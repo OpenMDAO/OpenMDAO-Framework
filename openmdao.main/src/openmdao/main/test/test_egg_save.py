@@ -737,8 +737,15 @@ class TestCase(unittest.TestCase):
             out.write("""\
 # EASY-INSTALL-ENTRY-SCRIPT: 'setuptools>=0.6c8','console_scripts','easy_install'
 __requires__ = 'setuptools>=0.6c8'
+import os
 import sys
 from pkg_resources import load_entry_point
+
+#print
+#print 'Installer Environment:'
+#for name, val in sorted(os.environ.items(), key=lambda item: item[0]):
+#    print '    %s = %r' % (name, val)
+#print
 
 sys.exit(
    load_entry_point('setuptools>=0.6c8', 'console_scripts', 'easy_install')()
@@ -754,6 +761,11 @@ sys.exit(
                 path += os.pathsep
             path += install_dir
             env['PYTHONPATH'] = path
+
+#            logging.debug('Test Environment:')
+#            for name, val in sorted(env.items(), key=lambda item: item[0]):
+#                logging.debug('    %s = %r', name, val)
+
             cmdline = '%s %s -d %s %s' % \
                       (python, installer, install_dir, self.egg_name)
             stdout = open(os.path.join(install_dir, 'installer.out'), 'w')

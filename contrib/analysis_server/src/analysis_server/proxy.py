@@ -7,16 +7,21 @@ the component proxy is built.
 
 import numpy
 import socket
+import types
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Component, Container, FileRef
+from openmdao.main.api import Component, Container, FileRef, VariableTree
 from openmdao.main.mp_support import is_instance
 from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
 
 from analysis_server.client import Client
+from analysis_server.objxml import get_as_xml, set_from_xml, populate_from_xml
 from analysis_server.units  import get_translation
+
+# Map from server host,port to object class dictionary.
+_OBJECT_CLASSES = {}
 
 def _float2str(val):
     """ Return accurate string value for float. """
@@ -53,7 +58,13 @@ class ComponentProxy(Component):
         self._client = Client(host, port)
         self._client.start(typname, self._objname)
         super(ComponentProxy, self).__init__()
+
+        # Add properties (variables).
         self._populate(self, self._objname)
+
+        # Add methods.
+        self._methods = self._client.list_methods(self._objname)
+        self._add_methods()
 
     def _populate(self, container, path):
         """
@@ -65,9 +76,13 @@ class ComponentProxy(Component):
         path: string
             Path on server corresponding to `container`.
         """
-# TODO: local/remote name collision detection/resolution?
         info = self._client.list_properties(path)
         for prop, typ, iotype in info:
+            if hasattr(container, prop):
+                container.raise_exception('Name %r already bound to %r'
+                                          % (prop, getattr(container, prop)),
+                                          AttributeError)
+
             rpath = '.'.join([path, prop])
             if typ == 'PHXDouble' or typ == 'PHXLong' or typ == 'PHXString':
                 enum_valstrs = self._client.get(rpath+'.enumValues')
@@ -109,19 +124,40 @@ class ComponentProxy(Component):
                 container.add_trait(prop,
                                     ListProxy(iotype, self._client, rpath,
                                               str))
+            elif typ == 'PHXScriptObject':
+                container.add(prop,
+                              ObjProxy(iotype, self._client, rpath))
             else:
                 raise NotImplementedError('%r type %r' % (prop, typ))
+
+    def _add_methods(self):
+        """ Add methods to invoke remote methods. """
+        for name in self._methods:
+            if hasattr(self, name):
+                self.raise_exception('Name %r already bound to %r'
+                                     % (name, getattr(self, name)),
+                                     AttributeError)
+            dct = {}
+            exec """
+def %s(self):
+    return self._invoke_method(%r)
+""" % (name, name) in dct
+            setattr(self, name,
+                    types.MethodType(dct[name], self, self.__class__))
 
     def __getstate__(self):
         """ Return dict representing this component's local state. """
         state = super(ComponentProxy, self).__getstate__()
         del state['_client']
+        for name in self._methods:
+            del state[name]
         return state
 
     def __setstate__(self, state):
         """ Restore this component's local state. """
         state['_client'] = None
         super(ComponentProxy, self).__setstate__(state)
+        self._add_methods()
 
     def post_load(self):
         """
@@ -143,27 +179,45 @@ class ComponentProxy(Component):
 
         for name, obj in container.items():
             if is_instance(obj, Container):
-                self._restore(obj)  # Recurse.
+                if isinstance(obj, VarTreeMixin):
+                    obj.restore(self._client)
+                else:
+                    self._restore(obj)  # Recurse.
 
     def pre_delete(self):
         """ Unload remote instance before we get deleted. """
         super(ComponentProxy, self).pre_delete()
         if self._client is not None:
             self._client.end(self._objname)
-            self._client = None
-
-    def __del__(self):
-        """ Cleanup client if it hasn't been already. """
-        if self._client is not None:
-            try:
-                self._client.end(self._objname)
-            except (EOFError, socket.error):  # pragma no cover
-                pass
+            self._client.quit()
             self._client = None
 
     def execute(self):
         """ Execute remote component. """
+        self._flush_proxies()
         self._client.execute(self._objname)
+        self._update_proxies()
+
+    def _invoke_method(self, name):
+        """ Invoke remote method. """
+        self._flush_proxies()
+        result = self._client.invoke('%s.%s' % (self._objname, name))
+        self._update_proxies()
+        return result
+
+    def _flush_proxies(self):
+        """ Flush all 'in' object proxies. """
+        for name, obj in self.items():
+            if isinstance(obj, VariableTree):
+                if obj.iotype == 'in':
+                    obj.flush()
+
+    def _update_proxies(self):
+        """ Update all 'out' object proxies. """
+        for name, obj in self.items():
+            if isinstance(obj, VariableTree):
+                if obj.iotype == 'out':
+                    obj.update()
 
 
 class ProxyMixin(object):
@@ -207,7 +261,10 @@ class ProxyMixin(object):
 
     def rget(self):
         """ Get remote value as a string. """
-        return self._client.get(self._rpath)
+        if self._client is None:  # Happens during component.__setstate__
+            return self._valstr
+        else:
+            return self._client.get(self._rpath)
 
     def rset(self, valstr):
         """
@@ -299,9 +356,11 @@ class ArrayProxy(ProxyMixin, Array):
             data, rbrace, rest = rest.partition('}')
             return numpy.array([self._type(val.strip(' "'))
                                 for val in data.split(',')]).reshape(dims)
-        else:
+        elif valstr:
             return numpy.array([self._type(val.strip(' "'))
                                 for val in valstr.split(',')])
+        else:
+            return []
 
     def set(self, obj, name, value):
         """
@@ -606,6 +665,9 @@ class FileProxy(ProxyMixin, File):
         if self._component._call_tree_rooted:
             return None  # Not initialized.
 
+        if self._client is None:  # Happens during component.__setstate__
+            return None
+
         binary = self._client.get(self._rpath+'.isBinary') == 'true'
         valstr = self.rget()
         mode = 'wb' if binary else 'w'
@@ -807,4 +869,150 @@ class StrProxy(ProxyMixin, Str):
         """
         self.rset('"%s"' % \
                   self.validate(obj, name, value).encode('string_escape'))
+
+
+class VarTreeMixin(object):
+    """
+    Add and override some VariableTree methods to support proxying
+    a remote 'PHXScriptObject'.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
+
+    def __init__(self, iotype, client, rpath):
+        self._iotype = iotype
+        self._client = client
+        self._rpath = rpath
+        self._valstr = client.get(rpath)  # Needed for later restore.
+        self._dirty = False  # Set True after something is modified,
+
+    def __getstate__(self):
+        """ Return state of object. """
+        state = VariableTree.__getstate__(self)
+        state['_client'] = None
+        return state
+
+    def __setstate__(self, state):
+        """ Set state of object from `state`. """
+        VariableTree.__setstate__(self, state)
+
+    def add(self, name, obj):
+        """ Overrides VariableTree to manipulate `_dirty` flag. """
+        retval = VariableTree.add(self, name, obj)
+        if self._iotype == 'in':
+            self.on_trait_change(self._trait_modified, name)
+            if isinstance(obj, VariableTree):
+                self._register(name, obj)
+        return retval
+
+    def _register(self, path, vartree):
+        """ Helper method for :meth:`add`. """
+        for name, obj in vartree.items():
+            name = '.'.join((path, name))
+            self.on_trait_change(self._trait_modified, name)
+            if isinstance(obj, VariableTree):
+                self._register(name, obj)
+        
+    def _trait_modified(self, obj, name, old, new):
+        """ Record that local is now different than remote. """
+        self._dirty = True
+
+    def flush(self):
+        """ If we've been modified, then update remote from local. """
+        if self._dirty:
+            xml = get_as_xml(self)
+            self._client.set(self._rpath, xml)
+            self._valstr = xml
+            self._dirty = False
+
+    def restore(self, client):
+        """
+        Restore remote state.
+
+        client: :class:`client.Client`
+            The client to use to access the remote variable.
+        """
+        self._client = client
+        if self.iotype == 'in':
+            self._client.set(self._rpath, self._valstr)
+
+    def update(self):
+        """ Update local from remote. """
+        xml = self._client.get(self._rpath)
+        set_from_xml(self, xml)
+
+
+class ObjProxy(VarTreeMixin, VariableTree):
+    """
+    Proxy for a remote 'PHXScriptObject'.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
+
+    def __init__(self, iotype, client, rpath):
+        VarTreeMixin.__init__(self, iotype, client, rpath)
+        desc = client.get(rpath+'.description')
+        VariableTree.__init__(self, doc=desc, iotype=iotype)
+        xml = client.get(rpath)
+        populate_from_xml(self, xml)
+        self._dirty = False
+
+
+# Currently unused. While the code works, there are issues regarding how
+# other components can access the generated definition, as well as how the
+# definition could be accessed while loading from a pickled state.
+'''
+def make_object_proxy(host, port, iotype, client, rpath):
+    """
+    Create proxy for a remote 'PHXScriptObject'.
+    This will create a class definition if necessary via
+    :meth:`make_proxy_class` and then create an instance of that.
+
+    host: string
+        server hostname
+
+    port: int
+        server port on `host`.
+
+    iotype: string
+        'in' or 'out'.
+
+    client: :class:`client.Client`
+        The client to use to access the remote variable.
+
+    rpath: string
+        Path to the remote variable.
+    """
+    server_id = '%s:%s' % (host, port)
+    url = client.get(rpath+'.classURL')
+    try:
+        classes = _OBJECT_CLASSES[server_id]
+    except KeyError:
+        _OBJECT_CLASSES[server_id] = {}
+        classes = _OBJECT_CLASSES[server_id]
+    try:
+        cls = classes[url]
+    except KeyError:
+        # Create a proxy class based on the object at `rpath` on `client`.
+        xml = client.get(rpath)
+        name, definition = generate_from_xml(xml)
+        exec definition in globals()
+        classes[url] = globals()[name]
+
+    return cls(iotype, client, rpath)
+'''
 
