@@ -33,13 +33,17 @@ class DepTestCase(unittest.TestCase):
         comps = psta.find_inheritors('openmdao.main.component.Component')
         comps.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
         comps.extend(psta.find_inheritors('enthought.traits.api.Array'))
-        comps = [x.rsplit('.',1)[1] for x in comps]
-        comps.remove('Driver')
-        comps.remove('DriverUsesDerivatives')
-        comps.remove('DistributionCaseDriver')
-        comps.remove('CaseIterDriverBase')
-        comps.remove('PassthroughTrait')
-        comps.remove('PassthroughProperty')
+        comps = [x.rsplit('.',1)[1] for x in comps if '.examples.' not in x and '.optproblems.' not in x]
+        cset = set(comps)
+        excludes = set([
+            'Driver',
+            'DriverUsesDerivatives',
+            'DistributionCaseDriver',
+            'CaseIterDriverBase',
+            'PassthroughTrait',
+            'PassthroughProperty',
+            ])
+        cset = cset - excludes
         
         from openmdao.main.api import get_available_types
         from openmdao.main.factorymanager import _container_groups
@@ -51,7 +55,6 @@ class DepTestCase(unittest.TestCase):
         types = set([x[0] for x in get_available_types(groups)])
         types = [x.rsplit('.',1)[1] for x in types if x.startswith('openmdao.')]
         
-        cset = set(comps)
         tset = set(types)
         noentrypts = cset-tset
         if noentrypts:

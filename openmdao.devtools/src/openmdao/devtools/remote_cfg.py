@@ -176,6 +176,8 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
     
     retcode = 0
     
+    summary = {}
+    
     try:
         for host in options.hosts:
             if host in ec2_hosts:
@@ -206,6 +208,7 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
             time.sleep(1)
             for p in processes:
                 if p.exitcode is not None:
+                    summary[p.name] = p.exitcode
                     processes.remove(p)
                     if len(processes) > 0:
                         remaining = '\nremaining hosts: %s' % ([pr.name for pr in processes],)
@@ -227,7 +230,11 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
         mins = int(secs-hours*3600.0)/60
         secs = secs-(hours*3600.)-(mins*60.)
         
-        print '\nElapsed time:',
+        print '\nResult Summary:  Host, Return Code'
+        for k,v in summary.items():
+            print '  %s, %s' % (k, v)
+            
+        print '\n\nElapsed time:',
         if hours > 0:
             print ' %d hours' % hours,
         if mins > 0:
