@@ -144,7 +144,6 @@ See the example that follows.
         licenses/index
         documenting/index
 
-
 Use your text editor to add ``new-guide/index`` to the desired location in the project's
 ``index.rst`` and then save the file. 
 
