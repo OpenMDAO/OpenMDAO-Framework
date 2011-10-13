@@ -6,6 +6,7 @@ dist/
 parts/
 eggs/
 develop-eggs/
+host_results/
 .coverage
 openmdao_log.txt
 build.out

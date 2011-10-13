@@ -137,7 +137,7 @@ class Architecture(object):
                     raise RuntimeError("this Architecture doesn't support the following "
                                        "constraint types: %s" % list(diff))
         try:
-            parent_coupling_vars = self.parent.list_coupling_vars()
+            parent_coupling_vars = self.parent.get_coupling_vars()
         except AttributeError:
             parent_coupling_vars = []
         if len(parent_coupling_vars) > 0 and not self.has_coupling_vars:

@@ -42,9 +42,12 @@ class DepTestCase(unittest.TestCase):
         comps.remove('PassthroughProperty')
         
         from openmdao.main.api import get_available_types
+        from openmdao.main.factorymanager import _container_groups
         groups = [ 'openmdao.component',
                    'openmdao.driver',
-                   'openmdao.variable']
+                   'openmdao.variable',
+                   'openmdao.surrogatemodel',
+                   'openmdao.differentiator']
         types = set([x[0] for x in get_available_types(groups)])
         types = [x.rsplit('.',1)[1] for x in types if x.startswith('openmdao.')]
         

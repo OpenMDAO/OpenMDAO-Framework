@@ -439,8 +439,7 @@ class CONMINdriver(DriverUsesDerivatives):
                 
                 case_input = []
                 for var, val in zip(self.get_parameters().keys(), dvals):
-                    case_input.append([var, val])
-                
+                    case_input.append([var[0], val])
                 if self.printvars:
                     case_output = [(name,
                                     ExprEvaluator(name, scope=self.parent).evaluate())
@@ -452,9 +451,7 @@ class CONMINdriver(DriverUsesDerivatives):
                 for i, val in enumerate(self.constraint_vals):
                     case_output.append(["Constraint%d" % i, val])
                 
-                case = Case(case_input, case_output,
-                            desc='case%s' % self.iter_count,
-                            parent_uuid=self._case_id)
+                case = Case(case_input, case_output,parent_uuid=self._case_id)
                 
                 self.recorder.record(case)
         

@@ -8,13 +8,13 @@
     match the original Sobiesky-Agte implementation.
 """
 
-from openmdao.examples.mdao.disciplines import SellarDiscipline1,\
-                                               SellarDiscipline2
 from openmdao.main.api import Assembly
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
+
+from openmdao.lib.optproblems import sellar
 
 
 class SellarBLISS(Assembly):
@@ -35,8 +35,8 @@ class SellarBLISS(Assembly):
         super(SellarBLISS, self).__init__()        
 
         # Disciplines
-        self.add('dis1', SellarDiscipline1())
-        self.add('dis2', SellarDiscipline2())
+        self.add('dis1', sellar.Discipline1())
+        self.add('dis2', sellar.Discipline2())
         
         objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + exp(-dis2.y2)'
         constraint1 = 'dis1.y1 > 3.16'
