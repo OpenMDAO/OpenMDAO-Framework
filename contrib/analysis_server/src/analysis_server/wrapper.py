@@ -1033,11 +1033,18 @@ class ListWrapper(ArrayBase):
             elif isinstance(inner_type, Str):
                 typ = str
             else:
-                raise TypeError('%s.%s: unsupported List element type %r'
+                raise TypeError('%s.%s: unsupported List element type (1) %r'
                                 % (container.get_pathname(), name, inner_type))
         else:
-            raise TypeError('%s.%s: undefined List element type'
-                            % (container.get_pathname(), name))
+            value = container.get(name)
+            if value:
+                typ = type(value[0])
+                if typ not in (float, int, str):
+                    raise TypeError('%s.%s: unsupported List element type (2) %r'
+                                    % (container.get_pathname(), name, typ))
+            else:
+                raise TypeError('%s.%s: undefined List element type'
+                                % (container.get_pathname(), name))
         super(ListWrapper, self).__init__(container, name, ext_path, logger,
                                           typ, is_array=False)
 

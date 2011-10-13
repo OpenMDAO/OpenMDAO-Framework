@@ -62,9 +62,26 @@ class ASFactory(Factory):
             return []
 
         types = []
-        for comp in self._client.list_components():
-            versions = self._client.versions(comp)
-            for version in versions:
-                types.append((comp, version))
+        self._list('', types)
         return types
+
+
+    def _list(self, category, types):
+        """ List components in `category` and sub-categories. """
+        if category:
+            category += '/'
+
+        for comp in self._client.list_components(category):
+            comp = '%s%s' % (category, comp)
+            try:
+                versions = self._client.versions(comp)
+            except RuntimeError:
+                types.append((comp, ''))
+            else:
+                for version in versions:
+                    types.append((comp, version))
+
+        for sub in self._client.list_categories(category):
+            sub = '%s%s' % (category, sub)
+            self._list(sub, types)
 

@@ -364,7 +364,7 @@ class Container(HasTraits):
 
     def __setstate__(self, state):
         """Restore this component's state."""
-        list_fixups = state.pop('_list_fixups')
+        list_fixups = state.pop('_list_fixups', {})
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
 
