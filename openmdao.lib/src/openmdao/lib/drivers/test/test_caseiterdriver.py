@@ -216,10 +216,8 @@ class TestCase(unittest.TestCase):
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                if self.model.driver.sequential:
-                    self.assertEqual(case.msg, 'driven: Forced error')
-                else:
-                    self.assertEqual(case.msg, 'driven: Forced error')
+                self.assertEqual(case.msg[:10], 'Traceback ')
+                self.assertEqual(case.msg[-21:], 'driven: Forced error\n')
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],

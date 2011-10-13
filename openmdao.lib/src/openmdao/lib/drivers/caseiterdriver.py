@@ -3,6 +3,7 @@ import Queue
 import sys
 import thread
 import threading
+import traceback
 
 from openmdao.lib.datatypes.api import Bool, Enum
 
@@ -389,7 +390,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.debug('    exception while loading: %r', exc)
                 if self.error_policy == 'ABORT':
                     if self._abort_exc is None:
-                        self._abort_exc = exc
+                        self._abort_exc = exc[0]
                     self._stop = True
                     self._server_states[server] = _EMPTY
                     in_use = False
@@ -417,10 +418,10 @@ class CaseIterDriverBase(Driver):
                     case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
                 self._logger.debug('    exception while executing: %r', exc)
-                case.msg = str(exc)
+                case.msg = str(exc[1])
                 if self.error_policy == 'ABORT':
                     if self._abort_exc is None:
-                        self._abort_exc = exc
+                        self._abort_exc = exc[0]
                     self._stop = True
 
             # Record the data.
@@ -612,7 +613,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.error('server %r filexfer of %r failed: %r',
                                    server, self._egg_file, exc)
                 self._top_levels[server] = None
-                self._exceptions[server] = exc
+                self._exceptions[server] = (exc, traceback.format_exc())
                 return
             else:
                 self._server_info[server]['egg_file'] = self._egg_file
@@ -623,7 +624,7 @@ class CaseIterDriverBase(Driver):
             self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             self._top_levels[server] = None
-            self._exceptions[server] = exc
+            self._exceptions[server] = (exc, traceback.format_exc())
         else:
             self._top_levels[server] = tlo
 
@@ -648,7 +649,7 @@ class CaseIterDriverBase(Driver):
             try:
                 self.workflow.run()
             except Exception as exc:
-                self._exceptions[server] = exc
+                self._exceptions[server] = (exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
@@ -658,7 +659,7 @@ class CaseIterDriverBase(Driver):
         try:
             self._top_levels[server].run()
         except Exception as exc:
-            self._exceptions[server] = exc
+            self._exceptions[server] = (exc, traceback.format_exc())
             self._logger.error('Caught exception from server %r, PID %d on %s: %r',
                                self._server_info[server]['name'],
                                self._server_info[server]['pid'],
