@@ -105,7 +105,7 @@ repository (assuming the maintainers approve the change).
 
     Fix any errors found during testing.
 
-10. Change the docs if needed. (For more information on creating or updating docs, see
+11. Change the docs if needed. (For more information on creating or updating docs, see
     :ref:`resources`.)  
 
     To build and then display the docs, use the following scripts:
@@ -116,7 +116,7 @@ repository (assuming the maintainers approve the change).
       openmdao_docs
 
 
-11. Test the docs. 
+12. Test the docs. 
                  	 
     ::
     
@@ -127,20 +127,20 @@ repository (assuming the maintainers approve the change).
 
     Fix errors if any.
 
-12. If you have not done so, visually inspect the docs using the default browser. 
+13. If you have not done so, visually inspect the docs using the default browser. 
                  
 		 
     ::
      
       openmdao_docs
 
-13.  Stage the updated content for the next commit.
+14.  Stage the updated content for the next commit.
                  
      ::
      
        git add .
 
-14. Commit the staged content. (The ``-a`` will include any changes that you forgot to explicitly add to the
+15. Commit the staged content. (The ``-a`` will include any changes that you forgot to explicitly add to the
     staging area with ``git add``.) Use the issue number from Step 1 in your comment. 
     
     ::
