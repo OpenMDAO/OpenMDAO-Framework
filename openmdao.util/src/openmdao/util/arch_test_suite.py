@@ -22,6 +22,22 @@ def build_arch_list(include=[],exclude=[]):
     
     if include and exclude: 
         raise ValueError("Can't set both include and exlude")
+    
+    startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),]
+    psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
+    architectures = psta.find_inheritors("openmdao.main.arch.Architecture")
+    
+    archs = []
+    for arch_name in architectures: 
+            arch_class = arch_name.split(".")[-1]
+            arch_package = ".".join(arch_name.split(".")[:-1])
+            if  (not include and not exclude) or (include and prob_class in include) or \
+                (exclude and prob_class not in exclude): 
+                
+                arch_package = __import__(arch_package,globals(),locals(),[arch_class,],-1)
+                archs.append(getattr(arch_package,arch_class)()) #create instance of the Architecture
+
+    return archs
 
 
 def build_optproblem_list(include=[],exclude=[]):
