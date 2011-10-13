@@ -12,19 +12,19 @@ class TestArchTestSuite(unittest.TestCase):
     
     def test_build_optproblem_list(self): 
         
-        probs = build_arch_list()
-        
+        probs = build_optproblem_list()
         self.assertTrue(all([isinstance(p,OptProblem) for p in probs]))
         
         try: 
-            build_arch_list(incude=['SellarProblem'],exclude=["BraninProblem"])
+            build_optproblem_list(include=['SellarProblem'],exclude=["BraninProblem"])
         except ValueError as err: 
             self.assertEqual(str(err), "Can't set both include and exlude")
         else: 
             self.fail("ValueError Expected") 
             
-        probs = build_arch_list(incude=['SellarProblem']) 
-        self.assertEqual(probs,[SellarProblem])
+        probs = build_optproblem_list(include=['SellarProblem']) 
+        self.assertTrue(SellarProblem in [p.__class__ for p in probs])
+        self.assertEqual(probs[0].__class__,SellarProblem)
         
-        probs = build_arch_list(exclude=['SellarProblem']) 
-        self.assertFalse(SellarProblem in probs)
+        probs = build_optproblem_list(exclude=['SellarProblem']) 
+        self.assertFalse(SellarProblem in [p.__class__ for p in probs])

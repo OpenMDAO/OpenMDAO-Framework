@@ -1,3 +1,5 @@
+import os
+
 import openmdao.lib.optproblems
 
 from openmdao.util.dep import PythonSourceTreeAnalyser
@@ -54,7 +56,6 @@ def build_optproblem_list(include=[],exclude=[]):
                 
                 prob_package = __import__(prob_package,globals(),locals(),[prob_class,],-1)
                 probs.append(getattr(prob_package,prob_class)()) #create instance of the OptProblem
-
 
     return probs
 
