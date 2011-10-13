@@ -66,6 +66,7 @@ class TestOptProblems(unittest.TestCase):
         opt_problems = psta.find_inheritors("openmdao.main.problem_formulation.OptProblem")
         
         for prob_name in opt_problems: 
+            print "running %s"%prob_name
             prob_class = prob_name.split(".")[-1]
             prob_package = ".".join(prob_name.split(".")[:-1])
             prob_package = __import__(prob_package,globals(),locals(),[prob_class,],-1)
