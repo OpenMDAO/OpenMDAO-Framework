@@ -221,7 +221,8 @@ class TestCase(unittest.TestCase):
         
         for case in self.model.driver.recorder.cases:
             if forced_errors:
-                self.assertEqual(case.msg, 'driven: Forced error')
+                self.assertEqual(case.msg[:10], 'Traceback ')
+                self.assertEqual(case.msg[-21:], 'driven: Forced error\n')
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
