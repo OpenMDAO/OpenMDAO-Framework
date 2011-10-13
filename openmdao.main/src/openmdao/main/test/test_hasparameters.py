@@ -278,11 +278,24 @@ class ParametersTestCase(unittest.TestCase):
         params2['comp.a'].set(d2val)
         self.assertEqual(self.top.comp.a, 15.)
         
+    def test_group_get_referenced_vars_by_compname(self):
+        self.top.driver.add_parameter(('comp.a','comp.b'),0,1e99)
+        self.top.driver.add_parameter(('comp.c','comp.d'),0,1e99)
+        params = self.top.driver.get_parameters()
+        
+        data = params[('comp.a','comp.b')].get_referenced_vars_by_compname()
+        self.assertEqual(['comp',],data.keys())
+        self.assertEqual(set([param.target for param in data['comp']]),set(['comp.a','comp.b']))    
+        
+        data = params[('comp.c','comp.d')].get_referenced_vars_by_compname()
+        self.assertEqual(['comp',],data.keys())
+        self.assertEqual(set([param.target for param in data['comp']]),set(('comp.c','comp.d')))  
+
         # Vars with bounds, params with no bounds
         self.top.comp.add_trait('v1', Float(0.0, low=0.0, high=10.0, iotype='in'))
         self.top.comp.v1 = 5.0
         self.top.driver.add_parameter('comp.v1', scaler=0.5, adder=-2.0)
-        
+
         params = self.top.driver.get_parameters()
         self.assertEqual(params['comp.v1'].evaluate(), 12.0)
         self.assertEqual(params['comp.v1'].high, 22.0)
