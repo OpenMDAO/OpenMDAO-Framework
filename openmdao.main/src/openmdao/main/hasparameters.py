@@ -241,6 +241,16 @@ class ParameterGroup(object):
         for param in self._params:
             result.update(param.get_referenced_compnames())
         return result
+    
+    def get_referenced_vars_by_compname(self): 
+        result = dict()
+        for param in self._params: 
+            comp = param.get_referenced_compnames().pop()
+            try: 
+                result[comp].update([param,])
+            except KeyError: 
+                result[comp] = set([param,])
+        return result        
 
     def get_referenced_varpaths(self):
         """Return a set of Variable names referenced in our target strings."""
