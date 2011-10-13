@@ -145,10 +145,10 @@ syntax includes an equal sign in the expression.
 
     from openmdao.lib.drivers.api import BroydenSolver
     from openmdao.main.api import Assembly
-    from openmdao.examples.mdao.disciplines import SellarDiscipline1
+    from openmdao.lib.optproblems import sellar
     
     self = Assembly()
-    self.add('dis1', SellarDiscipline1())
+    self.add('dis1', sellar.Discipline1())
     self.add('driver', BroydenSolver())
 
 .. testcode:: Parameter_API2
