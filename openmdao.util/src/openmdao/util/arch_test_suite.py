@@ -1,6 +1,9 @@
 import os
 
 import openmdao.lib.optproblems
+import openmdao.lib.architectures
+
+from openmdao.main.arch import Architecture
 
 from openmdao.util.dep import PythonSourceTreeAnalyser
 
@@ -23,10 +26,11 @@ def build_arch_list(include=[],exclude=[]):
     if include and exclude: 
         raise ValueError("Can't set both include and exlude")
     
-    startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),]
+    startdirs = [os.path.dirname(openmdao.lib.architectures.__file__),]
+    print startdirs
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     architectures = psta.find_inheritors("openmdao.main.arch.Architecture")
-    
+    print "test",architectures
     archs = []
     for arch_name in architectures: 
             arch_class = arch_name.split(".")[-1]
@@ -85,4 +89,20 @@ def run_arch_test_suite(arch=[],optproblems=[]):
         The OptProblems to test the Architectures on. 
     """
     
-    pass
+    for a in arch: 
+        for p in optproblems: 
+            print "running %s on %s"%(a,p)
+            
+            prob = p()
+            prob.architecture = a
+            
+            prob.run()
+
+            
+if __name__ == "__main__": 
+    archs = build_arch_list()
+    probs = build_optproblem_list()
+    
+    print archs
+    print probs
+    run_arch_test_suite(archs,probs)

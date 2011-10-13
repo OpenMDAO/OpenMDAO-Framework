@@ -8,11 +8,14 @@ from openmdao.lib.architectures.mdf import MDF
 from openmdao.util.arch_test_suite import build_arch_list, build_optproblem_list
 
 
+
+
 class TestArchTestSuite(unittest.TestCase): 
     
     def test_build_optproblem_list(self): 
         
         probs = build_optproblem_list()
+        self.assertTrue(probs)
         self.assertTrue(all([isinstance(p,OptProblem) for p in probs]))
         
         try: 
@@ -33,6 +36,7 @@ class TestArchTestSuite(unittest.TestCase):
     def test_build_arch_list(self): 
         
         archs = build_arch_list()
+        self.assertTrue(archs)
         self.assertTrue(all([isinstance(a,Architecture) for a in archs]))
         
         try: 
