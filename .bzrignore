@@ -10,7 +10,6 @@ dist
 parts
 eggs
 develop-eggs
-*/**/pylint
 ~*
 licenses_table.txt
 engineCmodule.c
