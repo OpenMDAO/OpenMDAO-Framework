@@ -65,6 +65,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                     c.setSource(src_fig.getPort("output"));
                     c.setTarget(dst_fig.getPort("input"));
                     c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+                    c.setRouter(new draw2d.BezierConnectionRouter());
                     dataflow.addFigure(c);
                 }
                 // TODO: handle connections to parent assembly vars (e.g. Vehicle.velocity)
