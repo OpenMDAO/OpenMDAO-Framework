@@ -138,6 +138,7 @@ def PickUnusedPort():
 
 #
 # launch web browser on specified port
+# (chrome will launch in "app mode" on Windows 7)
 #
 def launch_browser(port,preferred_browser=None):
     ''' try to use preferred browser if specified, fall back to default 
@@ -151,7 +152,7 @@ def launch_browser(port,preferred_browser=None):
         if USERPROFILE:
             CHROMEPATH = USERPROFILE+'\AppData\Local\Google\Chrome\Application\chrome.exe'
        	    if os.path.isfile(CHROMEPATH):
-                preferred_browser = CHROMEPATH.replace('\\','\\\\')+' %s'
+                preferred_browser = CHROMEPATH.replace('\\','\\\\')+' --app=%s'
     
     # try to get preferred browser, fall back to default
     if preferred_browser:
