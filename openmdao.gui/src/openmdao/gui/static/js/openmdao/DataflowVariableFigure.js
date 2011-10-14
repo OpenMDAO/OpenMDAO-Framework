@@ -206,6 +206,27 @@ openmdao.DataflowVariableFigure.prototype.setWorkflow=function(wkflw){
             this.outputPort.setWorkflow(wkflw);
             this.outputPort.setName("output");
             this.addPort(this.outputPort,this.width+5,this.height/2);
+            var oThis=this;
+            this.outputPort.createCommand = function(request) {
+                if(request.getPolicy() ==draw2d.EditPolicy.CONNECT) {
+                    if( request.source.parentNode.id == request.target.parentNode.id) {
+                        return null;
+                    }
+                    if (request.source instanceof draw2d.InputPort) {
+                        var parentPath = openmdao.Util.getParentPath(oThis.pathname),
+                            parentAssm = openmdao.Util.getParentPath(parentPath),
+                            parentName = openmdao.Util.getName(parentPath),
+                            dstName    = request.source.getParent().name,
+                            dstPath    = openmdao.Util.getParentPath(request.source.getParent().pathname),
+                            dstParent  = openmdao.Util.getName(dstPath),
+                            src = parentName + "." + oThis.name,
+                            dst = dstParent + "." + dstName,
+                            cmd = "top."+parentAssm+".connect('"+src+"','"+dst+"')";
+                        oThis.myModel.issueCommand(cmd);
+                    };                
+                    return null;
+                }
+            }
         }
     }
 };
@@ -222,19 +243,20 @@ openmdao.DataflowVariableFigure.prototype.toggle=function(){
     }
 };
 
-// openmdao.DataflowVariableFigure.prototype.getContextMenu=function(){
-    // var menu=new draw2d.Menu();
-    // var oThis=this;
-    // menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
-        // if (/.driver$/.test(oThis.name)) {
-            // oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name.replace(/.driver/g,'')+"')");
-        // }
-        // else {
-            // oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
-        // }
-    // }));
-    // return menu;
-// };
+openmdao.DataflowVariableFigure.prototype.getContextMenu=function(){
+    var menu=new draw2d.Menu();
+    var oThis=this;
+    if (oThis.type == 'output') {
+        menu.appendMenuItem(new draw2d.MenuItem("Create Passthrough",null,function(){
+            var parentPath = openmdao.Util.getParentPath(oThis.pathname),
+                parentAssm = openmdao.Util.getParentPath(parentPath),
+                parentName = openmdao.Util.getName(parentPath),
+                cmd = "top."+parentAssm+".create_passthrough('"+parentName+"."+oThis.name+"')";
+            oThis.myModel.issueCommand(cmd);
+        }));
+    }
+    return menu;
+};
 
 // openmdao.DataflowVariableFigure.prototype.onMouseEnter=function(){
     // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
