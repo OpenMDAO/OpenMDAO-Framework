@@ -1,12 +1,13 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.DataflowVariableFigure=function(myModel,pathname,type){
+openmdao.DataflowVariableFigure=function(myModel,pathname,type,inout){
     this.myModel = myModel;
     this.pathname = pathname;
     this.type = type;
+    this.inout = inout;
     this.cornerWidth=15;
     this.cornerHeight=15;
-    if (type == 'input') {
+    if (inout == 'input') {
         this.outputPort=null;
         this.inputPort=new draw2d.InputPort();
     }
@@ -35,7 +36,7 @@ openmdao.DataflowVariableFigure=function(myModel,pathname,type){
     else
         this.setContent('<center><i>'+type+''+'</i></center>')
         
-    this.toggle();
+    //this.toggle();
     this.setCanDrag(false);
 };
 
@@ -48,6 +49,7 @@ openmdao.DataflowVariableFigure.prototype.createHTMLElement=function(){
     
     var item=document.createElement("div");    
     item.id=this.id;
+    item.style.color="black";
     item.style.position="absolute";
     item.style.left=this.x+"px";
     item.style.top=this.y+"px";
@@ -246,7 +248,7 @@ openmdao.DataflowVariableFigure.prototype.toggle=function(){
 openmdao.DataflowVariableFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
-    if (oThis.type == 'output') {
+    if (oThis.inout == 'output') {
         menu.appendMenuItem(new draw2d.MenuItem("Create Passthrough",null,function(){
             var parentPath = openmdao.Util.getParentPath(oThis.pathname),
                 parentAssm = openmdao.Util.getParentPath(parentPath),

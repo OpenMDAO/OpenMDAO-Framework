@@ -42,6 +42,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     
     var item=document.createElement("div");    
     item.id=this.id;
+    item.style.color="black";
     item.style.position="absolute";
     item.style.left=this.x+"px";
     item.style.top=this.y+"px";

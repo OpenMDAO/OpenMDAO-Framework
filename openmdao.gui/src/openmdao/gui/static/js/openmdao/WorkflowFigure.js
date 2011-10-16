@@ -29,6 +29,7 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     item.style.border="1px solid black";
     item.style.cursor=null;
     this.titlebar=document.createElement("div");
+    this.titlebar.style.color="white";
     this.titlebar.style.position="absolute";
     this.titlebar.style.left="0px";
     this.titlebar.style.top="0px";

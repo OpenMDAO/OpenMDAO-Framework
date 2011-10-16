@@ -268,8 +268,21 @@ class ConsoleServer(cmd.Cmd):
         if self.top:
             try:
                 asm = self.top.get(pathname);
-                conns['outputs'] = asm.get(src_name).list_outputs();
-                conns['inputs']  = asm.get(dst_name).list_inputs();
+                
+                outputs = []
+                src = asm.get(src_name)
+                for name in src.list_outputs():
+                    outputs.append({'name': name,
+                                    'type': type(src.get(name)).__name__ })
+                conns['outputs'] = outputs;
+                    
+                inputs = []
+                dst = asm.get(dst_name)
+                for name in dst.list_inputs():
+                    inputs.append({'name': name,
+                                   'type': type(dst.get(name)).__name__ })
+                conns['inputs']  = inputs;
+                
                 connections = [];
                 conntuples = asm.list_connections(show_passthrough=False)
                 for src,dst in conntuples:

@@ -11,6 +11,7 @@ from django import forms
 
 import sys, os, traceback
 import zipfile, jsonpickle
+from threading import Timer
 
 from openmdao.gui.mdao_util import *
 
@@ -60,6 +61,12 @@ def Geometry(request):
                               {'filename': request.GET['path'] },
                               context_instance=RequestContext(request))
  
+@never_cache
+@login_required()
+def Close(request):
+    server_mgr.delete_server(request.session.session_key)
+    return HttpResponseRedirect('/')
+    
 @never_cache
 @csrf_exempt
 @login_required()
@@ -192,8 +199,9 @@ def Exec(request):
 @login_required()
 def Exit(request):
     server_mgr.delete_server(request.session.session_key)
-    return HttpResponseRedirect('/')
-
+    t = Timer(5, end_process) # Quit after 5 seconds
+    return render_to_response('closewindow.html')
+    
 @never_cache
 @csrf_exempt
 @login_required()

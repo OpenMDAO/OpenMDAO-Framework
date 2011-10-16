@@ -171,3 +171,14 @@ def launch_browser(port,preferred_browser=None):
     else:
         print "Couldn't launch browser: "+str(browser)
 
+# 
+# end current process (TODO: make this work?)
+#
+def end_process():
+    if (os.name == 'nt'):
+        import win32api, win32con
+        handle = win32api.OpenProcess( win32con.PROCESS_TERMINATE, 0, pid )
+        win32api.TerminateProcess( handle, 0 )
+        win32api.CloseHandle( handle )
+    else:
+        os.kill(os.getpid(), 9)

@@ -27,8 +27,6 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
     model.addListener(update)
 
     function loadData(data) {
-        debug.info('connection editor:',self.pathname,self.src_comp,self.dst_comp)
-        debug.info('connections:',data)
         if (!data || !data['outputs'] || !data['inputs']) {
             // don't have what we need, probably something got deleted
             self.close();
@@ -38,18 +36,20 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
             figures = {};
             var x = 20, y = 10;
             jQuery.each(data['outputs'], function(idx,outvar) {
-                var varPath = self.pathname+'.'+src_comp+'.'+outvar,
-                    fig = new openmdao.DataflowVariableFigure(model,varPath,'output');
+                var src_name = src_comp+'.'+outvar['name'],
+                    src_path = self.pathname+'.'+src_name,
+                    fig = new openmdao.DataflowVariableFigure(model,src_path,outvar['type'],'output');
                 dataflow.addFigure(fig,x,y);
-                figures[src_comp+'.'+outvar] = fig
+                figures[src_name] = fig
                 y = y + 60;
             });
             x = 250, y = 10;
             jQuery.each(data['inputs'], function(idx,invar) {
-                var varPath = self.pathname+'.'+dst_comp+'.'+invar,
-                    fig = new openmdao.DataflowVariableFigure(model,varPath,'input');
+                var dst_name = dst_comp+'.'+invar['name'],
+                    dst_path = self.pathname+'.'+dst_name,
+                    fig = new openmdao.DataflowVariableFigure(model,dst_path,invar['type'],'input');
                 dataflow.addFigure(fig,x,y);
-                figures[dst_comp+'.'+invar] = fig
+                figures[dst_name] = fig
                 y = y + 60;
             });
             dataflowDiv.css({'height':y+'px','width': x+100+'px'});

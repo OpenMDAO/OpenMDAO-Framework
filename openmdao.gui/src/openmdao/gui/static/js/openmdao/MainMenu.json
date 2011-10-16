@@ -4,7 +4,7 @@
         { "text": "Save",          "onclick": "openmdao.model.saveProject();" },
         { "text": "Run",           "onclick": "openmdao.model.runModel();" },
         { "text": "Reload",        "url": "/workspace/project" },
-        { "text": "Close",         "url": "/workspace/exit" }
+        { "text": "Close",         "url": "/workspace/close" }        
       ]
     },
     { "text": "View", 
