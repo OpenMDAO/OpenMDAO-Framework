@@ -198,6 +198,9 @@ def Exec(request):
 @never_cache
 @login_required()
 def Exit(request):
+    ''' close the browser window and shut down the server
+        (unfortunately neither of these things actually work)
+    '''
     server_mgr.delete_server(request.session.session_key)
     t = Timer(5, end_process) # Quit after 5 seconds
     return render_to_response('closewindow.html')

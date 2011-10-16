@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.FileTree = function(id,model,edit_function,view_function) {
+openmdao.FileTree = function(id,model,code_fn,geom_fn) {
     var menu = [  
                     {   "text": "File",
                         "items": [
@@ -50,18 +50,24 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
     
     /** if we have an edit function, then call it on the specified file */
     function editFile(pathname) {
-        if (typeof edit_function == 'function')
-            edit_function(pathname)
+        if (typeof code_fn == 'function')
+            code_fn(pathname)
         else
             alert("Edit function is not defined")
     }
 
-    /** if we have a view function, then call it on the specified file */
+    /** display the file in a new window (probably not in a useful format) */
     function viewFile(pathname) {
-        if (typeof view_function == 'function')
-            view_function(pathname)
+        openmdao.Util.popupWindow('file'+path.replace(/\\/g,'/'),path,600,800)
+    }
+
+
+    /** if we have a view geometry function, then call it on the specified file */
+    function viewGeometry(pathname) {
+        if (typeof geom_fn == 'function')
+            geom_fn(pathname)
         else
-            alert("View function is not defined")
+            alert("View Geometry function is not defined")
     }
 
     /** get a context menu for the specified node */
@@ -133,30 +139,35 @@ openmdao.FileTree = function(id,model,edit_function,view_function) {
         
         // if it's not a folder, 
         if (!isFolder) {
+            // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
+            menu.viewFile = {
+                "label"  : 'View File',
+                "action" : function(node) { viewFile(path) }
+            };
             // let them edit it (TODO: filter out non-text files?)
-            menu.update = {
+            menu.editFile = {
                 "label"  : 'Edit File',
                 "action" : function(node) { editFile(path) }
-            }
+            };
             // if it's a py file, let them import or execute it
             if (/.py$/.test(path)) {
                 menu.importfile = {
                     "label"  : 'Import * from File',
                     "action" : function(node) { model.importFile(path) }
-                }            
+                };          
                 menu.execfile = {
                     "label"  : 'Execute File',
                     "action" : function(node) { model.execFile(path) }
-                }            
-            }
-            // if it's a json file, assume for now it's geometry and let them load it into viewer
-            if (/.json$/.test(path)) {
+                };           
+            };
+            // if it's a geometry file, let them load it into viewer
+            if (/.geom$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
-                    "action" : function(node) { viewFile('file'+path.replace(/\\/g,'/')) }
-                }            
-            }
-        }
+                    "action" : function(node) { viewGeometry('file'+path.replace(/\\/g,'/')) }
+                };            
+            };
+        };
 
         // delete only files and empty folders
         if (!isFolder) {

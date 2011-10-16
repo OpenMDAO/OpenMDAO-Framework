@@ -313,7 +313,7 @@ class ConsoleServer(cmd.Cmd):
                         asm.connect(src,dst)
                 conns['connections'] = connections;
             except Exception, err:
-                print "Error getting connections:", str(err)
+                print "Error setting connections:", str(err)
         
     def _get_dataflow(self,asm):
         ''' get the list of components and connections between them
@@ -346,7 +346,7 @@ class ConsoleServer(cmd.Cmd):
                 else:
                     flow = self._get_dataflow(self.top)
             except Exception, err:
-                print "Error getting workflow:", str(err)
+                print "Error getting dataflow:", str(err)
         return jsonpickle.encode(flow)
 
     def _get_workflow(self,drvr):
