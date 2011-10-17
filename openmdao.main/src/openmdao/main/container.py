@@ -8,6 +8,7 @@ import traceback
 import re
 import pprint
 import socket
+import sys
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -25,9 +26,9 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
-from enthought.traits.api import HasTraits, Missing, Undefined, \
-                                 push_exception_handler, TraitType, CTrait, Python
-from enthought.traits.trait_handlers import NoDefaultSpecified
+from enthought.traits.api import HasTraits, Missing, Undefined, Python, \
+                                 push_exception_handler, TraitType, CTrait, List
+from enthought.traits.trait_handlers import NoDefaultSpecified, TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
 
@@ -153,7 +154,7 @@ class Container(HasTraits):
         self._parent = None
         self._name = None
         self._cached_traits_ = None
-        
+
         self._call_tree_rooted = True
         
         if doc is not None:
@@ -211,6 +212,7 @@ class Container(HasTraits):
         self._name = name
         self._logger.rename(self._name)
         
+    @rbac(('owner', 'user'))
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -344,16 +346,25 @@ class Container(HasTraits):
         """Return dict representing this container's state."""
         state = super(Container, self).__getstate__()
         dct = {}
+        list_fixups = {}
         for name, trait in state['_added_traits'].items():
             if trait.transient is not True:
                 dct[name] = trait
+                # List trait values lose their 'name' for some reason.
+                # Remember the values here so we don't need to getattr()
+                # during __setstate__().
+                if isinstance(trait, List):
+                    val = getattr(self, name)
+                    if isinstance(val, TraitListObject):
+                        list_fixups[name] = val
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
-        
+        state['_list_fixups'] = list_fixups
         return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
+        list_fixups = state.pop('_list_fixups', {})
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
 
@@ -364,6 +375,11 @@ class Container(HasTraits):
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
+
+        # List trait values lose their 'name' for some reason.
+        # Restore from remembered values.
+        for name in list_fixups:
+            list_fixups[name].name = name
 
         # Fix property traits that were not just added above.
         # For some reason they lost 'get()', but not 'set()' capability.
@@ -630,6 +646,8 @@ class Container(HasTraits):
         """Return a list of Variables in this Container."""
         return [k for k,v in self.items(iotype=not_none)]
     
+    # Can't use items() since it returns a generator (won't pickle).
+    @rbac(('owner', 'user'))
     def _alltraits(self, traits=None, events=False, **metadata):
         """This returns a dict that contains traits (class and instance)
         that match the given metadata.  If the 'traits' argument is not
@@ -1039,8 +1057,8 @@ class Container(HasTraits):
                                         src_dir, src_files, dst_dir,
                                         self._logger, observer.observer,
                                         need_requirements)
-        except Exception, exc:
-            self.raise_exception(str(exc), type(exc))
+        except Exception:
+            self.reraise_exception()  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1064,8 +1082,8 @@ class Container(HasTraits):
         self.parent = None  # Don't want to save stuff above us.
         try:
             eggsaver.save(self, outstream, fmt, proto, self._logger)
-        except Exception, exc:
-            self.raise_exception(str(exc), type(exc))
+        except Exception:
+            self.reraise_exception()  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1194,11 +1212,15 @@ class Container(HasTraits):
             trait = self.get_trait(cname)
             if trait is not None:
                 if iotype is not None:
-                    t_iotype = self.get_iotype(cname)
+                    if isinstance(trait.trait_type, Python):  # VariableTree
+                        obj = getattr(self, cname)
+                        t_iotype = getattr(obj, 'iotype', None)
+                    else:  # Variable
+                        t_iotype = self.get_iotype(cname)
                     if t_iotype != iotype:
                         self.raise_exception('%s must be an %s variable' % 
                                              (pathname, _iodict[iotype]),
-                                         RuntimeError)
+                                             RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
                 return None
@@ -1219,29 +1241,39 @@ class Container(HasTraits):
         iotype: str (optional)
             Expected iotype of the trait.
         """
-        trait = self.get_dyn_trait(pathname, iotype=iotype)
-        if trait is None:
-            return []
+        if not pathname:
+            obj = self
+        else:
+            trait = self.get_dyn_trait(pathname, iotype=iotype)
+            if trait is None:
+                return []
 
-        trait = trait.trait_type or trait.trait or trait
-        if trait.target:  # PassthroughTrait, PassthroughProperty
-            trait = self.get_dyn_trait(trait.target)
-            try:
-                ttype = trait.trait_type
-            except AttributeError:
-                pass
-            else:
-                if ttype is not None:
-                    trait = ttype
+            trait = trait.trait_type or trait.trait or trait
+            if trait.target:  # PassthroughTrait, PassthroughProperty
+                trait = self.get_dyn_trait(trait.target)
+                try:
+                    ttype = trait.trait_type
+                except AttributeError:
+                    pass
+                else:
+                    if ttype is not None:
+                        trait = ttype
 
-        def _bases(cls, names):
-            names.append('%s.%s' % (cls.__module__, cls.__name__))
-            for base in cls.__bases__:
-                _bases(base, names)
-        
+            if isinstance(trait, Python):  # Container
+                obj = self.get(pathname)
+            else:  # Variable
+                obj = trait
+
         names = []
-        _bases(type(trait), names)
+        Container._bases(type(obj), names)
         return names
+
+    @staticmethod
+    def _bases(cls, names):
+        """ Helper for :meth:`get_trait_typenames`. """
+        names.append('%s.%s' % (cls.__module__, cls.__name__))
+        for base in cls.__bases__:
+            Container._bases(base, names)
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
@@ -1249,9 +1281,23 @@ class Container(HasTraits):
         self._logger.error(msg)
         raise exception_class(full_msg)
     
+    def reraise_exception(self, msg=''):
+        """Re-raise an exception with updated message and original traceback."""
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        if msg:
+            msg = '%s: %s' % (msg, exc_value)
+        else:
+            msg = '%s' % exc_value
+        prefix = '%s: ' % self.get_pathname()
+        if not msg.startswith(prefix):
+            msg = prefix + msg
+        new_exc = exc_type(msg)
+        raise type(new_exc), new_exc, exc_traceback
 
-# By default we always proxy Containers.
+
+# By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
+CLASSES_TO_PROXY.append(FileRef)
 
     
 # Some utility functions

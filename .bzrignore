@@ -10,10 +10,8 @@ dist
 parts
 eggs
 develop-eggs
-*/**/pylint
 ~*
 licenses_table.txt
-engineCmodule.c
 wingproj.wpr
 .installed.cfg
 buildout/bin/
