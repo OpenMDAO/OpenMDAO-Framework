@@ -1,5 +1,5 @@
 """
-Test mp_util.py
+Test publickey.py
 """
 
 import logging
@@ -7,6 +7,7 @@ import os.path
 import getpass
 import socket
 import sys
+import threading
 import unittest
 import nose
 
@@ -47,6 +48,13 @@ class TestCase(unittest.TestCase):
             else:
                 public_file = '/bin/sh'
             self.assertFalse(is_private(public_file))
+
+        # We've clobbered the existing credentials key data, so be
+        # sure no stale credentials are in use.
+        try:
+            del threading.current_thread().credentials
+        except AttributeError:
+            pass
 
     def test_authorized_keys(self):
         logging.debug('')

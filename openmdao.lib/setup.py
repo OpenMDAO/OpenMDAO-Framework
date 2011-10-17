@@ -31,7 +31,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       author='',
       author_email='',
       url='http://openmdao.org/docs/srcdocs/packages/openmdao.lib.html',
-      license='NASA Open Source Agreement 1.3',
+      license='Apache License, Version 2.0',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
       package_dir={'': 'src'},
@@ -83,9 +83,17 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
       openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
       
-      [openmdao.surrogatesmodels]
+      [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
       openmdao.lib.surrogatemodels.logistic_regression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.nn_surrogate = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
+      
       """,
       )
+
+      # Optproblem entry points (commented for now)
+      #openmdao.lib.optproblems.sellar.Discipline1 = openmdao.lib.optproblems.sellar:Discipline1
+      #openmdao.lib.optproblems.sellar.Discipline2 = openmdao.lib.optproblems.sellar:Discipline2
+      #openmdao.lib.optproblems.sellar.Discipline1_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline1_WithDerivatives
+      #openmdao.lib.optproblems.sellar.Discipline2_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline2_WithDerivatives
+      #openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optproblems.sellar:SellarProblem

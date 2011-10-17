@@ -725,6 +725,7 @@ def import_library(libfilepointer):
               "they could not be resolved as a function of any other " + \
               "defined units:%s" % [x[0] for x in retry1]
 
+    return _unit_lib
 
 def convert_units(value, units, convunits):
     """Return the given value (given in units) converted 

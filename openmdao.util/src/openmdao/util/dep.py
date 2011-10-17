@@ -202,6 +202,7 @@ class PythonSourceTreeAnalyser(object):
         self.graph = self.graph.reverse(copy=False)
         
     def find_inheritors(self, base):
+        """Returns a list of names of classes that inherit from the given base class."""
         try:
             paths = nx.shortest_path(self.graph, source=base, target=None)
         except KeyError:

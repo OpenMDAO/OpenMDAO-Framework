@@ -164,6 +164,8 @@ class OpenMDAO_Server(Server):
             for user_host in self._allowed_users.keys():
                 user, host = user_host.split('@')
                 hosts.add(socket.gethostbyname(host))
+                if host == socket.gethostname():
+                    hosts.add('127.0.0.1')
             self._allowed_hosts = list(hosts)
         else:
             self._allowed_hosts = allowed_hosts or []

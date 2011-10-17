@@ -24,7 +24,8 @@ _pkg_res_factory = None
 _container_groups = [ 'openmdao.container',
                       'openmdao.component',
                       'openmdao.driver',
-                    ]
+                      'openmdao.surrogatemodel',
+                      'openmdao.differentiator']
 
 _plugin_groups = _container_groups + ['openmdao.variable']
 

@@ -32,9 +32,10 @@ are instantiated and the workflow is defined.
    
 .. testcode:: IDF_parts
 
-        from openmdao.examples.mdao.disciplines import SellarDiscipline1, SellarDiscipline2
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
+        
+        from openmdao.lib.optproblems import sellar
         
         class SellarIDF(Assembly): #TEST
             """ Optimization of the Sellar problem using IDF"""
@@ -52,8 +53,8 @@ are instantiated and the workflow is defined.
                 self.add('driver', CONMINdriver())
         
                 # Disciplines
-                self.add('dis1', SellarDiscipline1())
-                self.add('dis2', SellarDiscipline2())
+                self.add('dis1', sellar.Discipline1())
+                self.add('dis2', sellar.Discipline2())
                 
                 # Driver process definition
                 self.driver.workflow.add(['dis1', 'dis2'])
@@ -120,9 +121,10 @@ optimization.
 
 .. testcode:: IDF_full
 
-        from openmdao.examples.mdao.disciplines import SellarDiscipline1, SellarDiscipline2
         from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
+        
+        from openmdao.lib.optproblems import sellar
         
         
         class SellarIDF(Assembly):
@@ -141,8 +143,8 @@ optimization.
                 self.add('driver', CONMINdriver())
         
                 # Disciplines
-                self.add('dis1', SellarDiscipline1())
-                self.add('dis2', SellarDiscipline2())
+                self.add('dis1', sellar.Discipline1())
+                self.add('dis2', sellar.Discipline2())
                 
                 # Driver process definition
                 self.driver.workflow.add(['dis1', 'dis2'])

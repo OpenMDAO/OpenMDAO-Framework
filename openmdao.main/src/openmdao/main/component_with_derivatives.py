@@ -70,7 +70,10 @@ class ComponentWithDerivatives (Component):
         warn the user about all missing derivatives."""
         
         local_inputs = []
+        
+       
         for item in driver_inputs:
+
             if isinstance(item, tuple):
                 for linked_item in item:
                     paths = linked_item.split('.',1)
