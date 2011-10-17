@@ -14,6 +14,7 @@ import sys
 import time
 import unittest
 import nose
+from xml.sax.saxutils import escape
 
 from openmdao.util.testutil import assert_raises
 
@@ -128,9 +129,14 @@ class TestCase(unittest.TestCase):
                 self.fail('%d reply lines, %d expected lines'
                       % (len(reply_lines), len(expected_lines)))
             expected_line = expected_lines[i]
-            if reply_line != expected_line:
-                self.fail('Line %d: %r vs. %r'
-                           % (i+1, reply_line, expected_line))
+            if reply_line.startswith('classURL'): # installation-specific
+                if not expected_line.startswith('classURL'):
+                    self.fail('Line %d: %r vs. %r'
+                               % (i+1, reply_line, expected_line))
+            else:
+                if reply_line != expected_line:
+                    self.fail('Line %d: %r vs. %r'
+                               % (i+1, reply_line, expected_line))
         if len(reply_lines) != len(expected_lines):
             self.fail('%d reply lines, %d expected lines'
                       % (len(reply_lines), len(expected_lines)))
@@ -362,33 +368,17 @@ An additional description line.  ( &amp; &lt; &gt; )</Description>
                          'getDirectTransfer\r\n>')
 
     def test_get_hierarchy(self):
-        expected = """\
-<?xml version='1.0' encoding='utf-8'?>
-<Group>
-<Variable name="exe_count" type="long" io="output" format="" description="Execution count">0</Variable>
-<Variable name="in_file" type="file" io="input" description="Input file" isBinary="false" fileName=""></Variable>
-<Variable name="out_file" type="file" io="output" description="Output file" isBinary="false" fileName=""></Variable>
-<Group name="sub_group">
-<Variable name="b" type="boolean" io="input" format="" description="A boolean">true</Variable>
-<Variable name="f" type="double" io="input" format="" description="A float" units="">0.5</Variable>
-<Variable name="f1d" type="double[]" io="input" format="" description="1D float array" units="cm">1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5</Variable>
-<Variable name="f2d" type="double[]" io="input" format="" description="2D float array" units="mm">bounds[2, 4] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5}</Variable>
-<Variable name="f3d" type="double[]" io="input" format="" description="3D float array" units="">bounds[2, 3, 3] {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 20.5, 30.5, 40.5, 50.5, 60.5, 70.5, 80.5, 90.5}</Variable>
-<Variable name="fe" type="double" io="input" format="" description="Float enum" units="m">2.781828</Variable>
-<Variable name="i" type="long" io="input" format="" description="An int">7</Variable>
-<Variable name="i1d" type="long[]" io="input" format="" description="1D int array" units="">1, 2, 3, 4, 5, 6, 7, 8, 9</Variable>
-<Variable name="ie" type="long" io="input" format="" description="Int enum" units="">9</Variable>
-<Variable name="s" type="string" io="input" format="" description="A string">Hello World!  ( &amp; &lt; &gt; )</Variable>
-<Variable name="s1d" type="string[]" io="input" format="" description="1D string array" units="">"Hello", "from", "TestComponent.SubGroup"</Variable>
-<Variable name="se" type="string" io="input" format="" description="Str enum" units="">cold</Variable>
-</Group>
-<Variable name="x" type="double" io="input" format="" description="X input" units="">2</Variable>
-<Variable name="y" type="double" io="input" format="" description="Y input" units="ft">3</Variable>
-<Variable name="z" type="double" io="output" format="" description="Z output" units="ft">0</Variable>
-</Group>"""
-        expected = expected.replace('\n', '\r\n') + '\r\n>'
+        # Expected data is very large.
+        # Default int ranges are a pain.
+        i = 1
+        abi = 32 if sys.getsizeof(i) == 12 else 64  # sizeof int *object*.
+        with open('get_hierarchy%d.txt' % abi, 'rb') as inp:
+            expected = inp.read()
         replies = self.send_recv(['start ASTestComp comp',
                                   'getHierarchy comp'], count=3)
+# To generate updated data file:
+#        with open('get_hierarchy%d.new' % abi, 'wb') as out:
+#            out.write(replies[-1])
         self.compare(replies[-1], expected)
 
         replies = self.send_recv('getHierarchy')
@@ -562,9 +552,20 @@ Available Commands:
                          'help,h\r\n>')
 
     def test_invoke(self):
+        expected = """\
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\
+<response>\
+<version>100.0</version>\
+<download>true</download>\
+<string>0</string>\
+</response>\r\n>"""
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'invoke comp.int_method() full'], count=3)
+        self.assertEqual(replies[-1], expected)
+
         replies = self.send_recv(['start ASTestComp comp',
                                   'invoke comp.float_method()'], count=3)
-        self.assertEqual(replies[-1], '0\r\n>')
+        self.assertEqual(replies[-1], '5\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'invoke comp.null_method()'], count=3)
@@ -647,9 +648,10 @@ ASTestComp2"""
 
     def test_list_methods(self):
         expected = """\
-4 methods found:
+5 methods found:
 cause_exception()
 float_method()
+int_method()
 null_method()
 str_method()"""
         expected = expected.replace('\n', '\r\n') + '\r\n>'
@@ -661,9 +663,10 @@ str_method()"""
         self.compare(replies[-1], expected)
 
         expected = """\
-4 methods found:
+5 methods found:
 cause_exception() fullName="cause_exception"
 float_method() fullName="float_method"
+int_method() fullName="int_method"
 null_method() fullName="null_method"
 str_method() fullName="str_method"\
 """
@@ -700,9 +703,11 @@ __init__.py"""
 
     def test_list_properties(self):
         expected = """\
-7 properties found:
+9 properties found:
 exe_count (type=com.phoenix_int.aserver.types.PHXLong) (access=g)
 in_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=sg)
+obj_input (type=com.phoenix_int.aserver.types.PHXScriptObject) (access=sg)
+obj_output (type=com.phoenix_int.aserver.types.PHXScriptObject) (access=g)
 out_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=g)
 sub_group (type=com.phoenix_int.aserver.PHXGroup) (access=sg)
 x (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
@@ -717,16 +722,18 @@ z (type=com.phoenix_int.aserver.types.PHXDouble) (access=g)"""
         self.compare(replies[-1], expected)
 
         expected = """\
-12 properties found:
+14 properties found:
 b (type=com.phoenix_int.aserver.types.PHXBoolean) (access=sg)
 f (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
 f1d (type=double[9]) (access=sg)
 f2d (type=double[2][4]) (access=sg)
 f3d (type=double[2][3][3]) (access=sg)
 fe (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)
+flst (type=double[0]) (access=sg)
 i (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
 i1d (type=long[9]) (access=sg)
 ie (type=com.phoenix_int.aserver.types.PHXLong) (access=sg)
+ilst (type=long[0]) (access=sg)
 s (type=com.phoenix_int.aserver.types.PHXString) (access=sg)
 s1d (type=java.lang.String[3]) (access=sg)
 se (type=com.phoenix_int.aserver.types.PHXString) (access=sg)"""
@@ -744,83 +751,19 @@ se (type=com.phoenix_int.aserver.types.PHXString) (access=sg)"""
                          'listProperties,list,ls,l [object]\r\n>')
 
     def test_list_values(self):
-        expected = """\
-7 properties found:
-exe_count (type=com.phoenix_int.aserver.types.PHXLong) (access=g)  vLen=1  val=0
-   10 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=15  val=Execution count
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=long[0]) (access=g)  vLen=0  val=
-hasLowerBound (type=boolean) (access=g)  vLen=4  val=true
-hasUpperBound (type=boolean) (access=g)  vLen=4  val=true
-lowerBound (type=long) (access=g)  vLen=%d  val=%d
-units (type=java.lang.String) (access=g)  vLen=0  val=
-upperBound (type=long) (access=g)  vLen=%d  val=%d
-value (type=long) (access=g)  vLen=1  val=0
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=0
-in_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=sg)  vLen=0  val=
-   6 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=10  val=Input file
-isBinary (type=boolean) (access=g)  vLen=5  val=false
-mimeType (type=java.lang.String) (access=g)  vLen=0  val=
-name (type=java.lang.String) (access=g)  vLen=0  val=
-nameCoded (type=java.lang.String) (access=g)  vLen=0  val=
-url (type=java.lang.String) (access=g)  vLen=0  val=
-out_file (type=com.phoenix_int.aserver.types.PHXRawFile) (access=g)  vLen=0  val=
-   6 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=11  val=Output file
-isBinary (type=boolean) (access=g)  vLen=5  val=false
-mimeType (type=java.lang.String) (access=g)  vLen=10  val=text/plain
-name (type=java.lang.String) (access=g)  vLen=0  val=
-nameCoded (type=java.lang.String) (access=g)  vLen=0  val=
-url (type=java.lang.String) (access=g)  vLen=0  val=
-sub_group (type=com.phoenix_int.aserver.PHXGroup) (access=sg)  vLen=16  val=Group: sub_group
-x (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)  vLen=1  val=2
-   11 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=7  val=X input
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=double[0]) (access=g)  vLen=0  val=
-format (type=java.lang.String) (access=g)  vLen=4  val=null
-hasLowerBound (type=boolean) (access=g)  vLen=5  val=false
-hasUpperBound (type=boolean) (access=g)  vLen=5  val=false
-lowerBound (type=double) (access=g)  vLen=3  val=0.0
-units (type=java.lang.String) (access=g)  vLen=0  val=
-upperBound (type=double) (access=g)  vLen=3  val=0.0
-value (type=double) (access=sg)  vLen=1  val=2
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=2
-y (type=com.phoenix_int.aserver.types.PHXDouble) (access=sg)  vLen=1  val=3
-   11 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=7  val=Y input
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=double[0]) (access=g)  vLen=0  val=
-format (type=java.lang.String) (access=g)  vLen=4  val=null
-hasLowerBound (type=boolean) (access=g)  vLen=4  val=true
-hasUpperBound (type=boolean) (access=g)  vLen=4  val=true
-lowerBound (type=double) (access=g)  vLen=5  val=-10.0
-units (type=java.lang.String) (access=g)  vLen=2  val=ft
-upperBound (type=double) (access=g)  vLen=4  val=10.0
-value (type=double) (access=sg)  vLen=1  val=3
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=3
-z (type=com.phoenix_int.aserver.types.PHXDouble) (access=g)  vLen=1  val=0
-   11 SubProps found:
-description (type=java.lang.String) (access=g)  vLen=8  val=Z output
-enumAliases (type=java.lang.String[0]) (access=g)  vLen=0  val=
-enumValues (type=double[0]) (access=g)  vLen=0  val=
-format (type=java.lang.String) (access=g)  vLen=4  val=null
-hasLowerBound (type=boolean) (access=g)  vLen=5  val=false
-hasUpperBound (type=boolean) (access=g)  vLen=5  val=false
-lowerBound (type=double) (access=g)  vLen=3  val=0.0
-units (type=java.lang.String) (access=g)  vLen=2  val=ft
-upperBound (type=double) (access=g)  vLen=3  val=0.0
-value (type=double) (access=g)  vLen=1  val=0
-valueStr (type=java.lang.String) (access=g)  vLen=1  val=0""" \
-            % (len(str(-sys.maxint)), -sys.maxint,
-               len(str( sys.maxint)),  sys.maxint)
-        expected = expected.replace('\n', '\r\n') + '\r\n>'
-
+        # Expected data is very large.
+        # Default int ranges are a pain.
+        i = 1
+        abi = 32 if sys.getsizeof(i) == 12 else 64  # sizeof int *object*.
+        with open('list_values%d.txt' % abi, 'rb') as inp:
+            expected = inp.read()
         replies = self.send_recv(['start ASTestComp comp',
                                   'listValues comp'], count=3)
+# To generate updated data file:
+#        with open('list_values%d.new' % abi, 'wb') as out:
+#            out.write(replies[-1])
         self.compare(replies[-1], expected)
+
         replies = self.send_recv(['start ASTestComp comp',
                                   'lv comp'], count=3)
         self.compare(replies[-1], expected)
@@ -975,10 +918,16 @@ if __name__ == '__main__':
                          'setServerAuthInfo <serverURL> <username> <password>\r\n>')
 
     def test_set_hierarchy(self):
+        # Grab value of obj_input (big XML string).
+        replies = self.send_recv(['start ASTestComp comp',
+                                  'get comp.obj_input'], count=3)
+        obj_input = replies[-1][:-3]
+
         xml = """\
 <?xml version='1.0' encoding='utf-8'?>
 <Group>
 <Variable name="in_file">test setHierarchy</Variable>
+<Variable name="obj_input">%s</Variable>
 <Variable name="sub_group.b">false</Variable>
 <Variable name="sub_group.f">-0.5</Variable>
 <Variable name="sub_group.f1d">5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9</Variable>
@@ -992,7 +941,7 @@ if __name__ == '__main__':
 <Variable name="sub_group.se">hot</Variable>
 <Variable name="x">6</Variable>
 <Variable name="y">7</Variable>
-</Group>"""
+</Group>""" % escape(obj_input)
 
         cmd_1 = 'start ASTestComp comp'
         cmd_2 = 'setHierarchy comp %s' % xml
@@ -1150,7 +1099,7 @@ ASTestComp2"""
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.f1d.lockResize'], count=3)
-        self.assertEqual(replies[-1], 'false\r\n>')
+        self.assertEqual(replies[-1], 'true\r\n>')
 
         replies = self.send_recv(['start ASTestComp comp',
                                   'get comp.sub_group.f1d.numDimensions'], count=3)

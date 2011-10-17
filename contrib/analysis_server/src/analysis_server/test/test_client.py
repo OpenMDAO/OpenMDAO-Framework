@@ -184,7 +184,7 @@ version: 7.0, build: 42968"""
     def test_invoke(self):
         self.client.start('ASTestComp', 'comp')
         result = self.client.invoke('comp.float_method')
-        self.assertEqual(result, '0')
+        self.assertEqual(result, '5')
         result = self.client.invoke('comp.null_method')
         self.assertEqual(result, '')
         result = self.client.invoke('comp.str_method')
@@ -214,12 +214,14 @@ version: 7.0, build: 42968"""
         result = self.client.list_methods('comp')
         self.assertEqual(result, ['cause_exception',
                                   'float_method',
+                                  'int_method',
                                   'null_method',
                                   'str_method'])
 
         result = self.client.list_methods('comp', full=True)
         self.assertEqual(result, [('cause_exception', 'cause_exception'),
                                   ('float_method', 'float_method'),
+                                  ('int_method', 'int_method'),
                                   ('null_method', 'null_method'),
                                   ('str_method', 'str_method')])
 
@@ -241,6 +243,8 @@ version: 7.0, build: 42968"""
         expected = [
             ('exe_count', 'PHXLong', 'out'),
             ('in_file', 'PHXRawFile', 'in'),
+            ('obj_input', 'PHXScriptObject', 'in'),
+            ('obj_output', 'PHXScriptObject', 'out'),
             ('out_file', 'PHXRawFile', 'out'),
             ('sub_group', 'PHXGroup', 'in'),
             ('x', 'PHXDouble', 'in'),

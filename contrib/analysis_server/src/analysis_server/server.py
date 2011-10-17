@@ -83,7 +83,8 @@ if sys.platform != 'win32':
 from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
-from openmdao.main.api import Component, Container, SimulationRoot, set_as_top
+from openmdao.main.api import Component, Container, SimulationRoot, \
+                              VariableTree, set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -116,7 +117,7 @@ _DISABLE_HEARTBEAT = False  # If True, no heartbeat replies are sent.
 
 _LOGGER = logging.getLogger('aserver')
 
-_DBG_LEN = 1000  # Max length of debug log message.
+_DBG_LEN = 10000  # Max length of debug log message.
 
 
 class _DictContextMgr(object):
@@ -310,20 +311,27 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     # Get Python class and create temporary instance.
                     classname = config.get('Python', 'classname')
                     dirname = os.path.dirname(filename)
+                    modname = os.path.basename(filename)[:-3]  # drop '.py'
                     if not os.path.isabs(dirname):
                         if dirname:
                             dirname = os.path.join(cwd, dirname)
                         else:
                             dirname = cwd
+
                     if not dirname in sys.path:
                         logger.debug('    prepending %r to sys.path', dirname)
                         sys.path.insert(0, dirname)
-                    modname = os.path.basename(filename)[:-3]  # drop '.py'
+                        prepended = True
+                    else:
+                        prepended = False
                     try:
                         __import__(modname)
                     except ImportError as exc:
                         raise RuntimeError("Can't import %r: %r" \
                                            % (modname, exc))
+                    finally:
+                        if prepended:
+                            sys.path.pop(0)
 
                     module = sys.modules[modname]
                     try:
@@ -1150,13 +1158,13 @@ Available Commands:
             self._send_error('invalid syntax. Proper syntax:\n'
                              'invoke <object.method()> [full]')
             return
-# TODO: what does 'full' mean?
 
         name, dot, method = args[0].partition('.')
         method = method[:-2]
+        full = len(args) == 2 and args[1] == 'full'
         wrapper, worker = self._get_wrapper(name)
         if wrapper is not None:
-            worker.put((wrapper.invoke, (method, self._req_id), {}, None))
+            worker.put((wrapper.invoke, (method, full, self._req_id), {}, None))
 
     _COMMANDS['invoke'] = _invoke
 
@@ -1873,18 +1881,33 @@ class _WrapperConfig(object):
                 if int_path != '*':
                     raise ValueError("internal path must be '*'"
                                      " if the external path is '*'")
-                # Register all valid top-level non-vanilla paths.
+
+                # Collect all plain subcontainers.
                 containers = [instance]
-                subs = [obj for name, obj in sorted(instance.items(recurse=True),
-                                                    key=lambda item: item[0])]
-                containers.extend([sub for sub in subs
-                                       if isinstance(sub, Container) and not
-                                          isinstance(sub, Component)])
+                for name, obj in sorted(instance.items(recurse=True),
+                                        key=lambda item: item[0]):
+                    if isinstance(obj, VariableTree):
+                        continue
+                    elif isinstance(obj, Container) and \
+                         not isinstance(obj, Component):
+                        containers.append(obj)
+
+                # Register all valid top-level non-vanilla paths.
                 for container in containers:
-                    for name, val in sorted(container.items(iotype=iotype),
+                    # Filtering .items() by iotype loses containers :-(
+                    for name, val in sorted(container.items(),
                                             key=lambda item: item[0]):
                         if name in _IGNORE_ATTR or name.startswith('_'):
                             continue
+
+                        if isinstance(val, VariableTree):
+                            if getattr(val, 'iotype', None) != iotype:
+                                continue
+                        else:
+                            trait = container.get_dyn_trait(name)
+                            if getattr(trait, 'iotype', None) != iotype:
+                                continue
+
                         # Only register if it's a supported type.
                         typenames = container.get_trait_typenames(name)
                         wrapper_class = lookup(typenames)
@@ -1948,20 +1971,24 @@ class _WrapperConfig(object):
         return len(args) == 1  # Just 'self'.
 
 
-def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
+def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None,
+                 debug=False):
     """
-    Start server process at `address` and `port` (use zero for a
-    system-selected port). If `allowed_hosts` is None then
-    ``['127.0.0.1', socket.gethostname()]`` is used. Returns ``(proc, port)``.
+    Start server process at `address` and `port`.
+    Returns ``(proc, port)``.
 
     address: string
         Server address to be used.
 
     port: int
-        Server port to be used.
+        Server port to be used. Use zero for a system-selected port.
 
     allowed_hosts: list[string]
         Hosts to allow access.
+        If None then ``['127.0.0.1', socket.gethostname()]`` is used.
+
+    debug: bool
+        Set logging level to ``DEBUG``, default is ``INFO``.
     """
     if allowed_hosts is None:
         allowed_hosts = ['127.0.0.1', socket.gethostname()]
@@ -1982,6 +2009,8 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None):
     # Start process.
     args = ['python', server_path,
             '--address', address, '--port', '%d' % port, '--up', server_up]
+    if debug:
+        args.append('--debug')
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     # Wait for valid server_up file.
@@ -2028,7 +2057,7 @@ def main():  # pragma no cover
     are described by ``name.cfg`` files in the current directory or
     subdirectories.  Subdirectory names are used for category names.
 
-    Usage: python server.py [--hosts=filename][--address=address][--port=number][--up=filename]
+    Usage: python server.py [--hosts=filename][--address=address][--port=number][--debug][--no-heartbeat][--up=filename]
 
     --hosts: string
         Filename for allowed hosts specification. Default ``hosts.allow``.

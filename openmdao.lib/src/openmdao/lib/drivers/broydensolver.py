@@ -19,6 +19,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.util.decorators import add_delegate
+from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, implements
 
         
 @add_delegate(HasParameters, HasEqConstraints)
@@ -50,6 +51,8 @@ class BroydenSolver(Driver):
     also very effective. The remaining nonlinear solvers from SciPy are, in
     their own words, of "mediocre quality," so they were not implemented.
     """ 
+
+    implements(IHasParameters, IHasEqConstraints)
     
     # pylint: disable-msg=E1101
     algorithm = Enum('broyden2', ['broyden2', 'broyden3', 'excitingmixing'],
