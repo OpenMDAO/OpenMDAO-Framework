@@ -32,6 +32,9 @@ class DirContext(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         os.chdir(self.startdir)
 
+def expand_path(path):
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(path)))
+
 def cleanup(*fnames, **kwargs):
     """delete the given files or directories if they exists"""
     for fname in fnames:
@@ -180,6 +183,26 @@ def get_module_path(fpath):
             path, pname = os.path.split(path)
             pnames.append(pname)
     return '.'.join(pnames[::-1])
+
+def find_module(name, path=None):
+    """Return the pathname of the file corresponding to the given module
+    name, or None if it can't be found.  If path is set, search in path
+    for the file, otherwise search in sys.path
+    """
+    if path is None:
+        path = sys.path
+    nameparts = name.split('.')
+    
+    endings = [os.path.join(*nameparts)]
+    endings.append(os.path.join(endings[0], '__init__.py'))
+    endings[0] += '.py'
+    
+    for entry in path:
+        for ending in endings:
+            f = os.path.join(entry, ending)
+            if os.path.isfile(f):
+                return f
+    return None
    
 def get_ancestor_dir(path, num_levels=1):
     """Return the name of the directory that is 'num_levels' levels

@@ -3,6 +3,7 @@
 import os
 import shutil
 import unittest
+import sys
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, SimulationRoot
 from openmdao.lib.datatypes.api import Float, Str, Slot, List
