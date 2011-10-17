@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}
+    OpenMDAO: Add Project
+{% endblock %}
+
+{% block content %}
+    Select a project file:
+    <form method="POST" enctype="multipart/form-data" action="/projects/add/">
+        {% csrf_token %}
+        <input type="file" name="myfile" class='button' />
+        <br/>
+        <input type="submit" value="Add Project" class='button' />
+    </form>
+    
+    <p>
+{% endblock %}
+
+{% block footer %}
+   <a href="/projects/">Back to Projects</a> 
+{% endblock %}

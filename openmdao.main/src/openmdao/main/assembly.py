@@ -286,6 +286,17 @@ class Assembly (Component):
         """
         return self._depgraph.list_connections(show_passthrough)
 
+    @rbac(('owner', 'user'))
+    def get_configinfo(self, pathname='self'):
+        """Return a ConfigInfo object for this instance.  The
+        ConfigInfo object should also contain ConfigInfo objects
+        for children of this object.
+        """
+        cfg = super(Assembly, self).get_configinfo(pathname)
+        for src, dest in self._depgraph.list_connections():
+            cfg.cmds.append("%s.connect('%s', '%s')" % (pathname, src, dest))
+        return cfg
+    
     def _cvt_input_srcs(self, sources):
         link = self._depgraph.get_link('@xin', '@bin')
         if link is None:

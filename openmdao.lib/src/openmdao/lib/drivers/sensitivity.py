@@ -20,7 +20,7 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.util.decorators import add_delegate
-
+from openmdao.main.interfaces import IHasParameters, IHasObjectives, IHasConstraints, implements
 
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
 class SensitivityDriver(DriverUsesDerivatives):
@@ -31,6 +31,8 @@ class SensitivityDriver(DriverUsesDerivatives):
     SensitivityDriver includes a differentiator slot where the differentiation
     method can be plugged. Fake finite difference is supported.
     """
+
+    implements(IHasParameters, IHasObjectives, IHasConstraints)
     
     dF = Array(zeros((0, 0),'d'), iotype='out', desc='Sensitivity of the '
                'objectives withrespect to the parameters. Index 1 is the '
