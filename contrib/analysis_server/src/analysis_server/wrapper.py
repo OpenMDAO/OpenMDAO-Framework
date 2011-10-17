@@ -29,6 +29,7 @@ from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
                                        List, Str
 
 from analysis_server.monitor import FileMonitor
+from analysis_server.objxml import get_as_xml, set_from_xml
 
 class WrapperError(Exception):
     """ Denotes wrapper-specific errors. """
@@ -167,6 +168,8 @@ class ComponentWrapper(object):
                     container = obj
                     rpath = rel_path
                     name, dot, rel_path = rel_path.partition('.')
+                    if not dot:
+                        break
                     try:
                         obj = getattr(obj, name)
                     except Exception:
@@ -276,12 +279,15 @@ class ComponentWrapper(object):
         except Exception as exc:
             self._send_exc(exc, req_id)
 
-    def invoke(self, method, req_id):
+    def invoke(self, method, full, req_id):
         """
         Invokes a method on a component instance.
 
         method: string
             External method reference.
+
+        full: bool
+            If True, return result as XML.
 
         req_id: string
             'Raw' mode request identifier.
@@ -291,15 +297,28 @@ class ComponentWrapper(object):
                 attr = self._cfg.methods[method]
             except KeyError:
                 raise WrapperError('no such method <%s>.' % method)
+
             meth = getattr(self._comp, attr)
             result = meth()
-# FIXME: MC 8 doesn't understand return value (uses 'full' option)
             if result is None:
                 reply = ''
-            elif type(result) == float:
+            elif isinstance(result, float):
                 reply = _float2str(result)
+            elif isinstance(result, basestring):
+                reply = result.encode('string_escape')
             else:
                 reply = str(result)
+
+            # Setting 'download' True since we have no idea about side-effects.
+            if full:
+                reply = """\
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\
+<response>\
+<version>100.0</version>\
+<download>true</download>\
+<string>%s</string>\
+</response>""" % escape(reply)
+
             self._send_reply(reply, req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
@@ -528,7 +547,8 @@ class ComponentWrapper(object):
         """
         try:
             monitor = self._monitors.pop(monitor_id)
-        except KeyError:
+        # Invalid monitor_id intercepted by server.py
+        except KeyError:  # pragma no cover
             raise WrapperError('No registered monitor for %r' % monitor_id)
         else:
             monitor.stop()
@@ -616,6 +636,9 @@ class ComponentWrapper(object):
         req_id: string
             'Raw' mode request identifier.
         """
+        # Quotes around the value are semi-optional.
+        if valstr.startswith('"') and valstr.endswith('"'):
+            valstr = valstr[1:-1]
         try:
             self._set(path, valstr)
             self._send_reply('value set for <%s>' % path, req_id)
@@ -660,8 +683,9 @@ class ComponentWrapper(object):
                 try:
                     self._set(var.attrib['name'], valstr, gzipped)
                 except Exception as exc:
+                    self._logger.exception("Can't set %r", var.attrib['name'])
                     raise type(exc)("Can't set %r from %r: %s" 
-                                    % (var.attrib['name'], valstr, exc))
+                                    % (var.attrib['name'], valstr[:1000], exc))
             self._send_reply('values set', req_id)
         except Exception as exc:
             self._send_exc(exc, req_id)
@@ -814,20 +838,23 @@ class ArrayBase(BaseWrapper):
             value = self._container.get(self._name)
             if len(value):
                 if self._is_array and len(value.shape) > 1:
-                    return '%s' % value.flat[0]
+                    first = '%s' % value.flat[0]
                 else:
-                    return '%s' % value[0]
+                    first = '%s' % value[0]
+                if self.typ == str:
+                    first = first.encode('string_escape')
             else:
-                return ''
+                first = ''
+            return first
         elif attr == 'format':
             return 'null'
-        elif attr == 'hasUpperBound' and self._trait.dtype != str:
+        elif attr == 'hasUpperBound' and self.typ != str:
             return 'false' if self._trait.high is None else 'true'
-        elif attr == 'upperBound' and self._trait.dtype != str:
+        elif attr == 'upperBound' and self.typ != str:
             return '0' if self._trait.high is None else str(self._trait.high)
-        elif attr == 'hasLowerBound' and self._trait.dtype != str:
+        elif attr == 'hasLowerBound' and self.typ != str:
             return 'false' if self._trait.low is None else 'true'
-        elif attr == 'lowerBound' and self._trait.dtype != str:
+        elif attr == 'lowerBound' and self.typ != str:
             return '0' if self._trait.low is None else str(self._trait.low)
         elif attr == 'length':
             value = self._container.get(self._name)
@@ -836,7 +863,7 @@ class ArrayBase(BaseWrapper):
             else:
                 return '%d' % len(value)
         elif attr == 'lockResize':
-            return 'false'
+            return 'true' if self._is_array else 'false'
         elif attr == 'numDimensions':
             if self._is_array:
                 value = self._container.get(self._name)
@@ -863,7 +890,7 @@ class ArrayBase(BaseWrapper):
                % (self._ext_name, self._typstr, self._io,
                   quoteattr(self.get('description', self._ext_path)),
                   self.get('units', self._ext_path),
-                  self.get('value', self._ext_path))
+                  escape(self.get('value', self._ext_path)))
 
     def set(self, attr, path, valstr, gzipped):
         """
@@ -896,7 +923,11 @@ class ArrayBase(BaseWrapper):
                     value = numpy.array([self.typ(val.strip(' "'))
                                          for val in valstr.split(',')])
             else:
-                value = [self.typ(val.strip(' "')) for val in valstr.split(',')]
+                if valstr:
+                    value = [self.typ(val.strip(' "'))
+                             for val in valstr.split(',')]
+                else:
+                    value = []
             self._container.set(self._name, value)
         elif attr in ('componentType', 'description', 'dimensions',
                       'enumAliases', 'enumValues', 'first', 'format',
@@ -991,9 +1022,29 @@ class ListWrapper(ArrayBase):
     """
 
     def __init__(self, container, name, ext_path, logger):
-        value = container.get(name)
-# HACK!
-        typ = str
+        trait = container.get_dyn_trait(name)
+        inner_traits = trait.trait_type.inner_traits()
+        if inner_traits:
+            inner_type = inner_traits[0].trait_type
+            if isinstance(inner_type, Float):
+                typ = float
+            elif isinstance(inner_type, Int):
+                typ = int
+            elif isinstance(inner_type, Str):
+                typ = str
+            else:
+                raise TypeError('%s.%s: unsupported List element type (1) %r'
+                                % (container.get_pathname(), name, inner_type))
+        else:
+            value = container.get(name)
+            if value:
+                typ = type(value[0])
+                if typ not in (float, int, str):
+                    raise TypeError('%s.%s: unsupported List element type (2) %r'
+                                    % (container.get_pathname(), name, typ))
+            else:
+                raise TypeError('%s.%s: undefined List element type'
+                                % (container.get_pathname(), name))
         super(ListWrapper, self).__init__(container, name, ext_path, logger,
                                           typ, is_array=False)
 
@@ -1118,10 +1169,10 @@ class EnumWrapper(BaseWrapper):
             raise WrapperError('unexpected value type for %s.%s: %r'
                                % (container.get_pathname(), name, typ))
         self._py_type = typ
-        if typ == float:
+        if typ is float:
             self._phx_type = 'com.phoenix_int.aserver.types.PHXDouble'
             self._val_type = 'double'
-        elif typ == int:
+        elif typ is int:
             self._phx_type = 'com.phoenix_int.aserver.types.PHXLong'
             self._val_type = 'long'
         else:
@@ -1373,14 +1424,15 @@ class FileWrapper(BaseWrapper):
                         gz_file.writelines(inp)
                         gz_file.close()
                 except IOError as exc:
-                    self._logger.warning('get %s.value: %r', path, exc)
+                    self._logger.warning('get %s.value: %r',
+                                         self._ext_path, exc)
                     data = ''
                 else:
                     data = base64.b64encode(data.getvalue())
-            zipped=' gzipped="true"'
+            zipped = ' gzipped="true"'
         else:
             data = escape(self.get('value', self._ext_path))
-            zipped=''
+            zipped = ''
 
         return '<Variable name="%s" type="file" io="%s" description=%s' \
                ' isBinary="%s" fileName=""%s>%s</Variable>' \
@@ -1778,4 +1830,103 @@ class StrWrapper(BaseWrapper):
                 'valueStr (type=java.lang.String) (access=g)')
 
 _register(Str, StrWrapper)
+
+
+class ObjWrapper(BaseWrapper):
+    """
+    Wrapper for a general object providing ``PHXScriptObject`` interface.
+
+    container: proxy
+        Proxy to remote parent container.
+
+    name: string
+        Name of variable.
+
+    ext_path: string
+        External reference to variable.
+
+    logger: :class:`logging.Logger`
+        Used for progress, errors, etc.
+    """
+
+    def __init__(self, container, name, ext_path, logger):
+        super(ObjWrapper, self).__init__(container, name, ext_path, logger)
+        obj = container.get(name)
+        self._cls = type(obj)
+        self._iotype = obj.iotype
+        self._access = 'sg' if obj.iotype == 'in' else 'g'
+        self._io = 'input' if obj.iotype == 'in' else 'output'
+
+    @property
+    def phx_type(self):
+        """ AnalysisServer type string for value. """
+        return 'com.phoenix_int.aserver.types.PHXScriptObject'
+
+    def get(self, attr, path):
+        """
+        Return attribute corresponding to `attr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+        """
+        if attr == 'value':
+            obj = self._container.get(self._name)
+            xml = get_as_xml(obj)
+            return xml
+        elif attr == 'classURL':
+            path = sys.modules[self._cls.__module__].__file__
+            if path.endswith(('.pyc', '.pyo')):
+                path = path[:-1]
+            path = os.path.abspath(path)
+            return '%s#%s' % (path, self._cls.__name__)
+        else:
+            return super(ObjWrapper, self).get(attr, path)
+
+    def get_as_xml(self, gzipped):
+        """
+        Return info in XML form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
+        return '<Variable name="%s" type="object" io="%s"' \
+               ' description=%s>%s</Variable>' \
+               % (self._ext_name, self._io,
+                  quoteattr(self.get('description', self._ext_path)),
+                  escape(self.get('value', self._ext_path)))
+
+    def set(self, attr, path, valstr, gzipped):
+        """
+        Set attribute corresponding to `attr` to `valstr`.
+
+        attr: string
+            Name of property.
+
+        path: string
+            External reference to property.
+
+        valstr: string
+            Value to be set, in string form.
+
+        gzipped: bool
+            If True, file data is gzipped and then base64 encoded.
+        """
+        if attr == 'value':
+            obj = self._cls(iotype=self._iotype)
+            set_from_xml(obj, valstr.decode('string_escape'))
+            self._container.set(self._name, obj)
+        elif attr in ('classURL', 'description'):
+            raise WrapperError('cannot set <%s>.' % path)
+        else:
+            raise WrapperError('no such property <%s>.' % path)
+
+    def list_properties(self):
+        """ Return lines listing properties. """
+        return ('classURL (type=java.lang.String) (access=g)',
+                'description (type=java.lang.String) (access=g)')
+
+_register(Container, ObjWrapper)
 

@@ -296,11 +296,22 @@ class ContainerTestCase(unittest.TestCase):
         output = StringIO.StringIO()
         c1 = Container()
         c1.add('c2', Container())
+        c1.add('list_in', List(Float, iotype='in'))
+        c1.list_in = [1., 2., 3.]
+        self.assertEqual(c1.list_in, [1., 2., 3.])
         c1.save(output)
         
         inp = StringIO.StringIO(output.getvalue())
         newc1 = Container.load(inp)
+        self.assertEqual(newc1.list_in, [1., 2., 3.])
         
+        # The List fixup issue occurs on the second save/load.
+        output = StringIO.StringIO()
+        newc1.save(output)
+        inp = StringIO.StringIO(output.getvalue())
+        newerc1 = Container.load(inp)
+        self.assertEqual(newerc1.list_in, [1., 2., 3.])
+
     def test_save_load_pickle(self):
         output = StringIO.StringIO()
         c1 = Container()

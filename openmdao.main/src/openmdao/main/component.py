@@ -242,7 +242,7 @@ class Component (Container):
             except OSError, exc:
                 self.raise_exception("Can't create execution directory '%s': %s"
                                      % (path, exc.strerror), OSError)
-            
+
             # Populate with external files from config directory.
             config_dir = self.directory
             self.directory = new_dir
@@ -523,6 +523,42 @@ class Component (Container):
                         return False
         return True
         
+    #@rbac(('owner', 'user'))
+    #def get_configinfo(self, pathname='self'):
+        #"""Return a ConfigInfo object for this instance.  The
+        #ConfigInfo object should also contain ConfigInfo objects
+        #for children of this object.
+        #"""
+        #info = ConfigInfo(self, pathname)
+        #names = self.list_inputs()
+        #for name, trait in self.traits().items():
+            #if trait.is_trait_type(Instance):
+                #names.append(name)
+                
+        #nameset = set(names)
+        #for cont in self.list_containers():
+            #if cont not in nameset:
+                #names.append(cont)
+
+        #for name in names:
+            #val = getattr(self, name)
+            #if self.trait(name).default == val:
+                #continue
+            #vname = '.'.join([pathname, name])
+            #if isinstance(val, (float, int, long, complex, basestring, bool)):
+                #info.cmds.append('%s = %s' % (vname, val))
+            #elif hasattr(val, 'get_configinfo'):
+                #cfg = val.get_configinfo(vname)
+                #if issubclass(cfg.klass, Container):
+                    #addtxt = "%s.add('%s', %s)" % (pathname,name,cfg.get_ctor())
+                #else:
+                    #addtxt = '%s = %s' % (vname, cfg.get_ctor())
+                #info.cmds.append((cfg, addtxt))
+            #else:
+                #raise TypeError("get_configinfo: don't know how to handle type %s" % type(val))
+            
+        #return info
+    
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,

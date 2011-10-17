@@ -1,4 +1,5 @@
 import glob
+import logging
 import nose
 import os.path
 import pkg_resources
@@ -29,8 +30,12 @@ class Model(Assembly):
         self.add('sink', Sink())
         self.connect('source.x', 'as_comp.x')
         self.connect('source.y', 'as_comp.y')
+        self.connect('source.tof', 'as_comp.obj_input.tof')
+        self.connect('source.sof', 'as_comp.obj_input.subobj.sof')
         self.connect('source.output', 'as_comp.in_file')
         self.connect('as_comp.z', 'sink.z')
+        self.connect('as_comp.obj_output.tof', 'sink.tof')
+        self.connect('as_comp.obj_output.subobj.sof', 'sink.sof')
         self.connect('as_comp.out_file', 'sink.input')
         self.driver.workflow.add(['source', 'as_comp', 'sink'])
 
@@ -39,11 +44,15 @@ class Source(Component):
 
     x = Float(iotype='out')
     y = Float(iotype='out')
+    tof = Float(iotype='out')
+    sof = Float(iotype='out')
     output = File(path='output', iotype='out')
 
     def execute(self):
         self.x = 6
         self.y = 7
+        self.tof = 2.781828
+        self.sof = 3.14159
         with open(self.output.path, 'w') as out:
             out.write('Hello world!')
 
@@ -51,6 +60,8 @@ class Sink(Component):
     """ Sink data from test component. """
 
     z = Float(iotype='in')
+    tof = Float(iotype='in')
+    sof = Float(iotype='in')
     input = File(iotype='in')
     data = Str(iotype='out')
 
@@ -68,7 +79,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         os.chdir(TestCase.directory)
-        self.server, port = analysis_server.start_server(port=0)
+        self.server, port = analysis_server.start_server(port=0, debug=True)
         self.factory = analysis_server.ASFactory(port=port)
 
     def tearDown(self):
@@ -98,7 +109,19 @@ class TestCase(unittest.TestCase):
                 state[rpath] = client.get(rpath)
         return state
 
+    def compare_states(self, before, after):
+        """ Compare `before` to `after`. """
+        for key in sorted(before.keys()):
+            bval = before[key]
+            aval = after[key]
+            if aval != bval:
+                logging.error('before[%s] %r', key, bval)
+                logging.error('after[%s] %r', key, aval)
+                self.fail('after[%s] != before[%s]' % (key, key))
+
     def test_factory(self):
+        logging.debug('')
+        logging.debug('test_factory')
         self.assertEqual(self.factory.get_available_types(),
                          [('ASTestComp', '0.1'),
                           ('ASTestComp', '0.2'),
@@ -107,9 +130,13 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.factory.create('no-such-type'), None)
 
     def test_component(self):
+        logging.debug('')
+        logging.debug('test_component')
         comp = set_as_top(self.factory.create('ASTestComp'))
         comp.set('x', 6)
         comp.set('y', 7)
+        comp.set('obj_input.tof', 2.781828)
+        comp.set('obj_input.subobj.sof', 3.14159)
         path = 'output'
         with comp.dir_context:
             with open(path, 'w') as out:
@@ -119,40 +146,51 @@ class TestCase(unittest.TestCase):
             os.remove(path)
         comp.run()
         self.assertEqual(comp.get('z'), 42.)
+        self.assertEqual(comp.get('obj_output.tof'), 2.781828)
+        self.assertEqual(comp.get('obj_output.subobj.sof'), 3.14159)
         with comp.get('out_file').open() as inp:
             data = inp.read()
         self.assertEqual(data, 'Hello world!')
 
+        result_b = comp.float_method()
         before = self.get_state(comp, 'the_obj', comp._client)
         state_file = 'state.pickle'
         try:
             comp.save(state_file)
             restored = Component.load(state_file)
+            result_a = restored.float_method()
             after = self.get_state(restored, 'the_obj', restored._client)
             restored.pre_delete()
-            self.assertEqual(after, before)
+            self.assertEqual(result_a, result_b)
+            self.compare_states(before, after)
         finally:
             os.remove(state_file)
             os.remove('AS-the_obj.in_file.dat')
             os.remove('AS-the_obj.out_file.dat')
-        comp.pre_delete()
-
-        comp = set_as_top(self.factory.create('ASTestComp'))
-        comp.__del__()
+            comp.pre_delete()
 
     def test_model(self):
+        logging.debug('')
+        logging.debug('test_model')
         model = set_as_top(Model(self.factory))
         self.assertEqual(model.sink.z, 0)
+        self.assertEqual(model.sink.tof, 0)
+        self.assertEqual(model.sink.sof, 0)
         self.assertEqual(model.sink.data, '')
         model.run()
         with model.source.dir_context:
             os.remove(model.source.output.path)
             os.remove('AS-the_obj.out_file.dat')
+        os.remove('AS-the_obj.in_file.dat')
         self.assertEqual(model.sink.z, 42)
+        self.assertEqual(model.sink.tof, 2.781828)
+        self.assertEqual(model.sink.sof, 3.14159)
         self.assertEqual(model.sink.data, 'Hello world!')
         model.pre_delete()
 
     def test_bool(self):
+        logging.debug('')
+        logging.debug('test_bool')
         comp = self.factory.create('ASTestComp')
         self.assertTrue(comp.get('sub_group.b'))
         comp.set('sub_group.b', False)
@@ -164,6 +202,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_enum(self):
+        logging.debug('')
+        logging.debug('test_enum')
         comp = self.factory.create('ASTestComp')
 
         self.assertEqual(comp.get('sub_group.ie'), 9)
@@ -201,6 +241,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_float(self):
+        logging.debug('')
+        logging.debug('test_float')
         comp = self.factory.create('ASTestComp')
 
         self.assertEqual(comp.get('sub_group.f'), 0.5)
@@ -220,6 +262,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_floatND(self):
+        logging.debug('')
+        logging.debug('test_floatND')
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.f'), 0.5)
 
@@ -254,6 +298,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_int(self):
+        logging.debug('')
+        logging.debug('test_int')
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.i'), 7)
         comp.set('sub_group.i', 42)
@@ -265,6 +311,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_int1D(self):
+        logging.debug('')
+        logging.debug('test_int1D')
         comp = self.factory.create('ASTestComp')
         assert_array_equal(comp.get('sub_group.i1d'),
                            [1, 2, 3, 4, 5, 6, 7, 8, 9])
@@ -277,6 +325,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_str(self):
+        logging.debug('')
+        logging.debug('test_str')
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.s'), 'Hello World!  ( & < > )')
         comp.set('sub_group.s', 'xyzzy')
@@ -288,6 +338,8 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_str1D(self):
+        logging.debug('')
+        logging.debug('test_str1D')
         comp = self.factory.create('ASTestComp')
         self.assertEqual(comp.get('sub_group.s1d'),
                          ['Hello', 'from', 'TestComponent.SubGroup'])
@@ -300,6 +352,9 @@ class TestCase(unittest.TestCase):
         comp.pre_delete()
 
     def test_units(self):
+        logging.debug('')
+        logging.debug('test_units')
+
         self.assertFalse(analysis_server.have_translation('FroBoz'))
         self.assertTrue(analysis_server.have_translation('Btu/hr'))
 
