@@ -6,7 +6,7 @@ from enthought.traits.api import Dict
 
 from openmdao.main.api import Interface, ExprEvaluator, Assembly, Slot
 from openmdao.util.decorators import add_delegate
-from openmdao.main.interfaces import IArchitecture
+from openmdao.main.interfaces import IArchitecture, implements, IHasConstraints,IHasParameters,IHasCouplingVars,IHasObjectives
 
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
@@ -144,6 +144,7 @@ class HasCouplingVars(object):
         
 @add_delegate(HasConstraints,HasParameters,HasCouplingVars,HasObjectives)
 class ArchitectureAssembly(Assembly): 
+    implements(IHasConstraints,IHasParameters,IHasCouplingVars,IHasObjectives)
     
     architecture = Slot(IArchitecture,
                         desc="Slot for automatic architecture configurations")
@@ -280,6 +281,7 @@ class ArchitectureAssembly(Assembly):
                     result[comp].append(const)
                 except: 
                     result[comp] = [const,]
+
         return result 
 
     
@@ -333,4 +335,3 @@ class OptProblem(ArchitectureAssembly):
                 pass
             
         return error    
-                
