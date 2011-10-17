@@ -67,6 +67,16 @@ class DependencyGraph(object):
         """Return True if this graph contains the given component."""
         return compname in self._graph
     
+    def __eq__(self, other):
+        if isinstance(other, DependencyGraph):
+            if self._graph.nodes() == other._graph.nodes():
+                if self._graph.edges() == other._graph.edges():
+                    return True
+        return False
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+            
     def copy_graph(self):
         graph = self._graph.copy()
         graph.remove_nodes_from(_fakes)

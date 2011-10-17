@@ -35,6 +35,7 @@ from openmdao.main.hasobjective import HasObjective
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.util.decorators import add_delegate
 from openmdao.lib.datatypes.api import Float, Int
+from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 
 import newsumt.newsumtinterruptible as newsumtinterruptible
 
@@ -269,6 +270,8 @@ class NEWSUMTdriver(DriverUsesDerivatives):
             
     """
 
+    implements(IHasParameters, IHasIneqConstraints, IHasObjective)
+    
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before \
                     termination.')
     

@@ -1577,7 +1577,7 @@ def _single_install(cmds, req, bin_dir, dodeps=False):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4']
+    reqs = ['networkx==1.3', 'jinja2==2.4', 'traits==3.3.0', 'fabric==0.9.3', 'pyparsing==1.5.2', 'pyevolve==0.6', 'nose==0.11.3', 'zope.interface==3.6.1', 'pygments==1.3.1', 'jsonpickle==0.4.0', 'decorator==3.2.0', 'docutils==0.6', 'newsumt==1.1.0', 'ordereddict==1.1', 'boto==2.0rc1', 'pyyaml==3.09', 'web.py==0.36', 'paramiko==1.7.7.1', 'sphinx==1.0.6', 'virtualenv==1.6.4', 'django==1.3', 'conmin==1.0.1', 'pycrypto==2.3']
     url = 'http://openmdao.org/dists'
     # for testing we allow one to specify a url where the openmdao
     # package dists are located that may be different from the main
@@ -1632,6 +1632,7 @@ def after_install(options, home_dir):
  ('openmdao.main', '', 'sdist'),
  ('openmdao.lib', '', 'sdist'),
  ('openmdao.test', '', 'sdist'),
+ ('openmdao.gui', '', 'sdist'),
  ('openmdao.examples.simple', 'examples', 'sdist'),
  ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
  ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
