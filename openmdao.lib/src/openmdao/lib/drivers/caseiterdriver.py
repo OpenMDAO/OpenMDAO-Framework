@@ -121,7 +121,7 @@ class CaseIterDriverBase(Driver):
             if self._abort_exc is None:
                 self.raise_exception('Run stopped', RunStopped)
             else:
-                self.raise_exception('Run aborted: %s' % self._abort_exc,
+                self.raise_exception('Run aborted: %s' % self._abort_exc[1],
                                      RuntimeError)
 
     def step(self):
@@ -390,7 +390,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.debug('    exception while loading: %r', exc)
                 if self.error_policy == 'ABORT':
                     if self._abort_exc is None:
-                        self._abort_exc = exc[0]
+                        self._abort_exc = exc
                     self._stop = True
                     self._server_states[server] = _EMPTY
                     in_use = False
@@ -421,7 +421,7 @@ class CaseIterDriverBase(Driver):
                 case.msg = str(exc[1])
                 if self.error_policy == 'ABORT':
                     if self._abort_exc is None:
-                        self._abort_exc = exc[0]
+                        self._abort_exc = exc
                     self._stop = True
 
             # Record the data.

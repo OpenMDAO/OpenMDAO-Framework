@@ -206,9 +206,15 @@ class TestCase(unittest.TestCase):
             self.assertEqual(len(results), len(self.cases))
             self.verify_results(forced_errors)
         else:
-            assert_raises(self, 'self.model.run()', globals(), locals(),
-                          RuntimeError,
-                          "driver: Run aborted: driven: Forced error")
+            try:
+                self.model.run()
+            except Exception as err:
+                startmsg = 'driver: Run aborted: Traceback '
+                endmsg = 'driven: Forced error\n'
+                self.assertEqual(str(err)[:len(startmsg)], startmsg)
+                self.assertEqual(str(err)[-len(endmsg):], endmsg)
+            else:
+                self.fail("Exception expected")
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
@@ -216,8 +222,10 @@ class TestCase(unittest.TestCase):
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                self.assertEqual(case.msg[:10], 'Traceback ')
-                self.assertEqual(case.msg[-21:], 'driven: Forced error\n')
+                startmsg = 'Traceback '
+                endmsg = 'driven: Forced error\n'
+                self.assertEqual(case.msg[:len(startmsg)], startmsg)
+                self.assertEqual(case.msg[-len(endmsg):], endmsg)
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
