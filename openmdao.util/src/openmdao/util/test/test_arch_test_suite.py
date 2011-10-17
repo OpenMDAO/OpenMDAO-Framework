@@ -46,9 +46,9 @@ class TestArchTestSuite(unittest.TestCase):
         else: 
             self.fail("ValueError Expected") 
             
-        probs = build_arch_list(include=['MDF']) 
+        archs = build_arch_list(include=['MDF']) 
         self.assertTrue(MDF in [a.__class__ for a in archs])
-        self.assertEqual(archs[0].__class__,MDF)
+        self.assertEqual(archs[0].__class__, MDF)
         
-        probs = build_arch_list(exclude=['MDF']) 
-        self.assertFalse(MDF in [a.__class__ for a in MDF])    
+        archs = build_arch_list(exclude=['MDF']) 
+        self.assertFalse(MDF in [a.__class__ for a in archs])    

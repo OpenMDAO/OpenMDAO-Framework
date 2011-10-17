@@ -3,8 +3,9 @@ import os
 import openmdao.lib.optproblems
 import openmdao.lib.architectures
 
+import openmdao.main
 from openmdao.main.arch import Architecture
-
+from openmdao.main.problem_formulation import OptProblem
 from openmdao.util.dep import PythonSourceTreeAnalyser
 
 
@@ -26,7 +27,8 @@ def build_arch_list(include=[],exclude=[]):
     if include and exclude: 
         raise ValueError("Can't set both include and exlude")
     
-    startdirs = [os.path.dirname(openmdao.lib.architectures.__file__),]
+    startdirs = [os.path.dirname(openmdao.lib.architectures.__file__),
+                 os.path.dirname(openmdao.main.__file__)]
     print startdirs
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     architectures = psta.find_inheritors("openmdao.main.arch.Architecture")
@@ -35,8 +37,8 @@ def build_arch_list(include=[],exclude=[]):
     for arch_name in architectures: 
             arch_class = arch_name.split(".")[-1]
             arch_package = ".".join(arch_name.split(".")[:-1])
-            if  (not include and not exclude) or (include and prob_class in include) or \
-                (exclude and prob_class not in exclude): 
+            if  (not include and not exclude) or (include and arch_class in include) or \
+                (exclude and arch_class not in exclude): 
                 
                 arch_package = __import__(arch_package,globals(),locals(),[arch_class,],-1)
                 archs.append(getattr(arch_package,arch_class)()) #create instance of the Architecture
@@ -63,7 +65,8 @@ def build_optproblem_list(include=[],exclude=[]):
     if include and exclude: 
         raise ValueError("Can't set both include and exlude")
     
-    startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),]
+    startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),
+                 os.path.dirname(openmdao.main.__file__)]
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     opt_problems = psta.find_inheritors("openmdao.main.problem_formulation.OptProblem")
     
