@@ -1549,8 +1549,8 @@ def extend_parser(parser):
 
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
-    if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
+    if major_version < (2,6) or major_version > (3,0):
+        print 'ERROR: python major version must be 2.6 or 2.7. yours is %s' % str(major_version)
         sys.exit(-1)
 
     for arg in args:
