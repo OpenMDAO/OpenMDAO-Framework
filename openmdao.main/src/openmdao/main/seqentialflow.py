@@ -3,7 +3,6 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.mp_support import has_interface
-from openmdao.main.configinfo import ConfigInfo
 
 __all__ = ['SequentialWorkflow']
 
