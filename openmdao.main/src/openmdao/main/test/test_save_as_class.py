@@ -31,10 +31,12 @@ class Multiplier(Component):
 class SaveAsClassTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.tdir = tempfile.mkdtemp()
+        pass
+        #self.tdir = tempfile.mkdtemp()
         
     def tearDown(self):
-        shutil.rmtree(self.tdir)
+        pass
+        #shutil.rmtree(self.tdir)
     
     #def test_save_as_class(self):
         

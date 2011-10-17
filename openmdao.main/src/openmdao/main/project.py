@@ -87,15 +87,15 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     #return None
     
     
-def model_to_class(model, classname, stream):
-    """Takes a model and creates a new class inherited from the model's
-    class that is initialized with the current model's non-default
-    configuration.  The class definition is written to the given stream.
-    Note that this does not save the exact state of the model, but only
-    key inputs and attributes recommended by the model and its children.
-    """
-    cfg = model.get_configinfo()
-    cfg.save_as_class(stream, classname)
+#def model_to_class(model, classname, stream):
+    #"""Takes a model and creates a new class inherited from the model's
+    #class that is initialized with the current model's non-default
+    #configuration.  The class definition is written to the given stream.
+    #Note that this does not save the exact state of the model, but only
+    #key inputs and attributes recommended by the model and its children.
+    #"""
+    #cfg = model.get_configinfo()
+    #cfg.save_as_class(stream, classname)
 
 
 def _is_valid_project_dir(dpath):

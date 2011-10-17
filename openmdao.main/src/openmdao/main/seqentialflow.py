@@ -25,15 +25,15 @@ class SequentialWorkflow(Workflow):
     def __contains__(self, comp):
         return comp in self._names
     
-    def get_configinfo(self, pathname):
-        """Return a ConfigInfo object for this instance.  The
-        ConfigInfo object should also contain ConfigInfo objects
-        for children of this object.
-        """
-        info = ConfigInfo(self, pathname)
-        for name in self._names:
-            info.cmds.append("%s.add('%s')" % (pathname, name))
-        return info
+    #def get_configinfo(self, pathname):
+        #"""Return a ConfigInfo object for this instance.  The
+        #ConfigInfo object should also contain ConfigInfo objects
+        #for children of this object.
+        #"""
+        #info = ConfigInfo(self, pathname)
+        #for name in self._names:
+            #info.cmds.append("%s.add('%s')" % (pathname, name))
+        #return info
         
     def __eq__(self, other):
         return type(self) is type(other) and self._names == other._names
