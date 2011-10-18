@@ -23,6 +23,7 @@ class BLISS(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.requires_global_des_vars = True
         
     def configure(self): 
         
@@ -58,7 +59,6 @@ class BLISS(Architecture):
             mda.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
                 
         #Global Sensitivity Analysis
-        #TODO: Need to solve GSE here instead of FD on MDA
         ssa = self.parent.add("ssa",SensitivityDriver())
         ssa.workflow.add("mda")
         ssa.differentiator = FiniteDifference()
