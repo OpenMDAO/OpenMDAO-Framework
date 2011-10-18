@@ -1,5 +1,6 @@
 
 import unittest
+import pickle
 
 from enthought.traits.api import Int
 
@@ -100,6 +101,10 @@ class SlotTestCase(unittest.TestCase):
         asm = Assembly()
         sc3.somesocket = asm
         self.assertEqual(sc3.somesocket, asm)
+        
+    def test_pickle(self):
+        s = Slot()
+        out = pickle.dumps(s)
         
     def test_socket_override(self):
         sc2 = SlotComp2()
