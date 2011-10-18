@@ -8,7 +8,8 @@ From Sellar's analytic problem.
     January 1996.
 """
 
-from openmdao.main.api import Component, ComponentWithDerivatives, OptProblem
+from openmdao.main.api import Component, ComponentWithDerivatives
+from openmdao.main.problem_formulation import OptProblem
 from openmdao.lib.datatypes.api import Float
 
 class Discipline1(Component):

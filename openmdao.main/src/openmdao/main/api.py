@@ -31,8 +31,6 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.case import Case
 
 from openmdao.main.arch import Architecture
-from openmdao.main.problem_formulation import ArchitectureAssembly, OptProblem
-
 
 from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
                                    SAVE_PICKLE, SAVE_CPICKLE
