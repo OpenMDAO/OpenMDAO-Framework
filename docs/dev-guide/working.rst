@@ -427,7 +427,7 @@ merge:
 .. index:: branch; pushing to GitHub
 
 Contributing Your Changes
--------------------------
+--------------------------
 
 At some point you'll finish adding your new feature or implementing your bug
 fix, and you'll want to get your changes into the official version of OpenMDAO.
@@ -460,9 +460,10 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
 
 1. Go to the page for your personal OpenMDAO fork on GitHub. (You must be logged in to GitHub.)
 
-   To get there from your user page, select the branch that you pushed up to GitHub. For example, in the figure below
-   under **Public Activity** you see a ``play_branch`` that pziegfeld created from her personal ``OpenMDAO-Framework`` fork
-   (circled in red). 
+   To get there from your user page, select the branch that you pushed up to GitHub. For example, in the
+   figure below under **Public Activity** you see a ``play_branch`` that pziegfeld created from her
+   personal ``OpenMDAO-Framework`` fork (circled in red) and pushed up to GitHub. If pziegfeld clicked
+   on ``play_branch``, it would take her to that branch on her personal fork.
 
 .. figure:: user_page1.png
    :align: center
@@ -471,33 +472,31 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
    
 |    
    
-   In this example, selecting ``play_branch`` will take you to a personal OpenMDAO fork, as shown in
-   the next figure, and you will be on ``play_branch``. However, alternatively, you could select
-   ``OpenMDAO-Framework``, the fork under **Repositories** (circled in green). If you do that, when
-   you go to the personal OpenMDAO fork page you will be on the ``master`` branch and will have to
-   switch branches. 
+   Alternatively, pziegfeld could select ``OpenMDAO-Framework``, the fork listed under **Repositories**
+   (circled in green above). If she did that, when she goes to her personal OpenMDAO fork page she would
+   be on the `master` branch.  In the next figure, on the right side of the page, it shows that the 
+   `Current branch` (circled in green) is the master. 
 
- |   
-   
+      
 .. figure:: personal_fork1.png
    :align: center
    
    Example Page for a Personal OpenMDAO Fork 
   
    
-2. If you wish to confirm that you are on the correct branch on your personal OpenMDAO fork, you can go to
-   the *Switch Branches* dropdown in the upper left part of the page (circled in green). You'll see a list of
-   branches in alphabetical order; a check mark appears after the branch you're on. If you elected to click
-   on the OpenMDAO Framework fork instead of a specific branch, the check mark will appear after ``master``,
-   and you'll have to select the branch you want *pulled*. If you clicked a specific branch (e.g.,
-   ``play_branch``) to get to your personal OpenMDAO page, the check mark should be after that branch's name.
+2. If you are on the master branch as in the above figure, you need to switch branches before issuing a
+   pull request. Click on down arrow next to the current branch name. A drop-down list of branches will
+   appear in alphabetical order. Scroll down until you find the desired branch. If you mouse over the
+   branch name, it will be highlighted and a check mark will appear in front of it. Click on the branch
+   name to go to that branch. 
 
 
-3. Once you're on the correct branch, push the *Pull Request* button located in the upper right of the page. 
+3. Once you're on the correct branch, click on the *Pull Request* button located in the upper right of
+   the page (circled in red above). 
 
-   (It's circled in red in the above figure.)
 
-4. You will be prompted to fill in a description of your changes. The message near the top of the page should read something like:
+4. You will be prompted to fill in a description of your changes. The message near the top of the page should read
+   something like:
 
    :: 
    

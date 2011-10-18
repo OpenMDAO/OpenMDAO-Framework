@@ -23,9 +23,9 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
    If you are on a Windows machine, even though you have Python installed, the Path environment
    variable will not be configured to point to the Python installation directory. You will have to put
-   ``Python26`` in the path. For help doing this, please see the following `video
+   the correct Python version in the path. For help doing this, please see the following `video
    <http://showmedo.com/videotutorials/video?name=960000&fromSeriesID=96>`_. Please note that this
-   video is for Python 2.5, and you want to use **Python 2.6**.  
+   video is for Python 2.5, and you want to use **Python 2.6.x or 2.7.x**.  
 
 2. Run the script. 
 
