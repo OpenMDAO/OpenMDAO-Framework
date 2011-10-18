@@ -188,11 +188,6 @@ class SellarProblem(OptProblem):
         }
         
         #END OF MDAO Problem Definition
-        
-        #self.dis1.z1 = self.dis2.z1 = 5.0
-        #self.dis1.z2 = self.dis2.z2 = 2.0
-        #self.dis1.x1 = 1.0
-        #self.dis1.y2 = 0.0
-        #self.dis2.y1 = 3.16        
+              
 
         

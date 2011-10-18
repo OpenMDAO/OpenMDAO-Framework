@@ -52,3 +52,6 @@ class TestArchTestSuite(unittest.TestCase):
         
         archs = build_arch_list(exclude=['MDF']) 
         self.assertFalse(MDF in [a.__class__ for a in archs])    
+        
+   
+        
