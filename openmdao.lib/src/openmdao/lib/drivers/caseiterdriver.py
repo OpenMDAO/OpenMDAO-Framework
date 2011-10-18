@@ -8,7 +8,7 @@ import traceback
 from openmdao.lib.datatypes.api import Bool, Enum
 
 from openmdao.main.api import Driver
-from openmdao.main.exceptions import RunStopped
+from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -27,7 +27,6 @@ _EXECUTING = 'executing'
 class _ServerError(Exception):
     """ Raised when a server thread has problems. """
     pass
-
 
 class CaseIterDriverBase(Driver):
     """
@@ -121,7 +120,7 @@ class CaseIterDriverBase(Driver):
             if self._abort_exc is None:
                 self.raise_exception('Run stopped', RunStopped)
             else:
-                self.raise_exception('Run aborted: %s' % self._abort_exc[1],
+                self.raise_exception('Run aborted: %s' % traceback_str(self._abort_exc),
                                      RuntimeError)
 
     def step(self):
@@ -418,11 +417,12 @@ class CaseIterDriverBase(Driver):
                     case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
                 self._logger.debug('    exception while executing: %r', exc)
-                case.msg = str(exc[1])
-                if self.error_policy == 'ABORT':
-                    if self._abort_exc is None:
-                        self._abort_exc = exc
-                    self._stop = True
+                case.msg = str(exc)
+
+            if case.msg is not None and self.error_policy == 'ABORT':
+                if self._abort_exc is None:
+                    self._abort_exc = exc
+                self._stop = True
 
             # Record the data.
             self._record_case(case)
@@ -432,11 +432,11 @@ class CaseIterDriverBase(Driver):
 
         # Just being defensive, should never happen.
         else:  #pragma no cover
-            self._logger.error('unexpected state %r for server %r',
-                               state, server)
+            msg = 'unexpected state %r for server %r' % (state, server)
+            self._logger.error(msg)
             if self.error_policy == 'ABORT':
                 if self._abort_exc is None:
-                    self._abort_exc = exc
+                    self._abort_exc = RuntimeError(msg)
                 self._stop = True
             in_use = False
 
@@ -613,7 +613,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.error('server %r filexfer of %r failed: %r',
                                    server, self._egg_file, exc)
                 self._top_levels[server] = None
-                self._exceptions[server] = (exc, traceback.format_exc())
+                self._exceptions[server] = TracedError(exc, traceback.format_exc())
                 return
             else:
                 self._server_info[server]['egg_file'] = self._egg_file
@@ -624,7 +624,7 @@ class CaseIterDriverBase(Driver):
             self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             self._top_levels[server] = None
-            self._exceptions[server] = (exc, traceback.format_exc())
+            self._exceptions[server] = TracedError(exc, traceback.format_exc())
         else:
             self._top_levels[server] = tlo
 
@@ -649,7 +649,7 @@ class CaseIterDriverBase(Driver):
             try:
                 self.workflow.run()
             except Exception as exc:
-                self._exceptions[server] = (exc, traceback.format_exc())
+                self._exceptions[server] = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
@@ -659,7 +659,7 @@ class CaseIterDriverBase(Driver):
         try:
             self._top_levels[server].run()
         except Exception as exc:
-            self._exceptions[server] = (exc, traceback.format_exc())
+            self._exceptions[server] = TracedError(exc, traceback.format_exc())
             self._logger.error('Caught exception from server %r, PID %d on %s: %r',
                                self._server_info[server]['name'],
                                self._server_info[server]['pid'],
