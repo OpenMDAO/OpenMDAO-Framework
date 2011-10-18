@@ -27,9 +27,14 @@ def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
     tries = 1
     while True:
         time.sleep(sleeptime)
-        inst.update()
-        if debug:
-            stream.write("%s state = %s\n" % (imgname, inst.state))
+        try:
+            inst.update()
+        except Exception as err:
+            if debug:
+                stream.write("ERROR while attempting to get instance state: %s" % str(err))
+        else:
+            if debug:
+                stream.write("%s state = %s\n" % (imgname, inst.state))
         if inst.state == state or tries >= maxtries:
             break
         tries += 1
