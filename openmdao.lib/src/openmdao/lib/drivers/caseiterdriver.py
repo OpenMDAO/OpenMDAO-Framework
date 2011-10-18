@@ -1,3 +1,8 @@
+"""
+.. _`caseiterdriver.py`:
+
+"""
+
 import os.path
 import Queue
 import sys
