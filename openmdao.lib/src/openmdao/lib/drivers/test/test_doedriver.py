@@ -18,11 +18,9 @@ from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.datatypes.api import Float, Bool, Array
 from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.main.eggchecker import check_save_load
-from openmdao.util.testutil import find_python
 
 
 # Users who have ssh configured correctly for testing.
@@ -159,6 +157,7 @@ class TestCase(unittest.TestCase):
 
         results = ListCaseRecorder()
         self.model.driver.recorder = results
+        self.model.driver.error_policy = 'RETRY'
         self.model.driver.case_outputs.append('driven.sum_z')
         
         self.model.run()
@@ -190,6 +189,39 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.recorder = None
         self.model.run()
+        
+    def test_output_error(self):
+        class Dummy(Component): 
+            x = Float(0,iotype="in")
+            y = Float(0,iotype="out")
+            z = Float(0,iotype="out")
+            
+            def execute(self): 
+                self.y = 10+self.x
+                
+        class Analysis(Assembly): 
+            
+            def __init__(self): 
+                super(Analysis,self).__init__(self)
+                
+                self.add('d',Dummy())
+                
+                self.add('driver',DOEdriver())
+                self.driver.DOEgenerator = FullFactorial(2) 
+                self.driver.recorder = DumpCaseRecorder()
+                self.driver.add_parameter('d.x',low=0,high=10)     
+                self.driver.case_outputs = ['d.y','d.bad','d.z']
+                
+        a = Analysis()
+        
+        try:
+            a.run()
+        except Exception as err:
+            self.assertTrue(str(err).startswith('driver: Run aborted: Traceback '))
+            self.assertTrue(str(err).endswith("d: object has no attribute 'bad'"))
+        else:
+            self.fail("Exception expected")
+
 
     def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
