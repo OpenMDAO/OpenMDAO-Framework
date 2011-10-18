@@ -4,7 +4,7 @@ from openmdao.main.problem_formulation import ArchitectureAssembly
 
 from openmdao.lib.architectures.api import EGO
 
-from openmdao.examples.expected_improvement.branin_component import BraninComponent        
+from openmdao.lib.optproblems.branin import BraninComponent        
 
         
 class Analysis(ArchitectureAssembly): 
@@ -16,8 +16,8 @@ class Analysis(ArchitectureAssembly):
         #Problem Formulation 
         
         #Local Des Vars
-        self.add_parameter('branin.x')        
-        self.add_parameter('branin.y')
+        self.add_parameter('branin.x',low=-5.,high=10.)        
+        self.add_parameter('branin.y',low=0.,high=15.)
                 
         #No Global Des Vars or Coupling Vars
         

@@ -44,7 +44,7 @@ outputs as whatever component is put into the model slot.
     from openmdao.main.api import Assembly
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-    from openmdao.examples.expected_improvement.branin_component import BraninComponent
+    from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly):
         def __init__(self): 
@@ -78,7 +78,7 @@ in the list will be mirrored by MetaModel.
     from openmdao.main.api import Assembly
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-    from openmdao.examples.expected_improvement.branin_component import BraninComponent
+    from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly):
         def __init__(self):
@@ -101,7 +101,7 @@ or
     from openmdao.main.api import Assembly
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-    from openmdao.examples.expected_improvement.branin_component import BraninComponent
+    from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly):
 
@@ -149,7 +149,7 @@ it will trigger its behavior regardless of the value you set it to.
     from openmdao.main.api import Assembly
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-    from openmdao.examples.expected_improvement.branin_component import BraninComponent
+    from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly):
         def __init__(self): 
@@ -182,7 +182,7 @@ more detailed example can be found in the ``single_objective_ei`` example under 
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-    from openmdao.examples.expected_improvement.branin_component import BraninComponent
+    from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly): 
         def __init__(self,doc=None): 
