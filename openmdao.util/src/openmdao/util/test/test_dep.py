@@ -42,6 +42,7 @@ class DepTestCase(unittest.TestCase):
             'CaseIterDriverBase',
             'PassthroughTrait',
             'PassthroughProperty',
+            'OptProblem',
             ])
         cset = cset - excludes
         
@@ -59,10 +60,6 @@ class DepTestCase(unittest.TestCase):
         noentrypts = cset-tset
         if noentrypts:
             self.fail("the following Components are not registered using entry points: %s" % noentrypts)
-        
-        #noclasses = tset-cset
-        #if noclasses:
-        #    self.fail("the following entry points have no classes associated with them: %s" % noclasses)
     
 if __name__ == '__main__':
     unittest.main()

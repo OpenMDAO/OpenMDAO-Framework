@@ -45,6 +45,12 @@ class NormalDistribution(UncertainDistribution):
     def expected(self): 
         return self.mu
     
+    def __add__(self,other): 
+        return NormalDistribution(mu = self.mu + other, sigma = self.sigma)
+    
+    def __sub__(self,other): 
+        return NormalDistribution(mu = self.mu - other, sigma = self.sigma)
+    
     def __str__(self): 
         return "NormalDistribution(mu=%s,sigma=%s)"%(self.mu,self.sigma)
     

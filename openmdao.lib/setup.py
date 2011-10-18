@@ -88,6 +88,10 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.surrogatemodels.logistic_regression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.nn_surrogate = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
       
+      [openmdao.optproblems]
+      openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
+      openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
+      
       """,
       )
 

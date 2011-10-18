@@ -35,6 +35,31 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.add('driver', MyDriver())
         self.top.add('comp', ExecComp(exprs=['c=x+y','d=x-y']))
         self.top.driver.workflow.add('comp')
+    
+    def test_add_parameter_param_target(self): 
+        p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
+        p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)
+        
+        self.top.driver.add_parameter(p)
+        self.assertEqual({'comp.x':p},self.top.driver.get_parameters())
+        
+        self.top.driver.remove_parameter('comp.x')
+        
+        self.top.driver.add_parameter(p,low=10.0)
+        self.assertEqual({'comp.x':p},self.top.driver.get_parameters())
+        self.assertEqual(10.0,self.top.driver.get_parameters()['comp.x'].low)
+        self.top.driver.remove_parameter('comp.x')
+        
+        pg = ParameterGroup([p,p2])
+        self.top.driver.add_parameter(pg)
+        self.assertEqual({'comp.x':pg},dict(self.top.driver.get_parameters()))
+        
+        self.top.driver.remove_parameter('comp.x')
+        
+        pg = ParameterGroup([p,p2])
+        self.top.driver.add_parameter(pg,low=10.0)
+        self.assertEqual(10.0,self.top.driver.get_parameters()['comp.x'].low)
+        
         
     def test_single_bogus(self):
         
