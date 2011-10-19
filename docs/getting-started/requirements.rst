@@ -13,7 +13,7 @@ additional :ref:`system requirements <developer-requirements>` on certain platfo
 
 OpenMDAO requires that the following software be installed at the system level on all platforms:
 
-- Python 2.6 
+- Python (2.6.x or 2.7.x) 
 
 - NumPy (version 1.3 or higher) 
 
@@ -49,7 +49,7 @@ use it, you must have compilers (C and Fortran) on your system.
 
 **Windows**: 
 
-- `Python 2.6 <http://www.python.org/download/releases//>`_
+- `Python 2.6.x or 2.7.x <http://www.python.org/download/releases//>`_
 
 - `numpy <http://sourceforge.net/projects/numpy/files/>`_ 
 
@@ -78,7 +78,7 @@ use it, you must have compilers (C and Fortran) on your system.
               
 - On **Snow Leopard:**
 
- - Python 2.6 -- Install a new version from ``python.org`` because the built-in version has a distutils bug that
+ - Python -- Install a new version (2.6.x or 2.7.x) from ``python.org`` because the built-in version has a distutils bug that
    will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
    appeared in, but version `Python 2.6.5 <http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg>`_ definitely has the
    fix.
@@ -90,7 +90,7 @@ use it, you must have compilers (C and Fortran) on your system.
 
 - On **Leopard:**
 
- - `Python 2.6`__ 
+ - `Python (2.6.x or 2.7.x)`__ 
  - `numpy <http://sourceforge.net/projects/numpy/files/>`_
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
  - `gfortran`__ 

@@ -1,4 +1,6 @@
-.. index:: iteration-hierarchy
+.. index:: iteration hierarchy
+
+.. _`iteration-hierarchy`:
 
 Summary: Using the Iteration Hierarchy
 =======================================

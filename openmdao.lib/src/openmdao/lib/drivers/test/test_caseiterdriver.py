@@ -127,7 +127,21 @@ class TestCase(unittest.TestCase):
         self.generate_cases(force_errors=True)
         self.run_cases(sequential=True, forced_errors=True, retry=False)
         self.run_cases(sequential=True, forced_errors=True, retry=True)
-
+        
+    def test_output_errors(self):
+        inputs = [('driven.x', numpy_random.normal(size=4)),
+                  ('driven.y', numpy_random.normal(size=10)),
+                  ('driven.raise_error', False),
+                  ('driven.stop_exec', False)]
+        outputs = ['driven.rosen_suzuki','driven.foobar']
+        self.cases = [Case(inputs, outputs, label='1')]
+        self.model.driver.sequential = True
+        self.model.driver.iterator = ListCaseIterator(self.cases)
+        results = ListCaseRecorder()
+        self.model.driver.recorder = results
+        self.model.driver.error_policy = 'RETRY'
+        self.model.run()
+        
     def test_run_stop_step_resume(self):
         logging.debug('')
         logging.debug('test_run_stop_step_resume')
@@ -206,9 +220,15 @@ class TestCase(unittest.TestCase):
             self.assertEqual(len(results), len(self.cases))
             self.verify_results(forced_errors)
         else:
-            assert_raises(self, 'self.model.run()', globals(), locals(),
-                          RuntimeError,
-                          "driver: Run aborted: driven: Forced error")
+            try:
+                self.model.run()
+            except Exception as err:
+                startmsg = 'driver: Run aborted: Traceback '
+                endmsg = 'driven: Forced error'
+                self.assertEqual(str(err)[:len(startmsg)], startmsg)
+                self.assertEqual(str(err)[-len(endmsg):], endmsg)
+            else:
+                self.fail("Exception expected")
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
@@ -216,10 +236,7 @@ class TestCase(unittest.TestCase):
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                if self.model.driver.sequential:
-                    self.assertEqual(case.msg, 'driven: Forced error')
-                else:
-                    self.assertEqual(case.msg, 'driven: Forced error')
+                self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
@@ -283,6 +300,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
         self.model.driver.recorder = results
+        self.model.driver.error_policy = 'RETRY'
 
         self.model.run()
 
