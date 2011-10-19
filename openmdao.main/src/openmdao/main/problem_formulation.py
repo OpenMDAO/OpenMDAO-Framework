@@ -281,7 +281,6 @@ class ArchitectureAssembly(Assembly):
                     result[comp].append(const)
                 except: 
                     result[comp] = [const,]
-<<<<<<< .merge_file_bmBKAM
         return result 
 
     
@@ -336,6 +335,4 @@ class OptProblem(ArchitectureAssembly):
             
         return error    
                 
-=======
-        return result            
->>>>>>> .merge_file_lQwaZO
+
