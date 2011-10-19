@@ -456,7 +456,7 @@ class ConsoleServer(cmd.Cmd):
             for key,con in cons.iteritems():
                 attr = {}
                 attr['name']    = str(key)
-                attr['expr']    = con.__str__
+                attr['expr']    = str(con)
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
                 constraints.append(attr)
@@ -468,7 +468,7 @@ class ConsoleServer(cmd.Cmd):
             for key,con in cons.iteritems():
                 attr = {}
                 attr['name']    = str(key)
-                attr['expr']    = con.__str__
+                attr['expr']    = str(con)
                 attr['scaler']  = con.scaler
                 attr['adder']   = con.adder
                 constraints.append(attr)
