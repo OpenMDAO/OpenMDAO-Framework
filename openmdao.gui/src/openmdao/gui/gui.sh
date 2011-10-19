@@ -1,0 +1,1 @@
+python omg.py $*

@@ -1,9 +1,11 @@
 
 from uuid import uuid1
 import re
+import traceback
 from StringIO import StringIO
 
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.exceptions import TracedError
 
 class _Missing(object):
     pass
@@ -197,18 +199,37 @@ class Case(object):
         """Update the value of all outputs in this Case, using the given scope.
         """
         self.msg = msg
+        last_excpt = None
         if self._outputs is not None:
             if self._exprs:
                 for name in self._outputs.keys():
                     expr = self._exprs.get(name)
-                    if expr:
-                        self._outputs[name] = expr.evaluate(scope)
-                    else:
-                        self._outputs[name] = scope.get(name)
+                    try:
+                        if expr:
+                            self._outputs[name] = expr.evaluate(scope)
+                        else:
+                            self._outputs[name] = scope.get(name)
+                    except Exception as err:
+                        last_excpt = TracedError(err, traceback.format_exc())
+                        self._outputs[name] = _Missing
+                        if self.msg is None:
+                            self.msg = str(err)
+                        else:
+                            self.msg = self.msg + " %s" % err
             else:
                 for name in self._outputs.keys():
-                    self._outputs[name] = scope.get(name)
-
+                    try:
+                        self._outputs[name] = scope.get(name)
+                    except Exception as err:
+                        last_excpt = TracedError(err, traceback.format_exc())
+                        self._outputs[name] = _Missing
+                        if self.msg is None:
+                            self.msg = str(err)
+                        else:
+                            self.msg = self.msg + " %s" % err
+        if last_excpt:
+            raise last_excpt
+            
     def add_input(self, name, value):
         """Adds an input and its value to this case.
         

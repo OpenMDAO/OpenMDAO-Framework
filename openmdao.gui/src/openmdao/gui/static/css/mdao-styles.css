@@ -1,0 +1,213 @@
+html {
+  font:12px Tahoma, Sans-serif;
+}
+
+ul {
+  margin-left: 1em;
+  padding-left: 1em;
+}
+
+
+/* colors & borders */
+#menubar {
+  background:#000;
+}
+#leftcol {
+  background-color:#1a1a1a;
+  border:1px solid #222;
+}
+#rightcol {
+  background-color:#1a1a1a;
+  border:1px solid #222;
+}
+#central {
+  background: #fff;
+  border:1px solid #222;
+}
+#footer {
+  background: #6a6a6a;
+  border:1px solid #222;
+}
+.ui-layout-toggler {
+  border:1px groove #222;
+}
+
+/* nav styles */
+nav {
+	border:1px solid #222;
+	background-color:#6a6a6a;
+    font-size: 14px;
+}
+nav li a {
+	border-left:1px solid #999;
+	border-right:1px solid #222;
+	color:#eee;
+	text-decoration:none;
+}
+nav li a:focus {
+	outline:none;
+	text-decoration:underline;
+}
+nav li:first-child a {
+	border-left:none;
+}
+nav li.last a {
+	border-right:none;
+}
+nav ul ul {
+	background:#6a6a6a;
+}
+nav ul ul a {
+	border-left:none;
+	border-right:none;
+}
+nav ul ul a:hover {
+	background-color:#555;
+}
+
+/* base dl dt (tab) styles */
+dl dt {
+  display: block;
+  border: 1px solid #222; 
+  background-color:#6a6a6a; 
+  color: white; 
+  font-size: 14px;
+}
+
+.tab_here {
+  background-color: #EFEFEF;
+  color: #23A4FF  !important;
+}
+
+/* base H3 (palette accordian header) styles */
+ h3 {
+  margin:0; 
+  border:1px solid #222; 
+  position:relative; 
+  background-color:#6a6a6a; 
+  color: white; 
+  font-size: 14px;
+  font-weight: normal;
+}
+
+/* file tree & object tree styles */
+.folder, .obj {
+  font-weight: bold;
+}
+.file, .var, .array, .ref {
+  font-weight: normal;
+}
+.null {
+  font-style: italic; 
+}
+
+/* objtype styles */
+.objtype {
+  display: block;
+  border:1px solid #222;
+  background-color: #6a6a6a;
+  color:white;
+}
+
+/* history box */
+#historybox {
+  background-color:grey;
+  border-style:groove;
+}
+
+/* button styles */
+.button {
+  border:1px solid #222; 
+  background-color:#6a6a6a; 
+  color: white; 
+  font-size:14px;
+}
+
+/* codemirror line numbers */
+.CodeMirror-line-numbers {
+    width: 2.2em;
+    color: #aaa;
+    background-color: #eee;
+    text-align: right;
+    padding: .4em;
+    margin: 0;
+    font-family: monospace;
+    font-size: 10pt;
+    line-height: 1.1em;
+}
+
+/* context menus */
+.context-menu {
+	border:1px solid #666;
+	margin:0;
+	padding:3px;
+	list-style:none;
+	width:100px;
+	background-color:#eee;
+} 
+.context-menu li:hover, .context-menu .context-menu-item-active {
+	background-color:#ccc;
+}
+.disabled {
+	color:#999;
+	background-color:#eee !important;
+}
+
+
+/* CSS3 */
+.borderradius nav, dl dt,  h3, .button {
+	-moz-border-radius:4px;
+	-webkit-border-radius:4px;
+	border-radius:4px; 
+}
+.cssgradients nav, dl dt, h3, .button {
+	background-image:-moz-linear-gradient(0% 22px 90deg, #222, #999);
+	background-image:-webkit-gradient(linear, 0% 0%, 0% 70%, from(#999), to(#222));
+}
+.boxshadow.rgba nav, dl dt, h3 .button {
+	-moz-box-shadow:2px 2px 2px rgba(0,0,0,.75);
+	-webkit-box-shadow:2px 2px 2px rgba(0,0,0,.75);
+	box-shadow:2px 2px 2px rgba(0,0,0,.75);
+}
+.cssgradients nav li:hover {
+	background-image:-moz-linear-gradient(0% 100px 90deg, #999, #222);
+	background-image:-webkit-gradient(linear, 0% 0%, 0% 100%, from(#222), to(#555));
+}
+.borderradius nav ul ul {
+	-moz-border-radius-bottomleft:4px;
+	-moz-border-radius-bottomright:4px;
+	-webkit-border-bottom-left-radius:4px;
+	-webkit-border-bottom-right-radius:4px;
+	border-bottom-left-radius:4px;
+	border-bottom-right-radius:4px;
+}
+.boxshadow.rgba nav ul ul {
+	background-color:rgba(0,0,0,0.8);
+	-moz-box-shadow:2px 2px 2px rgba(0,0,0,.8);
+	-webkit-box-shadow:2px 2px 2px rgba(0,0,0,.8);
+	box-shadow:2px 2px 2px rgba(0,0,0,.8);
+}
+.rgba nav ul ul li {
+	border-left:1px solid rgba(0,0,0,0.1);
+	border-right:1px solid rgba(0,0,0,0.1);
+}
+.rgba nav ul ul a:hover {
+	background-color:rgba(85,85,85,.9);
+}
+.borderradius.rgba nav ul ul li.last {
+	border-left:1px solid rgba(0,0,0,0.1);
+	border-bottom:1px solid rgba(0,0,0,0.1);
+	-moz-border-radius-bottomleft:4px;
+	-moz-border-radius-bottomright:4px;
+	-webkit-border-bottom-left-radius:4px;
+	-webkit-border-bottom-right-radius:4px;
+	border-bottom-left-radius:4px;
+	border-bottom-right-radius:4px;
+}
+.csstransforms nav ul a span {
+	-moz-transform:rotate(-180deg);
+	-webkit-transform:rotate(-180deg);
+}
+
+/* end CSS3 */
+
