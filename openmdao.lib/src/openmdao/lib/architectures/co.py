@@ -59,16 +59,16 @@ class CO(Architecture):
             for var in param.targets: 
                 self.target_var_map[var] = target_var
                 
-        initial_conditions = [indep.evaluate() for indep,dep in coupling]   
+        initial_conditions = [couple.indep.evaluate() for key,couple in coupling.iteritems()]   
         #print "coupling initial conditions: ", initial_conditions
         self.parent.add_trait('coupling_var_targets',Array(initial_conditions))
-        for i,(indep,dep) in enumerate(coupling): 
+        for i,(key,couple) in enumerate(coupling.iteritems()): 
             target_var = 'coupling_var_targets[%d]'%i
-            low = indep.low or -1e99
-            high = indep.high or 1e99
+            low = couple.indep.low or -1e99
+            high = couple.indep.high or 1e99
             global_opt.add_parameter(target_var,low=low,high=high)
-            self.target_var_map[indep.target] = target_var
-            self.target_var_map[dep.target] = target_var
+            self.target_var_map[couple.indep.target] = target_var
+            self.target_var_map[couple.dep.target] = target_var
             
         
         initial_conditions = [param.evaluate() for comp,param in local_dvs]    
@@ -83,11 +83,12 @@ class CO(Architecture):
         
             
         #create the new objective with the target variables
-        varpaths = objective.items()[0][1].get_referenced_varpaths()
-        new_objective = objective.items()[0][0]
+        obj = objective.items()[0]
+        varpaths = obj[1].get_referenced_varpaths()
+        new_objective = obj[1].text         
         for var in varpaths: 
             new_objective = new_objective.replace(var,self.target_var_map[var])
-        global_opt.add_objective(new_objective)
+        global_opt.add_objective(new_objective,name=obj[1])
         
         #setup the local optimizations
         for comp,params in all_dvs_by_comp.iteritems(): 
@@ -98,14 +99,14 @@ class CO(Architecture):
                 local_opt.add_parameter(param.target,low=param.low,high=param.high)
                 residuals.append("(%s-%s)**2"%(self.target_var_map[param.target],param.target))
             if comp in coupl_indeps_by_comp: 
-                for indep in coupl_indeps_by_comp[comp]: 
-                    low = indep.low or -1e99
-                    high = indep.high or 1e99
-                    local_opt.add_parameter(indep.target,low=low,high=high)
-                    residuals.append("(%s-%s)**2"%(self.target_var_map[indep.target],indep.target))
+                for couple in coupl_indeps_by_comp[comp]: 
+                    low = couple.indep.low or -1e99
+                    high = couple.indep.high or 1e99
+                    local_opt.add_parameter(couple.indep.target,low=low,high=high)
+                    residuals.append("(%s-%s)**2"%(self.target_var_map[couple.indep.target],couple.indep.target))
             if comp in coupl_deps_by_comp: 
-                for dep in coupl_deps_by_comp[comp]: 
-                    residuals.append("(%s-%s)**2"%(self.target_var_map[dep.target],dep.target))     
+                for couple in coupl_deps_by_comp[comp]: 
+                    residuals.append("(%s-%s)**2"%(self.target_var_map[couple.dep.target],couple.dep.target))     
             if comp in constraints_by_comp: 
                 for const in constraints_by_comp[comp]: 
                     local_opt.add_constraint(str(const))
@@ -142,7 +143,6 @@ class CO(Architecture):
             print constraint
         
         print 
-        print"""
-            
+        print"""            
             
             
