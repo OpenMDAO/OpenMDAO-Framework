@@ -1,0 +1,20 @@
+$def with (form)
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<title>OpenMDAO: Command Line</title>
+    <meta charset="utf-8">
+</head>
+
+<body bgcolor="Grey">
+    <center>
+        Enter a Command:
+        <form  id="cmdline" name="command" method="post"> 
+            $if not form.valid: <p class="error">Try again, AmeriCAN:</p>
+            $:form.render()
+        </form>
+    </center>
+</body>
+
+</html>

@@ -22,7 +22,7 @@ operate.
         from openmdao.lib.drivers.api import DOEdriver
         from openmdao.lib.doegenerators.api import FullFactorial
 
-        from openmdao.examples.expected_improvement.branin_component import BraninComponent
+        from openmdao.lib.optproblems.branin import BraninComponent
         
         class Analysis(Assembly): 
             def __init__(self,doc=None): 
@@ -32,8 +32,8 @@ operate.
                 self.add('driver', DOEdriver())
                 self.driver.workflow.add('branin')
 
-                self.driver.add_parameter('branin.x')
-                self.driver.add_parameter('branin.y')
+                self.driver.add_parameter('branin.x',low=-5.,high=10.)
+                self.driver.add_parameter('branin.y',low=0.,high=15.)
                 
                 #use a full factorial DOE with 2 variables, and 3 levels
                 #   for each variable

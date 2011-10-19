@@ -36,8 +36,6 @@ if __name__ == "__main__":
     
     analysis.run()
     
-    for case in analysis.driver.recorder.get_iterator(): 
-        print case
         
         
         
