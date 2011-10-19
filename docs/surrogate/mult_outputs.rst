@@ -1,10 +1,10 @@
-.. index:: Mult_Outputs_Meta
+.. index:: multiple outputs metamodel
 
 Modeling Multiple Outputs
 ==================================
 
 This tutorial is a short demonstration of how to construct a MetaModel of a component with
-multiple outputs. This tutorial builds off of the :ref:`single_output` tutorial, with 
+multiple outputs. This tutorial builds off of the :ref:`single-output tutorial <Using-a-MetaModel-Component>`, with 
 modifications for multiple outputs in a component.
 
 We created a new component called ``Trig()``. This component has one input and two 
@@ -35,12 +35,12 @@ outputs, both of which will be mimicked by the MetaModel.
             self.f_x_cos = .5*cos(self.x)
 
 This next section differs from the the previous example in that there are two surrogate models, 
-one specified for each of the outputs. Note that each of the outputs had been assinged 
-a specific surrogate model, a logistic regression for sin, and a kriging surrogate for cos. In this case, 
-no ``default`` was set at all. 
+one specified for each of the outputs. Note that each of the outputs had been assigned 
+a specific surrogate model, a logistic regression for sin, and a Kriging Surrogate for cos. In this case, 
+no default was set at all. 
 
-The parameter `x` still only needs to be added once in this case, since the same input 
-is being evaluated for both outputs, thus a need for only one input.
+The parameter `x` still needs to be added only once in this case, since the same input 
+is being evaluated for both outputs.
         
 
 .. testcode:: Mult_out_parts
@@ -87,14 +87,14 @@ is being evaluated for both outputs, thus a need for only one input.
         
 The iteration hierarchy is structurally the same as it would be with one output.  Even 
 though there's multiple surrogate models for multiple outputs, they are still contained 
-within only one MetaModel component.  So once again there is the MetaModel component seperately 
+within only one MetaModel component.  So once again there is the MetaModel component separately 
 added to each workflow, and the ``trig_calc`` component being added to the validation 
-stage so that comparitive values may be generated.
+stage so that comparative values may be generated.
 
 
-In the printing of the information, we have now included all four of the outputs. 
-For the kriging surrogate model, the answer returned as a normal distribution 
-(kriging surrogate predicts both a mean and a standard deviation for a given input).
+In printing the information we have now included all four of the outputs. 
+For the Kriging Surrogate model, the answer returned as a normal distribution 
+(Kriging Surrogate predicts both a mean and a standard deviation for a given input).
 When comparing the data, we just look at the mean here.  This is why there is a ``.mu`` appended to the 
 cos case under ``predicted_cos``.  An 
 alternative would be to append ``.sigma`` which would return the standard deviation.
