@@ -14,7 +14,7 @@ class Architecture(HasTraits):
     
     def __init__(self, parent=None, param_types=None,
                  constraint_types=None, num_allowed_objectives=None,
-                 has_coupling_vars=False, requires_global_des_vars=True):
+                 has_coupling_vars=False):
         super(Architecture,self).__init__()
         
         self.parent = parent
@@ -22,7 +22,6 @@ class Architecture(HasTraits):
         self.constraint_types = constraint_types
         self.num_allowed_objectives = num_allowed_objectives
         self.has_coupling_vars = has_coupling_vars
-        self.requires_global_des_vars=False
         self.configured = False
     
     @property
@@ -99,11 +98,7 @@ class Architecture(HasTraits):
         """
         if self.parent is None:
             raise RuntimeError("no parent Assembly is defined for this Architecture")
-                
-        lenglobals = len(self.parent.get_global_des_vars())
-        if (not lenglobals) and self.requires_global_des_vars: 
-            raise RuntimeError("this Architecture requires a problem formulation that contains"
-                               " global_des_vars, but none were found in the parent")
+    
         
         try:
             lenobjs = len(self.parent.get_objectives())
