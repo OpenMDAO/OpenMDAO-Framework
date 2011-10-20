@@ -1,7 +1,9 @@
 from openmdao.lib.architectures.api import MDF, BLISS, CO
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     
-from openmdao.lib.optproblems.api import HeartDipoleProblem    
+from openmdao.lib.optproblems.api import HeartDipoleProblem 
+
+#from openmdao.lib.optproblems.api import HulmeProblem as HeartDipoleProblem
         
         
 if __name__ == "__main__": # pragma: no cover
@@ -10,7 +12,7 @@ if __name__ == "__main__": # pragma: no cover
     from openmdao.main.api import set_as_top
     
     prob = HeartDipoleProblem()
-    prob.architecture = MDF()
+    prob.architecture = CO()
     prob.configure()
     
     #prob.driver.iprint = 1
