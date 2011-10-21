@@ -38,7 +38,7 @@ class Simulation(Assembly):
         self.DOE_Trainer.add_parameter("sin_meta_model.x",low=0,high=20)
         self.DOE_Trainer.case_outputs = ["sin_meta_model.f_x"]
         self.DOE_Trainer.add_event("sin_meta_model.train_next")
-        self.DOE_Trainer.recorder = DBCaseRecorder()
+        self.DOE_Trainer.recorders = [DBCaseRecorder()]
         self.DOE_Trainer.force_execute = True
         
         #MetaModel Validation
@@ -48,7 +48,7 @@ class Simulation(Assembly):
         self.DOE_Validate.DOEgenerator.num_samples = 100
         self.DOE_Validate.add_parameter(("sin_meta_model.x","sin_calc.x"),low=0,high=20)
         self.DOE_Validate.case_outputs = ["sin_calc.f_x","sin_meta_model.f_x"]
-        self.DOE_Validate.recorder = DBCaseRecorder()
+        self.DOE_Validate.recorders = [DBCaseRecorder()]
         self.DOE_Validate.force_execute = True
         
         #Iteration Hierarchy
@@ -65,8 +65,8 @@ if __name__ == "__main__":
     sim.run()
         
     #This is how you can access any of the data
-    train_data = sim.DOE_Trainer.recorder.get_iterator()
-    validate_data = sim.DOE_Validate.recorder.get_iterator()
+    train_data = sim.DOE_Trainer.recorders[0].get_iterator()
+    validate_data = sim.DOE_Validate.recorders[0].get_iterator()
     
     #Note: Kriging outputs NormalDistribution (not float), so you need to grab
     #    the mean (.mu) or the std-deviation (.sigma) from the returned object
