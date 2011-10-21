@@ -44,14 +44,14 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         by a DBCaseIterator.  Finally the cases are dumped to a string after
         being run for the second time.
         """
-        self.top.driver.recorder = DBCaseRecorder()
+        self.top.driver.recorders = [DBCaseRecorder()]
         self.top.run()
         
         # now use the DB as source of Cases
-        self.top.driver.iterator = self.top.driver.recorder.get_iterator()
+        self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
         
         sout = StringIO.StringIO()
-        self.top.driver.recorder = DumpCaseRecorder(sout)
+        self.top.driver.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
             'Case: case8',
@@ -185,7 +185,7 @@ class NestedCaseTestCase(unittest.TestCase):
         asm.add('comp2', ExecComp(exprs=['z=x+y']))
         asm.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
-        driver.recorder = DBCaseRecorder(dbname, append=True)
+        driver.recorders = [DBCaseRecorder(dbname, append=True)]
         return asm
     
     def _create_nested_assemblies(self, dbname):
@@ -196,9 +196,9 @@ class NestedCaseTestCase(unittest.TestCase):
         top.asm.driver.workflow.add('asm')
         
         top.driver.iterator = ListCaseIterator(self._create_cases(1))
-        top.driver.recorder = DBCaseRecorder(dbname, append=True)
+        top.driver.recorders = [DBCaseRecorder(dbname, append=True)]
         top.asm.driver.iterator = ListCaseIterator(self._create_cases(2))
-        top.asm.driver.recorder = DBCaseRecorder(dbname, append=True)
+        top.asm.driver.recorders = [DBCaseRecorder(dbname, append=True)]
         top.asm.asm.driver.iterator = ListCaseIterator(self._create_cases(3))
         top.asm.asm.driver.recorder = DBCaseRecorder(dbname, append=True)
         
@@ -211,10 +211,10 @@ class NestedCaseTestCase(unittest.TestCase):
         # Case hierarchy is structured properly
         top = set_as_top(self._create_assembly(dbname))
         driver2 = top.add('driver2', SimpleCaseIterDriver())
-        driver2.recorder = DBCaseRecorder(dbname, append=True)
+        driver2.recorders = [DBCaseRecorder(dbname, append=True)]
         top.driver.workflow.add(['driver2'])
         driver3 = top.add('driver3', SimpleCaseIterDriver())
-        driver3.recorder = DBCaseRecorder(dbname, append=True)
+        driver3.recorders = [DBCaseRecorder(dbname, append=True)]
         top.driver2.workflow.add(['driver3'])
         top.driver3.workflow.add(['comp1','comp2'])
         
