@@ -435,7 +435,7 @@ class CONMINdriver(DriverUsesDerivatives):
         if self.iter_count != self.cnmn1.iter:
             self.iter_count = self.cnmn1.iter 
             
-            if self.recorder:
+            if self.recorders:
                 # Write out some relevant information to the recorder
                 
                 dvals = [float(val) for val in self.design_vals[:-2]]
@@ -456,7 +456,9 @@ class CONMINdriver(DriverUsesDerivatives):
                 
                 case = Case(case_input, case_output,parent_uuid=self._case_id)
                 
-                self.recorder.record(case)
+                #FIXME: the driver should probably just add its own recorder for this information
+                #       instead of just putting it into the first recorder it finds
+                self.recorders[0].record(case)
         
 
     def _config_conmin(self):
