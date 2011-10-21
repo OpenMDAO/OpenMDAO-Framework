@@ -838,9 +838,9 @@ comp.run()
             # Load & run in subprocess.
             logging.debug("Load and run '%s' in subprocess...", entry_name)
             logging.debug('    %s', os.path.join(install_dir, self.egg_name))
-            cmdline = '%s load-n-run.py' % python
+            cmdline = [python, 'load-n-run.py']
             stdout = open('load-n-run.out', 'w')
-            retcode = subprocess.call([python, 'load-n-run.py'], shell=True, stdout=stdout,
+            retcode = subprocess.call(cmdline, stdout=stdout,
                                       stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open('load-n-run.out', 'r')
@@ -1023,7 +1023,7 @@ comp.run()
         try:
             cmdline = [python, 'test_egg_save.py']
             stdout = open('main_handling.out', 'w')
-            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+            retcode = subprocess.call(cmdline, stdout=stdout,
                                       stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open('main_handling.out', 'r')
