@@ -136,11 +136,6 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
             else:
                 self.localnames[al.asname] = '.'.join([node.module, al.name])
                 
-    def visit_Implements(self, node):
-        """This executes every time a "from foo import bar" style import
-        statement is parsed.
-        """
-        print "Success"
 
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None):
