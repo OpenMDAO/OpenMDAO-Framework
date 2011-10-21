@@ -766,11 +766,10 @@ sys.exit(
 #            for name, val in sorted(env.items(), key=lambda item: item[0]):
 #                logging.debug('    %s = %r', name, val)
 
-            cmdline = ['python', os.path.join('install_dir','installer.py'), 
-                       '-d', 'install_dir', self.egg_name]
+            cmdline = [python, installer, '-d', install_dir, self.egg_name]
 
             stdout = open(os.path.join(install_dir, 'installer.out'), 'w')
-            retcode = subprocess.call(cmdline, env=env, shell=True,
+            retcode = subprocess.call(cmdline, env=env,
                                       stdout=stdout, stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open(os.path.join(install_dir, 'installer.out'), 'r')
