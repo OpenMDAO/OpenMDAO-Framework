@@ -80,7 +80,7 @@ class EGO(Architecture):
         DOE_trainer.add_event("%s.train_next"%self.comp_name)
         
         DOE_trainer.case_outputs = [self.objective]
-        DOE_trainer.recorder = DBCaseRecorder(':memory:')
+        DOE_trainer.recorders = [DBCaseRecorder(':memory:')]
         
         EI_opt = self.parent.add("EI_opt",Genetic())
         EI_opt.opt_type = "maximize"

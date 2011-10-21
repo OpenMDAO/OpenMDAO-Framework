@@ -219,20 +219,8 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), ValueError,
                       "Unknown/unsupported variable 'no-such-variable'")
 
-        variables = (('area', 'inch**2'),)
-        assert_raises(self, 'surface_probe(wedge, surfaces, variables, "mass")',
-                      globals(), locals(), NotImplementedError,
-                      'Zone solution location Vertex not supported')
-        surfaces = (('xyzzy', 0, -1, 2, 2, 0, -1),)
-        assert_raises(self, 'surface_probe(wedge, surfaces, variables, "mass")',
-                      globals(), locals(), NotImplementedError,
-                      'Zone solution location Vertex not supported')
-        surfaces = (('xyzzy', 0, -1, 0, -1, 2, 2),)
-        assert_raises(self, 'surface_probe(wedge, surfaces, variables, "mass")',
-                      globals(), locals(), NotImplementedError,
-                      'Zone solution location Vertex not supported')
-
         surfaces = (('xyzzy', 2, 2, 0, -1, 0, -1),)
+        variables = (('area', 'inch**2'),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables, "scheme")',
                       globals(), locals(), ValueError,
                       "Unknown/unsupported weighting scheme 'scheme'")
@@ -251,39 +239,42 @@ class TestCase(unittest.TestCase):
 
         variables = (('mass_flow', 'lbm/s'),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
-                      globals(), locals(), AttributeError, "For mass flow,"
+                      globals(), locals(), AttributeError, "For mass_flow,"
                       " reference_state is missing one or more of"
                       " ('length_reference', 'pressure_reference',"
                       " 'ideal_gas_constant', 'temperature_reference').")
 
         variables = (('corrected_mass_flow', 'lbm/s'),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
-                      globals(), locals(), AttributeError, "For corrected mass"
-                      " flow, zone xyzzy is missing one or more of"
+                      globals(), locals(), AttributeError, "For corrected_mass"
+                      "_flow, zone xyzzy is missing one or more of"
                       " ('density', 'momentum', 'pressure').")
 
         variables = (('pressure', 'psi'),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
-                      globals(), locals(), AttributeError, "For static"
-                      " pressure, zone xyzzy is missing 'pressure'.")
+                      globals(), locals(), NotImplementedError,
+                      'Get dimensional pressure from Q variables')
 
         variables = (('pressure_stagnation', 'psi'),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
-                      globals(), locals(), AttributeError, "For total"
-                      " pressure, zone xyzzy is missing one or more of"
-                      " ('density', 'momentum', 'pressure').")
+                      globals(), locals(), AttributeError, "For pressure"
+                      "_stagnation, reference_state is missing one or more of"
+                      " ('pressure_reference', 'ideal_gas_constant',"
+                      " 'temperature_reference', 'specific_heat_ratio').")
 
         variables = (('temperature', 'degR'),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
-                      globals(), locals(), AttributeError, "For static"
-                      " temperature, zone xyzzy is missing one or more of"
-                      " ('density', 'pressure').")
+                      globals(), locals(), AttributeError, "For temperature,"
+                      " reference_state is missing one or more of"
+                      " ('pressure_reference', 'ideal_gas_constant',"
+                      " 'temperature_reference').")
 
         variables = (('temperature_stagnation', 'degR'),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
-                      globals(), locals(), AttributeError, "For total"
-                      " temperature, zone xyzzy is missing one or more of"
-                      " ('density', 'momentum', 'pressure').")
+                      globals(), locals(), AttributeError, "For temperature"
+                      "_stagnation, reference_state is missing one or more of"
+                      " ('pressure_reference', 'ideal_gas_constant',"
+                      " 'temperature_reference', 'specific_heat_ratio').")
 
 
 if __name__ == '__main__':
