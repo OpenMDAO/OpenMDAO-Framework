@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import StringIO
 import os
+import sys
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
@@ -32,6 +33,16 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
 
+    def test_bad_recorder(self):
+        try:
+            self.top.driver.recorders = DumpCaseRecorder(sys.stdout)
+        except Exception as err:
+            self.assertTrue(str(err).startswith("The 'recorders' trait of a SimpleCaseIterDriver"))
+            self.assertTrue(str(err).endswith(" was specified."))
+        else:
+            self.fail("Exception expected")
+        
+        
     def test_dumprecorder(self):
         sout1 = StringIO.StringIO()
         sout2 = StringIO.StringIO()
