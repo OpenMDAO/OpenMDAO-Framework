@@ -5,7 +5,7 @@ import webbrowser
 import pprint
 import StringIO
 from ConfigParser import SafeConfigParser
-from optparse import OptionParser
+from argparse import ArgumentParser
 from subprocess import call
 from fnmatch import fnmatch
 
@@ -13,6 +13,7 @@ from ordereddict import OrderedDict
 
 from setuptools import find_packages
 
+from openmdao.main.factorymanager import get_available_types
 from openmdao.util.fileutil import build_directory, find_files
 from openmdao.util.dep import PythonSourceTreeAnalyser
 
@@ -362,6 +363,23 @@ class %(classname)s(Variable):
         # self.error(object, name, value)
 '''
 
+_class_templates['openmdao.surrogatemodel'] = '''
+from enthought.traits.api import HasTraits
+
+from openmdao.main.interfaces import implements, ISurrogate
+
+class %(classname)s(HasTraits):
+
+    implements(ISurrogate)
+    
+    def train(self,X,Y):
+        """Train the surrogate model with the given set of inputs and outputs."""
+        
+    def predict(self,new_x):
+        """Calculates a predicted value of the response based on the current
+        trained model for the supplied list of inputs.        
+'''
+
 def _get_srcdocs(destdir, name):
     startdir = os.getcwd()
     srcdir = os.path.join(destdir,'src')
@@ -610,25 +628,22 @@ def plugin_quickstart(argv=None):
     if argv is None:
         argv = sys.argv[1:]
     
-    parser = OptionParser()
+    parser = ArgumentParser()
     parser.usage = "plugin_quickstart <dist_name> [options]"
-    parser.add_option("-v", "--version", action="store", type="string", dest='version', default='0.1',
-                      help="version id of the plugin (optional)")
-    parser.add_option("-c", "--class", action="store", type="string", dest='classname',
-                      help="plugin class name (optional)")
-    parser.add_option("-d", "--dest", action="store", type="string", dest='dest', default='.',
-                      help="directory where new plugin directory will be created (optional)")
-    parser.add_option("-g", "--group", action="store", type="string", dest='group', 
-                      default = 'openmdao.component',
-                      help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable) (optional)")
+    parser.add_argument('dist_name', help='name of distribution')
+    parser.add_argument("-v", "--version", action="store", type=str, dest='version', default='0.1',
+                        help="version id of the plugin (optional)")
+    parser.add_argument("-c", "--class", action="store", type=str, dest='classname',
+                        help="plugin class name (optional)")
+    parser.add_argument("-d", "--dest", action="store", type=str, dest='dest', default='.',
+                        help="directory where new plugin directory will be created (optional)")
+    parser.add_argument("-g", "--group", action="store", type=str, dest='group', 
+                        default = 'openmdao.component',
+                        help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable, openmdao.surrogatemodel) (optional)")
     
-    (options, args) = parser.parse_args(argv)
+    options = parser.parse_args(argv)
 
-    if len(args) < 1 or len(args) > 2:
-        parser.print_help()
-        sys.exit(-1)
-
-    name = args[0]
+    name = options.dist_name
     if options.classname:
         classname = options.classname
     else:
@@ -718,10 +733,16 @@ def _find_all_plugins(searchdir):
     
     comps = psta.find_inheritors('openmdao.main.component.Component')
     comps.extend(psta.find_inheritors('openmdao.main.api.Component'))
+    comps.extend(psta.find_inheritors('openmdao.main.component_with_derivatives.ComponentWithDerivatives'))
+    comps.extend(psta.find_inheritors('openmdao.main.api.ComponentWithDerivatives'))
+    comps.extend(psta.find_inheritors('openmdao.lib.components.external_code.ExternalCode'))
+    comps.extend(psta.find_inheritors('openmdao.lib.components.api.ExternalCode'))
     comps = set(comps)
     
     drivers = psta.find_inheritors('openmdao.main.driver.Driver')
     drivers.extend(psta.find_inheritors('openmdao.main.api.Driver'))
+    drivers.extend(psta.find_inheritors('openmdao.main.driver_uses_derivatives.DriverUsesDerivatives'))
+    drivers.extend(psta.find_inheritors('openmdao.main.api.DriverUsesDerivatives'))
     drivers = set(drivers)
     
     comps = comps - drivers
@@ -729,6 +750,7 @@ def _find_all_plugins(searchdir):
     dct['openmdao.component'] = comps
     dct['openmdao.driver'] = drivers
     
+    # TODO -note, this doesn't work, since we don't have a variable base class.
     variables = psta.find_inheritors('openmdao.main.api.Variable')
     variables.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
     dct['openmdao.variable'] = set(variables)
@@ -872,37 +894,74 @@ def plugin_install(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = OptionParser()
+    parser = ArgumentParser()
     parser.usage = "plugin_install [plugin_distribution] [options]"
-    parser.add_option("-f", "--find-links", action="store", type="string", dest='findlinks', 
-                      help="URL of find-links server") 
+    parser.add_argument('dist_name', help='name of plugin distribution', 
+                        nargs='?')
+    parser.add_argument("-g", "--github", help='find plugin in the official Openmdao-Plugins repository on github', 
+                        action='store_true')
+    parser.add_argument("-l", "--list", help='list all installed plugins', 
+                        action='store_true')
+    parser.add_argument("-f", "--find-links", action="store", type=str, 
+                        dest='findlinks', help="URL of find-links server")
     
-    (options, args) = parser.parse_args(argv)
+    options = parser.parse_args(argv)
     
-    develop = False
-    if len(args) == 0:
-        print "installing distribution from current directory as a 'develop' egg"
-        develop = True
-    elif len(args) > 1:
-        parser.print_help()
-        sys.exit(-1)
+    # Interact with github
+    if options.github:
         
-    if develop:
-        cmdargs = [sys.executable, 'setup.py', 'develop', '-N']
-    else:
-        cmdargs = ['easy_install']
-        if options.findlinks:
-            cmdargs.extend(['-f', options.findlinks])
+        # List all available plugins in OpenMDAO-Plugins
+        if options.list:
+            pass
+            
+        # Get plugin from github.
         else:
-            cmdargs.extend(['-f', 'http://openmdao.org/dists']) # make openmdao.org the default
-        cmdargs.extend(args)
-    cmd = ' '.join(cmdargs)
-    retcode = call(cmdargs)
-    if retcode:
-        sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
-        sys.exit(-1)
+            pass
         
-    update_libpath()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
+    # List installed plugins
+    elif options.list:
+        all_types = get_available_types()
+        
+        plugins = set()
+        for type in all_types:
+            name = type[0].split('.')[0]
+            if name != 'openmdao':
+                plugins.add((name, type[1]))
+                
+        print "\nInstalled plugins"
+        print "-------------------"
+        print "(Note: surrogate generators currently don't show up in this list.)"
+        print "\n"
+        for plugin in sorted(plugins):
+            print plugin[0], plugin[1]
+            
+        print "\n"
+ 
+    # Install plugin from local file or directory
+    else:
+    
+        develop = False
+        if not options.dist_name:
+            print "installing distribution from current directory as a 'develop' egg"
+            develop = True
+        
+        if develop:
+            cmdargs = [sys.executable, 'setup.py', 'develop', '-N']
+        else:
+            cmdargs = ['easy_install']
+            if options.findlinks:
+                cmdargs.extend(['-f', options.findlinks])
+            else:
+                cmdargs.extend(['-f', 'http://openmdao.org/dists']) # make openmdao.org the default
+            cmdargs.extend([options.dist_name])
+            
+        cmd = ' '.join(cmdargs)
+        retcode = call(cmdargs)
+        if retcode:
+            sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
+            sys.exit(-1)
+            
+        update_libpath()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
 
         
 def update_libpath():

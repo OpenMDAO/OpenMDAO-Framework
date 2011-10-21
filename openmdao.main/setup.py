@@ -40,6 +40,7 @@ setup(name='openmdao.main',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
+          'argparse',
           'decorator',
           'networkx==1.3',
           'numpy',
