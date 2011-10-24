@@ -1,5 +1,5 @@
 import logging
-import os, os.path, sys
+import os, os.path, sys, traceback
 import platform
 import shutil
 import cmd
@@ -135,6 +135,11 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = ''
         self.proj = None
         self.top = None
+
+    def stack_trace(self):
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        traceback.print_tb(exc_traceback, limit=30)        
         
     def getcwd(self):
         return os.getcwd()
@@ -160,6 +165,7 @@ class ConsoleServer(cmd.Cmd):
             cmd.Cmd.onecmd(self, line)
         except Exception, err:
             print 'The command returned an error: %s\n' % str(err)
+            self.stack_trace()
 
     def emptyline(self):
         # Default for empty line is to repeat last command - yuck
@@ -180,6 +186,7 @@ class ConsoleServer(cmd.Cmd):
                 exec(line) in self._locals, self._globals
             except Exception, e:
                 print str(e.__class__.__name__), ":", e
+                self.stack_trace()
         else:
             try:
                 result = eval(line, self._globals, self._locals)
@@ -187,6 +194,7 @@ class ConsoleServer(cmd.Cmd):
                     print result
             except Exception, e:
                 print str(e.__class__.__name__), ":", e
+                self.stack_trace()
 
     def run(self):
         ''' run the model (i.e. the top assembly)
@@ -199,6 +207,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 print "** Execution failed:"
                 print str(err)                
+                self.stack_trace()
         else:
             print "Execution failed: No top level assembly was found."
         
@@ -269,20 +278,37 @@ class ConsoleServer(cmd.Cmd):
             try:
                 asm = self.top.get(pathname);
                 
+                # outputs
                 outputs = []
                 src = asm.get(src_name)
                 for name in src.list_outputs():
+                    units = ''
+                    meta = src.get_metadata(name);
+                    if meta and 'units' in meta:
+                        units = meta['units']
                     outputs.append({'name': name,
-                                    'type': type(src.get(name)).__name__ })
+                                    'type': type(src.get(name)).__name__ ,
+                                    'valid': src.get_valid([name])[0],
+                                    'units': units
+                                   })                                    
                 conns['outputs'] = outputs;
                     
+                # inputs
                 inputs = []
                 dst = asm.get(dst_name)
                 for name in dst.list_inputs():
+                    units = ''
+                    meta = dst.get_metadata(name);
+                    if meta and 'units' in meta:
+                        units = meta['units']
                     inputs.append({'name': name,
-                                   'type': type(dst.get(name)).__name__ })
+                                   'type': type(dst.get(name)).__name__ ,
+                                   'valid': dst.get_valid([name])[0],
+                                    'units': units
+                                 })
                 conns['inputs']  = inputs;
                 
+                # connections
                 connections = [];
                 conntuples = asm.list_connections(show_passthrough=False)
                 for src,dst in conntuples:
@@ -291,6 +317,7 @@ class ConsoleServer(cmd.Cmd):
                 conns['connections'] = connections;
             except Exception, err:
                 print "Error getting connections:", str(err)
+                self.stack_trace()
         return jsonpickle.encode(conns)
 
     def set_connections(self,pathname,src_name,dst_name,connections):
@@ -314,10 +341,11 @@ class ConsoleServer(cmd.Cmd):
                 conns['connections'] = connections;
             except Exception, err:
                 print "Error setting connections:", str(err)
-        
+                self.stack_trace()
+
     def _get_dataflow(self,asm):
         ''' get the list of components and connections between them
-            that make up the workflow for the top level driver 
+            that make up the data flow for the given assembly 
         '''
         components = []
         connections = []
@@ -347,6 +375,7 @@ class ConsoleServer(cmd.Cmd):
                     flow = self._get_dataflow(self.top)
             except Exception, err:
                 print "Error getting dataflow:", str(err)
+                self.stack_trace()
         return jsonpickle.encode(flow)
 
     def _get_workflow(self,drvr):
@@ -380,6 +409,7 @@ class ConsoleServer(cmd.Cmd):
                 flow = self._get_workflow(self.top.get(name))
             except Exception, err:
                 print "Error getting workflow:", str(err)
+                self.stack_trace()
         return jsonpickle.encode(flow)
 
     def _get_attributes(self,comp):
@@ -396,6 +426,14 @@ class ConsoleServer(cmd.Cmd):
                     attr['name'] = vname
                     attr['type'] = type(v).__name__
                     attr['value'] = v
+                    attr['valid'] = comp.get_valid([vname])[0]
+                    meta = comp.get_metadata(vname);
+                    if meta:
+                        for field in ['units','high','low','desc']:
+                            if field in meta:
+                                attr[field] = meta[field]
+                            else:
+                                attr[field] = ''
                 inputs.append(attr)
             attrs['Inputs'] = inputs
                 
@@ -407,6 +445,14 @@ class ConsoleServer(cmd.Cmd):
                     attr['name'] = vname
                     attr['type'] = type(v).__name__
                     attr['value'] = v
+                    attr['valid'] = comp.get_valid([vname])[0]
+                    meta = comp.get_metadata(vname);
+                    if meta:
+                        for field in ['units','high','low','desc']:
+                            if field in meta:
+                                attr[field] = meta[field]
+                            else:
+                                attr[field] = ''
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
@@ -486,6 +532,7 @@ class ConsoleServer(cmd.Cmd):
             return jsonpickle.encode(attr)
         except Exception, err:
             print "Error getting attributes of",name,":", str(err)
+            self.stack_trace()
     
     def get_available_types(self):
         return packagedict(get_available_types())
@@ -503,6 +550,7 @@ class ConsoleServer(cmd.Cmd):
                         types.append( ( k , 'n/a') )
         except Exception, err:
             print "Error getting working types:", str(err)
+            self.stack_trace()
         return packagedict(types)
 
     def load_project(self,filename):
@@ -529,6 +577,7 @@ class ConsoleServer(cmd.Cmd):
                     print 'Export failed, directory not known'
             except Exception, err:
                 print "Save failed:", str(err)                
+            self.stack_trace()
         else:
             print 'No Project to save'
 
@@ -546,6 +595,7 @@ class ConsoleServer(cmd.Cmd):
                 self.top.add(name,create(classname))
         except Exception, err:
             print "Add component failed:", str(err)
+            self.stack_trace()
             
     def create(self,typname,name):
         ''' create a new object of the given type. 
@@ -557,6 +607,7 @@ class ConsoleServer(cmd.Cmd):
                 self._globals[name]=create(typname)
         except Exception, err:
             print "create failed:", str(err)
+            self.stack_trace()
             
         return self._globals
 
@@ -571,9 +622,10 @@ class ConsoleServer(cmd.Cmd):
             try:
                 print "trying to rmtree ",self.root_dir
                 shutil.rmtree(self.root_dir)
-            except Exception, e:
+            except Exception, err:
                 print "failed to rmtree ",self.root_dir
-                print e
+                print err
+                self.stack_trace()
         
     def get_files(self):
         ''' get a nested dictionary of files in the working directory

@@ -38,19 +38,19 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
             jQuery.each(data['outputs'], function(idx,outvar) {
                 var src_name = src_comp+'.'+outvar['name'],
                     src_path = self.pathname+'.'+src_name,
-                    fig = new openmdao.DataflowVariableFigure(model,src_path,outvar['type'],'output');
+                    fig = new openmdao.DataflowVariableFigure(model,src_path,outvar,'output');
                 dataflow.addFigure(fig,x,y);
                 figures[src_name] = fig
-                y = y + 60;
+                y = y + fig.height + 10;
             });
             x = 250, y = 10;
             jQuery.each(data['inputs'], function(idx,invar) {
                 var dst_name = dst_comp+'.'+invar['name'],
                     dst_path = self.pathname+'.'+dst_name,
-                    fig = new openmdao.DataflowVariableFigure(model,dst_path,invar['type'],'input');
+                    fig = new openmdao.DataflowVariableFigure(model,dst_path,invar,'input');
                 dataflow.addFigure(fig,x,y);
                 figures[dst_name] = fig
-                y = y + 60;
+                y = y + fig.height + 10;
             });
             dataflowDiv.css({'height':y+'px','width': x+100+'px'});
             

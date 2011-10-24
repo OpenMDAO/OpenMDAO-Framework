@@ -171,13 +171,13 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
 
         // delete only files and empty folders
         if (!isFolder) {
-            menu.delete = {
+            menu.deleteFile = {
                 "label"  : 'Delete File',
                 "action" : function(node) { model.removeFile(path) }
             }
         }
         else if (isEmptyFolder) {
-            menu.delete = {
+            menu.deleteFolder = {
                 "label"  : 'Delete Empty Folder',
                 "action" : function(node) { model.removeFile(path) }
             }
