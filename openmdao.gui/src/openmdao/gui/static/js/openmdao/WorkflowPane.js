@@ -95,7 +95,8 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
 
     /** clear workflow */
     function clearWorkflow() {
-        cmd = "top."+pathname+".workflow.clear();"
+        cmd = "top."+pathname+".workflow.clear();"+
+              "top."+pathname+".workflow.config_changed();"
         model.issueCommand(cmd);        
     }
     
