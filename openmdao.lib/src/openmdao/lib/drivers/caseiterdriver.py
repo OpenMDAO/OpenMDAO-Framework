@@ -548,8 +548,8 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append(case)
         else:
-            if self.recorder is not None:
-                self.recorder.record(case)
+            for recorder in self.recorders:
+                recorder.record(case)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """

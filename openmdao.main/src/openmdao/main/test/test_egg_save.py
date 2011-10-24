@@ -766,10 +766,10 @@ sys.exit(
 #            for name, val in sorted(env.items(), key=lambda item: item[0]):
 #                logging.debug('    %s = %r', name, val)
 
-            cmdline = '%s %s -d %s %s' % \
-                      (python, installer, install_dir, self.egg_name)
+            cmdline = [python, installer, '-d', install_dir, self.egg_name]
+
             stdout = open(os.path.join(install_dir, 'installer.out'), 'w')
-            retcode = subprocess.call(cmdline, env=env, shell=True,
+            retcode = subprocess.call(cmdline, env=env,
                                       stdout=stdout, stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open(os.path.join(install_dir, 'installer.out'), 'r')
@@ -838,9 +838,9 @@ comp.run()
             # Load & run in subprocess.
             logging.debug("Load and run '%s' in subprocess...", entry_name)
             logging.debug('    %s', os.path.join(install_dir, self.egg_name))
-            cmdline = '%s load-n-run.py' % python
+            cmdline = [python, 'load-n-run.py']
             stdout = open('load-n-run.out', 'w')
-            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+            retcode = subprocess.call(cmdline, stdout=stdout,
                                       stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open('load-n-run.out', 'r')
@@ -1021,9 +1021,9 @@ comp.run()
         orig_dir = os.getcwd()
         os.chdir(PY_DIR)
         try:
-            cmdline = '%s test_egg_save.py' % python
+            cmdline = [python, 'test_egg_save.py']
             stdout = open('main_handling.out', 'w')
-            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+            retcode = subprocess.call(cmdline, stdout=stdout,
                                       stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open('main_handling.out', 'r')
