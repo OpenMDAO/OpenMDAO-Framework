@@ -281,6 +281,7 @@ class ConsoleServer(cmd.Cmd):
                 # outputs
                 outputs = []
                 src = asm.get(src_name)
+                connected = src.list_outputs(connected=True)
                 for name in src.list_outputs():
                     units = ''
                     meta = src.get_metadata(name);
@@ -289,13 +290,15 @@ class ConsoleServer(cmd.Cmd):
                     outputs.append({'name': name,
                                     'type': type(src.get(name)).__name__ ,
                                     'valid': src.get_valid([name])[0],
-                                    'units': units
+                                    'units': units,
+                                    'connected': (name in connected)
                                    })                                    
                 conns['outputs'] = outputs;
                     
                 # inputs
                 inputs = []
                 dst = asm.get(dst_name)
+                connected = dst.list_inputs(connected=True)
                 for name in dst.list_inputs():
                     units = ''
                     meta = dst.get_metadata(name);
@@ -304,7 +307,8 @@ class ConsoleServer(cmd.Cmd):
                     inputs.append({'name': name,
                                    'type': type(dst.get(name)).__name__ ,
                                    'valid': dst.get_valid([name])[0],
-                                    'units': units
+                                   'units': units,
+                                   'connected': (name in connected)
                                  })
                 conns['inputs']  = inputs;
                 

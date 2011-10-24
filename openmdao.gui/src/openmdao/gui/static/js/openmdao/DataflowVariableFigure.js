@@ -8,10 +8,16 @@ openmdao.DataflowVariableFigure=function(myModel,pathname,variable,inout){
     if (inout == 'input') {
         this.outputPort=null;
         this.inputPort=new draw2d.InputPort();
+        if (this.variable['connected']) {
+            this.inputPort.setBackgroundColor(new draw2d.Color(255,0,0))
+        }
     }
     else {
         this.outputPort=new draw2d.OutputPort();
         this.inputPort=null;
+        if (this.variable['connected']) {
+            this.outputPort.setBackgroundColor(new draw2d.Color(255,0,0))
+        }
     }
     draw2d.Node.call(this);
     this.setDimension(100,30);
@@ -32,7 +38,7 @@ openmdao.DataflowVariableFigure=function(myModel,pathname,variable,inout){
     if (tok.length > 1)
         this.setContent('<center><i>'+variable['units']+' ('+tok[tok.length-1]+') </i></center>')
     else
-        this.setContent('<center><i>'+variable['units']+' ('+variable['type']+') </i></center>')
+        this.setContent('<center><i>'+variable['units']+' ('+tok+') </i></center>')
         
     this.setCanDrag(false);
 };
