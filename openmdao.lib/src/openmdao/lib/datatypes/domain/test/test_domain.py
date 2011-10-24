@@ -8,12 +8,14 @@ import unittest
 import numpy
 
 from openmdao.lib.datatypes.domain import DomainObj, FlowSolution, \
-                                       GridCoordinates, Vector, Zone, \
-                                       write_plot3d_q
+                                          GridCoordinates, Vector, Zone, \
+                                          write_plot3d_q
 
 from openmdao.lib.datatypes.domain.test.wedge import create_wedge_3d, \
-                                                  create_wedge_2d
-from openmdao.util.testutil import assert_raises
+                                                     create_wedge_2d, \
+                                                     create_curve_2d
+
+from openmdao.util.testutil import assert_raises, assert_rel_error
 
 
 class TestCase(unittest.TestCase):
@@ -51,6 +53,13 @@ class TestCase(unittest.TestCase):
         self.assertFalse(domain.is_equivalent(wedge, logger))
         domain.add_zone('xyzzy', zone)
         self.assertTrue(domain.is_equivalent(wedge, logger))
+        zone = domain.remove_zone(zone)
+        self.assertFalse(domain.is_equivalent(wedge, logger))
+        domain.add_zone('xyzzy', zone)
+        self.assertTrue(domain.is_equivalent(wedge, logger))
+
+        assert_raises(self, 'domain.remove_zone(Zone())', globals(), locals(),
+                      ValueError, 'cannot find zone!')
 
         # Translations ordered for test coverage.
         domain.translate(0., 0., 0.5)
@@ -182,6 +191,9 @@ class TestCase(unittest.TestCase):
         self.assertFalse(domain.is_equivalent(wedge, logger))
         self.assertFalse(domain.is_equivalent(wedge, logger, tolerance=0.00001))
  
+        flow = FlowSolution()
+        self.assertEqual(flow.shape, ())
+
     def test_grid(self):
         logging.debug('')
         logging.debug('test_grid')
@@ -223,11 +235,29 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), ValueError,
                       "axis must be 'z' or 'x'")
         wedge.xyzzy.grid_coordinates.make_cylindrical(axis='z')
+        assert_rel_error(self, wedge.xyzzy.grid_coordinates.extent,
+                         (0.0, 5.0, 0.5, 2.0, 0.0, 0.52359879),
+                         0.000001)
         assert_raises(self,
                       "wedge.xyzzy.grid_coordinates.make_cartesian(axis='q')",
                       globals(), locals(), ValueError,
                       "axis must be 'z' or 'x'")
         wedge.xyzzy.grid_coordinates.make_cartesian(axis='z')
+        assert_rel_error(self, wedge.xyzzy.grid_coordinates.extent,
+                         (0.43301269, 2.0, 0.0, 1.0, 0.0, 5.0),
+                         0.000001)
+
+        wedge = create_wedge_2d((20, 10), 0.5, 2., 30.)
+        wedge.xyzzy.grid_coordinates.make_cylindrical()
+        assert_rel_error(self, wedge.xyzzy.grid_coordinates.extent,
+                         (0.5, 2.0, 0.0, 0.52359879), 0.000001)
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        assert_rel_error(self, curve.xyzzy.grid_coordinates.extent,
+                         (0.43301269, 0.5, 0.0, 0.25), 0.000001)
+        curve.xyzzy.grid_coordinates.make_cylindrical()
+        assert_rel_error(self, curve.xyzzy.grid_coordinates.extent,
+                         (0.5, 0.5, 0.0, 0.52359879), 0.000001)
 
     def test_vector(self):
         logging.debug('')
@@ -340,6 +370,97 @@ class TestCase(unittest.TestCase):
                       RuntimeError, 'Zone not in cartesian coordinates')
         assert_raises(self, 'domain.rotate_about_z(0.)', globals(), locals(),
                       RuntimeError, 'Zone not in cartesian coordinates')
+
+    def test_extract(self):
+        logging.debug('')
+        logging.debug('test_extract')
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+
+        volume = wedge.xyzzy.extract(10, -10, 10, 15, 0, -1)
+        self.assertEqual(volume.shape, (11, 6, 10))
+        self.assertEqual(volume.flow_solution.shape, (11, 6, 10))
+        assert_rel_error(self, volume.extent,
+                         (1.116717, 1.6842105, 0.0, 0.84210527, 1.7241379, 3.4482758),
+                         0.000001)
+
+        surface = wedge.xyzzy.extract(0, -1, 10, 10, 0, -1)
+        self.assertEqual(surface.shape, (30, 1, 10))
+        self.assertEqual(surface.flow_solution.shape, (30, 1, 10))
+        assert_rel_error(self, surface.extent,
+                         (1.116717, 1.2894737, 0.0, 0.64473683, 0.0, 5.0),
+                         0.000001)
+
+        curve = wedge.xyzzy.extract(-1, -1, 10, 10, 0, -1)
+        self.assertEqual(curve.shape, (1, 1, 10))
+        self.assertEqual(curve.flow_solution.shape, (1, 1, 10))
+        assert_rel_error(self, curve.extent,
+                         (1.116717, 1.2894737, 0.0, 0.64473683, 5.0, 5.0),
+                         0.000001)
+
+        code = 'wedge.xyzzy.flow_solution.extract(0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '3D extract requires jmin, jmax, kmin, and kmax')
+        code = 'wedge.xyzzy.flow_solution.momentum.extract(0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '3D extract requires jmin, jmax, kmin, and kmax')
+        code = 'wedge.xyzzy.grid_coordinates.extract(0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '3D extract requires jmin, jmax, kmin, and kmax')
+
+        wedge = create_wedge_2d((20, 10), 0.5, 2., 30.)
+
+        surface = wedge.xyzzy.extract(5, -5, 1, -2)
+        self.assertEqual(surface.shape, (11, 8))
+        self.assertEqual(surface.flow_solution.shape, (11, 8))
+        assert_rel_error(self, surface.extent,
+                         (0.79956603, 1.6813611, 0.05202432, 0.75587231),
+                         0.000001)
+
+        curve = wedge.xyzzy.extract(0, -1, 5, 5)
+        self.assertEqual(curve.shape, (20, 1))
+        self.assertEqual(curve.flow_solution.shape, (20, 1))
+        assert_rel_error(self, curve.extent,
+                         (0.47899476, 1.915979, 0.14340162, 0.57360649),
+                         0.000001)
+
+        code = 'wedge.xyzzy.flow_solution.extract(0, -1, 0, -1, 0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '2D extract undefined for kmin or kmax')
+        code = 'wedge.xyzzy.flow_solution.momentum.extract(0, -1, 0, -1, 0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '2D extract undefined for kmin or kmax')
+        code = 'wedge.xyzzy.grid_coordinates.extract(0, -1, 0, -1, 0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '2D extract undefined for kmin or kmax')
+
+        code = 'wedge.xyzzy.flow_solution.extract(0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '2D extract requires jmin and jmax')
+        code = 'wedge.xyzzy.flow_solution.momentum.extract(0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '2D extract requires jmin and jmax')
+        code = 'wedge.xyzzy.grid_coordinates.extract(0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '2D extract requires jmin and jmax')
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        subcurve = curve.xyzzy.extract(1, -2)
+        self.assertEqual(subcurve.shape, (18,))
+        self.assertEqual(subcurve.flow_solution.shape, (18,))
+        assert_rel_error(self, subcurve.extent,
+                         (0.43973687, 0.49981016, 0.013777171, 0.23797369),
+                         0.000001)
+
+        code = 'curve.xyzzy.flow_solution.extract(0, -1, 0, -1, 0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '1D extract undefined for jmin, jmax, kmin, or kmax')
+        code = 'curve.xyzzy.flow_solution.momentum.extract(0, -1, 0, -1, 0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '1D extract undefined for jmin, jmax, kmin, or kmax')
+        code = 'curve.xyzzy.grid_coordinates.extract(0, -1, 0, -1, 0, -1)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      '1D extract undefined for jmin, jmax, kmin, or kmax')
 
 
 if __name__ == '__main__':

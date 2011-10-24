@@ -30,7 +30,11 @@ class Vector(object):
 
     @property
     def extent(self):
-        """ Tuple of component ranges. """
+        """
+        Tuple of component ranges.
+        If cartesian ``(xmin,xmax,ymin,ymax,zmin,zmax)``.
+        Otherwise ``(zmin,zmax,rmin,rmax,tmin,tmax)``.
+        """
         if self.x is not None:
             if self.y is not None:
                 if self.z is not None:
@@ -40,28 +44,27 @@ class Vector(object):
                 return (self.x.min(), self.x.max(),
                         self.y.min(), self.y.max())
             return (self.x.min(), self.x.max())
-
-        elif self.r is not None and self.t is not None:
+        elif self.r is not None:
             if self.z is not None:
                 return (self.z.min(), self.z.max(),
                         self.r.min(), self.r.max(),
                         self.t.min(), self.t.max())
             return (self.r.min(), self.r.max(),
                     self.t.min(), self.t.max())
-
-        return ()
+        else:
+            return ()
 
     def is_equivalent(self, other, name, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
 
-        other: Vector
+        other: :class:`Vector`
             The vector to check against.
 
         name: string
             Name of this vector, used for reporting differences.
 
-        logger: Logger or None
+        logger: :class:`Logger` or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
@@ -100,6 +103,94 @@ class Vector(object):
                     return False
         return True
 
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+        """
+        Construct a new :class:`Vector` from data extracted from the
+        specified region.
+
+        imin, imax, jmin, jmax, kmin, kmax: int
+            Specifies the region to extract.
+            Negative values are relative to the size in that dimension,
+            so -1 refers to the last element. For 2D zones omit kmin and kmax.
+        """
+        ijk = self.shape
+        if len(ijk) == 3:
+            if kmin is None or kmax is None or jmin is None or jmax is None:
+                raise ValueError('3D extract requires jmin, jmax, kmin, and kmax')
+            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax)
+        elif len(ijk) == 2:
+            if kmin is not None or kmax is not None:
+                raise ValueError('2D extract undefined for kmin or kmax')
+            if jmin is None or jmax is None:
+                raise ValueError('2D extract requires jmin and jmax')
+            return self._extract_2d(imin, imax, jmin, jmax)
+        else:
+            if kmin is not None or kmax is not None:
+                raise ValueError('1D extract undefined for jmin, jmax, kmin, or kmax')
+            return self._extract_1d(imin, imax)
+
+    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax):
+        """ 3D (index space) extraction. """
+        # Support end-relative indexing.
+        vec_imax, vec_jmax, vec_kmax = self.shape
+        if imin < 0:
+            imin += vec_imax
+        if imax < 0:
+            imax += vec_imax
+        if jmin < 0:
+            jmin += vec_jmax
+        if jmax < 0:
+            jmax += vec_jmax
+        if kmin < 0:
+            kmin += vec_kmax
+        if kmax < 0:
+            kmax += vec_kmax
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                setattr(vec, component,
+                        arr[imin:imax+1, jmin:jmax+1, kmin:kmax+1])
+        return vec
+
+    def _extract_2d(self, imin, imax, jmin, jmax):
+        """ 2D (index space) extraction. """
+        # Support end-relative indexing.
+        vec_imax, vec_jmax = self.shape
+        if imin < 0:
+            imin += vec_imax
+        if imax < 0:
+            imax += vec_imax
+        if jmin < 0:
+            jmin += vec_jmax
+        if jmax < 0:
+            jmax += vec_jmax
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                setattr(vec, component,
+                        arr[imin:imax+1, jmin:jmax+1])
+        return vec
+
+    def _extract_1d(self, imin, imax):
+        """ 1D (index space) extraction. """
+        # Support end-relative indexing.
+        vec_imax = self.shape[0]
+        if imin < 0:
+            imin += vec_imax
+        if imax < 0:
+            imax += vec_imax
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                setattr(vec, component, arr[imin:imax+1])
+        return vec
+
     def flip_z(self):
         """ Convert to other-handed coordinate system. """
         if self.z is None:
@@ -110,7 +201,7 @@ class Vector(object):
         """
         Convert to Cartesian coordinate system.
 
-        grid: GridCoordinates
+        grid: :class:`GridCoordinates`
             Must be in cylindrical form.
 
         axis: string
@@ -123,7 +214,7 @@ class Vector(object):
         r_flat = self.r.flat
         t_flat = self.t.flat
 
-        if axis == 'z':
+        if axis == 'z' or self.z is None:
             self.x = self.r.copy()
             self.y = self.r.copy()
             x_flat = self.x.flat
@@ -163,7 +254,7 @@ class Vector(object):
         """
         Convert to cylindrical coordinate system.
 
-        grid: GridCoordinates
+        grid: :class:`GridCoordinates`
             Must be in cylindrical form.
 
         axis: string
@@ -178,7 +269,7 @@ class Vector(object):
         r_flat = self.r.flat
         t_flat = self.t.flat
 
-        if axis == 'z':
+        if axis == 'z' or self.z is None:
             x_flat = self.x.flat
             y_flat = self.y.flat
             for i in range(self.x.size):

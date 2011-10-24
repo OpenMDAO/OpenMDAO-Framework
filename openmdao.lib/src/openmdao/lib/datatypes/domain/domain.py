@@ -30,7 +30,7 @@ class DomainObj(object):
         """
         Add zones from `other` to self, retaining names where possible.
 
-        other: DomainObj
+        other: :class:`DomainObj`
             Source for new zone data.
 
         prefix: string
@@ -54,11 +54,14 @@ class DomainObj(object):
             Name for the zone. If None or blank, then a default of the form
             ``zone_N`` is used.
 
+        zone: :class:`Zone`
+            Zone to be added.
+
         prefix: string
             String prepended to the zone name.
 
         make_copy: bool
-            If True, then a deep copy of each zone is made rather than just
+            If True, then a deep copy of `zone` is made rather than just
             referring to a shared instance.
         """
         if not name:
@@ -76,7 +79,7 @@ class DomainObj(object):
         """
         Remove a zone. Returns the removed zone.
 
-        zone: string or DomainObj
+        zone: string or :class:`Zone`
             Zone to be removed.
         """
         if isinstance(zone, basestring):
@@ -94,7 +97,7 @@ class DomainObj(object):
         name: string
             New name for the zone.
 
-        zone: DomainObj
+        zone: :class:`Zone`
             Zone to be renamed.
         """
         if hasattr(self, name):
@@ -107,7 +110,7 @@ class DomainObj(object):
         """
         Return name that a zone is bound to.
 
-        zone: DomainObj
+        zone: :class:`Zone`
             Zone whose name is to be returned.
         """
         for name, value in self.__dict__.items():
@@ -129,7 +132,7 @@ class DomainObj(object):
         """
         Test if self and `other` are equivalent.
 
-        other: DomainObj
+        other: :class:`DomainObj`
             The domain to check against.
 
         logger: Logger or None

@@ -22,12 +22,12 @@ class Zone(object):
 
     @property
     def shape(self):
-        """ Tuple of coordinate index limits. """
+        """ Coordinate index limits, not including 'ghost/rind' planes. """
         return self.grid_coordinates.shape
 
     @property
     def extent(self):
-        """ Tuple of coordinate ranges. """
+        """ Coordinate ranges, not including 'ghost/rind' planes. """
         return self.grid_coordinates.extent
 
     def _get_coord_sys(self):
@@ -46,10 +46,10 @@ class Zone(object):
         """
         Test if self and `other` are equivalent.
 
-        other: Zone
+        other: :class:`Zone`
             Zone to check against.
 
-        logger: Logger or None
+        logger: :class:`Logger` or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
@@ -90,6 +90,32 @@ class Zone(object):
             return False
 
         return True
+
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+        """
+        Construct a new :class:`Zone` from grid and flow data extracted
+        from the specified region. Symmetry data is copied.
+
+        imin, imax, jmin, jmax, kmin, kmax: int
+            Specifies the region to extract neglecting ghost/rind planes.
+            Negative values are relative to the size in that dimension,
+            so -1 refers to the last element. For 2D zones omit kmin and kmax.
+        """
+        zone = Zone()
+        zone.grid_coordinates = \
+            self.grid_coordinates.extract(imin, imax, jmin, jmax, kmin, kmax)
+        zone.flow_solution = \
+            self.flow_solution.extract(imin, imax, jmin, jmax, kmin, kmax)
+        if self.reference_state is None:
+            zone.reference_state = None
+        else:
+            zone.reference_state = self.reference_state.copy()
+        zone.coordinate_system = self.coordinate_system
+        zone.right_handed = self.right_handed
+        zone.symmetry = self.symmetry
+        zone.symmetry_axis = self.symmetry_axis
+        zone.symmetry_instances = self.symmetry_instances
+        return zone
 
     def make_cartesian(self, axis='z'):
         """

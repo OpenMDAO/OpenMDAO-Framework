@@ -50,6 +50,27 @@ class FlowSolution(object):
         """ List of vector data. """
         return self._vectors
 
+    @property
+    def shape(self):
+        """ Data index limits, not including 'ghost/rind' planes. """
+        if self._arrays:
+            ijk = self._arrays[0].shape
+        elif self._vectors:
+            ijk = self._vectors[0].shape
+        else:
+            ijk = ()
+        if len(ijk) < 1:
+            return ijk
+        ghosts = self._ghosts
+        imax = ijk[0] - (ghosts[0] + ghosts[1])
+        if len(ijk) < 2:
+            return (imax,)
+        jmax = ijk[1] - (ghosts[2] + ghosts[3])
+        if len(ijk) < 3:
+            return (imax, jmax)
+        kmax = ijk[2] - (ghosts[4] + ghosts[5])
+        return (imax, jmax, kmax)
+
     def add_array(self, name, array):
         """
         Add a :class:`numpy.ndarray` of scalar data and bind to `name`.
@@ -58,7 +79,7 @@ class FlowSolution(object):
         name: string
             Name for the added array.
 
-        array: ndarray
+        array: :class:`numpy.ndarray`
             Scalar data.
         """
         if hasattr(self, name):
@@ -75,7 +96,7 @@ class FlowSolution(object):
         name: string
             Name for the added array.
 
-        vector: Vector
+        vector: :class:`Vector`
             Vector data.
         """
         if hasattr(self, name):
@@ -88,10 +109,10 @@ class FlowSolution(object):
         """
         Test if self and `other` are equivalent.
 
-        other: FlowSolution
+        other: :class:`FlowSolution`
             The flowfield to check against.
 
-        logger: Logger or None
+        logger: :class:`Logger` or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
@@ -113,8 +134,6 @@ class FlowSolution(object):
 
         for arr in self._arrays:
             name = self.name_of_obj(arr)
-            if name is None:
-                raise AttributeError('cannot find array!')
             try:
                 other_arr = getattr(other, name)
             except AttributeError:
@@ -131,8 +150,6 @@ class FlowSolution(object):
 
         for vector in self._vectors:
             name = self.name_of_obj(vector)
-            if name is None:
-                raise AttributeError('cannot find vector!')
             try:
                 other_vector = getattr(other, name)
             except AttributeError:
@@ -144,6 +161,139 @@ class FlowSolution(object):
 # TODO: check scalars
 
         return True
+
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+        """
+        Construct a new :class:`FlowSolution` from data extracted from the
+        specified region. Ghost data is copied.
+
+        imin, imax, jmin, jmax, kmin, kmax: int
+            Specifies the region to extract neglecting ghost/rind planes.
+            Negative values are relative to the size in that dimension,
+            so -1 refers to the last element. For 2D zones omit kmin and kmax.
+        """
+        i = len(self.shape)
+        if i == 3:
+            if jmin is None or jmax is None or kmin is None or kmax is None:
+                raise ValueError('3D extract requires jmin, jmax, kmin, and kmax')
+            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax)
+        elif i == 2:
+            if kmin is not None or kmax is not None:
+                raise ValueError('2D extract undefined for kmin or kmax')
+            if jmin is None or jmax is None:
+                raise ValueError('2D extract requires jmin and jmax')
+            return self._extract_2d(imin, imax, jmin, jmax)
+        else:
+            if kmin is not None or kmax is not None or \
+               jmin is not None or jmax is not None:
+                raise ValueError('1D extract undefined for jmin, jmax, kmin, or kmax')
+            return self._extract_1d(imin, imax)
+
+    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax):
+        """ 3D (index space) extraction. """
+        # Support end-relative indexing.
+        if self._arrays:
+            flow_imax, flow_jmax, flow_kmax = self._arrays[0].shape
+        elif self._vectors:
+            flow_imax, flow_jmax, flow_kmax = self._vectors[0].shape
+        else:
+            flow_imax, flow_jmax, flow_kmax = (0, 0, 0)
+        if imin < 0:
+            imin += flow_imax
+        if imax < 0:
+            imax += flow_imax
+        if jmin < 0:
+            jmin += flow_jmax
+        if jmax < 0:
+            jmax += flow_jmax
+        if kmin < 0:
+            kmin += flow_kmax
+        if kmax < 0:
+            kmax += flow_kmax
+
+        # Adjust for ghost/rind planes.
+        ghosts = self.ghosts
+        imin += ghosts[0]
+        imax += ghosts[0]
+        jmin += ghosts[2]
+        jmax += ghosts[2]
+        kmin += ghosts[4]
+        kmax += ghosts[4]
+
+        flow = FlowSolution()
+        for arr in self._arrays:
+            flow.add_array(self.name_of_obj(arr),
+                           arr[imin:imax+1, jmin:jmax+1, kmin:kmax+1])
+        for vector in self._vectors:
+            flow.add_vector(self.name_of_obj(vector),
+                            vector.extract(imin, imax, jmin, jmax, kmin, kmax))
+        flow.grid_location = self.grid_location
+        flow.ghosts = ghosts
+        return flow
+
+    def _extract_2d(self, imin, imax, jmin, jmax):
+        """ 2D (index space) extraction. """
+        # Support end-relative indexing.
+        if self._arrays:
+            flow_imax, flow_jmax = self._arrays[0].shape
+        elif self._vectors:
+            flow_imax, flow_jmax = self._vectors[0].shape
+        else:
+            flow_imax, flow_jmax = (0, 0)
+        if imin < 0:
+            imin += flow_imax
+        if imax < 0:
+            imax += flow_imax
+        if jmin < 0:
+            jmin += flow_jmax
+        if jmax < 0:
+            jmax += flow_jmax
+
+        # Adjust for ghost/rind planes.
+        ghosts = self.ghosts
+        imin += ghosts[0]
+        imax += ghosts[0]
+        jmin += ghosts[2]
+        jmax += ghosts[2]
+
+        flow = FlowSolution()
+        for arr in self._arrays:
+            flow.add_array(self.name_of_obj(arr),
+                           arr[imin:imax+1, jmin:jmax+1])
+        for vector in self._vectors:
+            flow.add_vector(self.name_of_obj(vector),
+                            vector.extract(imin, imax, jmin, jmax))
+        flow.grid_location = self.grid_location
+        flow.ghosts = ghosts
+        return flow
+
+    def _extract_1d(self, imin, imax):
+        """ 1D (index space) extraction. """
+        # Support end-relative indexing.
+        if self._arrays:
+            flow_imax = self._arrays[0].shape[0]
+        elif self._vectors:
+            flow_imax = self._vectors[0].shape[0]
+        else:
+            flow_imax = 0
+        if imin < 0:
+            imin += flow_imax
+        if imax < 0:
+            imax += flow_imax
+
+        # Adjust for ghost/rind planes.
+        ghosts = self.ghosts
+        imin += ghosts[0]
+        imax += ghosts[0]
+
+        flow = FlowSolution()
+        for arr in self._arrays:
+            flow.add_array(self.name_of_obj(arr), arr[imin:imax+1])
+        for vector in self._vectors:
+            flow.add_vector(self.name_of_obj(vector), vector.extract(imin, imax))
+        flow.grid_location = self.grid_location
+        flow.ghosts = ghosts
+        return flow
 
     def name_of_obj(self, obj):
         """ Return name of object or None if not found. """
@@ -161,7 +311,7 @@ class FlowSolution(object):
         """
         Convert to Cartesian coordinate system.
 
-        grid: GridCoordinates
+        grid: :class:`GridCoordinates`
             Must be in cylindrical form.
 
         axis: string
@@ -174,7 +324,7 @@ class FlowSolution(object):
         """
         Convert to cylindrical coordinate system.
 
-        grid: GridCoordinates
+        grid: :class:`GridCoordinates`
             Must be in cylindrical form.
 
         axis: string
