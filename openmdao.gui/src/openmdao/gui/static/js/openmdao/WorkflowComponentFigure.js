@@ -101,7 +101,7 @@ openmdao.ComponentFigure.prototype.createHTMLElement=function(){
     this.footer.style.position="absolute";
     this.footer.style.left=this.cornerWidth+"px";
     this.footer.style.top="0px";
-    this.footer.style.height=(this.cornerHeight-1)+"px";
+    this.footer.style.height=(this.cornerHeight)+"px";
     this.footer.style.backgroundColor="white";
     this.footer.style.borderBottom="1px solid #666666";
     this.footer.style.fontSize="2px";
@@ -139,7 +139,7 @@ openmdao.ComponentFigure.prototype.setDimension=function(w,h){
         this.textarea.style.height=(this.height-this.cornerHeight*2)+"px";
         this.header.style.width=(this.width-this.cornerWidth*2)+"px";
         this.footer.style.width=(this.width-this.cornerWidth*2)+"px";
-        this.footer.style.top=(this.height-this.cornerHeight)+"px";
+        this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
     if(this.outputPort!==null){
         this.outputPort.setPosition(this.width+5,this.height/2);
