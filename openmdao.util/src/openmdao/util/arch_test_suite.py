@@ -29,10 +29,8 @@ def build_arch_list(include=[],exclude=[]):
     
     startdirs = [os.path.dirname(openmdao.lib.architectures.__file__),
                  os.path.dirname(openmdao.main.__file__)]
-    print startdirs
     psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))    
     architectures = psta.find_inheritors("openmdao.main.arch.Architecture")
-    print "test",architectures
     archs = []
     for arch_name in architectures: 
             arch_class = arch_name.split(".")[-1]
@@ -92,20 +90,31 @@ def run_arch_test_suite(arch=[],optproblems=[]):
         The OptProblems to test the Architectures on. 
     """
     
+    compat_matrix = []
     for a in arch: 
+        arch_row = []
         for p in optproblems: 
-            print "running %s on %s"%(a,p)
-            
-            prob = p()
-            prob.architecture = a
-            
+            print "Testing %s on %s"%(a,p)
+            prob = p.__class__()
+            prob.architecture = a.__class__()
+            try:
+                prob.check_config()
+                arch_row.append(True)
+            except RuntimeError as err: 
+                arch_row.append(False) #not compatible, so just move on
+                continue 
             prob.run()
-
+            print prob.check_solution()
             
+        compat_matrix.append(arch_row)
+        
+    return compat_matrix
 if __name__ == "__main__": 
     archs = build_arch_list()
     probs = build_optproblem_list()
     
-    print archs
-    print probs
-    run_arch_test_suite(archs,probs)
+    data = run_arch_test_suite(archs,probs)
+    
+    print data
+    
+    

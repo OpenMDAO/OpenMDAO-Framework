@@ -23,6 +23,7 @@ class BLISS(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.requires_global_des_vars = True
         
     def configure(self): 
         
@@ -30,6 +31,7 @@ class BLISS(Architecture):
         local_dvs = self.parent.get_local_des_vars_by_comp()
         objective = self.parent.get_objectives().items()[0]
         constraints = self.parent.list_constraints()
+        comp_constraints = self.parent.get_constraints_by_comp()
         coupling = self.parent.get_coupling_vars()
         
         self.parent.add('driver',FixedPointIterator())
@@ -58,7 +60,6 @@ class BLISS(Architecture):
             mda.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
                 
         #Global Sensitivity Analysis
-        #TODO: Need to solve GSE here instead of FD on MDA
         ssa = self.parent.add("ssa",SensitivityDriver())
         ssa.workflow.add("mda")
         ssa.differentiator = FiniteDifference()
@@ -84,16 +85,12 @@ class BLISS(Architecture):
                 sa.add_constraint(constraint)
             sa.add_objective(objective[1].text,name=objective[0])
             sa.differentiator = FiniteDifference()
-
-        
         
         #Linear System Optimizations
         
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
-        delta_x = []
-        df = []
-        dg = []
+        
         
         bbopts = []
         for comp,local_params in local_dvs.iteritems(): 
@@ -104,6 +101,9 @@ class BLISS(Architecture):
             bbopts.append('bbopt_%s'%comp)
             
             x_store = "%s_local_des_vars"%comp
+            delta_x = []
+            df = []
+            dg = []
             
             for i,param in enumerate(local_params): 
                 x_store_i = "%s[%d]"%(x_store,i)
@@ -169,9 +169,14 @@ class BLISS(Architecture):
             sysopt.add_constraint(lin_constraint)
 
         self.parent.driver.workflow = SequentialWorkflow()
-        self.parent.driver.workflow.add("ssa")
+        if global_dvs: 
+            self.parent.driver.workflow.add("ssa")
+        else: 
+            self.parent.driver.workflow.add("mda")
         self.parent.driver.workflow.add(sa_s)
         self.parent.driver.workflow.add(bbopts)
         self.parent.driver.workflow.add("sysopt")
+                
+        
     
         

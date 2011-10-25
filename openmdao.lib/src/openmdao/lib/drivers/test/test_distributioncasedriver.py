@@ -245,6 +245,7 @@ class TestCase(unittest.TestCase):
         model.driver.distribution_generator = FiniteDifferenceGenerator(model.driver)
         model.driver.case_outputs = ['driven.invalid']
         model.driver.add_parameter("driven.x", low=-10., high=10., fd_step = 0.1 )
+        model.driver.error_policy = 'RETRY'
 
         results = ListCaseRecorder()
         model.driver.recorder = results
