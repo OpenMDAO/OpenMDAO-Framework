@@ -138,8 +138,8 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
         this.bottom_left.style.top=(this.height-this.cornerHeight)+"px";
         this.textarea.style.width=(this.width-2)+"px";
         this.textarea.style.height=(this.height-this.cornerHeight*2)+"px";
-        this.header.style.width=(this.width-this.cornerWidth*2)+"px";
-        this.footer.style.width=(this.width-this.cornerWidth*2)+"px";
+        this.header.style.width=(this.width-this.cornerWidth*2+1)+"px";
+        this.footer.style.width=(this.width-this.cornerWidth*2+1)+"px";
         this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
     if (this.outputPort!==null) {
@@ -202,7 +202,7 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
         this.outputPort.setName("output");
         var oThis=this;
         this.outputPort.createCommand = function(request) {
-            if(request.getPolicy() ==draw2d.EditPolicy.CONNECT) {
+            if(request.getPolicy() == draw2d.EditPolicy.CONNECT) {
                 if( request.source.parentNode.id == request.target.parentNode.id) {
                     return null;
                 }

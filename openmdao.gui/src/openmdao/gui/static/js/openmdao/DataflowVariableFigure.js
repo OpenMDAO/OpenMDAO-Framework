@@ -167,9 +167,13 @@ openmdao.DataflowVariableFigure.prototype.setWorkflow=function(wkflw){
                             dstPath    = openmdao.Util.getParentPath(request.source.getParent().pathname),
                             dstParent  = openmdao.Util.getName(dstPath),
                             src = parentName + "." + oThis.name,
-                            dst = dstParent + "." + dstName,
-                            cmd = "top."+parentAssm+".connect('"+src+"','"+dst+"')";
-                        oThis.myModel.issueCommand(cmd);
+                            dst = dstParent + "." + dstName;
+                        if (parentAssm.length > 0) {
+                            oThis.myModel.issueCommand("top."+parentAssm+".connect('"+src+"','"+dst+"')");
+                        }
+                        else {
+                            oThis.myModel.issueCommand("top.connect('"+src+"','"+dst+"')");
+                        }
                     };                
                     return null;
                 }

@@ -17,9 +17,8 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
         
     // make the dataflow pane droppable
     dataflowDiv.droppable ({
-        accept: '.obj, .objtype',
+        accept: '.objtype',
         drop: function(ev,ui) { 
-            //debug.info("Dataflow drop:",ev,ui)
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
@@ -27,14 +26,10 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top)
-            //debug.info("dropped:",droppedObject)
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForName(function(name) { 
                     model.addComponent(droppedPath,name,x,y)
                 })
-            }
-            else if (droppedObject.hasClass('obj')) {
-                model.issueCommand('top.driver.dataflow.add("'+droppedPath+'")')
             }
         }
     });
@@ -52,12 +47,9 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
      *  TODO: prob just want to iterate through & update existing figures
      */
     function updateFigures(json) {
-        //debug.info('updating dataflow figures for ',self.pathname,json)
         jQuery.each(json['components'],function(idx,comp) {
-            //debug.info('idx=',idx,'comp=',comp,'self=',self)
             var name = comp['name'],
-                type = comp['type'],
-                flow = comp['dataflow']
+                type = comp['type'];
                 
             if (self.pathname) {
                 var fig = new openmdao.DataflowComponentFigure(model,self.pathname+'.'+name,type);
@@ -73,11 +65,7 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
                 x = (count-1)*(fig.getWidth()+20)  + 20,
                 y = (count-1)*(fig.getHeight()+20) + 20
             //debug.info('count=',count,'x=',x,'y=',y)
-            dataflow.addFigure(fig,x,y)
-            
-            if (flow) {
-                updateFigures(name,flow)
-            }            
+            dataflow.addFigure(fig,x,y)            
         })
         
         jQuery.each(json['connections'],function(idx,conn) {

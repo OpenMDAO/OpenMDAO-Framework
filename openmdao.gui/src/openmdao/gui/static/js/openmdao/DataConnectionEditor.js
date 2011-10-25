@@ -80,9 +80,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
     
     /** if there is something loaded, update it from the model */
     function update() {
-        if (self.pathname) {
-            self.editConnections(self.pathname,self.src_comp,self.dst_comp);
-        }
+        self.editConnections(self.pathname,self.src_comp,self.dst_comp);
     }
     
     /***********************************************************************

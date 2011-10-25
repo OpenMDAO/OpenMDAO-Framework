@@ -131,7 +131,7 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
             return 0;
     }
     
-    /** get the width of the flow container */
+    /** get the height of the flow container */
     function getFlowHeight(flow_fig) {
         var figHeight = 50,
             i=0, ymin=999999, ymax=0,
@@ -190,7 +190,7 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
         
         if (flow) {
             // add driver figure
-            comp_fig = new openmdao.ComponentFigure(model,path,type);
+            comp_fig = new openmdao.WorkflowComponentFigure(model,path,type);
             comp_figs[path] = comp_fig;
             
             flow_fig = flow_figs[flow_name];
@@ -235,7 +235,7 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
         }
         else {
             // add component figure
-            comp_fig = new openmdao.ComponentFigure(model,path,type)
+            comp_fig = new openmdao.WorkflowComponentFigure(model,path,type)
             comp_figs[path] = comp_fig
 
             flow_fig = flow_figs[flow_name];
@@ -262,25 +262,8 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
 
             workflow.addFigure(comp_fig,x,y)
         }
-        
-        /**
-        jQuery.each(json['connections'],function(idx,conn) {
-            var src_name = conn[0].split('.')[0],
-                dst_name = conn[1].split('.')[0],
-                c = new openmdao.ContextMenuConnection()
-            if (conn[0].indexOf('.') < 0)
-                src_name = asm_name
-            var src_fig = figures[src_name]
-            if (conn[1].indexOf('.') < 0)
-                dst_name = asm_name
-            var dst_fig = figures[dst_name]
-            c.setSource(src_fig.getPort("output"));
-            c.setTarget(dst_fig.getPort("input"));
-            workflow.addFigure(c);
-        })
-        /**/        
     }
-    
+        
     /** update the schematic with data from the model */
     function update() {
         model.getWorkflow(self.pathname, 

@@ -134,7 +134,6 @@ def Components(request):
     json = cserver.get_components()
     return HttpResponse(json,mimetype='application/json')
 
-
 @never_cache
 @csrf_exempt
 @login_required()
