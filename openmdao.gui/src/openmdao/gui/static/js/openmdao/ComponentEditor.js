@@ -92,8 +92,8 @@ openmdao.ComponentEditor = function(model,pathname) {
             panes[name] = new openmdao.WorkflowPane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
         }
-        else {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false);
+        else if (name == 'Connections') {
+            panes[name] = new openmdao.DataflowPane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
         }
     }

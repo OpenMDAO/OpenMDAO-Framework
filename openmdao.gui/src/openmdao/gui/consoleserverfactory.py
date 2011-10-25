@@ -467,8 +467,11 @@ class ConsoleServer(cmd.Cmd):
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
+        if is_instance(comp,Assembly):
+            attrs['Connections'] = self._get_dataflow(comp)
+        
         if has_interface(comp,IDriver):
-            attrs['Workflow'] = comp.workflow.get_names()
+            attrs['Workflow'] = self._get_workflow(comp)
         
         if has_interface(comp,IHasCouplingVars):
             couples = []
