@@ -1,8 +1,6 @@
-from numpy import sin
 
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
-
 
 class Alg_Component2(Component):
     y = Float(iotype="in",low=-3.5,high=10.000001)
