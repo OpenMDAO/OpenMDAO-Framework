@@ -2,6 +2,8 @@ import sys
 import os.path
 import webbrowser
 
+import urllib2
+import json
 import pprint
 import StringIO
 from ConfigParser import SafeConfigParser
@@ -898,9 +900,9 @@ def plugin_install(argv=None):
     parser.usage = "plugin_install [plugin_distribution] [options]"
     parser.add_argument('dist_name', help='name of plugin distribution', 
                         nargs='?')
-    parser.add_argument("-g", "--github", help='find plugin in the official Openmdao-Plugins repository on github', 
+    parser.add_argument("-g", "--github", help='Find plugin in the official Openmdao-Plugins repository on github', 
                         action='store_true')
-    parser.add_argument("-l", "--list", help='list all installed plugins', 
+    parser.add_argument("-l", "--list", help='List all installed plugins', 
                         action='store_true')
     parser.add_argument("-f", "--find-links", action="store", type=str, 
                         dest='findlinks', help="URL of find-links server")
@@ -912,12 +914,60 @@ def plugin_install(argv=None):
         
         # List all available plugins in OpenMDAO-Plugins
         if options.list:
-            pass
+            
+            url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
+            
+            print "\nAvailable plugins"
+            print "===================\n"
+            
+            resp = urllib2.urlopen(url)
+            for line in resp.fp:
+                text = json.loads(line)
+                for item in sorted(text):
+                    print '%20s -- %s' % (item['name'], item['description'])
+                    #print item['name']
+                    #print '-------------------------'
+                    #print item['description']
+                print '\n'
             
         # Get plugin from github.
         else:
-            pass
+            
+            pieces = options.dist_name.split('==')
+            name = pieces[0]
+            
+            # User has specified version using easy_install style ("plugin==version")
+            if len(pieces) > 1:
+                version = pieces[1]
+                
+            # Get most recent version from our tag list
+            else:
+                url = 'https://api.github.com/repos/OpenMDAO-Plugins/%s/tags' % name
         
+                resp = urllib2.urlopen(url)
+                for line in resp.fp:
+                    text = json.loads(line)
+    
+                    tags = []
+                    for item in text:
+                        tags.append(item['name'])
+                    
+                tags.sort(key=lambda s: map(int, s.split('.')))
+                version = tags[-1]
+                
+            url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
+            print url
+            cmdargs = ['easy_install']
+            cmdargs.extend([url])
+            
+            cmd = ' '.join(cmdargs)
+            retcode = call(cmdargs)
+            if retcode:
+                sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
+                sys.exit(-1)
+            
+            update_libpath()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
+
     # List installed plugins
     elif options.list:
         all_types = get_available_types()
