@@ -91,7 +91,8 @@ class Zone(object):
 
         return True
 
-    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None,
+                grid_ghosts=None, flow_ghosts=None):
         """
         Construct a new :class:`Zone` from grid and flow data extracted
         from the specified region. Symmetry data is copied.
@@ -100,12 +101,23 @@ class Zone(object):
             Specifies the region to extract neglecting ghost/rind planes.
             Negative values are relative to the size in that dimension,
             so -1 refers to the last element. For 2D zones omit kmin and kmax.
+            For 1D zones omit jmin, jmax, kmin, and kmax.
+
+        grid_ghosts: int[]
+            Numer of ghost/rind planes for the new zone's grid.
+            If ``None`` the grid's existing specification is used.
+
+        flow_ghosts: int[]
+            Numer of ghost/rind planes for the new zone's flow solution.
+            If ``None`` the flow's existing specification is used.
         """
         zone = Zone()
         zone.grid_coordinates = \
-            self.grid_coordinates.extract(imin, imax, jmin, jmax, kmin, kmax)
+            self.grid_coordinates.extract(imin, imax, jmin, jmax, kmin, kmax,
+                                          grid_ghosts)
         zone.flow_solution = \
-            self.flow_solution.extract(imin, imax, jmin, jmax, kmin, kmax)
+            self.flow_solution.extract(imin, imax, jmin, jmax, kmin, kmax,
+                                       flow_ghosts)
         if self.reference_state is None:
             zone.reference_state = None
         else:

@@ -152,16 +152,16 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), ValueError,
                       "'pluto' is not a valid grid location", use_exec=True)
 
-        assert_raises(self, "flow.ghosts = []",
-                      globals(), locals(), ValueError,
-                      'ghosts must be a 6-element array', use_exec=True)
-
         assert_raises(self, "flow.ghosts = [1, 2, 3, 4, 5, -6]",
                       globals(), locals(), ValueError,
                       'All ghost values must be >= 0', use_exec=True)
 
         wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
         domain = wedge.copy()
+
+        assert_raises(self, "domain.xyzzy.flow_solution.ghosts = []",
+                      globals(), locals(), ValueError,
+                      'ghosts must be a 6-element array', use_exec=True)
 
         assert_raises(self,
                       "domain.xyzzy.flow_solution.add_array('density',"
@@ -184,13 +184,27 @@ class TestCase(unittest.TestCase):
         wedge.xyzzy.flow_solution.add_array('pressure', pressure2)
         self.assertTrue(domain.is_equivalent(wedge, logger))
 
-        domain.xyzzy.flow_solution.add_vector('empty', Vector())
-        self.assertFalse(domain.is_equivalent(wedge, logger))
+        assert_raises(self,
+                      "domain.xyzzy.flow_solution.add_array('empty', numpy.zeros(()))",
+                      globals(), locals(), ValueError,
+                      'array shape () != existing shape (30, 20, 10)')
 
+        assert_raises(self,
+                      "domain.xyzzy.flow_solution.add_vector('empty', Vector())",
+                      globals(), locals(), ValueError,
+                      'vector shape () != existing shape (30, 20, 10)')
+
+        self.assertTrue(domain.is_equivalent(wedge, logger))
         pressure2[0][0][0] += 1.
         self.assertFalse(domain.is_equivalent(wedge, logger))
         self.assertFalse(domain.is_equivalent(wedge, logger, tolerance=0.00001))
  
+        pressure2[0][0][0] -= 1.
+        self.assertTrue(domain.is_equivalent(wedge, logger))
+        domain.xyzzy.flow_solution.add_vector('mom2',
+                                            domain.xyzzy.flow_solution.momentum)
+        self.assertFalse(domain.is_equivalent(wedge, logger))
+
         flow = FlowSolution()
         self.assertEqual(flow.shape, ())
 
@@ -212,10 +226,6 @@ class TestCase(unittest.TestCase):
         other.ghosts = [1, 1, 1, 1, 1, 1]
         self.assertFalse(grid.is_equivalent(other, logger))
 
-        assert_raises(self, 'grid.ghosts = []', globals(), locals(),
-                      ValueError, 'ghosts must be a 6-element array',
-                      use_exec=True)
-
         assert_raises(self, 'grid.ghosts = [0, 1, 2, 3, 4, -5]',
                       globals(), locals(), ValueError,
                       'All ghost values must be >= 0', use_exec=True)
@@ -230,10 +240,16 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), AttributeError, 'no Z coordinates')
 
         wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+
+        assert_raises(self, 'wedge.xyzzy.grid_coordinates.ghosts = []',
+                      globals(), locals(), ValueError,
+                      'ghosts must be a 6-element array', use_exec=True)
+
         assert_raises(self,
                       "wedge.xyzzy.grid_coordinates.make_cylindrical(axis='q')",
                       globals(), locals(), ValueError,
                       "axis must be 'z' or 'x'")
+
         wedge.xyzzy.grid_coordinates.make_cylindrical(axis='z')
         assert_rel_error(self, wedge.xyzzy.grid_coordinates.extent,
                          (0.0, 5.0, 0.5, 2.0, 0.0, 0.52359879),
@@ -408,6 +424,19 @@ class TestCase(unittest.TestCase):
         assert_raises(self, code, globals(), locals(), ValueError,
                       '3D extract requires jmin, jmax, kmin, and kmax')
 
+        code = 'wedge.xyzzy.flow_solution.extract(0, 99, 0, 99, 0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99, 0, 99, 0, 99)'
+                      ' exceeds original (0, 30, 0, 20, 0, 10)')
+        code = 'wedge.xyzzy.flow_solution.momentum.extract(0, 99, 0, 99, 0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99, 0, 99, 0, 99)'
+                      ' exceeds original (0, 30, 0, 20, 0, 10)')
+        code = 'wedge.xyzzy.grid_coordinates.extract(0, 99, 0, 99, 0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99, 0, 99, 0, 99)'
+                      ' exceeds original (0, 30, 0, 20, 0, 10)')
+
         wedge = create_wedge_2d((20, 10), 0.5, 2., 30.)
 
         surface = wedge.xyzzy.extract(5, -5, 1, -2)
@@ -444,6 +473,19 @@ class TestCase(unittest.TestCase):
         assert_raises(self, code, globals(), locals(), ValueError,
                       '2D extract requires jmin and jmax')
 
+        code = 'wedge.xyzzy.flow_solution.extract(0, 99, 0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99, 0, 99)'
+                      ' exceeds original (0, 20, 0, 10)')
+        code = 'wedge.xyzzy.flow_solution.momentum.extract(0, 99, 0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99, 0, 99)'
+                      ' exceeds original (0, 20, 0, 10)')
+        code = 'wedge.xyzzy.grid_coordinates.extract(0, 99, 0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99, 0, 99)'
+                      ' exceeds original (0, 20, 0, 10)')
+
         curve = create_curve_2d(20, 0.5, 30.)
         subcurve = curve.xyzzy.extract(1, -2)
         self.assertEqual(subcurve.shape, (18,))
@@ -461,6 +503,26 @@ class TestCase(unittest.TestCase):
         code = 'curve.xyzzy.grid_coordinates.extract(0, -1, 0, -1, 0, -1)'
         assert_raises(self, code, globals(), locals(), ValueError,
                       '1D extract undefined for jmin, jmax, kmin, or kmax')
+
+        code = 'curve.xyzzy.flow_solution.extract(0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99) exceeds original (0, 20)')
+        code = 'curve.xyzzy.flow_solution.momentum.extract(0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99) exceeds original (0, 20)')
+        code = 'curve.xyzzy.grid_coordinates.extract(0, 99)'
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      'Extraction region (0, 99) exceeds original (0, 20)')
+
+        assert_raises(self, 'FlowSolution().extract(0, -1)',
+                      globals(), locals(), RuntimeError,
+                      'FlowSolution is empty!')
+        assert_raises(self, 'GridCoordinates().extract(0, -1)',
+                      globals(), locals(), RuntimeError,
+                      'Grid is empty!')
+        assert_raises(self, 'Vector().extract(0, -1)',
+                      globals(), locals(), RuntimeError,
+                      'Vector is empty!')
 
 
 if __name__ == '__main__':

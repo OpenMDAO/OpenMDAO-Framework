@@ -24,8 +24,9 @@ class GridCoordinates(Vector):
         return self._ghosts
 
     def _set_ghosts(self, ghosts):
-        if len(ghosts) != 6:
-            raise ValueError('ghosts must be a 6-element array')
+        if len(ghosts) < 2*len(self.shape):
+            raise ValueError('ghosts must be a %d-element array'
+                             % (2*len(self.shape)))
         for i in ghosts:
             if i < 0:
                 raise ValueError('All ghost values must be >= 0')
@@ -40,7 +41,7 @@ class GridCoordinates(Vector):
         ijk = super(GridCoordinates, self).shape
         i = len(ijk)
         if i < 1:
-            return ijk
+            return ()
         ghosts = self._ghosts
         imax = ijk[0] - (ghosts[0] + ghosts[1])
         if i < 2:
@@ -172,53 +173,62 @@ class GridCoordinates(Vector):
 
         return True
 
-    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None,
+                ghosts=None):
         """
         Construct a new :class:`GridCoordinates` from data extracted from the
-        specified region. Ghost data is copied.
+        specified region.
 
         imin, imax, jmin, jmax, kmin, kmax: int
             Specifies the region to extract neglecting ghost/rind planes.
             Negative values are relative to the size in that dimension,
             so -1 refers to the last element. For 2D zones omit kmin and kmax.
             Similarly, for 1D zones only specify imin and imax.
+
+        ghosts: int[]
+            Numer of ghost/rind planes for the new zone.
+            If ``None`` the existing specification is used.
         """
+        ghosts = ghosts or self._ghosts
         i = len(super(GridCoordinates, self).shape)
         if i == 3:
             if jmin is None or jmax is None or kmin is None or kmax is None:
                 raise ValueError('3D extract requires jmin, jmax, kmin, and kmax')
-            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax)
+            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax, ghosts)
         elif i == 2:
             if kmin is not None or kmax is not None:
                 raise ValueError('2D extract undefined for kmin or kmax')
             if jmin is None or jmax is None:
                 raise ValueError('2D extract requires jmin and jmax')
-            return self._extract_2d(imin, imax, jmin, jmax)
-        else:
+            return self._extract_2d(imin, imax, jmin, jmax, ghosts)
+        elif i == 1:
             if kmin is not None or kmax is not None or \
                jmin is not None or jmax is not None:
                 raise ValueError('1D extract undefined for jmin, jmax, kmin, or kmax')
-            return self._extract_1d(imin, imax)
+            return self._extract_1d(imin, imax, ghosts)
+        else:
+            raise RuntimeError('Grid is empty!')
 
-    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax):
+    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax, new_ghosts):
         """ 3D (index space) extraction. """
+        ghosts = self._ghosts
+
         # Support end-relative indexing.
         grid_imax, grid_jmax, grid_kmax = super(GridCoordinates, self).shape
         if imin < 0:
-            imin += grid_imax
+            imin += (grid_imax - ghosts[1])
         if imax < 0:
-            imax += grid_imax
+            imax += (grid_imax - ghosts[1])
         if jmin < 0:
-            jmin += grid_jmax
+            jmin += (grid_jmax - ghosts[3])
         if jmax < 0:
-            jmax += grid_jmax
+            jmax += (grid_jmax - ghosts[3])
         if kmin < 0:
-            kmin += grid_kmax
+            kmin += (grid_kmax - ghosts[5])
         if kmax < 0:
-            kmax += grid_kmax
+            kmax += (grid_kmax - ghosts[5])
 
-        # Adjust for ghost/rind planes.
-        ghosts = self.ghosts
+        # Adjust for existing ghost/rind planes.
         imin += ghosts[0]
         imax += ghosts[0]
         jmin += ghosts[2]
@@ -226,73 +236,117 @@ class GridCoordinates(Vector):
         kmin += ghosts[4]
         kmax += ghosts[4]
 
+        # Adjust for new ghost/rind planes.
+        imin -= new_ghosts[0]
+        imax += new_ghosts[1]
+        jmin -= new_ghosts[2]
+        jmax += new_ghosts[3]
+        kmin -= new_ghosts[4]
+        kmax += new_ghosts[5]
+
+        # Check limits.
+        if imin < 0 or imax > grid_imax or \
+           jmin < 0 or jmax > grid_jmax or \
+           kmin < 0 or kmax > grid_kmax:
+            region = (imin, imax, jmin, jmax, kmin, kmax)
+            original = (0, grid_imax, 0, grid_jmax, 0, grid_kmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         grid = GridCoordinates()
-        if self.x is not None:  # Cartesian
+        if self.x is not None:
             grid.x = self.x[imin:imax+1, jmin:jmax+1, kmin:kmax+1]
             grid.y = self.y[imin:imax+1, jmin:jmax+1, kmin:kmax+1]
-        else:  # Cylindrical
+        else:
             grid.r = self.r[imin:imax+1, jmin:jmax+1, kmin:kmax+1]
             grid.t = self.t[imin:imax+1, jmin:jmax+1, kmin:kmax+1]
         grid.z = self.z[imin:imax+1, jmin:jmax+1, kmin:kmax+1]
-        grid.ghosts = ghosts
+        grid.ghosts = new_ghosts
         return grid
 
-    def _extract_2d(self, imin, imax, jmin, jmax):
+    def _extract_2d(self, imin, imax, jmin, jmax, new_ghosts):
         """ 2D (index space) extraction. """
+        ghosts = self._ghosts
+
         # Support end-relative indexing.
         grid_imax, grid_jmax = super(GridCoordinates, self).shape
         if imin < 0:
-            imin += grid_imax
+            imin += (grid_imax - ghosts[1])
         if imax < 0:
-            imax += grid_imax
+            imax += (grid_imax - ghosts[1])
         if jmin < 0:
-            jmin += grid_jmax
+            jmin += (grid_jmax - ghosts[1])
         if jmax < 0:
-            jmax += grid_jmax
+            jmax += (grid_jmax - ghosts[1])
 
-        # Adjust for ghost/rind planes.
-        ghosts = self.ghosts
+        # Adjust for existing ghost/rind planes.
         imin += ghosts[0]
         imax += ghosts[0]
         jmin += ghosts[2]
         jmax += ghosts[2]
 
+        # Adjust for new ghost/rind planes.
+        imin -= new_ghosts[0]
+        imax += new_ghosts[1]
+        jmin -= new_ghosts[2]
+        jmax += new_ghosts[3]
+
+        # Check limits.
+        if imin < 0 or imax > grid_imax or jmin < 0 or jmax > grid_jmax:
+            region = (imin, imax, jmin, jmax)
+            original = (0, grid_imax, 0, grid_jmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         grid = GridCoordinates()
-        if self.x is not None:  # Cartesian
+        if self.x is not None:
             grid.x = self.x[imin:imax+1, jmin:jmax+1]
             grid.y = self.y[imin:imax+1, jmin:jmax+1]
-        else:  # Cylindrical
+        else:
             grid.r = self.r[imin:imax+1, jmin:jmax+1]
             grid.t = self.t[imin:imax+1, jmin:jmax+1]
         if self.z is not None:
             grid.z = self.z[imin:imax+1, jmin:jmax+1]
-        grid.ghosts = ghosts
+        grid.ghosts = new_ghosts
         return grid
 
-    def _extract_1d(self, imin, imax):
+    def _extract_1d(self, imin, imax, new_ghosts):
         """ 1D (index space) extraction. """
+        ghosts = self._ghosts
+
         # Support end-relative indexing.
         grid_imax = super(GridCoordinates, self).shape[0]
         if imin < 0:
-            imin += grid_imax
+            imin += (grid_imax - ghosts[1])
         if imax < 0:
-            imax += grid_imax
+            imax += (grid_imax - ghosts[1])
 
-        # Adjust for ghost/rind planes.
-        ghosts = self.ghosts
+        # Adjust for existing ghost/rind planes.
         imin += ghosts[0]
+        imax += ghosts[0]
 
+        # Adjust for new ghost/rind planes.
+        imin -= new_ghosts[0]
+        imax += new_ghosts[1]
+
+        # Check limits.
+        if imin < 0 or imax > grid_imax:
+            region = (imin, imax)
+            original = (0, grid_imax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         grid = GridCoordinates()
-        if self.x is not None:  # Cartesian
+        if self.x is not None:
             grid.x = self.x[imin:imax+1]
             if self.y is not None:
                 grid.y = self.y[imin:imax+1]
-        else:  # Cylindrical
+        else:
             grid.r = self.r[imin:imax+1]
             grid.t = self.t[imin:imax+1]
         if self.z is not None:
             grid.z = self.z[imin:imax+1]
-        grid.ghosts = ghosts
+        grid.ghosts = new_ghosts
         return grid
 
     def make_cartesian(self, axis='z'):

@@ -31,8 +31,9 @@ class FlowSolution(object):
         return self._ghosts
 
     def _set_ghosts(self, ghosts):
-        if len(ghosts) != 6:
-            raise ValueError('ghosts must be a 6-element array')
+        if len(ghosts) < 2*len(self.shape):
+            raise ValueError('ghosts must be a %d-element array'
+                             % (2*len(self.shape)))
         for i in ghosts:
             if i < 0:
                 raise ValueError('All ghost values must be >= 0')
@@ -60,7 +61,7 @@ class FlowSolution(object):
         else:
             ijk = ()
         if len(ijk) < 1:
-            return ijk
+            return ()
         ghosts = self._ghosts
         imax = ijk[0] - (ghosts[0] + ghosts[1])
         if len(ijk) < 2:
@@ -84,6 +85,15 @@ class FlowSolution(object):
         """
         if hasattr(self, name):
             raise ValueError("name '%s' is already bound" % name)
+        if self._arrays:
+            ijk = self._arrays[0].shape
+        elif self._vectors:
+            ijk = self._vectors[0].shape
+        else:
+            ijk = ()
+        if ijk and array.shape != ijk:
+            raise ValueError('array shape %s != existing shape %s'
+                             % (array.shape, ijk))
         setattr(self, name, array)
         self._arrays.append(array)
         return array
@@ -101,6 +111,15 @@ class FlowSolution(object):
         """
         if hasattr(self, name):
             raise ValueError("name '%s' is already bound" % name)
+        if self._arrays:
+            ijk = self._arrays[0].shape
+        elif self._vectors:
+            ijk = self._vectors[0].shape
+        else:
+            ijk = ()
+        if ijk and vector.shape != ijk:
+            raise ValueError('vector shape %s != existing shape %s'
+                             % (vector.shape, ijk))
         setattr(self, name, vector)
         self._vectors.append(vector)
         return vector
@@ -162,57 +181,65 @@ class FlowSolution(object):
 
         return True
 
-    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None,
+                ghosts=None):
         """
         Construct a new :class:`FlowSolution` from data extracted from the
-        specified region. Ghost data is copied.
+        specified region.
 
         imin, imax, jmin, jmax, kmin, kmax: int
             Specifies the region to extract neglecting ghost/rind planes.
             Negative values are relative to the size in that dimension,
             so -1 refers to the last element. For 2D zones omit kmin and kmax.
+            For 1D zones omit jmin, jmax, kmin, and kmax.
+
+        ghosts: int[]
+            Numer of ghost/rind planes for the new zone.
+            If ``None`` the existing specification is used.
         """
+        ghosts = ghosts or self._ghosts
         i = len(self.shape)
         if i == 3:
             if jmin is None or jmax is None or kmin is None or kmax is None:
                 raise ValueError('3D extract requires jmin, jmax, kmin, and kmax')
-            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax)
+            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax, ghosts)
         elif i == 2:
             if kmin is not None or kmax is not None:
                 raise ValueError('2D extract undefined for kmin or kmax')
             if jmin is None or jmax is None:
                 raise ValueError('2D extract requires jmin and jmax')
-            return self._extract_2d(imin, imax, jmin, jmax)
-        else:
+            return self._extract_2d(imin, imax, jmin, jmax, ghosts)
+        elif i == 1:
             if kmin is not None or kmax is not None or \
                jmin is not None or jmax is not None:
                 raise ValueError('1D extract undefined for jmin, jmax, kmin, or kmax')
-            return self._extract_1d(imin, imax)
+            return self._extract_1d(imin, imax, ghosts)
+        else:
+            raise RuntimeError('FlowSolution is empty!')
 
-    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax):
+    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax, new_ghosts):
         """ 3D (index space) extraction. """
+        ghosts = self._ghosts
+
         # Support end-relative indexing.
         if self._arrays:
             flow_imax, flow_jmax, flow_kmax = self._arrays[0].shape
-        elif self._vectors:
-            flow_imax, flow_jmax, flow_kmax = self._vectors[0].shape
         else:
-            flow_imax, flow_jmax, flow_kmax = (0, 0, 0)
+            flow_imax, flow_jmax, flow_kmax = self._vectors[0].shape
         if imin < 0:
-            imin += flow_imax
+            imin += (flow_imax - ghosts[1])
         if imax < 0:
-            imax += flow_imax
+            imax += (flow_imax - ghosts[1])
         if jmin < 0:
-            jmin += flow_jmax
+            jmin += (flow_jmax - ghosts[3])
         if jmax < 0:
-            jmax += flow_jmax
+            jmax += (flow_jmax - ghosts[3])
         if kmin < 0:
-            kmin += flow_kmax
+            kmin += (flow_kmax - ghosts[5])
         if kmax < 0:
-            kmax += flow_kmax
+            kmax += (flow_kmax - ghosts[5])
 
-        # Adjust for ghost/rind planes.
-        ghosts = self.ghosts
+        # Adjust for existing ghost/rind planes.
         imin += ghosts[0]
         imax += ghosts[0]
         jmin += ghosts[2]
@@ -220,6 +247,23 @@ class FlowSolution(object):
         kmin += ghosts[4]
         kmax += ghosts[4]
 
+        # Adjust for new ghost/rind planes.
+        imin -= new_ghosts[0]
+        imax += new_ghosts[1]
+        jmin -= new_ghosts[2]
+        jmax += new_ghosts[3]
+        kmin -= new_ghosts[4]
+        kmax += new_ghosts[5]
+
+        # Check limits.
+        if imin < 0 or imax > flow_imax or \
+           jmin < 0 or jmax > flow_jmax or \
+           kmin < 0 or kmax > flow_kmax:
+            region = (imin, imax, jmin, jmax, kmin, kmax)
+            original = (0, flow_imax, 0, flow_jmax, 0, flow_kmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         flow = FlowSolution()
         for arr in self._arrays:
             flow.add_array(self.name_of_obj(arr),
@@ -228,34 +272,46 @@ class FlowSolution(object):
             flow.add_vector(self.name_of_obj(vector),
                             vector.extract(imin, imax, jmin, jmax, kmin, kmax))
         flow.grid_location = self.grid_location
-        flow.ghosts = ghosts
+        flow.ghosts = new_ghosts
         return flow
 
-    def _extract_2d(self, imin, imax, jmin, jmax):
+    def _extract_2d(self, imin, imax, jmin, jmax, new_ghosts):
         """ 2D (index space) extraction. """
+        ghosts = self._ghosts
+
         # Support end-relative indexing.
         if self._arrays:
             flow_imax, flow_jmax = self._arrays[0].shape
-        elif self._vectors:
-            flow_imax, flow_jmax = self._vectors[0].shape
         else:
-            flow_imax, flow_jmax = (0, 0)
+            flow_imax, flow_jmax = self._vectors[0].shape
         if imin < 0:
-            imin += flow_imax
+            imin += (flow_imax - ghosts[1])
         if imax < 0:
-            imax += flow_imax
+            imax += (flow_imax - ghosts[1])
         if jmin < 0:
-            jmin += flow_jmax
+            jmin += (flow_jmax - ghosts[3])
         if jmax < 0:
-            jmax += flow_jmax
+            jmax += (flow_jmax - ghosts[3])
 
-        # Adjust for ghost/rind planes.
-        ghosts = self.ghosts
+        # Adjust for existing ghost/rind planes.
         imin += ghosts[0]
         imax += ghosts[0]
         jmin += ghosts[2]
         jmax += ghosts[2]
 
+        # Adjust for new ghost/rind planes.
+        imin -= new_ghosts[0]
+        imax += new_ghosts[1]
+        jmin -= new_ghosts[2]
+        jmax += new_ghosts[3]
+
+        # Check limits.
+        if imin < 0 or imax > flow_imax or jmin < 0 or jmax > flow_jmax:
+            region = (imin, imax, jmin, jmax)
+            original = (0, flow_imax, 0, flow_jmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         flow = FlowSolution()
         for arr in self._arrays:
             flow.add_array(self.name_of_obj(arr),
@@ -264,35 +320,45 @@ class FlowSolution(object):
             flow.add_vector(self.name_of_obj(vector),
                             vector.extract(imin, imax, jmin, jmax))
         flow.grid_location = self.grid_location
-        flow.ghosts = ghosts
+        flow.ghosts = new_ghosts
         return flow
 
-    def _extract_1d(self, imin, imax):
+    def _extract_1d(self, imin, imax, new_ghosts):
         """ 1D (index space) extraction. """
+        ghosts = self._ghosts
+
         # Support end-relative indexing.
         if self._arrays:
             flow_imax = self._arrays[0].shape[0]
-        elif self._vectors:
-            flow_imax = self._vectors[0].shape[0]
         else:
-            flow_imax = 0
+            flow_imax = self._vectors[0].shape[0]
         if imin < 0:
-            imin += flow_imax
+            imin += (flow_imax - ghosts[1])
         if imax < 0:
-            imax += flow_imax
+            imax += (flow_imax - ghosts[1])
 
-        # Adjust for ghost/rind planes.
-        ghosts = self.ghosts
+        # Adjust for existing ghost/rind planes.
         imin += ghosts[0]
         imax += ghosts[0]
 
+        # Adjust for new ghost/rind planes.
+        imin -= new_ghosts[0]
+        imax += new_ghosts[1]
+
+        # Check limits.
+        if imin < 0 or imax > flow_imax:
+            region = (imin, imax)
+            original = (0, flow_imax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         flow = FlowSolution()
         for arr in self._arrays:
             flow.add_array(self.name_of_obj(arr), arr[imin:imax+1])
         for vector in self._vectors:
             flow.add_vector(self.name_of_obj(vector), vector.extract(imin, imax))
         flow.grid_location = self.grid_location
-        flow.ghosts = ghosts
+        flow.ghosts = new_ghosts
         return flow
 
     def name_of_obj(self, obj):

@@ -112,22 +112,25 @@ class Vector(object):
             Specifies the region to extract.
             Negative values are relative to the size in that dimension,
             so -1 refers to the last element. For 2D zones omit kmin and kmax.
+            For 1D zones omit jmin, jmax, kmin, and kmax.
         """
-        ijk = self.shape
-        if len(ijk) == 3:
+        i = len(self.shape)
+        if i == 3:
             if kmin is None or kmax is None or jmin is None or jmax is None:
                 raise ValueError('3D extract requires jmin, jmax, kmin, and kmax')
             return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax)
-        elif len(ijk) == 2:
+        elif i == 2:
             if kmin is not None or kmax is not None:
                 raise ValueError('2D extract undefined for kmin or kmax')
             if jmin is None or jmax is None:
                 raise ValueError('2D extract requires jmin and jmax')
             return self._extract_2d(imin, imax, jmin, jmax)
-        else:
+        elif i == 1:
             if kmin is not None or kmax is not None:
                 raise ValueError('1D extract undefined for jmin, jmax, kmin, or kmax')
             return self._extract_1d(imin, imax)
+        else:
+            raise RuntimeError('Vector is empty!')
 
     def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax):
         """ 3D (index space) extraction. """
@@ -146,6 +149,15 @@ class Vector(object):
         if kmax < 0:
             kmax += vec_kmax
 
+        # Check limits.
+        if imin < 0 or imax > vec_imax or \
+           jmin < 0 or jmax > vec_jmax or \
+           kmin < 0 or kmax > vec_kmax:
+            region = (imin, imax, jmin, jmax, kmin, kmax)
+            original = (0, vec_imax, 0, vec_jmax, 0, vec_kmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         vec = Vector()
         for component in ('x', 'y', 'z', 'r', 't'):
             arr = getattr(self, component)
@@ -167,6 +179,13 @@ class Vector(object):
         if jmax < 0:
             jmax += vec_jmax
 
+        # Check limits.
+        if imin < 0 or imax > vec_imax or jmin < 0 or jmax > vec_jmax:
+            region = (imin, imax, jmin, jmax)
+            original = (0, vec_imax, 0, vec_jmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         vec = Vector()
         for component in ('x', 'y', 'z', 'r', 't'):
             arr = getattr(self, component)
@@ -184,6 +203,13 @@ class Vector(object):
         if imax < 0:
             imax += vec_imax
 
+        # Check limits.
+        if imin < 0 or imax > vec_imax:
+            region = (imin, imax)
+            original = (0, vec_imax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
         vec = Vector()
         for component in ('x', 'y', 'z', 'r', 't'):
             arr = getattr(self, component)
