@@ -96,6 +96,9 @@ openmdao.ComponentEditor = function(model,pathname) {
             panes[name] = new openmdao.DataflowPane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
         }
+        else {
+            debug.warn("ComponentEditor: Unexpected object",pathname,name)
+        }
     }
 
     function loadData(properties) {

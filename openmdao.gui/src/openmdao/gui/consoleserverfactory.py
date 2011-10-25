@@ -146,9 +146,12 @@ class ConsoleServer(cmd.Cmd):
     def do_trace(self, arg):
         ''' print remembered trace from last exception
         '''
-        exc_type, exc_value, exc_traceback = self.exc_info
-        traceback.print_exception(exc_type, exc_value, exc_traceback)
-        traceback.print_tb(exc_traceback, limit=30)        
+        if self.exc_info:
+            exc_type, exc_value, exc_traceback = self.exc_info
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            traceback.print_tb(exc_traceback, limit=30)        
+        else:
+            print "No trace available."
         
     def getcwd(self):
         return os.getcwd()
