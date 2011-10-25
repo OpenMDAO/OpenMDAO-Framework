@@ -49,7 +49,6 @@ class FixedPointIterator(Driver):
         
     def execute(self):
         """Perform the iteration."""
-        
         self._check_config()
 
         nvar = len(self.get_parameters().values())
@@ -60,7 +59,7 @@ class FixedPointIterator(Driver):
         val0 = zeros(nvar)
         for i, val in enumerate(self.get_parameters().values()):
             val0[i] = val.evaluate(self.parent)
-            
+                
         # perform an initial run
         self.run_iteration()
         self.current_iteration = 0
@@ -120,6 +119,7 @@ class FixedPointIterator(Driver):
             
                 term = val.evaluate(self.parent)
                 delta[i] = term[0] - term[1]
+                
             
             history[self.current_iteration] = delta
             

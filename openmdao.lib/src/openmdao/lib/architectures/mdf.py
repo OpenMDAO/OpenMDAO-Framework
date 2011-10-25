@@ -49,9 +49,7 @@ class MDF(Architecture):
             
 
         #add the local design variables to the driver
-        for k,v in self.parent.get_local_des_vars(): 
-            print type(v) 
-            
+        for k,v in self.parent.get_local_des_vars():             
             self.parent.driver.add_parameter(v,name=k)
          
         #TODO: possibly add method for passing constraint directly?

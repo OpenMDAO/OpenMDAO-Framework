@@ -53,7 +53,7 @@ class BLISS(Architecture):
                 self.parent.driver.add_constraint('%s_local_des_vars[%d]=%s'%(comp,i,param.targets[0]))
             
         # Multidisciplinary Analysis
-        mda = self.parent.add('mda', BroydenSolver())
+        mda = self.parent.add('mda', FixedPointIterator())
         self.parent.force_execute=True
         for key,couple in coupling.iteritems(): 
             mda.add_parameter(couple.indep.target,low=-9.e99, high=9.e99)
@@ -171,11 +171,12 @@ class BLISS(Architecture):
         self.parent.driver.workflow = SequentialWorkflow()
         if global_dvs: 
             self.parent.driver.workflow.add("ssa")
-        else: 
-            self.parent.driver.workflow.add("mda")
         self.parent.driver.workflow.add(sa_s)
         self.parent.driver.workflow.add(bbopts)
-        self.parent.driver.workflow.add("sysopt")
+        if global_dvs: 
+            self.parent.driver.workflow.add("sysopt")
+        else: #if there are no global dv's then you just need to run the MDA 
+            self.parent.driver.workflow.add("mda")
                 
         
     

@@ -82,13 +82,11 @@ class BroydenSolver(Driver):
         
     def execute(self):
         """Solver execution."""
-                
         # get the initial values of the independents
         independents = self.get_parameters().values()
         self.xin = numpy.zeros(len(independents),'d')
         for i, val in enumerate(independents):
             self.xin[i] = val.evaluate(self.parent)
-            
         # perform an initial run for self-consistency
         self.run_iteration()
 
