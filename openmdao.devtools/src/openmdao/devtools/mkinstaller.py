@@ -111,6 +111,8 @@ def main(args=None):
         openmdao_packages = %s
         try:
             for pkg, pdir, _ in openmdao_packages:
+                if options.nogui and pkg == 'openmdao.gui':
+                    continue
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
@@ -130,6 +132,10 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--disturl", action="store", type="string", dest='disturl', 
                       help="specify url where openmdao distribs are located")
+    parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
+                      help="don't check for any prerequisites, e.g., numpy or scipy")
+    parser.add_option("--nogui", action="store_true", dest='nogui', 
+                      help="don't install the openmdao graphical user interface")
 
 %(adjust_options)s
 
@@ -149,6 +155,8 @@ def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
     reqs = %(reqs)s
+    guireqs = %(guireqs)s
+    
     url = '%(url)s'
     # for testing we allow one to specify a url where the openmdao
     # package dists are located that may be different from the main
@@ -173,16 +181,17 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
-    failed_imports = []
-    for pkg in openmdao_prereqs:
-        try:
-            __import__(pkg)
-        except ImportError:
-            failed_imports.append(pkg)
-    if failed_imports:
-        logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
-        logger.error("These must be installed in the system level python before installing OpenMDAO.")
-        sys.exit(-1)
+    if not options.noprereqs:
+        failed_imports = []
+        for pkg in openmdao_prereqs:
+            try:
+                __import__(pkg)
+            except ImportError:
+                failed_imports.append(pkg)
+        if failed_imports:
+            logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
+            logger.error("These must be installed in the system level python before installing OpenMDAO.")
+            sys.exit(-1)
     
     cmds = ['-f', url]
     openmdao_cmds = ['-f', openmdao_url]
@@ -216,24 +225,36 @@ def after_install(options, home_dir):
     """
     
     reqs = set()
+    guireqs = set()
     
     version = '?.?.?'
-    dists = working_set.resolve([Requirement.parse(r[0]) for r in openmdao_packages])
     excludes = set(['setuptools', 'distribute']+openmdao_prereqs)
+    dists = set(working_set.resolve([Requirement.parse(r[0]) 
+                                   for r in openmdao_packages if r[0]!='openmdao.gui']))-excludes
+    gui_dists = set(working_set.resolve([Requirement.parse('openmdao.gui')]))-dists-excludes
+    
     for dist in dists:
         if dist.project_name == 'openmdao.main':
             version = dist.version
-        if dist.project_name not in excludes:
-            if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
-                if not dist.project_name.startswith('openmdao.'):
-                    reqs.add('%s' % dist.as_requirement())
-            else:
+        if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
+            if not dist.project_name.startswith('openmdao.'):
                 reqs.add('%s' % dist.as_requirement())
+        else:
+            reqs.add('%s' % dist.as_requirement())
+            
+    for dist in gui_dists:
+        if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
+            if not dist.project_name.startswith('openmdao.'):
+                guireqs.add('%s' % dist.as_requirement())
+        else:
+            guireqs.add('%s' % dist.as_requirement())
 
     reqs = list(reqs)
+    guireqs = list(guireqs)
     
     optdict = { 
         'reqs': reqs, 
+        'guireqs': guireqs,
         'version': version, 
         'url': options.disturl,
         'make_dev_eggs': make_dev_eggs,
