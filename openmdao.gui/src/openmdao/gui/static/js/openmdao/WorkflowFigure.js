@@ -13,7 +13,7 @@ openmdao.WorkflowFigure=function(myModel,flowpath,pathname){
     else
         this.name = flowpath;
     this.title = this.name
-    this.defaultBackgroundColor=new draw2d.Color(230,230,250);
+    this.defaultBackgroundColor=new draw2d.Color(255,255,255);
     this.highlightBackgroundColor=new draw2d.Color(250,250,200);
     draw2d.CompartmentFigure.call(this);
     this.setBackgroundColor(this.defaultBackgroundColor);
@@ -38,7 +38,7 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     this.titlebar.style.margin="0px";
     this.titlebar.style.padding="0px";
     this.titlebar.style.font="normal 10px verdana";
-    this.titlebar.style.backgroundColor="blue";
+    this.titlebar.style.backgroundColor="gray";
     this.titlebar.style.borderBottom="1px solid gray";
     this.titlebar.style.borderLeft="5px solid transparent";
     this.titlebar.style.whiteSpace="nowrap";

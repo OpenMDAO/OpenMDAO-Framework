@@ -60,13 +60,17 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                     var src_name = conn[0],
                         dst_name = conn[1],
                         src_fig = figures[src_name],
-                        dst_fig = figures[dst_name];
-                        c = new openmdao.ContextMenuConnection()
-                    c.setSource(src_fig.getPort("output"));
-                    c.setTarget(dst_fig.getPort("input"));
+                        dst_fig = figures[dst_name],
+                        src_port = src_fig.getPort("output"),
+                        dst_port = dst_fig.getPort("input");                        
+                    c = new openmdao.ContextMenuConnection()
+                    c.setSource(src_port);
+                    c.setTarget(dst_port);
                     c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                     c.setRouter(new draw2d.BezierConnectionRouter());
                     dataflow.addFigure(c);
+                    src_port.setBackgroundColor(new draw2d.Color(0,0,0));
+                    dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
                 }
                 // TODO: handle connections to parent assembly vars (e.g. Vehicle.velocity)
                 // TODO: show passthroughs somehow
