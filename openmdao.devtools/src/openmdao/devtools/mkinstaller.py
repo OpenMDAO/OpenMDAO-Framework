@@ -116,7 +116,7 @@ def main(args=None):
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
-                subprocess.check_call(cmdline)
+                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
         finally:
             os.chdir(startdir)
         """ % pkgstr
@@ -136,10 +136,13 @@ def extend_parser(parser):
                       help="don't check for any prerequisites, e.g., numpy or scipy")
     parser.add_option("--nogui", action="store_true", dest='nogui', 
                       help="don't install the openmdao graphical user interface")
+                      
+    # hack to force use of setuptools for now
+    os.environ['VIRTUALENV_USE_SETUPTOOLS'] = '1'
 
 %(adjust_options)s
 
-def _single_install(cmds, req, bin_dir, dodeps=False):
+def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
     global logger
     if dodeps:
         extarg = '-Z'
@@ -148,8 +151,8 @@ def _single_install(cmds, req, bin_dir, dodeps=False):
     cmdline = [join(bin_dir, 'easy_install'), extarg] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
-    logger.debug("running command: %%s" %% ' '.join(cmdline))
-    subprocess.check_call(cmdline)
+    #logger.debug("running command: %%s" %% ' '.join(cmdline))
+    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
@@ -181,32 +184,41 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
         
-    if not options.noprereqs:
-        failed_imports = []
-        for pkg in openmdao_prereqs:
-            try:
-                __import__(pkg)
-            except ImportError:
-                failed_imports.append(pkg)
-        if failed_imports:
-            logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
-            logger.error("These must be installed in the system level python before installing OpenMDAO.")
-            sys.exit(-1)
+    failed_imports = []
+    for pkg in openmdao_prereqs:
+        try:
+            __import__(pkg)
+        except ImportError:
+            failed_imports.append(pkg)
+    if failed_imports and not options.noprereqs:
+        logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
+        logger.error("These must be installed in the system level python before installing OpenMDAO.")
+        sys.exit(-1)
     
     cmds = ['-f', url]
     openmdao_cmds = ['-f', openmdao_url]
+    if options.noprereqs:
+        strict = False
+    else:
+        strict = True
     try:
         for req in reqs:
             if req.startswith('openmdao.'):
-                _single_install(openmdao_cmds, req, bin_dir)
+                _single_install(openmdao_cmds, req, bin_dir, strict=strict)
             else:
-                _single_install(cmds, req, bin_dir)
+                _single_install(cmds, req, bin_dir, strict=strict)
+        if not options.nogui:
+            for req in guireqs:
+                if req.startswith('openmdao.'):
+                    _single_install(openmdao_cmds, req, bin_dir, strict=strict)
+                else:
+                    _single_install(cmds, req, bin_dir, strict=strict)
         
 %(make_dev_eggs)s
 
         # add any additional packages specified on the command line
         for req in options.reqs:
-            _single_install(cmds, req, bin_dir, True)
+            _single_install(cmds, req, bin_dir, True, strict=strict)
 
     except Exception as err:
         logger.error("ERROR: build failed: %%s" %% str(err))
@@ -229,11 +241,15 @@ def after_install(options, home_dir):
     
     version = '?.?.?'
     excludes = set(['setuptools', 'distribute']+openmdao_prereqs)
-    dists = set(working_set.resolve([Requirement.parse(r[0]) 
-                                   for r in openmdao_packages if r[0]!='openmdao.gui']))-excludes
-    gui_dists = set(working_set.resolve([Requirement.parse('openmdao.gui')]))-dists-excludes
+    dists = working_set.resolve([Requirement.parse(r[0]) 
+                                   for r in openmdao_packages if r[0]!='openmdao.gui'])
+    distnames = set([d.project_name for d in dists])-excludes
+    gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
+    guinames = set([d.project_name for d in gui_dists])-distnames-excludes
     
     for dist in dists:
+        if dist.project_name not in distnames:
+            continue
         if dist.project_name == 'openmdao.main':
             version = dist.version
         if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
@@ -243,6 +259,8 @@ def after_install(options, home_dir):
             reqs.add('%s' % dist.as_requirement())
             
     for dist in gui_dists:
+        if dist.project_name not in guinames:
+            continue
         if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
             if not dist.project_name.startswith('openmdao.'):
                 guireqs.add('%s' % dist.as_requirement())
