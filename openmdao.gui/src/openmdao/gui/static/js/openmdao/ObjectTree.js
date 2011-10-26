@@ -81,7 +81,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
                                 // data.r - the drop target                                
-                                debug.info("drop_check:",data);
+                                debug.info("ObjectTree: drop_check:",data);
                                 return true;
                             },
                             
@@ -92,7 +92,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             "drop_finish" : function (data) { 
                                 // data.o - the object being dragged
                                 // data.r - the drop target                                
-                                debug.info("drop_finish:",data)
+                                debug.info("ObjectTree: drop_finish:",data)
                                 debug.info(data.o,"was dropped on",data.r);
                             },
                             
@@ -101,9 +101,10 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             
                             /* drag_check: */
                             "drag_check" : function (data) {
-                                debug.info("drag_check:",data);
+                                debug.info("ObjectTree: drag_check:",data);
                                 // data.o - the foreign object being dragged
                                 // data.r - the hovered node
+                                return true;
                                 return { 
                                     after : true, 
                                     before : true, 
@@ -115,7 +116,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             "drag_finish" : function (data) { 
                                 // data.o - the foreign object being dragged
                                 // data.r - the target node
-                                debug.info("drag_finish:",data)
+                                debug.info("ObjectTree: drag_finish:",data)
                             }
                           },            
         })

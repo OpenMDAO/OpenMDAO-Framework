@@ -58,7 +58,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
 
     /** display the file in a new window (probably not in a useful format) */
     function viewFile(pathname) {
-        openmdao.Util.popupWindow('file'+path.replace(/\\/g,'/'),path,600,800)
+        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname,600,800)
     }
 
 

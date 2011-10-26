@@ -101,7 +101,7 @@ def Component(request,name):
     if request.method=='POST':
         result = ''
         try:
-            cserver.add_component(name,request.POST['type']);
+            cserver.add_component(name,request.POST['type'],request.POST['parent']);
         except Exception,e:
             print e
             result = sys.exc_info()

@@ -599,16 +599,24 @@ class ConsoleServer(cmd.Cmd):
         print 'setting top to:',name
         set_as_top(self.top.get(name))
 
-    def add_component(self,name,classname):
-        ''' add a new component of the given type to the top assembly. 
+    def add_component(self,name,classname,parentname):
+        ''' add a new component of the given type to the specified parent. 
         '''
-        try:
-            if classname in self._globals:
-                self.top.add(name,self._globals[classname]())
-            else:
-                self.top.add(name,create(classname))
-        except Exception, err:
-            self.error(err,sys.exc_info())
+        if (parentname and len(parentname)>0):
+            parent = self.top.get(parentname)
+        else:
+            parent = self.top
+        
+        if parent:
+            try:
+                if classname in self._globals:
+                    parent.add(name,self._globals[classname]())
+                else:
+                    parent.add(name,create(classname))
+            except Exception, err:
+                self.error(err,sys.exc_info())
+        else:
+            print "Error adding component: parent",parentname,"not found."
             
     def create(self,typname,name):
         ''' create a new object of the given type. 

@@ -45,7 +45,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     
     // make the workflow pane droppable
     workflowDiv.droppable ({
-        accept: '.obj, .objtype',
+        accept: '.obj',
         drop: function(ev,ui) { 
             debug.info("Workflow drop:",ev,ui)
             // get the object that was dropped and where it was dropped
@@ -56,15 +56,13 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top),
                 flowfig = workflow.getBestCompartmentFigure(x,y);
-            debug.info("dropped:",droppedObject)            
-            if (droppedObject.hasClass('objtype')) {
-                openmdao.Util.promptForName(function(name) { 
-                        model.addComponent(droppedPath,name,x,y)
-                })
-            }
-            else if (flowfig && droppedObject.hasClass('obj')) {
+            debug.info("Workflow dropped object:",droppedObject)            
+            if (flowfig && droppedObject.hasClass('obj')) {
                 debug.info('flowfig:',flowfig,'pathname:',flowfig.pathname)
                 model.issueCommand('top'+flowfig.pathname+'.workflow.add("'+droppedPath+'")')
+            }
+            else {
+                debug.info('Workflow drop was not on a flow figure')
             }
         }
     });

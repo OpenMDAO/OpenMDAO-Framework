@@ -25,10 +25,10 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top)
-            debug.info("dropped:",droppedObject)            
+            debug.info("Dataflow dropped object:",droppedObject)            
             if (droppedObject.hasClass('objtype')) {
-                openmdao.Util.promptForName(function(name) { 
-                    model.addComponent(droppedPath,name,x,y)
+                openmdao.Util.promptForName(function(name) {
+                    model.addComponent(droppedPath,name,self.pathname)
                 })
             }
         }
