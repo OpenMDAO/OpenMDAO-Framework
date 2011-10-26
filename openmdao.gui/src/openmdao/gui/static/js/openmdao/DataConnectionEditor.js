@@ -63,11 +63,21 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                         dst_fig = figures[dst_name],
                         src_port = src_fig.getPort("output"),
                         dst_port = dst_fig.getPort("input");                        
-                    c = new openmdao.ContextMenuConnection()
+                    c = new draw2d.Connection()
                     c.setSource(src_port);
                     c.setTarget(dst_port);
                     c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                     c.setRouter(new draw2d.BezierConnectionRouter());
+                    c.getContextMenu=function(){
+                        var menu=new draw2d.Menu();
+                        var oThis=this;
+                        menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+                                var cmd = 'top.'+self.pathname+'.disconnect('+src_name+','+dst_name+')';
+                                model.issueCommand(cmd);
+                            })
+                        );
+                        return menu;
+                    };
                     dataflow.addFigure(c);
                     src_port.setBackgroundColor(new draw2d.Color(0,0,0));
                     dst_port.setBackgroundColor(new draw2d.Color(0,0,0));

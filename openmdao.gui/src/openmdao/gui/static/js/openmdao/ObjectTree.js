@@ -76,7 +76,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             themes      : { "theme":  "classic-dark" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
-            dnd         : { 
+            dnd         : { /* DND with foreign items doesn't work in latest (github) version damnit */
                             /* drop_check: false means move is invalid, otherwise true */
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
@@ -86,7 +86,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             },
                             
                             /* drop_target: jquery selector matching all drop targets */
-                            "drop_target" : ".jstree-drop",
+                            "drop_target" : "*",
                             
                             /* drop_finish: executed after a valid drop */
                             "drop_finish" : function (data) { 
@@ -136,7 +136,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             }
         })
         .bind("loaded.jstree", function (e, data) {
-            jQuery('#'+id+' .obj').draggable({ helper: 'clone', appendTo: 'body' })
+            jQuery('#'+id+' a').draggable({ helper: 'clone', appendTo: 'body' })    // doesn't work ?
         })
         .one("reselect.jstree", function (e, data) { });
     }
@@ -175,7 +175,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         };
         if (isAssembly) {
             menu.show_dataflow = {
-                "label"  : 'Show Data Connections',
+                "label"  : 'Show Structure',
                 "action" :  function(node) { 
                                 dataflow_fn(path);
                             }
