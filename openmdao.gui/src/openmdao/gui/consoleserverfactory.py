@@ -471,7 +471,7 @@ class ConsoleServer(cmd.Cmd):
             attrs['Outputs'] = outputs
 
         if is_instance(comp,Assembly):
-            attrs['Connections'] = self._get_dataflow(comp)
+            attrs['Structure'] = self._get_dataflow(comp)
         
         if has_interface(comp,IDriver):
             attrs['Workflow'] = self._get_workflow(comp)
