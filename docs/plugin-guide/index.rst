@@ -10,6 +10,7 @@ Plugin Developer Guide
    
    overview
    plugin_creation
+   official_plugins
    module_plugin
    variable_plugin
    extension_plugin
