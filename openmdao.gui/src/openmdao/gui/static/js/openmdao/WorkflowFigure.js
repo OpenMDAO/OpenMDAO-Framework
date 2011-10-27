@@ -13,7 +13,7 @@ openmdao.WorkflowFigure=function(myModel,flowpath,pathname){
     else
         this.name = flowpath;
     this.title = this.name
-    this.defaultBackgroundColor=new draw2d.Color(230,230,250);
+    this.defaultBackgroundColor=new draw2d.Color(255,255,255);
     this.highlightBackgroundColor=new draw2d.Color(250,250,200);
     draw2d.CompartmentFigure.call(this);
     this.setBackgroundColor(this.defaultBackgroundColor);
@@ -38,7 +38,7 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     this.titlebar.style.margin="0px";
     this.titlebar.style.padding="0px";
     this.titlebar.style.font="normal 10px verdana";
-    this.titlebar.style.backgroundColor="blue";
+    this.titlebar.style.backgroundColor="gray";
     this.titlebar.style.borderBottom="1px solid gray";
     this.titlebar.style.borderLeft="5px solid transparent";
     this.titlebar.style.whiteSpace="nowrap";
@@ -47,6 +47,14 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     this.textNode=document.createTextNode(this.title);
     this.titlebar.appendChild(this.textNode);
     item.appendChild(this.titlebar);
+ 
+    // set up for dropping objects from jstree
+    var elm = jQuery(item);
+    elm.addClass("WorkflowFigure");
+    elm.data('name',this.name);
+    elm.data('pathname',this.pathname);
+    elm.data('flowpath',this.flowpath);
+    
     return item;
 };
 openmdao.WorkflowFigure.prototype.onFigureEnter=function(_4a1c){
@@ -86,4 +94,14 @@ openmdao.WorkflowFigure.prototype.setBackgroundColor=function(color){
     else{
         this.html.style.backgroundColor="transparent";
     }
+};
+openmdao.WorkflowFigure.prototype.getContextMenu=function(){
+    var menu=new draw2d.Menu();
+    var oThis=this;
+    menu.appendMenuItem(new draw2d.MenuItem("Clear Workflow",null,function(){
+        var asm = 'top.'+oThis.pathname,
+            cmd = asm + '.workflow.clear();' + asm + '.config_changed();';
+        oThis.myModel.issueCommand(cmd);
+    }));
+    return menu;
 };
