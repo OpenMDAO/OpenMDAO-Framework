@@ -51,11 +51,10 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                 name = openmdao.Util.getName(pathname);
                 
             if (filterChars.indexOf(name[0])<0) {
-                var node = { 'title': name  };
-                node['data'] = { 
+                var node = { 'data': name  };
+                node['attr'] = { 
                      'type'  : type,
                      'path'  : pathname,
-                     'title' : type+': '+name,
                      'interfaces' : interfaces
                 };
                 if (item['children']) {
@@ -71,18 +70,22 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
     function updateTree(json) {
         tree.empty()        
         tree.jstree({
-            plugins     : [ "json", "sort", "themes", "types", "cookies", "contextmenu", "ui", "dnd" ],
-            json        : { "data": convertJSON(json,'') },
-            themes      : { "theme":  "classic-dark" },
+            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "dnd" ],
+            json_data   : { "data": convertJSON(json,'') },
+            themes      : { "theme":  "classic" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
-            dnd         : { /* DND with foreign items doesn't work in latest (github) version damnit */
-                            /* drop_check: false means move is invalid, otherwise true */
+            dnd         : { /* drop_check: false means move is invalid, otherwise true */
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
                                 // data.r - the drop target                                
-                                debug.info("ObjectTree: drop_check:",data);
-                                return true;
+                                //debug.info("ObjectTree: drop_check:",data);
+                                if (data.r.hasClass('WorkflowFigure')) {
+                                    return true;
+                                }
+                                else {
+                                    return false;
+                                }
                             },
                             
                             /* drop_target: jquery selector matching all drop targets */
@@ -93,11 +96,18 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                 // data.o - the object being dragged
                                 // data.r - the drop target                                
                                 debug.info("ObjectTree: drop_finish:",data)
-                                debug.info(data.o,"was dropped on",data.r);
+                                data.e.stopPropagation();
+                                if (data.r.hasClass('WorkflowFigure')) {
+                                    var component = openmdao.Util.getName(data.o.attr('path')),
+                                        pathname  = data.r.data('pathname')
+                                        cmd = 'top.'+pathname+'.workflow.add("'+component+'")';
+                                    debug.info(cmd);
+                                    model.issueCommand(cmd);
+                                }
                             },
                             
                             /* drag_target: jquery selector matching all foreign nodes that can be dropped on the tree */
-                            "drag_target" : ".objtype, .ui-draggable, .jstree-draggable, .ui-droppable",
+                            "drag_target" : ".objtype",
                             
                             /* drag_check: */
                             "drag_check" : function (data) {
@@ -122,23 +132,21 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         })
         .bind("select_node.jstree", function(e,data) {
             if (typeof select_fn == 'function') {
-                var meta = data.rslt.obj.data(),
-                    path = meta["path"];
-                select_fn(path)
+                var path = data.rslt.obj.attr("path");
+                select_fn(path);
             }
         })
         .bind("dblclick.jstree", function (e,data) {
             if (typeof dblclick_fn == 'function') {
                 var node = jQuery(e.target).closest("li"),
-                    meta = node.data(),
-                    path = meta["path"];
-                dblclick_fn(model,path)
+                    path = node.attr("path");
+                dblclick_fn(model,path);
             }
         })
-        .bind("loaded.jstree", function (e, data) {
-            jQuery('#'+id+' a').draggable({ helper: 'clone', appendTo: 'body' })    // doesn't work ?
-        })
-        .one("reselect.jstree", function (e, data) { });
+        // .bind("loaded.jstree", function (e, data) {
+            // jQuery('#'+id+' a').draggable({ helper: 'clone', appendTo: 'body' })    // doesn't work ?
+        // })
+        // .one("reselect.jstree", function (e, data) { });
     }
 
     /** get a context menu for the specified node */
@@ -149,11 +157,9 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             isAssembly = true;
         }
         
-        var metadata = node.data();
-        var path = metadata['path'],
-            type = metadata['type'],
-            interfaces = metadata['interfaces']
-            
+        var path = node.attr('path'),
+            type = node.attr('type'),
+            interfaces = node.attr['interfaces'];
         
         // now create the menu
         var menu = {}
@@ -186,13 +192,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                 model.setTop(path)
                             }
             };
-        };
-        menu.add_to_workflow = {
-            "label"  : 'Add to Workflow',
-            "action" :  function(node) { 
-                            // TODO: need to show list of workflows and allow user to pick one
-                            model.issueCommand('top.driver.workflow.add("'+path+'")');
-                        }
         };
         menu.run = {
             "label"  : 'Run this Component',

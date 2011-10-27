@@ -208,8 +208,8 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         
         // convert to a jstree
         tree.jstree({
-            "plugins" :     [ "html", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
-            "themes" :      { "theme":  "classic-dark" },
+            "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
+            "themes" :      { "theme":  "classic" },
             "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
             "contextmenu" : { "items":  contextMenu }
         })

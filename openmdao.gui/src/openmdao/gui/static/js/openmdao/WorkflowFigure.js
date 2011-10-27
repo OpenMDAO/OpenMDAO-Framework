@@ -47,6 +47,14 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     this.textNode=document.createTextNode(this.title);
     this.titlebar.appendChild(this.textNode);
     item.appendChild(this.titlebar);
+ 
+    // set up for dropping objects from jstree
+    var elm = jQuery(item);
+    elm.addClass("WorkflowFigure");
+    elm.data('name',this.name);
+    elm.data('pathname',this.pathname);
+    elm.data('flowpath',this.flowpath);
+    
     return item;
 };
 openmdao.WorkflowFigure.prototype.onFigureEnter=function(_4a1c){
