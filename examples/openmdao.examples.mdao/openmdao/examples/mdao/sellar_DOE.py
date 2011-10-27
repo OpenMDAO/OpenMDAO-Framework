@@ -13,7 +13,7 @@ class SellarDOE(Assembly):
         super(SellarDOE,self).__init__()
         
         self.add("driver",DOEdriver())
-        self.driver.recorder = ListCaseRecorder()
+        self.driver.recorders = [ListCaseRecorder()]
         self.driver.DOEgenerator = FullFactorial()
         #configure the specific DOE options
         self.driver.DOEgenerator.num_levels = 3

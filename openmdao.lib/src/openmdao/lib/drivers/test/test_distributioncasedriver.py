@@ -81,7 +81,7 @@ class TestCase(unittest.TestCase):
         model.driver.add_parameter("driven.x", low=-10., high=10., fd_step = 0.1 )
 
         results = ListCaseRecorder()
-        model.driver.recorder = results
+        model.driver.recorders = [results]
 
         model.driver.distribution_generator.form = "FORWARD"
         model.driver.distribution_generator.order = 2
@@ -107,7 +107,7 @@ class TestCase(unittest.TestCase):
         model.driver.add_parameter("driven.x", low=-10., high=10., fd_step = 0.1 )
 
         results = ListCaseRecorder()
-        model.driver.recorder = results
+        model.driver.recorders = [results]
 
         model.driver.distribution_generator.form = "BACKWARD"
         model.driver.distribution_generator.order = 2
@@ -134,7 +134,7 @@ class TestCase(unittest.TestCase):
         model.driver.add_parameter("driven.x", low=-10., high=10., fd_step = 0.1 )
 
         results = ListCaseRecorder()
-        model.driver.recorder = results
+        model.driver.recorders = [results]
 
         model.driver.distribution_generator.form = "CENTRAL"
         model.driver.distribution_generator.order = 2
@@ -154,7 +154,7 @@ class TestCase(unittest.TestCase):
         # Forward with order 1
         self.model.driver.distribution_generator = FiniteDifferenceGenerator(self.model.driver)
         self.results = ListCaseRecorder()
-        self.model.driver.recorder = self.results
+        self.model.driver.recorders = [self.results]
         self.order =  1
         self.model.driver.distribution_generator.form = "FORWARD"
         self.model.driver.distribution_generator.order = self.order
@@ -167,7 +167,7 @@ class TestCase(unittest.TestCase):
         # Backward with order 2
         self.model.driver.distribution_generator = FiniteDifferenceGenerator(self.model.driver)
         self.results = ListCaseRecorder()
-        self.model.driver.recorder = self.results
+        self.model.driver.recorders = [self.results]
         self.order = 2
         self.model.driver.distribution_generator.form = "BACKWARD"
         self.model.driver.distribution_generator.order = self.order
@@ -180,7 +180,7 @@ class TestCase(unittest.TestCase):
         # Central with order 2
         self.model.driver.distribution_generator = FiniteDifferenceGenerator(self.model.driver)
         self.results = ListCaseRecorder()
-        self.model.driver.recorder = self.results
+        self.model.driver.recorders = [self.results]
         self.order = 2
         self.model.driver.distribution_generator.form = "CENTRAL"
         self.model.driver.distribution_generator.order = self.order
@@ -193,7 +193,7 @@ class TestCase(unittest.TestCase):
         # Central with order 3
         self.model.driver.distribution_generator = FiniteDifferenceGenerator(self.model.driver)
         self.results = ListCaseRecorder()
-        self.model.driver.recorder = self.results
+        self.model.driver.recorders = [self.results]
         self.order = 3
         self.model.driver.distribution_generator.form = "CENTRAL"
         self.model.driver.distribution_generator.order = self.order
@@ -214,7 +214,7 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(len(self.results), 1 + num_params * self.order)
 
 
-        for case in self.model.driver.recorder.cases:
+        for case in self.model.driver.recorders[0].cases:
             self.assertEqual(case.msg, None)
             self.assertEqual(case['driven.rosen_suzuki'],
                              rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
@@ -248,7 +248,7 @@ class TestCase(unittest.TestCase):
         model.driver.error_policy = 'RETRY'
 
         results = ListCaseRecorder()
-        model.driver.recorder = results
+        model.driver.recorders = [results]
 
         model.driver.distribution_generator.form = "FORWARD"
         model.driver.distribution_generator.order = 2
@@ -268,7 +268,7 @@ class TestCase(unittest.TestCase):
         model.driver.add_parameter("driven.x", low=-10., high=10., fd_step = 0.1 )
 
         results = ListCaseRecorder()
-        model.driver.recorder = results
+        model.driver.recorders = [results]
 
         try:
             model.driver.distribution_generator.form = "INVALID_FORM"
