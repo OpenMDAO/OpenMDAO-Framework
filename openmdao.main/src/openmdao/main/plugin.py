@@ -902,7 +902,7 @@ def plugin_install(argv=None):
                         nargs='?')
     parser.add_argument("-g", "--github", help='Find plugin in the official Openmdao-Plugins repository on github', 
                         action='store_true')
-    parser.add_argument("-l", "--list", help='List all installed plugins', 
+    parser.add_argument("-l", "--list", help='List all installed plugins (with -g, list all available plugins in OpenMDAO-Plugins)', 
                         action='store_true')
     parser.add_argument("-f", "--find-links", action="store", type=str, 
                         dest='findlinks', help="URL of find-links server")
@@ -944,7 +944,12 @@ def plugin_install(argv=None):
             else:
                 url = 'https://api.github.com/repos/OpenMDAO-Plugins/%s/tags' % name
         
-                resp = urllib2.urlopen(url)
+                try:
+                    resp = urllib2.urlopen(url)
+                except urllib2.HTTPError:
+                    print "\nERROR: plugin named not found in OpenMDAO-Plugins"
+                    exit()
+                    
                 for line in resp.fp:
                     text = json.loads(line)
     
