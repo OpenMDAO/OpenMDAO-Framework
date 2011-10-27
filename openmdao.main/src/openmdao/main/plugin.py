@@ -752,7 +752,6 @@ def _find_all_plugins(searchdir):
     dct['openmdao.component'] = comps
     dct['openmdao.driver'] = drivers
     
-    # TODO -note, this doesn't work, since we don't have a variable base class.
     variables = psta.find_inheritors('openmdao.main.api.Variable')
     variables.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
     dct['openmdao.variable'] = set(variables)
