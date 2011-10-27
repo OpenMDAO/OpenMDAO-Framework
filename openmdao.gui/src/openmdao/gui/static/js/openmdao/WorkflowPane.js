@@ -69,7 +69,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     
     /** expand workflow (container) figures to contain all their children */
     function resizeFlowFigures() {
-        var figWidth = 100,figHeight = 50
+        var figWidth = 110,figHeight = 60
         for (fig in flow_figs) {
             var i=0, xmin=999999, xmax=0, ymin=999999, ymax=0,
                 children = flow_figs[fig].getChildren()

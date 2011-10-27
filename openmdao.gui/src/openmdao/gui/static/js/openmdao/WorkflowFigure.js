@@ -95,3 +95,13 @@ openmdao.WorkflowFigure.prototype.setBackgroundColor=function(color){
         this.html.style.backgroundColor="transparent";
     }
 };
+openmdao.WorkflowFigure.prototype.getContextMenu=function(){
+    var menu=new draw2d.Menu();
+    var oThis=this;
+    menu.appendMenuItem(new draw2d.MenuItem("Clear Workflow",null,function(){
+        var asm = 'top.'+oThis.pathname,
+            cmd = asm + '.workflow.clear();' + asm + '.config_changed();';
+        oThis.myModel.issueCommand(cmd);
+    }));
+    return menu;
+};

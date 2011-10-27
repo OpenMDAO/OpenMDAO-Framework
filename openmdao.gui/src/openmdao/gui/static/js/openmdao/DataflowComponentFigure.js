@@ -234,20 +234,14 @@ openmdao.DataflowComponentFigure.prototype.toggle=function(){
 openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
-    menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
-        if (/.driver$/.test(oThis.name)) {
-            oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name.replace(/.driver/g,'')+"')");
-        }
-        else {
-            oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
-        }
+    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+        var asm = 'top.'+openmdao.Util.getParentPath(oThis.pathname),
+            cmd = asm + '.disconnect("'+oThis.name+'");',
+            cmd = cmd + asm + '.config_changed(update_parent=True);';
+        oThis.myModel.issueCommand(cmd);
     }));
     return menu;
 };
-
-// openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
-    // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
-// };
 
 openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
@@ -255,7 +249,9 @@ openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
 
 openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
+    //this.getWorkflow().showTooltip(new openmdao.Tooltip(this.pathname),true);
 };
+
 openmdao.DataflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };

@@ -40,6 +40,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     if (editable) {
         parms.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+            // TODO: check type and behave appropriately (quotes around strings?)
             cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
             model.issueCommand(cmd)
         });
