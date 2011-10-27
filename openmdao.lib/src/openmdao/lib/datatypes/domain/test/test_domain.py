@@ -136,7 +136,7 @@ class TestCase(unittest.TestCase):
 
         flow = FlowSolution()
         self.assertEqual(flow.grid_location, 'Vertex')
-        self.assertEqual(flow.ghosts, [0, 0, 0, 0, 0, 0])
+        self.assertEqual(flow.ghosts, (0, 0, 0, 0, 0, 0))
 
         self.assertFalse(flow.is_equivalent([], logger))
 
@@ -217,7 +217,7 @@ class TestCase(unittest.TestCase):
         grid = GridCoordinates()
         self.assertEqual(grid.shape, ())
         self.assertEqual(grid.extent, ())
-        self.assertEqual(grid.ghosts, [0, 0, 0, 0, 0, 0])
+        self.assertEqual(grid.ghosts, (0, 0, 0, 0, 0, 0))
 
         self.assertFalse(grid.is_equivalent([], logger))
 
@@ -523,6 +523,108 @@ class TestCase(unittest.TestCase):
         assert_raises(self, 'Vector().extract(0, -1)',
                       globals(), locals(), RuntimeError,
                       'Vector is empty!')
+
+    def test_extend(self):
+        logging.debug('')
+        logging.debug('test_extend')
+        logger = logging.getLogger()
+
+        # Create vanilla 3D wedge.
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        self.assertEqual(wedge.xyzzy.shape, (30, 20, 10))
+        self.assertEqual(wedge.xyzzy.flow_solution.shape, (30, 20, 10))
+
+        # Extend for ghost planes.
+        zone = wedge.xyzzy.extend('i', +1., 2, 1)
+        self.assertEqual(zone.shape, (32, 20, 10))
+        self.assertEqual(zone.flow_solution.shape, (31, 20, 10))
+        zone = zone.extend('i', -1., 3, 1)
+        self.assertEqual(zone.shape, (35, 20, 10))
+        self.assertEqual(zone.flow_solution.shape, (32, 20, 10))
+        zone = zone.extend('j', +1., 2, 1)
+        self.assertEqual(zone.shape, (35, 22, 10))
+        self.assertEqual(zone.flow_solution.shape, (32, 21, 10))
+        zone = zone.extend('j', -1., 3, 1)
+        self.assertEqual(zone.shape, (35, 25, 10))
+        self.assertEqual(zone.flow_solution.shape, (32, 22, 10))
+        zone = zone.extend('k', +1., 2, 1)
+        self.assertEqual(zone.shape, (35, 25, 12))
+        self.assertEqual(zone.flow_solution.shape, (32, 22, 11))
+        zone = zone.extend('k', -1., 3, 1)
+        self.assertEqual(zone.shape, (35, 25, 15))
+        self.assertEqual(zone.flow_solution.shape, (32, 22, 12))
+        self.assertEqual(zone.grid_coordinates.shape, (35, 25, 15))
+
+        zone.grid_coordinates.ghosts = (3, 2, 3, 2, 3, 2)
+        self.assertEqual(zone.grid_coordinates.shape, (30, 20, 10))
+        zone.flow_solution.ghosts = (1, 1, 1, 1, 1, 1)
+        self.assertEqual(zone.flow_solution.shape, (30, 20, 10))
+
+        # Extract to no-ghosts zone and show equivalent to original.
+        zone = zone.extract(0, -1, 0, -1, 0, -1,
+                            grid_ghosts=(0, 0, 0, 0, 0, 0),
+                            flow_ghosts=(0, 0, 0, 0, 0, 0))
+        self.assertEqual(zone.shape, (30, 20, 10))
+        self.assertEqual(zone.flow_solution.shape, (30, 20, 10))
+        self.assertTrue(zone.is_equivalent(wedge.xyzzy, logger))
+
+        # Create vanilla 2D wedge.
+        wedge = create_wedge_2d((20, 10), 0.5, 2., 30.)
+        self.assertEqual(wedge.xyzzy.shape, (20, 10))
+        self.assertEqual(wedge.xyzzy.flow_solution.shape, (20, 10))
+
+        # Extend for ghost planes.
+        zone = wedge.xyzzy.extend('i', +1., 2, 1)
+        self.assertEqual(zone.shape, (22, 10))
+        self.assertEqual(zone.flow_solution.shape, (21, 10))
+        zone = zone.extend('i', -1., 3, 1)
+        self.assertEqual(zone.shape, (25, 10))
+        self.assertEqual(zone.flow_solution.shape, (22, 10))
+        zone = zone.extend('j', +1., 2, 1)
+        self.assertEqual(zone.shape, (25, 12))
+        self.assertEqual(zone.flow_solution.shape, (22, 11))
+        zone = zone.extend('j', -1., 3, 1)
+        self.assertEqual(zone.shape, (25, 15))
+        self.assertEqual(zone.flow_solution.shape, (22, 12))
+
+        zone.grid_coordinates.ghosts = (3, 2, 3, 2)
+        self.assertEqual(zone.grid_coordinates.shape, (20, 10))
+        zone.flow_solution.ghosts = (1, 1, 1, 1)
+        self.assertEqual(zone.flow_solution.shape, (20, 10))
+
+        # Extract to no-ghosts zone and show equivalent to original.
+        zone = zone.extract(0, -1, 0, -1,
+                            grid_ghosts=(0, 0, 0, 0, 0, 0),
+                            flow_ghosts=(0, 0, 0, 0, 0, 0))
+        self.assertEqual(zone.shape, (20, 10))
+        self.assertEqual(zone.flow_solution.shape, (20, 10))
+        self.assertTrue(zone.is_equivalent(wedge.xyzzy, logger))
+
+        # Create vanilla 2D curve.
+        curve = create_curve_2d(20, 0.5, 30.)
+        self.assertEqual(curve.xyzzy.shape, (20,))
+        self.assertEqual(curve.xyzzy.flow_solution.shape, (20,))
+
+        # Extend for ghost planes.
+        zone = curve.xyzzy.extend('i', +1., 2, 1)
+        self.assertEqual(zone.shape, (22,))
+        self.assertEqual(zone.flow_solution.shape, (21,))
+        zone = zone.extend('i', -1., 3, 1)
+        self.assertEqual(zone.shape, (25,))
+        self.assertEqual(zone.flow_solution.shape, (22,))
+
+        zone.grid_coordinates.ghosts = (3, 2)
+        self.assertEqual(zone.grid_coordinates.shape, (20,))
+        zone.flow_solution.ghosts = (1, 1)
+        self.assertEqual(zone.flow_solution.shape, (20,))
+
+        # Extract to no-ghosts zone and show equivalent to original.
+        zone = zone.extract(0, -1,
+                            grid_ghosts=(0, 0, 0, 0, 0, 0),
+                            flow_ghosts=(0, 0, 0, 0, 0, 0))
+        self.assertEqual(zone.shape, (20,))
+        self.assertEqual(zone.flow_solution.shape, (20,))
+        self.assertTrue(zone.is_equivalent(curve.xyzzy, logger))
 
 
 if __name__ == '__main__':

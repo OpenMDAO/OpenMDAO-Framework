@@ -97,9 +97,15 @@ class Vector(object):
                                  component.upper())
                     return False
             else:
-                if (other_arr != arr).any():
-                    logger.debug('%s %s values are not equal.', name,
-                                 component.upper())
+                try:
+                    if (other_arr != arr).any():
+                        logger.debug('%s %s values are not equal.', name,
+                                     component.upper())
+                        return False
+                except Exception as exc:
+                    logger.debug('%s %s: %r vs. %r: %s', name, component.upper(),
+                                 other_arr, arr, exc)
+                    logger.debug('!=: %r', other_arr != arr)
                     return False
         return True
 
@@ -215,6 +221,140 @@ class Vector(object):
             arr = getattr(self, component)
             if arr is not None:
                 setattr(vec, component, arr[imin:imax+1])
+        return vec
+
+    def extend(self, axis, delta, npoints):
+        """
+        Construct a new :class:`Vector` by replication.
+
+        axis: 'i', 'j', or 'k'
+            Index axis to extend.
+
+        delta: float.
+            Direction. A negative value adds points before the current
+            zero-index of `axis`. 
+
+        npoints: int > 0
+            Number of points to add in `axis` dimension.
+        """
+        if not delta:
+            raise ValueError('delta must be non-zero')
+        if npoints < 1:
+            raise ValueError('npoints must be >= 1')
+        i = len(self.shape)
+        if i == 3:
+            if axis not in ('i', 'j', 'k'):
+                raise ValueError('axis must be i, j, or k')
+            return self._extend_3d(axis, delta, npoints)
+        elif i == 2:
+            if axis not in ('i', 'j'):
+                raise ValueError('axis must be i or j')
+            return self._extend_2d(axis, delta, npoints)
+        elif i == 1:
+            if axis != 'i':
+                raise ValueError('axis must be i')
+            return self._extend_1d(delta, npoints)
+        else:
+            raise RuntimeError('Vector is empty!')
+
+    def _extend_3d(self, axis, delta, npoints):
+        """ 3D (index space) extension. """
+        shape = self.shape
+        if axis == 'i':
+            new_shape = (shape[0] + npoints, shape[1], shape[2])
+            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+        elif axis == 'j':
+            new_shape = (shape[0], shape[1] + npoints, shape[2])
+            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+        else:
+            new_shape = (shape[0], shape[1], shape[2] + npoints)
+            indx = shape[2] if delta > 0 else new_shape[2] - shape[2]
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                new_arr = numpy.zeros(new_shape)
+                if axis == 'i':
+                    if delta > 0:
+                        new_arr[0:indx, :, :] = arr
+                        new_arr[indx:, :, :] = arr[-1, :, :]
+                    else:
+                        new_arr[indx:, :, :] = arr
+                        new_arr[0:indx, :, :] = arr[0, :, :]
+                elif axis == 'j':
+                    if delta > 0:
+                        new_arr[:, 0:indx, :] = arr
+                        for j in range(npoints):
+                            new_arr[:, indx+j, :] = arr[:, -1, :]
+                    else:
+                        new_arr[:, indx:, :] = arr
+                        for j in range(npoints):
+                            new_arr[:, j, :] = arr[:, 0, :]
+                else:
+                    if delta > 0:
+                        new_arr[:, :, 0:indx] = arr
+                        for k in range(npoints):
+                            new_arr[:, :, indx+k] = arr[:, :, -1]
+                    else:
+                        new_arr[:, :, indx:] = arr
+                        for k in range(npoints):
+                            new_arr[:, :, k] = arr[:, :, 0]
+                setattr(vec, component, new_arr)
+        return vec
+
+    def _extend_2d(self, axis, delta, npoints):
+        """ 2D (index space) extension. """
+        shape = self.shape
+        if axis == 'i':
+            new_shape = (shape[0] + npoints, shape[1])
+            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+        else:
+            new_shape = (shape[0], shape[1] + npoints)
+            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                new_arr = numpy.zeros(new_shape)
+                if axis == 'i':
+                    if delta > 0:
+                        new_arr[0:indx, :] = arr
+                        new_arr[indx:, :] = arr[-1, :]
+                    else:
+                        new_arr[indx:, :] = arr
+                        new_arr[0:indx, :] = arr[0, :]
+                else:
+                    if delta > 0:
+                        new_arr[:, 0:indx] = arr
+                        for j in range(npoints):
+                            new_arr[:, indx+j] = arr[:, -1]
+                    else:
+                        new_arr[:, indx:] = arr
+                        for j in range(npoints):
+                            new_arr[:, j] = arr[:, 0]
+                setattr(vec, component, new_arr)
+        return vec
+
+    def _extend_1d(self, delta, npoints):
+        """ 1D (index space) extension. """
+        shape = self.shape
+        new_shape = (shape[0] + npoints,)
+        indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                new_arr = numpy.zeros(new_shape)
+                if delta > 0:
+                    new_arr[0:indx] = arr
+                    new_arr[indx:] = arr[-1]
+                else:
+                    new_arr[indx:] = arr
+                    new_arr[0:indx] = arr[0]
+                setattr(vec, component, new_arr)
         return vec
 
     def flip_z(self):

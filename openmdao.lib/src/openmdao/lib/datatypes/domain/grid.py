@@ -1,4 +1,6 @@
+import copy
 from math import atan2, cos, hypot, sin
+import numpy
 
 from openmdao.lib.datatypes.domain.vector import Vector
 
@@ -18,7 +20,7 @@ class GridCoordinates(Vector):
 
     def __init__(self):
         super(GridCoordinates, self).__init__()
-        self._ghosts = [0, 0, 0, 0, 0, 0]
+        self._ghosts = (0, 0, 0, 0, 0, 0)
 
     def _get_ghosts(self):
         return self._ghosts
@@ -144,6 +146,10 @@ class GridCoordinates(Vector):
                 return (z.min(), z.max(), r.min(), r.max(), t.min(), t.max())
             return (r.min(), r.max(), t.min(), t.max())
 
+    def copy(self):
+        """ Returns a deep copy of self. """
+        return copy.deepcopy(self)
+
     def is_equivalent(self, other, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
@@ -167,8 +173,9 @@ class GridCoordinates(Vector):
                                                           logger, tolerance):
             return False
 
-        if self.ghosts != other.ghosts:
-            logger.debug('ghost cell counts are not equal.')
+        if other.ghosts != self.ghosts:
+            logger.debug('grid ghost cell counts are not equal: %s vs. %s.',
+                         other.ghosts, self.ghosts)
             return False
 
         return True
@@ -213,28 +220,32 @@ class GridCoordinates(Vector):
         """ 3D (index space) extraction. """
         ghosts = self._ghosts
 
-        # Support end-relative indexing.
+        # Support end-relative indexing and adjust for existing ghost planes.
         grid_imax, grid_jmax, grid_kmax = super(GridCoordinates, self).shape
         if imin < 0:
             imin += (grid_imax - ghosts[1])
+        else:
+            imin += ghosts[0]
         if imax < 0:
             imax += (grid_imax - ghosts[1])
+        else:
+            imax += ghosts[0]
         if jmin < 0:
             jmin += (grid_jmax - ghosts[3])
+        else:
+            jmin += ghosts[2]
         if jmax < 0:
             jmax += (grid_jmax - ghosts[3])
+        else:
+            jmax += ghosts[2]
         if kmin < 0:
             kmin += (grid_kmax - ghosts[5])
+        else:
+            kmin += ghosts[4]
         if kmax < 0:
             kmax += (grid_kmax - ghosts[5])
-
-        # Adjust for existing ghost/rind planes.
-        imin += ghosts[0]
-        imax += ghosts[0]
-        jmin += ghosts[2]
-        jmax += ghosts[2]
-        kmin += ghosts[4]
-        kmax += ghosts[4]
+        else:
+            kmax += ghosts[4]
 
         # Adjust for new ghost/rind planes.
         imin -= new_ghosts[0]
@@ -268,22 +279,24 @@ class GridCoordinates(Vector):
         """ 2D (index space) extraction. """
         ghosts = self._ghosts
 
-        # Support end-relative indexing.
+        # Support end-relative indexing and adjust for existing ghost planes.
         grid_imax, grid_jmax = super(GridCoordinates, self).shape
         if imin < 0:
             imin += (grid_imax - ghosts[1])
+        else:
+            imin += ghosts[0]
         if imax < 0:
             imax += (grid_imax - ghosts[1])
+        else:
+            imax += ghosts[0]
         if jmin < 0:
             jmin += (grid_jmax - ghosts[1])
+        else:
+            jmin += ghosts[2]
         if jmax < 0:
             jmax += (grid_jmax - ghosts[1])
-
-        # Adjust for existing ghost/rind planes.
-        imin += ghosts[0]
-        imax += ghosts[0]
-        jmin += ghosts[2]
-        jmax += ghosts[2]
+        else:
+            jmax += ghosts[2]
 
         # Adjust for new ghost/rind planes.
         imin -= new_ghosts[0]
@@ -314,16 +327,16 @@ class GridCoordinates(Vector):
         """ 1D (index space) extraction. """
         ghosts = self._ghosts
 
-        # Support end-relative indexing.
+        # Support end-relative indexing and adjust for existing ghost planes.
         grid_imax = super(GridCoordinates, self).shape[0]
         if imin < 0:
             imin += (grid_imax - ghosts[1])
+        else:
+            imin += ghosts[0]
         if imax < 0:
             imax += (grid_imax - ghosts[1])
-
-        # Adjust for existing ghost/rind planes.
-        imin += ghosts[0]
-        imax += ghosts[0]
+        else:
+            imax += ghosts[0]
 
         # Adjust for new ghost/rind planes.
         imin -= new_ghosts[0]
@@ -348,6 +361,339 @@ class GridCoordinates(Vector):
             grid.z = self.z[imin:imax+1]
         grid.ghosts = new_ghosts
         return grid
+
+    def extend(self, axis, delta, npoints, normal=None):
+        """
+        Construct a new :class:`GridCoordinates` by linear extrapolation.
+        The existing ghosts/rind planes specification is retained.
+
+        axis: 'i', 'j', or 'k'
+            Index axis to extend.
+
+        delta: float
+            Fractional amount to move for each point. Multiplies the 'edge'
+            delta in the `axis` direction or the appropriate component of
+            `normal`.  A negative value adds points before the current
+            zero-index of `axis`. 
+
+        npoints: int > 0
+            Number of points to add in `axis` dimension.
+
+        normal: float[]
+            For cases where only a single point exists in the `axis` direction,
+            this specifies the direction to move. If not specified, an
+            axis-aligned direction is selected based on minimum grid extent.
+        """
+        if not delta:
+            raise ValueError('delta must be non-zero')
+        if npoints < 1:
+            raise ValueError('npoints must be >= 1')
+        i = len(super(GridCoordinates, self).shape)
+        if i == 3:
+            if axis not in ('i', 'j', 'k'):
+                raise ValueError('axis must be i, j, or k')
+            return self._extend_3d(axis, delta, npoints, normal)
+        elif i == 2:
+            if axis not in ('i', 'j'):
+                raise ValueError('axis must be i or j')
+            return self._extend_2d(axis, delta, npoints, normal)
+        elif i == 1:
+            if axis != 'i':
+                raise ValueError('axis must be i')
+            return self._extend_1d(delta, npoints, normal)
+        else:
+            raise RuntimeError('Grid is empty!')
+
+    def _extend_3d(self, axis, delta, npoints, normal):
+        """ 3D (index space) extension. """
+        shape = super(GridCoordinates, self).shape
+        need_normal = False
+        if axis == 'i':
+            new_shape = (shape[0] + npoints, shape[1], shape[2])
+            if shape[0] < 2:
+                need_normal = True
+        elif axis == 'j':
+            new_shape = (shape[0], shape[1] + npoints, shape[2])
+            if shape[1] < 2:
+                need_normal = True
+        else:
+            new_shape = (shape[0], shape[1], shape[2] + npoints)
+            if shape[2] < 2:
+                need_normal = True
+
+        # Select normal if necessary.
+        if need_normal:
+            if normal is None:
+                min1, max1, min2, max2, min3, max3 = self.extent
+                delta1 = max1 - min1
+                delta2 = max2 - min2
+                delta3 - max3 - min3
+                if delta1 <= delta2:
+                    if delta1 <= delta3:
+                        normal = (1., 0., 0.)
+                    else:
+                        normal = (0., 0., 1.)
+                elif delta2 <= delta3:
+                    normal = (0., 1., 0.)
+                else:
+                    normal = (0., 0., 1.)
+            elif len(normal) != 3:
+                raise ValueError('normal needs 3 elements')
+        else:
+            normal = (0., 0., 0.)
+
+        # Extend.
+        grid = GridCoordinates()
+        if self.x is not None:
+            grid.x = self._extrap_3d(axis, delta, npoints, self.x, new_shape,
+                                     normal[0])
+            grid.y = self._extrap_3d(axis, delta, npoints, self.y, new_shape,
+                                     normal[1])
+        else:
+            grid.r = self._extrap_3d(axis, delta, npoints, self.r, new_shape,
+                                     normal[0])
+            grid.t = self._extrap_3d(axis, delta, npoints, self.t, new_shape,
+                                     normal[1])
+        grid.z = self._extrap_3d(axis, delta, npoints, self.z, new_shape,
+                                 normal[2])
+        grid.ghosts = self._ghosts
+        return grid
+
+    def _extrap_3d(self, axis, delta, npoints, arr, new_shape, on_axis=False):
+        """ Return extrapolated `arr`. """
+        shape = arr.shape
+        new_arr = numpy.zeros(new_shape)
+
+        if axis == 'i':
+            if delta > 0:
+                v = arr[-1, :, :]
+                if shape[0] > 1:
+                    dv = (v - arr[-2, :, :]) * delta
+                else:
+                    dv = normal * delta
+                indx = shape[0]
+                new_arr[0:indx, :, :] = arr
+                for i in range(npoints):
+                    new_arr[indx:, :, :] = v + (i+1)*dv
+            else:
+                v = arr[0, :, :]
+                if arr.shape[0] > 1:
+                    dv = (arr[1, :, :] - v) * delta
+                else:
+                    dv = normal * -delta
+                indx = new_shape[0] - shape[0]
+                new_arr[indx:, :, :] = arr
+                for i in range(npoints):
+                    new_arr[0:indx, :, :] = v + (i+1)*dv
+
+        elif axis == 'j':
+            if delta > 0:
+                v = arr[:, -1, :]
+                if shape[1] > 1:
+                    dv = (v - arr[:, -2, :]) * delta
+                else:
+                    dv = normal * delta
+                indx = shape[1]
+                new_arr[:, 0:indx, :] = arr
+                for j in range(npoints):
+                    new_arr[:, indx+j, :] = v + (j+1)*dv
+            else:
+                v = arr[:, 0, :]
+                if arr.shape[1] > 1:
+                    dv = (arr[:, 1, :] - v) * delta
+                else:
+                    dv = normal * -delta
+                indx = new_shape[1] - shape[1]
+                new_arr[:, indx:, :] = arr
+                for j in range(npoints):
+                    new_arr[:, j, :] = v + (j+1)*dv
+        else:
+            if delta > 0:
+                v = arr[:, :, -1]
+                if shape[2] > 1:
+                    dv = (v - arr[:, :, -2]) * delta
+                else:
+                    dv = normal * delta
+                indx = shape[2]
+                new_arr[:, :, 0:indx] = arr
+                for k in range(npoints):
+                    new_arr[:, :, indx+k] = v + (k+1)*dv
+            else:
+                v = arr[:, :, 0]
+                if arr.shape[2] > 1:
+                    dv = (arr[:, :, 1] - v) * delta
+                else:
+                    dv = normal * -delta
+                indx = new_shape[2] - shape[2]
+                new_arr[:, :, indx:] = arr
+                for k in range(npoints):
+                    new_arr[:, :, k] = v + (k+1)*dv
+        return new_arr
+
+    def _extend_2d(self, axis, delta, npoints, normal):
+        """ 2D (index space) extension. """
+        shape = super(GridCoordinates, self).shape
+        need_normal = False
+        if axis == 'i':
+            new_shape = (shape[0] + npoints, shape[1])
+            if shape[0] < 2:
+                need_normal = True
+        else:
+            new_shape = (shape[0], shape[1] + npoints,)
+            if shape[1] < 2:
+                need_normal = True
+
+        # Select normal if necessary.
+        if need_normal:
+            extent = self.extent
+            dims = len(extent) / 2
+            if normal is None:
+                if dims == 2:
+                    min1, max1, min2, max2 = extent
+                    delta1 = max1 - min1
+                    delta2 = max2 - min2
+                    if delta1 <= delta2:
+                        normal = (1., 0.)
+                    else:
+                        normal = (0., 1.)
+                else:
+                    min1, max1, min2, max2, min3, max3 = self.extent()
+                    delta1 = max1 - min1
+                    delta2 = max2 - min2
+                    delta3 - max3 - min3
+                    if delta1 <= delta2:
+                        if delta1 <= delta3:
+                            normal = (1., 0., 0.)
+                        else:
+                            normal = (0., 0., 1.)
+                    elif delta2 <= delta3:
+                        normal = (0., 1., 0.)
+                    else:
+                        normal = (0., 0., 1.)
+            elif len(normal) != dims:
+                raise ValueError('normal needs %d elements' % dims)
+        else:
+            normal = (0., 0., 0.)
+
+        # Extend.
+        grid = GridCoordinates()
+        if self.x is not None:
+            grid.x = self._extrap_2d(axis, delta, npoints, self.x, new_shape,
+                                     normal[0])
+            grid.y = self._extrap_2d(axis, delta, npoints, self.y, new_shape,
+                                     normal[1])
+        else:
+            grid.r = self._extrap_2d(axis, delta, npoints, self.r, new_shape,
+                                     normal[0])
+            grid.t = self._extrap_2d(axis, delta, npoints, self.t, new_shape,
+                                     normal[1])
+        if self.z is not None:
+            grid.z = self._extrap_2d(axis, delta, npoints, self.z, new_shape,
+                                     normal[2])
+        grid.ghosts = self._ghosts
+        return grid
+
+    def _extrap_2d(self, axis, delta, npoints, arr, new_shape, normal):
+        """ Return extrapolated `arr`. """
+        shape = arr.shape
+        new_arr = numpy.zeros(new_shape)
+
+        if axis == 'i':
+            if delta > 0:
+                v = arr[-1, :]
+                if shape[0] > 1:
+                    dv = (v - arr[-2, :]) * delta
+                else:
+                    dv = normal * delta
+                indx = shape[0]
+                new_arr[0:indx, :] = arr
+                for i in range(npoints):
+                    new_arr[indx:, :] = v + (i+1)*dv
+            else:
+                v = arr[0, :]
+                if arr.shape[0] > 1:
+                    dv = (arr[1, :] - v) * delta
+                else:
+                    dv = normal * -delta
+                indx = new_shape[0] - shape[0]
+                new_arr[indx:, :] = arr
+                for i in range(npoints):
+                    new_arr[0:indx, :] = v + (i+1)*dv
+        else:
+            if delta > 0:
+                v = arr[:, -1]
+                if shape[1] > 1:
+                    dv = (v - arr[:, -2]) * delta
+                else:
+                    dv = normal * delta
+                indx = shape[1]
+                new_arr[:, 0:indx] = arr
+                for j in range(npoints):
+                    new_arr[:, indx+j] = v + (j+1)*dv
+            else:
+                v = arr[:, 0]
+                if arr.shape[1] > 1:
+                    dv = (arr[:, 1] - v) * delta
+                else:
+                    dv = normal * -delta
+                indx = new_shape[1] - shape[1]
+                new_arr[:, indx:] = arr
+                for j in range(npoints):
+                    new_arr[:, j] = v + (j+1)*dv
+        return new_arr
+
+    def _extend_1d(self, delta, npoints, normal):
+        """ 1D (index space) extension. """
+        shape = super(GridCoordinates, self).shape
+        new_shape = (shape[0] + npoints,)
+
+        # If unspecified, normal is +x.
+        normal = normal or (1., 0., 0.)
+
+        # Extend.
+        grid = GridCoordinates()
+        if self.x is not None:
+            grid.x = self._extrap_1d(delta, npoints, self.x, new_shape,
+                                     normal[0])
+            if self.y is not None:
+                grid.y = self._extrap_1d(delta, npoints, self.y, new_shape,
+                                         normal[1])
+        else:
+            grid.r = self._extrap_1d(delta, npoints, self.r, new_shape,
+                                     normal[0])
+            grid.t = self._extrap_1d(delta, npoints, self.t, new_shape,
+                                     normal[1])
+        if self.z is not None:
+            grid.z = self._extrap_1d(delta, npoints, self.z, new_shape,
+                                     normal[2])
+        grid.ghosts = self._ghosts
+        return grid
+
+    def _extrap_1d(self, delta, npoints, arr, new_shape, normal):
+        """ Return extrapolated `arr`. """
+        shape = arr.shape
+        new_arr = numpy.zeros(new_shape)
+        if delta > 0:
+            v = arr[-1]
+            if shape[0] > 1:
+                dv = (v - arr[-2]) * delta
+            else:
+                dv = normal * delta
+            indx = shape[0]
+            new_arr[0:indx] = arr
+            for i in range(npoints):
+                new_arr[indx:] = v + (i+1)*dv
+        else:
+            v = arr[0]
+            if arr.shape[0] > 1:
+                dv = (arr[1] - v) * delta
+            else:
+                dv = normal * -delta
+            indx = new_shape[0] - shape[0]
+            new_arr[indx:] = arr
+            for i in range(npoints):
+                new_arr[0:indx] = v + (i+1)*dv
+        return new_arr
 
     def make_cartesian(self, axis='z'):
         """
