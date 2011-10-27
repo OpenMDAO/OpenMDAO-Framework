@@ -206,4 +206,3 @@ class Float(Variable):
         except Exception:
             self.error(obj, name, pq.value)
 
-        

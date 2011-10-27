@@ -98,34 +98,41 @@ class Assembly (Component):
         be the last entry in its pathname. The trait specified by pathname
         must exist.
         """
+        parts = pathname.split('.')
         if alias:
             newname = alias
         else:
-            parts = pathname.split('.')
             newname = parts[-1]
 
         if newname in self.__dict__:
             self.raise_exception("'%s' already exists" %
                                  newname, KeyError)
-        parts = pathname.split('.', 1)
         if len(parts) < 2:
             self.raise_exception('destination of passthrough must be a dotted path',
                                  NameError)
-        comp = getattr(self, parts[0])
-        trait = comp.get_trait(parts[1])
+        comp = self
+        for part in parts[:-1]:
+            try:
+                comp = getattr(comp, part)
+            except AttributeError:
+                trait = None
+                break
+        else:
+            trait = comp.get_trait(parts[-1])
+            iotype = comp.get_iotype(parts[-1])
+            
         if trait:
-            iotype = trait.iotype
             ttype = trait.trait_type
             if ttype is None:
                 ttype = trait
-            
-            if not trait.validate:
-                trait = None  # no validate function, so just don't use trait for validation
         else:
             if not self.contains(pathname):
                 self.raise_exception("the variable named '%s' can't be found" %
                                      pathname, KeyError)
             iotype = self.get_metadata(pathname, 'iotype')
+            
+        if trait is not None and not trait.validate:
+            trait = None  # no validate function, so just don't use trait for validation
             
         metadata = self.get_metadata(pathname)
         metadata['target'] = pathname
