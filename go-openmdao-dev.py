@@ -588,7 +588,8 @@ def _install_req(py_executable, unzip=False, distribute=False,
 def file_search_dirs():
     here = os.path.dirname(os.path.abspath(__file__))
     dirs = ['.', here,
-            join(here, 'virtualenv_support')]
+            #join(here, 'virtualenv_support')]
+            '/usr/share/python-virtualenv/']
     if os.path.splitext(os.path.dirname(__file__))[0] != 'virtualenv':
         # Probably some boot script; just in case virtualenv is installed...
         try:
@@ -727,9 +728,16 @@ def main():
     parser.add_option(
         '--distribute',
         dest='use_distribute',
-        action='store_true',
-        help='Use Distribute instead of Setuptools. Set environ variable '
-        'VIRTUALENV_USE_DISTRIBUTE to make it the default ')
+        action='store_true', default=True,
+        help='Ignored.  Distribute is used by default. See --setuptools '
+        'to use Setuptools instead of Distribute.')
+
+    parser.add_option(
+        '--setuptools',
+        dest='use_distribute',
+        action='store_false',
+        help='Use Setuptools instead of Distribute. Set environ variable '
+        'VIRTUALENV_USE_SETUPTOOLS to make it the default.')
 
     default_search_dirs = file_search_dirs()
     parser.add_option(
@@ -885,7 +893,7 @@ def call_subprocess(cmd, show_stdout=True,
 
 
 def create_environment(home_dir, site_packages=True, clear=False,
-                       unzip_setuptools=False, use_distribute=False,
+                       unzip_setuptools=False, use_distribute=True,
                        prompt=None, search_dirs=None, never_download=False):
     """
     Creates a new environment in ``home_dir``.
@@ -904,11 +912,11 @@ def create_environment(home_dir, site_packages=True, clear=False,
 
     install_distutils(home_dir)
 
-    if use_distribute or os.environ.get('VIRTUALENV_USE_DISTRIBUTE'):
-        install_distribute(py_executable, unzip=unzip_setuptools, 
+    if not use_distribute or os.environ.get('VIRTUALENV_USE_SETUPTOOLS'):
+        install_setuptools(py_executable, unzip=unzip_setuptools, 
                            search_dirs=search_dirs, never_download=never_download)
     else:
-        install_setuptools(py_executable, unzip=unzip_setuptools, 
+        install_distribute(py_executable, unzip=unzip_setuptools, 
                            search_dirs=search_dirs, never_download=never_download)
 
     install_pip(py_executable, search_dirs=search_dirs, never_download=never_download)
@@ -1545,6 +1553,13 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--disturl", action="store", type="string", dest='disturl', 
                       help="specify url where openmdao distribs are located")
+    parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
+                      help="don't check for any prerequisites, e.g., numpy or scipy")
+    parser.add_option("--nogui", action="store_true", dest='nogui', 
+                      help="don't install the openmdao graphical user interface")
+                      
+    # hack to force use of setuptools for now
+    os.environ['VIRTUALENV_USE_SETUPTOOLS'] = '1'
 
 
 def adjust_options(options, args):
@@ -1562,7 +1577,7 @@ def adjust_options(options, args):
 
 
 
-def _single_install(cmds, req, bin_dir, dodeps=False):
+def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
     global logger
     if dodeps:
         extarg = '-Z'
@@ -1571,13 +1586,15 @@ def _single_install(cmds, req, bin_dir, dodeps=False):
     cmdline = [join(bin_dir, 'easy_install'), extarg] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
-    logger.debug("running command: %s" % ' '.join(cmdline))
-    subprocess.check_call(cmdline)
+    #logger.debug("running command: %s" % ' '.join(cmdline))
+    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['pyevolve==0.6', 'networkx==1.3', 'traits==3.3.0', 'pyparsing==1.5.2', 'pygments==1.3.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'pyyaml==3.09', 'jinja2==2.4', 'sphinx==1.0.6', 'jsonpickle==0.4.0', 'Django==1.3', 'decorator==3.2.0', 'docutils==0.6', 'newsumt==1.1.0', 'ordereddict==1.1', 'boto==2.0rc1', 'web.py==0.36', 'paramiko==1.7.7.1', 'fabric==0.9.3', 'virtualenv==1.6.4', 'conmin==1.0.1', 'pycrypto==2.3']
+    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4', 'argparse==1.2.1']
+    guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'Django==1.3']
+    
     url = 'http://openmdao.org/dists'
     # for testing we allow one to specify a url where the openmdao
     # package dists are located that may be different from the main
@@ -1608,19 +1625,29 @@ def after_install(options, home_dir):
             __import__(pkg)
         except ImportError:
             failed_imports.append(pkg)
-    if failed_imports:
+    if failed_imports and not options.noprereqs:
         logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
         logger.error("These must be installed in the system level python before installing OpenMDAO.")
         sys.exit(-1)
     
     cmds = ['-f', url]
     openmdao_cmds = ['-f', openmdao_url]
+    if options.noprereqs:
+        strict = False
+    else:
+        strict = True
     try:
         for req in reqs:
             if req.startswith('openmdao.'):
-                _single_install(openmdao_cmds, req, bin_dir)
+                _single_install(openmdao_cmds, req, bin_dir, strict=strict)
             else:
-                _single_install(cmds, req, bin_dir)
+                _single_install(cmds, req, bin_dir, strict=strict)
+        if not options.nogui:
+            for req in guireqs:
+                if req.startswith('openmdao.'):
+                    _single_install(openmdao_cmds, req, bin_dir, strict=strict)
+                else:
+                    _single_install(cmds, req, bin_dir, strict=strict)
         
 
         # now install dev eggs for all of the openmdao packages
@@ -1642,17 +1669,19 @@ def after_install(options, home_dir):
 
         try:
             for pkg, pdir, _ in openmdao_packages:
+                if options.nogui and pkg == 'openmdao.gui':
+                    continue
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
-                subprocess.check_call(cmdline)
+                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
         finally:
             os.chdir(startdir)
         
 
         # add any additional packages specified on the command line
         for req in options.reqs:
-            _single_install(cmds, req, bin_dir, True)
+            _single_install(cmds, req, bin_dir, True, strict=strict)
 
     except Exception as err:
         logger.error("ERROR: build failed: %s" % str(err))

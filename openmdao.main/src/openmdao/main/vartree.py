@@ -33,6 +33,17 @@ class VariableTree(Container):
                     self._iotype = t.iotype
         super(VariableTree, self).tree_rooted()
     
+    @rbac(('owner', 'user'))
+    def get_metadata(self, traitpath, metaname=None):
+        if metaname=='iotype':
+            return self._iotype
+        elif metaname is None:
+            meta = super(VariableTree, self).get_metadata(traitpath, metaname)
+            meta['iotype'] = self._iotype
+            return meta
+        else:
+            return super(VariableTree, self).get_metadata(traitpath, metaname)
+
     def add(self, name, obj):
         if isinstance(obj, VariableTree):
             if self.trait(name) is None:
