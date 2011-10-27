@@ -125,6 +125,14 @@ class Case(object):
         else:
             return len(self._inputs) + len(self._outputs)
     
+    def get_input(self, name):
+        return self._inputs[name]
+    
+    def get_output(self, name):
+        if self._outputs:
+            return self._outputs[name]
+        raise KeyError("'%s' not found" % name)        
+    
     def items(self, iotype=None):
         """Return a list of (name,value) tuples for variables/expressions in this Case.
         
@@ -134,10 +142,10 @@ class Case(object):
             If None (the default), inputs and outputs are returned
         """
         if iotype is None:
-            lst = self._inputs.items()
             if self._outputs:
-                lst.extend(self._outputs.items())
-            return lst
+                return self._inputs.items() + self._outputs.items()
+            else:
+                return self._inputs.items()
         elif iotype == 'in':
             return self._inputs.items()
         elif iotype == 'out':

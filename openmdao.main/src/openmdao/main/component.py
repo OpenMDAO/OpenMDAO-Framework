@@ -364,10 +364,10 @@ class Component (Container):
         
         pass
         
-    
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
-        Overrides of this function must call this version.
+        Overrides of this function must call this version.  This is only 
+        called if execute() actually ran.
         """
         self.exec_count += 1
         
@@ -379,6 +379,10 @@ class Component (Container):
         for name in self.list_inputs(valid=False):
             valids[name] = True
         self._call_execute = False
+        
+    def _post_run (self):
+        """"Runs at the end of the run function, whether execute() ran or not."""
+        pass
         
     @rbac('*', 'owner')
     def run (self, force=False, ffd_order=0, case_id=''):
@@ -430,6 +434,7 @@ class Component (Container):
                 self._post_execute()
             #else:
                 #print 'skipping: %s' % self.get_pathname()
+            self._post_run()
         finally:
             if self.directory:
                 self.pop_dir()
