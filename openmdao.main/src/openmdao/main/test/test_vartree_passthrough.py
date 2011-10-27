@@ -28,7 +28,7 @@ class TstAssembly(Assembly):
         self.create_passthrough('comp.dummy_data_out.dummy1', 'dummy1_out')
         self.driver.workflow.add('comp')
 
-class PassthroughTestCase(unittest.TestCase):
+class VarTreePassthroughTestCase(unittest.TestCase):
 
     def test_vartree_passthrough(self):
         blah = set_as_top(TstAssembly())

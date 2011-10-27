@@ -98,7 +98,6 @@ class Float(Variable):
         # Add low and high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
-        metadata['validation_trait'] = self
         super(Float, self).__init__(default_value=default_value,
                                     **metadata)
 
