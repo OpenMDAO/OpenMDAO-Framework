@@ -58,7 +58,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
 
     /** display the file in a new window (probably not in a useful format) */
     function viewFile(pathname) {
-        openmdao.Util.popupWindow('file'+path.replace(/\\/g,'/'),path,600,800)
+        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname,600,800)
     }
 
 
@@ -171,13 +171,13 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
 
         // delete only files and empty folders
         if (!isFolder) {
-            menu.delete = {
+            menu.deleteFile = {
                 "label"  : 'Delete File',
                 "action" : function(node) { model.removeFile(path) }
             }
         }
         else if (isEmptyFolder) {
-            menu.delete = {
+            menu.deleteFolder = {
                 "label"  : 'Delete Empty Folder',
                 "action" : function(node) { model.removeFile(path) }
             }
@@ -208,8 +208,8 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         
         // convert to a jstree
         tree.jstree({
-            "plugins" :     [ "html", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
-            "themes" :      { "theme":  "classic-dark" },
+            "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
+            "themes" :      { "theme":  "classic" },
             "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
             "contextmenu" : { "items":  contextMenu }
         })

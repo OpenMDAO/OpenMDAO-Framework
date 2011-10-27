@@ -65,11 +65,11 @@ openmdao.ComponentEditor = function(model,pathname) {
     function getContent(contentPane,name,val) {
         // TODO: get content pane type more dynamically (a look up table maybe?)
         if (name == 'Inputs') {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,true);
+            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,true,true);
             panes[name].loadData(val);
         }
         else if (name == 'Outputs') {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false);
+            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false,true);
             panes[name].loadData(val);
         }
         else if (name == 'CouplingVars') {
@@ -92,9 +92,12 @@ openmdao.ComponentEditor = function(model,pathname) {
             panes[name] = new openmdao.WorkflowPane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
         }
-        else {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false);
+        else if (name == 'Structure') {
+            panes[name] = new openmdao.DataflowPane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
+        }
+        else {
+            debug.warn("ComponentEditor: Unexpected object",pathname,name)
         }
     }
 

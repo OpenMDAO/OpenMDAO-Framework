@@ -101,7 +101,7 @@ def Component(request,name):
     if request.method=='POST':
         result = ''
         try:
-            cserver.add_component(name,request.POST['type']);
+            cserver.add_component(name,request.POST['type'],request.POST['parent']);
         except Exception,e:
             print e
             result = sys.exc_info()
@@ -133,7 +133,6 @@ def Components(request):
     cserver = server_mgr.console_server(request.session.session_key)
     json = cserver.get_components()
     return HttpResponse(json,mimetype='application/json')
-
 
 @never_cache
 @csrf_exempt
