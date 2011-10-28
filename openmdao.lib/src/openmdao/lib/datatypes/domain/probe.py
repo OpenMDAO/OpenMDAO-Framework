@@ -36,7 +36,7 @@ def register_surface_probe(name, function, integrate):
 def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     """
     Calculate metrics on mesh surfaces.
-    Currently only supports 3D structured grids with cell-centered data.
+    Currently only supports 3D structured grids.
 
     domain: DomainObj
         The domain to be processed.
@@ -51,6 +51,7 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
         List of `(metric_name, units)` tuples. Legal metric names are
         'area', 'mass_flow', 'corrected_mass_flow', 'pressure',
         'pressure_stagnation', 'temperature', and 'temperature_stagnation'.
+        If `units` is None then no unit conversion is attempted.
 
     weighting_scheme: string
         Specifies how individual values are weighted. Legal values are
@@ -137,11 +138,13 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
             zone_name = surface[0]
             zone = getattr(domain, zone_name)
 
-            # Check for a reference_state dictionary.
-            ref = zone.reference_state or domain.reference_state
-            if not ref:
-                raise ValueError('No zone or domain reference_state dictionary'
-                                 ' supplied for %s.' % zone_name)
+            if units is None:
+                ref = None
+            else:  # Check for a reference_state dictionary.
+                ref = zone.reference_state or domain.reference_state
+                if not ref:
+                    raise ValueError('No zone or domain reference_state'
+                                     ' dictionary supplied for %s.' % zone_name)
 
             value = _VARIABLES[name][1](domain, surface, weights, ref)
             value *= zone.symmetry_instances  # Adjust for symmetry.
@@ -154,8 +157,11 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
         if not _VARIABLES[name][0]:
             total /= weight_total
 
-        total.convert_to_unit(units)  # Convert to requested units.
-        metrics.append(total.value)
+        if units is None:
+            metrics.append(total)
+        else:
+            total.convert_to_unit(units)  # Convert to requested units.
+            metrics.append(total.value)
 
     return metrics
 
@@ -317,6 +323,7 @@ def _kface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
 
     return (sc1, sc2, sc3)
 
+
 def _iface_cell_value(arr, i, j, k):
     """ Returns I face value for cell-centered data. """
     return 0.5 * (arr(i, j, k) + arr(i-1, j, k))
@@ -332,15 +339,18 @@ def _kface_cell_value(arr, i, j, k):
 
 def _iface_node_value(arr, i, j, k):
     """ Returns I face value for vertex data. """
-    raise NotImplementedError('Zone solution location Vertex not supported')
+    return 0.25 * (arr(i-1, j, k) + arr(i-1, j-1, k) + 
+                   arr(i-1, j, k-1) + arr(i-1, j-1, k-1))
 
 def _jface_node_value(arr, i, j, k):
     """ Returns J face value for vertex data. """
-    raise NotImplementedError('Zone solution location Vertex not supported')
+    return 0.25 * (arr(i, j-1, k) + arr(i-1, j-1, k) + 
+                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
 
 def _kface_node_value(arr, i, j, k):
     """ Returns K face value for vertex data. """
-    raise NotImplementedError('Zone solution location Vertex not supported')
+    return 0.25 * (arr(i, j, k-1) + arr(i-1, j, k-1) + 
+                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
 
 
 def _area(domain, surface, weights, reference_state):
@@ -369,14 +379,17 @@ def _area(domain, surface, weights, reference_state):
         kmax += 1
         face_normal = _kface_normal
 
-    try:
-        lref = reference_state['length_reference']
-    except KeyError:
-        raise AttributeError("For area, reference_state is missing"
-                             " 'length_reference'.")
-    aref = lref * lref
+    if reference_state is None:
+        lref = 1.
+    else:
+        try:
+            lref = reference_state['length_reference']
+        except KeyError:
+            raise AttributeError("For area, reference_state is missing"
+                                 " 'length_reference'.")
+        aref = lref * lref
+        lref = lref.value
 
-    lref = lref.value
     total = 0.
     for i in range(imin, imax):
         for j in range(jmin, jmax):
@@ -385,7 +398,10 @@ def _area(domain, surface, weights, reference_state):
                                             lref)
                 total += sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3)
 
-    return PhysicalQuantity(total, aref.get_unit_name())
+    if reference_state is None:
+        return total
+    else:
+        return PhysicalQuantity(total, aref.get_unit_name())
 
 register_surface_probe('area', _area, True)
 
@@ -418,7 +434,7 @@ def _massflow(domain, surface, weights, reference_state):
             mom_c2 = flow.momentum.y.item
             mom_c3 = flow.momentum.z.item
     except AttributeError:
-        raise AttributeError("For mass flow, zone %s is missing 'momentum'."
+        raise AttributeError("For mass_flow, zone %s is missing 'momentum'."
                              % zone_name)
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
@@ -433,24 +449,27 @@ def _massflow(domain, surface, weights, reference_state):
         face_normal = _kface_normal
         face_value = _kface_cell_value if cell_center else _kface_node_value
 
-    try:
-        lref = reference_state['length_reference']
-        pref = reference_state['pressure_reference']
-        rgas = reference_state['ideal_gas_constant']
-        tref = reference_state['temperature_reference']
-    except KeyError:
-        vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
-                'temperature_reference')
-        raise AttributeError('For mass flow, reference_state is missing'
-                             ' one or more of %s.' % (vals,))
+    if reference_state is None:
+        lref = 1.
+        momref = 1.
+    else:
+        try:
+            lref = reference_state['length_reference']
+            pref = reference_state['pressure_reference']
+            rgas = reference_state['ideal_gas_constant']
+            tref = reference_state['temperature_reference']
+        except KeyError:
+            vals = ('length_reference', 'pressure_reference',
+                    'ideal_gas_constant', 'temperature_reference')
+            raise AttributeError('For mass_flow, reference_state is missing'
+                                 ' one or more of %s.' % (vals,))
+        rhoref = pref / rgas / tref
+        vref = (rgas * tref).sqrt()
+        momref = rhoref * vref
+        wref = momref * lref * lref
+        lref = lref.value
+        momref = momref.value
 
-    rhoref = pref / rgas / tref
-    vref = (rgas * tref).sqrt()
-    momref = rhoref * vref
-    wref = momref * lref * lref
-
-    lref = lref.value
-    momref = momref.value
     total = 0.
     for i in range(imin, imax):
         ip1 = i + 1
@@ -468,7 +487,10 @@ def _massflow(domain, surface, weights, reference_state):
                 w = rvu*sc1 + rvv*sc2 + rvw*sc3
                 total += w
 
-    return PhysicalQuantity(total, wref.get_unit_name())
+    if reference_state is None:
+        return total
+    else:
+        return PhysicalQuantity(total, wref.get_unit_name())
 
 register_surface_probe('mass_flow', _massflow, True)
 
@@ -507,7 +529,7 @@ def _corrected_massflow(domain, surface, weights, reference_state):
         pressure = flow.pressure.item
     except AttributeError:
         vnames = ('density', 'momentum', 'pressure')
-        raise AttributeError('For corrected mass flow, zone %s is missing'
+        raise AttributeError('For corrected_mass_flow, zone %s is missing'
                              ' one or more of %s.' % (zone_name, vnames))
     try:
         gam = flow.gamma.item
@@ -527,6 +549,9 @@ def _corrected_massflow(domain, surface, weights, reference_state):
         face_normal = _kface_normal
         face_value = _kface_cell_value if cell_center else _kface_node_value
 
+    if reference_state is None:
+        raise ValueError('corrected_mass_flow must have units specified')
+
     try:
         lref = reference_state['length_reference']
         pref = reference_state['pressure_reference']
@@ -537,7 +562,7 @@ def _corrected_massflow(domain, surface, weights, reference_state):
     except KeyError:
         vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
                 'temperature_reference', 'specific_heat_ratio')
-        raise AttributeError('For corrected mass flow, reference_state is'
+        raise AttributeError('For corrected_mass_flow, reference_state is'
                              ' missing one or more of %s.' % (vals,))
 
     rhoref = pref / rgas / tref
@@ -558,6 +583,7 @@ def _corrected_massflow(domain, surface, weights, reference_state):
     momref = momref.value
     pstd = pstd.value
     tstd = tstd.value
+
     total = 0.
     for i in range(imin, imax):
         ip1 = i + 1
@@ -600,15 +626,37 @@ def _static_pressure(domain, surface, weights, reference_state):
     :class:`PhysicalQuantity`.
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    flow = getattr(domain, zone_name).flow_solution
+    zone = getattr(domain, zone_name)
+    flow = zone.flow_solution
+    cylindrical = zone.coordinate_system == CYLINDRICAL
     cell_center = flow.grid_location == CELL_CENTER
     weights = weights[zone_name]
 
-    try:
+    try:  # Some codes (i.e. ADPAC restart file) have this directly available.
         pressure = flow.pressure.item
     except AttributeError:
-        raise AttributeError("For static pressure, zone %s is missing"
-                             " 'pressure'." % zone_name)
+        pressure = None
+        try:  # Look for typical Q variabes.
+            density = flow.density.item
+            if cylindrical:
+                mom_c1 = flow.momentum.z.item
+                mom_c2 = flow.momentum.r.item
+                mom_c3 = flow.momentum.t.item
+            else:
+                mom_c1 = flow.momentum.x.item
+                mom_c2 = flow.momentum.y.item
+                mom_c3 = flow.momentum.z.item
+            energy = flow.energy_stagnation_density.item
+        except AttributeError:
+            vnames = ('pressure', 'density', 'momentum',
+                      'energy_stagnation_density')
+            raise AttributeError('For pressure, zone %s is missing'
+                                 ' one or more of %s.' % (zone_name, vnames))
+    try:
+        gam = flow.gamma.item
+    except AttributeError:
+        gam = None  # Use passed-in scalar gamma.
+
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
         face_value = _iface_cell_value if cell_center else _iface_node_value
@@ -619,11 +667,41 @@ def _static_pressure(domain, surface, weights, reference_state):
         kmax += 1
         face_value = _kface_cell_value if cell_center else _kface_node_value
 
-    try:
-        pref = reference_state['pressure_reference']
-    except KeyError:
-        raise AttributeError("For static pressure, reference_state is missing"
-                             " 'pressure_reference'.")
+    if reference_state is None:
+        pref = 1.
+        rhoref = 1.
+        momref = 1.
+        e0ref = 1.
+    else:
+        if pressure is not None:
+            try:
+                pref = reference_state['pressure_reference']
+            except KeyError:
+                raise AttributeError("For pressure, reference_state is"
+                                     " missing 'pressure_reference'.")
+        else:
+            raise NotImplementedError('Get dimensional pressure from'
+                                      ' Q variables')
+#            pref = reference_state['pressure_reference']
+#            rgas = reference_state['ideal_gas_constant']
+#            tref = reference_state['temperature_reference']
+#            if gam is None:
+#                gamma = reference_state['specific_heat_ratio'].value
+#            except AttributeError:
+#                vnames = ('ideal_gas_constant', 'pressure_reference',
+#                          'temperature_reference', 'specific_heat_ratio')
+#                raise AttributeError('For static pressure, reference_state is'
+#                                     ' missing one or more of %s.' % vnames)
+#            rhoref = pref / rgas / tref
+#            vref = (rgas * tref).sqrt()
+#            momref = rhoref * vref
+#            rhoref = rhoref.value
+#            momref = momref.value
+#            e0ref = ?
+
+        units = pref.get_unit_name()
+        pref = pref.value
+
     total = 0.
     weight_index = 0
     for i in range(imin, imax):
@@ -633,13 +711,27 @@ def _static_pressure(domain, surface, weights, reference_state):
             for k in range(kmin, kmax):
                 kp1 = k + 1
 
-                ps = face_value(pressure, ip1, jp1, kp1) * pref.value
+                if pressure is not None:
+                    ps = face_value(pressure, ip1, jp1, kp1) * pref
+                else:
+                    rho = face_value(density, ip1, jp1, kp1) * rhoref
+                    vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
+                    vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
+                    vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
+                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
+                    if gam is not None:
+                        gamma = face_value(gam, ip1, jp1, kp1)
+
+                    ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
+
                 weight = weights[weight_index]
                 weight_index += 1
-
                 total += ps * weight
 
-    return PhysicalQuantity(total, pref.get_unit_name())
+    if reference_state is None:
+        return total
+    else:
+        return PhysicalQuantity(total, units)
 
 register_surface_probe('pressure', _static_pressure, False)
 
@@ -666,11 +758,20 @@ def _total_pressure(domain, surface, weights, reference_state):
             mom_c1 = flow.momentum.x.item
             mom_c2 = flow.momentum.y.item
             mom_c3 = flow.momentum.z.item
+    except AttributeError:
+        vnames = ('density', 'momentum')
+        raise AttributeError('For pressure_stagnation, zone %s is missing'
+                             ' one or more of %s.' % (zone_name, vnames))
+    try:
         pressure = flow.pressure.item
     except AttributeError:
-        vnames = ('density', 'momentum', 'pressure')
-        raise AttributeError('For total pressure, zone %s is missing'
-                             ' one or more of %s.' % (zone_name, vnames))
+        pressure = None
+        try:
+            energy = flow.energy_stagnation_density.item
+        except AttributeError:
+            vnames = ('pressure', 'energy_stagnation_density')
+            raise AttributeError('For pressure_stagnation, zone %s is missing'
+                                 ' one or more of %s.' % (zone_name, vnames))
     try:
         gam = flow.gamma.item
     except AttributeError:
@@ -686,24 +787,35 @@ def _total_pressure(domain, surface, weights, reference_state):
         kmax += 1
         face_value = _kface_cell_value if cell_center else _kface_node_value
 
-    try:
-        pref = reference_state['pressure_reference']
-        rgas = reference_state['ideal_gas_constant']
-        tref = reference_state['temperature_reference']
-        if gam is None:
-            gamma = reference_state['specific_heat_ratio'].value
-    except KeyError:
-        vals = ('pressure_reference', 'ideal_gas_constant',
-                'temperature_reference', 'specific_heat_ratio')
-        raise AttributeError('For total pressure, reference_state is missing'
-                             ' one or more of %s.' % (vals,))
+    if reference_state is None:
+        pref = 1.
+        rhoref = 1.
+        momref = 1.
+        e0ref = 1.
+    else:
+        try:
+            pref = reference_state['pressure_reference']
+            rgas = reference_state['ideal_gas_constant']
+            tref = reference_state['temperature_reference']
+            if gam is None:
+                gamma = reference_state['specific_heat_ratio'].value
+        except KeyError:
+            vals = ('pressure_reference', 'ideal_gas_constant',
+                    'temperature_reference', 'specific_heat_ratio')
+            raise AttributeError('For pressure_stagnation, reference_state'
+                                 ' is missing one or more of %s.' % (vals,))
+        if pressure is None:
+            raise NotImplementedError('Get dimensional pressure_stagnation from'
+                                      ' Q variables')
+        rhoref = pref / rgas / tref
+        vref = (rgas * tref).sqrt()
+        momref = rhoref * vref
+        rhoref = rhoref.value
+        momref = momref.value
+#        e0ref = ?
+        units = pref.get_unit_name()
+        pref = pref.value
 
-    rhoref = pref / rgas / tref
-    vref = (rgas * tref).sqrt()
-    momref = rhoref * vref
-
-    rhoref = rhoref.value
-    momref = momref.value
     total = 0.
     weight_index = 0
     for i in range(imin, imax):
@@ -717,19 +829,28 @@ def _total_pressure(domain, surface, weights, reference_state):
                 vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
                 vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
                 vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
-                ps = face_value(pressure, ip1, jp1, kp1) * pref.value
                 if gam is not None:
                     gamma = face_value(gam, ip1, jp1, kp1)
-                weight = weights[weight_index]
-                weight_index += 1
 
                 u2 = vu*vu + vv*vv + vw*vw
+                if pressure is not None:
+                    ps = face_value(pressure, ip1, jp1, kp1) * pref
+                else:
+                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
+                    ps = (gamma-1.) * rho * (e0 - 0.5*u2)
+
                 a2 = (gamma * ps) / rho
                 mach2 = u2 / a2
                 pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
+
+                weight = weights[weight_index]
+                weight_index += 1
                 total += pt * weight
 
-    return PhysicalQuantity(total, pref.get_unit_name())
+    if reference_state is None:
+        return total
+    else:
+        return PhysicalQuantity(total, units)
 
 register_surface_probe('pressure_stagnation', _total_pressure, False)
 
@@ -740,17 +861,35 @@ def _static_temperature(domain, surface, weights, reference_state):
     :class:`PhysicalQuantity`.
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    flow = getattr(domain, zone_name).flow_solution
+    zone = getattr(domain, zone_name)
+    flow = zone.flow_solution
+    cylindrical = zone.coordinate_system == CYLINDRICAL
     cell_center = flow.grid_location == CELL_CENTER
     weights = weights[zone_name]
 
     try:
         density = flow.density.item
+    except AttributeError:
+        raise AttributeError('For temperature, zone %s is missing'
+                             ' density.' % zone_name)
+    try:
         pressure = flow.pressure.item
     except AttributeError:
-        vnames = ('density', 'pressure')
-        raise AttributeError('For static temperature, zone %s is missing'
-                             ' one or more of %s.' % (zone_name, vnames))
+        pressure = None
+        try:  # Look for typical Q variabes.
+            if cylindrical:
+                mom_c1 = flow.momentum.z.item
+                mom_c2 = flow.momentum.r.item
+                mom_c3 = flow.momentum.t.item
+            else:
+                mom_c1 = flow.momentum.x.item
+                mom_c2 = flow.momentum.y.item
+                mom_c3 = flow.momentum.z.item
+            energy = flow.energy_stagnation_density.item
+        except AttributeError:
+            vnames = ('pressure', 'momentum', 'energy_stagnation_density')
+            raise AttributeError('For temperature, zone %s is missing'
+                                 ' one or more of %s.' % (zone_name, vnames))
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
         face_value = _iface_cell_value if cell_center else _iface_node_value
@@ -761,21 +900,31 @@ def _static_temperature(domain, surface, weights, reference_state):
         kmax += 1
         face_value = _kface_cell_value if cell_center else _kface_node_value
 
-    try:
-        pref = reference_state['pressure_reference']
-        rgas = reference_state['ideal_gas_constant']
-        tref = reference_state['temperature_reference']
-    except KeyError:
-        vals = ('pressure_reference', 'ideal_gas_constant',
-                'temperature_reference')
-        raise AttributeError('For static pressure, reference_state is missing'
-                             ' one or more of %s.' % (vals,))
+    if reference_state is None:
+        pref = 1.
+        rhoref = 1.
+        momref = 1.
+        e0ref = 1.
+        rgas = 1.
+    else:
+        try:
+            pref = reference_state['pressure_reference']
+            rgas = reference_state['ideal_gas_constant']
+            tref = reference_state['temperature_reference']
+        except KeyError:
+            vals = ('pressure_reference', 'ideal_gas_constant',
+                    'temperature_reference')
+            raise AttributeError('For temperature, reference_state is missing'
+                                 ' one or more of %s.' % (vals,))
+        if pressure is None:
+            raise NotImplementedError('Get dimensional temperature from'
+                                      ' Q variables')
+        rhoref = pref / rgas / tref
+        pref = pref.value
+        rgas = rgas.value
+        rhoref = rhoref.value
+#         e0ref = ?
 
-    rhoref = pref / rgas / tref
-
-    pref = pref.value
-    rgas = rgas.value
-    rhoref = rhoref.value
     total = 0.
     weight_index = 0
     for i in range(imin, imax):
@@ -786,14 +935,27 @@ def _static_temperature(domain, surface, weights, reference_state):
                 kp1 = k + 1
 
                 rho = face_value(density, ip1, jp1, kp1) * rhoref
-                ps = face_value(pressure, ip1, jp1, kp1) * pref
-                weight = weights[weight_index]
-                weight_index += 1
+                if pressure is not None:
+                    ps = face_value(pressure, ip1, jp1, kp1) * pref
+                else:
+                    vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
+                    vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
+                    vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
+                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
+                    if gam is not None:
+                        gamma = face_value(gam, ip1, jp1, kp1)
+                    ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
 
                 ts = ps / (rho * rgas)
+
+                weight = weights[weight_index]
+                weight_index += 1
                 total += ts * weight
 
-    return PhysicalQuantity(total, tref.get_unit_name())
+    if reference_state is None:
+        return total
+    else:
+        return PhysicalQuantity(total, tref.get_unit_name())
 
 register_surface_probe('temperature', _static_temperature, False)
 
@@ -820,11 +982,20 @@ def _total_temperature(domain, surface, weights, reference_state):
             mom_c1 = flow.momentum.x.item
             mom_c2 = flow.momentum.y.item
             mom_c3 = flow.momentum.z.item
-        pressure = flow.pressure.item
     except AttributeError:
         vnames = ('density', 'momentum', 'pressure')
-        raise AttributeError('For total temperature, zone %s is missing'
+        raise AttributeError('For temperature_stagnation, zone %s is missing'
                              ' one or more of %s.' % (zone_name, vnames))
+    try:
+        pressure = flow.pressure.item
+    except AttributeError:
+        pressure = None
+        try:
+            energy = flow.energy_stagnation_density.item
+        except AttributeError:
+            vnames = ('pressure', 'energy_stagnation_density')
+            raise AttributeError('For temperature_stagnation, zone %s is'
+                                 ' one or more of %s.' % (zone_name, vnames))
     try:
         gam = flow.gamma.item
     except AttributeError:
@@ -840,26 +1011,36 @@ def _total_temperature(domain, surface, weights, reference_state):
         kmax += 1
         face_value = _kface_cell_value if cell_center else _kface_node_value
 
-    try:
-        pref = reference_state['pressure_reference']
-        rgas = reference_state['ideal_gas_constant']
-        tref = reference_state['temperature_reference']
-        if gam is None:
-            gamma = reference_state['specific_heat_ratio'].value
-    except KeyError:
-        vals = ('pressure_reference', 'ideal_gas_constant',
-                'temperature_reference', 'specific_heat_ratio')
-        raise AttributeError('For total pressure, reference_state is missing'
-                             ' one or more of %s.' % (vals,))
+    if reference_state is None:
+        pref = 1.
+        rgas = 1.
+        rhoref = 1.
+        momref = 1.
+        e0ref = 1.
+    else:
+        try:
+            pref = reference_state['pressure_reference']
+            rgas = reference_state['ideal_gas_constant']
+            tref = reference_state['temperature_reference']
+            if gam is None:
+                gamma = reference_state['specific_heat_ratio'].value
+        except KeyError:
+            vals = ('pressure_reference', 'ideal_gas_constant',
+                    'temperature_reference', 'specific_heat_ratio')
+            raise AttributeError('For temperature_stagnation, reference_state'
+                                 ' is missing one or more of %s.' % (vals,))
+        if pressure is None:
+            raise NotImplementedError('Get dimensional temperature_stagnation'
+                                      ' from Q variables')
+        rhoref = pref / rgas / tref
+        vref = (rgas * tref).sqrt()
+        momref = rhoref * vref
+        pref = pref.value
+        rgas = rgas.value
+        rhoref = rhoref.value
+        momref = momref.value
+#        e0ref = ?
 
-    rhoref = pref / rgas / tref
-    vref = (rgas * tref).sqrt()
-    momref = rhoref * vref
-
-    pref = pref.value
-    rgas = rgas.value
-    rhoref = rhoref.value
-    momref = momref.value
     total = 0.
     weight_index = 0
     for i in range(imin, imax):
@@ -873,20 +1054,29 @@ def _total_temperature(domain, surface, weights, reference_state):
                 vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
                 vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
                 vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
-                ps = face_value(pressure, ip1, jp1, kp1) * pref
                 if gam is not None:
                     gamma = face_value(gam, ip1, jp1, kp1)
-                weight = weights[weight_index]
-                weight_index += 1
 
                 u2 = vu*vu + vv*vv + vw*vw
+                if pressure is not None:
+                    ps = face_value(pressure, ip1, jp1, kp1) * pref
+                else:
+                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
+                    ps = (gamma-1.) * rho * (e0 - 0.5*u2)
+
                 a2 = (gamma * ps) / rho
                 mach2 = u2 / a2
                 ts = ps / (rho * rgas)
                 tt = ts * (1. + (gamma-1.)/2. * mach2)
+
+                weight = weights[weight_index]
+                weight_index += 1
                 total += tt * weight
 
-    return PhysicalQuantity(total, tref.get_unit_name())
+    if reference_state is None:
+        return total
+    else:
+        return PhysicalQuantity(total, tref.get_unit_name())
 
 register_surface_probe('temperature_stagnation', _total_temperature, False)
 

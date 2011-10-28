@@ -4,6 +4,7 @@
 __all__ = ["Driver"]
 
 from networkx.algorithms.shortest_paths.generic import shortest_path
+from enthought.traits.api import List
 
 # pylint: disable-msg=E0611,F0401
 
@@ -30,8 +31,8 @@ class Driver(Component):
     
     implements(IDriver, IHasEvents)
 
-    recorder = Slot(ICaseRecorder, desc='Case recorder for iteration data.', 
-                     required=False) 
+    recorders = List(Slot(ICaseRecorder, required=False), 
+                     desc='Case recorders for iteration data.')
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__

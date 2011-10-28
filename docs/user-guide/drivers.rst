@@ -3,12 +3,12 @@
 Drivers
 ========
 
-Drivers are generally iterative solvers, such as optimizers, that operate on
-their respective workflow until certain conditions are met. OpenMDAO includes
-several drivers that are distributable (i.e., either open source or
-public domain.) This section describes the driver interface that is common
-to most drivers. A more complete discussion on how to use each of the :ref:`drivers
-<drivers>` can be found in the source documentation.
+Drivers are generally iterative solvers, such as optimizers, that operate on their
+respective workflow until certain conditions are met. OpenMDAO includes several drivers
+that are distributable (i.e., either open source or public domain.) This section
+describes the driver interface that is common to most drivers. A more complete
+discussion on how to use each of the :ref:`drivers <drivers>` can be found in the
+source documentation.
 
 .. _Driver-API: 
 

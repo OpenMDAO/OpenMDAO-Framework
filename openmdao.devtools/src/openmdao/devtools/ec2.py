@@ -27,13 +27,19 @@ def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
     tries = 1
     while True:
         time.sleep(sleeptime)
-        inst.update()
-        if debug:
-            stream.write("%s state = %s\n" % (imgname, inst.state))
-        if inst.state == state or tries >= maxtries:
+        try:
+            inst.update()
+        except Exception as err:
+            if debug:
+                stream.write("ERROR while attempting to get instance state: %s" % str(err))
+        else:
+            if debug:
+                stream.write("%s state = %s\n" % (imgname, inst.state))
+            if inst.state == state:
+                return state
+        if tries >= maxtries:
             break
         tries += 1
-    return inst.state
    
 def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     """Starts up an EC2 instance having the specified 'short' name and
