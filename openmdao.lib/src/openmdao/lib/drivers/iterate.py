@@ -80,6 +80,13 @@ class FixedPointIterator(Driver):
         unconverged = True
         while unconverged:
             self.iteration += 1
+            print "global: ",self.parent.global_des_vars
+            print "local:  ",self.parent.d0_local_des_vars
+            print "local:  ",self.parent.d1_local_des_vars
+            #print "local:  ",self.parent.d2_local_des_vars
+            print     
+
+
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
 
