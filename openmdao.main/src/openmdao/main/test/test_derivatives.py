@@ -5,9 +5,12 @@ Test of the derivatives capability.
 import unittest
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component, Assembly, ComponentWithDerivatives
+from openmdao.main.api import Component, Assembly, ComponentWithDerivatives, SequentialWorkflow, DriverUsesDerivatives
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.util.testutil import assert_rel_error
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasobjective import HasObjective
+from openmdao.util.decorators import add_delegate
 
 class Paraboloid_Derivative(ComponentWithDerivatives):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -510,6 +513,74 @@ class DerivativesTestCase(unittest.TestCase):
         self.assertEqual(comp.A3.ran_real, True)
         self.assertEqual(comp.A4.ran_real, False)
         self.assertEqual(comp.A5.ran_real, True)
+
         
+# Next up: test to make sure that we can pass tuples of parameters through assembly
+# without tripping up its check_derivatives 
+
+class Dummy(Component):
+    dummy2 = Float(321, iotype='out')
+    dummy3 = Float(322, iotype="in")
+    dummy4 = Float(322, iotype="in")
+
+    def __init__(self):
+        super(Dummy,self).__init__()
+
+    def execute(self):
+        self.dummy2 = self.dummy3**2 + self.dummy4**2
+
+class DummyAssembly(Assembly): 
+
+    dummy2 = Float(321, iotype='out')
+    dummy3 = Float(322, iotype="in")
+    dummy4 = Float(322, iotype="in")
+    
+@add_delegate(HasParameters, HasObjective)
+class Smarty(DriverUsesDerivatives):
+
+    def __init__(self):
+        super(Smarty,self).__init__()
+
+class TestAssembly(Assembly):
+    def __init__(self):
+        super(TestAssembly,self).__init__()
+        self.add('driver',Smarty())
+        self.add('dumcomp',Dummy())
+        self.add('dum2',DummyAssembly())
+
+        self.driver.add_parameter(("dumcomp.dummy3",'dum2.dummy3'),low=-1000,high=1000)
+        self.driver.add_parameter(("dumcomp.dummy4",'dum2.dummy4'),low=-1000,high=1000)
+
+        self.driver.add_objective('dumcomp.dummy2')  #Doesn't work.
+
+        self.driver.workflow = SequentialWorkflow()
+        self.driver.workflow.add(['dumcomp','dum2'])        
+
+
+        
+class CheckDerivativesTestCase(unittest.TestCase):
+    """ Test of Component. """
+
+    def setUp(self):
+        pass
+    
+    def test_assy(self):
+        
+        # Just make sure we don't error out 
+        
+        sim = TestAssembly()
+        sim.run()
+        
+        
+if __name__ == "__main__":
+
+    sim = TestAssembly()
+    print "TEST"
+    sim.dumcomp.dummy3 = 10
+    print sim.dumcomp.dummy2
+    sim.run()
+    print sim.dumcomp.dummy2
+
+
 if __name__ == '__main__':
     unittest.main()
