@@ -336,5 +336,3 @@ class OptProblem(ArchitectureAssembly):
                 pass
             
         return error    
-                
-

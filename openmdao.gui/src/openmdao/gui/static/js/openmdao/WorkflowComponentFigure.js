@@ -1,6 +1,6 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ComponentFigure=function(myModel,pathname,type){
+openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
     this.myModel = myModel;
     this.pathname = pathname;
     this.type = type;
@@ -32,11 +32,11 @@ openmdao.ComponentFigure=function(myModel,pathname,type){
     this.setCanDrag(false);
 };
 
-openmdao.ComponentFigure.prototype=new draw2d.Node();
+openmdao.WorkflowComponentFigure.prototype=new draw2d.Node();
 
-openmdao.ComponentFigure.prototype.type="ComponentFigure";
+openmdao.WorkflowComponentFigure.prototype.type="WorkflowComponentFigure";
 
-openmdao.ComponentFigure.prototype.createHTMLElement=function(){
+openmdao.WorkflowComponentFigure.prototype.createHTMLElement=function(){
     var circleIMG = "url(/static/images/circle.png)";
     
     var item=document.createElement("div");    
@@ -91,7 +91,7 @@ openmdao.ComponentFigure.prototype.createHTMLElement=function(){
     this.header.style.left=this.cornerWidth+"px";
     this.header.style.top="0px";
     this.header.style.height=(this.cornerHeight)+"px";
-    this.header.style.backgroundColor="#CCCCFF";
+    this.header.style.backgroundColor="#CCCCCC";
     this.header.style.borderTop="3px solid #666666";
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
@@ -101,7 +101,7 @@ openmdao.ComponentFigure.prototype.createHTMLElement=function(){
     this.footer.style.position="absolute";
     this.footer.style.left=this.cornerWidth+"px";
     this.footer.style.top="0px";
-    this.footer.style.height=(this.cornerHeight-1)+"px";
+    this.footer.style.height=(this.cornerHeight)+"px";
     this.footer.style.backgroundColor="white";
     this.footer.style.borderBottom="1px solid #666666";
     this.footer.style.fontSize="2px";
@@ -128,7 +128,7 @@ openmdao.ComponentFigure.prototype.createHTMLElement=function(){
     return item;
 };
 
-openmdao.ComponentFigure.prototype.setDimension=function(w,h){
+openmdao.WorkflowComponentFigure.prototype.setDimension=function(w,h){
     draw2d.Node.prototype.setDimension.call(this,w,h);
     if(this.top_left!==null){
         this.top_right.style.left=(this.width-this.cornerWidth)+"px";
@@ -137,9 +137,9 @@ openmdao.ComponentFigure.prototype.setDimension=function(w,h){
         this.bottom_left.style.top=(this.height-this.cornerHeight)+"px";
         this.textarea.style.width=(this.width-2)+"px";
         this.textarea.style.height=(this.height-this.cornerHeight*2)+"px";
-        this.header.style.width=(this.width-this.cornerWidth*2)+"px";
-        this.footer.style.width=(this.width-this.cornerWidth*2)+"px";
-        this.footer.style.top=(this.height-this.cornerHeight)+"px";
+        this.header.style.width=(this.width-this.cornerWidth*2+1)+"px";
+        this.footer.style.width=(this.width-this.cornerWidth*2+1)+"px";
+        this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
     if(this.outputPort!==null){
         this.outputPort.setPosition(this.width+5,this.height/2);
@@ -149,15 +149,15 @@ openmdao.ComponentFigure.prototype.setDimension=function(w,h){
     }
 };
 
-openmdao.ComponentFigure.prototype.setTitle=function(title){
+openmdao.WorkflowComponentFigure.prototype.setTitle=function(title){
     this.header.innerHTML=title;
 };
 
-openmdao.ComponentFigure.prototype.setContent=function(_5014){
+openmdao.WorkflowComponentFigure.prototype.setContent=function(_5014){
     this.textarea.innerHTML=_5014;
 };
 
-openmdao.ComponentFigure.prototype.onDragstart=function(x,y){
+openmdao.WorkflowComponentFigure.prototype.onDragstart=function(x,y){
     var _5017=draw2d.Node.prototype.onDragstart.call(this,x,y);
     if(this.header===null){
         return false;
@@ -175,7 +175,7 @@ openmdao.ComponentFigure.prototype.onDragstart=function(x,y){
     }
 };
 
-openmdao.ComponentFigure.prototype.setCanDrag=function(flag){
+openmdao.WorkflowComponentFigure.prototype.setCanDrag=function(flag){
     draw2d.Node.prototype.setCanDrag.call(this,flag);
     this.html.style.cursor="";
     if(this.header===null){
@@ -188,7 +188,7 @@ openmdao.ComponentFigure.prototype.setCanDrag=function(flag){
     }
 };
 
-openmdao.ComponentFigure.prototype.setWorkflow=function(_5019){
+openmdao.WorkflowComponentFigure.prototype.setWorkflow=function(_5019){
     draw2d.Node.prototype.setWorkflow.call(this,_5019);
     if(_5019!==null&&this.inputPort===null){
         // TODO: don't want ports for openmdao.Workflow, will want for Dataflow
@@ -204,7 +204,7 @@ openmdao.ComponentFigure.prototype.setWorkflow=function(_5019){
     }
 };
 
-openmdao.ComponentFigure.prototype.toggle=function(){
+openmdao.WorkflowComponentFigure.prototype.toggle=function(){
     if(this.originalHeight==-1){
         this.originalHeight=this.height;
         this.setDimension(this.width,this.cornerHeight*2);
@@ -216,7 +216,7 @@ openmdao.ComponentFigure.prototype.toggle=function(){
     }
 };
 
-openmdao.ComponentFigure.prototype.getContextMenu=function(){
+openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
@@ -235,17 +235,17 @@ openmdao.ComponentFigure.prototype.getContextMenu=function(){
     return menu;
 };
 
-// openmdao.ComponentFigure.prototype.onMouseEnter=function(){
+// openmdao.WorkflowComponentFigure.prototype.onMouseEnter=function(){
     // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
 // };
 
-openmdao.ComponentFigure.prototype.onDoubleClick=function(){
+openmdao.WorkflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
-openmdao.ComponentFigure.prototype.onMouseEnter=function(){
+openmdao.WorkflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
 };
-openmdao.ComponentFigure.prototype.onMouseLeave=function(){
+openmdao.WorkflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };

@@ -47,7 +47,8 @@ class MyDriver(Driver):
         case = Case(inputs = inputs,
                     outputs = outputs)
         
-        self.recorder.record(case)
+        for recorder in self.recorders:
+            recorder.record(case)
         
 class Analysis(Assembly):
     def __init__(self,*args,**kwargs):
@@ -79,7 +80,7 @@ class Analysis(Assembly):
         self.DOE_trainer.add_event("spiral_meta_model.train_next")
         self.DOE_trainer.case_outputs = ['spiral_meta_model.f1_xy',
                                          'spiral_meta_model.f2_xy']
-        self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
+        self.DOE_trainer.recorders = [DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))]
         
         self.add("MOEI_opt",Genetic())
         self.MOEI_opt.opt_type = "maximize"
@@ -93,7 +94,7 @@ class Analysis(Assembly):
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("spiral_meta_model.train_next")
-        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
+        self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
         self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())

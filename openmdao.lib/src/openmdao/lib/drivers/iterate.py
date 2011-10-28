@@ -104,11 +104,8 @@ class FixedPointIterator(Driver):
             # run the workflow
             self.run_iteration()
             
-            if self.recorder:
-                # Write out some relevant information to the recorder
-                
-                
-                
+            if self.recorders:
+                # Write out some relevant information to the first recorder               
                 case_input = []
                 for target,param in self.get_parameters().iteritems():
                     case_input.append([target[0], param.evaluate()])
@@ -121,7 +118,7 @@ class FixedPointIterator(Driver):
                 
                 case = Case(case_input, case_output,parent_uuid=self._case_id)
                 
-                self.recorder.record(case)
+                self.recorders[0].record(case)
                 
             self.current_iteration += 1
         

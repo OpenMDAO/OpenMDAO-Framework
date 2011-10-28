@@ -3,7 +3,7 @@ openmdao.ContextMenuConnection=function(){
     this.sourcePort=null;
     this.targetPort=null;
     this.lineSegments=[];
-    this.setColor(new draw2d.Color(128,128,255));
+    this.setColor(new draw2d.Color(0,0,0));
     this.setLineWidth(1);
 };
 openmdao.ContextMenuConnection.prototype=new draw2d.Connection();

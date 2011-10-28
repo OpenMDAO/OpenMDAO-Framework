@@ -22,7 +22,7 @@ openmdao.Console = function(formID,commandID,historyID,model) {
 
     /** DEBUG: make the history pane droppable */
     historyBox.droppable({
-        accept: '.ui-draggable',
+        accept: '*',
         drop: function(ev,ui) { 
             var droppedObject = jQuery(ui.draggable).clone();
             debug.info('Console drop',droppedObject)
