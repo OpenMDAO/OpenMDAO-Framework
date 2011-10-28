@@ -72,9 +72,9 @@ class HulmeProblem(OptProblem):
         self.add('y',Y())
         self.add('z',Z())
         
-        self.add_parameter('w.x_w',low=-9999,high=9999)
-        self.add_parameter('y.x_y',low=-9999,high=9999)
-        self.add_parameter('z.x_z',low=-9999,high=9999)
+        self.add_parameter('w.x_w',low=-20,high=20)
+        self.add_parameter('y.x_y',low=-20,high=20)
+        self.add_parameter('z.x_z',low=-20,high=20)
         
         self.add_objective('0.04*w.x_w**2+0.96*y.x_y**3+0.015*z.x_z-0.26*w.w1**2'
                            '+0.44*w.w2+0.57*w.w3**3-0.07*y.y1+0.68*y.y2**2'

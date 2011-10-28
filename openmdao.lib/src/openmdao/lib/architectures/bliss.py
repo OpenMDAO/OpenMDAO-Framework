@@ -54,7 +54,7 @@ class BLISS(Architecture):
             
         # Multidisciplinary Analysis
         mda = self.parent.add('mda', BroydenSolver())
-        self.parent.force_execute=True
+        mda.force_execute=True
         for key,couple in coupling.iteritems(): 
             mda.add_parameter(couple.indep.target,low=-9.e99, high=9.e99)
             mda.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
@@ -111,8 +111,10 @@ class BLISS(Architecture):
                 dx = "(%s-%s)"%(x_store_i,param.targets[0])
                 delta_x.append(dx)
                 move_limit = (param.high-param.low)*20.0/100.0
-                bbopt.add_constraint("%s < %f"%(dx,move_limit))
-                bbopt.add_constraint("%s > -%f"%(dx,move_limit))
+                #bbopt.add_constraint("%s < %f*%s"%(dx,.2,param.targets[0]))
+                #bbopt.add_constraint("%s > -%f*%s"%(dx,.2,param.targets[0]))
+                bbopt.add_constraint("%s < .5"%(dx,))
+                bbopt.add_constraint("%s > -.5"%(dx,))
                 
                 df.append("sa_%s.dF[0][%d]*%s"%(comp,i,dx))
             
@@ -148,8 +150,10 @@ class BLISS(Architecture):
             dz = "(%s-%s)"%(z_store,target)
             delta_z.append(dz)
             move_limit = (param.high-param.low)*20.00/100.0  
-            sysopt.add_constraint("%s < %f"%(dz,move_limit))
-            sysopt.add_constraint("%s > -%f"%(dz,move_limit))
+            #sysopt.add_constraint("%s < %f*%s"%(dz,.1,target))
+            #sysopt.add_constraint("%s > -%f*%s"%(dz,.1,target))
+            sysopt.add_constraint("%s < .5"%(dz,))
+            sysopt.add_constraint("%s > -.5"%(dz,))
             
             df.append("ssa.dF[0][%d]*%s"%(i,dz))
             dg_j = ["ssa.dG[%d][%d]*%s"%(j,i,dz) for j,const in enumerate(constraints)]
@@ -169,13 +173,75 @@ class BLISS(Architecture):
             sysopt.add_constraint(lin_constraint)
 
         self.parent.driver.workflow = SequentialWorkflow()
+        self.parent.driver.workflow.add("mda")
+        self.parent.driver.workflow.add(sa_s)
         if global_dvs: 
             self.parent.driver.workflow.add("ssa")
-        else: 
-            self.parent.driver.workflow.add("mda")
-        self.parent.driver.workflow.add(sa_s)
         self.parent.driver.workflow.add(bbopts)
-        self.parent.driver.workflow.add("sysopt")
+        if global_dvs: 
+            self.parent.driver.workflow.add("sysopt")
+            
+            
+        """print self.parent.driver.name
+        print "constraints: "
+        for c in self.parent.driver.get_eq_constraints():
+            print "    ",c
+        print "\nParams: "    
+        for param in self.parent.driver.get_parameters(): 
+            print "    ",param
+            
+        print self.parent.ssa.name
+        print "constraints: "
+        for c in self.parent.ssa.get_constraints():
+            print "    ",c
+        print "objectives: " 
+        for k,v in self.parent.ssa.get_objectives().iteritems(): 
+            print "    ",v
+        print "\nParams: "    
+        for param in self.parent.ssa.get_parameters(): 
+            print "    ",param
+        
+
+        d = getattr(self.parent,"sysopt")
+        print d.name
+        print "constraints: " 
+        for c in d.get_ieq_constraints():
+            print "    ",c
+        print "objectives: " 
+        for k,v in d.get_objectives().iteritems(): 
+            print "    ",v
+        print "\nParams: "    
+        for param in d.get_parameters(): 
+            print "    ",param            
+            
+        for d in sa_s: 
+            d = getattr(self.parent,d)
+            print d.name
+            print "constraints: " 
+            for c in d.get_constraints():
+                print "    ",c
+            print "objectives: " 
+            for k,v in d.get_objectives().iteritems(): 
+                print "    ",v
+            print "\nParams: "    
+            for param in d.get_parameters(): 
+                print "    ",param
+                
+        for d in bbopts: 
+            d = getattr(self.parent,d)
+            print d.name
+            print "constraints: " 
+            for c in d.get_ineq_constraints():
+                print "    ",c
+            print "objectives: " 
+            for k,v in d.get_objectives().iteritems(): 
+                print "    ",v
+            print "\nParams: "    
+            for param in d.get_parameters(): 
+                print "    ",param        
+            
+        
+        exit()"""
                 
         
     

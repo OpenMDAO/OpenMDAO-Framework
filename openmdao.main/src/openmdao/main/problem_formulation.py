@@ -96,9 +96,11 @@ class HasCouplingVars(object):
             if indep in [c[0] for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
                                              "exists in assembly"%indep,ValueError)    
-            if dep in [c[1] for c in self._couples]:
-                self._parent.raise_exception("Coupling variable with dep '%s' already "
-                                             "exists in assembly"%dep,ValueError)
+            
+            #It should be allowed for dependents to repeat    
+            #if dep in [c[1] for c in self._couples]:
+            #   self._parent.raise_exception("Coupling variable with dep '%s' already "
+            #                                 "exists in assembly"%dep,ValueError)
         
         if name is None: 
             name = indep_dep

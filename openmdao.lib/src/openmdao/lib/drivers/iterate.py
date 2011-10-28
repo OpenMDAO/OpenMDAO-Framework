@@ -30,6 +30,8 @@ class FixedPointIterator(Driver):
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
     
+    iteration = Int(0, iotype="out", desc='iteration counter')
+    
     tolerance = Float(1.0e-5, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
     
@@ -49,8 +51,8 @@ class FixedPointIterator(Driver):
         
     def execute(self):
         """Perform the iteration."""
-        
         self._check_config()
+        
 
         nvar = len(self.get_parameters().values())
         history = zeros([self.max_iteration, nvar])
@@ -60,7 +62,7 @@ class FixedPointIterator(Driver):
         val0 = zeros(nvar)
         for i, val in enumerate(self.get_parameters().values()):
             val0[i] = val.evaluate(self.parent)
-            
+                
         # perform an initial run
         self.run_iteration()
         self.current_iteration = 0
@@ -77,6 +79,13 @@ class FixedPointIterator(Driver):
 
         unconverged = True
         while unconverged:
+            self.iteration += 1
+            print "global: ",self.parent.global_des_vars
+            print "local:  ",self.parent.d0_local_des_vars
+            print "local:  ",self.parent.d1_local_des_vars
+            #print "local:  ",self.parent.d2_local_des_vars
+            print     
+
 
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
@@ -86,6 +95,7 @@ class FixedPointIterator(Driver):
                 self.history = history[:self.current_iteration+1, :]
                 self.raise_exception('Max iterations exceeded without ' + \
                                      'convergence.', RuntimeError)
+                
                 
             # Pass output to input
             val0 += history[self.current_iteration, :]
@@ -117,6 +127,7 @@ class FixedPointIterator(Driver):
             
                 term = val.evaluate(self.parent)
                 delta[i] = term[0] - term[1]
+                
             
             history[self.current_iteration] = delta
             

@@ -108,10 +108,10 @@ class HeartDipoleProblem(OptProblem):
         self.add_constraint('d2.f6 >= 0')
         self.add_constraint('d2.f8 >= 0')
         
-        self.add_coupling_var(('d1.x3','d2.x3'),name="x3",start=0)
-        self.add_coupling_var(('d1.x5','d2.x5'),name="x5",start=0)
-        self.add_coupling_var(('d2.x2','d1.x2'),name="x2",start=0)
-        self.add_coupling_var(('d2.x8','d1.x8'),name="x8",start=0)
+        self.add_coupling_var(('d1.x3','d2.x3'),name="x3",start=1)
+        self.add_coupling_var(('d1.x5','d2.x5'),name="x5",start=1)
+        self.add_coupling_var(('d2.x2','d1.x2'),name="x2",start=1)
+        self.add_coupling_var(('d2.x8','d1.x8'),name="x8",start=1)
         
         self.add_objective('d1.f5+d1.f7+d2.f6+d2.f8')
         
