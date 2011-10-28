@@ -485,14 +485,38 @@ class Assembly (Component):
         # Put the driver connection lists into our local scope by removing
         # the assembly name from the dotted path.
         for j, item in enumerate(driver_inputs):
-            names = item.split('.',1)
-            if names[0] == self.name:
-                driver_inputs[j] = names[1]
+            if isinstance(item, tuple):
+                
+                tuple_list = []
+                for tup_item in item:
+                    names = tup_item.split('.',1)
+                    if names[0] == self.name:
+                        tuple_list.append(names[1])
+                    else:
+                        tuple_list.append(tup_item)
+                        
+                driver_inputs[j] = tuple(tuple_list)
+            else:        
+                names = item.split('.',1)
+                if names[0] == self.name:
+                    driver_inputs[j] = names[1]
         
         for j, item in enumerate(driver_outputs):
-            names = item.split('.',1)
-            if names[0] == self.name:
-                driver_outputs[j] = names[1]
+            if isinstance(item, tuple):
+
+                tuple_list = []
+                for tup_item in item:
+                    names = tup_item.split('.',1)
+                    if names[0] == self.name:
+                        tuple_list.append(names[1])
+                    else:
+                        tuple_list.append(tup_item)
+                        
+                driver_inputs[j] = tuple(tuple_list)
+            else:
+                names = item.split('.',1)
+                if names[0] == self.name:
+                    driver_outputs[j] = names[1]
         
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
     
