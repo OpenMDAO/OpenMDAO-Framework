@@ -14,6 +14,7 @@ from openmdao.main.uncertain_distributions import UncertainDistribution, \
                                                   NormalDistribution
 from openmdao.main.mp_support import has_interface
 
+_missing = object()
 
 class MetaModel(Component):
     
@@ -64,6 +65,7 @@ class MetaModel(Component):
         self._surrogate_info = {}
         self._surrogate_input_names = []
         self._training_input_history = []
+        self._const_inputs = {} # dict of constant training inputs indices and their values
         self._train = False
         self._new_train_data = False
         
@@ -80,47 +82,41 @@ class MetaModel(Component):
     
     def _reset_training_data_fired(self):
         self._training_input_history = []
+        self._const_inputs = {}
         self.update_model(self.model, self.model)
         
-    def _warm_start_data_changed(self,oldval,newval): 
-        self.reset_training_date = True
+    def _warm_start_data_changed(self, oldval, newval): 
+        self.reset_training_data = True
         
         #build list of inputs         
-        inputs = []
         for case in newval:
             if self.recorder: 
                 self.recorder.record(case)
             inputs = []
             for inp_name in self._surrogate_input_names:
-                inp_val = None
-                var_name = "%s.%s"%(self.name,inp_name)
+                var_name = '.'.join([self.name, inp_name])
                 inp_val = case[var_name]
                 if inp_val is not None: 
                     inputs.append(inp_val)
                 else: 
                     self.raise_exception('The variable "%s" was not '
                                          'found as an input in one of the cases provided '
-                                         'for warm_start_data.'%var_name, ValueError)
+                                         'for warm_start_data.' % var_name, ValueError)
             #print "inputs", inputs
             self._training_input_history.append(inputs)                  
             
             for output_name in self.list_outputs_from_model():
                 #grab value from case data
-                output_val = None
-                var_name = "%s.%s"%(self.name,output_name)
-                for name,val in case.items(iotype='out'): 
-                    if name==var_name: 
-                        output_val = val
-                        break
-                if output_val is not None: 
-                    # save to training output history
-                    #print output_name,":",output_val
-                    self._surrogate_info[output_name][1].append(output_val) 
-                else: 
+                var_name = '.'.join([self.name, output_name])
+                try:
+                    val = case.get_output(var_name)
+                except KeyError:
                     self.raise_exception('The output "%s" was not found '
                                          'in one of the cases provided for '
-                                         'warm_start_data'%var_name, ValueError) 
-        
+                                         'warm_start_data' % var_name, ValueError) 
+                else: # save to training output history   
+                    self._surrogate_info[output_name][1].append(val)
+
         self._new_train_data = True        
         
     def execute(self):
@@ -160,18 +156,59 @@ class MetaModel(Component):
         else:
             #print '%s predicting' % self.get_pathname()
             if self._new_train_data: 
+                if len(self._training_input_history) < 2:
+                    self.raise_exception("ERROR: need at least 2 training points!", 
+                                         RuntimeError)
+                    
+                # figure out if we have any constant training inputs
+                tcases = self._training_input_history
+                in_hist = tcases[0][:]
+                # start off assuming every input is constant
+                idxlist = range(len(in_hist))
+                self._const_inputs = dict(zip(idxlist, in_hist))
+                for i in idxlist:
+                    val = in_hist[i]
+                    for case in range(1, len(tcases)):
+                        if val != tcases[case][i]:
+                            del self._const_inputs[i]
+                            break
+                  
+                if len(self._const_inputs) == len(in_hist):
+                    self.raise_exception("ERROR: all training inputs are constant.")
+                elif len(self._const_inputs) > 0:
+                    # some inputs are constant, so we have to remove them from the training set
+                    training_input_history = []
+                    for inputs in self._training_input_history:
+                        training_input_history.append([val for i,val in enumerate(inputs) 
+                                                       if i not in self._const_inputs])
+                else:
+                    training_input_history = self._training_input_history
                 for name,tup in self._surrogate_info.items(): 
-                    surrogate, output_history = tup
-                    surrogate.train(self._training_input_history, output_history) 
+                    surrogate, output_history = tup  
+                    surrogate.train(training_input_history, output_history)
+                    
+                #self._training_input_history = []
                 self._new_train_data = False
                 
-            input_values = array([getattr(self, name) for name in self._surrogate_input_names])
+            inputs = []
+            for i,name in enumerate(self._surrogate_input_names):
+                val = getattr(self, name)
+                cval = self._const_inputs.get(i, _missing)
+                if cval is _missing:
+                    inputs.append(val)
+                elif val != cval:
+                    self.raise_exception("ERROR: training input '%s' was a constant value of (%s) but the value has changed to (%s)." %
+                                         (name, cval, val), ValueError)
+            input_values = array(inputs)
             for name, tup in self._surrogate_info.items():
                 surrogate = tup[0]
-                predicted = surrogate.predict(input_values)
                 # copy output to boudary
-                setattr(self, name, predicted)
+                setattr(self, name, surrogate.predict(input_values))
             
+    def _post_run (self):
+        self._train = False
+        super(MetaModel, self)._post_run()
+
     def invalidate_deps(self, compname=None, varnames=None, force=False):
         if compname:  # we were called from our model, which expects to be in an Assembly
             return
@@ -188,7 +225,7 @@ class MetaModel(Component):
         self.update_model(oldmodel, newmodel)
         
     def update_model(self, oldmodel, newmodel):
-        """called whenever the model variable is set."""
+        """called whenever the model variable is set or when includes/excludes change."""
         # TODO: check for pre-connected traits on the new model
         # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
         # TODO: check for nested MMs?  Is this a problem?
@@ -196,7 +233,6 @@ class MetaModel(Component):
         if newmodel is not None and not has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
-
         if not self.surrogate:
             self.raise_exception("surrogate must be set before the model or any includes/excludes of variables", RuntimeError)
 
@@ -224,13 +260,11 @@ class MetaModel(Component):
                 
             # now outputs
             traitdict = newmodel._alltraits(iotype='out')
-            
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     try: 
                         surrogate = self.surrogate[name]
-                        args = self.surrogate_args.get(name,[])
-                            
+                        args = self.surrogate_args.get(name,[])   
                     except KeyError: 
                         try: 
                             surrogate = self.surrogate['default']
@@ -241,12 +275,13 @@ class MetaModel(Component):
                             "surrogate model for all outputs",ValueError)
 
                     if isinstance(args,dict): 
-                            kwargs = args
-                            args = []
+                        kwargs = args
+                        args = []
                     elif isinstance(args,tuple): 
                         args = args[0]
                         kwargs = args[1]
-                    else: kwargs = {}  
+                    else: 
+                        kwargs = {}  
                     
                     trait_type = surrogate.get_uncertain_value(1.0).__class__()
                     self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
@@ -254,6 +289,7 @@ class MetaModel(Component):
                     self._surrogate_info[name] = (surrogate.__class__(*args,**kwargs), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel,name)))
+                    
             newmodel.parent = self
             newmodel.name = 'model'
         

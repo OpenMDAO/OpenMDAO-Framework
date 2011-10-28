@@ -18,6 +18,9 @@
     <link rel="stylesheet" href="/static/css/mdao-layout.css">
     <link rel="stylesheet" href="/static/css/mdao-styles.css">
 
+    <!-- modernizr -->
+    <script src="/static/js/modernizr.js"></script>
+
     <!-- jQuery -->
     <link rel="stylesheet" href="/static/css/ui-darkness/jquery-ui-1.8.7.custom.css">
     <script src="/static/js/require-jquery.js"></script>
@@ -45,24 +48,10 @@
     <script src="/static/js/slickgrid/slick.grid.js"></script>
     <script src="/static/js/slickgrid/slick.editors.js"></script>
     
-    <!-- jstree -->
-    <script src="/static/js/jstree/vakata.js"></script>
-    <script src="/static/js/jstree/jstree.core.js"></script>
-    <script src="/static/js/jstree/jstree.themes.js"></script>
-    <script>jQuery.jstree.THEMES_DIR = "/static/js/jstree/themes/";</script>
-    <script src="/static/js/jstree/jstree.ui.js"></script>
-    <script src="/static/js/jstree/jstree.state.js"></script>
-    <script src="/static/js/jstree/jstree.html.js"></script>
-    <script src="/static/js/jstree/jstree.json.js"></script>
-    <script src="/static/js/jstree/jstree.sort.js"></script>
-    <script src="/static/js/jstree/jstree.contextmenu.js"></script>
-    <script src="/static/js/jstree/jstree.hotkeys.js"></script>
-    <script src="/static/js/jstree/jstree.dnd.js"></script>
-    <script src="/static/js/jstree/jstree.unique.js"></script>
-    <script src="/static/js/jstree/jstree.xml.js"></script>
+    <!-- jstree pre 1.0 fixed -->
+    <script src="/static/js/jquery.jstree.js"></script>
+    <script>jQuery.jstree.THEMES_DIR = "/static/js/themes/";</script>
     
-    <script src="/static/js/modernizr.js"></script>
-
     <!-- flot -->
     <script src="/static/js/jquery.flot.js"></script>
     
@@ -87,6 +76,7 @@
     <script src="/static/js/openmdao/ObjectivesPane.js"></script>
     <script src="/static/js/openmdao/CouplingVarsPane.js"></script>
     <script src="/static/js/openmdao/WorkflowPane.js"></script>
+    <script src="/static/js/openmdao/DataflowPane.js"></script>
     <script src="/static/js/openmdao/ComponentEditor.js"></script>
     <script src="/static/js/openmdao/Plotter.js"></script>
     <!-- schematic stuff -->
@@ -129,7 +119,7 @@
             <dd id="workflow_pane">
                 <div id="workflow"></div>
             </dd>
-            <dt id="dataflow_tab" target="dataflow_pane">Data</dt>
+            <dt id="dataflow_tab" target="dataflow_pane">Structure</dt>
             <dd id="dataflow_pane">
                 <div id="dataflow"></div>
             </dd>
