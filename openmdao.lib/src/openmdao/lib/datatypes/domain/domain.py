@@ -1,6 +1,5 @@
 import copy
 
-from openmdao.lib.datatypes.domain.zone import Zone
 from openmdao.util.log import NullLogger
 
 
@@ -163,6 +162,43 @@ class DomainObj(object):
                 logger.debug("zone '%s' equivalence failed.", name)
                 return False
         return True
+
+    def extract(self, zone_args):
+        """
+        Construct a new :class:`DomainObj` from grid and flow data extracted
+        from the specified regions of each zone. Existing zone names are used
+        for the new domain's zones.
+
+        zone_args: sequence
+            Sequence of argument tuples to be used to extract data from each
+            zone. If an argument tuple is empty or ``None`` then that zone
+            is skipped.
+        """
+        domain = DomainObj()
+        for i, args in enumerate(zone_args):
+            if args:
+                zone = zones[i]
+                name = self.zone_name(zone)
+                domain.add_zone(name, zone.extract(*args))
+        return domain
+
+    def extend(self, zone_args):
+        """
+        Construct a new :class:`DomainObj` from zones extended according to
+        `zone_args`. Existing zone names are used for the new domain's zones.
+
+        zone_args: sequence
+            Sequence of argument tuples to be used to extend each zone.
+            If an argument tuple is empty or ``None`` then that zone
+            is skipped.
+        """
+        domain = DomainObj()
+        for i, args in enumerate(zone_args):
+            if args:
+                zone = zones[i]
+                name = self.zone_name(zone)
+                domain.add_zone(name, zone.extend(*args))
+        return domain
 
     def make_cartesian(self, axis='z'):
         """

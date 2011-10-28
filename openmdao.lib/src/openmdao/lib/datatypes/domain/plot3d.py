@@ -37,7 +37,6 @@ Fortran unformatted file.  When writing, zones are assumed in Cartesian
 coordinates with data located at the vertices.
 """
 
-import os.path
 import numpy
 
 from openmdao.util.log import NullLogger

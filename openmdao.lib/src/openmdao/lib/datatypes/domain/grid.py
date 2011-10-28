@@ -59,7 +59,7 @@ class GridCoordinates(Vector):
         """
         Coordinate ranges, not including 'ghost/rind' planes.
         If cartesian ``(xmin,xmax,ymin,ymax,zmin,zmax)``.
-        Otherwise ``(zmin,zmax,rmin,rmax,tmin,tmax)``.
+        Otherwise ``(rmin,rmax,tmin,tmax,zmin,zmax)``.
         """
         i = len(super(GridCoordinates, self).shape)
         if i == 3:
@@ -93,7 +93,7 @@ class GridCoordinates(Vector):
             r = self.r[imin:imax, jmin:jmax, kmin:kmax]
             t = self.t[imin:imax, jmin:jmax, kmin:kmax]
             z = self.z[imin:imax, jmin:jmax, kmin:kmax]
-            return (z.min(), z.max(), r.min(), r.max(), t.min(), t.max())
+            return (r.min(), r.max(), t.min(), t.max(), z.min(), z.max())
 
     def _extent_2d(self):
         """ 2D (index space) coordinate ranges. """
@@ -118,7 +118,7 @@ class GridCoordinates(Vector):
             t = self.t[imin:imax, jmin:jmax]
             if self.z is not None:
                 z = self.z[imin:imax, jmin:jmax]
-                return (z.min(), z.max(), r.min(), r.max(), t.min(), t.max())
+                return (r.min(), r.max(), t.min(), t.max(), z.min(), z.max())
             return (r.min(), r.max(), t.min(), t.max())
 
     def _extent_1d(self):
@@ -143,7 +143,7 @@ class GridCoordinates(Vector):
             t = self.t[imin:imax]
             if self.z is not None:
                 z = self.z[imin:imax]
-                return (z.min(), z.max(), r.min(), r.max(), t.min(), t.max())
+                return (r.min(), r.max(), t.min(), t.max(), z.min(), z.max())
             return (r.min(), r.max(), t.min(), t.max())
 
     def copy(self):
@@ -427,7 +427,7 @@ class GridCoordinates(Vector):
                 min1, max1, min2, max2, min3, max3 = self.extent
                 delta1 = max1 - min1
                 delta2 = max2 - min2
-                delta3 - max3 - min3
+                delta3 = max3 - min3
                 if delta1 <= delta2:
                     if delta1 <= delta3:
                         normal = (1., 0., 0.)
@@ -459,7 +459,8 @@ class GridCoordinates(Vector):
         grid.ghosts = self._ghosts
         return grid
 
-    def _extrap_3d(self, axis, delta, npoints, arr, new_shape, on_axis=False):
+    @staticmethod
+    def _extrap_3d(axis, delta, npoints, arr, new_shape, normal):
         """ Return extrapolated `arr`. """
         shape = arr.shape
         new_arr = numpy.zeros(new_shape)
@@ -474,7 +475,7 @@ class GridCoordinates(Vector):
                 indx = shape[0]
                 new_arr[0:indx, :, :] = arr
                 for i in range(npoints):
-                    new_arr[indx:, :, :] = v + (i+1)*dv
+                    new_arr[indx+i, :, :] = v + (i+1)*dv
             else:
                 v = arr[0, :, :]
                 if arr.shape[0] > 1:
@@ -483,8 +484,9 @@ class GridCoordinates(Vector):
                     dv = normal * -delta
                 indx = new_shape[0] - shape[0]
                 new_arr[indx:, :, :] = arr
+                indx -= 1
                 for i in range(npoints):
-                    new_arr[0:indx, :, :] = v + (i+1)*dv
+                    new_arr[indx-i, :, :] = v + (i+1)*dv
 
         elif axis == 'j':
             if delta > 0:
@@ -505,8 +507,9 @@ class GridCoordinates(Vector):
                     dv = normal * -delta
                 indx = new_shape[1] - shape[1]
                 new_arr[:, indx:, :] = arr
+                indx -= 1
                 for j in range(npoints):
-                    new_arr[:, j, :] = v + (j+1)*dv
+                    new_arr[:, indx-j, :] = v + (j+1)*dv
         else:
             if delta > 0:
                 v = arr[:, :, -1]
@@ -526,8 +529,9 @@ class GridCoordinates(Vector):
                     dv = normal * -delta
                 indx = new_shape[2] - shape[2]
                 new_arr[:, :, indx:] = arr
+                indx -= 1
                 for k in range(npoints):
-                    new_arr[:, :, k] = v + (k+1)*dv
+                    new_arr[:, :, indx-k] = v + (k+1)*dv
         return new_arr
 
     def _extend_2d(self, axis, delta, npoints, normal):
@@ -560,7 +564,7 @@ class GridCoordinates(Vector):
                     min1, max1, min2, max2, min3, max3 = self.extent()
                     delta1 = max1 - min1
                     delta2 = max2 - min2
-                    delta3 - max3 - min3
+                    delta3 = max3 - min3
                     if delta1 <= delta2:
                         if delta1 <= delta3:
                             normal = (1., 0., 0.)
@@ -593,7 +597,8 @@ class GridCoordinates(Vector):
         grid.ghosts = self._ghosts
         return grid
 
-    def _extrap_2d(self, axis, delta, npoints, arr, new_shape, normal):
+    @staticmethod
+    def _extrap_2d(axis, delta, npoints, arr, new_shape, normal):
         """ Return extrapolated `arr`. """
         shape = arr.shape
         new_arr = numpy.zeros(new_shape)
@@ -608,7 +613,7 @@ class GridCoordinates(Vector):
                 indx = shape[0]
                 new_arr[0:indx, :] = arr
                 for i in range(npoints):
-                    new_arr[indx:, :] = v + (i+1)*dv
+                    new_arr[indx+i, :] = v + (i+1)*dv
             else:
                 v = arr[0, :]
                 if arr.shape[0] > 1:
@@ -617,8 +622,9 @@ class GridCoordinates(Vector):
                     dv = normal * -delta
                 indx = new_shape[0] - shape[0]
                 new_arr[indx:, :] = arr
+                indx -= 1
                 for i in range(npoints):
-                    new_arr[0:indx, :] = v + (i+1)*dv
+                    new_arr[indx-i, :] = v + (i+1)*dv
         else:
             if delta > 0:
                 v = arr[:, -1]
@@ -638,8 +644,9 @@ class GridCoordinates(Vector):
                     dv = normal * -delta
                 indx = new_shape[1] - shape[1]
                 new_arr[:, indx:] = arr
+                indx -= 1
                 for j in range(npoints):
-                    new_arr[:, j] = v + (j+1)*dv
+                    new_arr[:, indx-j] = v + (j+1)*dv
         return new_arr
 
     def _extend_1d(self, delta, npoints, normal):
@@ -669,7 +676,8 @@ class GridCoordinates(Vector):
         grid.ghosts = self._ghosts
         return grid
 
-    def _extrap_1d(self, delta, npoints, arr, new_shape, normal):
+    @staticmethod
+    def _extrap_1d(delta, npoints, arr, new_shape, normal):
         """ Return extrapolated `arr`. """
         shape = arr.shape
         new_arr = numpy.zeros(new_shape)
@@ -682,7 +690,7 @@ class GridCoordinates(Vector):
             indx = shape[0]
             new_arr[0:indx] = arr
             for i in range(npoints):
-                new_arr[indx:] = v + (i+1)*dv
+                new_arr[indx+i:] = v + (i+1)*dv
         else:
             v = arr[0]
             if arr.shape[0] > 1:
@@ -691,8 +699,9 @@ class GridCoordinates(Vector):
                 dv = normal * -delta
             indx = new_shape[0] - shape[0]
             new_arr[indx:] = arr
+            indx -= 1
             for i in range(npoints):
-                new_arr[0:indx] = v + (i+1)*dv
+                new_arr[indx-i] = v + (i+1)*dv
         return new_arr
 
     def make_cartesian(self, axis='z'):

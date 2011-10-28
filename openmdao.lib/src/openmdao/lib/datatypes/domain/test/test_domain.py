@@ -252,7 +252,7 @@ class TestCase(unittest.TestCase):
 
         wedge.xyzzy.grid_coordinates.make_cylindrical(axis='z')
         assert_rel_error(self, wedge.xyzzy.grid_coordinates.extent,
-                         (0.0, 5.0, 0.5, 2.0, 0.0, 0.52359879),
+                         (0.5, 2.0, 0.0, 0.52359879, 0.0, 5.0),
                          0.000001)
         assert_raises(self,
                       "wedge.xyzzy.grid_coordinates.make_cartesian(axis='q')",
@@ -340,7 +340,7 @@ class TestCase(unittest.TestCase):
         vec.make_cylindrical(grid)
         self.assertFalse(vec.is_equivalent(wedge.xyzzy.flow_solution.momentum,
                                            'momentum', logger))
-        self.assertEqual(vec.extent, (0., 5., 0., 5., -2.5, 0.))
+        self.assertEqual(vec.extent, (0., 5., -2.5, 0., 0., 5.))
 
     def test_zone(self):
         logging.debug('')

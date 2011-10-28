@@ -33,7 +33,7 @@ class Vector(object):
         """
         Tuple of component ranges.
         If cartesian ``(xmin,xmax,ymin,ymax,zmin,zmax)``.
-        Otherwise ``(zmin,zmax,rmin,rmax,tmin,tmax)``.
+        Otherwise ``(rmin,rmax,tmin,tmax,zmin,zmax)``.
         """
         if self.x is not None:
             if self.y is not None:
@@ -46,9 +46,9 @@ class Vector(object):
             return (self.x.min(), self.x.max())
         elif self.r is not None:
             if self.z is not None:
-                return (self.z.min(), self.z.max(),
-                        self.r.min(), self.r.max(),
-                        self.t.min(), self.t.max())
+                return (self.r.min(), self.r.max(),
+                        self.t.min(), self.t.max(),
+                        self.z.min(), self.z.max())
             return (self.r.min(), self.r.max(),
                     self.t.min(), self.t.max())
         else:

@@ -890,6 +890,11 @@ def _static_temperature(domain, surface, weights, reference_state):
             vnames = ('pressure', 'momentum', 'energy_stagnation_density')
             raise AttributeError('For temperature, zone %s is missing'
                                  ' one or more of %s.' % (zone_name, vnames))
+    try:
+        gam = flow.gamma.item
+    except AttributeError:
+        gam = None  # Use passed-in scalar gamma.
+
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
         face_value = _iface_cell_value if cell_center else _iface_node_value
@@ -906,17 +911,26 @@ def _static_temperature(domain, surface, weights, reference_state):
         momref = 1.
         e0ref = 1.
         rgas = 1.
+        gamma = 1.4
     else:
         try:
             pref = reference_state['pressure_reference']
             rgas = reference_state['ideal_gas_constant']
             tref = reference_state['temperature_reference']
+            if pressure is None and gam is None:
+                gamma = reference_state['specific_heat_ratio'].value
         except KeyError:
             vals = ('pressure_reference', 'ideal_gas_constant',
                     'temperature_reference')
             raise AttributeError('For temperature, reference_state is missing'
                                  ' one or more of %s.' % (vals,))
         if pressure is None:
+            if gam is None:
+                try:
+                    gamma = reference_state['specific_heat_ratio'].value
+                except KeyError:
+                    raise AttributeError('For temperature, reference_state is'
+                                         ' missing specific_heat_ratio')
             raise NotImplementedError('Get dimensional temperature from'
                                       ' Q variables')
         rhoref = pref / rgas / tref
