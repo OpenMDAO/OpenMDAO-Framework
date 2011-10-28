@@ -129,6 +129,12 @@ class FlowSolution(object):
         """ Returns a deep copy of self. """
         return copy.deepcopy(self)
 
+    def _copy_scalars(self, other):
+        """ Copy scalars from `other` to self. """
+        for name, val in other.__dict__.items():
+            if not hasattr(self, name):
+                setattr(self, name, val)
+
     def is_equivalent(self, other, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
@@ -284,6 +290,7 @@ class FlowSolution(object):
                             vector.extract(imin, imax, jmin, jmax, kmin, kmax))
         flow.grid_location = self.grid_location
         flow.ghosts = new_ghosts
+        flow._copy_scalars(self)
         return flow
 
     def _extract_2d(self, imin, imax, jmin, jmax, new_ghosts):
@@ -334,6 +341,7 @@ class FlowSolution(object):
                             vector.extract(imin, imax, jmin, jmax))
         flow.grid_location = self.grid_location
         flow.ghosts = new_ghosts
+        flow._copy_scalars(self)
         return flow
 
     def _extract_1d(self, imin, imax, new_ghosts):
@@ -372,6 +380,7 @@ class FlowSolution(object):
             flow.add_vector(self.name_of_obj(vector), vector.extract(imin, imax))
         flow.grid_location = self.grid_location
         flow.ghosts = new_ghosts
+        flow._copy_scalars(self)
         return flow
 
     def extend(self, axis, delta, npoints):
@@ -462,6 +471,7 @@ class FlowSolution(object):
 
         flow.grid_location = self.grid_location
         flow.ghosts = self._ghosts
+        flow._copy_scalars(self)
         return flow
 
     def _extend_2d(self, axis, delta, npoints):
@@ -505,6 +515,7 @@ class FlowSolution(object):
 
         flow.grid_location = self.grid_location
         flow.ghosts = self._ghosts
+        flow._copy_scalars(self)
         return flow
 
     def _extend_1d(self, delta, npoints):
@@ -534,6 +545,7 @@ class FlowSolution(object):
 
         flow.grid_location = self.grid_location
         flow.ghosts = self._ghosts
+        flow._copy_scalars(self)
         return flow
 
     def name_of_obj(self, obj):

@@ -555,6 +555,9 @@ class TestCase(unittest.TestCase):
         self.assertEqual(zone.flow_solution.shape, (32, 22, 12))
         self.assertEqual(zone.grid_coordinates.shape, (35, 25, 15))
 
+        # Uncomment to visualize result.
+#        write_plot3d_q(zone, 'ghost_wedge.xyz', 'ghost_wedge.q')
+
         zone.grid_coordinates.ghosts = (3, 2, 3, 2, 3, 2)
         self.assertEqual(zone.grid_coordinates.shape, (30, 20, 10))
         zone.flow_solution.ghosts = (1, 1, 1, 1, 1, 1)
@@ -586,6 +589,9 @@ class TestCase(unittest.TestCase):
         zone = zone.extend('j', -1., 3, 1)
         self.assertEqual(zone.shape, (25, 15))
         self.assertEqual(zone.flow_solution.shape, (22, 12))
+
+        # Uncomment to visualize result.
+#        write_plot3d_q(zone, 'ghost_sector.xyz', 'ghost_sector.q')
 
         zone.grid_coordinates.ghosts = (3, 2, 3, 2)
         self.assertEqual(zone.grid_coordinates.shape, (20, 10))

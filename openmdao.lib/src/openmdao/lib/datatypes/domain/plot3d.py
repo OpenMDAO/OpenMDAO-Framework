@@ -80,7 +80,7 @@ def read_plot3d_q(grid_file, q_file, multiblock=True, dim=3, blanking=False,
         else:
             nblocks = 1
         if nblocks != len(domain.zones):
-            raise RuntimeError('Q zones %d != Grid zones %d' \
+            raise RuntimeError('Q zones %d != Grid zones %d'
                                % (nblocks, len(domain.zones)))
 
         # Read zone dimensions.
@@ -97,14 +97,14 @@ def read_plot3d_q(grid_file, q_file, multiblock=True, dim=3, blanking=False,
                 logger.debug('    %s: %dx%dx%d', name, imax, jmax, kmax)
                 zone_i, zone_j, zone_k = zone.shape
                 if imax != zone_i or jmax != zone_j or kmax != zone_k:
-                    raise RuntimeError('%s: Q %dx%dx%d != Grid %dx%dx%d' \
+                    raise RuntimeError('%s: Q %dx%dx%d != Grid %dx%dx%d'
                                        % (name, imax, jmax, kmax,
                                           zone_i, zone_j, zone_k))
             else:
                 logger.debug('    %s: %dx%d', name, imax, jmax)
                 zone_i, zone_j = zone.shape
                 if imax != zone_i or jmax != zone_j:
-                    raise RuntimeError('%s: Q %dx%d != Grid %dx%d' \
+                    raise RuntimeError('%s: Q %dx%d != Grid %dx%d'
                                        % (name, imax, jmax, zone_i, zone_j))
         if unformatted:
             reclen2 = stream.read_recordmark()
@@ -152,7 +152,7 @@ def read_plot3d_f(grid_file, f_file, varnames=None, multiblock=True, dim=3,
         else:
             nblocks = 1
         if nblocks != len(domain.zones):
-            raise RuntimeError('F zones %d != Grid zones %d' \
+            raise RuntimeError('F zones %d != Grid zones %d'
                                % (nblocks, len(domain.zones)))
 
         # Read zone dimensions.
@@ -170,14 +170,14 @@ def read_plot3d_f(grid_file, f_file, varnames=None, multiblock=True, dim=3,
                              name, imax, jmax, kmax, nvars)
                 zone_i, zone_j, zone_k = zone.shape
                 if imax != zone_i or jmax != zone_j or kmax != zone_k:
-                    raise RuntimeError('%s: F %dx%dx%d != Grid %dx%dx%d' \
+                    raise RuntimeError('%s: F %dx%dx%d != Grid %dx%dx%d'
                                        % (name, imax, jmax, kmax,
                                           zone_i, zone_j, zone_k))
             else:
                 logger.debug('    %s: %dx%d %d', name, imax, jmax, nvars)
                 zone_i, zone_j = zone.shape
                 if imax != zone_i or jmax != zone_j:
-                    raise RuntimeError('%s: F %dx%d != Grid %dx%d' \
+                    raise RuntimeError('%s: F %dx%d != Grid %dx%d'
                                        % (name, imax, jmax, zone_i, zone_j))
         if unformatted:
             reclen2 = stream.read_recordmark()
@@ -291,7 +291,7 @@ def _read_plot3d_dims(stream, dim, f_file=False):
         else:
             imax, jmax, kmax = stream.read_ints(3)
         if imax < 1 or jmax < 1 or kmax < 1:
-            raise ValueError("invalid dimensions: %dx%dx%d" \
+            raise ValueError('invalid dimensions: %dx%dx%d'
                              % (imax, jmax, kmax))
     elif dim == 2:
         if f_file:
@@ -459,8 +459,8 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
     Requires 'density', 'momentum', and 'energy_stagnation_density' variables
     as well as 'mach', 'alpha', 'reynolds', and 'time' scalars.
 
-    domain: DomainObj
-        The domain to be written.
+    domain: :class:`DomainObj` or :class:`Zone`
+        The domain or zone to be written.
 
     grid_file: string
         Grid filename.
@@ -470,8 +470,17 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
     """
     logger = logger or NullLogger()
 
+    if isinstance(domain, DomainObj):
+        writing_domain = True
+        zones = domain.zones
+    elif isinstance(domain, Zone):
+        writing_domain = False
+        zones = [domain]
+    else:
+        raise TypeError("'domain' argument must be a DomainObj or Zone")
+        
     # Verify we have the needed data.
-    for zone in domain.zones:
+    for zone in zones:
         flow = zone.flow_solution
         missing = []
         for name in ('mach', 'alpha', 'reynolds', 'time',
@@ -479,8 +488,12 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
             if not hasattr(flow, name):
                 missing.append(name)
         if missing:
-            raise AttributeError('zone %s flow_solution is missing %s' \
-                                 % (domain.zone_name(zone), missing))
+            if writing_domain:
+                name = domain.zone_name(zone)
+            else:
+                name = ''
+            raise AttributeError('zone %s flow_solution is missing %s'
+                                 % (name, missing))
     # Write grid file.
     write_plot3d_grid(domain, grid_file, planes, binary, big_endian,
                       single_precision, unformatted, logger)
@@ -490,17 +503,20 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
         logger.info("writing Q file '%s'", q_file)
         stream = Stream(out, binary, big_endian, single_precision, False,
                         unformatted, False)
-        if len(domain.zones) > 1:
+        if len(zones) > 1:
             # Write number of zones.
-            stream.write_int(len(domain.zones), full_record=True)
+            stream.write_int(len(zones), full_record=True)
 
         # Write zone dimensions.
         _write_plot3d_dims(domain, stream, logger)
 
         # Write zone scalars and variables.
         varnames = ('density', 'momentum', 'energy_stagnation_density')
-        for zone in domain.zones:
-            name = domain.zone_name(zone)
+        for zone in zones:
+            if writing_domain:
+                name = domain.zone_name(zone)
+            else:
+                nmae = 'zone'
             logger.debug('writing data for %s', name)
             _write_plot3d_qscalars(zone, stream, logger)
             _write_plot3d_vars(zone, stream, varnames, planes, logger)
@@ -513,8 +529,8 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
     Writes `domain` to `grid_file` and `f_file` in Plot3D format.
     If `varnames` is None, then all arrays and then all vectors are written.
 
-    domain: DomainObj
-        The domain to be written.
+    domain: :class:`DomainObj` or :class:`Zone`
+        The domain or zone to be written.
 
     grid_file: string
         Grid filename.
@@ -524,21 +540,34 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
     """
     logger = logger or NullLogger()
 
+    if isinstance(domain, DomainObj):
+        writing_domain = True
+        zones = domain.zones
+    elif isinstance(domain, Zone):
+        writing_domain = False
+        zones = [domain]
+    else:
+        raise TypeError("'domain' argument must be a DomainObj or Zone")
+        
     if varnames is None:
-        flow = domain.zones[0].flow_solution
+        flow = zones[0].flow_solution
         varnames = [flow.name_of_obj(obj) for obj in flow.arrays]
         varnames.extend([flow.name_of_obj(obj) for obj in flow.vectors])
 
     # Verify we have the needed data.
-    for zone in domain.zones:
+    for zone in zones:
         flow = zone.flow_solution
         missing = []
         for name in varnames:
             if not hasattr(flow, name):
                 missing.append(name)
         if missing:
-            raise AttributeError('zone %s flow_solution is missing %s' \
-                                 % (domain.zone_name(zone), missing))
+            if writing_domain:
+                name = domain.zone_name(zone)
+            else:
+                name = ''
+            raise AttributeError('zone %s flow_solution is missing %s'
+                                 % (name, missing))
     # Write grid file.
     write_plot3d_grid(domain, grid_file, planes, binary, big_endian,
                       single_precision, unformatted, logger)
@@ -548,16 +577,19 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
         logger.info("writing F file '%s'", f_file)
         stream = Stream(out, binary, big_endian, single_precision, False,
                         unformatted, False)
-        if len(domain.zones) > 1:
+        if len(zones) > 1:
             # Write number of zones.
-            stream.write_int(len(domain.zones), full_record=True)
+            stream.write_int(len(zones), full_record=True)
 
         # Write zone dimensions.
         _write_plot3d_dims(domain, stream, logger, varnames)
 
         # Write zone variables.
-        for zone in domain.zones:
-            name = domain.zone_name(zone)
+        for zone in zones:
+            if writing_domain:
+                name = domain.zone_name(zone)
+            else:
+                name = 'zone'
             logger.debug('writing data for %s', name)
             _write_plot3d_vars(zone, stream, varnames, planes, logger)
 
@@ -568,39 +600,61 @@ def write_plot3d_grid(domain, grid_file, planes=False, binary=True,
     """
     Writes `domain` to `grid_file` in Plot3D format.
 
-    domain: DomainObj
-        The domain to be written.
+    domain: :class:`DomainObj` or :class:`Zone`
+        The domain or zone to be written.
 
     grid_file: string
         Grid filename.
     """
     logger = logger or NullLogger()
 
+    if isinstance(domain, DomainObj):
+        writing_domain = True
+        zones = domain.zones
+    elif isinstance(domain, Zone):
+        writing_domain = False
+        zones = [domain]
+    else:
+        raise TypeError("'domain' argument must be a DomainObj or Zone")
+        
     mode = 'wb' if binary else 'w'
     with open(grid_file, mode) as out:
         logger.info("writing grid file '%s'", grid_file)
         stream = Stream(out, binary, big_endian, single_precision, False,
                         unformatted, False)
-        if len(domain.zones) > 1:
+        if len(zones) > 1:
             # Write number of zones.
-            stream.write_int(len(domain.zones), full_record=True)
+            stream.write_int(len(zones), full_record=True)
 
         # Write zone dimensions.
         _write_plot3d_dims(domain, stream, logger)
 
         # Write zone coordinates.
-        for zone in domain.zones:
-            name = domain.zone_name(zone)
+        for zone in zones:
+            if writing_domain:
+                name = domain.zone_name(zone)
+            else:
+                name = 'zone'
             logger.debug('writing coords for %s', name)
             _write_plot3d_coords(zone, stream, planes, logger)
 
 
 def _write_plot3d_dims(domain, stream, logger, varnames=None):
     """ Write dimensions of each zone to Plot3D stream. """
+    if isinstance(domain, DomainObj):
+        writing_domain = True
+        zones = domain.zones
+    else:
+        writing_domain = False
+        zones = [domain]
+
     # Zones must be all 2D or all 3D.
     dim = 0
-    for zone in domain.zones:
-        name = domain.zone_name(zone)
+    for zone in zones:
+        if writing_domain:
+            name = domain.zone_name(zone)
+        else:
+            name = 'zone'
         shape = zone.shape
         if not dim:
             dim = len(shape)
@@ -617,7 +671,7 @@ def _write_plot3d_dims(domain, stream, logger, varnames=None):
 
     nvars = 0
     if varnames:
-        flow = domain.zones[0].flow_solution
+        flow = zones[0].flow_solution
         for name in varnames:
             obj = getattr(flow, name)
             nvars += dim if isinstance(obj, Vector) else 1
@@ -626,10 +680,10 @@ def _write_plot3d_dims(domain, stream, logger, varnames=None):
         count = len(shape)
         if nvars:
             count += 1
-        reclen = len(domain.zones) * stream.reclen_ints(count)
+        reclen = len(zones) * stream.reclen_ints(count)
         stream.write_recordmark(reclen)
 
-    for zone in domain.zones:
+    for zone in zones:
         shape = list(zone.grid_coordinates.x.shape)
         if nvars:
             shape.append(nvars)
