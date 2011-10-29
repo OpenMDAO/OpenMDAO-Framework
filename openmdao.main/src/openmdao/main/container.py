@@ -707,9 +707,16 @@ class Container(HasTraits):
         childname, _, restofpath = traitpath.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
+            if obj is Missing:
                 return self._get_metadata_failed(traitpath, metaname)
-            return obj.get_metadata(restofpath, metaname)
+            elif is_instance(obj, Container):
+                return obj.get_metadata(restofpath, metaname)
+            else:
+                t = self.get_trait(childname)
+                if metaname == 'iotype' and t is not None and t.iotype:
+                    return t.iotype
+                else:
+                    self._get_metadata_failed(traitpath, metaname)
             
         t = self.get_trait(traitpath)
         if not t:
@@ -734,6 +741,19 @@ class Container(HasTraits):
         path, raise an exception.  Inherited classes can override this
         to return the value of the specified variable.
         """
+        obj = self
+        for name in path.split('.'):
+            obj = getattr(obj, name, Missing)
+            if obj is Missing:
+                self._not_found(path)
+        if index is None:
+            return obj
+        else:
+            for idx in index:
+                obj = self._process_index_entry(obj, idx)
+            return obj
+        
+    def _not_found(self, path):
         self.raise_exception(
             "object has no attribute '%s'" % path, 
             AttributeError)
