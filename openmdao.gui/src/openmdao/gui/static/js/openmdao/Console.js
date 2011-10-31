@@ -83,6 +83,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
                 result = result + "&lt;";
             } else if(text.charAt(i)== ">"){
                 result = result + "&gt;";
+            } else if(text.charAt(i)== " "){
+                result = result + "&nbsp;";
             } else {
                 result = result + text.charAt(i);
             }
