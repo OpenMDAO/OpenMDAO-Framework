@@ -36,6 +36,15 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.add('comp', ExecComp(exprs=['c=x+y','d=x-y']))
         self.top.driver.workflow.add('comp')
     
+    def test_param_output(self):
+        try:
+            p = Parameter('comp.c', self.top, low=0, high=1e99, scope=self.top)
+        except Exception as err:
+            self.assertEqual(str(err), 
+                             ": Can't add parameter 'comp.c' because 'comp.c' is an output.")
+        else:
+            self.fail("Exception expected")
+        
     def test_add_parameter_param_target(self): 
         p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
         p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)

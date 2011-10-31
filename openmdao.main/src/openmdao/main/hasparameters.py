@@ -64,6 +64,10 @@ class Parameter(object):
         except AttributeError:
             parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % target,
                                    AttributeError)
+            
+        if 'iotype' in metadata and metadata['iotype'] == 'out':
+            parent.raise_exception("Can't add parameter '%s' because '%s' is an output." % (target, target),
+                                   RuntimeError)
         try:
             # So, our traits might not have a vartypename?
             self.vartypename = metadata['vartypename']
@@ -288,6 +292,17 @@ class HasParameters(object):
         self._parent = parent
         self._allowed_types = ['continuous']
 
+    def _override_param(self, param, low=None, high=None, 
+                        scaler=None, adder=None, start=None,
+                        fd_step=None, name=None):
+        if low is not None: param.low = low
+        if high is not None: param.high = high
+        if scaler is not None: param.scaler = scaler
+        if start is not None: param.start = start
+        if fd_step is not None: param.fd_step = fd_step
+        if name is not None: param.name = name
+        return param
+        
     def add_parameter(self, target, low=None, high=None, 
                       scaler=None, adder=None, start=None,
                       fd_step=None, name=None, scope=None):
@@ -341,34 +356,17 @@ class HasParameters(object):
         as arguments, a ValueError is raised.
         """
         if isinstance(target,Parameter): 
-            self._parameters[target.name] = target
-            
-            self._parameters[target.name].low = low or target.low 
-            self._parameters[target.name].high = high or target.high
-            self._parameters[target.name].scaler = scaler or target.scaler
-            self._parameters[target.name].start = adder or target.start
-            self._parameters[target.name].fd_step = fd_step or target.fd_step
-            self._parameters[target.name].name = name or target.name
-            
+            self._parameters[target.name] = self._override_param(target, low, high, 
+                                                                 scaler, adder, start,
+                                                                 fd_step, name)
         elif isinstance(target,ParameterGroup): 
-            self._parameters[target.name] = target
-            
-            self._parameters[target.name].low = low or target.low
-            self._parameters[target.name].high = high or target.high
-            self._parameters[target.name].scaler = scaler or target.scaler
-            self._parameters[target.name].start = adder or target.start
-            self._parameters[target.name].fd_step = fd_step or target.fd_step
-            self._parameters[target.name].name = name or target.name
-            
-            for param in self._parameters[target.name]._params: 
-                param.low = low or target.low
-                param.high = high or target.high
-                param.scaler = scaler or target.scaler
-                param.start = adder or target.start
-                param.fd_step = fd_step or target.fd_step
-                param.name = name or target.name
-
-            
+            self._parameters[target.name] = self._override_param(target, low, high, 
+                                                                 scaler, adder, start,
+                                                                 fd_step, name)
+            for param in target._params: 
+                self._override_param(param, low, high, 
+                                     scaler, adder, start,
+                                     fd_step, name)
         else:     
             if isinstance(target, basestring): 
                 names = [target]
@@ -413,8 +411,6 @@ class HasParameters(object):
             #if start is given, then initilze the var now
             if start is not None: 
                 self._parameters[key].set(start,self._get_scope(scope))
-        
-        
         
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
