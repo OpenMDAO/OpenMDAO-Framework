@@ -30,7 +30,11 @@ class Vector(object):
 
     @property
     def extent(self):
-        """ Tuple of component ranges. """
+        """
+        Tuple of component ranges.
+        If Cartesian ``(xmin,xmax,ymin,ymax,zmin,zmax)``.
+        Otherwise ``(rmin,rmax,tmin,tmax,zmin,zmax)``.
+        """
         if self.x is not None:
             if self.y is not None:
                 if self.z is not None:
@@ -40,28 +44,27 @@ class Vector(object):
                 return (self.x.min(), self.x.max(),
                         self.y.min(), self.y.max())
             return (self.x.min(), self.x.max())
-
-        elif self.r is not None and self.t is not None:
+        elif self.r is not None:
             if self.z is not None:
-                return (self.z.min(), self.z.max(),
-                        self.r.min(), self.r.max(),
-                        self.t.min(), self.t.max())
+                return (self.r.min(), self.r.max(),
+                        self.t.min(), self.t.max(),
+                        self.z.min(), self.z.max())
             return (self.r.min(), self.r.max(),
                     self.t.min(), self.t.max())
-
-        return ()
+        else:
+            return ()
 
     def is_equivalent(self, other, name, logger, tolerance=0.):
         """
         Test if self and `other` are equivalent.
 
-        other: Vector
+        other: :class:`Vector`
             The vector to check against.
 
         name: string
             Name of this vector, used for reporting differences.
 
-        logger: Logger or None
+        logger: :class:`Logger` or None
             Used to log debug messages that will indicate what if anything is
             not equivalent.
 
@@ -94,11 +97,271 @@ class Vector(object):
                                  component.upper())
                     return False
             else:
-                if (other_arr != arr).any():
-                    logger.debug('%s %s values are not equal.', name,
-                                 component.upper())
+                try:
+                    if (other_arr != arr).any():
+                        logger.debug('%s %s values are not equal.', name,
+                                     component.upper())
+                        return False
+                except Exception as exc:
+                    logger.debug('%s %s: %r vs. %r: %s', name, component.upper(),
+                                 other_arr, arr, exc)
+                    logger.debug('!=: %r', other_arr != arr)
                     return False
         return True
+
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+        """
+        Construct a new :class:`Vector` from data extracted from the
+        specified region.
+
+        imin, imax, jmin, jmax, kmin, kmax: int
+            Specifies the region to extract.
+            Negative values are relative to the size in that dimension,
+            so -1 refers to the last element. For 2D zones omit kmin and kmax.
+            For 1D zones omit jmin, jmax, kmin, and kmax.
+        """
+        i = len(self.shape)
+        if i == 3:
+            if kmin is None or kmax is None or jmin is None or jmax is None:
+                raise ValueError('3D extract requires jmin, jmax, kmin, and kmax')
+            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax)
+        elif i == 2:
+            if kmin is not None or kmax is not None:
+                raise ValueError('2D extract undefined for kmin or kmax')
+            if jmin is None or jmax is None:
+                raise ValueError('2D extract requires jmin and jmax')
+            return self._extract_2d(imin, imax, jmin, jmax)
+        elif i == 1:
+            if kmin is not None or kmax is not None:
+                raise ValueError('1D extract undefined for jmin, jmax, kmin, or kmax')
+            return self._extract_1d(imin, imax)
+        else:
+            raise RuntimeError('Vector is empty!')
+
+    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax):
+        """ 3D (index space) extraction. """
+        # Support end-relative indexing.
+        vec_imax, vec_jmax, vec_kmax = self.shape
+        if imin < 0:
+            imin += vec_imax
+        if imax < 0:
+            imax += vec_imax
+        if jmin < 0:
+            jmin += vec_jmax
+        if jmax < 0:
+            jmax += vec_jmax
+        if kmin < 0:
+            kmin += vec_kmax
+        if kmax < 0:
+            kmax += vec_kmax
+
+        # Check limits.
+        if imin < 0 or imax > vec_imax or \
+           jmin < 0 or jmax > vec_jmax or \
+           kmin < 0 or kmax > vec_kmax:
+            region = (imin, imax, jmin, jmax, kmin, kmax)
+            original = (0, vec_imax, 0, vec_jmax, 0, vec_kmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                setattr(vec, component,
+                        arr[imin:imax+1, jmin:jmax+1, kmin:kmax+1])
+        return vec
+
+    def _extract_2d(self, imin, imax, jmin, jmax):
+        """ 2D (index space) extraction. """
+        # Support end-relative indexing.
+        vec_imax, vec_jmax = self.shape
+        if imin < 0:
+            imin += vec_imax
+        if imax < 0:
+            imax += vec_imax
+        if jmin < 0:
+            jmin += vec_jmax
+        if jmax < 0:
+            jmax += vec_jmax
+
+        # Check limits.
+        if imin < 0 or imax > vec_imax or jmin < 0 or jmax > vec_jmax:
+            region = (imin, imax, jmin, jmax)
+            original = (0, vec_imax, 0, vec_jmax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                setattr(vec, component,
+                        arr[imin:imax+1, jmin:jmax+1])
+        return vec
+
+    def _extract_1d(self, imin, imax):
+        """ 1D (index space) extraction. """
+        # Support end-relative indexing.
+        vec_imax = self.shape[0]
+        if imin < 0:
+            imin += vec_imax
+        if imax < 0:
+            imax += vec_imax
+
+        # Check limits.
+        if imin < 0 or imax > vec_imax:
+            region = (imin, imax)
+            original = (0, vec_imax)
+            raise ValueError('Extraction region %s exceeds original %s'
+                             % (region, original))
+        # Extract.
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                setattr(vec, component, arr[imin:imax+1])
+        return vec
+
+    def extend(self, axis, delta, npoints):
+        """
+        Construct a new :class:`Vector` by replication.
+
+        axis: 'i', 'j', or 'k'
+            Index axis to extend.
+
+        delta: float.
+            Direction. A negative value adds points before the current
+            zero-index of `axis`. 
+
+        npoints: int > 0
+            Number of points to add in `axis` dimension.
+        """
+        if not delta:
+            raise ValueError('delta must be non-zero')
+        if npoints < 1:
+            raise ValueError('npoints must be >= 1')
+        i = len(self.shape)
+        if i == 3:
+            if axis not in ('i', 'j', 'k'):
+                raise ValueError('axis must be i, j, or k')
+            return self._extend_3d(axis, delta, npoints)
+        elif i == 2:
+            if axis not in ('i', 'j'):
+                raise ValueError('axis must be i or j')
+            return self._extend_2d(axis, delta, npoints)
+        elif i == 1:
+            if axis != 'i':
+                raise ValueError('axis must be i')
+            return self._extend_1d(delta, npoints)
+        else:
+            raise RuntimeError('Vector is empty!')
+
+    def _extend_3d(self, axis, delta, npoints):
+        """ 3D (index space) extension. """
+        shape = self.shape
+        if axis == 'i':
+            new_shape = (shape[0] + npoints, shape[1], shape[2])
+            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+        elif axis == 'j':
+            new_shape = (shape[0], shape[1] + npoints, shape[2])
+            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+        else:
+            new_shape = (shape[0], shape[1], shape[2] + npoints)
+            indx = shape[2] if delta > 0 else new_shape[2] - shape[2]
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                new_arr = numpy.zeros(new_shape)
+                if axis == 'i':
+                    if delta > 0:
+                        new_arr[0:indx, :, :] = arr
+                        for i in range(npoints):
+                            new_arr[indx+i, :, :] = arr[-1, :, :]
+                    else:
+                        new_arr[indx:, :, :] = arr
+                        for i in range(npoints):
+                            new_arr[i, :, :] = arr[0, :, :]
+                elif axis == 'j':
+                    if delta > 0:
+                        new_arr[:, 0:indx, :] = arr
+                        for j in range(npoints):
+                            new_arr[:, indx+j, :] = arr[:, -1, :]
+                    else:
+                        new_arr[:, indx:, :] = arr
+                        for j in range(npoints):
+                            new_arr[:, j, :] = arr[:, 0, :]
+                else:
+                    if delta > 0:
+                        new_arr[:, :, 0:indx] = arr
+                        for k in range(npoints):
+                            new_arr[:, :, indx+k] = arr[:, :, -1]
+                    else:
+                        new_arr[:, :, indx:] = arr
+                        for k in range(npoints):
+                            new_arr[:, :, k] = arr[:, :, 0]
+                setattr(vec, component, new_arr)
+        return vec
+
+    def _extend_2d(self, axis, delta, npoints):
+        """ 2D (index space) extension. """
+        shape = self.shape
+        if axis == 'i':
+            new_shape = (shape[0] + npoints, shape[1])
+            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+        else:
+            new_shape = (shape[0], shape[1] + npoints)
+            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                new_arr = numpy.zeros(new_shape)
+                if axis == 'i':
+                    if delta > 0:
+                        new_arr[0:indx, :] = arr
+                        for i in range(npoints):
+                            new_arr[indx+i, :] = arr[-1, :]
+                    else:
+                        new_arr[indx:, :] = arr
+                        for i in range(npoints):
+                            new_arr[i, :] = arr[0, :]
+                else:
+                    if delta > 0:
+                        new_arr[:, 0:indx] = arr
+                        for j in range(npoints):
+                            new_arr[:, indx+j] = arr[:, -1]
+                    else:
+                        new_arr[:, indx:] = arr
+                        for j in range(npoints):
+                            new_arr[:, j] = arr[:, 0]
+                setattr(vec, component, new_arr)
+        return vec
+
+    def _extend_1d(self, delta, npoints):
+        """ 1D (index space) extension. """
+        shape = self.shape
+        new_shape = (shape[0] + npoints,)
+        indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+
+        vec = Vector()
+        for component in ('x', 'y', 'z', 'r', 't'):
+            arr = getattr(self, component)
+            if arr is not None:
+                new_arr = numpy.zeros(new_shape)
+                if delta > 0:
+                    new_arr[0:indx] = arr
+                    for i in range(npoints):
+                        new_arr[indx+i] = arr[-1]
+                else:
+                    new_arr[indx:] = arr
+                    for i in range(npoints):
+                        new_arr[i] = arr[0]
+                setattr(vec, component, new_arr)
+        return vec
 
     def flip_z(self):
         """ Convert to other-handed coordinate system. """
@@ -110,7 +373,7 @@ class Vector(object):
         """
         Convert to Cartesian coordinate system.
 
-        grid: GridCoordinates
+        grid: :class:`GridCoordinates`
             Must be in cylindrical form.
 
         axis: string
@@ -123,7 +386,7 @@ class Vector(object):
         r_flat = self.r.flat
         t_flat = self.t.flat
 
-        if axis == 'z':
+        if axis == 'z' or self.z is None:
             self.x = self.r.copy()
             self.y = self.r.copy()
             x_flat = self.x.flat
@@ -163,7 +426,7 @@ class Vector(object):
         """
         Convert to cylindrical coordinate system.
 
-        grid: GridCoordinates
+        grid: :class:`GridCoordinates`
             Must be in cylindrical form.
 
         axis: string
@@ -178,7 +441,7 @@ class Vector(object):
         r_flat = self.r.flat
         t_flat = self.t.flat
 
-        if axis == 'z':
+        if axis == 'z' or self.z is None:
             x_flat = self.x.flat
             y_flat = self.y.flat
             for i in range(self.x.size):
