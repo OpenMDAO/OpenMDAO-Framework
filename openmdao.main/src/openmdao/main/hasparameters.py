@@ -101,9 +101,9 @@ class Parameter(object):
         else:
             if low is None:
                 parent.raise_exception("Trying to add parameter '%s', "
-                                   "but no lower limit was found and no " 
-                                   "'low' argument was given. One or the "
-                                   "other must be specified." % target,ValueError)
+                                       "but no lower limit was found and no " 
+                                       "'low' argument was given. One or the "
+                                       "other must be specified." % target,ValueError)
 
         meta_high = metadata.get('high') # this will be None if 'low' isn't there
         if meta_high is not None:
