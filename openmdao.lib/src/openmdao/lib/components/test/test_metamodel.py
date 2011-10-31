@@ -89,7 +89,7 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEquals(inputs-mmins, set(['w','x']))
         self.assertEquals(outputs-mmouts, set(['y','z']))
         
-    def test_in_assembly(self):
+    def _get_assembly(self):
         asm = set_as_top(Assembly())
         asm.add('metamodel', MetaModel())
         asm.add('comp1', Simple())
@@ -103,6 +103,10 @@ class MetaModelTestCase(unittest.TestCase):
         asm.connect('comp1.d','metamodel.b')
         asm.connect('metamodel.c','comp2.a')
         asm.connect('metamodel.d','comp2.b')
+        return asm
+        
+    def test_in_assembly(self):
+        asm = self._get_assembly()
         self.assertEqual(set(asm.list_connections()), 
                          set([('metamodel.d', 'comp2.b'), ('metamodel.c', 'comp2.a'), 
                               ('comp1.c', 'metamodel.a'), ('comp1.d', 'metamodel.b')]))
@@ -128,6 +132,54 @@ class MetaModelTestCase(unittest.TestCase):
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()
         self.assertEqual(asm.list_connections(), [])
+        
+    def _trained_asm(self, avals, bvals):
+        asm = set_as_top(Assembly())
+        asm.add('metamodel', MetaModel())
+        asm.metamodel.surrogate = {'default':KrigingSurrogate()}
+        asm.metamodel.model = Simple()
+        asm.metamodel.recorder = DumbRecorder()
+        asm.driver.workflow.add(['metamodel'])
+        
+        for a,b in zip(avals, bvals):
+            asm.metamodel.a = a
+            asm.metamodel.b = b
+            asm.metamodel.train_next = 1
+            asm.metamodel.run()
+            
+        return asm
+        
+    def test_constant_inputs(self):
+        avals = [1.1]*10
+        bvals = [2.2]*10
+        asm = self._trained_asm(avals, bvals)
+                    
+        # now run and get some results
+        asm.metamodel.a = 1.
+        asm.metamodel.b = 2.
+        
+        try:
+            asm.metamodel.run()
+        except Exception as err:
+            self.assertEqual("metamodel: ERROR: all training inputs are constant.", str(err))
+        else:
+            self.fail("Exception expected")
+            
+        asm = self._trained_asm(avals+[1.2], bvals+[2.2])
+        asm.metamodel.a = 1.
+        asm.metamodel.b = 2.2
+        asm.metamodel.run()
+        
+        # now set b to a value different than the constant training value
+        asm.metamodel.b = 4.8
+        try:
+            asm.metamodel.run()
+        except Exception as err:
+            self.assertEqual(str(err),
+                             "metamodel: ERROR: training input 'b' was a constant value of (2.2) but the value has changed to (4.8).")
+        else:
+            self.fail("Exception expected")
+        
         
     def test_warm_start(self): 
         metamodel = MetaModel()
