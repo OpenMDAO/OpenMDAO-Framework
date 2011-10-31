@@ -32,7 +32,7 @@ class Vector(object):
     def extent(self):
         """
         Tuple of component ranges.
-        If cartesian ``(xmin,xmax,ymin,ymax,zmin,zmax)``.
+        If Cartesian ``(xmin,xmax,ymin,ymax,zmin,zmax)``.
         Otherwise ``(rmin,rmax,tmin,tmax,zmin,zmax)``.
         """
         if self.x is not None:
@@ -278,10 +278,12 @@ class Vector(object):
                 if axis == 'i':
                     if delta > 0:
                         new_arr[0:indx, :, :] = arr
-                        new_arr[indx:, :, :] = arr[-1, :, :]
+                        for i in range(npoints):
+                            new_arr[indx+i, :, :] = arr[-1, :, :]
                     else:
                         new_arr[indx:, :, :] = arr
-                        new_arr[0:indx, :, :] = arr[0, :, :]
+                        for i in range(npoints):
+                            new_arr[i, :, :] = arr[0, :, :]
                 elif axis == 'j':
                     if delta > 0:
                         new_arr[:, 0:indx, :] = arr
@@ -321,10 +323,12 @@ class Vector(object):
                 if axis == 'i':
                     if delta > 0:
                         new_arr[0:indx, :] = arr
-                        new_arr[indx:, :] = arr[-1, :]
+                        for i in range(npoints):
+                            new_arr[indx+i, :] = arr[-1, :]
                     else:
                         new_arr[indx:, :] = arr
-                        new_arr[0:indx, :] = arr[0, :]
+                        for i in range(npoints):
+                            new_arr[i, :] = arr[0, :]
                 else:
                     if delta > 0:
                         new_arr[:, 0:indx] = arr
@@ -350,10 +354,12 @@ class Vector(object):
                 new_arr = numpy.zeros(new_shape)
                 if delta > 0:
                     new_arr[0:indx] = arr
-                    new_arr[indx:] = arr[-1]
+                    for i in range(npoints):
+                        new_arr[indx+i] = arr[-1]
                 else:
                     new_arr[indx:] = arr
-                    new_arr[0:indx] = arr[0]
+                    for i in range(npoints):
+                        new_arr[i] = arr[0]
                 setattr(vec, component, new_arr)
         return vec
 

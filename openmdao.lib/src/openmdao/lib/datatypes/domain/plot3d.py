@@ -70,7 +70,7 @@ def read_plot3d_q(grid_file, q_file, multiblock=True, dim=3, blanking=False,
 
     mode = 'rb' if binary else 'r'
     with open(q_file, mode) as inp:
-        logger.info("reading Q file '%s'", q_file)
+        logger.info('reading Q file %r', q_file)
         stream = Stream(inp, binary, big_endian, single_precision, False,
                         unformatted, False)
         if multiblock:
@@ -142,7 +142,7 @@ def read_plot3d_f(grid_file, f_file, varnames=None, multiblock=True, dim=3,
 
     mode = 'rb' if binary else 'r'
     with open(f_file, mode) as inp:
-        logger.info("reading F file '%s'", f_file)
+        logger.info('reading F file %r', f_file)
         stream = Stream(inp, binary, big_endian, single_precision, False,
                         unformatted, False)
         if multiblock:
@@ -207,7 +207,7 @@ def read_plot3d_grid(grid_file, multiblock=True, dim=3, blanking=False,
 
     mode = 'rb' if binary else 'r'
     with open(grid_file, mode) as inp:
-        logger.info("reading grid file '%s'", grid_file)
+        logger.info('reading grid file %r', grid_file)
         stream = Stream(inp, binary, big_endian, single_precision, False,
                         unformatted, False)
 
@@ -236,7 +236,7 @@ def read_plot3d_shape(grid_file, multiblock=True, dim=3, binary=True,
 
     mode = 'rb' if binary else 'r'
     with open(grid_file, mode) as inp:
-        logger.info("reading grid file '%s'", grid_file)
+        logger.info('reading grid file %r', grid_file)
         stream = Stream(inp, binary, big_endian, True, False,
                         unformatted, False)
         return _read_plot3d_shape(stream, multiblock, dim, logger)
@@ -301,7 +301,7 @@ def _read_plot3d_dims(stream, dim, f_file=False):
         if imax < 1 or jmax < 1:
             raise ValueError("invalid dimensions: %dx%d" % (imax, jmax))
     else:
-        raise ValueError("invalid dim parameter: '%s'" % dim)
+        raise ValueError('invalid dim parameter: %r' % dim)
 
     if f_file:
         if nvars < 1:
@@ -477,7 +477,7 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
         zones = [domain]
     else:
         raise TypeError("'domain' argument must be a DomainObj or Zone")
-        
+
     # Verify we have the needed data.
     for zone in zones:
         flow = zone.flow_solution
@@ -499,7 +499,7 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
     # Write Q file.
     mode = 'wb' if binary else 'w'
     with open(q_file, mode) as out:
-        logger.info("writing Q file '%s'", q_file)
+        logger.info('writing Q file %r', q_file)
         stream = Stream(out, binary, big_endian, single_precision, False,
                         unformatted, False)
         if len(zones) > 1:
@@ -515,7 +515,7 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
             if writing_domain:
                 name = domain.zone_name(zone)
             else:
-                nmae = 'zone'
+                name = 'zone'
             logger.debug('writing data for %s', name)
             _write_plot3d_qscalars(zone, stream, logger)
             _write_plot3d_vars(zone, stream, varnames, planes, logger)
@@ -547,7 +547,7 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
         zones = [domain]
     else:
         raise TypeError("'domain' argument must be a DomainObj or Zone")
-        
+
     if varnames is None:
         flow = zones[0].flow_solution
         varnames = [flow.name_of_obj(obj) for obj in flow.arrays]
@@ -573,7 +573,7 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
     # Write F file.
     mode = 'wb' if binary else 'w'
     with open(f_file, mode) as out:
-        logger.info("writing F file '%s'", f_file)
+        logger.info('writing F file %r', f_file)
         stream = Stream(out, binary, big_endian, single_precision, False,
                         unformatted, False)
         if len(zones) > 1:
@@ -615,10 +615,10 @@ def write_plot3d_grid(domain, grid_file, planes=False, binary=True,
         zones = [domain]
     else:
         raise TypeError("'domain' argument must be a DomainObj or Zone")
-        
+
     mode = 'wb' if binary else 'w'
     with open(grid_file, mode) as out:
-        logger.info("writing grid file '%s'", grid_file)
+        logger.info('writing grid file %r', grid_file)
         stream = Stream(out, binary, big_endian, single_precision, False,
                         unformatted, False)
         if len(zones) > 1:
@@ -658,7 +658,7 @@ def _write_plot3d_dims(domain, stream, logger, varnames=None):
         if not dim:
             dim = len(shape)
         elif dim != len(shape):
-            raise ValueError("zone '%s' is not %dD" % (name, dim))
+            raise ValueError('zone %r is not %dD' % (name, dim))
         if dim > 2:
             imax, jmax, kmax = shape
             logger.debug('    %s: %dx%dx%d', name, imax, jmax, kmax)

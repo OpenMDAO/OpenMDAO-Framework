@@ -23,7 +23,7 @@ class FlowSolution(object):
 
     def _set_grid_location(self, loc):
         if loc not in _GRID_LOCATIONS:
-            raise ValueError("'%s' is not a valid grid location" % loc)
+            raise ValueError('%r is not a valid grid location' % loc)
         self._grid_location = loc
 
     grid_location = property(_get_grid_location, _set_grid_location,
@@ -85,7 +85,7 @@ class FlowSolution(object):
             Scalar data.
         """
         if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
+            raise ValueError('name %r is already bound' % name)
         if self._arrays:
             ijk = self._arrays[0].shape
         elif self._vectors:
@@ -111,7 +111,7 @@ class FlowSolution(object):
             Vector data.
         """
         if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
+            raise ValueError('name %r is already bound' % name)
         if self._arrays:
             ijk = self._arrays[0].shape
         elif self._vectors:
@@ -169,7 +169,7 @@ class FlowSolution(object):
             try:
                 other_arr = getattr(other, name)
             except AttributeError:
-                logger.debug("other is missing array '%s'", name)
+                logger.debug('other is missing array %r', name)
                 return False
             if tolerance > 0.:
                 if not numpy.allclose(other_arr, arr, tolerance, tolerance):
@@ -185,7 +185,7 @@ class FlowSolution(object):
             try:
                 other_vector = getattr(other, name)
             except AttributeError:
-                logger.debug("other is missing vector '%s'", name)
+                logger.debug('other is missing vector %r', name)
                 return False
             if not vector.is_equivalent(other_vector, name, logger, tolerance):
                 return False
@@ -441,10 +441,12 @@ class FlowSolution(object):
             if axis == 'i':
                 if delta > 0:
                     new_arr[0:indx, :, :] = arr
-                    new_arr[indx:, :, :] = arr[-1, :, :]
+                    for i in range(npoints):
+                        new_arr[indx+i, :, :] = arr[-1, :, :]
                 else:
                     new_arr[indx:, :, :] = arr
-                    new_arr[0:indx, :, :] = arr[0, :, :]
+                    for i in range(npoints):
+                        new_arr[i, :, :] = arr[0, :, :]
             elif axis == 'j':
                 if delta > 0:
                     new_arr[:, 0:indx, :] = arr
@@ -494,10 +496,12 @@ class FlowSolution(object):
             if axis == 'i':
                 if delta > 0:
                     new_arr[0:indx, :] = arr
-                    new_arr[indx:, :] = arr[-1, :]
+                    for i in range(npoints):
+                        new_arr[indx+i, :] = arr[-1, :]
                 else:
                     new_arr[indx:, :] = arr
-                    new_arr[0:indx, :] = arr[0, :]
+                    for i in range(npoints):
+                        new_arr[i, :] = arr[0, :]
             else:
                 if delta > 0:
                     new_arr[:, 0:indx] = arr
@@ -533,10 +537,12 @@ class FlowSolution(object):
             new_arr = numpy.zeros(new_shape)
             if delta > 0:
                 new_arr[0:indx] = arr
-                new_arr[indx:] = arr[-1]
+                for i in range(npoints):
+                    new_arr[indx+i] = arr[-1]
             else:
                 new_arr[indx:] = arr
-                new_arr[0:indx] = arr[0]
+                for i in range(npoints):
+                    new_arr[i] = arr[0]
             flow.add_array(self.name_of_obj(arr), new_arr)
 
         for vector in self._vectors:

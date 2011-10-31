@@ -67,7 +67,7 @@ class DomainObj(object):
             name = 'zone_%d' % (len(self.zones) + 1)
         name = prefix+name
         if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
+            raise ValueError('name %r is already bound' % name)
         if make_copy:
             zone = copy.deepcopy(zone)
         setattr(self, name, zone)
@@ -100,7 +100,7 @@ class DomainObj(object):
             Zone to be renamed.
         """
         if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
+            raise ValueError('name %r is already bound' % name)
         current = self.zone_name(zone)
         delattr(self, current)
         setattr(self, name, zone)
@@ -156,10 +156,10 @@ class DomainObj(object):
             try:
                 other_zone = getattr(other, name)
             except AttributeError:
-                logger.debug("other is missing zone '%s'.", name)
+                logger.debug('other is missing zone %r.', name)
                 return False
             if not zone.is_equivalent(other_zone, logger, tolerance):
-                logger.debug("zone '%s' equivalence failed.", name)
+                logger.debug('zone %r equivalence failed.', name)
                 return False
         return True
 

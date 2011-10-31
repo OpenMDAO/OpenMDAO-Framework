@@ -38,7 +38,7 @@ class Zone(object):
         if sys in _COORD_SYSTEMS:
             self._coordinate_system = sys
         else:
-            raise ValueError("invalid coordinate system '%s'" % sys)
+            raise ValueError('invalid coordinate system %r' % sys)
 
     coordinate_system = property(_get_coord_sys, _set_coord_sys,
                                  doc='Coordinate system in use.')
@@ -109,11 +109,11 @@ class Zone(object):
             For 1D zones omit jmin, jmax, kmin, and kmax.
 
         grid_ghosts: int[]
-            Numer of ghost/rind planes for the new zone's grid.
+            The number of ghost/rind planes for the new zone's grid.
             If ``None`` the grid's existing specification is used.
 
         flow_ghosts: int[]
-            Numer of ghost/rind planes for the new zone's flow solution.
+            The number of ghost/rind planes for the new zone's flow solution.
             If ``None`` the flow's existing specification is used.
         """
         zone = Zone()
