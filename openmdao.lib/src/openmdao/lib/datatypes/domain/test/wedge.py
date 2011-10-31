@@ -134,6 +134,57 @@ def create_wedge_2d(shape, inner, outer, angle):
     return domain
 
 
+def create_curve_2d(npoints, radius, angle):
+    """ Creates a curve (arc) of `npoints` at `radius` through `angle`. """
+    delta_theta  = float(angle * _DEG2RAD) / (npoints - 1)
+    dtype = numpy.float32  # Default single-precision.
+    shape = (npoints,)
+
+    x = numpy.zeros(shape, dtype=dtype)
+    y = numpy.zeros(shape, dtype=dtype)
+
+    q1 = numpy.zeros(shape, dtype=dtype)
+    q2 = numpy.zeros(shape, dtype=dtype)
+    q3 = numpy.zeros(shape, dtype=dtype)
+    q4 = numpy.zeros(shape, dtype=dtype)
+
+    for i in range(npoints):
+        tangential = delta_theta * i
+
+        x.itemset(i, radius * cos(tangential))
+        y.itemset(i, radius * sin(tangential))
+
+        q1.itemset(i, radius)
+
+        q2.itemset(i, radius)
+        q3.itemset(i, tangential)
+
+        q4.itemset(i, tangential)
+
+    momentum = Vector()
+    momentum.x = q2
+    momentum.y = q3
+    
+    zone = Zone()
+    zone.grid_coordinates.x = x
+    zone.grid_coordinates.y = y
+
+    zone.flow_solution.mach = 0.5
+    zone.flow_solution.alpha = 0.
+    zone.flow_solution.reynolds = 100000.
+    zone.flow_solution.time = 42.
+
+    zone.flow_solution.add_array('density', q1)
+    zone.flow_solution.add_vector('momentum', momentum)
+    zone.flow_solution.add_array('energy_stagnation_density', q4)
+
+    domain = DomainObj()
+    domain.reference_state = dict(length_reference=PhysicalQuantity(1., 'ft'))
+    domain.add_zone('xyzzy', zone)
+
+    return domain
+
+
 if __name__ == '__main__': # pragma no cover
     write_plot3d_q(create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.),
                    'wedge3d.xyz', 'wedge3d.q')

@@ -68,7 +68,7 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
             zone = getattr(domain, zone_name)
             zone_imax, zone_jmax, zone_kmax = zone.shape
         except AttributeError:
-            raise ValueError("Domain does not contain zone '%s'" % zone_name)
+            raise ValueError('Domain does not contain zone %r' % zone_name)
 
         # Support end-relative indexing.
         if imin < 0:
@@ -112,11 +112,11 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     # Check validity of variables.
     for name, units in variables:
         if name not in _VARIABLES:
-            raise ValueError("Unknown/unsupported variable '%s'" % name)
+            raise ValueError('Unknown/unsupported variable %r' % name)
 
     # Check validity of weighting scheme.
     if weighting_scheme not in _SCHEMES:
-        raise ValueError("Unknown/unsupported weighting scheme '%s'"
+        raise ValueError('Unknown/unsupported weighting scheme %r'
                          % weighting_scheme)
 
     # Collect weights.
@@ -838,7 +838,6 @@ def _total_pressure(domain, surface, weights, reference_state):
                 else:
                     e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
                     ps = (gamma-1.) * rho * (e0 - 0.5*u2)
-
                 a2 = (gamma * ps) / rho
                 mach2 = u2 / a2
                 pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
@@ -890,6 +889,11 @@ def _static_temperature(domain, surface, weights, reference_state):
             vnames = ('pressure', 'momentum', 'energy_stagnation_density')
             raise AttributeError('For temperature, zone %s is missing'
                                  ' one or more of %s.' % (zone_name, vnames))
+    try:
+        gam = flow.gamma.item
+    except AttributeError:
+        gam = None  # Use passed-in scalar gamma.
+
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
         face_value = _iface_cell_value if cell_center else _iface_node_value
@@ -906,17 +910,26 @@ def _static_temperature(domain, surface, weights, reference_state):
         momref = 1.
         e0ref = 1.
         rgas = 1.
+        gamma = 1.4
     else:
         try:
             pref = reference_state['pressure_reference']
             rgas = reference_state['ideal_gas_constant']
             tref = reference_state['temperature_reference']
+            if pressure is None and gam is None:
+                gamma = reference_state['specific_heat_ratio'].value
         except KeyError:
             vals = ('pressure_reference', 'ideal_gas_constant',
                     'temperature_reference')
             raise AttributeError('For temperature, reference_state is missing'
                                  ' one or more of %s.' % (vals,))
         if pressure is None:
+            if gam is None:
+                try:
+                    gamma = reference_state['specific_heat_ratio'].value
+                except KeyError:
+                    raise AttributeError('For temperature, reference_state is'
+                                         ' missing specific_heat_ratio')
             raise NotImplementedError('Get dimensional temperature from'
                                       ' Q variables')
         rhoref = pref / rgas / tref
@@ -945,7 +958,6 @@ def _static_temperature(domain, surface, weights, reference_state):
                     if gam is not None:
                         gamma = face_value(gam, ip1, jp1, kp1)
                     ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
-
                 ts = ps / (rho * rgas)
 
                 weight = weights[weight_index]
@@ -983,7 +995,7 @@ def _total_temperature(domain, surface, weights, reference_state):
             mom_c2 = flow.momentum.y.item
             mom_c3 = flow.momentum.z.item
     except AttributeError:
-        vnames = ('density', 'momentum', 'pressure')
+        vnames = ('density', 'momentum')
         raise AttributeError('For temperature_stagnation, zone %s is missing'
                              ' one or more of %s.' % (zone_name, vnames))
     try:
@@ -1063,7 +1075,6 @@ def _total_temperature(domain, surface, weights, reference_state):
                 else:
                     e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
                     ps = (gamma-1.) * rho * (e0 - 0.5*u2)
-
                 a2 = (gamma * ps) / rho
                 mach2 = u2 / a2
                 ts = ps / (rho * rgas)
