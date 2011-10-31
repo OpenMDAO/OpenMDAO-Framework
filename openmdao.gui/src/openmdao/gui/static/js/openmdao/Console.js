@@ -34,7 +34,13 @@ openmdao.Console = function(formID,commandID,historyID,model) {
          history.text('');
     });    
     historyBox.append(clearButton);
-    
+
+    var bottomButton = jQuery('<div style="position:absolute; top:3px; right:80px; border:outset">&nbsp Bottom &nbsp</div>');
+    bottomButton.click(function(){
+        scrollToBottom();
+    });    
+    historyBox.append(bottomButton);
+
     // submit a command
     jQuery('#'+formID).submit(function() {
         model.issueCommand(command.val(),
@@ -84,14 +90,19 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         return result
     };
 
+    /** scroll to bottom */
+    function scrollToBottom() {
+        var h = history.height(),
+            hb = historyBox.height(),
+            hidden = h-hb
+        historyBox.scrollTop(hidden);
+    }
+    
     /** update the history */
     function updateHistory(text) {
         if (text.length > 0) {
             history.append(escapeHTML(text).replace(/\n\r?/g, '<br />'))
-            var h = history.height(),
-                hb = historyBox.height(),
-                hidden = h-hb
-            historyBox.scrollTop(h-(hidden));
+            scrollToBottom();
         }
     }
     
