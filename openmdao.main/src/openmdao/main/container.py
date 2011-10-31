@@ -712,8 +712,11 @@ class Container(HasTraits):
             elif is_instance(obj, Container):
                 return obj.get_metadata(restofpath, metaname)
             else:
+                # if the thing being accessed is an attribute of a Variable's
+                # data object, then we can assume that the iotype of the
+                # attribute is the same as the iotype of the Variable.
                 t = self.get_trait(childname)
-                if metaname == 'iotype' and t is not None and t.iotype:
+                if t is not None and t.iotype and metaname == 'iotype':
                     return t.iotype
                 else:
                     self._get_metadata_failed(traitpath, metaname)
@@ -738,25 +741,22 @@ class Container(HasTraits):
 
     def _get_failed(self, path, index=None):
         """If get() cannot locate the variable specified by the given
-        path, raise an exception.  Inherited classes can override this
+        path, either because the parent object is not a Container or because
+        getattr() fails, raise an exception.  Inherited classes can override this
         to return the value of the specified variable.
         """
         obj = self
-        for name in path.split('.'):
-            obj = getattr(obj, name, Missing)
-            if obj is Missing:
-                self._not_found(path)
+        try:
+            for name in path.split('.'):
+                obj = getattr(obj, name)
+        except AttributeError as err:
+            self.raise_exception(str(err), AttributeError)
         if index is None:
             return obj
         else:
             for idx in index:
                 obj = self._process_index_entry(obj, idx)
             return obj
-        
-    def _not_found(self, path):
-        self.raise_exception(
-            "object has no attribute '%s'" % path, 
-            AttributeError)
         
     @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
