@@ -27,7 +27,13 @@ openmdao.Console = function(formID,commandID,historyID,model) {
             var droppedObject = jQuery(ui.draggable).clone();
             debug.info('Console drop',droppedObject)
         }
-    })    
+    })
+
+    var clearButton = jQuery('<div style="position:absolute; top:3px; right:30px; border:outset">&nbsp Clear &nbsp</div>');
+    clearButton.click(function(){
+         history.text('');
+    });    
+    historyBox.append(clearButton);
     
     // submit a command
     jQuery('#'+formID).submit(function() {
