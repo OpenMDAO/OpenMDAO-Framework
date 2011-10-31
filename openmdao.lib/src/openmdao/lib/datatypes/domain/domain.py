@@ -1,6 +1,5 @@
 import copy
 
-from openmdao.lib.datatypes.domain.zone import Zone
 from openmdao.util.log import NullLogger
 
 
@@ -30,7 +29,7 @@ class DomainObj(object):
         """
         Add zones from `other` to self, retaining names where possible.
 
-        other: DomainObj
+        other: :class:`DomainObj`
             Source for new zone data.
 
         prefix: string
@@ -54,18 +53,21 @@ class DomainObj(object):
             Name for the zone. If None or blank, then a default of the form
             ``zone_N`` is used.
 
+        zone: :class:`Zone`
+            Zone to be added.
+
         prefix: string
             String prepended to the zone name.
 
         make_copy: bool
-            If True, then a deep copy of each zone is made rather than just
+            If True, then a deep copy of `zone` is made rather than just
             referring to a shared instance.
         """
         if not name:
             name = 'zone_%d' % (len(self.zones) + 1)
         name = prefix+name
         if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
+            raise ValueError('name %r is already bound' % name)
         if make_copy:
             zone = copy.deepcopy(zone)
         setattr(self, name, zone)
@@ -76,7 +78,7 @@ class DomainObj(object):
         """
         Remove a zone. Returns the removed zone.
 
-        zone: string or DomainObj
+        zone: string or :class:`Zone`
             Zone to be removed.
         """
         if isinstance(zone, basestring):
@@ -94,11 +96,11 @@ class DomainObj(object):
         name: string
             New name for the zone.
 
-        zone: DomainObj
+        zone: :class:`Zone`
             Zone to be renamed.
         """
         if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
+            raise ValueError('name %r is already bound' % name)
         current = self.zone_name(zone)
         delattr(self, current)
         setattr(self, name, zone)
@@ -107,7 +109,7 @@ class DomainObj(object):
         """
         Return name that a zone is bound to.
 
-        zone: DomainObj
+        zone: :class:`Zone`
             Zone whose name is to be returned.
         """
         for name, value in self.__dict__.items():
@@ -129,7 +131,7 @@ class DomainObj(object):
         """
         Test if self and `other` are equivalent.
 
-        other: DomainObj
+        other: :class:`DomainObj`
             The domain to check against.
 
         logger: Logger or None
@@ -154,12 +156,49 @@ class DomainObj(object):
             try:
                 other_zone = getattr(other, name)
             except AttributeError:
-                logger.debug("other is missing zone '%s'.", name)
+                logger.debug('other is missing zone %r.', name)
                 return False
             if not zone.is_equivalent(other_zone, logger, tolerance):
-                logger.debug("zone '%s' equivalence failed.", name)
+                logger.debug('zone %r equivalence failed.', name)
                 return False
         return True
+
+    def extract(self, zone_args):
+        """
+        Construct a new :class:`DomainObj` from grid and flow data extracted
+        from the specified regions of each zone. Existing zone names are used
+        for the new domain's zones.
+
+        zone_args: sequence
+            Sequence of argument tuples to be used to extract data from each
+            zone. If an argument tuple is empty or ``None`` then that zone
+            is skipped.
+        """
+        domain = DomainObj()
+        for i, args in enumerate(zone_args):
+            if args:
+                zone = zones[i]
+                name = self.zone_name(zone)
+                domain.add_zone(name, zone.extract(*args))
+        return domain
+
+    def extend(self, zone_args):
+        """
+        Construct a new :class:`DomainObj` from zones extended according to
+        `zone_args`. Existing zone names are used for the new domain's zones.
+
+        zone_args: sequence
+            Sequence of argument tuples to be used to extend each zone.
+            If an argument tuple is empty or ``None`` then that zone
+            is skipped.
+        """
+        domain = DomainObj()
+        for i, args in enumerate(zone_args):
+            if args:
+                zone = zones[i]
+                name = self.zone_name(zone)
+                domain.add_zone(name, zone.extend(*args))
+        return domain
 
     def make_cartesian(self, axis='z'):
         """

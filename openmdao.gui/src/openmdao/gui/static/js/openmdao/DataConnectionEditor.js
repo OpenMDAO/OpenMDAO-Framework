@@ -38,19 +38,19 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
             jQuery.each(data['outputs'], function(idx,outvar) {
                 var src_name = src_comp+'.'+outvar['name'],
                     src_path = self.pathname+'.'+src_name,
-                    fig = new openmdao.DataflowVariableFigure(model,src_path,outvar['type'],'output');
+                    fig = new openmdao.DataflowVariableFigure(model,src_path,outvar,'output');
                 dataflow.addFigure(fig,x,y);
                 figures[src_name] = fig
-                y = y + 60;
+                y = y + fig.height + 10;
             });
             x = 250, y = 10;
             jQuery.each(data['inputs'], function(idx,invar) {
                 var dst_name = dst_comp+'.'+invar['name'],
                     dst_path = self.pathname+'.'+dst_name,
-                    fig = new openmdao.DataflowVariableFigure(model,dst_path,invar['type'],'input');
+                    fig = new openmdao.DataflowVariableFigure(model,dst_path,invar,'input');
                 dataflow.addFigure(fig,x,y);
                 figures[dst_name] = fig
-                y = y + 60;
+                y = y + fig.height + 10;
             });
             dataflowDiv.css({'height':y+'px','width': x+100+'px'});
             
@@ -60,13 +60,29 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                     var src_name = conn[0],
                         dst_name = conn[1],
                         src_fig = figures[src_name],
-                        dst_fig = figures[dst_name];
-                        c = new openmdao.ContextMenuConnection()
-                    c.setSource(src_fig.getPort("output"));
-                    c.setTarget(dst_fig.getPort("input"));
+                        dst_fig = figures[dst_name],
+                        src_port = src_fig.getPort("output"),
+                        dst_port = dst_fig.getPort("input");                        
+                    c = new draw2d.Connection()
+                    c.setSource(src_port);
+                    c.setTarget(dst_port);
                     c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                     c.setRouter(new draw2d.BezierConnectionRouter());
+                    c.getContextMenu=function(){
+                        var menu=new draw2d.Menu();
+                        var oThis=this;
+                        menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+                                var asm = 'top.'+self.pathname,
+                                    cmd = asm +'.disconnect("'+src_name+"','"+dst_name+'");',
+                                    cmd = cmd + asm + '.config_changed(update_parent=True);';
+                                model.issueCommand(cmd);
+                            })
+                        );
+                        return menu;
+                    };
                     dataflow.addFigure(c);
+                    src_port.setBackgroundColor(new draw2d.Color(0,0,0));
+                    dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
                 }
                 // TODO: handle connections to parent assembly vars (e.g. Vehicle.velocity)
                 // TODO: show passthroughs somehow
@@ -76,9 +92,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
     
     /** if there is something loaded, update it from the model */
     function update() {
-        if (self.pathname) {
-            self.editConnections(self.pathname,self.src_comp,self.dst_comp);
-        }
+        self.editConnections(self.pathname,self.src_comp,self.dst_comp);
     }
     
     /***********************************************************************

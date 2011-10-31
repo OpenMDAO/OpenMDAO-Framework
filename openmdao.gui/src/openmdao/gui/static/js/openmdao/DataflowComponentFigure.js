@@ -92,7 +92,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     this.header.style.left=this.cornerWidth+"px";
     this.header.style.top="0px";
     this.header.style.height=(this.cornerHeight)+"px";
-    this.header.style.backgroundColor="#CCCCFF";
+    this.header.style.backgroundColor="#CCCCCC";
     this.header.style.borderTop="3px solid #666666";
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
@@ -102,7 +102,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     this.footer.style.position="absolute";
     this.footer.style.left=this.cornerWidth+"px";
     this.footer.style.top="0px";
-    this.footer.style.height=(this.cornerHeight-1)+"px";
+    this.footer.style.height=(this.cornerHeight)+"px";
     this.footer.style.backgroundColor="white";
     this.footer.style.borderBottom="1px solid #666666";
     this.footer.style.fontSize="2px";
@@ -138,9 +138,9 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
         this.bottom_left.style.top=(this.height-this.cornerHeight)+"px";
         this.textarea.style.width=(this.width-2)+"px";
         this.textarea.style.height=(this.height-this.cornerHeight*2)+"px";
-        this.header.style.width=(this.width-this.cornerWidth*2)+"px";
-        this.footer.style.width=(this.width-this.cornerWidth*2)+"px";
-        this.footer.style.top=(this.height-this.cornerHeight)+"px";
+        this.header.style.width=(this.width-this.cornerWidth*2+1)+"px";
+        this.footer.style.width=(this.width-this.cornerWidth*2+1)+"px";
+        this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
     if (this.outputPort!==null) {
         this.outputPort.setPosition(this.width+5,this.height/2);        
@@ -202,7 +202,7 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
         this.outputPort.setName("output");
         var oThis=this;
         this.outputPort.createCommand = function(request) {
-            if(request.getPolicy() ==draw2d.EditPolicy.CONNECT) {
+            if(request.getPolicy() == draw2d.EditPolicy.CONNECT) {
                 if( request.source.parentNode.id == request.target.parentNode.id) {
                     return null;
                 }
@@ -231,23 +231,17 @@ openmdao.DataflowComponentFigure.prototype.toggle=function(){
     }
 };
 
-// openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
-    // var menu=new draw2d.Menu();
-    // var oThis=this;
-    // menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
-        // if (/.driver$/.test(oThis.name)) {
-            // oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name.replace(/.driver/g,'')+"')");
-        // }
-        // else {
-            // oThis.myModel.issueCommand("top.driver.workflow.remove('"+oThis.name+"')");
-        // }
-    // }));
-    // return menu;
-// };
-
-// openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
-    // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
-// };
+openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
+    var menu=new draw2d.Menu();
+    var oThis=this;
+    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+        var asm = 'top.'+openmdao.Util.getParentPath(oThis.pathname),
+            cmd = asm + '.disconnect("'+oThis.name+'");',
+            cmd = cmd + asm + '.config_changed(update_parent=True);';
+        oThis.myModel.issueCommand(cmd);
+    }));
+    return menu;
+};
 
 openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
@@ -255,7 +249,9 @@ openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
 
 openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
+    //this.getWorkflow().showTooltip(new openmdao.Tooltip(this.pathname),true);
 };
+
 openmdao.DataflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };

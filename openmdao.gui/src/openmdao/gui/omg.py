@@ -6,7 +6,7 @@ def init(reset):
     # first time setup (or re-setup)
     print "Initializing settings..."
     
-    user_dir = os.path.expanduser("~/.openmdao/gui/")
+    user_dir = os.path.expanduser("~/.openmdao/gui/")  # TODO: could put in a prefs file
     ensure_dir(user_dir)
     
     settings_file = "settings.py"
