@@ -177,7 +177,7 @@ class DomainObj(object):
         domain = DomainObj()
         for i, args in enumerate(zone_args):
             if args:
-                zone = zones[i]
+                zone = self.zones[i]
                 name = self.zone_name(zone)
                 domain.add_zone(name, zone.extract(*args))
         return domain
@@ -195,7 +195,7 @@ class DomainObj(object):
         domain = DomainObj()
         for i, args in enumerate(zone_args):
             if args:
-                zone = zones[i]
+                zone = self.zones[i]
                 name = self.zone_name(zone)
                 domain.add_zone(name, zone.extend(*args))
         return domain
