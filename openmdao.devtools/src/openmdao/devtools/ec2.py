@@ -130,10 +130,10 @@ def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
 
     return inst
 
-def stop_instance(inst, host, stream):
+def stop_instance(inst, host, stream, debug):
     inst.stop()
     check_inst_state(inst, u'stopped', imgname=host, 
-                     stream=stream)
+                     stream=stream, debug=debug)
     if inst.state == u'stopped':
         stream.write("instance of %s has stopped\n" % host)
         return True
@@ -142,7 +142,7 @@ def stop_instance(inst, host, stream):
                      (host, inst.state))
         return False
 
-def terminate_instance(inst, host, stream):
+def terminate_instance(inst, host, stream, debug):
     stream.write("terminating %s\n" % host)
     inst.terminate()
     check_inst_state(inst, u'terminated', imgname=host, debug=debug,
@@ -245,15 +245,15 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
         if terminate is True:
-            if not terminate_instance(inst, host, orig_stdout):
+            if not terminate_instance(inst, host, orig_stdout, debug):
                 retval = -1
         else:
-            if not stop_instance(inst, host, orig_stdout):
+            if not stop_instance(inst, host, orig_stdout, debug):
                 retval = -1
     else:
         outf.write("run failed, so stopping %s instead of terminating it.\n" % host)
         outf.write("%s will have to be terminated manually.\n" % host)
-        if not stop_instance(inst, host, orig_stdout):
+        if not stop_instance(inst, host, orig_stdout, debug):
             retval = -1
         
     if retval != 0:
