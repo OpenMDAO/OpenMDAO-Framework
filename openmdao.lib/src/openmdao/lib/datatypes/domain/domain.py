@@ -270,3 +270,13 @@ class DomainObj(object):
         for zone in self.zones:
             zone.rotate_about_z(deg)
 
+    def promote(self):
+        """ Promote from N-dimensional to N+1 dimensional index space. """
+        for zone in self.zones:
+            zone.promote()
+
+    def demote(self):
+        """ Demote from N-dimensional to N-1 dimensional index space. """
+        for zone in self.zones:
+            zone.demote()
+
