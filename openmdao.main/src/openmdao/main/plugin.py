@@ -630,7 +630,7 @@ def plugin_quickstart(argv=None):
     if argv is None:
         argv = sys.argv[1:]
     
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="generate some skeleton files for a plugin")
     parser.usage = "plugin_quickstart <dist_name> [options]"
     parser.add_argument('dist_name', help='name of distribution')
     parser.add_argument("-v", "--version", action="store", type=str, dest='version', default='0.1',
@@ -786,7 +786,7 @@ def plugin_makedist(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="create a source distribution for a plugin")
     parser.usage = "plugin_makedist [dist_dir_name]"
     parser.add_argument('dist_dir_name', help='directory where plugin distribution is found')
     
@@ -850,7 +850,7 @@ def plugin_docs(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="display docs for a plugin")
     parser.usage = "plugin_docs <plugin_dist_name>"
     parser.add_argument('plugin_dist_name', help='name of plugin distribution')
     parser.add_argument("-b", "--browser", action="store", type=str, 
@@ -900,7 +900,7 @@ def plugin_install(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="install a plugin into the current environment")
     parser.usage = "plugin_install [plugin_distribution] [options]"
     parser.add_argument('dist_name', help='name of plugin distribution', 
                         nargs='?')
@@ -1027,7 +1027,7 @@ def update_libpath():
     """Find all of the shared libraries in the current virtual environment and modify
     the activate script to put their directories in LD_LIBRARY_PATH
     """
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="add any shared library paths found in the current environment to LD_LIBRARY_PATH")
     parser.usage = "update_libpath [options]"
     options = parser.parse_args(argv)
     
@@ -1133,7 +1133,7 @@ def plugin_build_docs(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = ArgumentParser()
+    parser = ArgumentParser(description="build sphinx doc files for a plugin")
     parser.usage = "plugin_build_docs <dist_dir_path>"
     parser.add_argument('dist_dir_path', help='path to distribution source directory')
     
