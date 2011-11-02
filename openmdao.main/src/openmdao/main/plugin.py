@@ -786,12 +786,15 @@ def plugin_makedist(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    if len(argv) == 0:
-        destdir = os.getcwd()
-    elif len(argv) == 1:
-        destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(argv[0])))
-    else:
-        raise RuntimeError("\nusage: plugin_makedist [dist_dir_name]\n")
+    parser = ArgumentParser()
+    parser.usage = "plugin_makedist [dist_dir_name]"
+    parser.add_argument('dist_dir_name', help='directory where plugin distribution is found')
+    
+    options = parser.parse_args(argv)
+    if options.dist_dir_name is None:
+        options.dist_dir_name = os.getcwd()
+        
+    destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_name)))
 
     _verify_dist_dir(destdir)
 
@@ -847,16 +850,18 @@ def plugin_docs(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    if len(argv) != 1:
-        print 'usage: plugin_docs <plugin_dist_name> [browser_name]'
+    parser = ArgumentParser()
+    parser.usage = "plugin_docs <plugin_dist_name>"
+    parser.add_argument('plugin_dist_name', help='name of plugin distribution')
+    parser.add_argument("-b", "--browser", action="store", type=str, 
+                        dest='browser', help="optional browser name (according to the webbrowser library)")
+    
+    options = parser.parse_args(argv)
+    if options.plugin_dist_name is None:
+        parser.print_help()
         sys.exit(-1)
         
-    if len(argv) > 1:
-        browser = argv[1]
-    else:
-        browser = None
-        
-    _plugin_docs(argv[0], browser)
+    _plugin_docs(argv[0], options.browser)
         
         
 def _plugin_docs(plugin_name, browser=None):
@@ -1022,6 +1027,14 @@ def update_libpath():
     """Find all of the shared libraries in the current virtual environment and modify
     the activate script to put their directories in LD_LIBRARY_PATH
     """
+    parser = ArgumentParser()
+    parser.usage = "update_libpath [options]"
+    options = parser.parse_args(argv)
+    
+    if sys.platform.startswith('win'):
+        print "update_libpath doesn't work on Windows"
+        sys.exit(-1)
+
     ldict = {
         'linux2': 'LD_LIBRARY_PATH',
         'linux': 'LD_LIBRARY_PATH',
@@ -1120,12 +1133,15 @@ def plugin_build_docs(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    if len(argv) == 0:
-        destdir = os.getcwd()
-    elif len(argv) == 1:
-        destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(argv[0])))
-    else:
-        raise RuntimeError("\nusage: plugin_build_docs [dist_dir_name]\n")
+    parser = ArgumentParser()
+    parser.usage = "plugin_build_docs <dist_dir_path>"
+    parser.add_argument('dist_dir_path', help='path to distribution source directory')
+    
+    options = parser.parse_args(argv)
+    if options.dist_dir_path is None:
+        options.dist_dir_path = os.getcwd()
+
+    destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_path)))
 
     _verify_dist_dir(destdir)
     cfgfile = os.path.join(destdir, 'setup.cfg')
