@@ -141,7 +141,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             if (typeof dblclick_fn == 'function') {
                 var node = jQuery(e.target).closest("li"),
                     path = node.attr("path");
-                dblclick_fn(model,path);
+                dblclick_fn(path);
             }
         })
         // .bind("loaded.jstree", function (e, data) {
