@@ -622,3 +622,87 @@ class FlowSolution(object):
         for vector in self._vectors:
             vector.rotate_about_z(deg)
 
+    def promote(self):
+        """ Promote from N-dimensional to N+1 dimensional index space. """
+        if self._arrays:
+            shape = self._arrays[0].shape
+        elif self._vectors:
+            shape = self._vectors[0].shape
+        else:
+            raise RuntimeError('FlowSolution is empty!')
+
+        if len(shape) > 2:
+            raise RuntimeError('FlowSolution is 3D')
+
+        elif len(shape) > 1:
+            imax, jmax = shape
+            for arr in self._arrays:
+                name = self.name_of_obj(arr)
+                new_arr = numpy.zeros((imax, jmax, 1))
+                new_arr[:, :, 0] = arr[:, :]
+                setattr(self, name, new_arr)
+        else:
+            imax = shape[0]
+            for arr in self._arrays:
+                name = self.name_of_obj(arr)
+                new_arr = numpy.zeros((imax, 1))
+                new_arr[:, 0] = arr[:]
+                setattr(self, name, new_arr)
+
+        for vector in self._vectors:
+            vector.promote()
+
+    def demote(self):
+        """ Demote from N-dimensional to N-1 dimensional index space. """
+        if self._arrays:
+            shape = self._arrays[0].shape
+        elif self._vectors:
+            shape = self._vectors[0].shape
+        else:
+            raise RuntimeError('FlowSolution is empty!')
+
+        if len(shape) > 2:
+            imax, jmax, kmax = shape
+            if imax == 1:
+                for arr in self._arrays:
+                    name = self.name_of_obj(arr)
+                    new_arr = numpy.zeros((jmax, kmax))
+                    new_arr[:, :] = arr[0, :, :]
+                    setattr(self, name, new_arr)
+            elif jmax == 1:
+                for arr in self._arrays:
+                    name = self.name_of_obj(arr)
+                    new_arr = numpy.zeros((imax, kmax))
+                    new_arr[:, :] = arr[:, 0, :]
+                    setattr(self, name, new_arr)
+            elif kmax == 1:
+                for arr in self._arrays:
+                    name = self.name_of_obj(arr)
+                    new_arr = numpy.zeros((imax, jmax))
+                    new_arr[:, :] = arr[:, :, 0]
+                    setattr(self, name, new_arr)
+            else:
+                raise RuntimeError('No i, j, or k plane to collapse')
+
+        elif len(shape) > 1:
+            imax, jmax = shape
+            if imax == 1:
+                for arr in self._arrays:
+                    name = self.name_of_obj(arr)
+                    new_arr = numpy.zeros((jmax,))
+                    new_arr[:] = arr[0, :]
+                    setattr(self, name, new_arr)
+            elif jmax == 1:
+                for arr in self._arrays:
+                    name = self.name_of_obj(arr)
+                    new_arr = numpy.zeros((imax,))
+                    new_arr[:] = arr[:, 0]
+                    setattr(self, name, new_arr)
+            else:
+                raise RuntimeError('No i or j plane to collapse')
+        else:
+            raise RuntimeError('FlowSolution is 1D')
+
+        for vector in self._vectors:
+            vector.demote()
+
