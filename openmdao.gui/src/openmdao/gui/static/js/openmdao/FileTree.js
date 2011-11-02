@@ -19,32 +19,36 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
      
     // initialize private variables
     var self = this,
-        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
+        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id),
+        filter_beg = '_.',
+        filter_ext = [ 'pyc', 'pyd' ]
         
     // ask model for an update whenever something changes
     model.addListener(update)
         
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
-        // get the file name without the path for display 
-        if (path[0]==='/')
-            var names = path.split('/')
-        else
-            var names = path.split('\\')
-        var name = names[names.length-1]
-        
-        var html = "<li><a"
-        if (typeof val === 'object') {    // a folder
-            html += " class='folder' path='"+path+"'>"+name+"</a>"
-            html += "<ul>"
-            jQuery.each(val,function(path,val) {
-                html += getFileHTML(path,val)
-            })
-            html += "</ul>"
+        // get the file name and extension 
+        var path = path.replace(/\\/g,'/'),
+            name = path.split('/'),
+            name = name[name.length-1],
+            ext = name.split('.'),
+            ext = ext[ext.length-1];
+            
+        if (filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0) {        
+            var html = "<li><a"
+            if (typeof val === 'object') {    // a folder
+                html += " class='folder' path='"+path+"'>"+name+"</a>"
+                html += "<ul>"
+                jQuery.each(val,function(path,val) {
+                    html += getFileHTML(path,val)
+                })
+                html += "</ul>"
+            }
+            else
+                html += " class='file' path='"+path+"'>"+name+"</a>"
+            html += "</li>"
         }
-        else
-            html += " class='file' path='"+path+"'>"+name+"</a>"
-        html += "</li>"
         return html
     }
     
@@ -190,6 +194,19 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                 "action" : function(node) { model.setFolder(path) }
             }    
         }
+        menu.toggle = {
+            "label"  : 'Toggle Hidden Files',
+            "action" :  function(node) { 
+                            if (filter_beg.length == 0) {
+                                filter_beg = '_.',
+                                filter_ext = [ 'pyc', 'pyd' ]
+                            }
+                            else {
+                                filter_beg = '',
+                                filter_ext = [ ]
+                            }
+                            update();                        }
+        };
         
         return menu
     }
