@@ -17,7 +17,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
      
     // initialize private variables
     var self = this,
-        filterChars = '_',
+        filter_beg = '_',
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
 
     /**  make the parent pane droppable * /
@@ -50,7 +50,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                 interfaces = item['interfaces'],
                 name = openmdao.Util.getName(pathname);
                 
-            if (filterChars.indexOf(name[0])<0) {
+            if (filter_beg.indexOf(name[0])<0) {
+                interfaces = JSON.stringify(interfaces)
                 var node = { 'data': name  };
                 node['attr'] = { 
                      'type'  : type,
@@ -159,8 +160,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         
         var path = node.attr('path'),
             type = node.attr('type'),
-            interfaces = node.attr['interfaces'];
-        
+            interfaces = jQuery.parseJSON(node.attr('interfaces'));
+            
         // now create the menu
         var menu = {}
         
@@ -200,13 +201,15 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                         }
         };
         menu.toggle = {
-            "label"  : 'Toggle Underscores',
+            "label"  : 'Toggle Hidden Components',
             "action" :  function(node) { 
-                            if (filterChars.length == 0)
-                                filterChars = '_';
-                            else
-                                filterChars = '';
-                            model.getJSON(updateTree);
+                            if (filter_beg.length == 0) {
+                                filter_beg = '_';
+                            }
+                            else {
+                                filter_beg = '';
+                            }
+                            update();
                         }
         };
         menu.remove = {

@@ -219,6 +219,10 @@ openmdao.WorkflowComponentFigure.prototype.toggle=function(){
 openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
+    menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
+        var cmd = 'top.'+oThis.pathname + '.run();';
+        oThis.myModel.issueCommand(cmd);
+    }));
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
         var parent = oThis.getParent();
         if (parent) {
@@ -235,17 +239,15 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     return menu;
 };
 
-// openmdao.WorkflowComponentFigure.prototype.onMouseEnter=function(){
-    // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
-// };
-
 openmdao.WorkflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
 openmdao.WorkflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
+    // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
 };
+
 openmdao.WorkflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };
