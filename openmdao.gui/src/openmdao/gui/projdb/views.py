@@ -108,9 +108,9 @@ def download(request, project_id):
         dir = 'projects/'+request.user.username
         filename = MEDIA_ROOT+'/'+str(p.filename)
         if os.path.exists(filename):
-            proj_file = file(filename,'r')
+            proj_file = file(filename,'rb')
             from django.core.servers.basehttp import FileWrapper
-            response = HttpResponse(FileWrapper(proj_file), content_type='application/x-zip-compressed')
+            response = HttpResponse(FileWrapper(proj_file), content_type='application/octet-stream')
             response['Content-Length'] = os.path.getsize(filename)
             response['Content-Disposition'] = 'attachment; filename='+p.projectname+'.proj'
             return response

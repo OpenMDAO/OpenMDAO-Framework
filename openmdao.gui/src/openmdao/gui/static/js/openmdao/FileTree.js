@@ -197,13 +197,16 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
             "action" :  function(node) { 
-                            if (filter_beg.length == 0) {
-                                filter_beg = '_.',
-                                filter_ext = [ 'pyc', 'pyd' ]
+                            var save_beg, save_ext;
+                            if (filter_beg.length > 0) {
+                                save_beg = filter_beg;
+                                save_ext = filter_ext;
+                                filter_beg = '';
+                                filter_ext = [];
                             }
                             else {
-                                filter_beg = '',
-                                filter_ext = [ ]
+                                filter_beg = save_beg;
+                                filter_ext = save_ext;
                             }
                             update();                        }
         };
