@@ -35,11 +35,13 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     });    
     historyBox.append(clearButton);
 
+    /** /
     var bottomButton = jQuery('<div style="position:absolute; top:3px; right:80px; border:outset">&nbsp Bottom &nbsp</div>');
     bottomButton.click(function(){
         scrollToBottom();
     });    
     historyBox.append(bottomButton);
+    /**/
 
     // submit a command
     jQuery('#'+formID).submit(function() {
