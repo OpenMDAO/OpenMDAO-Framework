@@ -1,3 +1,10 @@
+"""
+Support for calculating one or more scalar averages across one or more
+regions in a domain. Some typical fluid flow metric calculation classes are
+included here. Others may be added via :meth:`register_mesh_probe`. A list of
+available metrics is returned by :meth:`list_mesh_probes`.
+"""
+
 from math import sqrt
 
 from openmdao.units.units import PhysicalQuantity
@@ -12,46 +19,54 @@ _VARIABLES = {}
 
 _SCHEMES = ('area', 'mass')
 
-# TODO: support Vertex flow solution grid location.
 # TODO: account for ghost cells in index calculations.
 
 
-def register_surface_probe(name, function, integrate):
+def register_mesh_probe(name, cls, integrate):
     """
-    Register a surface probe function.
+    Register a mesh probe class.
 
     name: string
         The name of the metric calculated.
 
-    function: callable
-        The function to call.  The passed arguments are
-        `(domain, surface, weights, reference_state)`.
+    cls: class
+        Class used to calculate metric. It must contain :meth:`calculate_3d`
+        and a `result` property. Constructor arguments are
+        `(domain, region, reference_state)`. :meth:`calculate_3d` will be called
+        with `(i, j, k, get_value, weight, get_normal)`. `i`, `j`, and `k` are
+        indices into the zone variable arrays, `get_value` is used to fetch a
+        (possibly averaged) value from an array, `weight` is the weighting
+        factor to apply during accumulation, and `get_normal` returns a
+        vector normal to the face with magnitude equal to its area.
 
     integrate: bool
-        If True, then function values are integrated, not averaged.
+        If True, then calculated values are integrated, not averaged.
     """
-    _VARIABLES[name] = (integrate, function)
+    _VARIABLES[name] = (integrate, cls)
+
+def list_mesh_probes():
+    """ Return list of valid metric names. """
+    return sorted(_VARIABLES.keys())
 
 
-def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
+def mesh_probe(domain, regions, variables, weighting_scheme='area'):
     """
-    Calculate metrics on mesh surfaces.
+    Calculate metrics on mesh regions.
     Currently only supports 3D structured grids.
 
     domain: DomainObj
         The domain to be processed.
 
-    surfaces: list
+    regions: list
         List of `(zone_name, imin, imax, jmin, jmax, kmin, kmax)`
-        mesh surface specifications to be used for the calculation.
+        mesh region specifications to be used for the calculation.
         Indices start at 0. Negative indices are relative to the end of the
         array.
 
     variables: list
-        List of `(metric_name, units)` tuples. Legal metric names are
-        'area', 'mass_flow', 'corrected_mass_flow', 'pressure',
-        'pressure_stagnation', 'temperature', and 'temperature_stagnation'.
-        If `units` is None then no unit conversion is attempted.
+        List of `(metric_name, units)` tuples. Legal metric names cab be
+        obtained from :meth:`list_mesh_probes`. If `units` is None then no
+        unit conversion is attempted.
 
     weighting_scheme: string
         Specifies how individual values are weighted. Legal values are
@@ -61,9 +76,9 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     """
     metrics = []
 
-    # Check validity of surface specifications.
-    _surfaces = []
-    for zone_name, imin, imax, jmin, jmax, kmin, kmax in surfaces:
+    # Check validity of region specifications.
+    _regions = []
+    for zone_name, imin, imax, jmin, jmax, kmin, kmax in regions:
         try:
             zone = getattr(domain, zone_name)
             zone_imax, zone_jmax, zone_kmax = zone.shape
@@ -107,7 +122,7 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
             raise ValueError('Zone %s volume specified: %d,%d %d,%d %d,%d'
                              % (zone_name, imin, imax, jmin, jmax, kmin, kmax))
 
-        _surfaces.append((zone_name, imin, imax, jmin, jmax, kmin, kmax))
+        _regions.append((zone_name, imin, imax, jmin, jmax, kmin, kmax))
 
     # Check validity of variables.
     for name, units in variables:
@@ -122,20 +137,21 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     # Collect weights.
     weights = {}
     weight_total = 0.
-    for surface in _surfaces:
-        zone_name = surface[0]
+    for region in _regions:
+        zone_name = region[0]
         zone = getattr(domain, zone_name)
-        zone_weights = _weights(weighting_scheme, domain, surface)
+        zone_weights = _weights_3d(weighting_scheme, domain, region)
         zone_weights *= zone.symmetry_instances  # Adjust for symmetry.
+# NOTE: this assumes a zone is used only once for all regions.
         weights[zone_name] = zone_weights
         weight_total += sum(zone_weights)
 
     # For each variable...
     for name, units in variables:
-        # Compute total across each surface.
+        # Compute total for each region.
         total = None
-        for surface in _surfaces:
-            zone_name = surface[0]
+        for region in _regions:
+            zone_name = region[0]
             zone = getattr(domain, zone_name)
 
             if units is None:
@@ -146,7 +162,7 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
                     raise ValueError('No zone or domain reference_state'
                                      ' dictionary supplied for %s.' % zone_name)
 
-            value = _VARIABLES[name][1](domain, surface, weights, ref)
+            value = _calc_3d(_VARIABLES[name][1], domain, region, weights, ref)
             value *= zone.symmetry_instances  # Adjust for symmetry.
             if total is None:
                 total = value
@@ -166,9 +182,42 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     return metrics
 
 
-def _weights(scheme, domain, surface):
-    """ Returns weights for a mesh surface. """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+def _calc_3d(cls, domain, region, weights, reference_state):
+    """ Use `cls` to calculate a metric on a 3D (index space) region. """
+    metric = cls(domain, region, reference_state)
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+    zone = getattr(domain, zone_name)
+    flow = zone.flow_solution
+    cell_center = flow.grid_location == CELL_CENTER
+    weights = weights[zone_name]
+
+    if imin == imax:
+        imax += 1  # Ensure range() returns face index.
+        get_normal = _iface_normal
+        get_value = _iface_cell_value if cell_center else _iface_node_value
+    elif jmin == jmax:
+        jmax += 1
+        get_normal = _jface_normal
+        get_value = _jface_cell_value if cell_center else _jface_node_value
+    else:
+        kmax += 1
+        get_normal = _kface_normal
+        get_value = _kface_cell_value if cell_center else _kface_node_value
+
+    weight_index = 0
+    for i in range(imin, imax):
+        for j in range(jmin, jmax):
+            for k in range(kmin, kmax):
+                weight = weights[weight_index]
+                weight_index += 1
+                metric.calculate_3d(i, j, k, get_value, weight, get_normal)
+
+    return metric.result
+
+
+def _weights_3d(scheme, domain, region):
+    """ Returns 3D (index space) weights for a mesh region. """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = region
     zone = getattr(domain, zone_name)
     grid = zone.grid_coordinates
     flow = zone.flow_solution
@@ -212,18 +261,13 @@ def _weights(scheme, domain, surface):
 
     weights = []
     for i in range(imin, imax):
-        ip1 = i + 1
         for j in range(jmin, jmax):
-            jp1 = j + 1
             for k in range(kmin, kmax):
-                kp1 = k + 1
-
                 sc1, sc2, sc3 = face_normal(c1, c2, c3, i, j, k, cylindrical)
                 if scheme == 'mass':
-                    kp1 = k + 1
-                    rvu = face_value(mom_c1, ip1, jp1, kp1)
-                    rvv = face_value(mom_c2, ip1, jp1, kp1)
-                    rvw = face_value(mom_c3, ip1, jp1, kp1)
+                    rvu = face_value(mom_c1, i, j, k)
+                    rvv = face_value(mom_c2, i, j, k)
+                    rvw = face_value(mom_c3, i, j, k)
                     weights.append(rvu*sc1 + rvv*sc2 + rvw*sc3)
                 else:
                     weights.append(sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3))
@@ -326,768 +370,679 @@ def _kface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
 
 def _iface_cell_value(arr, i, j, k):
     """ Returns I face value for cell-centered data. """
-    return 0.5 * (arr(i, j, k) + arr(i-1, j, k))
+    return 0.5 * (arr(i+1, j+1, k+1) + arr(i, j+1, k+1))
 
 def _jface_cell_value(arr, i, j, k):
     """ Returns J face value for cell-centered data. """
-    return 0.5 * (arr(i, j, k) + arr(i, j-1, k))
+    return 0.5 * (arr(i+1, j+1, k+1) + arr(i+1, j, k+1))
 
 def _kface_cell_value(arr, i, j, k):
     """ Returns K face value for cell-centered data. """
-    return 0.5 * (arr(i, j, k) + arr(i, j, k-1))
+    return 0.5 * (arr(i+1, j+1, k+1) + arr(i+1, j+1, k))
 
 
 def _iface_node_value(arr, i, j, k):
     """ Returns I face value for vertex data. """
-    return 0.25 * (arr(i-1, j, k) + arr(i-1, j-1, k) + 
-                   arr(i-1, j, k-1) + arr(i-1, j-1, k-1))
+    return 0.25 * (arr(i, j+1, k+1) + arr(i, j, k+1) + 
+                   arr(i, j+1, k) + arr(i, j, k))
 
 def _jface_node_value(arr, i, j, k):
     """ Returns J face value for vertex data. """
-    return 0.25 * (arr(i, j-1, k) + arr(i-1, j-1, k) + 
-                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
+    return 0.25 * (arr(i+1, j, k+1) + arr(i, j, k+1) + 
+                   arr(i+1, j, k) + arr(i, j, k))
 
 def _kface_node_value(arr, i, j, k):
     """ Returns K face value for vertex data. """
-    return 0.25 * (arr(i, j, k-1) + arr(i-1, j, k-1) + 
-                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
+    return 0.25 * (arr(i+1, j+1, k) + arr(i, j+1, k) + 
+                   arr(i+1, j, k) + arr(i, j, k))
 
 
-def _area(domain, surface, weights, reference_state):
-    """ Returns area of mesh surface as a :class:`PhysicalQuantity`. """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
-    grid = zone.grid_coordinates
-    cylindrical = zone.coordinate_system == CYLINDRICAL
+class _Area(object):
+    """ Computes area of mesh surface. """
 
-    if cylindrical:
-        c1 = grid.z.item
-        c2 = grid.r.item
-        c3 = grid.t.item
-    else:
-        c1 = grid.x.item
-        c2 = grid.y.item
-        c3 = grid.z.item
+    def __init__(self, domain, region, reference_state):
+        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+        zone = getattr(domain, zone_name)
+        grid = zone.grid_coordinates
+        self.cylindrical = zone.coordinate_system == CYLINDRICAL
 
-    if imin == imax:
-        imax += 1  # Ensure range() returns face index.
-        face_normal = _iface_normal
-    elif jmin == jmax:
-        jmax += 1
-        face_normal = _jface_normal
-    else:
-        kmax += 1
-        face_normal = _kface_normal
-
-    if reference_state is None:
-        lref = 1.
-    else:
-        try:
-            lref = reference_state['length_reference']
-        except KeyError:
-            raise AttributeError("For area, reference_state is missing"
-                                 " 'length_reference'.")
-        aref = lref * lref
-        lref = lref.value
-
-    total = 0.
-    for i in range(imin, imax):
-        for j in range(jmin, jmax):
-            for k in range(kmin, kmax):
-                sc1, sc2, sc3 = face_normal(c1, c2, c3, i, j, k, cylindrical,
-                                            lref)
-                total += sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3)
-
-    if reference_state is None:
-        return total
-    else:
-        return PhysicalQuantity(total, aref.get_unit_name())
-
-register_surface_probe('area', _area, True)
-
-
-def _massflow(domain, surface, weights, reference_state):
-    """ Returns mass flow for a mesh surface as a :class:`PhysicalQuantity`. """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
-    grid = zone.grid_coordinates
-    flow = zone.flow_solution
-    cylindrical = zone.coordinate_system == CYLINDRICAL
-    cell_center = flow.grid_location == CELL_CENTER
-
-    if cylindrical:
-        c1 = grid.z.item
-        c2 = grid.r.item
-        c3 = grid.t.item
-    else:
-        c1 = grid.x.item
-        c2 = grid.y.item
-        c3 = grid.z.item
-
-    try:
-        if cylindrical:
-            mom_c1 = flow.momentum.z.item
-            mom_c2 = flow.momentum.r.item
-            mom_c3 = flow.momentum.t.item
+        if self.cylindrical:
+            self.c1 = grid.z.item
+            self.c2 = grid.r.item
+            self.c3 = grid.t.item
         else:
-            mom_c1 = flow.momentum.x.item
-            mom_c2 = flow.momentum.y.item
-            mom_c3 = flow.momentum.z.item
-    except AttributeError:
-        raise AttributeError("For mass_flow, zone %s is missing 'momentum'."
-                             % zone_name)
-    if imin == imax:
-        imax += 1  # Ensure range() returns face index.
-        face_normal = _iface_normal
-        face_value = _iface_cell_value if cell_center else _iface_node_value
-    elif jmin == jmax:
-        jmax += 1
-        face_normal = _jface_normal
-        face_value = _jface_cell_value if cell_center else _jface_node_value
-    else:
-        kmax += 1
-        face_normal = _kface_normal
-        face_value = _kface_cell_value if cell_center else _kface_node_value
+            self.c1 = grid.x.item
+            self.c2 = grid.y.item
+            self.c3 = grid.z.item
 
-    if reference_state is None:
-        lref = 1.
-        momref = 1.
-    else:
+        if reference_state is None:
+            self.aref = None
+            self.lref = 1.
+        else:
+            try:
+                lref = reference_state['length_reference']
+            except KeyError:
+                raise AttributeError("For area, reference_state is missing"
+                                     " 'length_reference'.")
+            self.aref = lref * lref
+            self.lref = lref.value
+
+        self.total = 0.
+
+    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
+        """ Accumulate 3D (index space) metric. """
+        sc1, sc2, sc3 = get_normal(self.c1, self.c2, self.c3, i, j, k,
+                                   self.cylindrical, self.lref)
+        self.total += sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3)
+
+    @property
+    def result(self):
+        """ Possibly dimensional accumulated total. """
+        if self.aref is None:
+            return self.total
+        else:
+            return PhysicalQuantity(self.total, self.aref.get_unit_name())
+
+register_mesh_probe('area', _Area, True)
+
+
+class _MassFlow(object):
+    """ Computes mass flow across a mesh surface. """
+
+    def __init__(self, domain, region, reference_state):
+        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+        zone = getattr(domain, zone_name)
+        grid = zone.grid_coordinates
+        flow = zone.flow_solution
+        self.cylindrical = zone.coordinate_system == CYLINDRICAL
+
+        if self.cylindrical:
+            self.c1 = grid.z.item
+            self.c2 = grid.r.item
+            self.c3 = grid.t.item
+        else:
+            self.c1 = grid.x.item
+            self.c2 = grid.y.item
+            self.c3 = grid.z.item
+
+        try:
+            if self.cylindrical:
+                self.mom_c1 = flow.momentum.z.item
+                self.mom_c2 = flow.momentum.r.item
+                self.mom_c3 = flow.momentum.t.item
+            else:
+                self.mom_c1 = flow.momentum.x.item
+                self.mom_c2 = flow.momentum.y.item
+                self.mom_c3 = flow.momentum.z.item
+        except AttributeError:
+            raise AttributeError("For mass_flow, zone %s is missing 'momentum'."
+                                 % zone_name)
+
+        if reference_state is None:
+            self.lref = 1.
+            self.momref = 1.
+            self.wref = None
+        else:
+            try:
+                lref = reference_state['length_reference']
+                pref = reference_state['pressure_reference']
+                rgas = reference_state['ideal_gas_constant']
+                tref = reference_state['temperature_reference']
+            except KeyError:
+                vals = ('length_reference', 'pressure_reference',
+                        'ideal_gas_constant', 'temperature_reference')
+                raise AttributeError('For mass_flow, reference_state is missing'
+                                     ' one or more of %s.' % (vals,))
+            rhoref = pref / rgas / tref
+            vref = (rgas * tref).sqrt()
+            momref = rhoref * vref
+            self.wref = momref * lref * lref
+            self.lref = lref.value
+            self.momref = momref.value
+
+        self.total = 0.
+
+    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
+        """ Accumulate 3D (index space) metric. """
+        rvu = get_value(self.mom_c1, i, j, k) * self.momref
+        rvv = get_value(self.mom_c2, i, j, k) * self.momref
+        rvw = get_value(self.mom_c3, i, j, k) * self.momref
+        sc1, sc2, sc3 = get_normal(self.c1, self.c2, self.c3, i, j, k,
+                                   self.cylindrical, self.lref)
+        w = rvu*sc1 + rvv*sc2 + rvw*sc3
+        self.total += w
+
+    @property
+    def result(self):
+        """ Possibly dimensional accumulated total. """
+        if self.wref is None:
+            return self.total
+        else:
+            return PhysicalQuantity(self.total, self.wref.get_unit_name())
+
+register_mesh_probe('mass_flow', _MassFlow, True)
+
+
+class _CorrectedMassFlow(object):
+    """ Computes corrected mass flow across a mesh surface. """
+
+    def __init__(self, domain, region, reference_state):
+        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+        zone = getattr(domain, zone_name)
+        grid = zone.grid_coordinates
+        flow = zone.flow_solution
+        self.cylindrical = zone.coordinate_system == CYLINDRICAL
+
+        if self.cylindrical:
+            self.c1 = grid.z.item
+            self.c2 = grid.r.item
+            self.c3 = grid.t.item
+        else:
+            self.c1 = grid.x.item
+            self.c2 = grid.y.item
+            self.c3 = grid.z.item
+
+        try:
+            self.density = flow.density.item
+            if self.cylindrical:
+                self.mom_c1 = flow.momentum.z.item
+                self.mom_c2 = flow.momentum.r.item
+                self.mom_c3 = flow.momentum.t.item
+            else:
+                self.mom_c1 = flow.momentum.x.item
+                self.mom_c2 = flow.momentum.y.item
+                self.mom_c3 = flow.momentum.z.item
+            self.pressure = flow.pressure.item
+        except AttributeError:
+            vnames = ('density', 'momentum', 'pressure')
+            raise AttributeError('For corrected_mass_flow, zone %s is missing'
+                                 ' one or more of %s.' % (zone_name, vnames))
+        try:
+            self.gam = flow.gamma.item
+        except AttributeError:
+            self.gam = None  # Use passed-in scalar gamma.
+
+        if reference_state is None:
+            raise ValueError('corrected_mass_flow must have units specified')
+
         try:
             lref = reference_state['length_reference']
             pref = reference_state['pressure_reference']
             rgas = reference_state['ideal_gas_constant']
             tref = reference_state['temperature_reference']
+            if self.gam is None:
+                self.gamma = reference_state['specific_heat_ratio'].value
         except KeyError:
-            vals = ('length_reference', 'pressure_reference',
-                    'ideal_gas_constant', 'temperature_reference')
-            raise AttributeError('For mass_flow, reference_state is missing'
-                                 ' one or more of %s.' % (vals,))
+            vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
+                    'temperature_reference', 'specific_heat_ratio')
+            raise AttributeError('For corrected_mass_flow, reference_state is'
+                                 ' missing one or more of %s.' % (vals,))
+
         rhoref = pref / rgas / tref
         vref = (rgas * tref).sqrt()
         momref = rhoref * vref
-        wref = momref * lref * lref
-        lref = lref.value
-        momref = momref.value
+        self.wref = momref * lref * lref
 
-    total = 0.
-    for i in range(imin, imax):
-        ip1 = i + 1
-        for j in range(jmin, jmax):
-            jp1 = j + 1
-            for k in range(kmin, kmax):
-                kp1 = k + 1
+        pstd = PhysicalQuantity(14.696, 'psi')
+        pstd.convert_to_unit(pref.get_unit_name())
 
-                rvu = face_value(mom_c1, ip1, jp1, kp1) * momref
-                rvv = face_value(mom_c2, ip1, jp1, kp1) * momref
-                rvw = face_value(mom_c3, ip1, jp1, kp1) * momref
-                sc1, sc2, sc3 = face_normal(c1, c2, c3, i, j, k, cylindrical,
-                                            lref)
+        tstd = PhysicalQuantity(518.67, 'degR')
+        tstd.convert_to_unit(tref.get_unit_name())
 
-                w = rvu*sc1 + rvv*sc2 + rvw*sc3
-                total += w
+        self.lref = lref.value
+        self.pref = pref.value
+        self.rgas = rgas.value
+        self.rhoref = rhoref.value
+        self.momref = momref.value
+        self.pstd = pstd.value
+        self.tstd = tstd.value
 
-    if reference_state is None:
-        return total
-    else:
-        return PhysicalQuantity(total, wref.get_unit_name())
+        self.total = 0.
 
-register_surface_probe('mass_flow', _massflow, True)
-
-
-def _corrected_massflow(domain, surface, weights, reference_state):
-    """
-    Returns corrected mass flow for a mesh surface as a
-    :class:`PhysicalQuantity`.
-    """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
-    grid = zone.grid_coordinates
-    flow = zone.flow_solution
-    cylindrical = zone.coordinate_system == CYLINDRICAL
-    cell_center = flow.grid_location == CELL_CENTER
-
-    if cylindrical:
-        c1 = grid.z.item
-        c2 = grid.r.item
-        c3 = grid.t.item
-    else:
-        c1 = grid.x.item
-        c2 = grid.y.item
-        c3 = grid.z.item
-
-    try:
-        density = flow.density.item
-        if cylindrical:
-            mom_c1 = flow.momentum.z.item
-            mom_c2 = flow.momentum.r.item
-            mom_c3 = flow.momentum.t.item
+    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
+        """ Accumulate 3D (index space) metric. """
+        rho = get_value(self.density, i, j, k) * self.rhoref
+        rvu = get_value(self.mom_c1, i, j, k) * self.momref
+        rvv = get_value(self.mom_c2, i, j, k) * self.momref
+        rvw = get_value(self.mom_c3, i, j, k) * self.momref
+        ps = get_value(self.pressure, i, j, k) * self.pref
+        if self.gam is not None:
+            gamma = get_value(self.gam, i, j, k)
         else:
-            mom_c1 = flow.momentum.x.item
-            mom_c2 = flow.momentum.y.item
-            mom_c3 = flow.momentum.z.item
-        pressure = flow.pressure.item
-    except AttributeError:
-        vnames = ('density', 'momentum', 'pressure')
-        raise AttributeError('For corrected_mass_flow, zone %s is missing'
-                             ' one or more of %s.' % (zone_name, vnames))
-    try:
-        gam = flow.gamma.item
-    except AttributeError:
-        gam = None  # Use passed-in scalar gamma.
+            gamma = self.gamma
+        sc1, sc2, sc3 = get_normal(self.c1, self.c2, self.c3, i, j, k,
+                                   self.cylindrical, self.lref)
+        w = rvu*sc1 + rvv*sc2 + rvw*sc3
 
-    if imin == imax:
-        imax += 1  # Ensure range() returns face index.
-        face_normal = _iface_normal
-        face_value = _iface_cell_value if cell_center else _iface_node_value
-    elif jmin == jmax:
-        jmax += 1
-        face_normal = _jface_normal
-        face_value = _jface_cell_value if cell_center else _jface_node_value
-    else:
-        kmax += 1
-        face_normal = _kface_normal
-        face_value = _kface_cell_value if cell_center else _kface_node_value
+        u2 = (rvu*rvu + rvv*rvv + rvw*rvw) / (rho*rho)
+        a2 = (gamma * ps) / rho
+        mach2 = u2 / a2
+        ts = ps / (rho * self.rgas)
+        tt = ts * (1. + (gamma-1.)/2. * mach2)
 
-    if reference_state is None:
-        raise ValueError('corrected_mass_flow must have units specified')
+        pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
 
-    try:
-        lref = reference_state['length_reference']
-        pref = reference_state['pressure_reference']
-        rgas = reference_state['ideal_gas_constant']
-        tref = reference_state['temperature_reference']
-        if gam is None:
-            gamma = reference_state['specific_heat_ratio'].value
-    except KeyError:
-        vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
-                'temperature_reference', 'specific_heat_ratio')
-        raise AttributeError('For corrected_mass_flow, reference_state is'
-                             ' missing one or more of %s.' % (vals,))
+        wc = w * sqrt(tt/self.tstd) / (pt/self.pstd)
+        self.total += wc
 
-    rhoref = pref / rgas / tref
-    vref = (rgas * tref).sqrt()
-    momref = rhoref * vref
-    wref = momref * lref * lref
+    @property
+    def result(self):
+        """ Dimensional accumulated total. """
+        return PhysicalQuantity(self.total, self.wref.get_unit_name())
 
-    pstd = PhysicalQuantity(14.696, 'psi')
-    pstd.convert_to_unit(pref.get_unit_name())
-
-    tstd = PhysicalQuantity(518.67, 'degR')
-    tstd.convert_to_unit(tref.get_unit_name())
-
-    lref = lref.value
-    pref = pref.value
-    rgas = rgas.value
-    rhoref = rhoref.value
-    momref = momref.value
-    pstd = pstd.value
-    tstd = tstd.value
-
-    total = 0.
-    for i in range(imin, imax):
-        ip1 = i + 1
-        for j in range(jmin, jmax):
-            jp1 = j + 1
-            for k in range(kmin, kmax):
-                kp1 = k + 1
-
-                rho = face_value(density, ip1, jp1, kp1) * rhoref
-                rvu = face_value(mom_c1, ip1, jp1, kp1) * momref
-                rvv = face_value(mom_c2, ip1, jp1, kp1) * momref
-                rvw = face_value(mom_c3, ip1, jp1, kp1) * momref
-                ps = face_value(pressure, ip1, jp1, kp1) * pref
-                if gam is not None:
-                    gamma = face_value(gam, ip1, jp1, kp1)
-                sc1, sc2, sc3 = face_normal(c1, c2, c3, i, j, k, cylindrical,
-                                            lref)
-
-                w = rvu*sc1 + rvv*sc2 + rvw*sc3
-
-                u2 = (rvu*rvu + rvv*rvv + rvw*rvw) / (rho*rho)
-                a2 = (gamma * ps) / rho
-                mach2 = u2 / a2
-                ts = ps / (rho * rgas)
-                tt = ts * (1. + (gamma-1.)/2. * mach2)
-
-                pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
-
-                wc = w * sqrt(tt/tstd) / (pt/pstd)
-                total += wc
-
-    return PhysicalQuantity(total, wref.get_unit_name())
-
-register_surface_probe('corrected_mass_flow', _corrected_massflow, True)
+register_mesh_probe('corrected_mass_flow', _CorrectedMassFlow, True)
 
 
-def _static_pressure(domain, surface, weights, reference_state):
-    """
-    Returns weighted static pressure for a mesh surface as a
-    :class:`PhysicalQuantity`.
-    """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
-    flow = zone.flow_solution
-    cylindrical = zone.coordinate_system == CYLINDRICAL
-    cell_center = flow.grid_location == CELL_CENTER
-    weights = weights[zone_name]
+class _StaticPressure(object):
+    """ Computes weighted static pressure for a mesh region. """
 
-    try:  # Some codes (i.e. ADPAC restart file) have this directly available.
-        pressure = flow.pressure.item
-    except AttributeError:
-        pressure = None
-        try:  # Look for typical Q variabes.
-            density = flow.density.item
-            if cylindrical:
-                mom_c1 = flow.momentum.z.item
-                mom_c2 = flow.momentum.r.item
-                mom_c3 = flow.momentum.t.item
-            else:
-                mom_c1 = flow.momentum.x.item
-                mom_c2 = flow.momentum.y.item
-                mom_c3 = flow.momentum.z.item
-            energy = flow.energy_stagnation_density.item
+    def __init__(self, domain, region, reference_state):
+        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+        zone = getattr(domain, zone_name)
+        flow = zone.flow_solution
+        cylindrical = zone.coordinate_system == CYLINDRICAL
+
+        try:  # Some codes have this directly available.
+            self.pressure = flow.pressure.item
         except AttributeError:
-            vnames = ('pressure', 'density', 'momentum',
-                      'energy_stagnation_density')
-            raise AttributeError('For pressure, zone %s is missing'
-                                 ' one or more of %s.' % (zone_name, vnames))
-    try:
-        gam = flow.gamma.item
-    except AttributeError:
-        gam = None  # Use passed-in scalar gamma.
+            self.pressure = None
+            try:  # Look for typical Q variabes.
+                self.density = flow.density.item
+                if cylindrical:
+                    self.mom_c1 = flow.momentum.z.item
+                    self.mom_c2 = flow.momentum.r.item
+                    self.mom_c3 = flow.momentum.t.item
+                else:
+                    self.mom_c1 = flow.momentum.x.item
+                    self.mom_c2 = flow.momentum.y.item
+                    self.mom_c3 = flow.momentum.z.item
+                self.energy = flow.energy_stagnation_density.item
+            except AttributeError:
+                vnames = ('pressure', 'density', 'momentum',
+                          'energy_stagnation_density')
+                raise AttributeError('For pressure, zone %s is missing'
+                                     ' one or more of %s.' % (zone_name, vnames))
+        try:
+            self.gam = flow.gamma.item
+        except AttributeError:
+            self.gam = None  # Use passed-in scalar gamma.
 
-    if imin == imax:
-        imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value if cell_center else _iface_node_value
-    elif jmin == jmax:
-        jmax += 1
-        face_value = _jface_cell_value if cell_center else _jface_node_value
-    else:
-        kmax += 1
-        face_value = _kface_cell_value if cell_center else _kface_node_value
+        if reference_state is None:
+            self.pref = 1.
+            self.rhoref = 1.
+            self.momref = 1.
+            self.e0ref = 1.
+            self.units = None
+        else:
+            if self.pressure is not None:
+                try:
+                    pref = reference_state['pressure_reference']
+                except KeyError:
+                    raise AttributeError("For pressure, reference_state is"
+                                         " missing 'pressure_reference'.")
+            else:
+                raise NotImplementedError('Get dimensional pressure from'
+                                          ' Q variables')
+#                pref = reference_state['pressure_reference']
+#                rgas = reference_state['ideal_gas_constant']
+#                tref = reference_state['temperature_reference']
+#                if self.gam is None:
+#                    self.gamma = reference_state['specific_heat_ratio'].value
+#                except AttributeError:
+#                    vnames = ('ideal_gas_constant', 'pressure_reference',
+#                              'temperature_reference', 'specific_heat_ratio')
+#                    raise AttributeError('For static pressure, reference_state is'
+#                                         ' missing one or more of %s.' % vnames)
+#                rhoref = pref / rgas / tref
+#                vref = (rgas * tref).sqrt()
+#                momref = rhoref * vref
+#                self.rhoref = rhoref.value
+#                self.momref = momref.value
+#                self.e0ref = ?
 
-    if reference_state is None:
-        pref = 1.
-        rhoref = 1.
-        momref = 1.
-        e0ref = 1.
-    else:
-        if pressure is not None:
+            self.units = pref.get_unit_name()
+            self.pref = pref.value
+
+        self.total = 0.
+
+    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
+        """ Accumulate 3D (index space) metric. """
+        if self.pressure is not None:
+            ps = get_value(self.pressure, i, j, k) * self.pref
+        else:
+            rho = get_value(self.density, i, j, k) * self.rhoref
+            vu = get_value(self.mom_c1, i, j, k) * self.momref / rho
+            vv = get_value(self.mom_c2, i, j, k) * self.momref / rho
+            vw = get_value(self.mom_c3, i, j, k) * self.momref / rho
+            e0 = get_value(self.energy, i, j, k) * self.e0ref / rho
+            if self.gam is not None:
+                gamma = get_value(self.gam, i, j, k)
+            else:
+                gamma = self.gamma
+
+            ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
+
+        self.total += ps * weight
+
+    @property
+    def result(self):
+        """ Return (possibly dimensional) accumulated total. """
+        if self.units is None:
+            return self.total
+        else:
+            return PhysicalQuantity(self.total, self.units)
+
+register_mesh_probe('pressure', _StaticPressure, False)
+
+
+class _TotalPressure(object):
+    """ Computes weighted total pressure for a mesh region. """
+
+    def __init__(self, domain, region, reference_state):
+        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+        zone = getattr(domain, zone_name)
+        flow = zone.flow_solution
+        cylindrical = zone.coordinate_system == CYLINDRICAL
+
+        try:
+            self.density = flow.density.item
+            if cylindrical:
+                self.mom_c1 = flow.momentum.z.item
+                self.mom_c2 = flow.momentum.r.item
+                self.mom_c3 = flow.momentum.t.item
+            else:
+                self.mom_c1 = flow.momentum.x.item
+                self.mom_c2 = flow.momentum.y.item
+                self.mom_c3 = flow.momentum.z.item
+        except AttributeError:
+            vnames = ('density', 'momentum')
+            raise AttributeError('For pressure_stagnation, zone %s is missing'
+                             ' one or more of %s.' % (zone_name, vnames))
+        try:
+            self.pressure = flow.pressure.item
+        except AttributeError:
+            self.pressure = None
+            try:
+                self.energy = flow.energy_stagnation_density.item
+            except AttributeError:
+                vnames = ('pressure', 'energy_stagnation_density')
+                raise AttributeError('For pressure_stagnation, zone %s is missing'
+                                     ' one or more of %s.' % (zone_name, vnames))
+        try:
+            self.gam = flow.gamma.item
+        except AttributeError:
+            self.gam = None  # Use passed-in scalar gamma.
+
+        if reference_state is None:
+            self.pref = 1.
+            self.rhoref = 1.
+            self.momref = 1.
+            self.e0ref = 1.
+            self.units = None
+        else:
             try:
                 pref = reference_state['pressure_reference']
+                rgas = reference_state['ideal_gas_constant']
+                tref = reference_state['temperature_reference']
+                if self.gam is None:
+                    self.gamma = reference_state['specific_heat_ratio'].value
             except KeyError:
-                raise AttributeError("For pressure, reference_state is"
-                                     " missing 'pressure_reference'.")
+                vals = ('pressure_reference', 'ideal_gas_constant',
+                        'temperature_reference', 'specific_heat_ratio')
+                raise AttributeError('For pressure_stagnation, reference_state'
+                                     ' is missing one or more of %s.' % (vals,))
+            if self.pressure is None:
+                raise NotImplementedError('Get dimensional pressure_stagnation from'
+                                          ' Q variables')
+            rhoref = pref / rgas / tref
+            vref = (rgas * tref).sqrt()
+            momref = rhoref * vref
+            self.rhoref = rhoref.value
+            self.momref = momref.value
+#            self.e0ref = ?
+            self.units = pref.get_unit_name()
+            self.pref = pref.value
+
+        self.total = 0.
+
+    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
+        """ Accumulate 3D (index space) metric. """
+        rho = get_value(self.density, i, j, k) * self.rhoref
+        vu = get_value(self.mom_c1, i, j, k) * self.momref / rho
+        vv = get_value(self.mom_c2, i, j, k) * self.momref / rho
+        vw = get_value(self.mom_c3, i, j, k) * self.momref / rho
+        if self.gam is not None:
+            gamma = get_value(self.gam, i, j, k)
         else:
-            raise NotImplementedError('Get dimensional pressure from'
-                                      ' Q variables')
-#            pref = reference_state['pressure_reference']
-#            rgas = reference_state['ideal_gas_constant']
-#            tref = reference_state['temperature_reference']
-#            if gam is None:
-#                gamma = reference_state['specific_heat_ratio'].value
-#            except AttributeError:
-#                vnames = ('ideal_gas_constant', 'pressure_reference',
-#                          'temperature_reference', 'specific_heat_ratio')
-#                raise AttributeError('For static pressure, reference_state is'
-#                                     ' missing one or more of %s.' % vnames)
-#            rhoref = pref / rgas / tref
-#            vref = (rgas * tref).sqrt()
-#            momref = rhoref * vref
-#            rhoref = rhoref.value
-#            momref = momref.value
-#            e0ref = ?
+            gamma = self.gamma
 
-        units = pref.get_unit_name()
-        pref = pref.value
-
-    total = 0.
-    weight_index = 0
-    for i in range(imin, imax):
-        ip1 = i + 1
-        for j in range(jmin, jmax):
-            jp1 = j + 1
-            for k in range(kmin, kmax):
-                kp1 = k + 1
-
-                if pressure is not None:
-                    ps = face_value(pressure, ip1, jp1, kp1) * pref
-                else:
-                    rho = face_value(density, ip1, jp1, kp1) * rhoref
-                    vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
-                    vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
-                    vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
-                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
-                    if gam is not None:
-                        gamma = face_value(gam, ip1, jp1, kp1)
-
-                    ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
-
-                weight = weights[weight_index]
-                weight_index += 1
-                total += ps * weight
-
-    if reference_state is None:
-        return total
-    else:
-        return PhysicalQuantity(total, units)
-
-register_surface_probe('pressure', _static_pressure, False)
-
-
-def _total_pressure(domain, surface, weights, reference_state):
-    """
-    Returns weighted total pressure for a mesh surface as a
-    :class:`PhysicalQuantity`.
-    """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
-    flow = zone.flow_solution
-    cylindrical = zone.coordinate_system == CYLINDRICAL
-    cell_center = flow.grid_location == CELL_CENTER
-    weights = weights[zone_name]
-
-    try:
-        density = flow.density.item
-        if cylindrical:
-            mom_c1 = flow.momentum.z.item
-            mom_c2 = flow.momentum.r.item
-            mom_c3 = flow.momentum.t.item
+        u2 = vu*vu + vv*vv + vw*vw
+        if self.pressure is not None:
+            ps = get_value(self.pressure, i, j, k) * self.pref
         else:
-            mom_c1 = flow.momentum.x.item
-            mom_c2 = flow.momentum.y.item
-            mom_c3 = flow.momentum.z.item
-    except AttributeError:
-        vnames = ('density', 'momentum')
-        raise AttributeError('For pressure_stagnation, zone %s is missing'
-                             ' one or more of %s.' % (zone_name, vnames))
-    try:
-        pressure = flow.pressure.item
-    except AttributeError:
-        pressure = None
+            e0 = get_value(self.energy, i, j, k) * self.e0ref / rho
+            ps = (gamma-1.) * rho * (e0 - 0.5*u2)
+        a2 = (gamma * ps) / rho
+        mach2 = u2 / a2
+        pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
+
+        self.total += pt * weight
+
+    @property
+    def result(self):
+        """ Return (possibly dimensional) accumulated total. """
+        if self.units is None:
+            return self.total
+        else:
+            return PhysicalQuantity(self.total, self.units)
+
+register_mesh_probe('pressure_stagnation', _TotalPressure, False)
+
+
+class _StaticTemperature(object):
+    """ Computes weighted static temperature for a mesh region. """
+
+    def __init__(self, domain, region, reference_state):
+        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+        zone = getattr(domain, zone_name)
+        flow = zone.flow_solution
+        cylindrical = zone.coordinate_system == CYLINDRICAL
+
         try:
-            energy = flow.energy_stagnation_density.item
+            self.density = flow.density.item
         except AttributeError:
-            vnames = ('pressure', 'energy_stagnation_density')
-            raise AttributeError('For pressure_stagnation, zone %s is missing'
-                                 ' one or more of %s.' % (zone_name, vnames))
-    try:
-        gam = flow.gamma.item
-    except AttributeError:
-        gam = None  # Use passed-in scalar gamma.
-
-    if imin == imax:
-        imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value if cell_center else _iface_node_value
-    elif jmin == jmax:
-        jmax += 1
-        face_value = _jface_cell_value if cell_center else _jface_node_value
-    else:
-        kmax += 1
-        face_value = _kface_cell_value if cell_center else _kface_node_value
-
-    if reference_state is None:
-        pref = 1.
-        rhoref = 1.
-        momref = 1.
-        e0ref = 1.
-    else:
-        try:
-            pref = reference_state['pressure_reference']
-            rgas = reference_state['ideal_gas_constant']
-            tref = reference_state['temperature_reference']
-            if gam is None:
-                gamma = reference_state['specific_heat_ratio'].value
-        except KeyError:
-            vals = ('pressure_reference', 'ideal_gas_constant',
-                    'temperature_reference', 'specific_heat_ratio')
-            raise AttributeError('For pressure_stagnation, reference_state'
-                                 ' is missing one or more of %s.' % (vals,))
-        if pressure is None:
-            raise NotImplementedError('Get dimensional pressure_stagnation from'
-                                      ' Q variables')
-        rhoref = pref / rgas / tref
-        vref = (rgas * tref).sqrt()
-        momref = rhoref * vref
-        rhoref = rhoref.value
-        momref = momref.value
-#        e0ref = ?
-        units = pref.get_unit_name()
-        pref = pref.value
-
-    total = 0.
-    weight_index = 0
-    for i in range(imin, imax):
-        ip1 = i + 1
-        for j in range(jmin, jmax):
-            jp1 = j + 1
-            for k in range(kmin, kmax):
-                kp1 = k + 1
-
-                rho = face_value(density, ip1, jp1, kp1) * rhoref
-                vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
-                vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
-                vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
-                if gam is not None:
-                    gamma = face_value(gam, ip1, jp1, kp1)
-
-                u2 = vu*vu + vv*vv + vw*vw
-                if pressure is not None:
-                    ps = face_value(pressure, ip1, jp1, kp1) * pref
-                else:
-                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
-                    ps = (gamma-1.) * rho * (e0 - 0.5*u2)
-                a2 = (gamma * ps) / rho
-                mach2 = u2 / a2
-                pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
-
-                weight = weights[weight_index]
-                weight_index += 1
-                total += pt * weight
-
-    if reference_state is None:
-        return total
-    else:
-        return PhysicalQuantity(total, units)
-
-register_surface_probe('pressure_stagnation', _total_pressure, False)
-
-
-def _static_temperature(domain, surface, weights, reference_state):
-    """
-    Returns weighted static temperature for a mesh surface as a
-    :class:`PhysicalQuantity`.
-    """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
-    flow = zone.flow_solution
-    cylindrical = zone.coordinate_system == CYLINDRICAL
-    cell_center = flow.grid_location == CELL_CENTER
-    weights = weights[zone_name]
-
-    try:
-        density = flow.density.item
-    except AttributeError:
-        raise AttributeError('For temperature, zone %s is missing'
-                             ' density.' % zone_name)
-    try:
-        pressure = flow.pressure.item
-    except AttributeError:
-        pressure = None
-        try:  # Look for typical Q variabes.
-            if cylindrical:
-                mom_c1 = flow.momentum.z.item
-                mom_c2 = flow.momentum.r.item
-                mom_c3 = flow.momentum.t.item
-            else:
-                mom_c1 = flow.momentum.x.item
-                mom_c2 = flow.momentum.y.item
-                mom_c3 = flow.momentum.z.item
-            energy = flow.energy_stagnation_density.item
-        except AttributeError:
-            vnames = ('pressure', 'momentum', 'energy_stagnation_density')
             raise AttributeError('For temperature, zone %s is missing'
-                                 ' one or more of %s.' % (zone_name, vnames))
-    try:
-        gam = flow.gamma.item
-    except AttributeError:
-        gam = None  # Use passed-in scalar gamma.
-
-    if imin == imax:
-        imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value if cell_center else _iface_node_value
-    elif jmin == jmax:
-        jmax += 1
-        face_value = _jface_cell_value if cell_center else _jface_node_value
-    else:
-        kmax += 1
-        face_value = _kface_cell_value if cell_center else _kface_node_value
-
-    if reference_state is None:
-        pref = 1.
-        rhoref = 1.
-        momref = 1.
-        e0ref = 1.
-        rgas = 1.
-        gamma = 1.4
-    else:
+                                 ' density.' % zone_name)
         try:
-            pref = reference_state['pressure_reference']
-            rgas = reference_state['ideal_gas_constant']
-            tref = reference_state['temperature_reference']
-            if pressure is None and gam is None:
-                gamma = reference_state['specific_heat_ratio'].value
-        except KeyError:
-            vals = ('pressure_reference', 'ideal_gas_constant',
-                    'temperature_reference')
-            raise AttributeError('For temperature, reference_state is missing'
-                                 ' one or more of %s.' % (vals,))
-        if pressure is None:
-            if gam is None:
-                try:
-                    gamma = reference_state['specific_heat_ratio'].value
-                except KeyError:
-                    raise AttributeError('For temperature, reference_state is'
-                                         ' missing specific_heat_ratio')
-            raise NotImplementedError('Get dimensional temperature from'
-                                      ' Q variables')
-        rhoref = pref / rgas / tref
-        pref = pref.value
-        rgas = rgas.value
-        rhoref = rhoref.value
-#         e0ref = ?
-
-    total = 0.
-    weight_index = 0
-    for i in range(imin, imax):
-        ip1 = i + 1
-        for j in range(jmin, jmax):
-            jp1 = j + 1
-            for k in range(kmin, kmax):
-                kp1 = k + 1
-
-                rho = face_value(density, ip1, jp1, kp1) * rhoref
-                if pressure is not None:
-                    ps = face_value(pressure, ip1, jp1, kp1) * pref
-                else:
-                    vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
-                    vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
-                    vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
-                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
-                    if gam is not None:
-                        gamma = face_value(gam, ip1, jp1, kp1)
-                    ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
-                ts = ps / (rho * rgas)
-
-                weight = weights[weight_index]
-                weight_index += 1
-                total += ts * weight
-
-    if reference_state is None:
-        return total
-    else:
-        return PhysicalQuantity(total, tref.get_unit_name())
-
-register_surface_probe('temperature', _static_temperature, False)
-
-
-def _total_temperature(domain, surface, weights, reference_state):
-    """
-    Returns weighted total temperature for a mesh surface as a
-    :class:`PhysicalQuantity`.
-    """
-    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
-    flow = zone.flow_solution
-    cylindrical = zone.coordinate_system == CYLINDRICAL
-    cell_center = flow.grid_location == CELL_CENTER
-    weights = weights[zone_name]
-
-    try:
-        density = flow.density.item
-        if cylindrical:
-            mom_c1 = flow.momentum.z.item
-            mom_c2 = flow.momentum.r.item
-            mom_c3 = flow.momentum.t.item
-        else:
-            mom_c1 = flow.momentum.x.item
-            mom_c2 = flow.momentum.y.item
-            mom_c3 = flow.momentum.z.item
-    except AttributeError:
-        vnames = ('density', 'momentum')
-        raise AttributeError('For temperature_stagnation, zone %s is missing'
-                             ' one or more of %s.' % (zone_name, vnames))
-    try:
-        pressure = flow.pressure.item
-    except AttributeError:
-        pressure = None
-        try:
-            energy = flow.energy_stagnation_density.item
+            self.pressure = flow.pressure.item
         except AttributeError:
-            vnames = ('pressure', 'energy_stagnation_density')
-            raise AttributeError('For temperature_stagnation, zone %s is'
-                                 ' one or more of %s.' % (zone_name, vnames))
-    try:
-        gam = flow.gamma.item
-    except AttributeError:
-        gam = None  # Use passed-in scalar gamma.
-
-    if imin == imax:
-        imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value if cell_center else _iface_node_value
-    elif jmin == jmax:
-        jmax += 1
-        face_value = _jface_cell_value if cell_center else _jface_node_value
-    else:
-        kmax += 1
-        face_value = _kface_cell_value if cell_center else _kface_node_value
-
-    if reference_state is None:
-        pref = 1.
-        rgas = 1.
-        rhoref = 1.
-        momref = 1.
-        e0ref = 1.
-    else:
-        try:
-            pref = reference_state['pressure_reference']
-            rgas = reference_state['ideal_gas_constant']
-            tref = reference_state['temperature_reference']
-            if gam is None:
-                gamma = reference_state['specific_heat_ratio'].value
-        except KeyError:
-            vals = ('pressure_reference', 'ideal_gas_constant',
-                    'temperature_reference', 'specific_heat_ratio')
-            raise AttributeError('For temperature_stagnation, reference_state'
-                                 ' is missing one or more of %s.' % (vals,))
-        if pressure is None:
-            raise NotImplementedError('Get dimensional temperature_stagnation'
-                                      ' from Q variables')
-        rhoref = pref / rgas / tref
-        vref = (rgas * tref).sqrt()
-        momref = rhoref * vref
-        pref = pref.value
-        rgas = rgas.value
-        rhoref = rhoref.value
-        momref = momref.value
-#        e0ref = ?
-
-    total = 0.
-    weight_index = 0
-    for i in range(imin, imax):
-        ip1 = i + 1
-        for j in range(jmin, jmax):
-            jp1 = j + 1
-            for k in range(kmin, kmax):
-                kp1 = k + 1
-
-                rho = face_value(density, ip1, jp1, kp1) * rhoref
-                vu = face_value(mom_c1, ip1, jp1, kp1) * momref / rho
-                vv = face_value(mom_c2, ip1, jp1, kp1) * momref / rho
-                vw = face_value(mom_c3, ip1, jp1, kp1) * momref / rho
-                if gam is not None:
-                    gamma = face_value(gam, ip1, jp1, kp1)
-
-                u2 = vu*vu + vv*vv + vw*vw
-                if pressure is not None:
-                    ps = face_value(pressure, ip1, jp1, kp1) * pref
+            self.pressure = None
+            try:  # Look for typical Q variabes.
+                if cylindrical:
+                    self.mom_c1 = flow.momentum.z.item
+                    self.mom_c2 = flow.momentum.r.item
+                    self.mom_c3 = flow.momentum.t.item
                 else:
-                    e0 = face_value(energy, ip1, jp1, kp1) * e0ref / rho
-                    ps = (gamma-1.) * rho * (e0 - 0.5*u2)
-                a2 = (gamma * ps) / rho
-                mach2 = u2 / a2
-                ts = ps / (rho * rgas)
-                tt = ts * (1. + (gamma-1.)/2. * mach2)
+                    self.mom_c1 = flow.momentum.x.item
+                    self.mom_c2 = flow.momentum.y.item
+                    self.mom_c3 = flow.momentum.z.item
+                self.energy = flow.energy_stagnation_density.item
+            except AttributeError:
+                vnames = ('pressure', 'momentum', 'energy_stagnation_density')
+                raise AttributeError('For temperature, zone %s is missing'
+                                     ' one or more of %s.' % (zone_name, vnames))
+        try:
+            self.gam = flow.gamma.item
+        except AttributeError:
+            self.gam = None  # Use passed-in scalar gamma.
 
-                weight = weights[weight_index]
-                weight_index += 1
-                total += tt * weight
+        if reference_state is None:
+            self.pref = 1.
+            self.rhoref = 1.
+            self.momref = 1.
+            self.e0ref = 1.
+            self.rgas = 1.
+            self.gamma = 1.4
+            self.tref = None
+        else:
+            try:
+                pref = reference_state['pressure_reference']
+                rgas = reference_state['ideal_gas_constant']
+                tref = reference_state['temperature_reference']
+            except KeyError:
+                vals = ('pressure_reference', 'ideal_gas_constant',
+                        'temperature_reference')
+                raise AttributeError('For temperature, reference_state is missing'
+                                     ' one or more of %s.' % (vals,))
+            if self.pressure is None:
+                if self.gam is None:
+                    try:
+                        self.gamma = reference_state['specific_heat_ratio'].value
+                    except KeyError:
+                        raise AttributeError('For temperature, reference_state is'
+                                             ' missing specific_heat_ratio')
 
-    if reference_state is None:
-        return total
-    else:
-        return PhysicalQuantity(total, tref.get_unit_name())
+                raise NotImplementedError('Get dimensional temperature from'
+                                          ' Q variables')
+            rhoref = pref / rgas / tref
+            self.pref = pref.value
+            self.rgas = rgas.value
+            self.rhoref = rhoref.value
+#            self.e0ref = ?
+            self.tref = tref
 
-register_surface_probe('temperature_stagnation', _total_temperature, False)
+        self.total = 0.
+
+    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
+        """ Accumulate 3D (index space) metric. """
+        rho = get_value(self.density, i, j, k) * self.rhoref
+        if self.pressure is not None:
+            ps = get_value(self.pressure, i, j, k) * self.pref
+        else:
+            vu = get_value(self.mom_c1, i, j, k) * self.momref / rho
+            vv = get_value(self.mom_c2, i, j, k) * self.momref / rho
+            vw = get_value(self.mom_c3, i, j, k) * self.momref / rho
+            e0 = get_value(self.energy, i, j, k) * self.e0ref / rho
+            if self.gam is not None:
+                gamma = get_value(self.gam, i, j, k)
+            else:
+                gamma = self.gamma
+            ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
+        ts = ps / (rho * self.rgas)
+        self.total += ts * weight
+
+    @property
+    def result(self):
+        """ Return (possibly dimensional) accumulated total. """
+        if self.tref is None:
+            return self.total
+        else:
+            return PhysicalQuantity(self.total, self.tref.get_unit_name())
+
+register_mesh_probe('temperature', _StaticTemperature, False)
+
+
+class _TotalTemperature(object):
+    """ Computes weighted total temperature for a mesh region. """
+
+    def __init__(self, domain, region, reference_state):
+        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+        zone = getattr(domain, zone_name)
+        flow = zone.flow_solution
+        cylindrical = zone.coordinate_system == CYLINDRICAL
+
+        try:
+            self.density = flow.density.item
+            if cylindrical:
+                self.mom_c1 = flow.momentum.z.item
+                self.mom_c2 = flow.momentum.r.item
+                self.mom_c3 = flow.momentum.t.item
+            else:
+                self.mom_c1 = flow.momentum.x.item
+                self.mom_c2 = flow.momentum.y.item
+                self.mom_c3 = flow.momentum.z.item
+        except AttributeError:
+            vnames = ('density', 'momentum')
+            raise AttributeError('For temperature_stagnation, zone %s is missing'
+                                 ' one or more of %s.' % (zone_name, vnames))
+        try:
+            self.pressure = flow.pressure.item
+        except AttributeError:
+            self.pressure = None
+            try:
+                self.energy = flow.energy_stagnation_density.item
+            except AttributeError:
+                vnames = ('pressure', 'energy_stagnation_density')
+                raise AttributeError('For temperature_stagnation, zone %s is'
+                                     ' one or more of %s.' % (zone_name, vnames))
+        try:
+            self.gam = flow.gamma.item
+        except AttributeError:
+            self.gam = None  # Use passed-in scalar gamma.
+
+        if reference_state is None:
+            self.pref = 1.
+            self.rgas = 1.
+            self.rhoref = 1.
+            self.momref = 1.
+            self.e0ref = 1.
+        else:
+            try:
+                pref = reference_state['pressure_reference']
+                rgas = reference_state['ideal_gas_constant']
+                tref = reference_state['temperature_reference']
+                if self.gam is None:
+                    self.gamma = reference_state['specific_heat_ratio'].value
+            except KeyError:
+                vals = ('pressure_reference', 'ideal_gas_constant',
+                        'temperature_reference', 'specific_heat_ratio')
+                raise AttributeError('For temperature_stagnation, reference_state'
+                                     ' is missing one or more of %s.' % (vals,))
+            if self.pressure is None:
+                raise NotImplementedError('Get dimensional temperature_stagnation'
+                                          ' from Q variables')
+            rhoref = pref / rgas / tref
+            vref = (rgas * tref).sqrt()
+            momref = rhoref * vref
+            self.pref = pref.value
+            self.rgas = rgas.value
+            self.rhoref = rhoref.value
+            self.momref = momref.value
+#            self.e0ref = ?
+            self.tref = tref
+
+        self.total = 0.
+
+    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
+        """ Accumulate 3D (index space) metric. """
+        rho = get_value(self.density, i, j, k) * self.rhoref
+        vu = get_value(self.mom_c1, i, j, k) * self.momref / rho
+        vv = get_value(self.mom_c2, i, j, k) * self.momref / rho
+        vw = get_value(self.mom_c3, i, j, k) * self.momref / rho
+        if self.gam is not None:
+            gamma = get_value(self.gam, i, j, k)
+        else:
+            gamma = self.gamma
+
+        u2 = vu*vu + vv*vv + vw*vw
+        if self.pressure is not None:
+            ps = get_value(self.pressure, i, j, k) * self.pref
+        else:
+            e0 = get_value(self.energy, i, j, k) * self.e0ref / rho
+            ps = (gamma-1.) * rho * (e0 - 0.5*u2)
+        a2 = (gamma * ps) / rho
+        mach2 = u2 / a2
+        ts = ps / (rho * self.rgas)
+        tt = ts * (1. + (gamma-1.)/2. * mach2)
+        self.total += tt * weight
+
+    @property
+    def result(self):
+        """ Return (possibly dimensional) accumulated total. """
+        if self.tref is None is None:
+            return self.total
+        else:
+            return PhysicalQuantity(self.total, self.tref.get_unit_name())
+
+register_mesh_probe('temperature_stagnation', _TotalTemperature, False)
 
