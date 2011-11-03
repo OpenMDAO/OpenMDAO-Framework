@@ -619,31 +619,13 @@ if __name__ == "__main__":
 """
 
 
-def plugin_quickstart(argv=None):
-    """A command line script (plugin_quickstart) points to this.  It generates a
+def plugin_quickstart(options):
+    """A command line script (plugin quickstart) points to this.  It generates a
     directory structure for an openmdao plugin package along with Sphinx docs.
     
-    usage: plugin_quickstart <dist_name> [-v <version>] [-d <dest_dir>] [-g <plugin_group>] [-c class_name]
+    usage: plugin quickstart <dist_name> [-v <version>] [-d <dest_dir>] [-g <plugin_group>] [-c class_name]
     
     """
-    
-    if argv is None:
-        argv = sys.argv[1:]
-    
-    parser = ArgumentParser()
-    parser.usage = "plugin_quickstart <dist_name> [options]"
-    parser.add_argument('dist_name', help='name of distribution')
-    parser.add_argument("-v", "--version", action="store", type=str, dest='version', default='0.1',
-                        help="version id of the plugin (optional)")
-    parser.add_argument("-c", "--class", action="store", type=str, dest='classname',
-                        help="plugin class name (optional)")
-    parser.add_argument("-d", "--dest", action="store", type=str, dest='dest', default='.',
-                        help="directory where new plugin directory will be created (optional)")
-    parser.add_argument("-g", "--group", action="store", type=str, dest='group', 
-                        default = 'openmdao.component',
-                        help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable, openmdao.surrogatemodel) (optional)")
-    
-    options = parser.parse_args(argv)
 
     name = options.dist_name
     if options.classname:
@@ -773,25 +755,20 @@ def _get_entry_points(startdir):
     
     return entrypoints.getvalue()
 
-def plugin_makedist(argv=None):
-    """A command line script (plugin_makedist) points to this.  It creates a 
+def plugin_makedist(options):
+    """A command line script (plugin makedist) points to this.  It creates a 
     source distribution containing Sphinx documentation for the specified
     distribution directory.  If no directory is specified, the current directory
     is assumed.
     
-    usage: plugin_makedist [dist_dir_path]
+    usage: plugin makedist [dist_dir_path]
     
     """
     
-    if argv is None:
-        argv = sys.argv[1:]
+    if options.dist_dir_name is None:
+        options.dist_dir_name = os.getcwd()
         
-    if len(argv) == 0:
-        destdir = os.getcwd()
-    elif len(argv) == 1:
-        destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(argv[0])))
-    else:
-        raise RuntimeError("\nusage: plugin_makedist [dist_dir_name]\n")
+    destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_name)))
 
     _verify_dist_dir(destdir)
 
@@ -840,23 +817,15 @@ def plugin_makedist(argv=None):
     else:
         sys.stderr.write("\nERROR: failed to make distribution %s" % disttar)
 
-def plugin_docs(argv=None):
-    """A command line script (plugin_docs) points to this. It brings up
+def plugin_docs(options):
+    """A command line script (plugin docs) points to this. It brings up
     the Sphinx documentation for the named plugin in a browser.
     """
-    if argv is None:
-        argv = sys.argv[1:]
-        
-    if len(argv) != 1:
-        print 'usage: plugin_docs <plugin_dist_name> [browser_name]'
+    if options.plugin_dist_name is None:
+        parser.print_help()
         sys.exit(-1)
         
-    if len(argv) > 1:
-        browser = argv[1]
-    else:
-        browser = None
-        
-    _plugin_docs(argv[0], browser)
+    _plugin_docs(argv[0], options.browser)
         
         
 def _plugin_docs(plugin_name, browser=None):
@@ -887,112 +856,55 @@ def _plugin_docs(plugin_name, browser=None):
     wb.open(idx)
 
 
-def plugin_install(argv=None):
+def plugin_install(options):
     """A command line script (plugin_install) points to this. It installs
     the specified plugin distribution into the current environment.
     
     """
-    if argv is None:
-        argv = sys.argv[1:]
-        
-    parser = ArgumentParser()
-    parser.usage = "plugin_install [plugin_distribution] [options]"
-    parser.add_argument('dist_name', help='name of plugin distribution', 
-                        nargs='?')
-    parser.add_argument("-g", "--github", help='Find plugin in the official Openmdao-Plugins repository on github', 
-                        action='store_true')
-    parser.add_argument("-l", "--list", help='List all installed plugins (with -g, list all available plugins in OpenMDAO-Plugins)', 
-                        action='store_true')
-    parser.add_argument("-f", "--find-links", action="store", type=str, 
-                        dest='findlinks', help="URL of find-links server")
-    
-    options = parser.parse_args(argv)
-    
     # Interact with github
     if options.github:
+        # Get plugin from github.
+        pieces = options.dist_name.split('==')
+        name = pieces[0]
         
-        # List all available plugins in OpenMDAO-Plugins
-        if options.list:
+        # User has specified version using easy_install style ("plugin==version")
+        if len(pieces) > 1:
+            version = pieces[1]
             
-            url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
-            
-            print "\nAvailable plugins"
-            print "===================\n"
-            
-            resp = urllib2.urlopen(url)
+        # Get most recent version from our tag list
+        else:
+            url = 'https://api.github.com/repos/OpenMDAO-Plugins/%s/tags' % name
+    
+            try:
+                resp = urllib2.urlopen(url)
+            except urllib2.HTTPError:
+                print "\nERROR: plugin named not found in OpenMDAO-Plugins"
+                exit()
+                
             for line in resp.fp:
                 text = json.loads(line)
-                for item in sorted(text):
-                    print '%20s -- %s' % (item['name'], item['description'])
-                    #print item['name']
-                    #print '-------------------------'
-                    #print item['description']
-                print '\n'
-            
-        # Get plugin from github.
-        else:
-            
-            pieces = options.dist_name.split('==')
-            name = pieces[0]
-            
-            # User has specified version using easy_install style ("plugin==version")
-            if len(pieces) > 1:
-                version = pieces[1]
-                
-            # Get most recent version from our tag list
-            else:
-                url = 'https://api.github.com/repos/OpenMDAO-Plugins/%s/tags' % name
-        
-                try:
-                    resp = urllib2.urlopen(url)
-                except urllib2.HTTPError:
-                    print "\nERROR: plugin named not found in OpenMDAO-Plugins"
-                    exit()
-                    
-                for line in resp.fp:
-                    text = json.loads(line)
-    
-                    tags = []
-                    for item in text:
-                        tags.append(item['name'])
-                    
-                tags.sort(key=lambda s: map(int, s.split('.')))
-                version = tags[-1]
-                
-            url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
-            print url
-            cmdargs = ['easy_install']
-            cmdargs.extend([url])
-            
-            cmd = ' '.join(cmdargs)
-            retcode = call(cmdargs)
-            if retcode:
-                sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
-                sys.exit(-1)
-            
-            update_libpath()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
 
-    # List installed plugins
-    elif options.list:
-        all_types = get_available_types()
-        
-        plugins = set()
-        for type in all_types:
-            name = type[0].split('.')[0]
-            if name != 'openmdao':
-                plugins.add((name, type[1]))
+                tags = []
+                for item in text:
+                    tags.append(item['name'])
                 
-        print "\nInstalled plugins"
-        print "-------------------"
-        print "(Note: surrogate generators currently don't show up in this list.)"
-        print "\n"
-        for plugin in sorted(plugins):
-            print plugin[0], plugin[1]
+            tags.sort(key=lambda s: map(int, s.split('.')))
+            version = tags[-1]
             
-        print "\n"
- 
-    # Install plugin from local file or directory
-    else:
+        url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
+        print url
+        cmdargs = ['easy_install']
+        cmdargs.extend([url])
+        
+        cmd = ' '.join(cmdargs)
+        retcode = call(cmdargs)
+        if retcode:
+            sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
+            sys.exit(-1)
+        
+        update_libpath()  # make sure LD_LIBRARY_PATH is updated if necessary in activate script
+    
+    else: # Install plugin from local file or directory
     
         develop = False
         if not options.dist_name:
@@ -1022,6 +934,14 @@ def update_libpath():
     """Find all of the shared libraries in the current virtual environment and modify
     the activate script to put their directories in LD_LIBRARY_PATH
     """
+    parser = ArgumentParser(description="add any shared library paths found in the current environment to LD_LIBRARY_PATH")
+    parser.usage = "update_libpath [options]"
+    options = parser.parse_args(argv)
+    
+    if sys.platform.startswith('win'):
+        print "update_libpath doesn't work on Windows"
+        sys.exit(-1)
+
     ldict = {
         'linux2': 'LD_LIBRARY_PATH',
         'linux': 'LD_LIBRARY_PATH',
@@ -1108,24 +1028,18 @@ def _plugin_build_docs(destdir, cfg):
             sys.path.remove(srcdir)
     
     
-def plugin_build_docs(argv=None):
-    """A command line script (plugin_build_docs) points to this.  It builds the
+def plugin_build_docs(options):
+    """A command line script (plugin build_docs) points to this.  It builds the
     Sphinx documentation for the specified distribution directory.  
     If no directory is specified, the current directory is assumed.
     
-    usage: plugin_build_docs [dist_dir_path]
+    usage: plugin build_docs [dist_dir_path]
     
     """
-    
-    if argv is None:
-        argv = sys.argv[1:]
-        
-    if len(argv) == 0:
-        destdir = os.getcwd()
-    elif len(argv) == 1:
-        destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(argv[0])))
-    else:
-        raise RuntimeError("\nusage: plugin_build_docs [dist_dir_name]\n")
+    if options.dist_dir_path is None:
+        options.dist_dir_path = os.getcwd()
+
+    destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_path)))
 
     _verify_dist_dir(destdir)
     cfgfile = os.path.join(destdir, 'setup.cfg')
@@ -1149,7 +1063,114 @@ def plugin_build_docs(argv=None):
     build_directory(dirstruct, force=True, topdir=destdir)
     _plugin_build_docs(destdir, cfg)
 
-
-if __name__ == '__main__':
-    fix_activate()
     
+def list_plugins(options):
+    if options.github:
+        _list_github_plugins()
+        return
+    
+    all_types = get_available_types()
+    
+    plugins = set()
+    for type in all_types:
+        name = type[0].split('.')[0]
+        if options.all or name != 'openmdao':
+            plugins.add((type[0], type[1]))
+            
+    print "\nInstalled plugins"
+    print "-------------------"
+    print "(Note: surrogate generators currently don't show up in this list.)"
+    print "\n"
+    for plugin in sorted(plugins):
+        print plugin[0], plugin[1]
+        
+    print "\n"
+
+def _list_github_plugins():
+    url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
+    
+    print "\nAvailable plugins"
+    print "===================\n"
+    
+    resp = urllib2.urlopen(url)
+    for line in resp.fp:
+        text = json.loads(line)
+        for item in sorted(text):
+            print '%20s -- %s' % (item['name'], item['description'])
+        print '\n'
+        
+
+def plugin():
+    top_parser = ArgumentParser()
+    subparsers = top_parser.add_subparsers(title='subcommands',
+                                           #description='valid subcommands',
+                                           #help='additional help'
+                                           )
+    
+    parser = subparsers.add_parser('list', description = "List installed plugins")
+    parser.usage = "plugin list [options]"
+    parser.add_argument("-g", "--github", 
+                        help='List plugins in the official Openmdao-Plugins repository on github', 
+                        action='store_true')
+    parser.add_argument("-a", "--all", 
+                        help='List all installed plugins, including builtins', 
+                        action='store_true')
+    parser.set_defaults(func=list_plugins)
+    
+    
+    parser = subparsers.add_parser('install', 
+                                   description="install an OpenMDAO plugin into the current environment")
+    parser.usage = "plugin install [plugin_distribution] [options]"
+    parser.add_argument('dist_name', help='name of plugin distribution', 
+                        nargs='?')
+    parser.add_argument("-g", "--github", 
+                        help='Find plugin in the official Openmdao-Plugins repository on github', 
+                        action='store_true')
+    parser.add_argument("-f", "--find-links", action="store", type=str, 
+                        dest='findlinks', help="URL of find-links server")
+    parser.set_defaults(func=plugin_install)
+    
+    
+    parser = subparsers.add_parser('build_docs', 
+                                   description="build sphinx doc files for a plugin")
+    parser.usage = "plugin build_docs <dist_dir_path>"
+    parser.add_argument('dist_dir_path', help='path to distribution source directory')
+    parser.set_defaults(func=plugin_build_docs)
+
+    
+    parser = subparsers.add_parser('docs', 
+                                   description="display docs for a plugin")
+    parser.usage = "plugin docs <plugin_dist_name>"
+    parser.add_argument('plugin_dist_name', help='name of plugin distribution')
+    parser.add_argument("-b", "--browser", action="store", type=str, 
+                        dest='browser', 
+                        help="optional browser name (according to the webbrowser library)")
+    parser.set_defaults(func=plugin_docs)
+    
+    
+    parser = subparsers.add_parser('quickstart',
+                                   description="generate some skeleton files for a plugin")
+    parser.usage = "plugin quickstart <dist_name> [options]"
+    parser.add_argument('dist_name', help='name of distribution')
+    parser.add_argument("-v", "--version", action="store", type=str, dest='version', default='0.1',
+                        help="version id of the plugin (optional)")
+    parser.add_argument("-c", "--class", action="store", type=str, dest='classname',
+                        help="plugin class name (optional)")
+    parser.add_argument("-d", "--dest", action="store", type=str, dest='dest', default='.',
+                        help="directory where new plugin directory will be created (optional)")
+    parser.add_argument("-g", "--group", action="store", type=str, dest='group', 
+                        default = 'openmdao.component',
+                        help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable, openmdao.surrogatemodel) (optional)")
+    parser.set_defaults(func=plugin_quickstart)
+    
+    
+    parser = subparsers.add_parser('makedist',
+                                   description="create a source distribution for a plugin")
+    parser.usage = "plugin makedist [dist_dir_name]"
+    parser.add_argument('dist_dir_name', help='directory where plugin distribution is found')
+    parser.set_defaults(func=plugin_makedist)
+    
+    options = top_parser.parse_args()
+    options.func(options)
+    
+
