@@ -10,7 +10,7 @@ import unittest
 from pkg_resources import DistributionNotFound, VersionConflict
 from pkg_resources import Requirement, Environment, working_set
 
-from openmdao.main.pkg_res_factory import import_version, PkgResourcesFactory
+from openmdao.main.pkg_res_factory import PkgResourcesFactory
 from openmdao.main.api import Component, get_available_types
 
 
@@ -18,14 +18,14 @@ from openmdao.main.api import Component, get_available_types
 class PkgResFactoryTestCase(unittest.TestCase):
     """tester for pkg_res_factory"""
 
-    def test_import_not_found(self):
-        """try importing a distrib that doesn't exist"""
-        try:
-            import_version('bogus', Requirement.parse('bogus==1.0'),
-                                     Environment(['plugins']))
-        except DistributionNotFound, err:
-            self.assertEqual(str(err),
-                            'could not find distribution satisfying bogus==1.0')
+    #def test_import_not_found(self):
+        #"""try importing a distrib that doesn't exist"""
+        #try:
+            #import_version('bogus', Requirement.parse('bogus==1.0'),
+                                     #Environment(['plugins']))
+        #except DistributionNotFound, err:
+            #self.assertEqual(str(err),
+                            #'could not find distribution satisfying bogus==1.0')
                 
     def test_load(self):
         # make sure we're looking in the right spot for the plugins whether

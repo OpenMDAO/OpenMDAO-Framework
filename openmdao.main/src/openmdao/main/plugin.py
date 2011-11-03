@@ -15,7 +15,7 @@ from ordereddict import OrderedDict
 
 from setuptools import find_packages
 
-from openmdao.main.factorymanager import get_available_types
+from openmdao.main.factorymanager import get_available_types, _plugin_groups
 from openmdao.util.fileutil import build_directory, find_files
 from openmdao.util.dep import PythonSourceTreeAnalyser
 
@@ -703,7 +703,11 @@ def _verify_dist_dir(dpath):
             raise IOError("directory '%s' does not contain '%s'" %
                           (dpath, f))
 
-        
+
+def _exclude_funct(path):
+    parts = path.split(os.sep)
+    return 'test' in parts or 'docs' in parts
+
 #
 # FIXME: this still needs some work, but for testing purposes it's ok for now
 #
@@ -712,21 +716,33 @@ def _find_all_plugins(searchdir):
     plugin group name, e.g., openmdao.component, openmdao.variable, etc.
     """
     dct = {}
-    psta = PythonSourceTreeAnalyser(searchdir,
-                                    exclude=os.path.join('*', 'test', '*.py'))
+    modnames = ['openmdao.main', 
+                'openmdao.lib.datatypes', 
+                'openmdao.lib.components',
+                'openmdao.lib.drivers',
+                'openmdao.lib.surrogatemodels',
+                'openmdao.lib.doegenerators',
+                'openmdao.lib.differentiators',
+                'openmdao.lib.optproblems',
+                'openmdao.lib.casehandlers',
+                'openmdao.lib.architectures']
     
-    comps = psta.find_inheritors('openmdao.main.component.Component')
-    comps.extend(psta.find_inheritors('openmdao.main.api.Component'))
-    comps.extend(psta.find_inheritors('openmdao.main.component_with_derivatives.ComponentWithDerivatives'))
-    comps.extend(psta.find_inheritors('openmdao.main.api.ComponentWithDerivatives'))
-    comps.extend(psta.find_inheritors('openmdao.lib.components.external_code.ExternalCode'))
-    comps.extend(psta.find_inheritors('openmdao.lib.components.api.ExternalCode'))
+    modules = []
+    for mod in modnames:
+        try:
+            __import__(mod)
+        except ImportError:
+            print 'skipping import of %s' % mod
+        else:
+            modules.append(sys.modules[mod])
+            
+    dirs = [os.path.dirname(m.__file__) for m in modules]+[searchdir]
+    psta = PythonSourceTreeAnalyser(dirs, exclude=_exclude_funct)
+    
+    comps = psta.find_inheritors('IComponent')
     comps = set(comps)
     
-    drivers = psta.find_inheritors('openmdao.main.driver.Driver')
-    drivers.extend(psta.find_inheritors('openmdao.main.api.Driver'))
-    drivers.extend(psta.find_inheritors('openmdao.main.driver_uses_derivatives.DriverUsesDerivatives'))
-    drivers.extend(psta.find_inheritors('openmdao.main.api.DriverUsesDerivatives'))
+    drivers = psta.find_inheritors('IDriver')
     drivers = set(drivers)
     
     comps = comps - drivers
@@ -734,8 +750,7 @@ def _find_all_plugins(searchdir):
     dct['openmdao.component'] = comps
     dct['openmdao.driver'] = drivers
     
-    variables = psta.find_inheritors('openmdao.main.api.Variable')
-    variables.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
+    variables = psta.find_inheritors('IVariable')
     dct['openmdao.variable'] = set(variables)
 
     return dct
@@ -746,6 +761,8 @@ def _get_entry_points(startdir):
     for key,val in plugins.items():
         epts = []
         for v in val:
+            if v.startswith('openmdao.'):
+                continue
             mod,cname = v.rsplit('.', 1)
             epts.append('%s.%s=%s:%s' % (mod,cname,mod,cname))
         if epts:
@@ -781,6 +798,7 @@ def plugin_makedist(options):
         cfg = SafeConfigParser(dict_type=OrderedDict)
         cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
             
+        print "collecting entry point information..."
         cfg.set('metadata', 'entry_points', _get_entry_points('src'))
         
         template_options = _get_template_options(options.dist_dir_path, cfg,

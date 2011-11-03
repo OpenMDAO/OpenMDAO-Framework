@@ -31,6 +31,10 @@ class DepTestCase(unittest.TestCase):
                         psta.graph['openmdao.main.variable.Variable'])
         
         comps = psta.find_inheritors('openmdao.main.component.Component')
+        icomps = psta.find_inheritors('IComponent')
+        
+        self.assertTrue('openmdao.main.assembly.Assembly' in icomps)
+        
         comps.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
         comps.extend(psta.find_inheritors('enthought.traits.api.Array'))
         comps = [x.rsplit('.',1)[1] for x in comps if '.examples.' not in x and '.optproblems.' not in x]
@@ -47,13 +51,7 @@ class DepTestCase(unittest.TestCase):
         cset = cset - excludes
         
         from openmdao.main.api import get_available_types
-        from openmdao.main.factorymanager import _container_groups
-        groups = [ 'openmdao.component',
-                   'openmdao.driver',
-                   'openmdao.variable',
-                   'openmdao.surrogatemodel',
-                   'openmdao.differentiator']
-        types = set([x[0] for x in get_available_types(groups)])
+        types = set([x[0] for x in get_available_types()])
         types = [x.rsplit('.',1)[1] for x in types if x.startswith('openmdao.')]
         
         tset = set(types)
