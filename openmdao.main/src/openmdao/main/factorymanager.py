@@ -52,6 +52,14 @@ def get_available_types(groups=None):
     """
     if groups is None:
         groups = _plugin_groups
+    else:
+        badgroups = []
+        for group in groups:
+            if group not in _plugin_groups:
+                badgroups.append(group)
+        if badgroups:
+            raise RuntimeError("Didn't recognize the following entry point groups: %s. Allowed groups are: %s" %
+                               (badgroups, _plugin_groups))
     types = []
     for fct in _factories:
         types.extend(fct.get_available_types(groups))

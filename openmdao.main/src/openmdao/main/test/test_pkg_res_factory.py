@@ -18,15 +18,6 @@ from openmdao.main.api import Component, get_available_types
 class PkgResFactoryTestCase(unittest.TestCase):
     """tester for pkg_res_factory"""
 
-    #def test_import_not_found(self):
-        #"""try importing a distrib that doesn't exist"""
-        #try:
-            #import_version('bogus', Requirement.parse('bogus==1.0'),
-                                     #Environment(['plugins']))
-        #except DistributionNotFound, err:
-            #self.assertEqual(str(err),
-                            #'could not find distribution satisfying bogus==1.0')
-                
     def test_load(self):
         # make sure we're looking in the right spot for the plugins whether
         # we're in a develop egg or in the released version

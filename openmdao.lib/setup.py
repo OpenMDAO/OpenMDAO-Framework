@@ -92,6 +92,30 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
       
+      [openmdao.caserecorder]
+      openmdao.lib.casehandlers.dumpcaserecorder.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcaserecorder:DumpCaseRecorder
+      openmdao.lib.casehandlers.listcaserecorder.ListCaseRecorder = openmdao.lib.casehandlers.listcaserecorder:ListCaseRecorder
+      openmdao.lib.casehandlers.db.DBCaseRecorder = openmdao.lib.casehandlers.db:DBCaseRecorder
+      openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
+      openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
+
+      [openmdao.caseiterator]
+      openmdao.lib.casehandlers.listcaseiter.ListCaseIterator = openmdao.lib.casehandlers.listcaseiter:ListCaseIterator
+      openmdao.lib.casehandlers.db.DBCaseIterator = openmdao.lib.casehandlers.db:DBCaseIterator
+      openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
+      openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
+      
+      [openmdao.doegenerator]
+      openmdao.lib.doegenerators.full_factorial.FullFactorial = openmdao.lib.doegenerators.full_factorial:FullFactorial
+      openmdao.lib.doegenerators.central_composite.CentralComposite = openmdao.lib.doegenerators.central_composite:CentralComposite
+      openmdao.lib.doegenerators.optlh.OptLatinHypercube = openmdao.lib.doegenerators.optlh:OptLatinHypercube
+      openmdao.lib.doegenerators.uniform.Uniform = openmdao.lib.doegenerators.uniform:Uniform
+
+      [openmdao.architecture]
+      openmdao.lib.architectures.bliss.BLISS = openmdao.lib.architectures.bliss:BLISS
+      openmdao.lib.architectures.co.CO = openmdao.lib.architectures.co:CO
+      openmdao.lib.architectures.ego.EGO = openmdao.lib.architectures.ego:EGO
+      openmdao.lib.architectures.mdf.MDF = openmdao.lib.architectures.mdf:MDF
       """,
       )
 

@@ -14,7 +14,8 @@ Factory = openmdao.main.factory.Factory
 
 
 
-# this list should contain all openmdao entry point groups
+# This is a list of all of the entry point groups that OpenMDAO uses to
+# identify plugins.
 _plugin_groups = [ 'openmdao.container',
                    'openmdao.component',
                    'openmdao.driver',
@@ -38,7 +39,7 @@ class PkgResourcesFactory(Factory):
     
     def __init__(self, groups, search_path=None):
         super(PkgResourcesFactory, self).__init__()
-        self._new_types = True
+        self._have_new_types = True
         self._groups = copy.copy(groups)
         self.env = Environment(search_path)
             
@@ -53,8 +54,10 @@ class PkgResourcesFactory(Factory):
         classes = self._get_type_dict()
             
         try:
-            dist, group = classes[typ]
-            klass = dist.load_entry_point(group, typ)
+            lst = classes[typ]
+            dist = lst[0]
+            groups = lst[1]
+            klass = dist.load_entry_point(groups[0], typ)
             
             if version is not None and dist.version != version:
                 return None
@@ -64,15 +67,14 @@ class PkgResourcesFactory(Factory):
             # try to look in the whole environment
             for group in self._groups:
                 for proj in self.env:
-                    dists = self.env[proj]
-                    for dist in dists:
+                    for dist in self.env[proj]:
                         if version is not None and version != dist.version:
                             continue
                         ep = dist.get_entry_info(group, typ)
                         if ep is not None:
                             dist.activate()
                             klass = ep.load(require=True, env=self.env)
-                            self._new_types = True
+                            self._have_new_types = True
                             return klass(**ctor_args)
                         if version is None:
                             # newest version didn't have entry point, so skip to next project
@@ -80,13 +82,14 @@ class PkgResourcesFactory(Factory):
         return None
             
     def _get_type_dict(self):
-        if self._new_types:
+        if self._have_new_types:
             dct = {}
             for group in _plugin_groups:
                 for dist in working_set:
                     d = dist.get_entry_map(group)
                     for name in d:
-                        dct[name] = (dist, group)
+                        lst = dct.setdefault(name, [dist, []])
+                        lst[1].append(group)
             self._entry_pt_classes = dct
         return self._entry_pt_classes
             
@@ -101,9 +104,23 @@ class PkgResourcesFactory(Factory):
             groups = _plugin_groups
         groups = set(groups)
         
-        for name, tup in self._entry_pt_classes.items():
-            dist, group = tup
-            if group in groups:
-                ret.append((name, dist.version))
+        typ_dict = self._get_type_dict()
+        distset = set()
+        for name, lst in typ_dict.items():
+            dist = lst[0]
+            distset.add(dist.project_name)
+            for group in lst[1]:
+                if group in groups:
+                    ret.append((name, dist.version))
+                
+        # now look in the whole environment
+        for group in groups:
+            for proj in self.env:
+                for dist in self.env[proj]:
+                    if dist.project_name in distset:
+                        break
+                    for name in dist.get_entry_map(group):
+                        ret.append((name, dist.version))
+                            
         return ret
 

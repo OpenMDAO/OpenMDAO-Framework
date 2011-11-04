@@ -18,7 +18,7 @@ class PluginsTestCase(unittest.TestCase):
 
     def test_quickstart(self):
         argv = ['quickstart', 'foobar', '-v', '1.1', '-d', self.tdir]
-        options = _get_plugin_parser().parse_args()
+        options = _get_plugin_parser().parse_args(argv)
         plugin_quickstart(options)
         fandd = find_files(self.tdir, nodirs=False)
         self.assertEqual(set([os.path.basename(f) for f in fandd]), 
