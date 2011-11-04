@@ -18,9 +18,9 @@ from openmdao.main.api import Assembly,Component,SequentialWorkflow
 from openmdao.lib.datatypes.api import Float, Array, Slot
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
-                                     SensitivityDriver, FixedPointIterator
+                                     SensitivityDriver, FixedPointIterator, IterateUntil
 from openmdao.lib.drivers.api import DOEdriver                                     
-from openmdao.lib.doegenerators.api import FullFactorial, Uniform
+from openmdao.lib.doegenerators.api import FullFactorial, Uniform, CentralComposite
 from openmdao.lib.components.api import MetaModel
 from openmdao.lib.casehandlers.api import DBCaseRecorder
 from openmdao.lib.surrogatemodels.api import LogisticRegression, KrigingSurrogate
@@ -51,7 +51,8 @@ class Debug(Component):
         
     def __init__(self):
         super(Debug,self).__init__()
-
+        self.force_execute = True
+        
     def execute(self):
         print "x1,z1,z2: ", [self.parent.dis1.x1,self.parent.dis1.z1,self.parent.dis1.z2]
         
@@ -95,8 +96,8 @@ class SellarBLISS2000(Assembly):
         #training metalmodel for disc1
         
         self.add("DOE_Trainer1",DOEdriver())
-        self.DOE_Trainer1.DOEgenerator = FullFactorial()
-        self.DOE_Trainer1.DOEgenerator.num_levels = 3
+        self.DOE_Trainer1.DOEgenerator = CentralComposite()
+        self.DOE_Trainer1.alpha = .2
         self.DOE_Trainer1.add_parameter("dis1_meta_model.z1",low=-10,high=10,start=5.0)        
         self.DOE_Trainer1.add_parameter("dis1_meta_model.z2",low=0,high=10,start=2.0)   
         self.DOE_Trainer1.add_parameter("dis1_meta_model.y2",low=0,high=20)   
@@ -116,8 +117,8 @@ class SellarBLISS2000(Assembly):
         #training metalmodel for disc1
         
         self.add("DOE_Trainer2",DOEdriver())
-        self.DOE_Trainer2.DOEgenerator = FullFactorial()
-        self.DOE_Trainer2.DOEgenerator.num_levels = 5
+        self.DOE_Trainer2.DOEgenerator = CentralComposite()
+        self.DOE_Trainer1.alpha = .2
         self.DOE_Trainer2.add_parameter("dis2_meta_model.z1",low=-10,high=10,start=5.0)        
         self.DOE_Trainer2.add_parameter("dis2_meta_model.z2",low=0,high=10,start=2.0)   
         self.DOE_Trainer2.add_parameter("dis2_meta_model.y1",low=0,high=20)   
@@ -155,7 +156,7 @@ class SellarBLISS2000(Assembly):
         
         self.sysopt.add_constraint('3.16 < m1.mu')
         self.sysopt.add_constraint('m2.mu < 24.0')
-        self.sysopt.iprint=1
+        #self.sysopt.iprint=1
         
         
         #optimization of discipline 1
@@ -163,16 +164,19 @@ class SellarBLISS2000(Assembly):
         self.add('disc1opt', CONMINdriver())
         self.disc1opt.add_objective('dis1.y1')
         
-        self.disc1opt.add_parameter('dis1.x1', low=0, high=10.0)            
+        self.disc1opt.add_parameter('dis1.x1', low=0, high=10.0) 
+        self.disc1opt.add_event('dis1_meta_model.reset_training_data')
+        #self.disc1opt.iprint = 1
         
         
         #build workflow for system driver
          # Top level is Fixed-Point Iteration
-        #self.add('driver', FixedPointIterator())
+        self.add('driver', IterateUntil())
+        self.driver.max_iterations = 3
         self.add("debug",Debug())
         self.driver.workflow=SequentialWorkflow()
         
-        self.driver.workflow.add(['debug','DOE_Trainer1']),#'debug','DOE_Trainer2','debug','sysopt','debug','disc1opt','debug'])  
+        self.driver.workflow.add(['DOE_Trainer1','DOE_Trainer2','sysopt','disc1opt','debug'])  
         #self.driver.add_parameter('x1_store', low=0, high=10.0)
         #self.driver.add_constraint('dis1.x1 = x1_store')
         
