@@ -882,6 +882,8 @@ def plugin_install(options):
     # Interact with github
     if options.github:
         # Get plugin from github.
+        
+        #FIXME: this should support all valid version syntax (>=, <=, etc.)
         pieces = options.dist_name.split('==')
         name = pieces[0]
         
@@ -911,8 +913,7 @@ def plugin_install(options):
             
         url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
         print url
-        cmdargs = ['easy_install']
-        cmdargs.extend([url])
+        cmdargs = ['easy_install', url]
         
         cmd = ' '.join(cmdargs)
         retcode = call(cmdargs)
