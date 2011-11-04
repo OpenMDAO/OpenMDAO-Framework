@@ -51,7 +51,5 @@ class DOEdriver(CaseIterDriverBase):
             # now add events
             for varname in self.get_events(): 
                 case.add_input(varname,True)
-            case.add_outputs(self.case_outputs)  
-            print "TEST"            
-            
+            case.add_outputs(self.case_outputs)              
             yield case

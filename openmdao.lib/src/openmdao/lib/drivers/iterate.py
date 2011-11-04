@@ -79,7 +79,8 @@ class FixedPointIterator(Driver):
 
         unconverged = True
         while unconverged:
-            self.iteration += 1
+            self.iteration += 1    
+
 
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
