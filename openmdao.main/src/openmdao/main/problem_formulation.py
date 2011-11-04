@@ -283,6 +283,7 @@ class ArchitectureAssembly(Assembly):
                     result[comp].append(const)
                 except: 
                     result[comp] = [const,]
+
         return result 
 
     
@@ -336,3 +337,4 @@ class OptProblem(ArchitectureAssembly):
                 pass
             
         return error    
+
