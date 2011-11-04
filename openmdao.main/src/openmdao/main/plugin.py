@@ -18,6 +18,7 @@ from setuptools import find_packages
 from openmdao.main.factorymanager import get_available_types, _plugin_groups
 from openmdao.util.fileutil import build_directory, find_files
 from openmdao.util.dep import PythonSourceTreeAnalyser
+from openmdao.main.pkg_res_factory import _plugin_groups
 
 #from sphinx.setup_command import BuildDoc
 import sphinx
@@ -635,6 +636,8 @@ def plugin_quickstart(options):
     version = options.version
     
     options.dest = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dest)))
+    if not options.group.startswith('openmdao.'):
+        options.group = 'openmdao.'+options.group
 
     startdir = os.getcwd()
     try:
@@ -782,9 +785,6 @@ def plugin_makedist(options):
     
     """
     
-    if options.dist_dir_path is None:
-        options.dist_dir_path = os.getcwd()
-        
     options.dist_dir_path = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_path)))
 
     _verify_dist_dir(options.dist_dir_path)
@@ -843,7 +843,7 @@ def plugin_docs(options):
         parser.print_help()
         sys.exit(-1)
         
-    _plugin_docs(argv[0], options.browser)
+    _plugin_docs(options.plugin_dist_name, options.browser)
         
         
 def _plugin_docs(plugin_name, browser=None):
@@ -1084,7 +1084,14 @@ def plugin_list(options):
         _list_github_plugins()
         return
     
-    all_types = get_available_types()
+    groups = []
+    for g in options.groups:
+        if not g.startswith('openmdao.'):
+            g = 'openmdao.'+g
+        groups.append(g)
+    if not groups:
+        groups = None
+    all_types = get_available_types(groups)
     
     show_all = (options.external == options.builtin)
     
@@ -1102,9 +1109,7 @@ def plugin_list(options):
                     plugins.add((type[0], type[1]))
             
     print "\nInstalled plugins"
-    print "-------------------"
-    print "(Note: surrogate generators currently don't show up in this list.)"
-    print "\n"
+    print "-------------------\n"
     for plugin in sorted(plugins):
         print plugin[0], plugin[1]
         
@@ -1125,6 +1130,8 @@ def _list_github_plugins():
         
 
 def _get_plugin_parser():
+    """Sets up the plugin arg parser and all of its subcommand parsers."""
+    
     top_parser = ArgumentParser()
     subparsers = top_parser.add_subparsers(title='subcommands',
                                            #description='valid subcommands',
@@ -1133,7 +1140,7 @@ def _get_plugin_parser():
     
     parser = subparsers.add_parser('list', description = "List installed plugins")
     parser.usage = "plugin list [options]"
-    parser.add_argument("-g", "--github", 
+    parser.add_argument("--github", 
                         help='List plugins in the official Openmdao-Plugins repository on github', 
                         action='store_true')
     parser.add_argument("-b", "--builtin", 
@@ -1142,15 +1149,19 @@ def _get_plugin_parser():
     parser.add_argument("-e", "--external", 
                         help='List all installed plugins that are not part of the OpenMDAO distribution', 
                         action='store_true')
+    parser.add_argument("-g", "--group", action="append", type=str, dest='groups',
+                        default=[], 
+                        choices=[p.split('.',1)[1] for p in _plugin_groups],
+                        help="specify plugin group")
     parser.set_defaults(func=plugin_list)
     
     
     parser = subparsers.add_parser('install', 
                                    description="install an OpenMDAO plugin into the current environment")
     parser.usage = "plugin install [plugin_distribution] [options]"
-    parser.add_argument('dist_name', help='name of plugin distribution', 
+    parser.add_argument('dist_name', help='name of plugin distribution (defaults to distrib found in current dir)', 
                         nargs='?')
-    parser.add_argument("-g", "--github", 
+    parser.add_argument("--github", 
                         help='Find plugin in the official Openmdao-Plugins repository on github', 
                         action='store_true')
     parser.add_argument("-f", "--find-links", action="store", type=str, 
@@ -1170,8 +1181,8 @@ def _get_plugin_parser():
     parser.usage = "plugin docs <plugin_dist_name>"
     parser.add_argument('plugin_dist_name', help='name of plugin distribution')
     parser.add_argument("-b", "--browser", action="store", type=str, 
-                        dest='browser', 
-                        help="optional browser name (according to the webbrowser library)")
+                        dest='browser', choices=webbrowser._browsers.keys(),
+                        help="browser name")
     parser.set_defaults(func=plugin_docs)
     
     
@@ -1179,15 +1190,17 @@ def _get_plugin_parser():
                                    description="generate some skeleton files for a plugin")
     parser.usage = "plugin quickstart <dist_name> [options]"
     parser.add_argument('dist_name', help='name of distribution')
-    parser.add_argument("-v", "--version", action="store", type=str, dest='version', default='0.1',
-                        help="version id of the plugin (optional)")
+    parser.add_argument("-v", "--version", action="store", type=str, dest='version', 
+                        default='0.1',
+                        help="version id of the plugin (defaults to 0.1)")
     parser.add_argument("-c", "--class", action="store", type=str, dest='classname',
-                        help="plugin class name (optional)")
-    parser.add_argument("-d", "--dest", action="store", type=str, dest='dest', default='.',
-                        help="directory where new plugin directory will be created (optional)")
+                        help="plugin class name")
+    parser.add_argument("-d", "--dest", action="store", type=str, dest='dest', 
+                        default='.',
+                        help="directory where new plugin directory will be created (defaults to current dir)")
     parser.add_argument("-g", "--group", action="store", type=str, dest='group', 
                         default = 'openmdao.component',
-                        help="specify plugin group (openmdao.component, openmdao.driver, openmdao.variable, openmdao.surrogatemodel) (optional)")
+                        help="specify plugin group %s (defaults to 'openmdao.component')" % _plugin_groups)
     parser.set_defaults(func=plugin_quickstart)
     
     
@@ -1195,7 +1208,8 @@ def _get_plugin_parser():
                                    description="create a source distribution for a plugin")
     parser.usage = "plugin makedist [dist_dir_path]"
     parser.add_argument('dist_dir_path', nargs='?',
-                        help='directory where plugin distribution is found')
+                        default='.',
+                        help='directory where plugin distribution is found (defaults to current dir')
     parser.set_defaults(func=plugin_makedist)
     
     return top_parser

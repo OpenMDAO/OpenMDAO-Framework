@@ -106,18 +106,13 @@ This returns a response that looks something like this:
          vsp_wrapper -- Component wrapper for VSP (Vehicle Sketch Pad)
 
 Note that https must be available in order to communicate with the GitHub repository. If you
-don't have a network connection, then these features will be unavailable. There is also a ``-g``
-shortcut for the argument ``--github``:
-
-::
-
-    plugin list -g
+don't have a network connection, then these features will be unavailable. 
 
 To install one of the plugins listed above, simply type:
 
 ::
 
-    plugin install -g pyopt_driver
+    plugin install --github pyopt_driver
     
 You will see some text that looks something like this.
 
@@ -148,7 +143,7 @@ one:
 
 ::
 
-  plugin install -g pyopt_driver==0.3
+  plugin install --github pyopt_driver==0.3
     
 This will give you ``pyopt_driver`` 0.3, not 0.4.
 
@@ -159,16 +154,16 @@ Here is a quick reference for these commands:
 **Quick Command Reference for ``plugin list and plugin install``**
 
 
-==================================   =================================
+==================================   ====================================
 Action                                Command
-==================================   =================================
+==================================   ====================================
 List all installed plugins           ``plugin list``
-----------------------------------   ---------------------------------
-List plugins available on GitHub     ``plugin list -g``
-----------------------------------   ---------------------------------
-Install plugin foo from GitHub       ``plugin install -g foo``
-----------------------------------   ---------------------------------
-Install version 0.3 of plugin foo    ``plugin install -g foo==0.3``
-==================================   =================================
+----------------------------------   ------------------------------------
+List plugins available on GitHub     ``plugin list --github``
+----------------------------------   ------------------------------------
+Install plugin foo from GitHub       ``plugin install --github foo``
+----------------------------------   ------------------------------------
+Install version 0.3 of plugin foo    ``plugin install --github foo==0.3``
+==================================   ====================================
 
 
