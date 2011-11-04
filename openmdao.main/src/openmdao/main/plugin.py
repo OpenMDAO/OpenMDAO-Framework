@@ -1,6 +1,9 @@
 import sys
 import os.path
 import webbrowser
+import tempfile
+import tarfile
+import shutil
 
 import urllib2
 import json
@@ -8,7 +11,7 @@ import pprint
 import StringIO
 from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser
-from subprocess import call
+from subprocess import call, check_call
 from fnmatch import fnmatch
 
 from ordereddict import OrderedDict
@@ -16,9 +19,10 @@ from ordereddict import OrderedDict
 from setuptools import find_packages
 
 from openmdao.main.factorymanager import get_available_types, _plugin_groups
-from openmdao.util.fileutil import build_directory, find_files
+from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir
 from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.main.pkg_res_factory import _plugin_groups
+from openmdao.main import __version__
 
 #from sphinx.setup_command import BuildDoc
 import sphinx
@@ -823,9 +827,9 @@ def plugin_makedist(options):
         build_directory(dirstruct, force=True)
 
         cmdargs = [sys.executable, 'setup.py', 'sdist', '-d', startdir]
-        cmd = ' '.join(cmdargs)
         retcode = call(cmdargs)
         if retcode:
+            cmd = ' '.join(cmdargs)
             sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
     finally:
         os.chdir(startdir)
@@ -852,26 +856,55 @@ def _plugin_docs(plugin_name, browser=None):
     environment.
     
     plugin_name: str
-        Name of the plugin distribution.
+        Name of the plugin distribution, module, or class.
         
     browser: str (optional)
         Name of the browser (according to the webbrowser library) to
         use to view the plugin docs.  If none is specified, the platform
         default browser will be used.
     """
+    if '.' not in plugin_name: # assume it's a class name and try to find unambiguous module
+        modname = None
+        for name, version in get_available_types():
+            mname, classname = name.rsplit('.',1)
+            if classname == plugin_name:
+                if modname and modname != mname:
+                    raise RuntimeError("Can't determine module for class '%s' unambiguously. found in %s" %
+                                       (classname, [mname, modname]))
+                modname = mname
+        if modname:
+            plugin_name = modname
+        else:
+            raise RuntimeError("Couldn't find a module containing class '%s'" % plugin_name)
+        
     try:
-        mod = __import__(plugin_name)
+        __import__(plugin_name)
+        mod = sys.modules[plugin_name]
     except ImportError:
-        raise RuntimeError("Can't locate plugin '%s'" % plugin_name)
+        raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
     
-    idx = os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
-                       'sphinx_build', 'html', 'index.html')
-    
-    if not os.path.isfile(idx):
-        raise RuntimeError("Cannot locate index file for plugin '%s'" % plugin_name)
+    if plugin_name.startswith('openmdao.'): # lookup builtin docs
+        parts = mod.__file__.split(os.sep)
+        pkg = '.'.join(plugin_name.split('.')[:2])
+        modname = plugin_name.split('.')[-1]
+        if any([p.endswith('.egg') and p.startswith('openmdao.') for p in parts]): 
+            # this is a release version, so use online docs
+            url = 'http://openmdao.org/releases/%s/docs/srcdocs/packages/%s.html#%s-py' % (
+                __version__, pkg, modname)
+        else:  # it's a developer version, so use locally built docs
+            htmldir = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
+                                   '_build', 'html')
+            if not os.path.isfile(os.path.join(htmldir,'index.html')): #make sure the local docs are built
+                print "local docs not found.\nbuilding them now\n"
+                check_call(['openmdao_build_docs'])
+            url = 'file://'+os.path.join(htmldir, 'srcdocs', 'packages', 
+                                         '%s.html#%s-py' % (pkg,modname))
+    else:
+        url = os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
+                           'sphinx_build', 'html', 'index.html')
     
     wb = webbrowser.get(browser)
-    wb.open(idx)
+    wb.open(url)
 
 
 def plugin_install(options):
@@ -913,13 +946,15 @@ def plugin_install(options):
             
         url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
         print url
-        cmdargs = ['easy_install', url]
         
-        cmd = ' '.join(cmdargs)
-        retcode = call(cmdargs)
-        if retcode:
-            sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
-            sys.exit(-1)
+        build_docs_and_install(name, version)
+
+        #cmdargs = ['easy_install', url] 
+        #cmd = ' '.join(cmdargs)
+        #retcode = call(cmdargs)
+        #if retcode:
+            #sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
+            #sys.exit(-1)
         
     else: # Install plugin from local file or directory
     
@@ -1016,6 +1051,52 @@ def update_libpath(options=None):
             print "changes to take effect\n"
 
 
+def download_github_tar(name, version, dest='.'):
+    """Pull a tarfile of an OpenMDAO-Plugins repo and place it in the 
+    specified destination directory.
+    """
+    dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))
+    url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
+    
+    try:
+        resp = urllib2.urlopen(url)
+    except urllib2.HTTPError as err:
+        print str(err)
+        exit(-1)
+    
+    tarpath = os.path.join(dest, "%s-%s.tar.gz" % (name, version))
+    with open(tarpath, 'wb') as out:
+        out.write(resp.fp.read())
+
+    return tarpath
+    
+    
+def build_docs_and_install(name, version):
+    tdir = tempfile.mkdtemp()
+    startdir = os.getcwd()
+    os.chdir(tdir)
+    try:
+        tarpath = download_github_tar(name, version)
+        # extract the tar file
+        tar = tarfile.open(tarpath)
+        tar.extractall()
+        tar.close()
+        
+        files = os.listdir('.')
+        files.remove(os.path.basename(tarpath))
+        if len(files) != 1:
+            raise RuntimeError("after untarring, found multiple directories: %s" % files)
+        cmds = ['plugin', 'build_docs', files[0]]
+        check_call(cmds)
+        os.chdir(files[0]) # should be in distrib directory now
+        cmds = [sys.executable, 'setup.py', 'install']
+        check_call(cmds)
+        
+    finally:
+        os.chdir(startdir)
+        shutil.rmtree(tdir, ignore_errors=True)
+
+        
 def _plugin_build_docs(destdir, cfg):
     """Builds the Sphinx docs for the plugin distribution, assuming it has
     a structure like the one created by plugin quickstart.

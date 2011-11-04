@@ -37,10 +37,11 @@ class PkgResourcesFactory(Factory):
     openmdao.component, openmdao.variable, etc.
     """
     
-    def __init__(self, groups, search_path=None):
+    def __init__(self, groups=_plugin_groups, search_path=None):
         super(PkgResourcesFactory, self).__init__()
         self._have_new_types = True
         self._groups = copy.copy(groups)
+        self._search_path = search_path
         self.env = Environment(search_path)
             
     def create(self, typ, version=None, server=None, 
@@ -64,6 +65,8 @@ class PkgResourcesFactory(Factory):
             
             return klass(**ctor_args)
         except KeyError:
+            if self._search_path is None:
+                return None
             # try to look in the whole environment
             for group in self._groups:
                 for proj in self.env:
@@ -112,7 +115,11 @@ class PkgResourcesFactory(Factory):
             for group in lst[1]:
                 if group in groups:
                     ret.append((name, dist.version))
-                
+           
+        if self._search_path is None: # self.env has same contents as working_set,
+                                      # so don't bother looking through it
+            return ret
+
         # now look in the whole environment
         for group in groups:
             for proj in self.env:

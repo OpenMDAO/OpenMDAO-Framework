@@ -58,7 +58,7 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     outfile.write('%s.py\n' % modbase)
     outfile.write('+'*(3+len(short.split('.').pop()))+'\n\n')
     
-    rstfile = _get_rst_path(name)
+    rstfile = _get_rst_path(mod)
     if(rstfile):
         outfile.write('.. include:: %s\n' % rstfile)
     
@@ -154,7 +154,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
                 break
             else:       
                 x = name.split('/')
-                #kind of dirty, but the other sections doesn't need api header.
+                #kind of dirty, but the other sections don't need api header.
                 if os.path.basename(name) == 'api.py' and x[1]=='lib':
                     newheader = 'api'
                 if len(x) >= 4:
@@ -369,36 +369,18 @@ def _get_rst_path(obj):
     bindir = os.path.dirname(sys.executable)
     branchdir = os.path.dirname(os.path.dirname(bindir))
     writedir = os.path.join(branchdir, 'docs', 'srcdocs', 'packages')
-    #grab the rightmost bit of the dotted filename and add .py & .rst to it
-    if(obj):
-        fname = obj.rsplit(".")
-        pyfile = fname[-1] + ".py"
-        rstfile = fname[-1] + ".rst"
-    else:
-        return
-    #then we'll walk down through the dirs until we find the py file
-    found = 0
-    for root, dirs, files in os.walk(branchdir):
-        #if we're in the directory that has
-        #the py file, record the root, and stop walking
-        if pyfile in files:
-            containing_dir = root
-            found = 1
-            break
-    if found:
-        docs_dir = os.path.join(containing_dir,"docs")
-        if os.path.isdir(docs_dir):
-            textfilepath = os.path.join(docs_dir, rstfile)
-            if os.path.isfile(textfilepath):
-                #The sphinx include directive needs a relative path
-                #to the text file, rel to the docs dir 
-                relpath= os.path.relpath(textfilepath, writedir)
-                if (relpath):
-                    return relpath
-    else:
-        return
     
-    
+    rstfile = os.path.basename(os.path.splitext(obj)[0] + ".rst")
+    pyabs = os.path.join(branchdir, '.'.join(obj.split('/')[:2]), 'src', obj)
+    textfilepath = os.path.join(os.path.dirname(pyabs), 'docs', rstfile)
+    if os.path.isfile(textfilepath):
+        #The sphinx include directive needs a relative path
+        #to the text file, rel to the docs dir 
+        relpath = os.path.relpath(textfilepath, writedir)
+        if (relpath):
+            return relpath
+
+        
 if __name__ == "__main__": #pragma: no cover
     build_docs()
 
