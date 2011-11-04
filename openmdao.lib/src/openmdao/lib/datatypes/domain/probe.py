@@ -162,7 +162,7 @@ def mesh_probe(domain, regions, variables, weighting_scheme='area'):
                     raise ValueError('No zone or domain reference_state'
                                      ' dictionary supplied for %s.' % zone_name)
 
-            value = _calc_3d(_VARIABLES[name][1], domain, region, weights, ref)
+            value = _calc_3d(name, domain, region, weights, ref)
             value *= zone.symmetry_instances  # Adjust for symmetry.
             if total is None:
                 total = value
@@ -182,37 +182,83 @@ def mesh_probe(domain, regions, variables, weighting_scheme='area'):
     return metrics
 
 
-def _calc_3d(cls, domain, region, weights, reference_state):
-    """ Use `cls` to calculate a metric on a 3D (index space) region. """
+def _calc_3d(name, domain, region, weights, reference_state):
+    """ Calculate `name` metric on a 3D (index space) region. """
+    integrate, cls = _VARIABLES[name]
     metric = cls(domain, region, reference_state)
     zone_name, imin, imax, jmin, jmax, kmin, kmax = region
     zone = getattr(domain, zone_name)
+    grid = zone.grid_coordinates
     flow = zone.flow_solution
+    cylindrical = zone.coordinate_system == CYLINDRICAL
     cell_center = flow.grid_location == CELL_CENTER
     weights = weights[zone_name]
 
+    if cylindrical:
+        c1 = grid.z.item
+        c2 = grid.r.item
+        c3 = grid.t.item
+    else:
+        c1 = grid.x.item
+        c2 = grid.y.item
+        c3 = grid.z.item
+
     if imin == imax:
+        face = 'i'
         imax += 1  # Ensure range() returns face index.
         get_normal = _iface_normal
-        get_value = _iface_cell_value if cell_center else _iface_node_value
+        get_value = _iface_cell_value if cell_center else _node_value
     elif jmin == jmax:
+        face = 'j'
         jmax += 1
         get_normal = _jface_normal
-        get_value = _jface_cell_value if cell_center else _jface_node_value
+        get_value = _jface_cell_value if cell_center else _node_value
     else:
+        face = 'k'
         kmax += 1
         get_normal = _kface_normal
-        get_value = _kface_cell_value if cell_center else _kface_node_value
+        get_value = _kface_cell_value if cell_center else _node_value
 
+    normal = None
     weight_index = 0
+    total = 0.
     for i in range(imin, imax):
+        ip1 = i + 1
         for j in range(jmin, jmax):
+            jp1 = j + 1
             for k in range(kmin, kmax):
-                weight = weights[weight_index]
-                weight_index += 1
-                metric.calculate_3d(i, j, k, get_value, weight, get_normal)
+                kp1 = k + 1
 
-    return metric.result
+                if integrate:
+                    normal = get_normal(c1, c2, c3, i, j, k, cylindrical)
+
+                val = metric.calculate_3d(i, j, k, get_value, normal)
+                if not cell_center:
+                    if face == 'i':
+                        val += metric.calculate_3d(i, jp1, k, get_value, normal)
+                        val += metric.calculate_3d(i, jp1, kp1, get_value, normal)
+                        val += metric.calculate_3d(i, j, kp1, get_value, normal)
+                    elif face == 'j':
+                        val += metric.calculate_3d(ip1, j, k, get_value, normal)
+                        val += metric.calculate_3d(ip1, j, kp1, get_value, normal)
+                        val += metric.calculate_3d(i, j, kp1, get_value, normal)
+                    else:
+                        val += metric.calculate_3d(ip1, j, k, get_value, normal)
+                        val += metric.calculate_3d(ip1, jp1, k, get_value, normal)
+                        val += metric.calculate_3d(i, jp1, k, get_value, normal)
+                    val *= 0.25
+
+                if integrate:
+                    total += val
+                else:
+                    weight = weights[weight_index]
+                    weight_index += 1
+                    total += val * weight
+
+    if reference_state is None:
+        return total
+    else:
+        return metric.dimensionalize(total)
 
 
 def _weights_3d(scheme, domain, region):
@@ -275,8 +321,10 @@ def _weights_3d(scheme, domain, region):
     return weights
 
 
-def _iface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
-    """ Return vector normal to I face with magnitude equal to area. """
+def _iface_normal(c1, c2, c3, i, j, k, cylindrical):
+    """
+    Return non-dimensional vector normal to I face with magnitude equal to area.
+    """
     jp1 = j + 1
     kp1 = k + 1
 
@@ -297,17 +345,17 @@ def _iface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
         r1 = 1.
         r2 = 1.
 
-    aref = lref * lref
-
-    sc1 = -0.5 * ( r2 * diag_c21 * diag_c32 - r1 * diag_c22 * diag_c31) * aref
-    sc2 = -0.5 * (-r2 * diag_c11 * diag_c32 + r1 * diag_c12 * diag_c31) * aref
-    sc3 = -0.5 * (      diag_c11 * diag_c22 -      diag_c12 * diag_c21) * aref
+    sc1 = -0.5 * ( r2 * diag_c21 * diag_c32 - r1 * diag_c22 * diag_c31)
+    sc2 = -0.5 * (-r2 * diag_c11 * diag_c32 + r1 * diag_c12 * diag_c31)
+    sc3 = -0.5 * (      diag_c11 * diag_c22 -      diag_c12 * diag_c21)
 
     return (sc1, sc2, sc3)
 
 
-def _jface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
-    """ Return vector normal to J face with magnitude equal to area. """
+def _jface_normal(c1, c2, c3, i, j, k, cylindrical):
+    """
+    Return non-dimensional vector normal to J face with magnitude equal to area.
+    """
     ip1 = i + 1
     kp1 = k + 1
 
@@ -328,17 +376,17 @@ def _jface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
         r1 = 1.
         r2 = 1.
 
-    aref = lref * lref
-
-    sc1 = 0.5 * ( r2 * diag_c21 * diag_c32 - r1 * diag_c22 * diag_c31) * aref
-    sc2 = 0.5 * (-r2 * diag_c11 * diag_c32 + r1 * diag_c12 * diag_c31) * aref
-    sc3 = 0.5 * (      diag_c11 * diag_c22 -      diag_c12 * diag_c21) * aref
+    sc1 = 0.5 * ( r2 * diag_c21 * diag_c32 - r1 * diag_c22 * diag_c31)
+    sc2 = 0.5 * (-r2 * diag_c11 * diag_c32 + r1 * diag_c12 * diag_c31)
+    sc3 = 0.5 * (      diag_c11 * diag_c22 -      diag_c12 * diag_c21)
 
     return (sc1, sc2, sc3)
 
 
-def _kface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
-    """ Return vector normal to K face with magnitude equal to area. """
+def _kface_normal(c1, c2, c3, i, j, k, cylindrical):
+    """
+    Return non-dimensional vector normal to K face with magnitude equal to area.
+    """
     ip1 = i + 1
     jp1 = j + 1
 
@@ -359,11 +407,9 @@ def _kface_normal(c1, c2, c3, i, j, k, cylindrical, lref=1.):
         r1 = 1.
         r2 = 1.
 
-    aref = lref * lref
-
-    sc1 = 0.5 * ( r2 * diag_c21 * diag_c32 - r1 * diag_c22 * diag_c31) * aref
-    sc2 = 0.5 * (-r2 * diag_c11 * diag_c32 + r1 * diag_c12 * diag_c31) * aref
-    sc3 = 0.5 * (      diag_c11 * diag_c22 -      diag_c12 * diag_c21) * aref
+    sc1 = 0.5 * ( r2 * diag_c21 * diag_c32 - r1 * diag_c22 * diag_c31)
+    sc2 = 0.5 * (-r2 * diag_c11 * diag_c32 + r1 * diag_c12 * diag_c31)
+    sc3 = 0.5 * (      diag_c11 * diag_c22 -      diag_c12 * diag_c21)
 
     return (sc1, sc2, sc3)
 
@@ -383,65 +429,52 @@ def _kface_cell_value(arr, i, j, k):
 
 def _iface_node_value(arr, i, j, k):
     """ Returns I face value for vertex data. """
-    return 0.25 * (arr(i, j+1, k+1) + arr(i, j, k+1) + 
-                   arr(i, j+1, k) + arr(i, j, k))
+    return 0.25 * (arr(i-1, j, k) + arr(i-1, j-1, k) +
+                   arr(i-1, j, k-1) + arr(i-1, j-1, k-1))
 
 def _jface_node_value(arr, i, j, k):
     """ Returns J face value for vertex data. """
-    return 0.25 * (arr(i+1, j, k+1) + arr(i, j, k+1) + 
-                   arr(i+1, j, k) + arr(i, j, k))
+    return 0.25 * (arr(i, j-1, k) + arr(i-1, j-1, k) +
+                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
 
 def _kface_node_value(arr, i, j, k):
     """ Returns K face value for vertex data. """
-    return 0.25 * (arr(i+1, j+1, k) + arr(i, j+1, k) + 
-                   arr(i+1, j, k) + arr(i, j, k))
+    return 0.25 * (arr(i, j, k-1) + arr(i-1, j, k-1) +
+                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
+
+
+def _node_value(arr, i, j, k):
+    """ Returns value for vertex data. """
+    return arr(i, j, k)
 
 
 class _Area(object):
     """ Computes area of mesh surface. """
 
     def __init__(self, domain, region, reference_state):
-        zone_name, imin, imax, jmin, jmax, kmin, kmax = region
-        zone = getattr(domain, zone_name)
-        grid = zone.grid_coordinates
-        self.cylindrical = zone.coordinate_system == CYLINDRICAL
-
-        if self.cylindrical:
-            self.c1 = grid.z.item
-            self.c2 = grid.r.item
-            self.c3 = grid.t.item
-        else:
-            self.c1 = grid.x.item
-            self.c2 = grid.y.item
-            self.c3 = grid.z.item
-
         if reference_state is None:
-            self.aref = None
-            self.lref = 1.
+            self.aref = 1.
         else:
             try:
                 lref = reference_state['length_reference']
             except KeyError:
                 raise AttributeError("For area, reference_state is missing"
                                      " 'length_reference'.")
-            self.aref = lref * lref
-            self.lref = lref.value
+            aref = lref * lref
+            self.units = aref.get_unit_name()
+            self.aref = aref.value
 
-        self.total = 0.
+    def calculate_3d(self, i, j, k, get_value, normal):
+        """ Return 3D (index space) metric. """
+        sc1, sc2, sc3 = normal
+        sc1 *= self.aref
+        sc2 *= self.aref
+        sc3 *= self.aref
+        return sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3)
 
-    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
-        """ Accumulate 3D (index space) metric. """
-        sc1, sc2, sc3 = get_normal(self.c1, self.c2, self.c3, i, j, k,
-                                   self.cylindrical, self.lref)
-        self.total += sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3)
-
-    @property
-    def result(self):
-        """ Possibly dimensional accumulated total. """
-        if self.aref is None:
-            return self.total
-        else:
-            return PhysicalQuantity(self.total, self.aref.get_unit_name())
+    def dimensionalize(self, value):
+        """ Return dimensional `value`. """
+        return PhysicalQuantity(value, self.units)
 
 register_mesh_probe('area', _Area, True)
 
@@ -452,21 +485,11 @@ class _MassFlow(object):
     def __init__(self, domain, region, reference_state):
         zone_name, imin, imax, jmin, jmax, kmin, kmax = region
         zone = getattr(domain, zone_name)
-        grid = zone.grid_coordinates
         flow = zone.flow_solution
-        self.cylindrical = zone.coordinate_system == CYLINDRICAL
-
-        if self.cylindrical:
-            self.c1 = grid.z.item
-            self.c2 = grid.r.item
-            self.c3 = grid.t.item
-        else:
-            self.c1 = grid.x.item
-            self.c2 = grid.y.item
-            self.c3 = grid.z.item
+        cylindrical = zone.coordinate_system == CYLINDRICAL
 
         try:
-            if self.cylindrical:
+            if cylindrical:
                 self.mom_c1 = flow.momentum.z.item
                 self.mom_c2 = flow.momentum.r.item
                 self.mom_c3 = flow.momentum.t.item
@@ -479,7 +502,7 @@ class _MassFlow(object):
                                  % zone_name)
 
         if reference_state is None:
-            self.lref = 1.
+            self.aref = 1.
             self.momref = 1.
             self.wref = None
         else:
@@ -497,28 +520,24 @@ class _MassFlow(object):
             vref = (rgas * tref).sqrt()
             momref = rhoref * vref
             self.wref = momref * lref * lref
-            self.lref = lref.value
+            aref = lref * lref
+            self.aref = aref.value
             self.momref = momref.value
 
-        self.total = 0.
-
-    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
-        """ Accumulate 3D (index space) metric. """
+    def calculate_3d(self, i, j, k, get_value, normal):
+        """ Return 3D (index space) metric. """
         rvu = get_value(self.mom_c1, i, j, k) * self.momref
         rvv = get_value(self.mom_c2, i, j, k) * self.momref
         rvw = get_value(self.mom_c3, i, j, k) * self.momref
-        sc1, sc2, sc3 = get_normal(self.c1, self.c2, self.c3, i, j, k,
-                                   self.cylindrical, self.lref)
-        w = rvu*sc1 + rvv*sc2 + rvw*sc3
-        self.total += w
+        sc1, sc2, sc3 = normal
+        sc1 *= self.aref
+        sc2 *= self.aref
+        sc3 *= self.aref
+        return rvu*sc1 + rvv*sc2 + rvw*sc3
 
-    @property
-    def result(self):
-        """ Possibly dimensional accumulated total. """
-        if self.wref is None:
-            return self.total
-        else:
-            return PhysicalQuantity(self.total, self.wref.get_unit_name())
+    def dimensionalize(self, value):
+        """ Dimensionalize `value`. """
+        return PhysicalQuantity(value, self.wref.get_unit_name())
 
 register_mesh_probe('mass_flow', _MassFlow, True)
 
@@ -529,22 +548,12 @@ class _CorrectedMassFlow(object):
     def __init__(self, domain, region, reference_state):
         zone_name, imin, imax, jmin, jmax, kmin, kmax = region
         zone = getattr(domain, zone_name)
-        grid = zone.grid_coordinates
         flow = zone.flow_solution
-        self.cylindrical = zone.coordinate_system == CYLINDRICAL
-
-        if self.cylindrical:
-            self.c1 = grid.z.item
-            self.c2 = grid.r.item
-            self.c3 = grid.t.item
-        else:
-            self.c1 = grid.x.item
-            self.c2 = grid.y.item
-            self.c3 = grid.z.item
+        cylindrical = zone.coordinate_system == CYLINDRICAL
 
         try:
             self.density = flow.density.item
-            if self.cylindrical:
+            if cylindrical:
                 self.mom_c1 = flow.momentum.z.item
                 self.mom_c2 = flow.momentum.r.item
                 self.mom_c3 = flow.momentum.t.item
@@ -589,7 +598,8 @@ class _CorrectedMassFlow(object):
         tstd = PhysicalQuantity(518.67, 'degR')
         tstd.convert_to_unit(tref.get_unit_name())
 
-        self.lref = lref.value
+        aref = lref * lref
+        self.aref = aref.value
         self.pref = pref.value
         self.rgas = rgas.value
         self.rhoref = rhoref.value
@@ -597,10 +607,8 @@ class _CorrectedMassFlow(object):
         self.pstd = pstd.value
         self.tstd = tstd.value
 
-        self.total = 0.
-
-    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
-        """ Accumulate 3D (index space) metric. """
+    def calculate_3d(self, i, j, k, get_value, normal):
+        """ Return 3D (index space) metric. """
         rho = get_value(self.density, i, j, k) * self.rhoref
         rvu = get_value(self.mom_c1, i, j, k) * self.momref
         rvv = get_value(self.mom_c2, i, j, k) * self.momref
@@ -610,8 +618,10 @@ class _CorrectedMassFlow(object):
             gamma = get_value(self.gam, i, j, k)
         else:
             gamma = self.gamma
-        sc1, sc2, sc3 = get_normal(self.c1, self.c2, self.c3, i, j, k,
-                                   self.cylindrical, self.lref)
+        sc1, sc2, sc3 = normal
+        sc1 *= self.aref
+        sc2 *= self.aref
+        sc3 *= self.aref
         w = rvu*sc1 + rvv*sc2 + rvw*sc3
 
         u2 = (rvu*rvu + rvv*rvv + rvw*rvw) / (rho*rho)
@@ -622,13 +632,11 @@ class _CorrectedMassFlow(object):
 
         pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
 
-        wc = w * sqrt(tt/self.tstd) / (pt/self.pstd)
-        self.total += wc
+        return w * sqrt(tt/self.tstd) / (pt/self.pstd)
 
-    @property
-    def result(self):
-        """ Dimensional accumulated total. """
-        return PhysicalQuantity(self.total, self.wref.get_unit_name())
+    def dimensionalize(self, value):
+        """ Dimensionalize `value`. """
+        return PhysicalQuantity(value, self.wref.get_unit_name())
 
 register_mesh_probe('corrected_mass_flow', _CorrectedMassFlow, True)
 
@@ -703,12 +711,10 @@ class _StaticPressure(object):
             self.units = pref.get_unit_name()
             self.pref = pref.value
 
-        self.total = 0.
-
-    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
-        """ Accumulate 3D (index space) metric. """
+    def calculate_3d(self, i, j, k, get_value, normal):
+        """ Return 3D (index space) metric. """
         if self.pressure is not None:
-            ps = get_value(self.pressure, i, j, k) * self.pref
+            return get_value(self.pressure, i, j, k) * self.pref
         else:
             rho = get_value(self.density, i, j, k) * self.rhoref
             vu = get_value(self.mom_c1, i, j, k) * self.momref / rho
@@ -720,17 +726,11 @@ class _StaticPressure(object):
             else:
                 gamma = self.gamma
 
-            ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
+            return (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
 
-        self.total += ps * weight
-
-    @property
-    def result(self):
-        """ Return (possibly dimensional) accumulated total. """
-        if self.units is None:
-            return self.total
-        else:
-            return PhysicalQuantity(self.total, self.units)
+    def dimensionalize(self, value):
+        """ Dimensionalize `value`. """
+        return PhysicalQuantity(value, self.units)
 
 register_mesh_probe('pressure', _StaticPressure, False)
 
@@ -805,8 +805,8 @@ class _TotalPressure(object):
 
         self.total = 0.
 
-    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
-        """ Accumulate 3D (index space) metric. """
+    def calculate_3d(self, i, j, k, get_value, normal):
+        """ Return 3D (index space) metric. """
         rho = get_value(self.density, i, j, k) * self.rhoref
         vu = get_value(self.mom_c1, i, j, k) * self.momref / rho
         vv = get_value(self.mom_c2, i, j, k) * self.momref / rho
@@ -824,17 +824,11 @@ class _TotalPressure(object):
             ps = (gamma-1.) * rho * (e0 - 0.5*u2)
         a2 = (gamma * ps) / rho
         mach2 = u2 / a2
-        pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
+        return ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
 
-        self.total += pt * weight
-
-    @property
-    def result(self):
-        """ Return (possibly dimensional) accumulated total. """
-        if self.units is None:
-            return self.total
-        else:
-            return PhysicalQuantity(self.total, self.units)
+    def dimensionalize(self, value):
+        """ Dimensionalize `value`. """
+        return PhysicalQuantity(value, self.units)
 
 register_mesh_probe('pressure_stagnation', _TotalPressure, False)
 
@@ -911,10 +905,8 @@ class _StaticTemperature(object):
 #            self.e0ref = ?
             self.tref = tref
 
-        self.total = 0.
-
-    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
-        """ Accumulate 3D (index space) metric. """
+    def calculate_3d(self, i, j, k, get_value, normal):
+        """ Return 3D (index space) metric. """
         rho = get_value(self.density, i, j, k) * self.rhoref
         if self.pressure is not None:
             ps = get_value(self.pressure, i, j, k) * self.pref
@@ -928,16 +920,11 @@ class _StaticTemperature(object):
             else:
                 gamma = self.gamma
             ps = (gamma-1.) * rho * (e0 - 0.5*(vu*vu + vv*vv + vw*vw))
-        ts = ps / (rho * self.rgas)
-        self.total += ts * weight
+        return ps / (rho * self.rgas)
 
-    @property
-    def result(self):
-        """ Return (possibly dimensional) accumulated total. """
-        if self.tref is None:
-            return self.total
-        else:
-            return PhysicalQuantity(self.total, self.tref.get_unit_name())
+    def dimensionalize(self, value):
+        """ Dimensionalize `value`. """
+        return PhysicalQuantity(value, self.tref.get_unit_name())
 
 register_mesh_probe('temperature', _StaticTemperature, False)
 
@@ -1011,10 +998,8 @@ class _TotalTemperature(object):
 #            self.e0ref = ?
             self.tref = tref
 
-        self.total = 0.
-
-    def calculate_3d(self, i, j, k, get_value, weight, get_normal):
-        """ Accumulate 3D (index space) metric. """
+    def calculate_3d(self, i, j, k, get_value, normal):
+        """ Return 3D (index space) metric. """
         rho = get_value(self.density, i, j, k) * self.rhoref
         vu = get_value(self.mom_c1, i, j, k) * self.momref / rho
         vv = get_value(self.mom_c2, i, j, k) * self.momref / rho
@@ -1033,16 +1018,11 @@ class _TotalTemperature(object):
         a2 = (gamma * ps) / rho
         mach2 = u2 / a2
         ts = ps / (rho * self.rgas)
-        tt = ts * (1. + (gamma-1.)/2. * mach2)
-        self.total += tt * weight
+        return ts * (1. + (gamma-1.)/2. * mach2)
 
-    @property
-    def result(self):
-        """ Return (possibly dimensional) accumulated total. """
-        if self.tref is None is None:
-            return self.total
-        else:
-            return PhysicalQuantity(self.total, self.tref.get_unit_name())
+    def dimensionalize(self, value):
+        """ Dimensionalize `value`. """
+        return PhysicalQuantity(value, self.tref.get_unit_name())
 
 register_mesh_probe('temperature_stagnation', _TotalTemperature, False)
 

@@ -224,7 +224,6 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), ValueError,
                       "Unknown/unsupported weighting scheme 'scheme'")
 
-        ref = wedge.reference_state
         wedge.reference_state = None
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
