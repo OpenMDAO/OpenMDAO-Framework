@@ -45,19 +45,21 @@ openmdao.Console = function(formID,commandID,historyID,model) {
 
     // submit a command
     jQuery('#'+formID).submit(function() {
+        var cmd = command.val();
         model.issueCommand(command.val(),
             // success, record any response in the history & clear the command
             function(responseText) {
-                if (responseText.length > 0)
-                    updateHistory(responseText)
-                command.val("")
+                if (responseText.length > 0) {
+                    updateHistory(responseText);
+                }
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
                 alert("Error issuing command: "+jqXHR.statusText)
             }
-        )
-        return false
+        );
+        command.val("");
+        return false;
     })
     
     // if an interval is specified, continuously update

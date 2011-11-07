@@ -112,7 +112,7 @@ def download(request, project_id):
             from django.core.servers.basehttp import FileWrapper
             response = HttpResponse(FileWrapper(proj_file), content_type='application/octet-stream')
             response['Content-Length'] = os.path.getsize(filename)
-            response['Content-Disposition'] = 'attachment; filename='+p.projectname+'.proj'
+            response['Content-Disposition'] = 'attachment; filename='+p.projectname+strftime(' %Y-%m-%d %H%M%S')+'.proj'
             return response
     return HttpResponse('Sorry, file is not available.')
 
