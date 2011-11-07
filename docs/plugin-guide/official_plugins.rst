@@ -48,7 +48,6 @@ You should get a response that looks something like this.
     openmdao.lib.drivers.conmindriver.CONMINdriver 0.2.1
     openmdao.lib.drivers.doedriver.DOEdriver 0.2.1
     openmdao.lib.drivers.genetic.Genetic 0.2.1
-    openmdao.lib.drivers.gradient.SensitivityDriver 0.2.1
     openmdao.lib.drivers.iterate.FixedPointIterator 0.2.1
     openmdao.lib.drivers.iterate.IterateUntil 0.2.1
     openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver 0.2.1
