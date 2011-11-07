@@ -865,13 +865,20 @@ def _plugin_docs(plugin_name, browser=None):
     """
     if '.' not in plugin_name: # assume it's a class name and try to find unambiguous module
         modname = None
+        dname = '.'.join([plugin_name, plugin_name])
         for name, version in get_available_types():
             mname, classname = name.rsplit('.',1)
+            distname = '.'.join(name.split('.')[:2])
             if classname == plugin_name:
                 if modname and modname != mname:
                     raise RuntimeError("Can't determine module for class '%s' unambiguously. found in %s" %
                                        (classname, [mname, modname]))
                 modname = mname
+            elif distname == dname:
+                # name has the form distname.modname where distname==modname
+                modname = distname
+                break
+   
         if modname:
             plugin_name = modname
         else:
