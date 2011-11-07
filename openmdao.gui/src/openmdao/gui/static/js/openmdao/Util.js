@@ -144,7 +144,12 @@ openmdao.Util = {
 
         // Build dialog markup
         var win = jQuery('<div><p>Enter name:</p></div>');
-        var userInput = jQuery('<input type="text" style="width:100%"></input>');
+        var userInput = jQuery('<input type="text" style="width:100%"></input>').keypress(function(e) {
+            if (e.which == 13) {
+                jQuery(win).dialog('close');
+                callback(jQuery(userInput).val());
+            }
+        });
         userInput.appendTo(win);
 
         // Display dialog
