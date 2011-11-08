@@ -15,7 +15,8 @@ have to obtain separately. In most cases, the plugin only contains the
 OpenMDAO wrapper code.
 
 The ``plugin list`` command allows you to list all plugins that are already
-installed, and with the addition of a ``-g`` option it will show you a list of
+installed.  You can limit the plugins you see to a particular plugin group or groups
+using the ``-g`` option, and with the addition of a ``--github`` option you can see a list of
 all plugins available for installation from the OpenMDAO-Plugins organization
 on GitHub. 
 
@@ -78,6 +79,13 @@ use the ``--external`` option. A shortcut for ``--external`` is ``-e``.  For exa
 
 To show only the builtin plugins that come with OpenMDAO, use the ``--builtin`` option or its
 shortcut, ``-b``.
+
+To limit the types of plugins displayed, use the ``-g`` option.  For example, to see only plugins
+that are drivers, do the following:
+
+::
+
+    plugin list -g driver
 
 
 You can also grab a list of the plugin distributions that are available from the OpenMDAO-Plugins

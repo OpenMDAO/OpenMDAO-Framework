@@ -1194,12 +1194,24 @@ def plugin_list(options):
         if not g.startswith('openmdao.'):
             g = 'openmdao.'+g
         groups.append(g)
+        
+    show_all = (options.external == options.builtin)
+    if show_all:
+        title_type = ''
+    elif options.external:
+        title_type = 'external'
+    else:
+        title_type = 'built-in'
+        
+    title_groups = ','.join([g.split('.')[1] for g in groups])
+    parts = title_groups.rsplit(',',1)
+    if len(parts) > 1:
+        title_groups = ' and '.join(parts)
+    
     if not groups:
         groups = None
     all_types = get_available_types(groups)
-    
-    show_all = (options.external == options.builtin)
-    
+      
     plugins = set()
     for type in all_types:
         if show_all:
@@ -1213,8 +1225,14 @@ def plugin_list(options):
                 if options.external:
                     plugins.add((type[0], type[1]))
             
-    print "\nInstalled plugins"
-    print "-------------------\n"
+    
+    title = "Installed %s %s plugins" % (title_type, title_groups)
+    title = title.replace('  ', ' ')
+    under = '-'*len(title)
+    print ""
+    print title
+    print under
+    print ""
     for plugin in sorted(plugins):
         print plugin[0], plugin[1]
         
@@ -1223,8 +1241,8 @@ def plugin_list(options):
 def _list_github_plugins():
     url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
     
-    print "\nAvailable plugins"
-    print "===================\n"
+    print "\nAvailable plugin distributions"
+    print "==============================\n"
     
     resp = urllib2.urlopen(url)
     for line in resp.fp:

@@ -83,9 +83,9 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
       
       [openmdao.surrogatemodel]
-      openmdao.lib.surrogatemodels.kriging_surrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
-      openmdao.lib.surrogatemodels.logistic_regression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
-      openmdao.lib.surrogatemodels.nn_surrogate = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
+      openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
+      openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
+      openmdao.lib.surrogatemodels.nn_surrogate.NeuralNet = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
       
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
@@ -117,10 +117,3 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.architectures.mdf.MDF = openmdao.lib.architectures.mdf:MDF
       """,
       )
-
-      # Optproblem entry points (commented for now)
-      #openmdao.lib.optproblems.sellar.Discipline1 = openmdao.lib.optproblems.sellar:Discipline1
-      #openmdao.lib.optproblems.sellar.Discipline2 = openmdao.lib.optproblems.sellar:Discipline2
-      #openmdao.lib.optproblems.sellar.Discipline1_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline1_WithDerivatives
-      #openmdao.lib.optproblems.sellar.Discipline2_WithDerivatives = openmdao.lib.optproblems.sellar:Discipline2_WithDerivatives
-      #openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optproblems.sellar:SellarProblem

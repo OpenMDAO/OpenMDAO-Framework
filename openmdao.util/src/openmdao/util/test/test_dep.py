@@ -18,9 +18,14 @@ class DepTestCase(unittest.TestCase):
             # don't perform this test if openmdao.main 
             # and openmdao.lib aren't present
             raise SkipTest("this test requires openmdao.main and openmdao.lib")
+        
+        def exclude_tests(pname):
+            parts = pname.split(os.sep)
+            return 'test' in parts
+        
         startdirs = [os.path.dirname(openmdao.main.__file__), 
                      os.path.dirname(openmdao.lib.__file__)]
-        psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))
+        psta = PythonSourceTreeAnalyser(startdirs, exclude_tests)
         
         self.assertTrue('openmdao.main.component.Component' in 
                         psta.graph['openmdao.main.container.Container'])
