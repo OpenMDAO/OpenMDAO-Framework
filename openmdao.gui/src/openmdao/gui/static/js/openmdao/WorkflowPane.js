@@ -7,7 +7,8 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         comp_figs = {},
         flow_figs = {},
         workflowID = "#"+pathname.replace(/\./g,'-')+"-workflow",
-        workflowDiv = jQuery('<div id='+workflowID+' style="height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px">').appendTo(elm),
+        workflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;'
+        workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">').appendTo(elm),
         workflow = new draw2d.Workflow(workflowID);
         
     self.pathname = pathname;
@@ -45,9 +46,9 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     
     // make the workflow pane droppable
     workflowDiv.droppable ({
-        accept: '.obj',
+        accept: '.obj, .objtype',
         drop: function(ev,ui) { 
-            debug.info("Workflow drop:",ev,ui)
+            debug.info("Workflow drop:",ev,ui,self.pathname)
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
@@ -55,14 +56,27 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 off = workflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top),
-                flowfig = workflow.getBestCompartmentFigure(x,y);
+                flowfig = workflow.getBestCompartmentFigure(x,y),
+                bestfig = workflow.getBestFigure(x,y);
             debug.info("Workflow dropped object:",droppedObject)            
             if (flowfig && droppedObject.hasClass('obj')) {
                 debug.info('flowfig:',flowfig,'pathname:',flowfig.pathname)
                 model.issueCommand('top'+flowfig.pathname+'.workflow.add("'+droppedPath+'")')
             }
+            else if (droppedObject.hasClass('objtype') && (/^openmdao.lib.drivers./).test(droppedPath)) {
+                // TODO: really need interface info to check if the type and fig are drivers
+                debug.info(droppedPath,'dropped on',bestfig.pathname,bestfig);
+                if (bestfig && openmdao.Util.getName(bestfig.pathname) === 'driver') {
+                    path = openmdao.Util.getParentPath(bestfig.pathname);
+                    // TODO: need a 'replaceDriver' function to preserve driver config
+                    model.addComponent(droppedPath,'driver',path);
+                }
+                else {
+                    debug.info(droppedPath,'was not dropped on a driver');
+                }
+            }
             else {
-                debug.info('Workflow drop was not on a flow figure')
+                debug.info('Workflow drop was not valid (obj on flow or objtype on driver)')
             }
         }
     });
