@@ -16,7 +16,7 @@ OpenMDAO wrapper code.
 
 The ``plugin list`` command allows you to list all plugins that are already
 installed.  You can limit the plugins you see to a particular plugin group or groups
-using the ``-g`` option, and with the addition of a ``--github`` option you can see a list of
+using the ``-g`` option, and the ``--github`` option lets you see a list of
 all plugins available for installation from the OpenMDAO-Plugins organization
 on GitHub. 
 
