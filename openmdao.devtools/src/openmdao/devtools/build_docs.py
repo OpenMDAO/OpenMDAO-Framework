@@ -12,20 +12,15 @@ import tarfile
 import sphinx
 
 from openmdao.devtools.dumpdistmeta import get_dist_metadata
-#import openmdao.util.releaseinfo
 
 # Specify modules and packages to be included in the OpenMDAO documentation here
 srcmods = [
 ]
 
-packages = [
-    'openmdao.main',
-    'openmdao.lib',
-    'openmdao.util',
-    'openmdao.units',
-    'openmdao.gui',
-]
-
+def get_openmdao_packages():
+    return [d.project_name for d in working_set 
+            if d.project_name.startswith('openmdao.') 
+                and not d.project_name.startswith('openmdao.examples.')]
 
 logger = logging.getLogger()
 
@@ -127,15 +122,26 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
         print >> outfile, docs, '\n'
     
     #excluding traits now since they need to be sorted separately
-    names = list(_get_resource_files(dist,
-                                    ['*__init__.py','*setup.py','*/test/*.py','*datatypes*.py',
+    _names = list(_get_resource_files(dist,
+                                    ['*__init__.py','*setup.py','*datatypes*.py',
                                      '*/gui/*/views.py','*/gui/*/models.py','*/gui/manage.py',
                                      '*/gui/urls.py','*/gui/*/urls.py','*/gui/projdb/admin.py'],
                                     ['*.py']))
+    names = []
+    for n in _names:
+        parts = n.split('/')
+        if parts[0] == 'openmdao' and parts[1] == 'test':
+            if len(parts) > 2 and parts[2] != 'plugins':
+                names.append(n)
+        elif 'test' not in parts:
+            names.append(n)
+            
     names.sort()
     
     #wanted to sort traits separately based only on filenames despite differing paths
-    traitz = list(_get_resource_files(dist, ['*__init__.py','*setup.py','*/test/*.py'], ['*datatypes*.py']))
+    traitz = list(_get_resource_files(dist, 
+                                      ['*__init__.py','*setup.py','*/test/*.py'], 
+                                      ['*datatypes*.py']))
     sorted_traitz = sorted(traitz, cmp=_compare_traits_path)
     
     names.extend(sorted_traitz)
@@ -180,7 +186,7 @@ def _write_src_docs(branchdir, docdir):
         if name != '.gitignore':
             os.remove(os.path.join(moddir, name))
     
-    for pack in packages:
+    for pack in get_openmdao_packages():
         print 'creating autodoc file for %s' % pack
         with open(os.path.join(pkgdir, pack+'.rst'), 'w') as f:
             _pkg_sphinx_info(branchdir, pack, f, show_undoc=True, underline='-')
@@ -304,7 +310,7 @@ def _make_license_table(docdir, reqs=None):
     license_fname = os.path.join(docdir,'licenses','licenses_table.txt')
     
     if reqs is None:
-        reqs = [Requirement.parse(p) for p in packages]
+        reqs = [Requirement.parse(p) for p in get_openmdao_packages()]
     dists = working_set.resolve(reqs)
         
     metadict = {}
