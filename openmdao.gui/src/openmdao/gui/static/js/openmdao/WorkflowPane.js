@@ -48,7 +48,6 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     workflowDiv.droppable ({
         accept: '.obj, .objtype',
         drop: function(ev,ui) { 
-            debug.info("Workflow drop:",ev,ui,self.pathname)
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
@@ -60,19 +59,17 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 bestfig = workflow.getBestFigure(x,y);
             debug.info("Workflow dropped object:",droppedObject)            
             if (flowfig && droppedObject.hasClass('obj')) {
-                debug.info('flowfig:',flowfig,'pathname:',flowfig.pathname)
                 model.issueCommand('top'+flowfig.pathname+'.workflow.add("'+droppedPath+'")')
             }
             else if (droppedObject.hasClass('objtype') && (/^openmdao.lib.drivers./).test(droppedPath)) {
                 // TODO: really need interface info to check if the type and fig are drivers
-                debug.info(droppedPath,'dropped on',bestfig.pathname,bestfig);
-                if (bestfig && openmdao.Util.getName(bestfig.pathname) === 'driver') {
+                if (bestfig instanceof openmdao.WorkflowComponentFigure && openmdao.Util.getName(bestfig.pathname) === 'driver') {
                     path = openmdao.Util.getParentPath(bestfig.pathname);
                     // TODO: need a 'replaceDriver' function to preserve driver config
                     model.addComponent(droppedPath,'driver',path);
                 }
                 else {
-                    debug.info(droppedPath,'was not dropped on a driver');
+                    debug.info(droppedPath,'was not dropped on a driver', bestfig);
                 }
             }
             else {
