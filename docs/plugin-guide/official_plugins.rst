@@ -5,15 +5,15 @@
 Installing Plugins from the Official OpenMDAO Plugin Repository
 ===============================================================
 
-The OpenMDAO project also hosts a set of official plugins in a github top-level
-organization called OpenMDAO-Plugins. You can visit this site at https://github.com/OpenMDAO-Plugins/
+The OpenMDAO project also hosts a set of official plugins in a GitHub top-level
+organization called **OpenMDAO-Plugins**. You can visit this site at https://github.com/OpenMDAO-Plugins/
 
-These plugins are all open-source, although some of them are component wraps of proprietary or
+These plugins are all open source, although some of them are component wraps of proprietary or
 otherwise-restricted codes (e.g., Nastran) that you will have to obtain separately. In most cases,
 the plugin only contains the OpenMDAO wrapper code.
 
-The plugin_install script takes some additional arguments that allow you to interact with
-the plugin repositories in OpenMDAO-Plugins, so that you can list and install easilly. To
+The ``plugin_install`` script takes some additional arguments that allow you to interact with
+the plugin repositories in OpenMDAO-Plugins so that you can list and install easilly. To
 list the components you currently have installed, type the following at the OS prompt (always
 in an activated OpenMDAO environment):
 
@@ -38,7 +38,7 @@ You should get a response that looks something like this.
 This shows both the plugin name and the versions in a simple list. If you have never installed
 a plugin, this list will be empty.
     
-A shortcut for the --list argument is -l:
+A shortcut for the ``--list`` argument is ``-l``:
 ::
 
     plugin_install -l
@@ -66,15 +66,15 @@ This returns a response that looks something like this:
         pyopt_driver -- Driver wrapper for the open-source optimization package pyOpt
          vsp_wrapper -- Component wrapper for VSP (Vehicle Sketch Pad)
 
-Note that https must be available in order to communicate with the github repository. If you
-don't have network connection, then these features will be unavailable. There is also a -g
-shortcut for the argument --github:
+Note that https must be available in order to communicate with the GitHub repository. If you
+don't have a network connection, then these features will be unavailable. There is also a ``-g``
+shortcut for the argument ``--github``:
 
 ::
 
     plugin_install -g -l
 
-To install one of the plugins listed above, simply:
+To install one of the plugins listed above, simply type:
 
 ::
 
@@ -100,22 +100,24 @@ You will see some text that looks something like this.
     You must deactivate and reactivate your virtual environment for the
     changes to take effect
     
-The message at the end indicates that you need to deactivate and reactive for some
-symbols to be added to your environment. Notice that in this case, I've actually
-used plugin_install to upgrade the version of pyopt_driver from 0.3 to 0.4.
+The message at the end indicates that you need to deactivate and reactivate for some
+symbols to be added to your environment. Notice that in this case, we've actually
+used ``plugin_install`` to upgrade the version of ``pyopt_driver`` from 0.3 to 0.4.
 
-If you want a specific version of a plugin, you can use the easy_install syntax to specify
+If you want a specific version of a plugin, you can use the ``easy_install`` syntax to specify
 one:
 
-    plugin_install -g pyopt_driver==0.3
+::
+
+  plugin_install -g pyopt_driver==0.3
     
-This will give me pyopt_driver 0.3, not 0.4.
+This will give you ``pyopt_driver`` 0.3, not 0.4.
 
 Here is a quick reference for these commands:
 
 .. index:: plugin_install quick command reference
     
-**Quick Command Reference for plugin_install**
+**Quick Command Reference for ``plugin_install``**
 
 
 ==================================   =================================

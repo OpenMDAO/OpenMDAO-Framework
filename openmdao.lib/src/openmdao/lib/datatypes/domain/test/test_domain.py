@@ -749,6 +749,139 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), RuntimeError, 'Vector is empty!')
 
 
+    def test_promote(self):
+        logging.debug('')
+        logging.debug('test_promote')
+        logger = logging.getLogger()
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        self.assertEqual(wedge.shape, [(30, 20)])
+        wedge.promote()
+        self.assertEqual(wedge.shape, [(30, 20, 1)])
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        wedge.make_cylindrical()
+        self.assertEqual(wedge.shape, [(30, 20)])
+        wedge.promote()
+        self.assertEqual(wedge.shape, [(1, 30, 20)])
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        self.assertEqual(curve.shape, [(20,)])
+        curve.promote()
+        self.assertEqual(curve.shape, [(20,1)])
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        curve.make_cylindrical()
+        self.assertEqual(curve.shape, [(20,)])
+        curve.promote()
+        self.assertEqual(curve.shape, [(20,1)])
+
+        assert_raises(self, 'FlowSolution().promote()', globals(), locals(),
+                      RuntimeError, 'FlowSolution is empty!')
+        assert_raises(self, 'Vector().promote()', globals(), locals(),
+                      RuntimeError, 'Vector is empty!')
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        assert_raises(self, 'wedge.xyzzy.flow_solution.promote()',
+                      globals(), locals(),
+                      RuntimeError, 'FlowSolution is 3D')
+        assert_raises(self, 'wedge.xyzzy.grid_coordinates.promote()',
+                      globals(), locals(),
+                      RuntimeError, 'Vector is 3D')
+
+    def test_demote(self):
+        logging.debug('')
+        logging.debug('test_demote')
+        logger = logging.getLogger()
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+
+        ij_surface = wedge.extract([(0, -1, 0, -1, 0, 0)])
+        self.assertEqual(ij_surface.shape, [(30, 20, 1)])
+        ij_surface.demote()
+        self.assertEqual(ij_surface.shape, [(30, 20)])
+
+        jk_surface = wedge.extract([(0, 0, 0, -1, 0, -1)])
+        self.assertEqual(jk_surface.shape, [(1, 20, 10)])
+        jk_surface.demote()
+        self.assertEqual(jk_surface.shape, [(20, 10)])
+
+        ik_surface = wedge.extract([(0, -1, 0, 0, 0, -1)])
+        self.assertEqual(ik_surface.shape, [(30, 1, 10)])
+        ik_surface.demote()
+        self.assertEqual(ik_surface.shape, [(30, 10)])
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        wedge.make_cylindrical()
+
+        ij_surface = wedge.extract([(0, -1, 0, -1, 0, 0)])
+        self.assertEqual(ij_surface.shape, [(30, 20, 1)])
+        ij_surface.demote()
+        self.assertEqual(ij_surface.shape, [(30, 20)])
+
+        jk_surface = wedge.extract([(0, 0, 0, -1, 0, -1)])
+        self.assertEqual(jk_surface.shape, [(1, 20, 10)])
+        jk_surface.demote()
+        self.assertEqual(jk_surface.shape, [(20, 10)])
+
+        ik_surface = wedge.extract([(0, -1, 0, 0, 0, -1)])
+        self.assertEqual(ik_surface.shape, [(30, 1, 10)])
+        ik_surface.demote()
+        self.assertEqual(ik_surface.shape, [(30, 10)])
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+
+        i_curve = wedge.extract([(0, -1, 0, 0)])
+        self.assertEqual(i_curve.shape, [(30, 1)])
+        i_curve.demote()
+        self.assertEqual(i_curve.shape, [(30,)])
+
+        j_curve = wedge.extract([(0, 0, 0, -1)])
+        self.assertEqual(j_curve.shape, [(1, 20)])
+        j_curve.demote()
+        self.assertEqual(j_curve.shape, [(20,)])
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        wedge.make_cylindrical()
+
+        i_curve = wedge.extract([(0, -1, 0, 0)])
+        self.assertEqual(i_curve.shape, [(30, 1)])
+        i_curve.demote()
+        self.assertEqual(i_curve.shape, [(30,)])
+
+        j_curve = wedge.extract([(0, 0, 0, -1)])
+        self.assertEqual(j_curve.shape, [(1, 20)])
+        j_curve.demote()
+        self.assertEqual(j_curve.shape, [(20,)])
+
+        assert_raises(self, 'FlowSolution().demote()', globals(), locals(),
+                      RuntimeError, 'FlowSolution is empty!')
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        assert_raises(self, 'wedge.xyzzy.flow_solution.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i, j, or k plane to collapse')
+        assert_raises(self, 'wedge.xyzzy.grid_coordinates.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i, j, or k plane to collapse')
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        assert_raises(self, 'wedge.xyzzy.flow_solution.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i or j plane to collapse')
+        assert_raises(self, 'wedge.xyzzy.grid_coordinates.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i or j plane to collapse')
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        assert_raises(self, 'curve.xyzzy.flow_solution.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'FlowSolution is 1D')
+        assert_raises(self, 'curve.xyzzy.grid_coordinates.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'Vector is 1D')
+
+
 if __name__ == '__main__':
     import nose
     import sys

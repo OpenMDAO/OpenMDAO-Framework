@@ -266,3 +266,13 @@ class Zone(object):
         else:
             raise RuntimeError('Zone not in cartesian coordinates')
 
+    def promote(self):
+        """ Promote from N-dimensional to N+1 dimensional index space. """
+        self.grid_coordinates.promote()
+        self.flow_solution.promote()
+
+    def demote(self):
+        """ Demote from N-dimensional to N-1 dimensional index space. """
+        self.grid_coordinates.demote()
+        self.flow_solution.demote()
+
