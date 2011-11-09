@@ -30,7 +30,7 @@ def _find_wing():
         tdir = r'C:\Program Files (x86)'
         try:
             locs = [os.path.join(tdir, p) for p in 
-                    fnmatch.filter(os.listdir(tdir), 'WingIDE ?.?')]
+                    fnmatch.filter(os.listdir(tdir), 'Wing IDE ?.?')]
         except:
             locs = []
     elif sys.platform == 'darwin':
