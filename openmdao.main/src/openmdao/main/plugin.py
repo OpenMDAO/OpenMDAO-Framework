@@ -904,24 +904,16 @@ def _plugin_docs(plugin_name, browser=None):
         pkg = '.'.join(modname.split('.')[:2])
         if any([p.endswith('.egg') and p.startswith('openmdao.') for p in fparts]): 
             # this is a release version, so use online docs
-            if classname is None:
-                url = 'http://openmdao.org/releases/%s/docs/srcdocs/packages/%s.html#%s' % (
-                    __version__, pkg, modname)
-            else:
-                url = 'http://openmdao.org/releases/%s/docs/srcdocs/packages/%s.html#%s-py' % (
-                    __version__, pkg, classname)
+            url = 'http://openmdao.org/releases/%s/docs/srcdocs/packages/%s.html#module-%s' % (
+                __version__, pkg, modname)
         else:  # it's a developer version, so use locally built docs
             htmldir = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
             if not os.path.isfile(os.path.join(htmldir,'index.html')): #make sure the local docs are built
-                print "local docs not found.\nbuilding them now\n"
+                print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao_build_docs'])
-            #if classname is None:
             url = 'file://'+os.path.join(htmldir, 'srcdocs', 'packages', 
                                          '%s.html#module-%s' % (pkg, modname))
-           # else:
-           #    url = 'file://'+os.path.join(htmldir, 'srcdocs', 'packages', 
-           #                                  '%s.html#%s-py' % (pkg,classname))
     else:
         url = os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
                            'sphinx_build', 'html', 'index.html')
