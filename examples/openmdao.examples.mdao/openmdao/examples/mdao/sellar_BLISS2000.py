@@ -156,7 +156,7 @@ class SellarBLISS2000(Assembly):
         
         self.sysopt.add_constraint('3.16 < m1.mu')
         self.sysopt.add_constraint('m2.mu < 24.0')
-        #self.sysopt.iprint=1
+        self.sysopt.iprint=101
         
         
         #optimization of discipline 1
