@@ -280,6 +280,8 @@ def get_metadata(path):
                 dist = d
                 metadata = get_dist_metadata(dist)
                 break
+        else:
+            raise RuntimeError("Could not locate distribution '%s'" % path)
     
     if dist is not None:
         metadata['py_version'] = dist.py_version
@@ -290,9 +292,8 @@ def get_metadata(path):
         for gname,group in get_entry_map(dist, group=None).items():
             metadata['entry_points'][gname] = [ep for ep in group]
         
-        return metadata
+    return metadata
     
-    raise RuntimeError("Could not locate distribution '%s'" % path)
     
 if __name__ == '__main__': # pragma no cover
     if len(sys.argv) > 2:
