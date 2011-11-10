@@ -864,10 +864,10 @@ def _plugin_docs(plugin_name, browser=None):
         default browser will be used.
     """
     parts = plugin_name.split('.')
-    classname = None
     
-    if '.' not in plugin_name: # assume it's a class name and try to find unambiguous module
+    if len(parts) == 1: # assume it's a class name and try to find unambiguous module
         modname = None
+        # loop over available types to find a class name that matches
         for name, version in get_available_types():
             mname, cname = name.rsplit('.',1)
             if cname == plugin_name:
@@ -875,45 +875,38 @@ def _plugin_docs(plugin_name, browser=None):
                     raise RuntimeError("Can't determine module for class '%s' unambiguously. found in %s" %
                                        (cname, [mname, modname]))
                 modname = mname
-                classname = plugin_name
+                parts = modname.split('.')
    
-        if modname is None: # assume plugin_name is a dist name
-            modname = plugin_name + '.' + plugin_name
+        if modname is None: # didn't find a class, so assume plugin_name is a dist name
+            parts = [plugin_name, plugin_name]
         
+    for i in range(len(parts)-1):
+        mname = '.'.join(parts[:len(parts)-i])
         try:
-            __import__(modname)
-            mod = sys.modules[modname]
+            __import__(mname)
+            mod = sys.modules[mname]
+            modname = mname
+            break
         except ImportError:
-            raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
-    else:    
-        for i in range(2):
-            mname = '.'.join(parts[:len(parts)-i])
-            try:
-                __import__(mname)
-                mod = sys.modules[mname]
-                classname = parts[-1] if i>0 else None
-                modname = mname
-                break
-            except ImportError:
-                pass
-        else:
-            raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
+            pass
+    else:
+        raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
     
     if modname.startswith('openmdao.'): # lookup in builtin docs
         fparts = mod.__file__.split(os.sep)
         pkg = '.'.join(modname.split('.')[:2])
+        anchorpath = '/'.join(['srcdocs', 'packages','%s.html#module-%s' % (pkg, modname)])
         if any([p.endswith('.egg') and p.startswith('openmdao.') for p in fparts]): 
             # this is a release version, so use online docs
-            url = 'http://openmdao.org/releases/%s/docs/srcdocs/packages/%s.html#module-%s' % (
-                __version__, pkg, modname)
+            url = '/'.join(['http://openmdao.org/releases/%s/docs' % __version__, anchorpath])
         else:  # it's a developer version, so use locally built docs
             htmldir = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
             if not os.path.isfile(os.path.join(htmldir,'index.html')): #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao_build_docs'])
-            url = 'file://'+os.path.join(htmldir, 'srcdocs', 'packages', 
-                                         '%s.html#module-%s' % (pkg, modname))
+            url = 'file://'+os.path.join(htmldir, anchorpath)
+            url = url.replace('\\', '/')
     else:
         url = os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
                            'sphinx_build', 'html', 'index.html')
