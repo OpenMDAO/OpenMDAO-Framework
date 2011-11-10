@@ -12,15 +12,17 @@ import StringIO
 from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser
 from subprocess import call, check_call
-from fnmatch import fnmatch
+import fnmatch
 
 from ordereddict import OrderedDict
 
 from setuptools import find_packages
+from pkg_resources import WorkingSet, Requirement
 
 from openmdao.main.factorymanager import get_available_types, _plugin_groups
 from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir
 from openmdao.util.dep import PythonSourceTreeAnalyser
+from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.main.pkg_res_factory import _plugin_groups
 from openmdao.main import __version__
 
@@ -956,13 +958,6 @@ def plugin_install(options):
         print url
         
         build_docs_and_install(name, version)
-
-        #cmdargs = ['easy_install', url] 
-        #cmd = ' '.join(cmdargs)
-        #retcode = call(cmdargs)
-        #if retcode:
-            #sys.stderr.write("\nERROR: command '%s' returned error code: %s\n" % (cmd,retcode))
-            #sys.exit(-1)
         
     else: # Install plugin from local file or directory
     
@@ -1085,7 +1080,8 @@ def build_docs_and_install(name, version):
     os.chdir(tdir)
     try:
         tarpath = download_github_tar(name, version)
-        # extract the tar file
+        
+        # extract the repo tar file
         tar = tarfile.open(tarpath)
         tar.extractall()
         tar.close()
@@ -1094,12 +1090,40 @@ def build_docs_and_install(name, version):
         files.remove(os.path.basename(tarpath))
         if len(files) != 1:
             raise RuntimeError("after untarring, found multiple directories: %s" % files)
-        cmds = ['plugin', 'build_docs', files[0]]
-        check_call(cmds)
-        os.chdir(files[0]) # should be in distrib directory now
-        cmds = [sys.executable, 'setup.py', 'install']
-        check_call(cmds)
         
+        # build sphinx docs
+        check_call(['plugin', 'build_docs', files[0]])
+        os.chdir(files[0]) # should be in distrib directory now
+        
+        # create an sdist so we can query metadata for distrib dependencies
+        check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
+        
+        tars = fnmatch.filter(os.listdir('.'), "*.tar.gz")
+        if len(tars) != 1:
+            raise RuntimeError("should have found a single tar file, but found %s instead" % tars)
+
+        check_call(['easy_install', '-NZ', tars[0]])
+        
+        # now install any dependencies
+        metadict = get_metadata(tars[0])
+        reqs = metadict.get('requires', [])
+        done = set()
+        
+        while reqs:
+            r = reqs.pop()
+            if r not in done:
+                done.add(r)
+                ws = WorkingSet()
+                req = Requirement.parse(r)
+                d = ws.find(req)
+                if d is None:
+                    check_call(['easy_install', '-NZ', r])
+                    d = ws.find(req)
+                    if d is None:
+                        raise RuntimeError("Couldn't find distribution '%s'" % r)
+                    dct = get_metadata(d.egg_name().split('-')[0])
+                    for new_r in dct.get('requires',[]):
+                        reqs.append(new_r)
     finally:
         os.chdir(startdir)
         shutil.rmtree(tdir, ignore_errors=True)
