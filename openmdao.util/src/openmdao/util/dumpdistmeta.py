@@ -205,7 +205,8 @@ def _meta_from_zipfile(path):
 
         # if there's no egg-info, use old PKG-INFO if found     
         if len(metadata) == 0 and oldpkginfo:  
-            message = rfc822.Message(zf.read(oldpkginfo))
+            instr = StringIO.StringIO(zf.read(oldpkginfo).strip())
+            message = rfc822.Message(instr)
             for k,v in message.items():
                 metadata[k] = v  
 
