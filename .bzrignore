@@ -22,10 +22,7 @@ doctrees
 generated_images
 repo_lock
 docs/srcdocs/packages/*.rst
-docs/srcdocs/modules/*.rst
 nosetests.xml
-examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-f2pywrappers.f
 devenv
-*.DS_Store
 
 

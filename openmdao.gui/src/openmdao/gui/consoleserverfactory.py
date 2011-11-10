@@ -223,7 +223,12 @@ class ConsoleServer(cmd.Cmd):
         '''
         # set name so any "if __name__ == __main__" code will be executed
         self._globals['__name__'] = '__main__'
-        execfile(file,self._globals)
+        print "Executing",file,"..."
+        try:
+            execfile(file,self._globals,self._locals)
+            print "Execution complete."
+        except Exception, err:
+            self.error(err,sys.exc_info())
 
     def get_output(self):
         ''' get any pending output and clear the outputput buffer

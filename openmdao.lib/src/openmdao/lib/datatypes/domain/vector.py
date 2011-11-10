@@ -527,3 +527,177 @@ class Vector(object):
         self.y = self.y*cosine + self.x*sine
         self.x = x_new
 
+    def promote(self):
+        """ Promote from N-dimensional to N+1 dimensional index space. """
+        shape = self.shape
+
+        if len(shape) > 2:
+            raise RuntimeError('Vector is 3D')
+
+        elif len(shape) > 1:
+            imax, jmax = shape
+            if self.x is not None:  # x,y -> x,y,z
+                new_arr = numpy.zeros((imax, jmax, 1))
+                new_arr[:, :, 0] = self.x[:, :]
+                self.x = new_arr
+                new_arr = numpy.zeros((imax, jmax, 1))
+                new_arr[:, :, 0] = self.y[:, :]
+                self.y = new_arr
+                if self.z is not None:
+                    new_arr = numpy.zeros((1, imax, jmax))
+                    new_arr[:, :, 0] = self.z[:, :]
+                    self.z = new_arr
+                else:
+                    self.z = numpy.zeros((imax, jmax, 1))
+            else:  # r,t -> z,r,t (note index order change!)
+                new_arr = numpy.zeros((1, imax, jmax))
+                new_arr[0, :, :] = self.r[:, :]
+                self.r = new_arr
+                new_arr = numpy.zeros((1, imax, jmax))
+                new_arr[0, :, :] = self.t[:, :]
+                self.t = new_arr
+                if self.z is not None:
+                    new_arr = numpy.zeros((1, imax, jmax))
+                    new_arr[0, :, :] = self.z[:, :]
+                    self.z = new_arr
+                else:
+                    self.z = numpy.zeros((1, imax, jmax))
+
+        elif len(shape) > 0:
+            imax = shape[0]
+            if self.x is not None:  # x -> x,y[,z]
+                new_arr = numpy.zeros((imax, 1))
+                new_arr[:, 0] = self.x[:]
+                self.x = new_arr
+                if self.y is not None:
+                    new_arr = numpy.zeros((imax, 1))
+                    new_arr[:, 0] = self.y[:]
+                    self.y = new_arr
+                    if self.z is not None:
+                        new_arr = numpy.zeros((imax, 1))
+                        new_arr[:, 0] = self.z[:]
+                        self.z = new_arr
+                else:
+                    self.y = numpy.zeros((imax, 1))
+            else:  # r,t -> r,t[,z]
+                new_arr = numpy.zeros((imax, 1))
+                new_arr[:, 0] = self.r[:]
+                self.r = new_arr
+                new_arr = numpy.zeros((imax, 1))
+                new_arr[:, 0] = self.t[:]
+                self.t = new_arr
+                if self.z is not None:
+                    new_arr = numpy.zeros((imax, 1))
+                    new_arr[:, 0] = self.z[:]
+                    self.z = new_arr
+        else:
+            raise RuntimeError('Vector is empty!')
+
+    def demote(self):
+        """ Demote from N-dimensional to N-1 dimensional index space. """
+        shape = self.shape
+
+        if len(shape) > 2:
+            imax, jmax, kmax = shape
+            if imax == 1:
+                if self.x is not None:
+                    new_arr = numpy.zeros((jmax, kmax))
+                    new_arr[:, :] = self.x[0, :, :]
+                    self.x = new_arr
+                    new_arr = numpy.zeros((jmax, kmax))
+                    new_arr[:, :] = self.y[0, :, :]
+                    self.y = new_arr
+                else:
+                    new_arr = numpy.zeros((jmax, kmax))
+                    new_arr[:, :] = self.r[0, :, :]
+                    self.r = new_arr
+                    new_arr = numpy.zeros((jmax, kmax))
+                    new_arr[:, :] = self.t[0, :, :]
+                    self.t = new_arr
+                new_arr = numpy.zeros((jmax, kmax))
+                new_arr[:, :] = self.z[0, :, :]
+                self.z = new_arr
+            elif jmax == 1:
+                if self.x is not None:
+                    new_arr = numpy.zeros((imax, kmax))
+                    new_arr[:, :] = self.x[:, 0, :]
+                    self.x = new_arr
+                    new_arr = numpy.zeros((imax, kmax))
+                    new_arr[:, :] = self.y[:, 0, :]
+                    self.y = new_arr
+                else:
+                    new_arr = numpy.zeros((imax, kmax))
+                    new_arr[:, :] = self.r[:, 0, :]
+                    self.r = new_arr
+                    new_arr = numpy.zeros((imax, kmax))
+                    new_arr[:, :] = self.t[:, 0, :]
+                    self.t = new_arr
+                new_arr = numpy.zeros((imax, kmax))
+                new_arr[:, :] = self.z[:, 0, :]
+                self.z = new_arr
+            elif kmax == 1:
+                if self.x is not None:
+                    new_arr = numpy.zeros((imax, jmax))
+                    new_arr[:, :] = self.x[:, :, 0]
+                    self.x = new_arr
+                    new_arr = numpy.zeros((imax, jmax))
+                    new_arr[:, :] = self.y[:, :, 0]
+                    self.y = new_arr
+                else:
+                    new_arr = numpy.zeros((imax, jmax))
+                    new_arr[:, :] = self.r[:, :, 0]
+                    self.r = new_arr
+                    new_arr = numpy.zeros((imax, jmax))
+                    new_arr[:, :] = self.t[:, :, 0]
+                    self.t = new_arr
+                new_arr = numpy.zeros((imax, jmax))
+                new_arr[:, :] = self.z[:, :, 0]
+                self.z = new_arr
+            else: 
+                raise RuntimeError('No i, j, or k plane to collapse')
+
+        elif len(shape) > 1:
+            imax, jmax = shape
+            if imax == 1:
+                if self.x is not None:
+                    new_arr = numpy.zeros((jmax,))
+                    new_arr[:] = self.x[0, :]
+                    self.x = new_arr
+                    new_arr = numpy.zeros((jmax,))
+                    new_arr[:] = self.y[0, :]
+                    self.y = new_arr
+                else:
+                    new_arr = numpy.zeros((jmax,))
+                    new_arr[:] = self.r[0, :]
+                    self.r = new_arr
+                    new_arr = numpy.zeros((jmax,))
+                    new_arr[:] = self.t[0, :]
+                    self.t = new_arr
+                if self.z is not None:
+                    new_arr = numpy.zeros((jmax,))
+                    new_arr[:] = self.z[0, :]
+                    self.z = new_arr
+            elif jmax == 1:
+                if self.x is not None:
+                    new_arr = numpy.zeros((imax,))
+                    new_arr[:] = self.x[:, 0]
+                    self.x = new_arr
+                    new_arr = numpy.zeros((imax,))
+                    new_arr[:] = self.y[:, 0]
+                    self.y = new_arr
+                else:
+                    new_arr = numpy.zeros((imax,))
+                    new_arr[:] = self.r[:, 0]
+                    self.r = new_arr
+                    new_arr = numpy.zeros((imax,))
+                    new_arr[:] = self.t[:, 0]
+                    self.t = new_arr
+                if self.z is not None:
+                    new_arr = numpy.zeros((imax,))
+                    new_arr[:] = self.z[:, 0]
+                    self.z = new_arr
+            else:
+                raise RuntimeError('No i or j plane to collapse')
+        else:
+            raise RuntimeError('Vector is 1D')
+

@@ -20,30 +20,31 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     historyBox.append(menuhtml)
     ContextMenu.set(historyID+"-menu", historyBox.attr('id'));
 
-    /** DEBUG: make the history pane droppable */
-    historyBox.droppable({
-        accept: '*',
-        drop: function(ev,ui) { 
-            var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('Console drop',droppedObject)
-        }
-    })    
-    
+    /** could make a menu/toolbar with this stuff... * /
+    var rateButton = jQuery('<div style="position:absolute; top:3px; right:30px; border:outset">&nbsp Poll &nbsp</div>');
+    rateButton.click(function(){
+         promptForRefresh();
+    });    
+    historyBox.parent().append(rateButton);
+    /**/
+
     // submit a command
     jQuery('#'+formID).submit(function() {
+        var cmd = command.val();
         model.issueCommand(command.val(),
             // success, record any response in the history & clear the command
             function(responseText) {
-                if (responseText.length > 0)
-                    updateHistory(responseText)
-                command.val("")
+                if (responseText.length > 0) {
+                    updateHistory(responseText);
+                }
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
                 alert("Error issuing command: "+jqXHR.statusText)
             }
-        )
-        return false
+        );
+        command.val("");
+        return false;
     })
     
     // if an interval is specified, continuously update
@@ -53,10 +54,31 @@ openmdao.Console = function(formID,commandID,historyID,model) {
 
     /** set the history to continuously update after specified ms */
     function setRefresh(interval) {
-        self.interval = interval
-        if (timer != 'undefined')
-            clearInterval(timer)
-        timer = setInterval(update,interval)    
+        self.interval = interval;
+        if (timer != 'undefined') {
+            clearInterval(timer);
+        }
+        if (interval > 0) {
+            timer = setInterval(update,interval);
+        }
+    }
+    
+    /** prompt user for refresh rate */
+    promptForRefresh = function() {
+        openmdao.Util.promptForValue('Specify a polling delay (in seconds)',function(val) {
+            if (val === '0') {
+                setRefresh(0);
+            }
+            else {
+                var rate = parseInt(val);
+                if (! isNaN(rate)) {
+                    setRefresh(rate*1000);
+                }
+                else {
+                    alert('Invalid refresh rate:',rate);                
+                }
+            }
+        })
     }
         
     /** escape anything in the text that might look like HTML, etc. */
@@ -71,6 +93,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
                 result = result + "&lt;";
             } else if(text.charAt(i)== ">"){
                 result = result + "&gt;";
+            } else if(text.charAt(i)== " "){
+                result = result + "&nbsp;";
             } else {
                 result = result + text.charAt(i);
             }
@@ -78,14 +102,19 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         return result
     };
 
+    /** scroll to bottom */
+    function scrollToBottom() {
+        var h = history.height(),
+            hb = historyBox.height(),
+            hidden = h-hb
+        historyBox.scrollTop(hidden);
+    }
+    
     /** update the history */
     function updateHistory(text) {
         if (text.length > 0) {
             history.append(escapeHTML(text).replace(/\n\r?/g, '<br />'))
-            var h = history.height(),
-                hb = historyBox.height(),
-                hidden = h-hb
-            historyBox.scrollTop(h-(hidden));
+            scrollToBottom();
         }
     }
     
