@@ -23,28 +23,14 @@ openmdao.Model=function() {
 
     /** notify all listeners that something has changed (by calling all callbacks) */
     this.updateListeners = function() {
-        for ( var i = 0; i < callbacks.length; i++ )
-            if (typeof callbacks[i] == 'function')
-                callbacks[i]()
-            else
-                debug.error('Model: listener did not provide a valid callback function!')
-    }
-
-    /** get current mode (design/analysis) */
-    this.getMode = function() {
-        return mode;
-    }
-    
-    /** set mode as 'design' */
-    this.setModeDesign = function() {
-        self.mode = 'design'
-        self.updateListeners()
-    }
-
-    /** set mode as 'analysis' */
-    this.setModeAnalysis = function() {
-        self.mode = 'analysis'
-        self.updateListeners()
+        for ( var i = 0; i < callbacks.length; i++ ) {
+            if (typeof callbacks[i] == 'function') {
+                callbacks[i]();
+            }
+            else {
+                debug.error('Model: listener did not provide a valid callback function!',callback[i])
+            }
+        }
     }
 
     /** get the list of object types that are available for creation */
@@ -75,7 +61,7 @@ openmdao.Model=function() {
         jQuery.ajax({
             type: 'POST',
             url:  'project',
-            success: self.updateListeners
+            success: self.updateListeners   // not really necessary?
         })
     }
     
@@ -225,19 +211,21 @@ openmdao.Model=function() {
     this.addComponent = function(typepath,name,parent,callback) {
         if (!parent) {
             parent = '';
-        }
-        
+        };
+       
+        if (/driver/.test(typepath)&&(openmdao.Util['$'+name])){openmdao.Util['$'+name]();return;};
+
         jQuery.ajax({
             type: 'POST',
             url:  'component/'+name,
             data: {'type': typepath, 'parent': parent },
-            success: function(text) { 
+            success: function(text) {
                         if (typeof callback == 'function') {
-                            callback(text)
+                            callback(text);
                         };
                         self.updateListeners();
-            },
-        })
+            }
+        });
     }
 
     /** issue the specified command against the model */
@@ -329,18 +317,19 @@ openmdao.Model=function() {
     }
 
     /** create a new folder in the model working directory with the specified path */
-    this.createFolder = function(folderpath) {
+    this.createFolder = function(folderpath, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+folderpath.replace(/\\/g,'/'),
             data: { 'isFolder': true},
-            success: self.updateListeners
+            success: self.updateListeners,
+            error: errorHandler
         })
     }
 
     /** create a new file in the model working directory with the specified path  */
     this.newFile = function(folderpath) {
-        openmdao.Util.promptForName(function(name) {
+        openmdao.Util.promptForValue('Specify a name for the new file',function(name) {
             if (folderpath)
                 name = folderpath+'/'+name
             var contents = ''
@@ -354,11 +343,11 @@ openmdao.Model=function() {
 
     /** prompt for name & create a new folder */
     this.newFolder = function(folderpath) {
-        debug.info("model.newFolder folderpath="+folderpath)
-        openmdao.Util.promptForName(function(name) {
-            if (folderpath)
-                name = folderpath+'/'+name
-            self.createFolder(name,self.updateListeners)
+        openmdao.Util.promptForValue('Specify a name for the new folder',function(name) {
+            if (folderpath) {
+                name = folderpath+'/'+name;
+            }
+            self.createFolder(name);
         })
     }
 
@@ -374,8 +363,12 @@ openmdao.Model=function() {
             type: 'DELETE',
             url:  'file'+filepath.replace(/\\/g,'/'),
             data: { 'file': filepath },
-            success: self.updateListeners
-        })
+            success: self.updateListeners,
+            error: function(jqXHR, textStatus, errorThrown) {
+                       debug.warn("model.removeFile",jqXHR,textStatus,errorThrown);
+                       self.updateListeners();
+                   }
+            })
     }
     
     /** import the contents of the specified file into the model */
@@ -384,12 +377,11 @@ openmdao.Model=function() {
         var path = filepath.replace(/^./,'').
                             replace(/.py/g,'').
                             replace(/\\/g,'.').
-                            replace(/\//g,'.')
-        self.issueCommand("from "+path+" import *")
-        self.updateListeners()
+                            replace(/\//g,'.');
+        self.issueCommand("from "+path+" import *");
     }
 
-    /** execute the specified file */
+    /** execute the model */
     this.runModel = function() {
         // make the call
         jQuery.ajax({
@@ -397,14 +389,13 @@ openmdao.Model=function() {
             url:  'exec',
             data: { },
             success: function(data, textStatus, jqXHR) {
-                         this.issueCommand('print "'+data.replace('\n','\\n') +'"')
-                     }.bind(this),
+                         self.issueCommand('print "'+data.replace('\n','\\n') +'"')
+                     },
             error: function(jqXHR, textStatus, errorThrown) {
                        alert("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
                        openmdao.Util.htmlWindow(jqXHR.responseText,'Error Running Model',600,400)
                        debug.error(jqXHR,textStatus,errorThrown)
                    }
-            
         })
     }
     
@@ -420,7 +411,7 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'exec',
             data: { 'filename': path },
-            success: self.updateListeners
+            success: self.updateListeners,
         })
     }
 
