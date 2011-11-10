@@ -1098,9 +1098,12 @@ def build_docs_and_install(name, version):
         # create an sdist so we can query metadata for distrib dependencies
         check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
         
-        tars = fnmatch.filter(os.listdir('.'), "*.tar.gz")
+        if sys.platform.startswith('win'):
+            tars = fnmatch.filter(os.listdir('.'), "*.zip")
+        else:
+            tars = fnmatch.filter(os.listdir('.'), "*.tar.gz")
         if len(tars) != 1:
-            raise RuntimeError("should have found a single tar file, but found %s instead" % tars)
+            raise RuntimeError("should have found a single archive file, but found %s instead" % tars)
 
         check_call(['easy_install', '-NZ', tars[0]])
         
