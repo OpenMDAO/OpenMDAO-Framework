@@ -20,44 +20,31 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     historyBox.append(menuhtml)
     ContextMenu.set(historyID+"-menu", historyBox.attr('id'));
 
-    /** DEBUG: make the history pane droppable */
-    historyBox.droppable({
-        accept: '*',
-        drop: function(ev,ui) { 
-            var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('Console drop',droppedObject)
-        }
-    })
-
-    var clearButton = jQuery('<div style="position:absolute; top:3px; right:30px; border:outset">&nbsp Clear &nbsp</div>');
-    clearButton.click(function(){
-         history.text('');
+    /** could make a menu/toolbar with this stuff... * /
+    var rateButton = jQuery('<div style="position:absolute; top:3px; right:30px; border:outset">&nbsp Poll &nbsp</div>');
+    rateButton.click(function(){
+         promptForRefresh();
     });    
-    historyBox.append(clearButton);
-
-    /** /
-    var bottomButton = jQuery('<div style="position:absolute; top:3px; right:80px; border:outset">&nbsp Bottom &nbsp</div>');
-    bottomButton.click(function(){
-        scrollToBottom();
-    });    
-    historyBox.append(bottomButton);
+    historyBox.parent().append(rateButton);
     /**/
 
     // submit a command
     jQuery('#'+formID).submit(function() {
+        var cmd = command.val();
         model.issueCommand(command.val(),
             // success, record any response in the history & clear the command
             function(responseText) {
-                if (responseText.length > 0)
-                    updateHistory(responseText)
-                command.val("")
+                if (responseText.length > 0) {
+                    updateHistory(responseText);
+                }
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
                 alert("Error issuing command: "+jqXHR.statusText)
             }
-        )
-        return false
+        );
+        command.val("");
+        return false;
     })
     
     // if an interval is specified, continuously update
@@ -67,10 +54,31 @@ openmdao.Console = function(formID,commandID,historyID,model) {
 
     /** set the history to continuously update after specified ms */
     function setRefresh(interval) {
-        self.interval = interval
-        if (timer != 'undefined')
-            clearInterval(timer)
-        timer = setInterval(update,interval)    
+        self.interval = interval;
+        if (timer != 'undefined') {
+            clearInterval(timer);
+        }
+        if (interval > 0) {
+            timer = setInterval(update,interval);
+        }
+    }
+    
+    /** prompt user for refresh rate */
+    promptForRefresh = function() {
+        openmdao.Util.promptForValue('Specify a polling delay (in seconds)',function(val) {
+            if (val === '0') {
+                setRefresh(0);
+            }
+            else {
+                var rate = parseInt(val);
+                if (! isNaN(rate)) {
+                    setRefresh(rate*1000);
+                }
+                else {
+                    alert('Invalid refresh rate:',rate);                
+                }
+            }
+        })
     }
         
     /** escape anything in the text that might look like HTML, etc. */

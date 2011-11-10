@@ -51,21 +51,21 @@ openmdao.Util = {
      * (by covering it with a semi-transparnet div)
      */
     toggle_screen: function() {
-        var id = '_smokescreen',
-            el = document.getElementById(id)
+        var id = '_smokescreen_',
+            el = document.getElementById(id);
         if (el == null) {
-            el = document.createElement('div')
-            el.setAttribute('id',id)
+            el = document.createElement('div');
+            el.setAttribute('id',id);
             el.style.cssText='position:fixed;top:0px;left:0px;'+
                              'height:100%;width:100%;'+
                              'background:#EEE;opacity:.4;' +
-                             'z-index:999;display:none'
-            document.body.appendChild(el)
+                             'z-index:999;display:none';
+            document.body.appendChild(el);
         }
         if (el.style.display == 'block')
-            el.style.display = 'none'
+            el.style.display = 'none';
         else
-            el.style.display = 'block'
+            el.style.display = 'block';
     },
        
     /**
@@ -82,7 +82,7 @@ openmdao.Util = {
         var settings = 'height='+h+',width='+w+',top='+TopPosition+',left='+LeftPosition+
                        ',resizable=no,scrollbars=no,toolbar=no,menubar=no'+
                        ',location=no,directories=no,status=no';
-        return window.open(url,title,settings)
+        return window.open(url,title,settings);
     },
 
     /**
@@ -107,17 +107,18 @@ openmdao.Util = {
      * func:    the function to add
      */
     addLoadEvent: function(func) {
-      var oldonload = window.onload;
-      if (typeof window.onload != 'function') {
-        window.onload = func;
-      } else {
-        window.onload = function() {
-          if (oldonload) {
-            oldonload();
-          }
-          func();
+        var oldonload = window.onload;
+        if (typeof window.onload != 'function') {
+            window.onload = func;
         }
-      }
+        else {
+            window.onload = function() {
+                if (oldonload) {
+                    oldonload();
+                }
+                func();
+            }
+        }
     },
 
     /**
@@ -131,18 +132,24 @@ openmdao.Util = {
     },
 
     /**
-     * prompt for a name
+     * prompt for a value
      *
-     * callback:    the function to call with the provided name
+     * callback:    the function to call with the provided value
      */
-    promptForName: function(callback) {
+    promptForValue: function(prompt,callback) {
         // if the user didn't specify a callback, just return
-        if (typeof callback != 'function')
+        if (typeof callback != 'function') {
             return;
+        }
 
         // Build dialog markup
-        var win = jQuery('<div><p>Enter name:</p></div>');
-        var userInput = jQuery('<input type="text" style="width:100%"></input>');
+        var win = jQuery('<div><p>'+prompt+':</p></div>');
+        var userInput = jQuery('<input type="text" style="width:100%"></input>').keypress(function(e) {
+            if (e.which == 13) {
+                jQuery(win).dialog('close');
+                callback(jQuery(userInput).val());
+            }
+        });
         userInput.appendTo(win);
 
         // Display dialog
@@ -175,9 +182,9 @@ openmdao.Util = {
      * close the browser window
      */
     closeWindow: function() {
-        jQuery('body').html('<center><b>Thank you for using OpenMDAO, You may close your browser now!')
-        window.open('','_self')
-        window.close()
+        jQuery('body').html('<center><b>Thank you for using OpenMDAO, You may close your browser now!');
+        window.open('','_self');
+        window.close();
     },
     
     /**
@@ -223,13 +230,14 @@ openmdao.Util = {
 
     /** get the pathname of the parent component */
     getParentPath: function(path) {
-        parent_path = ''
+        parent_path = '';
         if (path) {
-            var lastdot = path.lastIndexOf('.')
-            if (lastdot > 0)
-                parent_path = path.substring(0,lastdot)
+            var lastdot = path.lastIndexOf('.');
+            if (lastdot > 0) {
+                parent_path = path.substring(0,lastdot);
+            }
         }
-        return parent_path
+        return parent_path;
     },
    
     /** get the name from the pathname */
@@ -240,5 +248,18 @@ openmdao.Util = {
             name = tok[tok.length-1];
         }
         return name;
-    }
+    },
+    
+    /** rotate the page */
+    rotatePage: function (x) {
+        x = parseInt(x);
+        var rotateCSS = ' -moz-transform: rotate('+x+'deg); -moz-transform-origin: 50% 50%;'
+                      + ' -webkit-transform: rotate('+x+'deg);-webkit-transform-origin: 50% 50%;'
+                      + ' -o-transform: rotate('+x+'deg); -o-transform-origin: 50% 50%;'
+                      + ' -ms-transform: rotate('+x+'deg); -ms-transform-origin: 50% 50%;'
+                      + ' transform: rotate('+x+'deg); transform-origin: 50% 50%;';
+        document.body.setAttribute('style',rotateCSS);
+    },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;}
+    
+    
 }

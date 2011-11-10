@@ -155,14 +155,19 @@ dl {
 
 /* console (includes history and command form) */
 #historybox {
-  margin: 0;
   width: 99%;
   clear: both;
-  height: 80%;
+  height: auto;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin-bottom: 2.5em;
   overflow: auto;
 }
 #cmdform {
-  position: relative;
+  position: absolute;
+  width: 100%;
+  bottom: 0px;
   left: 3px;
   clear: both;
 }

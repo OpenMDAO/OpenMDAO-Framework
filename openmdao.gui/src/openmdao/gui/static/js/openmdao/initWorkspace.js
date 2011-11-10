@@ -30,13 +30,18 @@ jQuery(function() {
     (function() {
         var model = openmdao.model;
         
-        var data_fn = new openmdao.DataflowDiagram("dataflow",model,'').showDataflow;        
-        var work_fn = new openmdao.WorkflowDiagram("workflow",model,'driver').showWorkflow;
-        var code_fn = new openmdao.CodeEditor("code",model).editFile;
-        var prop_fn = new openmdao.PropertiesEditor("propertieseditor",model).editObject;
+        var data = new openmdao.DataflowDiagram("dataflow",model,''),
+            work = new openmdao.WorkflowDiagram("workflow",model,'driver'),
+            code = new openmdao.CodeEditor("code",model),
+            prop = new openmdao.PropertiesEditor("propertieseditor",model);
+            
+        function data_fn(path) { data.showDataflow(path); jQuery('#dataflow_tab').click(); }
+        function work_fn(path) { work.showWorkflow(path); jQuery('#workflow_tab').click(); }
+        function code_fn(path) { code.editFile(path);     jQuery('#code_tab').click(); }
+        function prop_fn(path) { prop.editObject(path);   }
         
-        var geom_fn = function(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
-        var comp_fn = function(model,path) { new openmdao.ComponentEditor(model,path) };
+        function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
+        function comp_fn(path) { new openmdao.ComponentEditor(model,path) };
         
         new openmdao.ObjectTree("otree", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTree("ftree",   model, code_fn, geom_fn);        
