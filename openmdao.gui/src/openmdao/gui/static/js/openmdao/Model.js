@@ -329,7 +329,7 @@ openmdao.Model=function() {
 
     /** create a new file in the model working directory with the specified path  */
     this.newFile = function(folderpath) {
-        openmdao.Util.promptForName(function(name) {
+        openmdao.Util.promptForValue('Specify a name for the new file',function(name) {
             if (folderpath)
                 name = folderpath+'/'+name
             var contents = ''
@@ -343,7 +343,7 @@ openmdao.Model=function() {
 
     /** prompt for name & create a new folder */
     this.newFolder = function(folderpath) {
-        openmdao.Util.promptForName(function(name) {
+        openmdao.Util.promptForValue('Specify a name for the new folder',function(name) {
             if (folderpath) {
                 name = folderpath+'/'+name;
             }

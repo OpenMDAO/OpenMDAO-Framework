@@ -132,18 +132,18 @@ openmdao.Util = {
     },
 
     /**
-     * prompt for a name
+     * prompt for a value
      *
-     * callback:    the function to call with the provided name
+     * callback:    the function to call with the provided value
      */
-    promptForName: function(callback) {
+    promptForValue: function(prompt,callback) {
         // if the user didn't specify a callback, just return
         if (typeof callback != 'function') {
             return;
         }
 
         // Build dialog markup
-        var win = jQuery('<div><p>Enter name:</p></div>');
+        var win = jQuery('<div><p>'+prompt+':</p></div>');
         var userInput = jQuery('<input type="text" style="width:100%"></input>').keypress(function(e) {
             if (e.which == 13) {
                 jQuery(win).dialog('close');

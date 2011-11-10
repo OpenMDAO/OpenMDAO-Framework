@@ -57,7 +57,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 y = Math.round(ui.offset.top - off.top),
                 flowfig = workflow.getBestCompartmentFigure(x,y),
                 bestfig = workflow.getBestFigure(x,y);
-            debug.info("Workflow dropped object:",droppedObject)            
+            debug.info(droppedName,'dropped on',self.pathname,'workflow');
             if (flowfig && droppedObject.hasClass('obj')) {
                 model.issueCommand('top'+flowfig.pathname+'.workflow.add("'+droppedPath+'")')
             }

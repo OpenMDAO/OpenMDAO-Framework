@@ -18,17 +18,16 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
     dataflowDiv.droppable ({
         accept: '.objtype',
         drop: function(ev,ui) { 
-            debug.info("Dataflow drop:",ev,ui)
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("path"),
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
-                y = Math.round(ui.offset.top - off.top)
-            debug.info("Dataflow dropped object:",droppedObject)            
+                y = Math.round(ui.offset.top - off.top);
+            debug.info(droppedName,'dropped on',self.pathname,'dataflow');
             if (droppedObject.hasClass('objtype')) {
-                openmdao.Util.promptForName(function(name) {
+                openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname)
                 })
             }
