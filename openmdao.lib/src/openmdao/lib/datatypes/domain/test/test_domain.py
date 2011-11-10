@@ -3,13 +3,14 @@ Test :class:`DomainObj` operations.
 """
 
 import logging
+import os.path
 import unittest
 
 import numpy
 
 from openmdao.lib.datatypes.domain import DomainObj, FlowSolution, \
                                           GridCoordinates, Vector, Zone, \
-                                          write_plot3d_q
+                                          read_plot3d_q, write_plot3d_q
 
 from openmdao.lib.datatypes.domain.test.wedge import create_wedge_3d, \
                                                      create_wedge_2d, \
@@ -393,7 +394,8 @@ class TestCase(unittest.TestCase):
 
         wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
 
-        volume = wedge.xyzzy.extract(10, -10, 10, 15, 0, -1)
+        domain = wedge.extract([(10, -10, 10, 15, 0, -1)])
+        volume = domain.xyzzy
         self.assertEqual(volume.shape, (11, 6, 10))
         self.assertEqual(volume.flow_solution.shape, (11, 6, 10))
         assert_rel_error(self, volume.extent,
@@ -524,6 +526,44 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), RuntimeError,
                       'Vector is empty!')
 
+        # No-op extractions.
+        logger = logging.getLogger()
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        domain = wedge.extract([(0, 29, 0, 19, 0, 9)])
+        self.assertTrue(domain.is_equivalent(wedge, logger))
+        domain = wedge.extract([(-30, -1, -20, -1, -10, -1)])
+        self.assertTrue(domain.is_equivalent(wedge, logger))
+        vec = wedge.xyzzy.flow_solution.momentum.extract(0, 29, 0, 19, 0, 9)
+        self.assertTrue(vec.is_equivalent(wedge.xyzzy.flow_solution.momentum,
+                                          'momentum', logger))
+        vec = wedge.xyzzy.flow_solution.momentum.extract(-30, -1, -20, -1, -10, -1)
+        self.assertTrue(vec.is_equivalent(wedge.xyzzy.flow_solution.momentum,
+                                          'momentum', logger))
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        domain = wedge.extract([(0, 29, 0, 19)])
+        self.assertTrue(domain.is_equivalent(wedge, logger))
+        domain = wedge.extract([(-30, -1, -20, -1)])
+        self.assertTrue(domain.is_equivalent(wedge, logger))
+        vec = wedge.xyzzy.flow_solution.momentum.extract(0, 29, 0, 19)
+        self.assertTrue(vec.is_equivalent(wedge.xyzzy.flow_solution.momentum,
+                                          'momentum', logger))
+        vec = wedge.xyzzy.flow_solution.momentum.extract(-30, -1, -20, -1)
+        self.assertTrue(vec.is_equivalent(wedge.xyzzy.flow_solution.momentum,
+                                          'momentum', logger))
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        domain = curve.extract([(0, 19)])
+        self.assertTrue(domain.is_equivalent(curve, logger))
+        domain = curve.extract([(-20, -1)])
+        self.assertTrue(domain.is_equivalent(curve, logger))
+        vec = curve.xyzzy.flow_solution.momentum.extract(0, 19)
+        self.assertTrue(vec.is_equivalent(curve.xyzzy.flow_solution.momentum,
+                                          'momentum', logger))
+        vec = curve.xyzzy.flow_solution.momentum.extract(-20, -1)
+        self.assertTrue(vec.is_equivalent(curve.xyzzy.flow_solution.momentum,
+                                          'momentum', logger))
+
     def test_extend(self):
         logging.debug('')
         logging.debug('test_extend')
@@ -535,7 +575,8 @@ class TestCase(unittest.TestCase):
         self.assertEqual(wedge.xyzzy.flow_solution.shape, (30, 20, 10))
 
         # Extend for ghost planes.
-        zone = wedge.xyzzy.extend('i', +1., 2, 1)
+        domain = wedge.extend([('i', +1., 2, 1)])
+        zone = domain.xyzzy
         self.assertEqual(zone.shape, (32, 20, 10))
         self.assertEqual(zone.flow_solution.shape, (31, 20, 10))
         zone = zone.extend('i', -1., 3, 1)
@@ -566,12 +607,22 @@ class TestCase(unittest.TestCase):
         self.assertEqual(zone.flow_solution.shape, (30, 20, 10))
 
         # Extract to no-ghosts zone and show equivalent to original.
-        zone = zone.extract(0, -1, 0, -1, 0, -1,
-                            grid_ghosts=(0, 0, 0, 0, 0, 0),
-                            flow_ghosts=(0, 0, 0, 0, 0, 0))
-        self.assertEqual(zone.shape, (30, 20, 10))
-        self.assertEqual(zone.flow_solution.shape, (30, 20, 10))
-        self.assertTrue(zone.is_equivalent(wedge.xyzzy, logger))
+        zone2 = zone.extract(0, -1, 0, -1, 0, -1,
+                             grid_ghosts=(0, 0, 0, 0, 0, 0),
+                             flow_ghosts=(0, 0, 0, 0, 0, 0))
+        self.assertEqual(zone2.shape, (30, 20, 10))
+        self.assertEqual(zone2.flow_solution.shape, (30, 20, 10))
+        self.assertTrue(zone2.is_equivalent(wedge.xyzzy, logger))
+
+        # Write out with ghosts in place. Read and show equivalent to original.
+        try:
+            write_plot3d_q(zone, 'zone_3d.xyz', 'zone_3d.q')
+            domain = read_plot3d_q('zone_3d.xyz', 'zone_3d.q', multiblock=False)
+            self.assertTrue(domain.zone_1.is_equivalent(wedge.xyzzy, logger))
+        finally:
+            for name in ('zone_3d.xyz', 'zone_3d.q'):
+                if os.path.exists(name):
+                    os.remove(name)
 
         # Create vanilla 2D wedge.
         wedge = create_wedge_2d((20, 10), 0.5, 2., 30.)
@@ -601,14 +652,26 @@ class TestCase(unittest.TestCase):
         self.assertEqual(zone.grid_coordinates.shape, (20, 10))
         zone.flow_solution.ghosts = (1, 1, 1, 1)
         self.assertEqual(zone.flow_solution.shape, (20, 10))
+        write_plot3d_q(wedge, 'zone_2d.xyz', 'zone_2d.q')
 
         # Extract to no-ghosts zone and show equivalent to original.
-        zone = zone.extract(0, -1, 0, -1,
-                            grid_ghosts=(0, 0, 0, 0, 0, 0),
-                            flow_ghosts=(0, 0, 0, 0, 0, 0))
-        self.assertEqual(zone.shape, (20, 10))
-        self.assertEqual(zone.flow_solution.shape, (20, 10))
-        self.assertTrue(zone.is_equivalent(wedge.xyzzy, logger))
+        zone2 = zone.extract(0, -1, 0, -1,
+                             grid_ghosts=(0, 0, 0, 0, 0, 0),
+                             flow_ghosts=(0, 0, 0, 0, 0, 0))
+        self.assertEqual(zone2.shape, (20, 10))
+        self.assertEqual(zone2.flow_solution.shape, (20, 10))
+        self.assertTrue(zone2.is_equivalent(wedge.xyzzy, logger))
+
+        # Write out with ghosts in place. Read and show equivalent to original.
+        try:
+            write_plot3d_q(zone, 'zone_2d.xyz', 'zone_2d.q')
+            domain = read_plot3d_q('zone_2d.xyz', 'zone_2d.q',
+                                   dim=2, multiblock=False)
+            self.assertTrue(domain.zone_1.is_equivalent(wedge.xyzzy, logger))
+        finally:
+            for name in ('zone_2d.xyz', 'zone_2d.q'):
+                if os.path.exists(name):
+                    os.remove(name)
 
         # Create vanilla 2D curve.
         curve = create_curve_2d(20, 0.5, 30.)
@@ -635,6 +698,188 @@ class TestCase(unittest.TestCase):
         self.assertEqual(zone.shape, (20,))
         self.assertEqual(zone.flow_solution.shape, (20,))
         self.assertTrue(zone.is_equivalent(curve.xyzzy, logger))
+
+        # No-op extend.
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        domain = wedge.extend([('i', +1., 0, 0)])
+        self.assertTrue(domain.is_equivalent(wedge, logger))
+
+        assert_raises(self, "wedge.xyzzy.flow_solution.extend('i', 0., 10)",
+                      globals(), locals(), ValueError, 'delta must be non-zero')
+        assert_raises(self, "wedge.xyzzy.grid_coordinates.extend('i', 0., 10)",
+                      globals(), locals(), ValueError, 'delta must be non-zero')
+        assert_raises(self, "wedge.xyzzy.flow_solution.momentum.extend('i', 0., 10)",
+                      globals(), locals(), ValueError, 'delta must be non-zero')
+
+        assert_raises(self, "wedge.xyzzy.flow_solution.extend('i', 1., 0)",
+                      globals(), locals(), ValueError, 'npoints must be >= 1')
+        assert_raises(self, "wedge.xyzzy.grid_coordinates.extend('i', 1., 0)",
+                      globals(), locals(), ValueError, 'npoints must be >= 1')
+        assert_raises(self, "wedge.xyzzy.flow_solution.momentum.extend('i', 1., 0)",
+                      globals(), locals(), ValueError, 'npoints must be >= 1')
+
+        assert_raises(self, "wedge.xyzzy.flow_solution.extend('l', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i, j, or k')
+        assert_raises(self, "wedge.xyzzy.grid_coordinates.extend('l', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i, j, or k')
+        assert_raises(self, "wedge.xyzzy.flow_solution.momentum.extend('l', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i, j, or k')
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        assert_raises(self, "wedge.xyzzy.flow_solution.extend('k', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i or j')
+        assert_raises(self, "wedge.xyzzy.grid_coordinates.extend('k', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i or j')
+        assert_raises(self, "wedge.xyzzy.flow_solution.momentum.extend('k', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i or j')
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        assert_raises(self, "curve.xyzzy.flow_solution.extend('j', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i')
+        assert_raises(self, "curve.xyzzy.grid_coordinates.extend('j', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i')
+        assert_raises(self, "curve.xyzzy.flow_solution.momentum.extend('j', 1., 10)",
+                      globals(), locals(), ValueError, 'axis must be i')
+
+        assert_raises(self, "FlowSolution().extend('j', 1., 10)",
+                      globals(), locals(), RuntimeError, 'FlowSolution is empty!')
+        assert_raises(self, "GridCoordinates().extend('j', 1., 10)",
+                      globals(), locals(), RuntimeError, 'Grid is empty!')
+        assert_raises(self, "Vector().extend('j', 1., 10)",
+                      globals(), locals(), RuntimeError, 'Vector is empty!')
+
+
+    def test_promote(self):
+        logging.debug('')
+        logging.debug('test_promote')
+        logger = logging.getLogger()
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        self.assertEqual(wedge.shape, [(30, 20)])
+        wedge.promote()
+        self.assertEqual(wedge.shape, [(30, 20, 1)])
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        wedge.make_cylindrical()
+        self.assertEqual(wedge.shape, [(30, 20)])
+        wedge.promote()
+        self.assertEqual(wedge.shape, [(1, 30, 20)])
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        self.assertEqual(curve.shape, [(20,)])
+        curve.promote()
+        self.assertEqual(curve.shape, [(20,1)])
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        curve.make_cylindrical()
+        self.assertEqual(curve.shape, [(20,)])
+        curve.promote()
+        self.assertEqual(curve.shape, [(20,1)])
+
+        assert_raises(self, 'FlowSolution().promote()', globals(), locals(),
+                      RuntimeError, 'FlowSolution is empty!')
+        assert_raises(self, 'Vector().promote()', globals(), locals(),
+                      RuntimeError, 'Vector is empty!')
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        assert_raises(self, 'wedge.xyzzy.flow_solution.promote()',
+                      globals(), locals(),
+                      RuntimeError, 'FlowSolution is 3D')
+        assert_raises(self, 'wedge.xyzzy.grid_coordinates.promote()',
+                      globals(), locals(),
+                      RuntimeError, 'Vector is 3D')
+
+    def test_demote(self):
+        logging.debug('')
+        logging.debug('test_demote')
+        logger = logging.getLogger()
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+
+        ij_surface = wedge.extract([(0, -1, 0, -1, 0, 0)])
+        self.assertEqual(ij_surface.shape, [(30, 20, 1)])
+        ij_surface.demote()
+        self.assertEqual(ij_surface.shape, [(30, 20)])
+
+        jk_surface = wedge.extract([(0, 0, 0, -1, 0, -1)])
+        self.assertEqual(jk_surface.shape, [(1, 20, 10)])
+        jk_surface.demote()
+        self.assertEqual(jk_surface.shape, [(20, 10)])
+
+        ik_surface = wedge.extract([(0, -1, 0, 0, 0, -1)])
+        self.assertEqual(ik_surface.shape, [(30, 1, 10)])
+        ik_surface.demote()
+        self.assertEqual(ik_surface.shape, [(30, 10)])
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        wedge.make_cylindrical()
+
+        ij_surface = wedge.extract([(0, -1, 0, -1, 0, 0)])
+        self.assertEqual(ij_surface.shape, [(30, 20, 1)])
+        ij_surface.demote()
+        self.assertEqual(ij_surface.shape, [(30, 20)])
+
+        jk_surface = wedge.extract([(0, 0, 0, -1, 0, -1)])
+        self.assertEqual(jk_surface.shape, [(1, 20, 10)])
+        jk_surface.demote()
+        self.assertEqual(jk_surface.shape, [(20, 10)])
+
+        ik_surface = wedge.extract([(0, -1, 0, 0, 0, -1)])
+        self.assertEqual(ik_surface.shape, [(30, 1, 10)])
+        ik_surface.demote()
+        self.assertEqual(ik_surface.shape, [(30, 10)])
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+
+        i_curve = wedge.extract([(0, -1, 0, 0)])
+        self.assertEqual(i_curve.shape, [(30, 1)])
+        i_curve.demote()
+        self.assertEqual(i_curve.shape, [(30,)])
+
+        j_curve = wedge.extract([(0, 0, 0, -1)])
+        self.assertEqual(j_curve.shape, [(1, 20)])
+        j_curve.demote()
+        self.assertEqual(j_curve.shape, [(20,)])
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        wedge.make_cylindrical()
+
+        i_curve = wedge.extract([(0, -1, 0, 0)])
+        self.assertEqual(i_curve.shape, [(30, 1)])
+        i_curve.demote()
+        self.assertEqual(i_curve.shape, [(30,)])
+
+        j_curve = wedge.extract([(0, 0, 0, -1)])
+        self.assertEqual(j_curve.shape, [(1, 20)])
+        j_curve.demote()
+        self.assertEqual(j_curve.shape, [(20,)])
+
+        assert_raises(self, 'FlowSolution().demote()', globals(), locals(),
+                      RuntimeError, 'FlowSolution is empty!')
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        assert_raises(self, 'wedge.xyzzy.flow_solution.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i, j, or k plane to collapse')
+        assert_raises(self, 'wedge.xyzzy.grid_coordinates.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i, j, or k plane to collapse')
+
+        wedge = create_wedge_2d((30, 20), 0.5, 2., 30.)
+        assert_raises(self, 'wedge.xyzzy.flow_solution.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i or j plane to collapse')
+        assert_raises(self, 'wedge.xyzzy.grid_coordinates.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'No i or j plane to collapse')
+
+        curve = create_curve_2d(20, 0.5, 30.)
+        assert_raises(self, 'curve.xyzzy.flow_solution.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'FlowSolution is 1D')
+        assert_raises(self, 'curve.xyzzy.grid_coordinates.demote()',
+                      globals(), locals(),
+                      RuntimeError, 'Vector is 1D')
 
 
 if __name__ == '__main__':

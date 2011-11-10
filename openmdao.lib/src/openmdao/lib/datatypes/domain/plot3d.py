@@ -457,6 +457,7 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
     Writes `domain` to `grid_file` and `q_file` in Plot3D format.
     Requires 'density', 'momentum', and 'energy_stagnation_density' variables
     as well as 'mach', 'alpha', 'reynolds', and 'time' scalars.
+    Ghost data is not written.
 
     domain: :class:`DomainObj` or :class:`Zone`
         The domain or zone to be written.
@@ -527,6 +528,7 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
     """
     Writes `domain` to `grid_file` and `f_file` in Plot3D format.
     If `varnames` is None, then all arrays and then all vectors are written.
+    Ghost data is not written.
 
     domain: :class:`DomainObj` or :class:`Zone`
         The domain or zone to be written.
@@ -598,6 +600,7 @@ def write_plot3d_grid(domain, grid_file, planes=False, binary=True,
                       unformatted=True, logger=None):
     """
     Writes `domain` to `grid_file` in Plot3D format.
+    Ghost data is not written.
 
     domain: :class:`DomainObj` or :class:`Zone`
         The domain or zone to be written.
@@ -683,7 +686,7 @@ def _write_plot3d_dims(domain, stream, logger, varnames=None):
         stream.write_recordmark(reclen)
 
     for zone in zones:
-        shape = list(zone.grid_coordinates.x.shape)
+        shape = list(zone.shape)
         if nvars:
             shape.append(nvars)
         stream.write_ints(numpy.array(shape, dtype=numpy.int32))
@@ -715,16 +718,17 @@ def _write_plot3d_coords(zone, stream, planes, logger):
 
     logger.debug('    x min %g, max %g',
                  zone.grid_coordinates.x.min(), zone.grid_coordinates.x.max())
-    stream.write_floats(zone.grid_coordinates.x, order='Fortran')
+    _write_array(zone.grid_coordinates.x, zone.grid_coordinates.ghosts, stream)
 
     logger.debug('    y min %g, max %g',
                  zone.grid_coordinates.y.min(), zone.grid_coordinates.y.max())
-    stream.write_floats(zone.grid_coordinates.y, order='Fortran')
+    _write_array(zone.grid_coordinates.y, zone.grid_coordinates.ghosts, stream)
 
     if dim > 2:
         logger.debug('    z min %g, max %g',
                      zone.grid_coordinates.z.min(), zone.grid_coordinates.z.max())
-        stream.write_floats(zone.grid_coordinates.z, order='Fortran')
+        _write_array(zone.grid_coordinates.z, zone.grid_coordinates.ghosts,
+                     stream)
 
     if stream.unformatted:
         stream.write_recordmark(reclen)
@@ -769,21 +773,42 @@ def _write_plot3d_vars(zone, stream, varnames, planes, logger):
         if isinstance(obj, Vector):
             arr = obj.x
             logger.debug('    %s.x min %g, max %g', name, arr.min(), arr.max())
-            stream.write_floats(arr, order='Fortran')
+            _write_array(arr, flow.ghosts, stream)
 
             arr = obj.y
             logger.debug('    %s.y min %g, max %g', name, arr.min(), arr.max())
-            stream.write_floats(arr, order='Fortran')
+            _write_array(arr, flow.ghosts, stream)
 
             if dim > 2:
                 arr = obj.z
                 logger.debug('    %s.z min %g, max %g', name, arr.min(), arr.max())
-                stream.write_floats(arr, order='Fortran')
+                _write_array(arr, flow.ghosts, stream)
         else:
             arr = obj
             logger.debug('    %s min %g, max %g', name, arr.min(), arr.max())
-            stream.write_floats(arr, order='Fortran')
+            _write_array(arr, flow.ghosts, stream)
 
     if stream.unformatted:
         stream.write_recordmark(reclen)
+
+
+def _write_array(arr, ghosts, stream):
+    """ Write `arr` to `stream`, adjusting for `ghosts`. """
+    shape = arr.shape
+    if len(shape) > 2:
+        imin = ghosts[0]
+        jmin = ghosts[2]
+        kmin = ghosts[4]
+        imax, jmax, kmax = shape
+        imax -= ghosts[1]
+        jmax -= ghosts[3]
+        kmax -= ghosts[5]
+        stream.write_floats(arr[imin:imax, jmin:jmax, kmin:kmax], order='Fortran')
+    else:
+        imin = ghosts[0]
+        jmin = ghosts[2]
+        imax, jmax = shape
+        imax -= ghosts[1]
+        jmax -= ghosts[3]
+        stream.write_floats(arr[imin:imax, jmin:jmax], order='Fortran')
 

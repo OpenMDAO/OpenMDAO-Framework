@@ -97,6 +97,25 @@ def detail(request, project_id):
                               'file_form':    file_form},
                               context_instance=RequestContext(request))
 
+
+#
+# project download
+#                              
+@login_required()
+def download(request, project_id):
+    p = get_object_or_404(Project, pk=project_id)
+    if p.filename:
+        dir = 'projects/'+request.user.username
+        filename = MEDIA_ROOT+'/'+str(p.filename)
+        if os.path.exists(filename):
+            proj_file = file(filename,'rb')
+            from django.core.servers.basehttp import FileWrapper
+            response = HttpResponse(FileWrapper(proj_file), content_type='application/octet-stream')
+            response['Content-Length'] = os.path.getsize(filename)
+            response['Content-Disposition'] = 'attachment; filename='+p.projectname+strftime(' %Y-%m-%d %H%M%S')+'.proj'
+            return response
+    return HttpResponse('Sorry, file is not available.')
+
 #
 # new (empty) project
 #                              
@@ -194,4 +213,3 @@ def display_meta(request):
     for k, v in values:
         html.append('<tr><td>%s</td><td>%s</td></tr>' % (k, v))
     return HttpResponse('<table>%s</table>' % '\n'.join(html))
-        

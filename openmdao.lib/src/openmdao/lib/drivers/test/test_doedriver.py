@@ -164,7 +164,7 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
         msg = "driver: Exception getting case outputs: " \
-            "driven: object has no attribute 'sum_z'"
+            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 
@@ -218,7 +218,7 @@ class TestCase(unittest.TestCase):
             a.run()
         except Exception as err:
             self.assertTrue(str(err).startswith('driver: Run aborted: Traceback '))
-            self.assertTrue(str(err).endswith("d: object has no attribute 'bad'"))
+            self.assertTrue(str(err).endswith("d: 'Dummy' object has no attribute 'bad'"))
         else:
             self.fail("Exception expected")
 

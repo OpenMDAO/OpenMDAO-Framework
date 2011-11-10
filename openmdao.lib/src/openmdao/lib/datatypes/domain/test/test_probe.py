@@ -10,12 +10,11 @@ import unittest
 from math import pi
 
 from openmdao.lib.datatypes.domain import surface_probe
+from openmdao.lib.datatypes.domain.test import restart
 from openmdao.lib.datatypes.domain.test.cube import create_cube
 from openmdao.lib.datatypes.domain.test.wedge import create_wedge_3d
 
 from openmdao.util.testutil import assert_raises, assert_rel_error
-
-from openmdao.lib.datatypes.domain.test import restart
 
 ORIG_DIR = os.getcwd()
 

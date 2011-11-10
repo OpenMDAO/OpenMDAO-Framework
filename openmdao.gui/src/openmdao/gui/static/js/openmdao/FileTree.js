@@ -19,32 +19,36 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
      
     // initialize private variables
     var self = this,
-        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
+        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id),
+        filter_beg = '_.',
+        filter_ext = [ 'pyc', 'pyd' ];
         
     // ask model for an update whenever something changes
-    model.addListener(update)
+    model.addListener(update);
         
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
-        // get the file name without the path for display 
-        if (path[0]==='/')
-            var names = path.split('/')
-        else
-            var names = path.split('\\')
-        var name = names[names.length-1]
-        
-        var html = "<li><a"
-        if (typeof val === 'object') {    // a folder
-            html += " class='folder' path='"+path+"'>"+name+"</a>"
-            html += "<ul>"
-            jQuery.each(val,function(path,val) {
-                html += getFileHTML(path,val)
-            })
-            html += "</ul>"
+        // get the file name and extension 
+        var path = path.replace(/\\/g,'/'),
+            name = path.split('/'),
+            name = name[name.length-1],
+            ext = name.split('.'),
+            ext = ext[ext.length-1];
+            
+        if (filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0) {        
+            var html = "<li><a"
+            if (typeof val === 'object') {    // a folder
+                html += " class='folder' path='"+path+"'>"+name+"</a>"
+                html += "<ul>"
+                jQuery.each(val,function(path,val) {
+                    html += getFileHTML(path,val)
+                })
+                html += "</ul>"
+            }
+            else
+                html += " class='file' path='"+path+"'>"+name+"</a>"
+            html += "</li>"
         }
-        else
-            html += " class='file' path='"+path+"'>"+name+"</a>"
-        html += "</li>"
         return html
     }
     
@@ -173,13 +177,13 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         if (!isFolder) {
             menu.deleteFile = {
                 "label"  : 'Delete File',
-                "action" : function(node) { model.removeFile(path) }
+                "action" : function(node) { model.removeFile(path); }
             }
         }
         else if (isEmptyFolder) {
             menu.deleteFolder = {
                 "label"  : 'Delete Empty Folder',
-                "action" : function(node) { model.removeFile(path) }
+                "action" : function(node) { model.removeFile(path); }
             }
         }
         
@@ -190,6 +194,22 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                 "action" : function(node) { model.setFolder(path) }
             }    
         }
+        menu.toggle = {
+            "label"  : 'Toggle Hidden Files',
+            "action" :  function(node) { 
+                            var save_beg, save_ext;
+                            if (filter_beg.length > 0) {
+                                save_beg = filter_beg;
+                                save_ext = filter_ext;
+                                filter_beg = '';
+                                filter_ext = [];
+                            }
+                            else {
+                                filter_beg = save_beg;
+                                filter_ext = save_ext;
+                            }
+                            update();                        }
+        };
         
         return menu
     }
@@ -197,14 +217,14 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
     /** update the tree from JSON file structure */
     function updateFiles(files) {
         // generate HTML for the file tree
-        var html = "<ul>"
+        var html = "<ul>";
         jQuery.each(files,function(path,val) {
-            html += getFileHTML(path,val)
+            html += getFileHTML(path,val);
         })
-        html += "</ul>"
+        html += "</ul>";
         
         // replace old html
-        tree.html(html)
+        tree.html(html);
         
         // convert to a jstree
         tree.jstree({
@@ -213,16 +233,29 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             "cookies" :     { "prefix": "filetree", opts : { path : '/' } },
             "contextmenu" : { "items":  contextMenu }
         })
-        .bind("loaded.jstree", function (e, data) {
+        .bind("loaded.jstree", function (e) {
             jQuery('#'+id+' .file').draggable({ helper: 'clone', appendTo: 'body' })
+        })
+        .bind("dblclick.jstree", function (e,tree) {
+            var node = jQuery(e.target),            
+                path = node.attr("path");
+            if (node.hasClass('file')) {
+                editFile(path);
+            }
+            else if (node.hasClass('folder')) {
+                // what do, what do
+            }
+            else {
+                debug.warn("node in file tree does not seem to be a file or a folder:",node);
+            }
         })
     }
 
     /** update the display, with data from the model */
     function update() {
         tree.html("<div>Updating...</div>")
-                 .effect('highlight',{color:'#ffd'},1000)
-        model.getFiles(updateFiles)
+            .effect('highlight',{color:'#ffd'},1000);
+        model.getFiles(updateFiles);
     }
     
     /***********************************************************************
