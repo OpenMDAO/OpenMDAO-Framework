@@ -29,8 +29,8 @@ def _find_wing():
         wname = 'wing.exe'
         tdir = r'C:\Program Files (x86)'
         try:
-            locs = [os.path.join(tdir, p) for p in 
-                    fnmatch.filter(os.listdir(tdir), 'WingIDE ?.?')]
+            locs = [os.path.join(tdir, p, 'bin') for p in 
+                    fnmatch.filter(os.listdir(tdir), r'Wing IDE ?.?')]
         except:
             locs = []
     elif sys.platform == 'darwin':

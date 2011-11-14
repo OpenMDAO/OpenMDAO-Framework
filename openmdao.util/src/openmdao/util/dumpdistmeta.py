@@ -56,7 +56,7 @@ import StringIO
 import fnmatch
 import pprint
 
-from pkg_resources import get_entry_map, find_distributions
+from pkg_resources import get_entry_map, find_distributions, working_set, Requirement
 import zipfile
 import tarfile
 
@@ -176,6 +176,42 @@ def _meta_from_tarfile(path):
 
     return metadata              
 
+def _meta_from_zipfile(path):
+    """Retrieve metadata from a zip file of a distutils distribution.
+    Returns a dict.
+    """
+    metadata = {}
+    oldpkginfo = None
+    zf = zipfile.ZipFile(path, 'r')
+    for name in zf.namelist():
+        if '.egg-info/' in name and not name.endswith('.egg-info/'):
+            metaname = os.path.splitext(os.path.basename(name))[0]
+            meta = zf.read(name).strip()
+            if name.endswith('/PKG-INFO'):
+                instr = StringIO.StringIO(meta)
+                message = rfc822.Message(instr)
+                for k,v in message.items():
+                    metadata[k] = v                
+            elif name.endswith('.txt'):
+                _parse_txt(name, meta, metadata)
+            elif name.endswith('/not-zip-safe'):
+                metadata['zip-safe'] = False
+            elif name.endswith('/zip-safe'):
+                metadata['zip-safe'] = True
+            else:
+                continue
+        elif name.endswith('/PKG-INFO'):
+            oldpkginfo = name
+
+        # if there's no egg-info, use old PKG-INFO if found     
+        if len(metadata) == 0 and oldpkginfo:  
+            instr = StringIO.StringIO(zf.read(oldpkginfo).strip())
+            message = rfc822.Message(instr)
+            for k,v in message.items():
+                metadata[k] = v  
+
+    return metadata              
+
 def _meta_from_zipped_egg(path):
     """Retrieve metadata from a zipped egg file.
     Returns a dict.
@@ -202,51 +238,62 @@ def _meta_from_zipped_egg(path):
 
 
 def get_metadata(path):
-    """Retrieve metadata from the file or directory specified by path.
+    """Retrieve metadata from a file or directory specified by path,
+    or from the name of a distribution that happens to be installed.
     path can be an installed egg, a zipped egg file, or a 
     zipped or unzipped tar file of a python distutils or setuptools
     source distribution.
     
     Returns a dict.
     """
+    dist = None
+    if os.path.isdir(path):
+        dists = [x for x in find_distributions(path, only=True)]
+        if len(dists) == 0:
+            raise RuntimeError('%s is not a zipped egg or an installed distribution'%path)
+        dist = dists[0]
 
-    if path.lower().endswith('.tar') or '.tar.gz' in path.lower():
-        # it's a tar file or gzipped tar file
-        return _meta_from_tarfile(path)
+        if os.path.abspath(path).lower() != os.path.abspath(dist.location).lower():
+            raise RuntimeError('%s is not a valid distribution (dist.location=%s)'%
+                    (os.path.abspath(path),dist.location))
+        metadata = get_dist_metadata(dist)
 
-    dists = [x for x in find_distributions(path, only=True)]
-    if len(dists) == 0:
-        raise RuntimeError('%s is not a zipped egg or an installed distribution'%path)
-
-    dist = dists[0]
-
-    if os.path.abspath(path).lower() != os.path.abspath(dist.location).lower():
-        raise RuntimeError('%s is not a valid distribution (dist.location=%s)'%
-                (os.path.abspath(path),dist.location))
-
-    # getting access to metadata in a zipped egg doesn't seem to work
-    # right, so just use a ZipFile to access files under the EGG-INFO
-    # directory to retrieve the metadata.   
-    if os.path.isfile(path):
+    elif os.path.isfile(path):
+        if path.lower().endswith('.tar') or '.tar.gz' in path.lower():
+            # it's a tar file or gzipped tar file
+            return _meta_from_tarfile(path)
+        # getting access to metadata in a zipped egg doesn't seem to work
+        # right, so just use a ZipFile to access files under the EGG-INFO
+        # directory to retrieve the metadata.   
         if path.lower().endswith('.egg'):
             # it's a zip file
             metadata = _meta_from_zipped_egg(path)
+        elif path.lower().endswith('.zip'):
+            metadata = _meta_from_zipfile(path)
         else:
             raise RuntimeError('cannot process file %s: unknown file type' %
                                 path)
     else:
-        metadata = get_dist_metadata(dist)
-
-
-    metadata['py_version'] = dist.py_version
-    if 'platform' not in metadata or metadata['platform']=='UNKNOWN':
-        metadata['platform'] = dist.platform
-
-    metadata['entry_points'] = {}
-    for gname,group in get_entry_map(dist, group=None).items():
-        metadata['entry_points'][gname] = [ep for ep in group]
+        # look for an installed dist with the given name
+        for d in working_set:
+            if path == d.egg_name().split('-')[0]:
+                dist = d
+                metadata = get_dist_metadata(dist)
+                break
+        else:
+            raise RuntimeError("Could not locate distribution '%s'" % path)
     
+    if dist is not None:
+        metadata['py_version'] = dist.py_version
+        if 'platform' not in metadata or metadata['platform']=='UNKNOWN':
+            metadata['platform'] = dist.platform
+    
+        metadata['entry_points'] = {}
+        for gname,group in get_entry_map(dist, group=None).items():
+            metadata['entry_points'][gname] = [ep for ep in group]
+        
     return metadata
+    
     
 if __name__ == '__main__': # pragma no cover
     if len(sys.argv) > 2:
