@@ -1551,14 +1551,17 @@ openmdao_prereqs = ['numpy', 'scipy']
 def extend_parser(parser):
     parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
                       help="specify additional required distributions", default=[])
-    parser.add_option("--disturl", action="store", type="string", dest='disturl', 
-                      help="specify url where openmdao distribs are located")
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
     parser.add_option("--nogui", action="store_true", dest='nogui', 
                       help="don't install the openmdao graphical user interface")
+    parser.add_option("-f", "--findlinks", action="store", type="string", 
+                      dest="findlinks",
+                      help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
+    parser.add_option("--testurl", action="store", type="string", dest='testurl', 
+                      help="specify url where openmdao.* distribs are located (used for release testing only)")
                       
-    # hack to force use of setuptools for now
+    # hack to force use of setuptools for now because using 'distribute' causes issues
     os.environ['VIRTUALENV_USE_SETUPTOOLS'] = '1'
 
 
@@ -1592,10 +1595,13 @@ def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4', 'argparse==1.2.1']
+    reqs = ['setupdocs>=1.0', 'docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4', 'argparse==1.2.1']
     guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'Django==1.3']
     
-    url = 'http://openmdao.org/dists'
+    if options.findlinks is None:
+        url = 'http://openmdao.org/dists'
+    else:
+        url = options.findlinks
     # for testing we allow one to specify a url where the openmdao
     # package dists are located that may be different from the main
     # url where the dependencies are located. We do this because
@@ -1604,10 +1610,10 @@ def after_install(options, home_dir):
     # directory in order to test our releases because setuptools will
     # barf if it can't find everything in the same location (or on PyPI).
     # TODO: get rid of this after we quit using setuptools.
-    if options.disturl:
-        openmdao_url = options.disturl
+    if options.testurl:
+        openmdao_url = options.testurl
     else:
-        openmdao_url = 'http://openmdao.org/dists'
+        openmdao_url = url
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
