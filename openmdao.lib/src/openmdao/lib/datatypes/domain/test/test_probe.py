@@ -10,7 +10,7 @@ import unittest
 from math import pi
 
 from openmdao.lib.datatypes.domain import mesh_probe
-from openmdao.lib.datatypes.domain.test import restart
+from openmdao.lib.datatypes.domain.test import restart, overflow
 from openmdao.lib.datatypes.domain.test.cube import create_cube
 from openmdao.lib.datatypes.domain.test.wedge import create_wedge_3d
 
@@ -128,14 +128,13 @@ class TestCase(unittest.TestCase):
         for i, (name, units) in enumerate(variables):
             logging.debug('    %s = %g %s' % (name, metrics[i], units))
 
-        # These values have been verified with ADSPIN.
         assert_rel_error(self, metrics[0], 830.494, 0.00001)
-        assert_rel_error(self, metrics[1], 8.95658, 0.00001)
+        assert_rel_error(self, metrics[1], 8.95673, 0.00001)
         assert_rel_error(self, metrics[2], 6.97191, 0.00001)
         assert_rel_error(self, metrics[3], 547.784, 0.00001)
         assert_rel_error(self, metrics[4], 509.909, 0.00001)
         assert_rel_error(self, metrics[5], 120.092, 0.00001)
-        assert_rel_error(self, metrics[6], 202.573, 0.00001)
+        assert_rel_error(self, metrics[6], 202.570, 0.00001)
 
         regions = [('zone_1', 0, -1, 2, 2, 0, -1)]
         metrics = mesh_probe(domain, regions, variables, 'mass')
@@ -144,12 +143,12 @@ class TestCase(unittest.TestCase):
             logging.debug('    %s = %g %s' % (name, metrics[i], units))
 
         assert_rel_error(self, metrics[0],  1089.77, 0.00001)
-        assert_rel_error(self, metrics[1],  7.08859, 0.00001)
+        assert_rel_error(self, metrics[1],  7.09975, 0.00001)
         assert_rel_error(self, metrics[2],  6.52045, 0.00001)
-        assert_rel_error(self, metrics[3],  553.772, 0.00001)
-        assert_rel_error(self, metrics[4],  540.711, 0.00001)
+        assert_rel_error(self, metrics[3],  554.000, 0.00001)
+        assert_rel_error(self, metrics[4],  540.770, 0.00001)
         assert_rel_error(self, metrics[5], 0.421583, 0.00001)
-        assert_rel_error(self, metrics[6], 0.903318, 0.00001)
+        assert_rel_error(self, metrics[6], 0.898204, 0.00001)
 
         regions = [('zone_1', 0, -1, 0, -1, 2, 2)]
         metrics = mesh_probe(domain, regions, variables, 'mass')
@@ -158,12 +157,12 @@ class TestCase(unittest.TestCase):
             logging.debug('    %s = %g %s' % (name, metrics[i], units))
 
         assert_rel_error(self, metrics[0],  2870.64, 0.00001)
-        assert_rel_error(self, metrics[1],  8.69595, 0.00001)
+        assert_rel_error(self, metrics[1],  8.70534, 0.00001)
         assert_rel_error(self, metrics[2],  6.89906, 0.00001)
-        assert_rel_error(self, metrics[3],  546.863, 0.00001)
-        assert_rel_error(self, metrics[4],  511.839, 0.00001)
+        assert_rel_error(self, metrics[3],  546.989, 0.00001)
+        assert_rel_error(self, metrics[4],  511.875, 0.00001)
         assert_rel_error(self, metrics[5], -156.175, 0.00001)
-        assert_rel_error(self, metrics[6], -271.477, 0.00001)
+        assert_rel_error(self, metrics[6], -270.858, 0.00001)
 
     def test_errors(self):
         logging.debug('')
@@ -175,42 +174,37 @@ class TestCase(unittest.TestCase):
         variables = (('area', 'inch**2'),)
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
-                      "Domain does not contain zone 'no-such-zone'")
+                      "region 1: Domain does not contain zone 'no-such-zone'")
 
         regions = (('xyzzy', -200, 2, 0, -1, 0, -1),)
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
-                      'Zone xyzzy imin -170 invalid (max 30)')
+                      'region 1: imin -170 invalid (max 30)')
 
         regions = (('xyzzy', 2, 200, 0, -1, 0, -1),)
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
-                      'Zone xyzzy imax 200 invalid (max 30)')
+                      'region 1: imax 200 invalid (max 30)')
 
         regions = (('xyzzy', 2, 2, -200, -1, 0, -1),)
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
-                      'Zone xyzzy jmin -180 invalid (max 20)')
+                      'region 1: jmin -180 invalid (max 20)')
 
         regions = (('xyzzy', 2, 2, 0, 200, 0, -1),)
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
-                      'Zone xyzzy jmax 200 invalid (max 20)')
+                      'region 1: jmax 200 invalid (max 20)')
 
         regions = (('xyzzy', 2, 2, 0, -1, -200, -1),)
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
-                      'Zone xyzzy kmin -100 invalid (max 100)')
+                      'region 1: kmin -100 invalid (max 100)')
 
         regions = (('xyzzy', 2, 2, 0, -1, 0, 200),)
         assert_raises(self, 'mesh_probe(wedge, regions, variables)',
                       globals(), locals(), ValueError,
-                      'Zone xyzzy kmax 200 invalid (max 100)')
-
-        regions = (('xyzzy', 0, -1, 0, -1, 0, -1),)
-        assert_raises(self, 'mesh_probe(wedge, regions, variables)',
-                      globals(), locals(), ValueError,
-                      'Zone xyzzy volume specified: 0,29 0,1')
+                      'region 1: kmax 200 invalid (max 100)')
 
         regions = (('xyzzy', 2, 2, 0, -1, 0, -1),)
         variables = (('no-such-variable', 'inch**2'),)
@@ -273,6 +267,48 @@ class TestCase(unittest.TestCase):
                       "_stagnation, reference_state is missing one or more of"
                       " ('pressure_reference', 'ideal_gas_constant',"
                       " 'temperature_reference', 'specific_heat_ratio').")
+
+    def test_overflow(self):
+        logging.debug('')
+        logging.debug('test_overflow')
+
+        domain = overflow.read_q('grid.in', 'q.save', multiblock=False,
+                                 logger=logging.getLogger())
+        variables = [('pressure_stagnation', None),]
+
+        # Exit surface (3D index space).
+        regions = [('zone_1', -1, -1, 0, -1, 0, -1)]
+        pt_area_3d, = mesh_probe(domain, regions, variables, 'area')
+        logging.debug('surface pt_area_3d %r', pt_area_3d)
+        assert_rel_error(self, pt_area_3d, 10.1090358495, 0.000001)
+
+        # Exit surface (2D index space).
+        surface = domain.extract([(-1, -1, 0, -1, 0, -1)])
+        surface.demote()
+        regions = [('zone_1', 0, -1, 0, -1)]
+        pt_area_2d, = mesh_probe(surface, regions, variables, 'area')
+        logging.debug('surface pt_area_2d %r', pt_area_2d)
+        self.assertEqual(pt_area_2d, pt_area_3d)
+
+        # Exit curve (3D index space).
+        regions = [('zone_1', -1, -1, 1, 1, 0, -1)]
+        pt_area_3d, = mesh_probe(domain, regions, variables, 'area')
+        logging.debug('curve pt_area_3d %r', pt_area_3d)
+        assert_rel_error(self, pt_area_3d, 10.1090358495, 0.000001)
+
+        # Exit curve (2D index space).
+        regions = [('zone_1', 1, 1, 0, -1)]
+        pt_area_2d, = mesh_probe(surface, regions, variables, 'area')
+        logging.debug('curve pt_area_2d %r', pt_area_2d)
+        self.assertEqual(pt_area_2d, pt_area_3d)
+
+        # Exit curve (1D index space).
+        curve = surface.extract([(1, 1, 0, -1)])
+        curve.demote()
+        regions = [('zone_1', 0, -1)]
+        pt_area_1d, = mesh_probe(curve, regions, variables, 'area')
+        logging.debug('curve pt_area_1d %r', pt_area_1d)
+        self.assertEqual(pt_area_1d, pt_area_3d)
 
 
 if __name__ == '__main__':

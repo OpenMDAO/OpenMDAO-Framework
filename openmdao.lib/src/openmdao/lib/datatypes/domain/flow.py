@@ -636,18 +636,20 @@ class FlowSolution(object):
 
         elif len(shape) > 1:
             imax, jmax = shape
-            for arr in self._arrays:
+            for i, arr in enumerate(self._arrays):
                 name = self.name_of_obj(arr)
                 new_arr = numpy.zeros((imax, jmax, 1))
                 new_arr[:, :, 0] = arr[:, :]
                 setattr(self, name, new_arr)
+                self._arrays[i] = new_arr
         else:
             imax = shape[0]
-            for arr in self._arrays:
+            for i, arr in enumerate(self._arrays):
                 name = self.name_of_obj(arr)
                 new_arr = numpy.zeros((imax, 1))
                 new_arr[:, 0] = arr[:]
                 setattr(self, name, new_arr)
+                self._arrays[i] = new_arr
 
         for vector in self._vectors:
             vector.promote()
@@ -664,40 +666,45 @@ class FlowSolution(object):
         if len(shape) > 2:
             imax, jmax, kmax = shape
             if imax == 1:
-                for arr in self._arrays:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((jmax, kmax))
                     new_arr[:, :] = arr[0, :, :]
                     setattr(self, name, new_arr)
+                    self._arrays[i] = new_arr
             elif jmax == 1:
-                for arr in self._arrays:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((imax, kmax))
                     new_arr[:, :] = arr[:, 0, :]
                     setattr(self, name, new_arr)
+                    self._arrays[i] = new_arr
             elif kmax == 1:
-                for arr in self._arrays:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((imax, jmax))
                     new_arr[:, :] = arr[:, :, 0]
                     setattr(self, name, new_arr)
+                    self._arrays[i] = new_arr
             else:
                 raise RuntimeError('No i, j, or k plane to collapse')
 
         elif len(shape) > 1:
             imax, jmax = shape
             if imax == 1:
-                for arr in self._arrays:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((jmax,))
                     new_arr[:] = arr[0, :]
                     setattr(self, name, new_arr)
+                    self._arrays[i] = new_arr
             elif jmax == 1:
-                for arr in self._arrays:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((imax,))
                     new_arr[:] = arr[:, 0]
                     setattr(self, name, new_arr)
+                    self._arrays[i] = new_arr
             else:
                 raise RuntimeError('No i or j plane to collapse')
         else:
