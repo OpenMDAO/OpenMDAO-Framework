@@ -873,16 +873,6 @@ comp.run()
         factory = PkgResourcesFactory(['openmdao.component',
                                        'openmdao.container'],
                                       [os.getcwd()])
-        logging.debug('    loaders:')
-        for key, value in factory._loaders.items():
-            logging.debug('        %s:', key)
-            for val in value:
-                logging.debug('                name: %s', val.name)
-                logging.debug('               group: %s', val.group)
-                logging.debug('                dist: %s', val.dist)
-                logging.debug('            entry_pt: %s', val.entry_pt)
-                logging.debug('                ctor: %s', val.ctor)
-                logging.debug('')
 
         # Create and move to test directory.
         orig_dir = os.getcwd()
@@ -933,10 +923,10 @@ comp.run()
                                   observer=observer)
             if comp is None:
                 self.fail('Create of test_comp failed.')
-            self.assertEqual(comp.get_pathname(), 'test_comp')
             self.assertEqual(comp.executions, 0)
             comp.run()
             self.assertEqual(comp.executions, 3)
+            self.assertEqual(comp.get_pathname(), 'test_comp')
 
             # Create a (sub)component.
             sub = factory.create('Egg_TestModel.Oddball.oddcomp',
