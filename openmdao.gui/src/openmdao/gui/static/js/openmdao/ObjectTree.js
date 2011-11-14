@@ -20,20 +20,20 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         filter_beg = '_',
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id)
 
-    /**  make the parent pane droppable * /
+    /** make the parent pane droppable */
+    /** TODO: handle this with jstree (i.e. drop into appropriate place in tree)  ** /
     tree.parent().droppable({
-    accept: '.objtype',
-    drop: function(ev,ui) { 
-            debug.info("objtree drop:",ev,ui)
-            // get the object that was dropped
-            var droppedObject = jQuery(ui.draggable).clone();
-            // get the type name and path
-            var typename = droppedObject.text();
-            var typepath = droppedObject.attr("path");
-            openmdao.Util.promptForName(function(name) { 
-                model.addComponent(typepath,name);
-            })
-        }
+        accept: '.objtype',
+        drop: function(ev,ui) { 
+                // get the object that was dropped
+                var droppedObject = jQuery(ui.draggable).clone();
+                // get the type name and path
+                var typename = droppedObject.text();
+                var typepath = droppedObject.attr("path");
+                openmdao.Util.promptForValue('Specify a name for the new '+typename,function(name) { 
+                    model.addComponent(typepath,name);
+                });
+            }
     })
     /**/
         
@@ -141,7 +141,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             if (typeof dblclick_fn == 'function') {
                 var node = jQuery(e.target).closest("li"),
                     path = node.attr("path");
-                dblclick_fn(model,path);
+                dblclick_fn(path);
             }
         })
         // .bind("loaded.jstree", function (e, data) {
