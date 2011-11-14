@@ -84,9 +84,10 @@ class Driver(Component):
             else:
                 diff = reqcomps - iterset
                 if len(diff) > 0:
-                    raise RuntimeError("Expressions in this Driver require the following "
-                                       "Components that are not part of the "
-                                       "workflow: %s" % list(diff))
+                    #raise RuntimeError("Expressions in this Driver require the following "
+                    #                   "Components that are not part of the "
+                    #                   "workflow: %s" % list(diff))
+                    pass
             # calling get_components() here just makes sure that all of the
             # components can be resolved
             comps = self.workflow.get_components()

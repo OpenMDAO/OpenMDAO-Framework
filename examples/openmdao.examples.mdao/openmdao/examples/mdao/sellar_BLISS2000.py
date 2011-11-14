@@ -54,7 +54,12 @@ class Debug(Component):
         self.force_execute = True
         
     def execute(self):
-        print "x1,z1,z2: ", [self.parent.dis1.x1,self.parent.dis1.z1,self.parent.dis1.z2]
+        temp=(self.parent.x1_store)**2 + self.parent.dis1_meta_model.z2+ self.parent.m1.mu + math.exp(-self.parent.m2.mu)
+        print "disc1.z1,disc2.z2,disc1.x1: ", [self.parent.dis1.z1,self.parent.dis1.z2,self.parent.dis1.x1]
+        print "disc2.z1,disc2.z2,x1_store", [self.parent.dis2.z1,self.parent.dis2.z2,self.parent.x1_store]
+        print "dis1_meta_model.z1,dis1_meta_model.z2,dis1_meta_model.x1: ", [self.parent.dis1_meta_model.z1,self.parent.dis1_meta_model.z2,self.parent.dis1_meta_model.x1]
+        print "dis2_meta_model.z1,dis2_meta_model.z2: ", [self.parent.dis2_meta_model.z1,self.parent.dis2_meta_model.z2]
+        print
         
         
 
@@ -97,7 +102,7 @@ class SellarBLISS2000(Assembly):
         
         self.add("DOE_Trainer1",DOEdriver())
         self.DOE_Trainer1.DOEgenerator = CentralComposite()
-        self.DOE_Trainer1.alpha = .2
+        self.DOE_Trainer1.alpha = .1
         self.DOE_Trainer1.add_parameter("dis1_meta_model.z1",low=-10,high=10,start=5.0)        
         self.DOE_Trainer1.add_parameter("dis1_meta_model.z2",low=0,high=10,start=2.0)   
         self.DOE_Trainer1.add_parameter("dis1_meta_model.y2",low=0,high=20)   
@@ -118,7 +123,7 @@ class SellarBLISS2000(Assembly):
         
         self.add("DOE_Trainer2",DOEdriver())
         self.DOE_Trainer2.DOEgenerator = CentralComposite()
-        self.DOE_Trainer1.alpha = .2
+        self.DOE_Trainer2.alpha = .5
         self.DOE_Trainer2.add_parameter("dis2_meta_model.z1",low=-10,high=10,start=5.0)        
         self.DOE_Trainer2.add_parameter("dis2_meta_model.z2",low=0,high=10,start=2.0)   
         self.DOE_Trainer2.add_parameter("dis2_meta_model.y1",low=0,high=20)   
@@ -137,12 +142,12 @@ class SellarBLISS2000(Assembly):
 
         
         
-        self.sysopt.add_objective('(x1_store)**2 + dis1_meta_model.z2 + m1.mu + math.exp(-m2.mu)')
+        self.sysopt.add_objective('(dis1.x1)**2 + dis1_meta_model.z2 + m1.mu + math.exp(-m2.mu)')
         # -------------------------set param values here
         #------------------------- change doe driver
         #------------------------- add compatibility constraints
         self.sysopt.add_parameter(['dis1_meta_model.z1','dis2_meta_model.z1','dis1.z1','dis2.z1'], low=-10, high=10.0,start=5.0)
-        self.sysopt.add_parameter(['dis1_meta_model.z2','dis2_meta_model.z2','dis1.z2','dis2.z2'], low=0, high=10.0,start=2.0)  
+        self.sysopt.add_parameter(['dis1_meta_model.z2','dis2_meta_model.z2','dis1.z2','dis2.z2'], low=0, high=10.0,start=2.0)        
         self.sysopt.add_parameter(['dis1_meta_model.y2','dis1.y2'], low=0, high=20.0)
         
         self.sysopt.add_parameter(['dis2_meta_model.y1','dis2.y1'], low=0, high=20.0)
@@ -156,7 +161,8 @@ class SellarBLISS2000(Assembly):
         
         self.sysopt.add_constraint('3.16 < m1.mu')
         self.sysopt.add_constraint('m2.mu < 24.0')
-        self.sysopt.iprint=101
+        self.sysopt.force_execute=True
+        #self.sysopt.iprint=1
         
         
         #optimization of discipline 1
@@ -164,19 +170,35 @@ class SellarBLISS2000(Assembly):
         self.add('disc1opt', CONMINdriver())
         self.disc1opt.add_objective('dis1.y1')
         
-        self.disc1opt.add_parameter('dis1.x1', low=0, high=10.0) 
+        self.disc1opt.add_parameter(['dis1.x1','dis1_meta_model.x1'], low=0, high=10.0) 
         self.disc1opt.add_event('dis1_meta_model.reset_training_data')
+        
+        self.disc1opt.add_event('dis2_meta_model.reset_training_data')
+        
+        self.disc1opt.add_constraint('3.16 < dis1.y1')
+        
+        self.disc1opt.force_execute=True
+        
+        self.disc1opt.workflow=SequentialWorkflow()
+        self.disc1opt.workflow.add(['dis1'])
+        
+        
         #self.disc1opt.iprint = 1
         
         
         #build workflow for system driver
          # Top level is Fixed-Point Iteration
         self.add('driver', IterateUntil())
-        self.driver.max_iterations = 3
+        self.driver.max_iterations = 2
         self.add("debug",Debug())
         self.driver.workflow=SequentialWorkflow()
         
-        self.driver.workflow.add(['DOE_Trainer1','DOE_Trainer2','sysopt','disc1opt','debug'])  
+        
+        self.driver.workflow.add(['debug','DOE_Trainer1','DOE_Trainer2','debug','sysopt','disc1opt','debug'])  
+        
+        #self.driver.workflow.add(['DOE_Trainer1','DOE_Trainer2','sysopt','disc1opt','debug'])  
+        
+        
         #self.driver.add_parameter('x1_store', low=0, high=10.0)
         #self.driver.add_constraint('dis1.x1 = x1_store')
         
@@ -199,15 +221,17 @@ if __name__ == "__main__": # pragma: no cover
             
     prob.dis1.z1 = prob.dis2.z1 = prob.dis1_meta_model.z1 = prob.dis2_meta_model.z1= 5.0
     prob.dis1.z2 = prob.dis2.z2 = prob.dis1_meta_model.z2 = prob.dis2_meta_model.z2= 2.0
-    prob.dis1.x1 = 1.0
+    prob.dis1.x1 = prob.dis1_meta_model.x1 = 1.0
     
     
     tt = time.time()
     prob.run()
     print "\n"
-    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
-                                             prob.dis1.z2, \
-                                             prob.dis1.x1)
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1_meta_model.z1, \
+                                             prob.dis1_meta_model.z2, \
+                                             prob.x1_store)
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", (prob.dis1.x1)**2 + prob.dis1.z2 + prob.dis1.y1 + math.exp(-prob.dis2.y2)
+    print "min objective:",(prob.dis1.x1)**2 + prob.dis1_meta_model.z2 + prob.m1.mu + math.exp(-prob.m2.mu)
+    
+    
     print "Elapsed time: ", time.time()-tt, "seconds"

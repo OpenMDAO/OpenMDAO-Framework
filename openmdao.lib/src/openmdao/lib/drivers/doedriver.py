@@ -33,14 +33,18 @@ class DOEdriver(CaseIterDriverBase):
         self.DOEgenerator.num_parameters = len(params)
         
         M=[]
+        P=[]
         for p in params:
-            M.append((p.evaluate()-p.low)/(p.high-p.low))
-        
-        for row in list(self.DOEgenerator)+[M]:
+            temp= p.evaluate()
+            P.append(temp)
+            M.append((temp-p.low)/(p.high-p.low))
+
+        for row in list(self.DOEgenerator)+[tuple(M)]:
             vals=[]
-            for p,val in zip(params,row):
-                #newval=(p.low+(p.high-p.low)*val-p.evaluate())*alpha+p.evaluate()
-                newval=(p.low+(p.high-p.low)*val)*self.alpha-p.evaluate()*(self.alpha-1.)
+            for p,val,curval in zip(params,row,P):
+                
+                newval=(p.low+(p.high-p.low)*val-curval)*self.alpha+curval
+
                 if newval<p.low:
                     newval=p.low
                 elif newval>p.high:
