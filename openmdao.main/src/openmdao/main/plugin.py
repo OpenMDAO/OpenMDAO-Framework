@@ -897,7 +897,9 @@ def _plugin_docs(plugin_name, browser=None):
     if modname.startswith('openmdao.'): # lookup in builtin docs
         fparts = mod.__file__.split(os.sep)
         pkg = '.'.join(modname.split('.')[:2])
-        anchorpath = '/'.join(['srcdocs', 'packages','%s.html#module-%s' % (pkg, modname)])
+        #anchorpath = '/'.join(['srcdocs', 'packages','%s.html#module-%s' % (pkg, modname)])
+        fragment_parts =  modname.split('.') + ['py']
+        anchorpath = '/'.join(['srcdocs', 'packages','%s.html#%s' % (pkg, '-'.join(fragment_parts))])
         if any([p.endswith('.egg') and p.startswith('openmdao.') for p in fparts]): 
             # this is a release version, so use online docs
             url = '/'.join(['http://openmdao.org/releases/%s/docs' % __version__, anchorpath])
