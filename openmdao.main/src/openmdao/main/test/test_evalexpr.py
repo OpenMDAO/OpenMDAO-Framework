@@ -494,7 +494,7 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ex.evaluate(self.top.a)
         except AttributeError as err:
-            self.assertEqual(str(err), "can't evaluate expression 'comp.y': a: object has no attribute 'comp.y'")
+            self.assertEqual(str(err), "can't evaluate expression 'comp.y': a: 'A' object has no attribute 'comp'")
         else:
             self.fail("AttributeError expected")
         ex.scope = self.top
@@ -624,7 +624,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ex = ExprEvaluator('abcd.efg', self.top)
             ex.evaluate()
         except AttributeError, err:
-            self.assertEqual(str(err), "can't evaluate expression 'abcd.efg': : object has no attribute 'abcd.efg'")
+            self.assertEqual(str(err), "can't evaluate expression 'abcd.efg': : 'Assembly' object has no attribute 'abcd'")
         else:
             raise AssertionError('AttributeError expected')
         

@@ -57,11 +57,7 @@ setup(name='openmdao.main',
       entry_points = """
       [console_scripts]
       openmdao_docs=openmdao.util.view_docs:view_docs
-      plugin_docs=openmdao.main.plugin:plugin_docs
-      plugin_build_docs=openmdao.main.plugin:plugin_build_docs
-      plugin_install=openmdao.main.plugin:plugin_install
-      plugin_makedist=openmdao.main.plugin:plugin_makedist
-      plugin_quickstart=openmdao.main.plugin:plugin_quickstart
+      plugin=openmdao.main.plugin:plugin
       update_libpath=openmdao.main.plugin:update_libpath
       
       [openmdao.component]

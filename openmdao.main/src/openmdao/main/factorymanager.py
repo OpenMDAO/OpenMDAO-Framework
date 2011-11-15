@@ -13,21 +13,10 @@ import os
 from pkg_resources import parse_version
 
 from openmdao.main.importfactory import ImportFactory
-from openmdao.main.pkg_res_factory import PkgResourcesFactory
+from openmdao.main.pkg_res_factory import PkgResourcesFactory, _plugin_groups
 
 _factories = []
 _pkg_res_factory = None
-
-
-
-# this list should contain all openmdao entry point groups for Containers
-_container_groups = [ 'openmdao.container',
-                      'openmdao.component',
-                      'openmdao.driver',
-                      'openmdao.surrogatemodel',
-                      'openmdao.differentiator']
-
-_plugin_groups = _container_groups + ['openmdao.variable']
 
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
@@ -62,7 +51,15 @@ def get_available_types(groups=None):
     If groups is None, return the set for all openmdao entry point groups.
     """
     if groups is None:
-        groups = _container_groups
+        groups = _plugin_groups
+    else:
+        badgroups = []
+        for group in groups:
+            if group not in _plugin_groups:
+                badgroups.append(group)
+        if badgroups:
+            raise RuntimeError("Didn't recognize the following entry point groups: %s. Allowed groups are: %s" %
+                               (badgroups, _plugin_groups))
     types = []
     for fct in _factories:
         types.extend(fct.get_available_types(groups))

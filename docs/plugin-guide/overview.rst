@@ -101,24 +101,27 @@ of ``openmdao.component`` since Driver inherits from Component.
 *Plugin Development Tools*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-There is a small set of scripts available to simplify the process of
-developing plugin distributions. The table below shows each script with a
-brief description of its purpose. All of the scripts are described in more
-detail in :ref:`build-pure-python-plugin-label`.
+There is a script called ``plugin`` available to simplify the process of
+developing and installing plugin distributions. The table below shows each
+subcommand of ``plugin`` with a brief description of its purpose. All of the
+subcommands are described in more detail in
+:ref:`build-pure-python-plugin-label`.
 
 
 ======================  ===========================================================================
-**Script Name**         **Purpose**
+**Command**             **Purpose**
 ======================  ===========================================================================
-``plugin_build_docs``   To build the html docs for the plugin
+``plugin build_docs``   To build the html docs for the plugin
 ----------------------  ---------------------------------------------------------------------------
-``plugin_docs``         To view the html docs for the plugin
+``plugin docs``         To view the html docs for the plugin
 ----------------------  ---------------------------------------------------------------------------
-``plugin_install``      To install the plugin into the active environment
+``plugin install``      To install the plugin into the active environment
 ----------------------  ---------------------------------------------------------------------------
-``plugin_makedist``     To create a source distribution containing the plugin
+``plugin list``         To list installed or available plugins
 ----------------------  ---------------------------------------------------------------------------
-``plugin_quickstart``   To create the directory structure needed to build the plugin distribution
+``plugin makedist``     To create a source distribution containing the plugin
+----------------------  ---------------------------------------------------------------------------
+``plugin quickstart``   To create the directory structure needed to build the plugin distribution
 ======================  ===========================================================================
 
 
@@ -126,10 +129,10 @@ detail in :ref:`build-pure-python-plugin-label`.
 *Defining Entry Points*
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The good news is that if you use the ``plugin_makedist`` tool to package your
+The good news is that if you use the ``plugin makedist`` tool to package your
 plugin, the ``setup.py`` file with all necessary entry points will be created
 for you automatically. The bad news is that there are some cases where
-``plugin_makedist`` cannot be used, so the entry points must be defined
+``plugin makedist`` cannot be used, so the entry points must be defined
 manually. The rest of this section describes how to add entry points and other
 metadata to a distribution manually.
 
@@ -172,7 +175,7 @@ in the table above.
    
    
 Once you have your ``setup.py`` file and your plugin class is complete, you're ready
-to build a distribution.  If you're not able to use ``plugin_makedist`` for some 
+to build a distribution.  If you're not able to use ``plugin makedist`` for some 
 reason, you can build your distribution by executing your ``setup.py`` file in the following
 way:
 
@@ -190,20 +193,20 @@ of the packaged distribution is *1.0* as was specified in the ``setup.py`` file.
 *Installing an OpenMDAO Plugin*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you run ``plugin_install`` from the top directory of your plugin
+If you run ``plugin install`` from the top directory of your plugin
 distribution, it will install your plugin as a *develop* egg, meaning that it
 places a link to your distribution on the Python path so that you can make
 changes to your plugin and test it in the environment without having to keep
 reinstalling it.
 
-If you have a distrbution tar or zip file, created either by using ``plugin_makedist`` 
+If you have a distrbution tar or zip file, created either by using ``plugin makedist`` 
 or by running ``setup.py`` directly, you can install your plugin into an OpenMDAO virtual 
-environment by running ``plugin_install`` and passing it the name of the file, for 
+environment by running ``plugin install`` and passing it the name of the file, for 
 example:
 
 ::
 
-    plugin_install myplugin-0.5.tar.gz
+    plugin install myplugin-0.5.tar.gz
     
 
 which will install the distribution into the ``site-packages`` directory
@@ -214,7 +217,7 @@ would look like:
 
 ::
 
-    plugin_install [-f <find_links_url>] <distrib_requirement>
+    plugin install [-f <find_links_url>] <distrib_requirement>
     
 
 where ``find_links_url`` is the url for a ``find_links`` server and ``distrib_reqirement`` is
@@ -230,28 +233,28 @@ version compatible with the current platform will be installed.
 You can make your plugin available to others in a number of ways, from simply emailing your distribution
 to others or giving it to them on a thumb drive, CD, etc., or placing your
 distribution on a file server that they can access. As mentioned above,
-``plugin_install`` allows you to download and install Python distributions
+``plugin install`` allows you to download and install Python distributions
 from remote web servers. For example, if there were a distribution called
 *MyDist* on the ``openmdao.org`` server and you wanted to grab the newest version
-of it, you could ``plugin_install`` it into your activated OpenMDAO virtual
+of it, you could ``plugin install`` it into your activated OpenMDAO virtual
 environment as follows:
 
 ::
 
-    plugin_install -f http://openmdao.org/dists MyDist
+    plugin install -f http://openmdao.org/dists MyDist
 
 
 If you want to distribute your plugin to the whole world but don't happen to
 have your own public server, you can put your plugin up on the 
 `Python Package Index`__ (PyPI), which is also known as the *Cheeseshop*. 
-PyPI is the default package index for ``plugin_install``, so the command
+PyPI is the default package index for ``plugin install``, so the command
 
 .. __: http://pypi.python.org/pypi
 
 
 ::
 
-    plugin_install MyDist
+    plugin install MyDist
     
     
 will attempt to download the MyDist distribution from PyPI. See this `link`__
