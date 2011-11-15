@@ -79,7 +79,8 @@ def add_reqs(argv=None, default_flink=None):
                 cmd = ['-f', options.flink]
         else:
             cmd = ['-f', flink]
-        subprocess.check_call([os.path.join(os.path.dirname(sys.executable),'easy_install'),'-NZ'] + cmd + [req])
+        subprocess.check_call([os.path.join(os.path.dirname(sys.executable),
+                                            'easy_install'),'-NZ'] + cmd + [req])
 
    
 if __name__ == "__main__": # pragma no cover
