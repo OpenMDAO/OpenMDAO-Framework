@@ -957,7 +957,7 @@ def plugin_install(options):
         url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
         print url
         
-        build_docs_and_install(name, version)
+        build_docs_and_install(name, version, findlinks=options.findlinks)
         
     else: # Install plugin from local file or directory
     
@@ -969,12 +969,7 @@ def plugin_install(options):
         if develop:
             cmdargs = [sys.executable, 'setup.py', 'develop', '-N']
         else:
-            cmdargs = ['easy_install']
-            if options.findlinks:
-                cmdargs.extend(['-f', options.findlinks])
-            else:
-                cmdargs.extend(['-f', 'http://openmdao.org/dists']) # make openmdao.org the default
-            cmdargs.extend([options.dist_name])
+            cmdargs = ['easy_install', '-f', options.findlinks, options.dist_name]
             
         cmd = ' '.join(cmdargs)
         retcode = call(cmdargs)
@@ -1074,7 +1069,7 @@ def download_github_tar(name, version, dest='.'):
     return tarpath
     
     
-def build_docs_and_install(name, version):
+def build_docs_and_install(name, version, findlinks):
     tdir = tempfile.mkdtemp()
     startdir = os.getcwd()
     os.chdir(tdir)
@@ -1120,7 +1115,7 @@ def build_docs_and_install(name, version):
                 req = Requirement.parse(r)
                 d = ws.find(req)
                 if d is None:
-                    check_call(['easy_install', '-NZ', r])
+                    check_call(['easy_install', '-NZ', '-f', findlinks, r])
                     d = ws.find(req)
                     if d is None:
                         raise RuntimeError("Couldn't find distribution '%s'" % r)
@@ -1300,7 +1295,8 @@ def _get_plugin_parser():
                         help='Find plugin in the official Openmdao-Plugins repository on github', 
                         action='store_true')
     parser.add_argument("-f", "--find-links", action="store", type=str, 
-                        dest='findlinks', help="URL of find-links server")
+                        dest='findlinks', default='http://openmdao.org/dists',
+                        help="URL of find-links server")
     parser.set_defaults(func=plugin_install)
     
     
