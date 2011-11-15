@@ -400,8 +400,25 @@ class MetaModelTestCase(unittest.TestCase):
         
         s.mm.x = 10
         s.mm.reset_training_data = True
+        self.assertEqual(len(s.mm._training_input_history), 1)
+
         #all meta model inputs should remain at their current values
         self.assertEqual(s.mm.x, 10)
+
+        
+        s.mm.train_next = True
+        s.mm.x = 10
+        s.run()
+        self.assertEqual(s.mm.x, 10)
+        
+        
+        s.mm.train_next = True
+        s.mm.x = 20
+        s.run()
+        self.assertEqual(s.mm.x, 20)
+        
+        s.run()
+        
         
 if __name__ == "__main__":
     unittest.main()

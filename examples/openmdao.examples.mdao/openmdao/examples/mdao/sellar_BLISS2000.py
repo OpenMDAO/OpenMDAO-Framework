@@ -54,7 +54,7 @@ class Debug(Component):
         self.force_execute = True
         
     def execute(self):
-        temp=(self.parent.x1_store)**2 + self.parent.dis1_meta_model.z2+ self.parent.m1.mu + math.exp(-self.parent.m2.mu)
+        print "iteration: ", self.parent.sysopt.exec_count
         print "disc1.z1,disc2.z2,disc1.x1: ", [self.parent.dis1.z1,self.parent.dis1.z2,self.parent.dis1.x1]
         print "disc2.z1,disc2.z2,x1_store", [self.parent.dis2.z1,self.parent.dis2.z2,self.parent.x1_store]
         print "dis1_meta_model.z1,dis1_meta_model.z2,dis1_meta_model.x1: ", [self.parent.dis1_meta_model.z1,self.parent.dis1_meta_model.z2,self.parent.dis1_meta_model.x1]
@@ -171,9 +171,7 @@ class SellarBLISS2000(Assembly):
         self.disc1opt.add_objective('dis1.y1')
         
         self.disc1opt.add_parameter(['dis1.x1','dis1_meta_model.x1'], low=0, high=10.0) 
-        self.disc1opt.add_event('dis1_meta_model.reset_training_data')
         
-        self.disc1opt.add_event('dis2_meta_model.reset_training_data')
         
         self.disc1opt.add_constraint('3.16 < dis1.y1')
         
@@ -189,12 +187,13 @@ class SellarBLISS2000(Assembly):
         #build workflow for system driver
          # Top level is Fixed-Point Iteration
         self.add('driver', IterateUntil())
-        self.driver.max_iterations = 2
+        self.driver.max_iterations = 10
         self.add("debug",Debug())
         self.driver.workflow=SequentialWorkflow()
         
-        
-        self.driver.workflow.add(['debug','DOE_Trainer1','DOE_Trainer2','debug','sysopt','disc1opt','debug'])  
+        self.driver.add_event('dis1_meta_model.reset_training_data')
+        self.driver.add_event('dis2_meta_model.reset_training_data')
+        self.driver.workflow.add(['DOE_Trainer1','DOE_Trainer2','sysopt','disc1opt','debug'])  
         
         #self.driver.workflow.add(['DOE_Trainer1','DOE_Trainer2','sysopt','disc1opt','debug'])  
         

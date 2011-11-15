@@ -107,6 +107,7 @@ class KrigingSurrogate(object):
         self.Y = Y
         self.m = len(X[0])
         self.n = len(X)
+                
         thetas = zeros(self.m)
         def _calcll(thetas):
             self.thetas = thetas
