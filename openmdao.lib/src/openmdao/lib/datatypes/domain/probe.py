@@ -3,12 +3,12 @@ Support for calculating one or more scalar averages across one or more
 regions in a domain.
 """
 
-from math import sqrt
+from math import cos, sin, sqrt
 
 from openmdao.lib.datatypes.domain.flow import CELL_CENTER
 from openmdao.lib.datatypes.domain.zone import CYLINDRICAL
-from openmdao.lib.datatypes.domain.metrics import get_metric, list_metrics
-
+from openmdao.lib.datatypes.domain.metrics import get_metric, list_metrics, \
+                                                  create_scalar_metric
 _SCHEMES = ('area', 'mass')
 
 # TODO: account for ghost cells in index calculations.
@@ -17,21 +17,23 @@ _SCHEMES = ('area', 'mass')
 def mesh_probe(domain, regions, variables, weighting_scheme='area'):
     """
     Calculate metrics on mesh regions.
-    Currently only supports 3D structured grids.
+    Currently only supports structured grids.
 
     domain: DomainObj
         The domain to be processed.
 
     regions: list
-        List of `(zone_name, imin, imax[, jmin, jmax[, kmin, kmax]])`
+        List of ``(zone_name, imin, imax[, jmin, jmax[, kmin, kmax]])``
         mesh region specifications to be used for the calculation.
         Indices start at 0. Negative indices are relative to the end of the
         array.
 
     variables: list
-        List of `(metric_name, units)` tuples. Legal metric names cab be
-        obtained from :meth:`list_mesh_probes`. If `units` is None then no
-        unit conversion is attempted.
+        List of ``(metric_name, units)`` tuples. Legal pre-existing metric
+        names can be obtained from :meth:`list_metrics`. If `units` is
+        None then no unit conversion is attempted. `metric_name` may also
+        be the name of a flow solution scalar variable, if `units` is None.
+        In this case a minimal metric calculator will be auto-generated.
 
     weighting_scheme: string
         Specifies how individual values are weighted. Legal values are
@@ -54,7 +56,16 @@ def mesh_probe(domain, regions, variables, weighting_scheme='area'):
     need_weights = False
     for name, units in variables:
         if name not in list_metrics():
-            raise ValueError('Unknown/unsupported variable %r' % name)
+            if units is None:
+                # See if it's something we can create dynamically.
+                zone_name = regions[0][0]
+                zone = getattr(domain, zone_name)
+                if hasattr(zone.flow_solution, name):
+                    create_scalar_metric(name)
+                else:
+                    raise ValueError('Unknown variable %r' % name)
+            else:
+                raise ValueError('Unsupported variable %r' % name)
         cls, integrate, geometry = get_metric(name)
         if not integrate:
             need_weights = True
@@ -85,7 +96,8 @@ def mesh_probe(domain, regions, variables, weighting_scheme='area'):
                 ref = zone.reference_state or domain.reference_state
                 if not ref:
                     raise ValueError('No zone or domain reference_state'
-                                     ' dictionary supplied for %s.' % zone_name)
+                                     ' dictionary supplied for zone %s.'
+                                     % zone_name)
 
             value = _calc_metric(name, domain, region, weights, ref)
             value *= zone.symmetry_instances  # Adjust for symmetry.
@@ -322,7 +334,9 @@ def _surface_weights_2d(scheme, domain, region):
     zone_name, imin, imax, jmin, jmax = region
     zone = getattr(domain, zone_name)
     grid = zone.grid_coordinates
+    flow = zone.flow_solution
     cylindrical = zone.coordinate_system == CYLINDRICAL
+    cell_center = flow.grid_location == CELL_CENTER
 
     if cylindrical:
         c1 = None if grid.z is None else grid.z.item
@@ -334,13 +348,49 @@ def _surface_weights_2d(scheme, domain, region):
         c3 = None if grid.z is None else grid.z.item
 
     if scheme == 'mass':
-        raise NotImplementedError('2D (index space) mass averaging')
+        try:
+            if cylindrical:
+                mom_c1 = None if flow.momentum.z is None else flow.momentum.z.item
+                mom_c2 = flow.momentum.r.item
+                mom_c3 = flow.momentum.t.item
+            else:
+                mom_c1 = flow.momentum.x.item
+                mom_c2 = flow.momentum.y.item
+                mom_c3 = None if flow.momentum.z is None else flow.momentum.z.item
+        except AttributeError:
+            raise AttributeError("For mass averaging zone %s is missing"
+                                 " 'momentum'." % zone_name)
 
     weights = []
     for i in range(imin, imax):
         for j in range(jmin, jmax):
                 sc1, sc2, sc3 = _cell_normal(c1, c2, c3, i, j, cylindrical)
-                weights.append(sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3))
+                if scheme == 'mass':
+                    ip1 = i + 1
+                    jp1 = j + 1
+                    if cell_center:
+                        # Cell value is value.
+# FIXME: built-in ghosts
+                        rvu = 0. if mom_c1 is None else mom_c1(ip1, jp1)
+                        rvv = mom_c2(ip1, jp1)
+                        rvw = 0. if mom_c1 is None else mom_c3(ip1, jp1)
+                    else:
+                        # Average across vertices.
+                        if mom_c1 is None:
+                            rvu = 0.
+                        else:
+                            rvu = 0.25 * (mom_c1(i, j) + mom_c1(ip1, j) + \
+                                          mom_c1(i, jp1) + mom_c1(ip1, jp1))
+                        rvv = 0.25 * (mom_c2(i, j) + mom_c2(ip1, j) + \
+                                      mom_c2(i, jp1) + mom_c2(ip1, jp1))
+                        if mom_c3 is None:
+                            rvw = 0.
+                        else:
+                            rvw = 0.25 * (mom_c3(i, j) + mom_c3(ip1, j) + \
+                                          mom_c3(i, jp1) + mom_c3(ip1, jp1))
+                    weights.append(rvu*sc1 + rvv*sc2 + rvw*sc3)
+                else:
+                    weights.append(sqrt(sc1*sc1 + sc2*sc2 + sc3*sc3))
     return weights
 
 
@@ -504,6 +554,8 @@ def _calc_metric(name, domain, region, weights, reference_state):
 
 def _volume(metric, integrate, zone, region, weights):
     """ Calculate metric on a volume. """
+    raise NotImplementedError('metric calculation on volume')
+''' Not implemented yet
     zone_name, imin, imax, jmin, jmax, kmin, kmax = region
     grid = zone.grid_coordinates
     flow = zone.flow_solution
@@ -531,26 +583,17 @@ def _volume(metric, integrate, zone, region, weights):
                 if cell_center:
 # FIXME: built-in ghosts
                     # Cell value is value.
-                    loc = (i+1, j+1, k+1)
-                    val = metric.calculate(loc, vol)
+                    val = metric.calculate((i+1, j+1, k+1), vol)
                 else:
                     # Average across vertices.
-                    loc = (i, j, k)
-                    val = metric.calculate(loc, vol)
-                    loc = (i, j+1, k)
-                    val += metric.calculate(loc, vol)
-                    loc = (i, j+1, k+1)
-                    val += metric.calculate(loc, vol)
-                    loc = (i, j, k+1)
-                    val += metric.calculate(loc, vol)
-                    loc = (i+1, j, k)
-                    val += metric.calculate(loc, vol)
-                    loc = (i+1, j+1, k)
-                    val += metric.calculate(loc, vol)
-                    loc = (i+1, j+1, k+1)
-                    val += metric.calculate(loc, vol)
-                    loc = (i+1, j, k+1)
-                    val += metric.calculate(loc, vol)
+                    val  = metric.calculate((i, j, k), vol)
+                    val += metric.calculate((i, j+1, k), vol)
+                    val += metric.calculate((i, j+1, k+1), vol)
+                    val += metric.calculate((i, j, k+1), vol)
+                    val += metric.calculate((i+1, j, k), vol)
+                    val += metric.calculate((i+1, j+1, k), vol)
+                    val += metric.calculate((i+1, j+1, k+1), vol)
+                    val += metric.calculate((i+1, j, k+1), vol)
                     val *= 0.125
 
                 if integrate:
@@ -560,6 +603,7 @@ def _volume(metric, integrate, zone, region, weights):
                     weight_index += 1
                     total += val * weight
     return total
+'''
 
 
 def _surface_3d(metric, integrate, zone, region, weights):
@@ -605,41 +649,29 @@ def _surface_3d(metric, integrate, zone, region, weights):
                 if cell_center:
 # FIXME: built-in ghosts
                     # Average across cells sharing surface.
-                    loc = (i+1, j+1, k+1)
-                    val = metric.calculate(loc, normal)
+                    val = metric.calculate((i+1, j+1, k+1), normal)
                     if face == 'i':
-                        loc = (i, j+1, k+1)
+                        val += metric.calculate((i, j+1, k+1), normal)
                     elif face == 'j':
-                        loc = (i+1, j, k+1)
+                        val += metric.calculate((i+1, j, k+1), normal)
                     else:
-                        loc = (i+1, j+1, k)
-                    val += metric.calculate(loc, normal)
+                        val += metric.calculate((i+1, j+1, k), normal)
                     val *= 0.5
                 else:
                     # Average across vertices.
-                    loc = (i, j, k)
-                    val = metric.calculate(loc, normal)
+                    val = metric.calculate((i, j, k), normal)
                     if face == 'i':
-                        loc = (i, j+1, k)
-                        val += metric.calculate(loc, normal)
-                        loc = (i, j+1, k+1)
-                        val += metric.calculate(loc, normal)
-                        loc = (i, j, k+1)
-                        val += metric.calculate(loc, normal)
+                        val += metric.calculate((i, j+1, k), normal)
+                        val += metric.calculate((i, j+1, k+1), normal)
+                        val += metric.calculate((i, j, k+1), normal)
                     elif face == 'j':
-                        loc = (i+1, j, k)
-                        val += metric.calculate(loc, normal)
-                        loc = (i+1, j, k+1)
-                        val += metric.calculate(loc, normal)
-                        loc = (i, j, k+1)
-                        val += metric.calculate(loc, normal)
+                        val += metric.calculate((i+1, j, k), normal)
+                        val += metric.calculate((i+1, j, k+1), normal)
+                        val += metric.calculate((i, j, k+1), normal)
                     else:
-                        loc = (i+1, j, k)
-                        val += metric.calculate(loc, normal)
-                        loc = (i+1, j+1, k)
-                        val += metric.calculate(loc, normal)
-                        loc = (i, j+1, k)
-                        val += metric.calculate(loc, normal)
+                        val += metric.calculate((i+1, j, k), normal)
+                        val += metric.calculate((i+1, j+1, k), normal)
+                        val += metric.calculate((i, j+1, k), normal)
                     val *= 0.25
 
                 if integrate:
@@ -675,23 +707,18 @@ def _surface_2d(metric, integrate, zone, region, weights):
         for j in range(jmin, jmax):
 
             if integrate:
-                normal = get_normal(c1, c2, c3, i, j, cylindrical)
+                normal = _cell_normal(c1, c2, c3, i, j, cylindrical)
     
             if cell_center:
 # FIXME: built-in ghosts
                 # Cell value is value.
-                loc = (i+1, j+1)
-                val = metric.calculate(loc, normal)
+                val = metric.calculate((i+1, j+1), normal)
             else:
                 # Average across vertices.
-                loc = (i, j)
-                val = metric.calculate(loc, normal)
-                loc = (i, j+1)
-                val += metric.calculate(loc, normal)
-                loc = (i+1, j+1)
-                val += metric.calculate(loc, normal)
-                loc = (i+1, j)
-                val += metric.calculate(loc, normal)
+                val  = metric.calculate((i, j), normal)
+                val += metric.calculate((i, j+1), normal)
+                val += metric.calculate((i+1, j+1), normal)
+                val += metric.calculate((i+1, j), normal)
                 val *= 0.25
 
             if integrate:
@@ -744,47 +771,34 @@ def _curve_3d(metric, integrate, zone, region, weights):
             for k in range(kmin, kmax):
 
                 if integrate:
-                    loc = (i, j, k)
-                    length = get_length(c1, c2, c3, loc, cylindrical)
+                    length = get_length(c1, c2, c3, (i, j, k), cylindrical)
 
                 if cell_center:
 # FIXME: built-in ghosts
                     # Average across cells sharing edge.
-                    loc = (i+1, j+1, k+1)
-                    val = metric.calculate(loc, length)
+                    val = metric.calculate((i+1, j+1, k+1), length)
                     if edge == 'i':
-                        loc = (i+1, j, k+1)
-                        val += metric.calculate(loc, length)
-                        loc = (i+1, j+1, k)
-                        val += metric.calculate(loc, length)
-                        loc = (i+1, j, k)
-                        val += metric.calculate(loc, length)
+                        val += metric.calculate((i+1, j, k+1), length)
+                        val += metric.calculate((i+1, j+1, k), length)
+                        val += metric.calculate((i+1, j, k), length)
                     elif edge == 'j':
-                        loc = (i, j+1, k+1)
-                        val += metric.calculate(loc, length)
-                        loc = (i+1, j+1, k)
-                        val += metric.calculate(loc, length)
-                        loc = (i, j+1, k)
-                        val += metric.calculate(loc, length)
+                        val += metric.calculate((i, j+1, k+1), length)
+                        val += metric.calculate((i+1, j+1, k), length)
+                        val += metric.calculate((i, j+1, k), length)
                     else:
-                        loc = (i, j+1, k+1)
-                        val += metric.calculate(loc, length)
-                        loc = (i+1, j, k+1)
-                        val += metric.calculate(loc, length)
-                        loc = (i, j, k+1)
-                        val += metric.calculate(loc, length)
+                        val += metric.calculate((i, j+1, k+1), length)
+                        val += metric.calculate((i+1, j, k+1), length)
+                        val += metric.calculate((i, j, k+1), length)
                     val *= 0.25
                 else:
                     # Average across vertices.
-                    loc = (i, j, k)
-                    val = metric.calculate(loc, length)
+                    val = metric.calculate((i, j, k), length)
                     if edge == 'i':
-                        loc = (i+1, j, k)
+                        val += metric.calculate((i+1, j, k), length)
                     elif edge == 'j':
-                        loc = (i, j+1, k)
+                         val +=metric.calculate((i, j+1, k), length)
                     else:
-                        loc = (i, j, k+1)
-                    val += metric.calculate(loc, length)
+                         val +=metric.calculate((i, j, k+1), length)
                     val *= 0.5
 
                 if integrate:
@@ -829,29 +843,24 @@ def _curve_2d(metric, integrate, zone, region, weights):
         for j in range(jmin, jmax):
 
             if integrate:
-                loc = (i, j)
-                length = get_length(c1, c2, c3, loc, cylindrical)
+                length = get_length(c1, c2, c3, (i, j), cylindrical)
 
             if cell_center:
 # FIXME: built-in ghosts
                 # Average across cells sharing edge.
-                loc = (i+1, j+1)
-                val = metric.calculate(loc, length)
+                val = metric.calculate((i+1, j+1), length)
                 if edge == 'i':
-                    loc = (i+1, j)
+                    val += metric.calculate((i+1, j), length)
                 else:
-                    loc = (i, j+1)
-                val += metric.calculate(loc, length)
+                    val += metric.calculate((i, j+1), length)
                 val *= 0.5
             else:
                 # Average across vertices.
-                loc = (i, j)
-                val = metric.calculate(loc, length)
+                val = metric.calculate((i, j), length)
                 if edge == 'i':
-                    loc = (i+1, j)
+                    val += metric.calculate((i+1, j), length)
                 else:
-                    loc = (i, j+1)
-                val += metric.calculate(loc, length)
+                    val += metric.calculate((i, j+1), length)
                 val *= 0.5
 
             if integrate:
@@ -888,20 +897,16 @@ def _curve_1d(metric, integrate, zone, region, weights):
     for i in range(imin, imax):
 
         if integrate:
-            loc = (i,)
-            length = get_length(c1, c2, c3, loc, cylindrical)
+            length = get_length(c1, c2, c3, (i,), cylindrical)
 
         if cell_center:
 # FIXME: built-in ghosts
             # Cell value is value.
-            loc = (i+1,)
-            val += metric.calculate(loc, length)
+            val = metric.calculate((i+1,), length)
         else:
             # Average across vertices.
-            loc = (i,)
-            val = metric.calculate(loc, length)
-            loc = (i+1,)
-            val += metric.calculate(loc, length)
+            val  = metric.calculate((i,), length)
+            val += metric.calculate((i+1,), length)
             val *= 0.5
 
         if integrate:
@@ -916,7 +921,6 @@ def _curve_1d(metric, integrate, zone, region, weights):
 def _point(metric, zone, region):
     """ Calculate metric at a point. """
     zone_name = region[0]
-    zone = getattr(domain, zone_name)
     flow = zone.flow_solution
     cell_center = flow.grid_location == CELL_CENTER
 
@@ -925,44 +929,38 @@ def _point(metric, zone, region):
 # FIXME: built-in ghosts
         if len(region) == 7:
             zone_name, imin, imax, jmin, jmax, kmin, kmax = region
-            loc = (imin+1, jmin+1, kmin+1)
-            val = metric.calculate(loc, None)
-            loc = (imin+1, jmin+1, kmin)
-            val += metric.calculate(loc, None)
-            loc = (imin+1, jmin, kmin)
-            val += metric.calculate(loc, None)
-            loc = (imin+1, jmin, kmin+1)
-            val += metric.calculate(loc, None)
-            loc = (imin, jmin+1, kmin+1)
-            val += metric.calculate(loc, None)
-            loc = (imin, jmin+1, kmin)
-            val += metric.calculate(loc, None)
-            loc = (imin, jmin, kmin)
-            val += metric.calculate(loc, None)
-            loc = (imin, jmin, kmin+1)
-            val += metric.calculate(loc, None)
+            val  = metric.calculate((imin+1, jmin+1, kmin+1), None)
+            val += metric.calculate((imin+1, jmin+1, kmin), None)
+            val += metric.calculate((imin+1, jmin, kmin), None)
+            val += metric.calculate((imin+1, jmin, kmin+1), None)
+            val += metric.calculate((imin, jmin+1, kmin+1), None)
+            val += metric.calculate((imin, jmin+1, kmin), None)
+            val += metric.calculate((imin, jmin, kmin), None)
+            val += metric.calculate((imin, jmin, kmin+1), None)
             return 0.125 * val
         elif len(region) == 5:
             zone_name, imin, imax, jmin, jmax = region
-            loc = (imin+1, jmin+1)
-            val = metric.calculate(loc, None)
-            loc = (imin, jmin+1)
-            val += metric.calculate(loc, None)
-            loc = (imin, jmin)
-            val += metric.calculate(loc, None)
-            loc = (imin+1, jmin)
-            val += metric.calculate(loc, None)
+            val  = metric.calculate((imin+1, jmin+1), None)
+            val += metric.calculate((imin, jmin+1), None)
+            val += metric.calculate((imin, jmin), None)
+            val += metric.calculate((imin+1, jmin), None)
             return 0.25 * val
         else:
             zone_name, imin, imax = region
-            loc = (imin+1,)
-            val = metric.calculate(loc, None)
-            loc = (imin,)
-            val += metric.calculate(loc, None)
+            val  = metric.calculate((imin+1,), None)
+            val += metric.calculate((imin,), None)
             return 0.5 * val
     else:
         # Vertex value is value.
-        return metric.calculate(loc, None)
+        if len(region) == 7:
+            zone_name, imin, imax, jmin, jmax, kmin, kmax = region
+            return metric.calculate((imin, jmin, kmin), None)
+        elif len(region) == 5:
+            zone_name, imin, imax, jmin, jmax = region
+            return metric.calculate((imin, jmin), None)
+        else:
+            zone_name, imin, imax = region
+            return metric.calculate((imin,), None)
 
 
 def _iface_normal(c1, c2, c3, i, j, k, cylindrical):
@@ -1098,7 +1096,27 @@ def _cell_normal(c1, c2, c3, i, j, cylindrical):
 def _iedge_length(c1, c2, c3, loc, cylindrical):
     """ Return length of edge along 'i'. """
     if cylindrical:
-        raise NotImplementedError('cylindrical _iedge_length')
+        if len(loc) > 2:
+            i, j, k = loc
+            ip1 = i + 1
+            theta = c3(ip1, j, k) - c3(i, j, k)
+            dx = c2(ip1, j, k) * cos(theta) - c2(i, j, k)
+            dy = c2(ip1, j, k) * sin(theta)
+            dz = c1(ip1, j, k) - c1(i, j, k)
+        elif len(loc) > 1:
+            i, j = loc
+            ip1 = i + 1
+            theta = c3(ip1, j) - c3(i, j)
+            dx = c2(ip1, j) * cos(theta) - c2(i, j)
+            dy = c2(ip1, j) * sin(theta)
+            dz = 0. if c1 is None else c1(ip1, j) - c1(i, j)
+        else:
+            i, = loc
+            ip1 = i + 1
+            theta = c3(ip1) - c3(i)
+            dx = c2(ip1) * cos(theta) - c2(i)
+            dy = c2(ip1) * sin(theta)
+            dz = 0. if c1 is None else c1(ip1) - c1(i)
     else:
         if len(loc) > 2:
             i, j, k = loc
@@ -1118,13 +1136,27 @@ def _iedge_length(c1, c2, c3, loc, cylindrical):
             dx = c1(ip1) - c1(i)
             dy = 0. if c2 is None else c2(ip1) - c2(i)
             dz = 0. if c3 is None else c3(ip1) - c3(i)
-        return sqrt(dx*dx + dy*dy + dz*dz)
+
+    return sqrt(dx*dx + dy*dy + dz*dz)
 
 
 def _jedge_length(c1, c2, c3, loc, cylindrical):
     """ Return length of edge along 'j'. """
     if cylindrical:
-        raise NotImplementedError('cylindrical _jedge_length')
+        if len(loc) > 2:
+            i, j, k = loc
+            jp1 = j + 1
+            theta = c3(i, jp1, k) - c3(i, j, k)
+            dx = c2(i, jp1, k) * cos(theta) - c2(i, j, k)
+            dy = c2(i, jp1, k) * sin(theta)
+            dz = c1(i, jp1, k) - c1(i, j, k)
+        else:
+            i, j = loc
+            jp1 = j + 1
+            theta = c3(i, jp1) - c3(i, j)
+            dx = c2(i, jp1) * cos(theta) - c2(i, j)
+            dy = c2(i, jp1) * sin(theta)
+            dz = 0. if c1 is None else c1(i, jp1) - c1(i, j)
     else:
         if len(loc) > 2:
             i, j, k = loc
@@ -1138,20 +1170,25 @@ def _jedge_length(c1, c2, c3, loc, cylindrical):
             dx = c1(i, jp1) - c1(i, j)
             dy = c2(i, jp1) - c2(i, j)
             dz = 0. if c3 is None else c3(i, jp1) - c3(i, j)
-        return sqrt(dx*dx + dy*dy + dz*dz)
+
+    return sqrt(dx*dx + dy*dy + dz*dz)
 
 
 def _kedge_length(c1, c2, c3, loc, cylindrical):
     """ Return length of edge along 'k'. """
     i, j, k = loc
+    kp1 = k + 1
     if cylindrical:
-        raise NotImplementedError('cylindrical _kedge_length')
+        theta = c3(i, j, kp1) - c3(i, j, k)
+        dx = c2(i, j, kp1) * cos(theta) - c2(i, j, k)
+        dy = c2(i, j, kp1) * sin(theta)
+        dz = c1(i, j, kp1) - c1(i, j, k)
     else:
-        kp1 = k + 1
         dx = c1(i, j, kp1) - c1(i, j, k)
         dy = c2(i, j, kp1) - c2(i, j, k)
         dz = c3(i, j, kp1) - c3(i, j, k)
-        return sqrt(dx*dx + dy*dy + dz*dz)
+
+    return sqrt(dx*dx + dy*dy + dz*dz)
 
 
 def _iface_cell_value(arr, loc):
@@ -1176,18 +1213,18 @@ def _kface_cell_value(arr, loc):
 def _iface_node_value(arr, loc):
     """ Returns I face value for vertex data. """
     i, j, k = loc
-    return 0.25 * (arr(i-1, j, k) + arr(i-1, j-1, k) +
-                   arr(i-1, j, k-1) + arr(i-1, j-1, k-1))
+    return 0.25 * (arr(i, j+1, k+1) + arr(i, j, k+1) +
+                   arr(i, j+1, k) + arr(i, j, k))
 
 def _jface_node_value(arr, loc):
     """ Returns J face value for vertex data. """
     i, j, k = loc
-    return 0.25 * (arr(i, j-1, k) + arr(i-1, j-1, k) +
-                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
+    return 0.25 * (arr(i+1, j, k+1) + arr(i, j, k+1) +
+                   arr(i+1, j, k) + arr(i, j, k))
 
 def _kface_node_value(arr, loc):
     """ Returns K face value for vertex data. """
     i, j, k = loc
-    return 0.25 * (arr(i, j, k-1) + arr(i-1, j, k-1) +
-                   arr(i, j-1, k-1) + arr(i-1, j-1, k-1))
+    return 0.25 * (arr(i+1, j+1, k) + arr(i, j+1, k) +
+                   arr(i+1, j, k) + arr(i, j, k))
 

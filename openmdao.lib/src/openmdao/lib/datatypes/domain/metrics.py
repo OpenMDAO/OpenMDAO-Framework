@@ -65,6 +65,33 @@ def list_metrics():
     return sorted(_METRICS.keys())
 
 
+def create_scalar_metric(var_name):
+    """
+    Creates a minimal metric calculation class for `var_name` and registers it.
+    This can be used for averaging scalar flow variables without having to
+    statically create a class and register it. The created class does not
+    support dimensionalization.
+    """
+    cls_name = var_name.capitalize()
+    exec '''
+class %(cls_name)s(object):
+    """ Computes %(var_name)s. """
+
+    def __init__(self, zone, zone_name, reference_state):
+        self.%(var_name)s = zone.flow_solution.%(var_name)s.item
+
+    def calculate(self, loc, length):
+        """ Return metric value. """
+        return self.%(var_name)s(*loc)
+
+    def dimensionalize(self, value):
+        """ Return dimensional `value`. """
+        raise NotImplementedError('Dimensional %(var_name)s')
+
+register_metric('%(var_name)s', %(cls_name)s, False, 'any')
+''' % {'var_name': var_name, 'cls_name': cls_name}
+
+
 class Area(object):
     """ Computes area of mesh surface. """
 
