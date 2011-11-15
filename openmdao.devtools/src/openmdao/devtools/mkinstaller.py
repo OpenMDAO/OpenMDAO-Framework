@@ -249,13 +249,18 @@ def after_install(options, home_dir):
     guireqs = set()
     
     version = '?.?.?'
-    excludes = set(['setuptools', 'distribute']+openmdao_prereqs)
+    excludes = set(['setuptools', 'distribute', 'SetupDocs']+openmdao_prereqs)
     dists = working_set.resolve([Requirement.parse(r[0]) 
                                    for r in openmdao_packages if r[0]!='openmdao.gui'])
     distnames = set([d.project_name for d in dists])-excludes
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
     
+    try:
+        setupdoc_dist = working_set.resolve([Requirement.parse('setupdocs')])[0]
+    except:
+        setupdoc_dist = None
+        
     for dist in dists:
         if dist.project_name not in distnames:
             continue
@@ -277,7 +282,11 @@ def after_install(options, home_dir):
             guireqs.add('%s' % dist.as_requirement())
 
     # adding setupdocs req is a workaround to prevent Traits from looking elsewhere for it
-    reqs = ['setupdocs>=1.0'] + list(reqs) 
+    if setupdoc_dist:
+        _reqs = [str(setupdoc_dist.as_requirement())]
+    else:
+        _reqs = ['setupdocs>=1.0']
+    reqs = _reqs + list(reqs) 
     guireqs = list(guireqs)
     
     optdict = { 
