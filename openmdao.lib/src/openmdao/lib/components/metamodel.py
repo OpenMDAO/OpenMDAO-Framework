@@ -86,6 +86,11 @@ class MetaModel(Component):
         self._const_inputs = {}
         self._failed_training_msgs = []
         
+        # remove output history from surrogate_info
+        for name, tup in self._surrogate_info.items():
+            surrogate, output_history = tup
+            self._surrogate_info[name] = (surrogate, [])
+            
     def _warm_start_data_changed(self, oldval, newval): 
         self.reset_training_data = True
         
@@ -187,7 +192,6 @@ class MetaModel(Component):
                     surrogate, output_history = tup  
                     surrogate.train(training_input_history, output_history)
                     
-                #self._training_input_history = []
                 self._new_train_data = False
                 
             inputs = []
@@ -240,6 +244,7 @@ class MetaModel(Component):
         self._surrogate_input_names = []
         self._training_input_history = []
         self._surrogate_info = {}
+        self._failed_training_msgs = []
         
         # remove traits promoted from the old model
         for name in self._current_model_traitnames:
