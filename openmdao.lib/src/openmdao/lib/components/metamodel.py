@@ -82,7 +82,7 @@ class MetaModel(Component):
         self._new_train_data = True
     
     def _reset_training_data_fired(self):
-        self._taining_input_history = []
+        self._training_input_history = []
         self._const_inputs = {}
         self._failed_training_msgs = []
         
@@ -238,7 +238,7 @@ class MetaModel(Component):
 
         new_model_traitnames = set()
         self._surrogate_input_names = []
-        self._taining_input_history = []
+        self._training_input_history = []
         self._surrogate_info = {}
         
         # remove traits promoted from the old model
