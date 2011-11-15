@@ -9,7 +9,11 @@
 __all__ = ['BroydenSolver']
 
 import numpy
-from scipy.optimize.nonlin import norm
+
+# this little funct replaces a dependency on scipy
+npnorm = numpy.linalg.norm
+def norm(a, ord=None):
+    return npnorm(numpy.asarray_chkfinite(a), ord=ord)
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float, Int, Enum

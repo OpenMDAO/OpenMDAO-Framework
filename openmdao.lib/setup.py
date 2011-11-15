@@ -47,7 +47,6 @@ Component, Driver, and Variable plugins for OpenMDAO
           'Pyevolve==0.6',
           'ordereddict',
           'scipy',
-          #'ffnet>=0.7'
           ],
       entry_points="""
       [openmdao.driver]

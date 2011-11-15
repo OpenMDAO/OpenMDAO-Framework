@@ -1,6 +1,12 @@
 #import sqlite3
 from random import gauss, weibullvariate, uniform
-from scipy.special import gamma
+try:
+    from scipy.special import gamma
+except ImportError:
+    # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
+    import math
+    if hasattr(math, 'gamma'):
+        gamma = math.gamma
 
 class UncertainDistribution(object):
     """Base class for uncertain variables."""
@@ -116,26 +122,28 @@ class TriangularDistribution(UncertainDistribution):
     def expected(self):
         return (self.max+self.mode+self.min)/3.
         
-class WeibullDistribution(UncertainDistribution):
-    """An UncertainDistribution which represents a quantity with a 
-    weibull distribution of uncertainty.
+        
+if 'gamma' in globals():
+    class WeibullDistribution(UncertainDistribution):
+        """An UncertainDistribution which represents a quantity with a 
+        weibull distribution of uncertainty.
+        
+        alpha: float
+           scale parameter
+           
+        beta: float
+           shape parameter
+        """
     
-    alpha: float
-       scale parameter
-       
-    beta: float
-       shape parameter
-    """
-
-    def __init__(self,alpha=1.,beta=2.,*args,**kwargs):
-        super(UniformDistribution,self).__init__(*args,**kwargs)
-        
-        self.alpha = alpha
-        self.beta = beta
-
-    def sample(self):
-        return weibullvariate(self.alpha,self.beta)
-        
-    def expected(self):
-        return self.alpha*gamma(1.+1./self.beta)
-        
+        def __init__(self,alpha=1.,beta=2.,*args,**kwargs):
+            super(UniformDistribution,self).__init__(*args,**kwargs)
+            
+            self.alpha = alpha
+            self.beta = beta
+    
+        def sample(self):
+            return weibullvariate(self.alpha,self.beta)
+            
+        def expected(self):
+            return self.alpha*gamma(1.+1./self.beta)
+            

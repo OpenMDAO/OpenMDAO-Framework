@@ -33,7 +33,31 @@ def forwarder(cls, fnc, delegatename):
     return types.MethodType(f, None, cls)
         
     
+def stub_if_missing_deps(*deps):
+    """A class decorator that will try to import the specified modules and 
+    in the event of failure will stub out the class, raising a RuntimeError
+    whenever an attempt is made to instatiate the class.
+    """
+    
+    def _error(cls, *args, **kwargs):
+        msg = "The %s class depends on the following modules which were not found on your system: %s"
+        raise RuntimeError(msg % (cls.__name__, list(deps)))
+    
+    def _stub_if_missing(cls):
+        failed = []
+        for dep in deps:
+            try:
+                __import__(dep)
+            except ImportError:
+                failed.append(dep)
+                
+        if failed:
+            cls.__new__ = staticmethod(_error)
+        return cls
+            
+    return _stub_if_missing
 
+    
 def add_delegate(*delegates):
     """A class decorator that takes delegate classes or (name,delegate) tuples as
     args. For each tuple, an instance with the given name will be created in the
