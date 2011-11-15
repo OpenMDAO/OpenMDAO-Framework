@@ -240,6 +240,7 @@ class MetaModel(Component):
         self._surrogate_input_names = []
         self._training_input_history = []
         self._surrogate_info = {}
+        self._failed_training_msgs = []
         
         # remove traits promoted from the old model
         for name in self._current_model_traitnames:
