@@ -40,13 +40,11 @@
         <input type="submit" value="Load this project into Workspace" />
     </form>
     
-    <!-- Not ready for primetime (i.e. doesn't work)
     <form action="/projects/download/{{ project.id }}/" method="GET">
         {% csrf_token %}
         <input type="hidden" name="filename" value="{{ project.filename }}" />
         <input type="submit" value="Save a copy of this project" />
     </form>
-    -->
     {% endif %}        
     <br>
 {% endblock %}

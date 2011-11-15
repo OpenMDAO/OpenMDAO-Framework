@@ -68,6 +68,23 @@ class AModel(Component):
 
 class MyMetaModel(MetaModel):
     my_x = Float(1., iotype='in')
+    
+
+class Dummy(Component): 
+    x = Float(1.2,iotype="in")
+    y = Float(0,iotype="out")
+
+    def execute(self): 
+        self.y = 2*self.x
+
+class Sim(Assembly):
+    def __init__(self): 
+        super(Sim,self).__init__()
+
+        self.add('mm',MetaModel())
+        self.mm.surrogate = {'default':KrigingSurrogate()}
+        self.mm.model = Dummy()
+
 
 class MetaModelTestCase(unittest.TestCase):
 
@@ -368,7 +385,23 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel.train_next = True
         metamodel.run()
         
+    def test_reset_nochange_inputs(self):
+        s = Sim()
         
+        s.mm.train_next = True
+        s.mm.x = 1
+        s.run()
+        self.assertEqual(s.mm.x, 1)
+        
+        s.mm.train_next = True
+        s.mm.x = 2
+        s.run()
+        self.assertEqual(s.mm.x, 2)
+        
+        s.mm.x = 10
+        s.mm.reset_training_data = True
+        #all meta model inputs should remain at their current values
+        self.assertEqual(s.mm.x, 10)
         
 if __name__ == "__main__":
     unittest.main()

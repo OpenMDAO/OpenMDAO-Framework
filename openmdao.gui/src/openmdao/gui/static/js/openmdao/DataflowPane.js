@@ -6,7 +6,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
     var self = this,
         figures = {},
         dataflowID = "#"+pathname.replace(/\./g,'-')+"-dataflow",
-        dataflowDiv = jQuery('<div id='+dataflowID+' style="height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow: auto;">').appendTo(elm),
+        dataflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;'
+        dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">').appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID);
         
     self.pathname = pathname;
@@ -17,17 +18,16 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
     dataflowDiv.droppable ({
         accept: '.objtype',
         drop: function(ev,ui) { 
-            debug.info("Dataflow drop:",ev,ui)
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("path"),
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
-                y = Math.round(ui.offset.top - off.top)
-            debug.info("Dataflow dropped object:",droppedObject)            
+                y = Math.round(ui.offset.top - off.top);
+            debug.info(droppedName,'dropped on',self.pathname,'dataflow');
             if (droppedObject.hasClass('objtype')) {
-                openmdao.Util.promptForName(function(name) {
+                openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname)
                 })
             }
