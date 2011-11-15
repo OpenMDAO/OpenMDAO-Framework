@@ -236,6 +236,7 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
             oThis.myModel.issueCommand(cmd)
         }
     }));
+    menu.setZOrder(999999);
     return menu;
 };
 

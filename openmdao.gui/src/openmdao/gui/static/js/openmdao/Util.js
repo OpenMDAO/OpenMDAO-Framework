@@ -250,6 +250,22 @@ openmdao.Util = {
         return name;
     },
     
+    /** find the element with the highest z-index of those specified by the jQuery selector */
+    getHighest: function (selector) {
+        var elems = jQuery(selector);
+        var highest_elm = null;
+        var highest_idx = 0;
+        for (var i = 0; i < elems.length; i++)  {
+            var elem = elems[i][0];
+            var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
+            if ((zindex > highest_idx) && (zindex != 'auto')) {
+                highest_elm = elem;
+                highest_idx = zindex;
+            }
+        }
+        return highest_elm;
+    },
+    
     /** rotate the page */
     rotatePage: function (x) {
         x = parseInt(x);
@@ -260,6 +276,6 @@ openmdao.Util = {
                       + ' transform: rotate('+x+'deg); transform-origin: 50% 50%;';
         document.body.setAttribute('style',rotateCSS);
     },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;}
-    
-    
+
+
 }

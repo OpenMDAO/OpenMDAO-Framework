@@ -1,7 +1,9 @@
-openmdao.WorkflowFigure=function(myModel,flowpath,pathname){
+openmdao.WorkflowFigure=function(myModel,flowpath,pathname,driver){
     this.myModel = myModel;
     this.flowpath = flowpath;
     this.pathname = pathname;
+    this.driver = driver;
+    this.horizontal = true;
     // if my name is 'driver', then use my parent's (assembly) name
     var tok = flowpath.split('.')    
     if (tok.length > 1) {
@@ -98,10 +100,87 @@ openmdao.WorkflowFigure.prototype.setBackgroundColor=function(color){
 openmdao.WorkflowFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
+    menu.appendMenuItem(new draw2d.MenuItem("Flip Workflow",null,function(){
+        oThis.horizontal = !oThis.horizontal;
+        oThis.redraw();
+    }));
     menu.appendMenuItem(new draw2d.MenuItem("Clear Workflow",null,function(){
         var asm = 'top.'+oThis.pathname,
             cmd = asm + '.workflow.clear();' + asm + '.config_changed();';
         oThis.myModel.issueCommand(cmd);
     }));
+    menu.setZOrder(999999);
     return menu;
+};
+
+/** add a component figure to this workflow (container) figure */
+openmdao.WorkflowFigure.prototype.addComponentFigure=function(comp_fig){
+    //debug.info("flow:",this.name,"children:",this.getChildren(),'horizontal',this.horizontal)
+    var count = this.getChildren().size;
+    if (this.horizontal) {
+        //x = this.getAbsoluteX()+getFlowWidth(this);
+        x = this.getAbsoluteX()+comp_fig.getWidth()*count*1.5;
+        y = 20+this.getAbsoluteY();
+    }
+    else {
+        x = this.getAbsoluteX();
+        //y = 20+this.getAbsoluteY()+getFlowHeight(this);
+        y = 20+this.getAbsoluteY()+comp_fig.getHeight()*count*1.5;
+    }                                            
+    this.addChild(comp_fig);
+    this.getWorkflow().addFigure(comp_fig,x,y);
+};
+
+/** resize workflow (container) figure to contain all it's children */
+openmdao.WorkflowFigure.prototype.resize=function(){
+    var figWidth = 110,figHeight = 60;
+    var i=0, xmin=999999, xmax=0, ymin=999999, ymax=0,
+        children = this.getChildren();
+    for (i=0;i<children.size;i++) {
+        child = children.get(i);
+        if (child instanceof openmdao.WorkflowComponentFigure) {
+            x = child.getAbsoluteX();
+            if (x < xmin) {
+                xmin = x;
+            };
+            if (x > xmax) {
+                xmax = x;
+                figWidth = child.getWidth();
+            };
+            y = child.getAbsoluteY();
+            if (y < ymin) {
+                ymin = y;
+            };
+            if (y > ymax) {
+                ymax = y;
+                figHeight = child.getHeight();
+            };
+        };
+    };
+    this.setDimension(xmax+figWidth-xmin,
+                      ymax+figHeight-ymin+20)
+};
+
+/** redraw workflow (container) figure */
+openmdao.WorkflowFigure.prototype.redraw=function(){
+    var children = this.getChildren();
+    for (i=0;i<children.size;i++) {
+        child = children.get(i);                
+        if (child instanceof openmdao.WorkflowFigure) {
+            x = child.driver.getAbsoluteX()+child.driver.getWidth()-20;
+            y = child.driver.getAbsoluteY()+child.driver.getHeight()-10;            
+        }
+        else {
+            if (this.horizontal) {
+                x = this.getX()+child.getWidth()*i*1.5;
+                y = 20+this.getY();
+            }
+            else {
+                x = this.getAbsoluteX();
+                y = 20+this.getY()+child.getHeight()*i*1.5;
+            }
+        }
+        child.setPosition(x,y);
+    };
+    this.resize();
 };
