@@ -12,16 +12,20 @@
 __all__ = ['SensitivityDriver']
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros
+try:
+    from numpy import zeros
+except ImportError:
+    pass
 
 from openmdao.lib.datatypes.api import Array, List
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.main.interfaces import IHasParameters, IHasObjectives, IHasConstraints, implements
 
+@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
 class SensitivityDriver(DriverUsesDerivatives):
     """Driver to calculate the gradient of a workflow, and return
