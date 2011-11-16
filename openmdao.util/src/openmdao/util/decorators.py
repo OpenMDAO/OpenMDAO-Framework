@@ -34,18 +34,6 @@ def forwarder(cls, fnc, delegatename):
     return types.MethodType(f, None, cls)
 
 
-def method_replacer(fnc, body):
-    """Returns a method with a new body that replaces the given method. The
-    signature of the original method is preserved in the new method.
-    """
-    fname = fnc.__name__
-    spec = getargspec(fnc)
-    sig = formatargspec(*spec)
-    f = FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
-                             doc=fnc.__doc__)
-    return types.MethodType(f, None, fnc.im_class)
-
-
 def funct_replacer(fnc, body):
     """Returns a function with a new body that replaces the given function. The
     signature of the original function is preserved in the new function.
