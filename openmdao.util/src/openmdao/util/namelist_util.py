@@ -14,6 +14,7 @@ from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       oneOf, nums, TokenConverter, Group
 
 from openmdao.util.filewrap import ToFloat, ToInteger
+from openmdao.util.decorators import stub_if_missing_deps
 
 def _floatfmt(val):
     """ Returns the output format for a floating point number.

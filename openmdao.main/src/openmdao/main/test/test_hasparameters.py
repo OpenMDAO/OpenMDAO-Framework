@@ -97,7 +97,7 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter('comp.vstr', 0., 1.e99) 
         except ValueError, err:
-            self.assertEqual(str(err), "driver: The value of parameter 'comp.vstr' must be of type float or int, but its type is 'str'.")
+            self.assertEqual(str(err), "driver: The value of parameter 'comp.vstr' must be a real or integral type, but its type is 'str'.")
         else: 
             self.fail("Exception Expected")
             

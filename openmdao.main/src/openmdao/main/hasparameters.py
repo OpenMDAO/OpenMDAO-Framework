@@ -2,7 +2,7 @@ import ordereddict
 import weakref
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.types import real_types, int_types
+from openmdao.util.types import real_types, int_types
 from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 

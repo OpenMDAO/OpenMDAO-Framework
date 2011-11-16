@@ -19,12 +19,12 @@ from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Slot
 
 from openmdao.main.api import Driver 
-from openmdao.main.types import real_types, int_types
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-import time
+from openmdao.util.types import real_types, int_types
+
 array_test = re.compile("(\[[0-9]+\])+$")
 
 @add_delegate(HasParameters, HasObjective,HasEvents)
