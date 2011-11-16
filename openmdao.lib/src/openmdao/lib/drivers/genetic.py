@@ -23,7 +23,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-from openmdao.util.typegroups import real_types, int_types
+from openmdao.util.typegroups import real_types, int_types, iterable_types
 
 array_test = re.compile("(\[[0-9]+\])+$")
 
@@ -105,7 +105,7 @@ class Genetic(Driver):
                 if isinstance(val, int_types):
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=False)
                     
-            elif "values" in metadata and isinstance(metadata['values'],(list,tuple,array,set)):
+            elif "values" in metadata and isinstance(metadata['values'], iterable_types):
                 allele = GAllele.GAlleleList(metadata['values'])
 
             if allele:

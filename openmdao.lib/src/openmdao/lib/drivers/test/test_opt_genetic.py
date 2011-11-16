@@ -273,7 +273,7 @@ class TestCase(unittest.TestCase):
             s = Simulation()    
         except ValueError,err:
             self.assertEqual(str(err),
-                "driver: The value of parameter 'comp.z' must be of type float or int, but its type is 'str'.")
+                "driver: The value of parameter 'comp.z' must be a real or integral type, but its type is 'str'.")
         else: 
             self.fail("ValueError expected")
 

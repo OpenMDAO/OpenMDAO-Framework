@@ -5,8 +5,12 @@ Utilities for reading and writing Fortran namelists.
 # pylint: disable-msg=E0611,F0401
 import ordereddict
 
-from numpy import ndarray, array, append, vstack, zeros, \
-                  int32, int64, float32, float64
+try:
+    from numpy import ndarray, array, append, vstack, zeros, \
+         int32, int64, float32, float64
+except ImportError:
+    pass
+
 from enthought.traits.trait_handlers import TraitListObject 
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \

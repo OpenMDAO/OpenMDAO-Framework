@@ -40,7 +40,7 @@ def stub_if_missing_deps(*deps):
     explains the missing dependencies whenever an attempt is made to
     instatiate the class.
     
-    *deps: list of str args
+    deps: str args
         args in deps may have the form a.b.c or a.b.c:attr, where attr would be 
         searched for within the module a.b.c after a.b.c is successfully imported.
     """
