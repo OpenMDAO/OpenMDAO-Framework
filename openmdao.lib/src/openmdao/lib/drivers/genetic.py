@@ -23,7 +23,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
-from openmdao.util.types import real_types, int_types
+from openmdao.util.typegroups import real_types, int_types
 
 array_test = re.compile("(\[[0-9]+\])+$")
 
