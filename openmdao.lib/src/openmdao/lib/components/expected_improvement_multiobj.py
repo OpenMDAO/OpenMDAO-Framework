@@ -1,17 +1,22 @@
 """Expected Improvement calculation for one or more objectives.""" 
 
-from numpy import exp, abs, pi, array,isnan, diag
-from scipy.special import erf
-from scipy import random
+try:
+    from numpy import exp, abs, pi, array,isnan, diag
+    from scipy.special import erf
+    from scipy import random
+except ImportError:
+    pass
 
 from openmdao.lib.datatypes.api import Slot, Str, ListStr, Enum, \
      Float, Array,Event, Int
 
 from openmdao.main.component import Component
+from openmdao.util.decorators import stub_if_missing_deps
 
 from openmdao.lib.casehandlers.api import CaseSet
 from openmdao.main.uncertain_distributions import NormalDistribution
 
+@stub_if_missing_deps('numpy', 'scipy')
 class MultiObjExpectedImprovement(Component):
     best_cases = Slot(CaseSet, iotype="in",
                     desc="CaseIterator which contains only Pareto optimal cases \

@@ -1,6 +1,7 @@
 """
 Some useful decorators
 """
+import sys
 import types
 import time
 
@@ -34,24 +35,37 @@ def forwarder(cls, fnc, delegatename):
         
     
 def stub_if_missing_deps(*deps):
-    """A class decorator that will try to import the specified modules and 
-    in the event of failure will stub out the class, raising a RuntimeError
-    whenever an attempt is made to instatiate the class.
-    """
+    """A class decorator that will try to import the specified modules and in
+    the event of failure will stub out the class, raising a RuntimeError that
+    explains the missing dependencies whenever an attempt is made to
+    instatiate the class.
     
-    def _error(cls, *args, **kwargs):
-        msg = "The %s class depends on the following modules which were not found on your system: %s"
-        raise RuntimeError(msg % (cls.__name__, list(deps)))
+    *deps: list of str args
+        args in deps may have the form a.b.c or a.b.c:attr, where attr would be 
+        searched for within the module a.b.c after a.b.c is successfully imported.
+    """
     
     def _stub_if_missing(cls):
         failed = []
         for dep in deps:
+            parts = dep.split(':')
+            modname = parts[0]
+            attrname = parts[1] if len(parts)>1 else None
+            
             try:
-                __import__(dep)
+                __import__(modname)
             except ImportError:
-                failed.append(dep)
+                failed.append(modname)
+                continue
+            
+            if attrname and attrname not in sys.modules[modname]:
+                failed.append('.'.join([modname, attrname]))
                 
         if failed:
+            def _error(cls, *args, **kwargs):
+                msg = "The %s class depends on the following modules or attributes which were not found on your system: %s"
+                raise RuntimeError(msg % (cls.__name__, failed))
+    
             cls.__new__ = staticmethod(_error)
         return cls
             

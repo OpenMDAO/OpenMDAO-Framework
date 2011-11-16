@@ -40,9 +40,8 @@ def is_latin_hypercube(lh):
     """
     n,k = lh.shape
     for j in range(k):
-        colset = set()
         col = lh[:,j]
-        colset.update(col)
+        colset = set(col)
         if len(colset) < len(col):
             return False  # something was duplicated
     return True

@@ -5,14 +5,18 @@ resolution. It plugs into the DOEgenerator socket on a DOEdriver."""
 from itertools import product
 
 # pylint: disable-msg=E0611,F0401
-from numpy import linspace
+# FIXME: adding a numpy dependency just for linspace doesn't seem worth it
+try:
+    from numpy import linspace
+except ImportError:
+    pass
+
 from enthought.traits.api import HasTraits
-from openmdao.main.interfaces import implements
+from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.lib.datatypes.api import Int
+from openmdao.util.decorators import stub_if_missing_deps
 
-from openmdao.main.interfaces import IDOEgenerator
-
-
+@stub_if_missing_deps('numpy')
 class FullFactorial(HasTraits):
     """ DOEgenerator that performs a full-factorial Design of Experiments. Plugs
     into the DOEgenerator socket on a DOEdriver."""

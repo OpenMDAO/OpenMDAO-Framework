@@ -2,8 +2,6 @@
 
 import re
 
-from numpy import float32, float64, int32, int64, array
-
 #pyevolve calls multiprocessing.cpu_count(), which can raise NotImplementedError
 #so try to monkeypatch it here to return 1 if that's the case
 try:
@@ -21,6 +19,7 @@ from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Slot
 
 from openmdao.main.api import Driver 
+from openmdao.main.types import real_types, int_types
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasevents import HasEvents
@@ -99,11 +98,11 @@ class Genetic(Driver):
             
             #then it's a float or an int, or a member of an array
             if ('low' in metadata or 'high' in metadata) or array_test.search(param.targets[0]): 
-                if isinstance(val,(float,float32,float64)):                
+                if isinstance(val, real_types):                
                     #some kind of float
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=True)
                 #some kind of int    
-                if isinstance(val,(int,int32,int64)):
+                if isinstance(val, int_types):
                     allele = GAllele.GAlleleRange(begin=low, end=high, real=False)
                     
             elif "values" in metadata and isinstance(metadata['values'],(list,tuple,array,set)):

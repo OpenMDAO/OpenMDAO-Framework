@@ -1,10 +1,14 @@
 import copy
 from math import atan2, cos, hypot, sin
-import numpy
+try:
+    import numpy
+except ImportError:
+    pass
 
 from openmdao.lib.datatypes.domain.vector import Vector
+from openmdao.util.decorators import stub_if_missing_deps
 
-
+@stub_if_missing_deps('numpy')
 class GridCoordinates(Vector):
     """
     Coordinate data for a :class:`Zone`.

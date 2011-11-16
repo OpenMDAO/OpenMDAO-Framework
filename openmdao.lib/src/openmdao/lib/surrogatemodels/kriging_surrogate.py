@@ -3,17 +3,21 @@
 from math import log, e, sqrt
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp, diag
-from numpy.linalg import det, linalg, lstsq
-from scipy.linalg import cho_factor, cho_solve
-from scipy.optimize import fmin
+try:
+    from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp, diag
+    from numpy.linalg import det, linalg, lstsq
+    from scipy.linalg import cho_factor, cho_solve
+    from scipy.optimize import fmin
+except ImportError:
+    pass
 
 import zope.interface
 
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.util.decorators import stub_if_missing_deps
 
-
+@stub_if_missing_deps('numpy', 'scipy')
 class KrigingSurrogate(object): 
     implements(ISurrogate)
     

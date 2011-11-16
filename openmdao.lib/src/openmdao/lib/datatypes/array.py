@@ -7,13 +7,18 @@ __all__ = ["Array"]
 
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array, ndarray, zeros
+try:
+    from numpy import array, ndarray, zeros
+except ImportError:
+    pass
 
 from enthought.traits.api import Array as TraitArray
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper
+from openmdao.util.decorators import stub_if_missing_deps
 
+@stub_if_missing_deps('numpy')
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
     The unit applies to the entire array."""

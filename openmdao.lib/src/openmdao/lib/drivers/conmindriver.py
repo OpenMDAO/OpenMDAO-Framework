@@ -25,8 +25,11 @@
 __all__ = ['CONMINdriver']
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros, ones
-from numpy import int as numpy_int
+try:
+    from numpy import zeros, ones
+    from numpy import int as numpy_int
+except ImportError:
+    pass
 
 import conmin.conmin as conmin
 
@@ -38,7 +41,7 @@ from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasOb
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
 
 class _cnmn1(object):
@@ -170,6 +173,7 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
+@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class CONMINdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of CONMIN. 

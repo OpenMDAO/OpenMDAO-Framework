@@ -8,12 +8,15 @@
 #public symbols
 __all__ = ['BroydenSolver']
 
-import numpy
-
-# this little funct replaces a dependency on scipy
-npnorm = numpy.linalg.norm
-def norm(a, ord=None):
-    return npnorm(numpy.asarray_chkfinite(a), ord=ord)
+try:
+    import numpy
+except ImportError:
+    pass
+else:
+    # this little funct replaces a dependency on scipy
+    npnorm = numpy.linalg.norm
+    def norm(a, ord=None):
+        return npnorm(numpy.asarray_chkfinite(a), ord=ord)
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float, Int, Enum
@@ -22,10 +25,11 @@ from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, implements
 
-        
+    
+@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasEqConstraints)
 class BroydenSolver(Driver):
     """ :term:`MIMO` Newton-Raphson Solver with Broyden approximation to the Jacobian.

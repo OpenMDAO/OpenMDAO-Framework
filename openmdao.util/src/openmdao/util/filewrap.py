@@ -9,8 +9,13 @@ from pyparsing import CaselessLiteral, Combine, OneOrMore, Optional, \
                       TokenConverter, Word, nums, oneOf, printables, \
                       ParserElement
 
+from openmdao.util.decorators import stub_if_missing_deps
+
 # pylint: disable-msg=E0611,F0401
-from numpy import append, array, zeros
+try:
+    from numpy import append, array, zeros
+except ImportError:
+    pass
 
 def _getformat(val):
     # Returns the output format for a floating point number.
@@ -409,6 +414,7 @@ class InputFileGenerator(object):
         infile.close()
 
 
+@stub_if_missing_deps('numpy')
 class FileParser(object):
     """Utility to locate and read data from a file."""
     

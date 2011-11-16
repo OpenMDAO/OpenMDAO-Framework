@@ -43,7 +43,6 @@ setup(name='openmdao.main',
           'argparse',
           'decorator',
           'networkx==1.3',
-          'numpy',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
@@ -54,6 +53,9 @@ setup(name='openmdao.main',
           'Traits==3.3.0',
           'zope.interface',
       ],
+      extras_require = {
+          'numpy_comps': ['numpy'],
+      },
       entry_points = """
       [console_scripts]
       openmdao_docs=openmdao.util.view_docs:view_docs
