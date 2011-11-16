@@ -4,7 +4,7 @@ from inspect import getmembers, ismethod, isfunction
 
 from enthought.traits.api import HasTraits, Float
 
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
 
 class GoodDelegate(object):
@@ -45,7 +45,7 @@ class BadDelegate2(object):
         return self.inst_y
     
 
-class decoratorTestCase(unittest.TestCase):
+class DelegateTestCase(unittest.TestCase):
 
     def test_add_delegate(self):
         @add_delegate(GoodDelegate)
@@ -129,6 +129,49 @@ class decoratorTestCase(unittest.TestCase):
 
         f = Foo4()
         self.assertEqual(f.amethod(1,2), -54.3)
+
+        
+class StubIfMissingTestCase(unittest.TestCase):
+    def test_stub_class(self):
+        @stub_if_missing_deps('FooBar', 'math', 'blah')
+        class MyClass(object):
+            pass
+        
+        try:
+            c = MyClass()
+        except RuntimeError as err:
+            self.assertEqual(str(err), 
+                "The MyClass class depends on the following modules or attributes which were not found on your system: ['FooBar', 'blah']")
+        else:
+            self.fail("expected RuntimeError")
+    
+    def test_stub_funct(self):
+        
+        @stub_if_missing_deps('abcdef', 'Krusty', 'math')
+        def funct(a, b, c, d):
+            return True
+        
+        try:
+            f = funct(1,2,3,4)
+        except RuntimeError as err:
+            self.assertEqual(str(err), "The funct function depends on the following modules or attributes which were not found on your system: ['abcdef', 'Krusty']")
+        else:
+            self.fail("expected RuntimeError")
+
+    def test_stub_method(self):
+        
+        class TheClass(object):
+            @stub_if_missing_deps('somemodule','fooey')
+            def my_method(self, a, b, c, d):
+                return True
+        
+        c = TheClass()
+        try:
+            c.my_method(1,2,3,4)
+        except RuntimeError as err:
+            self.assertEqual(str(err), "The my_method function depends on the following modules or attributes which were not found on your system: ['somemodule', 'fooey']")
+        else:
+            self.fail("expected RuntimeError")
 
 
 if __name__ == '__main__':

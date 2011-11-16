@@ -22,9 +22,11 @@
 #public symbols
 __all__ = ['NEWSUMTdriver']
 
-
-from numpy import zeros, ones
-from numpy import int as numpy_int
+try:
+    from numpy import zeros, ones
+    from numpy import int as numpy_int
+except ImportError:
+    pass
 
 from enthought.traits.api import Array
                                  
@@ -33,7 +35,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 
@@ -260,6 +262,7 @@ class _countr(object):
 
         
 # pylint: disable-msg=R0913,R0902
+@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class NEWSUMTdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of NEWSUMT. 

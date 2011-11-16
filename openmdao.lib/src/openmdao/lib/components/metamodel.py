@@ -1,7 +1,6 @@
 """ Metamodel provides basic Meta Modeling capability."""
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
@@ -199,11 +198,10 @@ class MetaModel(Component):
                 elif val != cval:
                     self.raise_exception("ERROR: training input '%s' was a constant value of (%s) but the value has changed to (%s)." %
                                          (name, cval, val), ValueError)
-            input_values = array(inputs)
             for name, tup in self._surrogate_info.items():
                 surrogate = tup[0]
                 # copy output to boudary
-                setattr(self, name, surrogate.predict(input_values))
+                setattr(self, name, surrogate.predict(inputs))
             
     def _post_run (self):
         self._train = False

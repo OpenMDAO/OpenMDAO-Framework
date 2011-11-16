@@ -106,7 +106,7 @@ class ToBool(TokenConverter):
             raise RuntimeError('Unexpected error while trying to identify a'
                                ' Boolean value in the namelist.')
 
-    
+@stub_if_missing_deps('numpy')
 class Namelist(object):
     """Utility to ease the task of constructing a formatted output file."""
     

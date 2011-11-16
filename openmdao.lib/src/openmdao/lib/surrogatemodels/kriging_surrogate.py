@@ -55,6 +55,7 @@ class KrigingSurrogate(object):
         X, Y = self.X, self.Y
         thetas = 10.**self.thetas
         XX = array(X)
+        new_x = array(new_x)
         for i in range(self.n):
             r[i] = sum(thetas*(XX[i]-new_x)**2.)
         r = exp(-r)

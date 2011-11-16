@@ -6,7 +6,7 @@ import types
 import time
 
 from decorator import FunctionMaker
-from inspect import getmembers, ismethod, getargspec, formatargspec, getmro
+from inspect import getmembers, ismethod, isfunction, isclass, getargspec, formatargspec, getmro
 
 # this decorator is based on a code snippet by vegaseat at daniweb.
 # See http://www.daniweb.com/code/snippet216689.html
@@ -32,6 +32,29 @@ def forwarder(cls, fnc, delegatename):
     f = FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
                              doc=fnc.__doc__)
     return types.MethodType(f, None, cls)
+
+
+def method_replacer(fnc, body):
+    """Returns a method with a new body that replaces the given method. The
+    signature of the original method is preserved in the new method.
+    """
+    fname = fnc.__name__
+    spec = getargspec(fnc)
+    sig = formatargspec(*spec)
+    f = FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
+                             doc=fnc.__doc__)
+    return types.MethodType(f, None, fnc.im_class)
+
+
+def funct_replacer(fnc, body):
+    """Returns a function with a new body that replaces the given function. The
+    signature of the original function is preserved in the new function.
+    """
+    fname = fnc.__name__
+    spec = getargspec(fnc)
+    sig = formatargspec(*spec)
+    return FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
+                                doc=fnc.__doc__)
         
     
 def stub_if_missing_deps(*deps):
@@ -45,7 +68,7 @@ def stub_if_missing_deps(*deps):
         searched for within the module a.b.c after a.b.c is successfully imported.
     """
     
-    def _stub_if_missing(cls):
+    def _find_failures():
         failed = []
         for dep in deps:
             parts = dep.split(':')
@@ -60,14 +83,20 @@ def stub_if_missing_deps(*deps):
             
             if attrname and attrname not in sys.modules[modname]:
                 failed.append('.'.join([modname, attrname]))
-                
-        if failed:
-            def _error(cls, *args, **kwargs):
-                msg = "The %s class depends on the following modules or attributes which were not found on your system: %s"
-                raise RuntimeError(msg % (cls.__name__, failed))
+        return failed
     
-            cls.__new__ = staticmethod(_error)
-        return cls
+    def _stub_if_missing(obj):
+        failed = _find_failures()        
+        if failed:
+            if isclass(obj):
+                def _error(obj, *args, **kwargs):
+                    msg = "The %s class depends on the following modules or attributes which were not found on your system: %s"
+                    raise RuntimeError(msg % (obj.__name__, failed))
+                obj.__new__ = staticmethod(_error)
+            elif isfunction(obj):
+                body = "raise RuntimeError(\"The %s function depends on the following modules or attributes which were not found on your system: %s\")" 
+                return funct_replacer(obj, body % (obj.__name__, failed))
+        return obj
             
     return _stub_if_missing
 
