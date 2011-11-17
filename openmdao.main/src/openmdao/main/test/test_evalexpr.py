@@ -6,7 +6,8 @@ import numpy
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, List, Slot, Dict
+from openmdao.main.datatypes.api import Float, List, Slot, Dict
+from openmdao.lib.datatypes.api import Array
 
 class A(Component):
     f = Float(iotype='in')

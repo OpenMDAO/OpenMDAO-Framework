@@ -16,7 +16,7 @@ from pyevolve import G1DList, GAllele, GenomeBase, Scaling
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Python, Enum, Float, Int, Bool, Slot
+from openmdao.main.datatypes.api import Python, Enum, Float, Int, Bool, Slot
 
 from openmdao.main.api import Driver 
 from openmdao.main.hasparameters import HasParameters

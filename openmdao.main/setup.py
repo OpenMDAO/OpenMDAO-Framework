@@ -70,5 +70,10 @@ setup(name='openmdao.main',
       
       [openmdao.variable]
       openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
+      openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
+      openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
+      openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
+      openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
+      
       """,
     )

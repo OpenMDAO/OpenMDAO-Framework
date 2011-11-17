@@ -32,7 +32,7 @@ class DepTestCase(unittest.TestCase):
         self.assertTrue('openmdao.main.assembly.Assembly' in 
                         psta.graph['openmdao.main.component.Component'])
         
-        self.assertTrue('openmdao.lib.datatypes.float.Float' in
+        self.assertTrue('openmdao.main.datatypes.float.Float' in
                         psta.graph['openmdao.main.variable.Variable'])
         
         comps = psta.find_inheritors('openmdao.main.component.Component')

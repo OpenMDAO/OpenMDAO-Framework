@@ -77,10 +77,6 @@ Component, Driver, and Variable plugins for OpenMDAO
       
       [openmdao.variable]
       openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
-      openmdao.lib.datatypes.enum.Enum = openmdao.lib.datatypes.enum:Enum
-      openmdao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
-      openmdao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
-      openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
       
       [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate

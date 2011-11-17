@@ -73,7 +73,7 @@ def stub_if_missing_deps(*deps):
                 failed.append(err.message.split()[-1])
                 continue
             
-            if attrname and attrname not in sys.modules[modname]:
+            if attrname and not hasattr(sys.modules[modname], attrname):
                 failed.append('.'.join([modname, attrname]))
         return failed
     

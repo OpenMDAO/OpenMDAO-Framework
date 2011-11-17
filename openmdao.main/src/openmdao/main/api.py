@@ -23,6 +23,8 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.variable import Variable
 
+from openmdao.main.datatypes.slot import Slot
+
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.filevar import FileMetadata, FileRef

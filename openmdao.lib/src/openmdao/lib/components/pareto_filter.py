@@ -1,7 +1,7 @@
 """ Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Slot, List, ListStr
+from openmdao.main.datatypes.api import Slot, List, ListStr
 from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
 
 from openmdao.main.component import Component

@@ -14,7 +14,7 @@ except ImportError as err:
     except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
 
-from openmdao.lib.datatypes.api import Slot, Str, Float
+from openmdao.main.datatypes.api import Slot, Str, Float
 from openmdao.lib.casehandlers.api import CaseSet
 
 from openmdao.main.api import Component
