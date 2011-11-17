@@ -72,6 +72,7 @@ class ObjServerFactory(Factory):
     def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False,
                  allowed_types=None, address=None):
         super(ObjServerFactory, self).__init__()
+        self._name = name
         self._authkey = authkey
         self._address = address or ObjServerFactory._address
         self._allow_shell = allow_shell or ObjServerFactory._allow_shell
@@ -210,16 +211,18 @@ class ObjServerFactory(Factory):
             else:
                 del ctor_args['allowed_users']
 
-            if self._address is None or isinstance(self._address, basestring):
-                # Local access only via pipe.
+            if self._address is None or \
+               isinstance(self._address, basestring) or \
+               self._allow_tunneling:
+                # Local access only via pipe if factory accessed by pipe
+                # or factory is accessed via tunnel.
                 address = None
             else:
                 # Network access via same IP as factory, system-selected port.
                 address = (self._address[0], 0)
 
             manager = _ServerManager(address, self._authkey, name=name,
-                                     allowed_users=allowed_users,
-                                     allow_tunneling=self._allow_tunneling)
+                                     allowed_users=allowed_users)
             root_dir = name
             count = 1
             while os.path.exists(root_dir):

@@ -292,7 +292,11 @@ class ResourceAllocator(ObjServerFactory):
                 authkey = 'PublicKey'
                 multiprocessing.current_process().authkey = authkey
         super(ResourceAllocator, self).__init__(name, authkey, allow_shell)
-        self.name = name
+
+    @property
+    def name(self):
+        """ This allocator's name. """
+        return self._name
 
     # To be implemented by real allocator.
     def max_servers(self, resource_desc):  #pragma no cover
@@ -328,10 +332,45 @@ class ResourceAllocator(ObjServerFactory):
         """
         raise NotImplementedError
 
+    def check_compatibility(self, resource_desc):
+        """
+        Check compatibility with common resource attributes.
+
+        resource_desc: dict
+            Description of required resources.
+
+        Returns ``(retcode, info)``.  If `retcode` is zero, then `info`
+        is a list of keys in `recource_desc` that have not been processed.
+        Otherwise `retcode` will be -2 and `info` will be a single-entry
+        dictionary whose key is the incompatible key in `resource_desc`
+        and value provides data regarding the incompatibility.
+        """
+        keys = []
+        for key, value in resource_desc.items():
+            if key == 'required_distributions':
+                missing = self.check_required_distributions(value)
+                if missing:
+                    return (-2, {key: missing})
+            elif key == 'orphan_modules':
+                missing = self.check_orphan_modules(value)
+                if missing:
+                    return (-2, {key: missing})
+            elif key == 'python_version':
+                if sys.version[:3] != value:
+                    return (-2, {key : (value, sys.version[:3])})
+            elif key == 'exclude':
+                if socket.gethostname() in value:
+                    return (-2, {key : (value, socket.gethostname())})
+            elif key == 'allocator':
+                if self.name != value:
+                    return (-2, {key : (value, self.name)})
+            else:
+                keys.append(key)
+        return (0, keys)
+
     def check_required_distributions(self, resource_value):
         """
-        Returns True if this allocator can support the specified required
-        distributions.
+        Returns a list of distributions that are not availabled.
 
         resource_value: list
             List of Distributions or Requirements.
@@ -342,15 +381,11 @@ class ResourceAllocator(ObjServerFactory):
                 required.append(item.as_requirement())
             else:
                 required.append(item)
-        not_avail = check_requirements(sorted(required)) #, logger=self._logger)
-        if not_avail:  # Distribution not found or version conflict.
-            return (-2, {'required_distributions' : not_avail})
-        return (0, None)
+        return check_requirements(sorted(required))
 
     def check_orphan_modules(self, resource_value):
         """
-        Returns True if this allocator can support the specified 'orphan'
-        modules.
+        Returns a list of 'orphan' modules that are not available.
 
         resource_value: list
             List of 'orphan' module names.
@@ -358,15 +393,11 @@ class ResourceAllocator(ObjServerFactory):
 #FIXME: shouldn't pollute the environment like this does.
         not_found = []
         for module in sorted(resource_value):
-#            self._logger.debug("checking for 'orphan' module: %s", module)
             try:
                 __import__(module)
             except ImportError:
-#                self._logger.info('    not found')
                 not_found.append(module)
-        if len(not_found) > 0:  # Can't import module(s).
-            return (-2, {'orphan_modules' : not_found})
-        return (0, None)
+        return not_found
 
     # To be implemented by real allocator.
     def deploy(self, name, resource_desc, criteria):  #pragma no cover
@@ -414,7 +445,6 @@ class LocalAllocator(ResourceAllocator):
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
                  authkey=None, allow_shell=False):
         super(LocalAllocator, self).__init__(name, authkey, allow_shell)
-        self._name = name  # To allow looking like a proxy.
         self.pid = os.getpid()  # We may be a process on a remote host.
         if total_cpus > 0:
             self.total_cpus = total_cpus
@@ -435,9 +465,9 @@ class LocalAllocator(ResourceAllocator):
         resource_desc: dict
             Description of required resources.
         """
-        estimate, criteria = self._check_compatibility(resource_desc, False)
-        if estimate < 0:
-            return 0  # Incompatible with resource_desc.
+        retcode, info = self.check_compatibility(resource_desc)
+        if retcode != 0:
+            return 0
         return max(int(self.total_cpus * self.max_load), 1)
 
     @rbac('*')
@@ -458,9 +488,9 @@ class LocalAllocator(ResourceAllocator):
         resource_desc: dict
             Description of required resources.
         """
-        estimate, criteria = self._check_compatibility(resource_desc, True)
-        if estimate < 0:
-            return (estimate, criteria)
+        retcode, info = self.check_compatibility(resource_desc)
+        if retcode != 0:
+            return (retcode, info)
 
         # Check system load.
         try:
@@ -487,66 +517,33 @@ class LocalAllocator(ResourceAllocator):
         else:  #pragma no cover
             return (-1, criteria)  # Try again later.
 
-    def _check_compatibility(self, resource_desc, log_failure):
+    def check_compatibility(self, resource_desc):
         """
-        Check compatibility against `resource_desc`.
-        Returns ``(estimate, criteria)``, where `estimate` >= 0 implies
-        compatibility.
+        Check compatibility with resource attributes.
+
+        resource_desc: dict
+            Description of required resources.
+
+        Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
+        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        be a single-entry dictionary whose key is the incompatible key in
+        `resource_desc` and value provides data regarding the incompatibility.
         """
-        for key, value in resource_desc.items():
+        retcode, info = \
+            super(LocalAllocator, self).check_compatibility(resource_desc)
+        if retcode != 0:
+            return (retcode, info)
+
+        for key in info:
+            value = resource_desc[key]
             if key == 'localhost':
                 if not value:
-                    if log_failure:
-                        self._logger.debug('Rating failed:' \
-                                           ' specifically not localhost.')
                     return (-2, {key : value})
-
             elif key == 'n_cpus':
                 if value > self.total_cpus:
-                    if log_failure:
-                        self._logger.debug('Rating failed: too many cpus.')
-                    return (-2, {key : value})
-
-            elif key == 'required_distributions':
-                estimate, info = self.check_required_distributions(value)
-                if estimate < 0:
-                    if log_failure:
-                        self._logger.debug('Rating failed:' \
-                                           ' not found or version conflict.')
-                    return (estimate, info)
-
-            elif key == 'orphan_modules':
-                estimate, info = self.check_orphan_modules(value)
-                if estimate < 0:
-                    if log_failure:
-                        self._logger.debug("Rating failed:" \
-                                           " can't import module(s).")
-                    return (estimate, info)
-
-            elif key == 'python_version':
-                if sys.version[:3] != value:
-                    if log_failure:
-                        self._logger.debug('Rating failed: version mismatch.')
-                    return (-2, {key : value})
-
-            elif key == 'exclude':
-                 if socket.gethostname() in value:
-                    if log_failure:
-                        self._logger.debug('Rating failed: excluded host.')
-                    return (-2, {key : value})
-
-            elif key == 'allocator':
-                 if self.name != value:
-                    if log_failure:
-                        self._logger.debug('Rating failed: wrong allocator.')
-                    return (-2, {key : value})
-
+                    return (-2, {key : (value, self.total_cpus)})
             else:
-                if log_failure:
-                    self._logger.debug('Rating failed:' \
-                                       ' unrecognized => unsupported.')
-                return (-2, {key : value})
-
+                return (-2, {key : (value, 'unrecognized key')})
         return (0, {})
 
     @rbac('*')
@@ -611,7 +608,6 @@ class ClusterAllocator(object):  #pragma no cover
                 authkey = 'PublicKey'
                 multiprocessing.current_process().authkey = authkey
 
-        self.name = name   # Duplication to look like both a server and proxy.
         self._name = name
         self._lock = threading.Lock()
         self._allocators = {}
@@ -635,24 +631,23 @@ class ClusterAllocator(object):  #pragma no cover
         for host in self.cluster:
             manager = host.manager
             try:
-                name = manager._name
+                la_name = manager._name
             except AttributeError:
-                name = 'localhost'
+                la_name = 'localhost'
                 host_ip = '127.0.0.1'
             else:
                 # 'host' is 'Host-<ipaddr>:<port>
-                dash = name.index('-')
-                colon = name.index(':')
-                host_ip = name[dash+1:colon]
+                dash = la_name.index('-')
+                colon = la_name.index(':')
+                host_ip = la_name[dash+1:colon]
 
             if host_ip not in self._allocators:
                 allocator = \
-                    manager.openmdao_main_resource_LocalAllocator(name=name,
+                    manager.openmdao_main_resource_LocalAllocator(name=la_name,
                                                         allow_shell=allow_shell)
-                allocator._name = allocator.name
                 self._allocators[host_ip] = allocator
                 self._logger.debug('%s allocator %r pid %s', host.hostname,
-                                   allocator._name, allocator.pid)
+                                   la_name, allocator.pid)
 
     def __getitem__(self, i):
         return self._allocators[i]
@@ -662,6 +657,11 @@ class ClusterAllocator(object):  #pragma no cover
 
     def __len__(self):
         return len(self._allocators)
+
+    @property
+    def name(self):
+        """ Name of this allocator. """
+        return self._name
 
     def max_servers(self, resource_desc):
         """
@@ -763,7 +763,7 @@ class ClusterAllocator(object):  #pragma no cover
         value = resource_desc.get(key, '')
         if value:
             if self.name != value:
-                return (-2, {key: value})
+                return (-2, {key: (value, self.name)})
             else:
                 # Any host in our cluster is OK.
                 resource_desc = resource_desc.copy()
