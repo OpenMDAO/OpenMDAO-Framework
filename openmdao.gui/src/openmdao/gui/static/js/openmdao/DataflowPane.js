@@ -25,7 +25,9 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top);
-            debug.info(droppedName,'dropped on',self.pathname,'dataflow');
+            var elem = dataflowDiv[0];
+            var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
+            debug.info(droppedName,'dropped on dataflow:',self.pathname,'z-index',dataflowDiv.css('z-index'),'zIndex',dataflowDiv.css('zIndex'));
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname)

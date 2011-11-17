@@ -244,6 +244,7 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
                 + asm + '.config_changed(update_parent=True);';
         oThis.myModel.issueCommand(cmd);
     }));
+    menu.setZOrder(999999);
     return menu;
 };
 
