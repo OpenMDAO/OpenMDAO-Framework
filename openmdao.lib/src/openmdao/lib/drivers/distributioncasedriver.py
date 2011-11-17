@@ -4,6 +4,8 @@
           in the neighborhood of a given point
 """
 
+import logging
+
 # pylint: disable-msg=E0611,F0401,E1101
 # E0611 - name cannot be found in a module
 # F0401 - Unable to import module
@@ -16,8 +18,8 @@ from openmdao.util.decorators import add_delegate
 
 try:
     from numpy import zeros
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from enthought.traits.api import HasTraits
 from zope.interface import implements, Attribute, Interface

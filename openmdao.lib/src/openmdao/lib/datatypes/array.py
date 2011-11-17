@@ -5,12 +5,13 @@ Trait for numpy array variables, with optional units.
 #public symbols
 __all__ = ["Array"]
 
+import logging
 
 # pylint: disable-msg=E0611,F0401
 try:
     from numpy import array, ndarray, zeros
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from enthought.traits.api import Array as TraitArray
 from openmdao.units import PhysicalQuantity

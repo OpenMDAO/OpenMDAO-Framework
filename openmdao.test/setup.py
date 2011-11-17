@@ -43,7 +43,6 @@ setup(name='openmdao.test',
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'openmdao.lib',
           'nose',
       ],
       entry_points={

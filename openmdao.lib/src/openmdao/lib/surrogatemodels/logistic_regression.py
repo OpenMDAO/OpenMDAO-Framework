@@ -2,14 +2,14 @@
 overfitting. Based on work from  `Python logistic regression
 <http://blog.smellthedata.com/2009/06/python-logistic-regression-with-l2.html>`_. 
 """
-
+import logging
 from random import seed
 try:
     import numpy as np
     from numpy import log
     from scipy.optimize.optimize import fmin_bfgs
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from enthought.traits.api import HasTraits
 

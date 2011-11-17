@@ -1,14 +1,15 @@
 """ Differentiates a driver's workflow using the finite difference method. A
 variety of difference types are available for both first and second order."""
 
+import logging
 from ordereddict import OrderedDict
 from itertools import product
 
 # pylint: disable-msg=E0611,F0401
 try:
     from numpy import array
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Enum, Float

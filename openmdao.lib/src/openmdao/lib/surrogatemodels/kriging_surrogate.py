@@ -1,6 +1,7 @@
 """ Surrogate model based on Kriging. """
 
 from math import log, e, sqrt
+import logging
 
 # pylint: disable-msg=E0611,F0401
 try:
@@ -8,8 +9,8 @@ try:
     from numpy.linalg import det, linalg, lstsq
     from scipy.linalg import cho_factor, cho_solve
     from scipy.optimize import fmin
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 import zope.interface
 

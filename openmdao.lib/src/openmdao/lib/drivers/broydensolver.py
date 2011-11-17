@@ -8,10 +8,12 @@
 #public symbols
 __all__ = ['BroydenSolver']
 
+import logging
+
 try:
     import numpy
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 else:
     # this little funct replaces a dependency on scipy
     npnorm = numpy.linalg.norm

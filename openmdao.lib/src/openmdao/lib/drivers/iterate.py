@@ -4,12 +4,13 @@ to the input for the next iteration. Relative change and number of iterations
 are used as termination criteria.
 """
 
+import logging
 # pylint: disable-msg=E0611,F0401
 try:
     from numpy import zeros
     from numpy.linalg import norm
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.lib.datatypes.api import Float, Int, Bool, Enum, List, Str
 from openmdao.main.api import Driver, Case, ExprEvaluator

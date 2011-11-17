@@ -69,6 +69,6 @@ setup(name='openmdao.main',
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       
       [openmdao.variable]
-      openmdao.main.slot.Slot = openmdao.main.slot:Slot
+      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
       """,
     )

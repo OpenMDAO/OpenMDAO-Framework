@@ -1,14 +1,15 @@
-#import sqlite3
+
 from random import gauss, weibullvariate, uniform
 
 try:
     # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
     from math import gamma
-except ImportError:
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
     try:
         from scipy.special import gamma
-    except ImportError:
-        pass
+    except ImportError as err:
+        logging.warn("In %s: %r" % (__file__, err))
     
 from openmdao.util.decorators import stub_if_missing_deps
 

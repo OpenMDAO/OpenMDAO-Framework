@@ -1,9 +1,10 @@
 import copy
 from math import atan2, cos, hypot, sin
+import logging
 try:
     import numpy
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.lib.datatypes.domain.vector import Vector
 from openmdao.util.decorators import stub_if_missing_deps

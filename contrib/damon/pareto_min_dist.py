@@ -4,8 +4,8 @@ try:
     from numpy import exp, abs, pi, array,isnan,sum,sqrt,argsort, min
     from scipy.special import erf
     from scipy.integrate import dblquad
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.lib.datatypes.api import Str, ListStr, Enum, \
      Float, Array, Event, List

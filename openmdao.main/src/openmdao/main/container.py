@@ -36,7 +36,7 @@ from multiprocessing import connection
 
 from openmdao.main.variable import Variable
 from openmdao.main.filevar import FileRef
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac

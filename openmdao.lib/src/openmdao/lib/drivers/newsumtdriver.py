@@ -22,11 +22,12 @@
 #public symbols
 __all__ = ['NEWSUMTdriver']
 
+import logging
 try:
     from numpy import zeros, ones
     from numpy import int as numpy_int
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from enthought.traits.api import Array
                                  

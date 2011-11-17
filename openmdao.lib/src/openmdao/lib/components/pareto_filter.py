@@ -5,7 +5,6 @@ from openmdao.lib.datatypes.api import Slot, List, ListStr
 from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
 
 from openmdao.main.component import Component
-from openmdao.main.slot import Slot
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 

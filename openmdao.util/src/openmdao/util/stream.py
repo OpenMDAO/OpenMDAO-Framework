@@ -1,10 +1,11 @@
 import struct
 import sys
+import logging
 
 try:
     import numpy
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 _SZ_INT = 4
 _SZ_LONG = 8

@@ -20,7 +20,7 @@ from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters

@@ -24,14 +24,15 @@
 #public symbols
 __all__ = ['CONMINdriver']
 
+import logging
+
 # pylint: disable-msg=E0611,F0401
 try:
     from numpy import zeros, ones
     from numpy import int as numpy_int
-except ImportError:
-    pass
-
-import conmin.conmin as conmin
+    import conmin.conmin as conmin
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
@@ -173,7 +174,7 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@stub_if_missing_deps('numpy')
+@stub_if_missing_deps('numpy', 'conmin')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class CONMINdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of CONMIN. 

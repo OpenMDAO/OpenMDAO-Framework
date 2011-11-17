@@ -34,7 +34,7 @@ def forwarder(cls, fnc, delegatename):
     return types.MethodType(f, None, cls)
 
 
-def funct_replacer(fnc, body):
+def replace_funct(fnc, body):
     """Returns a function with a new body that replaces the given function. The
     signature of the original function is preserved in the new function.
     """
@@ -56,17 +56,21 @@ def stub_if_missing_deps(*deps):
         searched for within the module a.b.c after a.b.c is successfully imported.
     """
     
-    def _find_failures():
+    def _find_failed_imports():
         failed = []
         for dep in deps:
+            if ',' in dep:  # comma indicates a platform specific import
+                dep, plat = dep.split(',',1)
+                if plat != sys.platform:
+                    continue  # skip import, wrong platform
             parts = dep.split(':')
             modname = parts[0]
             attrname = parts[1] if len(parts)>1 else None
             
             try:
                 __import__(modname)
-            except ImportError:
-                failed.append(modname)
+            except ImportError as err:
+                failed.append(err.message.split()[-1])
                 continue
             
             if attrname and attrname not in sys.modules[modname]:
@@ -74,7 +78,7 @@ def stub_if_missing_deps(*deps):
         return failed
     
     def _stub_if_missing(obj):
-        failed = _find_failures()        
+        failed = _find_failed_imports()        
         if failed:
             if isclass(obj):
                 def _error(obj, *args, **kwargs):
@@ -83,7 +87,7 @@ def stub_if_missing_deps(*deps):
                 obj.__new__ = staticmethod(_error)
             elif isfunction(obj):
                 body = "raise RuntimeError(\"The %s function depends on the following modules or attributes which were not found on your system: %s\")" 
-                return funct_replacer(obj, body % (obj.__name__, failed))
+                return replace_funct(obj, body % (obj.__name__, failed))
         return obj
             
     return _stub_if_missing

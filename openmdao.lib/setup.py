@@ -42,13 +42,11 @@ Component, Driver, and Variable plugins for OpenMDAO
       install_requires=[
           'setuptools',
           'openmdao.main',
-          'conmin==1.0.1',
-          'newsumt==1.1.0',
           'Pyevolve==0.6',
           'ordereddict',
           ],
       extras_require = {
-          'numpy_comps': ['numpy'],
+          'numpy_comps': ['numpy', 'conmin==1.0.1', 'newsumt==1.1.0'],
           'scipy_comps': ['scipy'],
       },
       entry_points="""

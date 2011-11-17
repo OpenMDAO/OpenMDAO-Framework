@@ -2,14 +2,15 @@
 generates a set of design points that fully span the range of the parameters at the requested
 resolution. It plugs into the DOEgenerator socket on a DOEdriver."""
 
+import logging
 from itertools import product
 
 # pylint: disable-msg=E0611,F0401
 # FIXME: adding a numpy dependency just for linspace doesn't seem worth it
 try:
     from numpy import linspace
-except ImportError:
-    pass
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from enthought.traits.api import HasTraits
 from openmdao.main.interfaces import implements, IDOEgenerator

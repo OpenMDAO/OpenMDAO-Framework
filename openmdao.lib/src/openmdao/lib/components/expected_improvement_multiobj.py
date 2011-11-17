@@ -1,11 +1,19 @@
 """Expected Improvement calculation for one or more objectives.""" 
 
+import logging
+
 try:
-    from numpy import exp, abs, pi, array,isnan, diag
-    from scipy.special import erf
-    from scipy import random
-except ImportError:
-    pass
+    from numpy import exp, abs, pi, array,isnan, diag, random
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+try:
+    from math import erf
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+    try:
+        from scipy.special import erf
+    except ImportError as err:
+        logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.lib.datatypes.api import Slot, Str, ListStr, Enum, \
      Float, Array,Event, Int
