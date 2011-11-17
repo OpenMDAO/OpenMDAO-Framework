@@ -2,7 +2,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Int, Event, Float, Array, Enum, Str
+from openmdao.lib.datatypes.api import Int, Event, Float, List, Enum, Str
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.test.execcomp import ExecComp
@@ -10,7 +10,7 @@ from openmdao.test.execcomp import ExecComp
 class Dummy(Component): 
     x = Float(0.0,low=-10,high=10, iotype='in')
     y = Float(0.0,low=0,high=10, iotype='in')
-    arr = Array([1,2,3,4,5], iotype='in')
+    lst = List([1,2,3,4,5], iotype='in')
     i = Int(0,low=-10,high=10, iotype='in')
     j = Int(0,low=0,high=10, iotype='in')
     enum_i = Enum(values=(1,5,8), iotype='in')
@@ -247,8 +247,8 @@ class HasParametersTestCase(unittest.TestCase):
         
     def test_named_params(self):
         self.top.add('comp', Dummy())
-        self.top.driver.add_parameter('comp.arr[1]', low=0., high=1.e99, name='foo')
-        self.top.driver.add_parameter('comp.arr[3]', low=0., high=1.e99, name='bar')
+        self.top.driver.add_parameter('comp.lst[1]', low=0., high=1.e99, name='foo')
+        self.top.driver.add_parameter('comp.lst[3]', low=0., high=1.e99, name='bar')
         
         try:
             self.top.driver.add_parameter('comp.x', name='foo')
@@ -256,16 +256,16 @@ class HasParametersTestCase(unittest.TestCase):
             self.assertEqual(str(err), "driver: foo is already a Parameter")
         
         try:
-            self.top.driver.add_parameter('comp.arr[3]', name='blah')
+            self.top.driver.add_parameter('comp.lst[3]', name='blah')
         except Exception as err:
-            self.assertEqual(str(err), "driver: 'comp.arr[3]' is already a Parameter target")
+            self.assertEqual(str(err), "driver: 'comp.lst[3]' is already a Parameter target")
         
         targets = self.top.driver.list_param_targets()
-        self.assertEqual(set(targets),set(['comp.arr[1]','comp.arr[3]']))
+        self.assertEqual(set(targets),set(['comp.lst[1]','comp.lst[3]']))
 
         self.top.driver.remove_parameter('bar')
         targets = self.top.driver.list_param_targets()
-        self.assertEqual(targets,['comp.arr[1]'])
+        self.assertEqual(targets,['comp.lst[1]'])
         
     def test_metadata(self):
         
