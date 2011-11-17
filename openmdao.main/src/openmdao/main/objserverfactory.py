@@ -14,9 +14,8 @@ import signal
 import socket
 import sys
 import time
-import traceback
 
-from multiprocessing import current_process, active_children, util
+from multiprocessing import current_process
 
 from openmdao.main.component import SimulationRoot
 from openmdao.main.container import Container
@@ -25,7 +24,7 @@ from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.filevar import RemoteFile
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, \
-                                  write_server_config
+                                  write_server_config, setup_tunnel
 from openmdao.main.rbac import get_credentials, set_credentials, \
                                rbac, RoleError
 
@@ -68,6 +67,7 @@ class ObjServerFactory(Factory):
     _address = None
     _allow_shell = False
     _allowed_types = None
+    _allow_tunneling = False
 
     def __init__(self, name='ObjServerFactory', authkey=None, allow_shell=False,
                  allowed_types=None, address=None):
@@ -111,7 +111,7 @@ class ObjServerFactory(Factory):
             try:
                 server_host = server.host
                 server_pid = server.pid
-            except Exception as exc:
+            except Exception:
                 self._logger.error("release: can't identify server at %r",
                                    address)
                 raise ValueError("can't identify server at %r" % (address,))
@@ -218,7 +218,8 @@ class ObjServerFactory(Factory):
                 address = (self._address[0], 0)
 
             manager = _ServerManager(address, self._authkey, name=name,
-                                     allowed_users=allowed_users)
+                                     allowed_users=allowed_users,
+                                     allow_tunneling=self._allow_tunneling)
             root_dir = name
             count = 1
             while os.path.exists(root_dir):
@@ -575,7 +576,7 @@ class _ServerManager(OpenMDAO_Manager):
 register(ObjServer, _ServerManager, 'openmdao.main.objserverfactory')
 
     
-def connect(address, port, authkey='PublicKey', pubkey=None):
+def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None):
     """
     Connects to the :class:`ObjServerFactory` at `address` and `port`
     using `key` and returns a (shared) proxy for it.
@@ -586,6 +587,9 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
     port: int
         Server port.  If < 0, `address` is a pipe filename.
 
+    tunnel: bool
+        Connect via SSH tunnel.
+
     authkey:
         Server authorization key.
 
@@ -595,7 +599,10 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
     if port < 0:
         location = address
     else:
-        location = (address, port)
+        if tunnel:
+            location = setup_tunnel(address, port)
+        else:
+            location = (address, port)
     try:
         return _PROXIES[location]
     except KeyError:
@@ -609,8 +616,8 @@ def connect(address, port, authkey='PublicKey', pubkey=None):
 
 
 def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
-                 allowed_hosts=None, allowed_users=None,
-                 allow_shell=False, allowed_types=None, timeout=None):
+                 allowed_hosts=None, allowed_users=None, allow_shell=False,
+                 allowed_types=None, timeout=None, tunnel=False):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -653,6 +660,10 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
         computed value based on host type (and for Windows, the availability
         of pyWin32).
 
+    tunnel: bool
+        If True, report host IP address but listen for connections from a
+        local SSH tunnel.
+
     Returns :class:`ShellProc`.
     """
     if timeout is None:
@@ -678,6 +689,9 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
     if address is not None:
         args.extend(['--address', address])
 
+    if tunnel:
+        args.append('--tunnel')
+
     if allowed_users is not None:
         write_authorized_keys(allowed_users, 'users.allow', logging.getLogger())
         args.extend(['--users', 'users.allow'])
@@ -686,7 +700,8 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
         if port >= 0:
             if allowed_hosts is None:
                 allowed_hosts = [socket.gethostbyname(socket.gethostname())]
-                if allowed_hosts[0].startswith('127.') and '127.0.0.1' not in allowed_hosts:
+                if allowed_hosts[0].startswith('127.') and \
+                   '127.0.0.1' not in allowed_hosts:
                     allowed_hosts.append('127.0.0.1')
             with open('hosts.allow', 'w') as out:
                 for pattern in allowed_hosts:
@@ -741,7 +756,7 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--address=address][--port=number][--prefix=name]
+    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--address=address][--port=number][--prefix=name][--tunnel]
 
     --allow-public:
         Allows access by anyone from any allowed host. Use with care!
@@ -782,6 +797,10 @@ def main():  #pragma no cover
     --prefix: string
         Prefix for configuration and stdout/stderr files (default ``server``).
 
+    --tunnel:
+        Report host IP address but listen for connections from a local
+        SSH tunnel.
+
     If ``prefix.key`` exists, it is read for an authorization key string.
     Otherwise public key authorization and encryption is used.
 
@@ -809,6 +828,9 @@ def main():  #pragma no cover
                       help='Server port (0 implies next available port)')
     parser.add_option('--prefix', action='store', default='server',
                       help='Prefix for config and stdout/stderr files')
+    parser.add_option('--tunnel', action='store_true', default=False,
+                      help='Report host IP address but listen for connections'
+                           ' from a local SSH tunnel')
 
     options, arguments = parser.parse_args()
     if arguments:
@@ -915,15 +937,18 @@ def main():  #pragma no cover
 
     logger.info('Starting FactoryManager %s %r', address, keytype(authkey))
     current_process().authkey = authkey
-    manager = _FactoryManager(address, authkey, name='Factory',
+    bind_address = ('127.0.0.1', options.port) if options.tunnel else address
+    manager = _FactoryManager(bind_address, authkey, name='Factory',
                               allowed_hosts=allowed_hosts,
-                              allowed_users=allowed_users)
+                              allowed_users=allowed_users,
+                              allow_tunneling=options.tunnel)
 
     # Set defaults for created ObjServerFactories.
     # There isn't a good method to propagate these through the manager.
     ObjServerFactory._address = address
     ObjServerFactory._allow_shell = options.allow_shell
     ObjServerFactory._allowed_types = allowed_types
+    ObjServerFactory._allow_tunneling = options.tunnel
 
     # Get server, retry if specified address is in use.
     server = None
@@ -948,7 +973,8 @@ def main():  #pragma no cover
                 raise
 
     # Record configuration.
-    write_server_config(server, _SERVER_CFG)
+    real_ip = None if address is None else address[0]
+    write_server_config(server, _SERVER_CFG, real_ip)
     msg = 'Serving on %s' % (server.address,)
     logger.info(msg)
     print msg

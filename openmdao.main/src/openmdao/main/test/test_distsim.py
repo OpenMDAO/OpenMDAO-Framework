@@ -325,7 +325,7 @@ class TestCase(unittest.TestCase):
             server = start_server(port=port, allowed_users=allowed_users,
                                   allowed_types=allowed_types)
             self.servers.append(server)
-            self.address, self.port, self.key = read_server_config('server.cfg')
+            self.address, self.port, self.tunnel, self.key = read_server_config('server.cfg')
             logging.debug('server pid: %s', server.pid)
             logging.debug('server address: %s', self.address)
             logging.debug('server port: %s', self.port)
@@ -333,7 +333,7 @@ class TestCase(unittest.TestCase):
         finally:
             os.chdir('..')
 
-        factory = connect(self.address, self.port, pubkey=self.key)
+        factory = connect(self.address, self.port, self.tunnel, pubkey=self.key)
         self.factories.append(factory)
         logging.debug('factory: %r', factory)
         return factory
@@ -585,9 +585,10 @@ class TestCase(unittest.TestCase):
             allowed_types = ['openmdao.main.test.test_distsim.Box']
             server = start_server(authkey=authkey, allowed_types=allowed_types,
                                   timeout=30)
-            address, port, key = read_server_config('server.cfg')
+            address, port, tunnel, key = read_server_config('server.cfg')
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
+            logging.debug('server tunnel: %s', tunnel)
             logging.debug('server key: %s', key)
         finally:
             os.chdir('..')
