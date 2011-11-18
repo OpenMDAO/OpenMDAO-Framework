@@ -698,7 +698,7 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
         If True, report host IP address but listen for connections from a
         local SSH tunnel.
 
-    Returns :class:`ShellProc`.
+    Returns ``(server_proc, config_filename)``.
     """
     if timeout is None:
         if sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
@@ -776,7 +776,7 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
             else:  #pragma no cover
                 proc.terminate(timeout)
                 raise RuntimeError('Server startup timeout')
-        return proc
+        return (proc, server_cfg)
     finally:
         if os.path.exists(server_key):
             os.remove(server_key)

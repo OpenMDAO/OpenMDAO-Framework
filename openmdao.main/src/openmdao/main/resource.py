@@ -294,7 +294,7 @@ class ResourceAllocationManager(object):
             if not prefix:
                 prefix = server.host
             for i in range(total):
-                allocator = ram.get_allocator_proxy(i)
+                allocator = remote_ram.get_allocator_proxy(i)
                 proxy = RemoteAllocator('%s/%s' % (prefix, allocator.name),
                                         allocator)
             ram._allocators.append(proxy)

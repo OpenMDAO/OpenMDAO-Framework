@@ -11,6 +11,7 @@ import logging
 import os.path
 import re
 import socket
+import sys
 import time
 
 from Crypto.Cipher import AES
@@ -99,7 +100,11 @@ def read_server_config(filename):
 
 def setup_tunnel(address, port):
     """
-    Setup ssh tunnel to `address` and `port`.
+    Setup tunnel to `address` and `port` assuming:
+
+    - The remote login name matches the local login name.
+    - `port` is available on the local host.
+    - 'putty' is available on Windows, 'ssh' on other platforms.
 
     address: string
         IPv4 address to tunnel to.
@@ -111,10 +116,15 @@ def setup_tunnel(address, port):
     """
     logname = 'tunnel-%s-%d.log' % (address, port)
     logname = os.path.join(os.getcwd(), logname)
-    stdin = open('/dev/null', 'r')
     stdout = open(logname, 'w')
-# FIXME: this assumes that `port` is available locally.
-    args = ['ssh', '-L', '%d:localhost:%d' % (port, port), address]
+
+    if sys.platform == 'win32':  # pragma no cover
+        stdin = open('nul:', 'r')
+        args = ['putty', '-L', '%d:localhost:%d' % (port, port), address]
+    else:
+        stdin = open('/dev/null', 'r')
+        args = ['ssh', '-L', '%d:localhost:%d' % (port, port), address]
+
     tunnel_proc = ShellProc(args, stdin=stdin, stdout=stdout, stderr=STDOUT)
     sock = socket.socket(socket.AF_INET)
     address = ('127.0.0.1', port)
