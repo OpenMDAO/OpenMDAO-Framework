@@ -221,14 +221,19 @@ class ResourceAllocationManager(object):
 
         for allocator in self._allocators:
             estimate, criteria = allocator.time_estimate(resource_desc)
-            self._logger.debug('%r returned %g', allocator._name, estimate)
+            if estimate == -2:
+                self._logger.debug('%r returned %g %s',
+                                   allocator.name, estimate, criteria)
+            else:
+                self._logger.debug('%r returned %g',
+                                   allocator.name, estimate)
             if (best_estimate == -2 and estimate >= -1) or \
                (best_estimate == 0  and estimate >  0) or \
                (best_estimate >  0  and estimate < best_estimate):
                 # All current allocators support 'hostnames'.
                 if need_hostnames and not 'hostnames' in criteria:  #pragma no cover
                     self._logger.debug("%r is missing 'hostnames'",
-                                       allocator._name)
+                                       allocator.name)
                 else:
                     best_estimate = estimate
                     best_criteria = criteria
@@ -267,6 +272,47 @@ class ResourceAllocationManager(object):
         except Exception as exc:  #pragma no cover
             self._logger.error("Can't release %r: %r", server_info['name'], exc)
         server._close.cancel()
+
+    @staticmethod
+    def add_remotes(server, prefix=''):
+        """
+        Add allocators from a remote server to the list of resource allocators.
+
+        server: proxy for a remote server
+            The server whose allocators are to be added.
+            It must support :meth:`get_ram` which should return the server's
+            `ResourceAllocationManager` and a `host` attribute.
+
+        prefix: string
+            Prefix for the local names of the remote allocators.
+            The default is the remote hostname.
+        """
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            remote_ram = server.get_ram()
+            total = remote_ram.get_total_allocators()
+            if not prefix:
+                prefix = server.host
+            for i in range(total):
+                allocator = ram.get_allocator_proxy(i)
+                proxy = RemoteAllocator('%s/%s' % (prefix, allocator.name),
+                                        allocator)
+            ram._allocators.append(proxy)
+
+    @rbac('*')
+    def get_total_allocators(self):
+        """ Return number of allocators for remote use. """
+        return len(self._allocators)
+
+    @rbac('*', proxy_types=[object])
+    def get_allocator_proxy(self, index):
+        """
+        Return allocator for remote use.
+
+        index: int
+            Index of the allocator to return.
+        """
+        return self._allocators[index]
 
 
 class ResourceAllocator(ObjServerFactory):
@@ -575,6 +621,69 @@ register(LocalAllocator, mp_distributing.Cluster)
 register(LocalAllocator, mp_distributing.HostManager)
 
 
+class RemoteAllocator(object):
+    """
+    Allocator which delegates to a remote allocator.
+
+    name: string
+        Local name for allocator.
+
+    remote: proxy
+        Proxy for remote allocator.
+    """
+
+    def __init__(self, name, remote):
+        self._name = name
+        self._remote = remote
+
+    @property
+    def name(self):
+        """ The local name for the remote allocator. """
+        return self._name
+
+    @rbac('*')
+    def max_servers(self, resource_desc):
+        """ Return maximum number of servers for remote allocator. """
+        rdesc = self._check_local(resource_desc)
+        if rdesc is None:
+            return 0
+        return self._remote.max_servers(rdesc)
+
+    @rbac('*')
+    def time_estimate(self, resource_desc):
+        """ Return the time estimate from the remote allocator. """
+        rdesc, info = self._check_local(resource_desc)
+        if rdesc is None:
+            return info
+        return self._remote.time_estimate(rdesc)
+
+    def _check_local(self, resource_desc):
+        """ Check locally-relevant resources. """
+        rdesc = resource_desc.copy()
+        for key in ('localhost', 'allocator'):
+            if key not in rdesc:
+                continue
+            value = rdesc[key]
+            if key == 'localhost':
+                if value:
+                    return None, (-2, {'localhost': value})
+            if key == 'allocator':
+                if value != self.name:
+                    return None, (-2, {'allocator': (value, self.name)})
+            del rdesc[key]
+        return (rdesc, None)
+
+    @rbac('*')
+    def deploy(self, name, resource_desc, criteria):
+        """ Deploy on the remote allocator. """
+        return self._remote.deploy(name, resource_desc, criteria)
+
+    @rbac(('owner', 'user'))
+    def release(self, server):
+        """ Release a remotely allocated server. """
+        self._remote.release(server)
+
+
 # Cluster allocation requires ssh configuration and multiple hosts.
 class ClusterAllocator(object):  #pragma no cover
     """
@@ -733,7 +842,7 @@ class ClusterAllocator(object):  #pragma no cover
         except Exception:
             msg = traceback.format_exc()
             self._logger.error('%r max_servers() caught exception %s',
-                               allocator._name, msg)
+                               allocator.name, msg)
         return count
 
     def time_estimate(self, resource_desc):
@@ -884,15 +993,15 @@ class ClusterAllocator(object):  #pragma no cover
         except Exception:
             msg = traceback.format_exc()
             self._logger.error('%r time_estimate() caught exception %s',
-                               allocator._name, msg)
+                               allocator.name, msg)
             estimate = None
             criteria = None
         else:
             if estimate == 0:
-                self._logger.debug('%r returned %g (%g)', allocator._name,
+                self._logger.debug('%r returned %g (%g)', allocator.name,
                                    estimate, criteria['loadavgs'][0])
             else:
-                self._logger.debug('%r returned %g', allocator._name, estimate)
+                self._logger.debug('%r returned %g', allocator.name, estimate)
 
         return (allocator, estimate, criteria)
 
@@ -919,12 +1028,12 @@ class ClusterAllocator(object):  #pragma no cover
             server = allocator.deploy(name, resource_desc, criteria)
         except Exception as exc:
             self._logger.error('%r deploy() failed for %s: %r',
-                               allocator._name, name, exc)
+                               allocator.name, name, exc)
             return None
 
         if server is None:
             self._logger.error('%r deployment failed for %s',
-                               allocator._name, name)
+                               allocator.name, name)
         else:
             self._deployed_servers[id(server)] = (allocator, server)
         return server

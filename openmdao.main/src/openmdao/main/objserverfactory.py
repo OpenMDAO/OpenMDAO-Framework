@@ -23,8 +23,8 @@ from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.filevar import RemoteFile
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
-from openmdao.main.mp_util import keytype, read_allowed_hosts, \
-                                  write_server_config, setup_tunnel
+from openmdao.main.mp_util import keytype, read_allowed_hosts, setup_tunnel, \
+                                  read_server_config, write_server_config
 from openmdao.main.rbac import get_credentials, set_credentials, \
                                rbac, RoleError
 
@@ -81,6 +81,16 @@ class ObjServerFactory(Factory):
         self._logger = logging.getLogger(name)
         self._logger.info('PID: %d, %r, allow_shell %s', os.getpid(),
                           keytype(self._authkey), allow_shell)
+        self.host = platform.node()
+
+    @rbac('*', proxy_types=[object])  # ResourceAllocationManager import loop.
+    def get_ram(self):
+        """
+        Returns the :class:`ResourceAllocationManager` instance.
+        Used by :meth:`ResourceAllocationManager.add_remotes`.
+        """
+        from openmdao.main.resource import ResourceAllocationManager
+        return ResourceAllocationManager.get_instance()
 
     @rbac('*')
     def echo(self, *args):
@@ -579,10 +589,22 @@ class _ServerManager(OpenMDAO_Manager):
 register(ObjServer, _ServerManager, 'openmdao.main.objserverfactory')
 
     
+def connect_to_server(config_filename):
+    """
+    Connects to the the server specified by `config_filename` and returns a
+    (shared) proxy for the associated :class:`ObjServerFactory`.
+
+    config_filename: string:
+        Name of server configuration file.
+    """
+    address, port, tunnel, pubkey = read_server_config(config_filename)
+    return connect(address, port, tunnel, pubkey=pubkey)
+
+
 def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None):
     """
-    Connects to the :class:`ObjServerFactory` at `address` and `port`
-    using `key` and returns a (shared) proxy for it.
+    Connects to the the server at `address` and `port` using `key` and returns
+    a (shared) proxy for the associated :class:`ObjServerFactory`.
 
     address: string
         IP address for server, or pipe filename.
@@ -600,21 +622,30 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None):
         Server public key, required if `authkey` is 'PublicKey'.
     """
     if port < 0:
-        location = address
+        key = address
     else:
+        key = (address, port)
+    try:
+        return _PROXIES[key]
+    except KeyError:
         if tunnel:
             location = setup_tunnel(address, port)
         else:
-            location = (address, port)
-    try:
-        return _PROXIES[location]
-    except KeyError:
+            location = key
         if not OpenMDAO_Proxy.manager_is_alive(location):
-            raise RuntimeError("can't connect to %s" % (location,))
+            via = ' (via tunnel)' if tunnel else ''
+            raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
+                               " to be offline." % (address, port, via))
         mgr = _FactoryManager(location, authkey, pubkey=pubkey)
-        mgr.connect()
+        try:
+            mgr.connect()
+        except EOFError:
+            via = ' (via tunnel)' if tunnel else ''
+            raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
+                               " to be rejecting the connection. Please check"
+                               " the server log." % (address, port, via))
         proxy = mgr.openmdao_main_objserverfactory_ObjServerFactory()
-        _PROXIES[location] = proxy
+        _PROXIES[key] = proxy
         return proxy
 
 
@@ -749,6 +780,22 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
     finally:
         if os.path.exists(server_key):
             os.remove(server_key)
+
+
+def stop_server(server, config_filename):
+    """
+    Shutdown :class:`ObjServerFactory` specified by `config_filename` and
+    terminate it's process `server`.
+
+    server: :class:`ShellProc`
+        Server process retured by :meth:`start_server`.
+
+    config_filename: string:
+        Name of server configuration file.
+    """
+    factory = connect_to_server(config_filename)
+    factory.cleanup()
+    server.terminate(timeout=10)
 
 
 # Remote process code.

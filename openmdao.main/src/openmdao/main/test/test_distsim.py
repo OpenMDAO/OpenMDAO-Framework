@@ -683,7 +683,7 @@ class TestCase(unittest.TestCase):
         address = socket.gethostname()
         junk_port = 12345
         assert_raises(self, 'connect(address, junk_port, pubkey=self.key)',
-                      globals(), locals(), RuntimeError, "can't connect to ")
+                      globals(), locals(), RuntimeError, "Can't connect to ")
 
         # Unpickleable argument.
         code = compile('3 + 4', '<string>', 'eval')
