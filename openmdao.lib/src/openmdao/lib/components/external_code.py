@@ -223,9 +223,14 @@ class ExternalCode(ComponentWithDerivatives):
 
         filename = 'outputs.zip'
         pfiles, pbytes = self._server.pack_zipfile(tuple(patterns), filename)
+        filexfer(self._server, filename, None, filename, 'b')
+
+        # Valid, but empty, file causes unpack_zipfile() problems.
         try:
-            filexfer(self._server, filename, None, filename, 'b')
-            ufiles, ubytes = unpack_zipfile(filename, self._logger)
+            if os.path.getsize(filename) > 0:
+                ufiles, ubytes = unpack_zipfile(filename, self._logger)
+            else:
+                ufiles, ubytes = 0, 0
         finally:
             os.remove(filename)
 
