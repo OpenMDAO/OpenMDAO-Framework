@@ -19,8 +19,6 @@ Justin Gray."""
 import re, ConfigParser
 import os.path
 
-#import numpy as N
-
 from math import sin, cos, tan, floor
 
 # pylint: disable-msg=E0611,F0401, E1101

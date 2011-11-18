@@ -7,19 +7,37 @@ __all__ = ["Array"]
 
 import logging
 
-# pylint: disable-msg=E0611,F0401
-try:
-    from numpy import array, ndarray, zeros
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
-
-from enthought.traits.api import Array as TraitArray
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.util.decorators import stub_if_missing_deps
 
-@stub_if_missing_deps('numpy')
+# pylint: disable-msg=E0611,F0401
+try:
+    from numpy import array, ndarray, zeros
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+    from openmdao.main.numpy_fallback import array, ndarray, zeros
+    from openmdao.main.variable import Variable
+    
+    class TraitArray(Variable):
+        def __init__(self, **metadata):
+            self._shape = metadata.get('shape')
+            self._dtype = metadata.get('dtype')
+            super(TraitArray, self).__init__(**metadata)
+        
+        def validate(self, obj, name, value):
+            try:
+                it = iter(value)
+            except:
+                raise ValueError("attempted to assign non-iterable value to an array")
+            
+            # FIXME: improve type checking
+            return array(value)
+            
+else:
+    from enthought.traits.api import Array as TraitArray
+
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
     The unit applies to the entire array."""

@@ -4,12 +4,16 @@ Test for setting input variables back to their default values.
 
 import unittest
 
-import numpy
-
 from openmdao.main.api import Component, Assembly
-from openmdao.lib.datatypes.api import Float, Array, List
+from openmdao.main.datatypes.api import Float, List
 
-
+try:
+    import numpy
+except ImportError:
+    numpy = None
+else:
+    from openmdao.lib.datatypes import Array
+    
 class MyDefComp(Component):
     f_in = Float(3.14, iotype='in')
     f_out = Float(iotype='out')
@@ -17,8 +21,7 @@ class MyDefComp(Component):
     list_in = List(value=['a','b','c'], iotype='in')
     
     def execute(self):
-        self.f_out = self.f_in + 1.
-        
+        self.f_out = self.f_in + 1.        
 
 class MyNoDefComp(Component):
     f_in = Float(iotype='in')

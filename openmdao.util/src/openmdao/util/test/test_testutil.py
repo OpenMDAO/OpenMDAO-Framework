@@ -7,8 +7,6 @@ import os.path
 import sys
 import unittest
 
-import numpy.testing
-
 from openmdao.util.testutil import assert_rel_error
 
 class TestCase(unittest.TestCase):
