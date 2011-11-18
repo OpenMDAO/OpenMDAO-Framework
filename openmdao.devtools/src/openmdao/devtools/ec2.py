@@ -41,6 +41,14 @@ def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
             break
         tries += 1
    
+def get_username():
+    """ Return username for current user. """
+    if sys.platform == 'win32':
+        return os.environ['USERNAME']
+    else:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_name
+
 def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     """Starts up an EC2 instance having the specified 'short' name and
     returns the instance.
@@ -87,7 +95,11 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
         raise RuntimeError("instance of '%s' ran but ssh connection attempts failed (%d attempts)" % (name,max_tries))
 
     time.sleep(20)
-        
+    
+    try:
+        conn.create_tags([inst.id], {'Name': "%s_%s" % (get_username(),name)} )
+    except Exception as err:
+        print str(err)
     return inst
 
 def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
@@ -118,16 +130,28 @@ def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
 
     return inst
 
-def stop_instance(inst, host, stream):
+def stop_instance(inst, host, stream, debug):
     inst.stop()
     check_inst_state(inst, u'stopped', imgname=host, 
-                     stream=stream)
+                     stream=stream, debug=debug)
     if inst.state == u'stopped':
         stream.write("instance of %s has stopped\n" % host)
         return True
     else:
         stream.write("instance of %s failed to stop! (state=%s)\n" % 
                      (host, inst.state))
+        return False
+
+def terminate_instance(inst, host, stream, debug):
+    stream.write("terminating %s\n" % host)
+    inst.terminate()
+    check_inst_state(inst, u'terminated', imgname=host, debug=debug,
+                     stream=stream)
+    if inst.state == u'terminated':
+        stream.write("instance of %s is terminated.\n" % host)
+        return True
+    else:
+        stream.write("instance of %s failed to terminate!\n" % host)
         return False
 
 class MultiFile(object):
@@ -221,22 +245,15 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
         if terminate is True:
-            outf.write("terminating %s\n" % host)
-            inst.terminate()
-            check_inst_state(inst, u'terminated', imgname=host, debug=debug,
-                             stream=outf)
-            if inst.state == u'terminated':
-                outf.write("instance of %s is terminated.\n" % host)
-            else:
-                outf.write("instance of %s failed to terminate!\n" % host)
+            if not terminate_instance(inst, host, orig_stdout, debug):
                 retval = -1
         else:
-            if not stop_instance(inst, host, orig_stdout):
+            if not stop_instance(inst, host, orig_stdout, debug):
                 retval = -1
     else:
         outf.write("run failed, so stopping %s instead of terminating it.\n" % host)
         outf.write("%s will have to be terminated manually.\n" % host)
-        if not stop_instance(inst, host, orig_stdout):
+        if not stop_instance(inst, host, orig_stdout, debug):
             retval = -1
         
     if retval != 0:

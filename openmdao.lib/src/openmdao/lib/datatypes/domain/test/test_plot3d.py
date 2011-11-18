@@ -7,11 +7,13 @@ import os.path
 import unittest
 
 from openmdao.lib.datatypes.domain import read_plot3d_q, write_plot3d_q, \
-                                       read_plot3d_f, write_plot3d_f, \
-                                       read_plot3d_shape
+                                          read_plot3d_f, write_plot3d_f, \
+                                          read_plot3d_shape, write_plot3d_grid
 
 from openmdao.lib.datatypes.domain.test.wedge import create_wedge_2d, \
-                                                  create_wedge_3d
+                                                     create_wedge_3d
+
+from openmdao.util.testutil import assert_raises
 
 
 class TestCase(unittest.TestCase):
@@ -77,6 +79,28 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(exc), 'planar format not supported yet')
         else:
             self.fail('Expected NotImplementedError')
+
+        assert_raises(self, "write_plot3d_q(logger, 'u.xyz', 'u.q')",
+                      globals(), locals(), TypeError,
+                      "'domain' argument must be a DomainObj or Zone")
+
+        assert_raises(self, "write_plot3d_f(logger, 'u.xyz', 'u.f')",
+                      globals(), locals(), TypeError,
+                      "'domain' argument must be a DomainObj or Zone")
+
+        assert_raises(self, "write_plot3d_grid(logger, 'u.xyz')",
+                      globals(), locals(), TypeError,
+                      "'domain' argument must be a DomainObj or Zone")
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        delattr(wedge.xyzzy.flow_solution, 'mach')
+        assert_raises(self, "write_plot3d_q(wedge, 'u.xyz', 'u.q')",
+                      globals(), locals(), AttributeError,
+                      "zone xyzzy flow_solution is missing ['mach']")
+
+        assert_raises(self, "write_plot3d_f(wedge, 'u.xyz', 'u.f', ['froboz'])",
+                      globals(), locals(), AttributeError,
+                      "zone xyzzy flow_solution is missing ['froboz']")
 
     def test_q_2d(self):
         logging.debug('')

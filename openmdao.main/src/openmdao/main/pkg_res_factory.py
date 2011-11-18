@@ -1,7 +1,4 @@
 
-#public symbols
-__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory' ]
-
 import logging
 import copy
 import os.path
@@ -9,62 +6,28 @@ import os.path
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
 import pkg_resources
-from pkg_resources import get_entry_map, get_distribution
-from pkg_resources import Environment, Requirement, DistributionNotFound
+from pkg_resources import get_entry_map, get_distribution, working_set
+from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
     
 import openmdao.main.factory 
 Factory = openmdao.main.factory.Factory
 
-def import_version(modname, req, env=None):
-    """Import the specified module from the package specified in the
-    Requirement *req*, if it can be found in the current WorkingSet or in the
-    specified Environment. If a conflicting version already exists in the
-    WorkingSet, a VersionConflict will be raised. If a distrib cannot be found
-    matching the requirement, raise a DistributionNotFound.
-    """
-
-    # see if the requested distrib is available either in the current 
-    # working_set or in the environment
-    try:
-        needed = pkg_resources.working_set.resolve([req], env)
-    except DistributionNotFound:
-        raise DistributionNotFound('could not find distribution satisfying '+
-                                   str(req))
-
-    for dist in needed:
-        # add required distribs to the real working set
-        if dist not in pkg_resources.working_set:
-            pkg_resources.working_set.add(dist)
-            dist.activate()
-                
-    __import__(modname)
 
 
-class EntryPtLoader(object):
-    """Holder of entry points. Will perform lazy importing of 
-    distributions as needed.
-    """
-    def __init__(self, name, group, dist, entry_pt):
-        self.name = name
-        self.group = group
-        self.dist = dist
-        self.entry_pt = entry_pt
-        self.ctor = None
-    
-    def create(self, env, **ctor_args):
-        """Return the object created by calling the entry point. If
-        necessary, first activate the distribution and load the entry
-        point, and check for conflicting version dependencies before
-        loading. """
-        if self.ctor is None:
-            import_version(self.entry_pt.module_name,
-                           self.dist.as_requirement(), env)
-            self.ctor = self.entry_pt.load(require=False, env=env)
-            
-        logging.debug('calling %s(%s)' % (self.ctor.__name__, ctor_args))
-        obj = self.ctor(**ctor_args)
-        obj.parent = None
-        return obj
+# This is a list of all of the entry point groups that OpenMDAO uses to
+# identify plugins.
+_plugin_groups = [ 'openmdao.container',
+                   'openmdao.component',
+                   'openmdao.driver',
+                   'openmdao.surrogatemodel',
+                   'openmdao.differentiator',
+                   'openmdao.variable',
+                   'openmdao.architecture',
+                   'openmdao.caseiterator',
+                   'openmdao.caserecorder',
+                   'openmdao.doegenerator',
+                   'openmdao.optproblem',
+                ]
 
                 
 class PkgResourcesFactory(Factory):
@@ -74,20 +37,13 @@ class PkgResourcesFactory(Factory):
     openmdao.component, openmdao.variable, etc.
     """
     
-    def __init__(self, groups, search_path=None):
+    def __init__(self, groups=_plugin_groups, search_path=None):
         super(PkgResourcesFactory, self).__init__()
+        self._have_new_types = True
         self._groups = copy.copy(groups)
-        
-        self.update_search_path(search_path)
-    
-    def update_search_path(self, search_path):
-        """ Updates the plugin search path."""
-        
+        self._search_path = search_path
         self.env = Environment(search_path)
-        self._loaders = {}
-        for group in self._groups:
-            self._get_plugin_info(self.env, group)
-        
+            
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
         """Create and return an object of the given type, with
@@ -96,71 +52,82 @@ class PkgResourcesFactory(Factory):
         if server is not None or res_desc is not None:
             return None
 
+        classes = self._get_type_dict()
+            
         try:
-            if version is None:
-                # TODO: make sure this always creates the newest version
-                return self._loaders[typ][0].create(self.env, **ctor_args)
-
-            for entry in self._loaders[typ]:
-                if entry.dist in Requirement.parse(entry.dist.project_name+
-                                                   '=='+version):
-                    return entry.create(self.env, **ctor_args)
+            lst = classes[typ]
+            dist = lst[0]
+            groups = lst[1]
+            klass = dist.load_entry_point(groups[0], typ)
+            
+            if version is not None and dist.version != version:
+                return None
+            
+            return klass(**ctor_args)
         except KeyError:
-            pass
+            if self._search_path is None:
+                return None
+            # try to look in the whole environment
+            for group in self._groups:
+                for proj in self.env:
+                    for dist in self.env[proj]:
+                        if version is not None and version != dist.version:
+                            continue
+                        ep = dist.get_entry_info(group, typ)
+                        if ep is not None:
+                            dist.activate()
+                            klass = ep.load(require=True, env=self.env)
+                            self._have_new_types = True
+                            return klass(**ctor_args)
+                        if version is None:
+                            # newest version didn't have entry point, so skip to next project
+                            break
         return None
             
-    
-    def _get_plugin_info(self, pkg_env, groupname):
-        """Given a search path and an entry point group name, fill the
-        self._loaders dict with EntryPtLoader objects. This only searches
-        distributions and gathers information. It does not activate any
-        distributions.
-        """
-        for name in pkg_env:
-            # pkg_env[name] gives us a list of distribs for that package name
-            for dist in pkg_env[name]:
-                try:
-                    entry_dict = get_entry_map(dist, group=groupname)
-                except IOError:
-                    continue  # Probably due to removal of egg (tests, etc.)
-
-                for nm, entry_pt in entry_dict.items():
-                    if len(entry_pt.attrs) > 0:
-                        if nm not in self._loaders:
-                            self._loaders[nm] = []
-                        # avoid adding a loader we already have
-                        for loader in self._loaders[nm]:
-                            if dist == loader.dist:
-                                break
-                        else:
-                            self._loaders[nm].append(
-                                EntryPtLoader(name=nm, group=groupname,
-                                              dist=dist, entry_pt=entry_pt))
-                    else:
-                        raise NameError('entry point '+nm+' in setup.py file'+
-                                 ' must specify an object within the module')
-                
-
-    def get_loaders(self, group, active=True):
-        """Return a list of EntryPointLoaders with group ids that 
-        match the given group.
-        """
-        matches = []
-        for loaders in self._loaders.values():
-            for loader in loaders:
-                if loader.group == group:
-                    if loader.ctor is not None or active is False:
-                        matches.append(loader)
-        return matches
-    
-
+    def _get_type_dict(self):
+        if self._have_new_types:
+            dct = {}
+            for group in _plugin_groups:
+                for dist in working_set:
+                    d = dist.get_entry_map(group)
+                    for name in d:
+                        lst = dct.setdefault(name, [dist, []])
+                        lst[1].append(group)
+            self._entry_pt_classes = dct
+        return self._entry_pt_classes
+            
     def get_available_types(self, groups=None):
         """Return a set of tuples of the form (typename, dist_version), one
         for each available plugin type in the given entry point groups.
         If groups is None, return the set for all openmdao entry point groups.
         """
         ret = []
+        
+        if groups is None:
+            groups = _plugin_groups
+        groups = set(groups)
+        
+        typ_dict = self._get_type_dict()
+        distset = set()
+        for name, lst in typ_dict.items():
+            dist = lst[0]
+            distset.add(dist.project_name)
+            for group in lst[1]:
+                if group in groups:
+                    ret.append((name, dist.version))
+           
+        if self._search_path is None: # self.env has same contents as working_set,
+                                      # so don't bother looking through it
+            return ret
+
+        # now look in the whole environment
         for group in groups:
-            ret.extend([(l.name, l.dist.version) for l in self.get_loaders(group, False)])
+            for proj in self.env:
+                for dist in self.env[proj]:
+                    if dist.project_name in distset:
+                        break
+                    for name in dist.get_entry_map(group):
+                        ret.append((name, dist.version))
+                            
         return ret
 

@@ -14,7 +14,9 @@ from openmdao.main.container import Container, get_default_name, \
                                     deep_hasattr, get_default_name, find_name, \
                                     find_trait_and_value, _get_entry_group, \
                                     create_io_traits
+from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.variable import Variable
+from openmdao.main.slot import Slot
 from openmdao.lib.datatypes.api import Float, Int, Bool, List, Dict
 from openmdao.util.testutil import make_protected_dir
 
@@ -30,8 +32,11 @@ class DumbTrait(Variable):
         return value
 
 class MyContainer(Container):
+    uncertain = Slot(NormalDistribution(), iotype="out")
+
     def __init__(self, *args, **kwargs):
         super(MyContainer, self).__init__(*args, **kwargs)
+        self.uncertain = NormalDistribution()
         self.add('dyntrait', Float(9., desc='some desc'))
 
 
@@ -141,6 +146,11 @@ class ContainerTestCase(unittest.TestCase):
             self.assertEqual(str(err), "'MyClass' object has no attribute 'foo'")
         else:
             self.fail("expected AttributeError")
+            
+    def test_attrib_metadata(self):
+        cont = MyContainer()
+        io = cont.get_metadata('uncertain.mu', 'iotype')
+        self.assertEqual(io, 'out')
         
     def test_deep_hasattr(self):
         class MyClass(object):

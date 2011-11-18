@@ -2,22 +2,27 @@
 Multiprocessing support utilities.
 """
 
+import atexit
 import ConfigParser
 import cPickle
+import errno
 import inspect
 import logging
 import os.path
 import re
 import socket
+import sys
+import time
 
 from Crypto.Cipher import AES
 
 from multiprocessing import current_process, connection
-from multiprocessing.managers import BaseProxy, dispatch, listener_client
+from multiprocessing.managers import BaseProxy
 
 from openmdao.main.rbac import rbac_methods
 
 from openmdao.util.publickey import decode_public_key
+from openmdao.util.shellproc import ShellProc, STDOUT
 
 # Names of attribute access methods requiring special handling.
 SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
@@ -37,7 +42,7 @@ def keytype(authkey):
 
 
 # This happens on the remote server side and we'll check when connecting.
-def write_server_config(server, filename):  #pragma no cover
+def write_server_config(server, filename, real_ip=None):  #pragma no cover
     """
     Write server connection information.
 
@@ -47,6 +52,9 @@ def write_server_config(server, filename):  #pragma no cover
     filename: string
         Path to file to be written.
 
+    real_ip: string
+        If specified, the IP address to report (rather than possible tunnel)
+
     Connection information including IP address, port, and public key is
     written using :class:`ConfigParser`.
     """
@@ -54,11 +62,15 @@ def write_server_config(server, filename):  #pragma no cover
     section = 'ServerInfo'
     parser.add_section(section)
     if connection.address_type(server.address) == 'AF_INET':
-        parser.set(section, 'address', str(server.address[0]))
+        parser.set(section, 'address', str(real_ip or server.address[0]))
         parser.set(section, 'port', str(server.address[1]))
+        tunnel = real_ip is not None and \
+            socket.gethostbyname(real_ip) != server.address[0]
+        parser.set(section, 'tunnel', str(tunnel))
     else:
         parser.set(section, 'address', server.address)
         parser.set(section, 'port', '-1')
+        parser.set(section, 'tunnel', str(False))
     parser.set(section, 'key', server.public_key_text)
     with open(filename, 'w') as cfg:
         parser.write(cfg)
@@ -70,7 +82,7 @@ def read_server_config(filename):
     filename: string
         Path to file to be read.
 
-    Returns ``(address, port, key)``.
+    Returns ``(address, port, tunnel, key)``.
     """
     if not os.path.exists(filename):
         raise IOError('No such file %r' % filename)
@@ -79,10 +91,72 @@ def read_server_config(filename):
     section = 'ServerInfo'
     address = parser.get(section, 'address')
     port = parser.getint(section, 'port')
+    tunnel = parser.getboolean(section, 'tunnel')
     key = parser.get(section, 'key')
     if key:
         key = decode_public_key(key)
-    return (address, port, key)
+    return (address, port, tunnel, key)
+
+
+def setup_tunnel(address, port):
+    """
+    Setup tunnel to `address` and `port` assuming:
+
+    - The remote login name matches the local login name.
+    - `port` is available on the local host.
+    - 'putty' is available on Windows, 'ssh' on other platforms.
+
+    address: string
+        IPv4 address to tunnel to.
+
+    port: int
+        Port at `address` to tunnel to.
+
+    Returns ``(local_address, local_port)``.
+    """
+    logname = 'tunnel-%s-%d.log' % (address, port)
+    logname = os.path.join(os.getcwd(), logname)
+    stdout = open(logname, 'w')
+
+    if sys.platform == 'win32':  # pragma no cover
+        stdin = open('nul:', 'r')
+        args = ['putty', '-L', '%d:localhost:%d' % (port, port), address]
+    else:
+        stdin = open('/dev/null', 'r')
+        args = ['ssh', '-L', '%d:localhost:%d' % (port, port), address]
+
+    tunnel_proc = ShellProc(args, stdin=stdin, stdout=stdout, stderr=STDOUT)
+    sock = socket.socket(socket.AF_INET)
+    address = ('127.0.0.1', port)
+    for retry in range(20):
+        time.sleep(.5)
+        exitcode = tunnel_proc.poll()
+        if exitcode is not None:
+            msg = 'ssh tunnel process exited with exitcode %d,' \
+                  ' output in %s' % (exitcode, logname)
+            logging.error(msg)
+            raise RuntimeError(msg)
+        try:
+            sock.connect(address)
+        except socket.error as exc:
+            if exc.args[0] != errno.ECONNREFUSED and \
+               exc.args[0] != errno.ENOENT:
+                raise
+        else:
+            atexit.register(_cleanup_tunnel, tunnel_proc, logname)
+            sock.close()
+            return address
+
+    _cleanup_tunnel(tunnel_proc, logname)
+    raise RuntimeError('Timeout trying to connect through tunnel to %s'
+                       % address)
+
+def _cleanup_tunnel(tunnel_proc, logname):
+    """ Try to terminate `tunnel_proc` if it's still running. """
+    if tunnel_proc.poll() is None:
+        tunnel_proc.terminate(timeout=10)
+    if os.path.exists(logname):
+        os.remove(logname)
 
 
 def encrypt(obj, session_key):
@@ -226,9 +300,9 @@ def read_allowed_hosts(path):
     with open(path, 'r') as inp:
         for line in inp:
             count += 1
-            hash = line.find('#')
-            if hash >= 0:
-                line = line[:hash]
+            sharp = line.find('#')
+            if sharp >= 0:
+                line = line[:sharp]
             line = line.strip()
             if not line:
                 continue
