@@ -20,6 +20,7 @@ from openmdao.main.factorymanager import create
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.factorymanager import get_available_types
+from openmdao.main.slot import Slot
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
@@ -542,6 +543,28 @@ class ConsoleServer(cmd.Cmd):
                 constraints.append(attr)
             attrs['IneqConstraints'] = constraints
             
+        slots = []
+        for name, value in comp.traits().items():
+            if value.is_trait_type(Slot):
+                attr = {}
+                attr['name'] = name
+                if getattr(comp, name) is None:
+                    attr['value'] = None
+                    attr['type'] = value.klass
+                else:
+                    attr['value'] = 'filled'
+                    attr['type'] = type(value).__name__
+                meta = comp.get_metadata(name);
+                if meta:
+                    for field in ['units','high','low','desc']:
+                        if field in meta:
+                            attr[field] = meta[field]
+                        else:
+                            attr[field] = ''
+                    attr['type'] = meta['vartypename']
+                slots.append(attr)
+        attrs['Slots'] = slots
+
         return attrs
         
     def get_attributes(self,name):
