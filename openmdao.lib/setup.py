@@ -44,11 +44,11 @@ Component, Driver, and Variable plugins for OpenMDAO
           'openmdao.main',
           'Pyevolve==0.6',
           'ordereddict',
+          'conmin==1.0.1', 
+          'newsumt==1.1.0',
+          'numpy',
+          'scipy',
           ],
-      extras_require = {
-          'numpy_comps': ['numpy', 'conmin==1.0.1', 'newsumt==1.1.0'],
-          'scipy_comps': ['scipy'],
-      },
       entry_points="""
       [openmdao.driver]
       openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver

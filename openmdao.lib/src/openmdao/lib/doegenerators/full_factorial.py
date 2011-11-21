@@ -6,18 +6,12 @@ import logging
 from itertools import product
 
 # pylint: disable-msg=E0611,F0401
-# FIXME: adding a numpy dependency just for linspace doesn't seem worth it
-try:
-    from numpy import linspace
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+from openmdao.main.numpy_fallback import linspace
 
 from enthought.traits.api import HasTraits
 from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.lib.datatypes.api import Int
-from openmdao.util.decorators import stub_if_missing_deps
 
-@stub_if_missing_deps('numpy')
 class FullFactorial(HasTraits):
     """ DOEgenerator that performs a full-factorial Design of Experiments. Plugs
     into the DOEgenerator socket on a DOEdriver."""

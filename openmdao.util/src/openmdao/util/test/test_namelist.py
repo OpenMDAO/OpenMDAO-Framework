@@ -10,9 +10,7 @@ from numpy import float32 as numpy_float32
 from numpy import int32 as numpy_int32
 from numpy import array, zeros
 
-from openmdao.main.datatypes.api import Float, Bool, Int, Str, File, List, Enum, Slot
-from openmdao.lib.datatypes.api import Array
-
+from openmdao.main.datatypes.api import Float, Bool, Int, Str, File, List, Enum, Slot, Array
 from openmdao.main.api import VariableTree, Component
 from openmdao.util.namelist_util import Namelist, ToBool
 

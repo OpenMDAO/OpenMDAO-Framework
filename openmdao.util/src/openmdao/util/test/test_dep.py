@@ -52,6 +52,7 @@ class DepTestCase(unittest.TestCase):
             'PassthroughTrait',
             'PassthroughProperty',
             'OptProblem',
+            'TraitArray',
             ])
         cset = cset - excludes
         

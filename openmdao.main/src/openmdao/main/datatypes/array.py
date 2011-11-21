@@ -10,7 +10,6 @@ import logging
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper
-from openmdao.util.decorators import stub_if_missing_deps
 
 # pylint: disable-msg=E0611,F0401
 try:
@@ -33,8 +32,10 @@ except ImportError as err:
                 raise ValueError("attempted to assign non-iterable value to an array")
             
             # FIXME: improve type checking
-            return array(value)
-            
+            if self._dtype:
+                return array(value, dtype=self._dtype)
+            else:
+                return array(value)
 else:
     from enthought.traits.api import Array as TraitArray
 
@@ -59,7 +60,7 @@ class Array(TraitArray):
         elif isinstance(default_value, list):
             default_value = array(default_value)
         else:
-            raise TypeError("Default value should be a numpy array, "
+            raise TypeError("Default value should be an array-like object, "
                              "not a %s." % type(default_value))
         
         # Put iotype in the metadata dictionary
@@ -124,7 +125,7 @@ class Array(TraitArray):
         
         wtype = "value"
         wvalue = value
-        info = "a numpy array"
+        info = "an array-like object"
         
         # pylint: disable-msg=E1101
         if self.shape and value.shape:

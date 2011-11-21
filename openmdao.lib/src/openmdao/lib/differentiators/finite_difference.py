@@ -5,17 +5,12 @@ import logging
 from ordereddict import OrderedDict
 from itertools import product
 
-# pylint: disable-msg=E0611,F0401
-try:
-    from numpy import array
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+from openmdao.main.numpy_fallback import array
 
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Enum, Float
 from openmdao.main.interfaces import implements, IDifferentiator
 from openmdao.main.container import find_name
-from openmdao.util.decorators import stub_if_missing_deps
 
 
 def diff_1st_central(fp, fm, eps):
@@ -39,7 +34,6 @@ def diff_2nd_xy(fpp, fpm, fmp, fmm, eps1, eps2):
     return (fpp - fpm - fmp + fmm)/(4.0*eps1*eps2)
 
 
-@stub_if_missing_deps('numpy')
 class FiniteDifference(HasTraits):
     """ Differentiates a driver's workflow using the finite difference method.
     A variety of difference types are available for both first and second

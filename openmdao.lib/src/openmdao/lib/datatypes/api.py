@@ -3,5 +3,4 @@ OpenMDAO datatypes in the standard library."""
 
 # Traits that we've modified
 from openmdao.main.datatypes.api import *
-from openmdao.lib.datatypes.array import Array
 

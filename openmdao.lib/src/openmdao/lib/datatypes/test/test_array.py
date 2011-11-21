@@ -2,11 +2,11 @@
 
 import unittest
 
-from numpy import array
+from openmdao.main.numpy_fallback import array
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.array import Array
+from openmdao.main.datatypes.array import Array
 from openmdao.units import convert_units
 
 class ArrayTestCase(unittest.TestCase):
@@ -113,7 +113,7 @@ class ArrayTestCase(unittest.TestCase):
         try:
             self.hobj.add('bad_default', Array('bad'))
         except TypeError, err:
-            self.assertEqual(str(err), "Default value should be a numpy array, not a <type 'str'>.")
+            self.assertEqual(str(err), "Default value should be an array-like object, not a <type 'str'>.")
         else:
             self.fail('TypeError expected')
             
@@ -136,7 +136,7 @@ class ArrayTestCase(unittest.TestCase):
         try:
             self.hobj.sh1 = array([[11.0, 2.0]])
         except ValueError, err:
-            msg = ": Variable 'sh1' must be a numpy array of shape (2, 2), but a shape of (1, 2) (<type 'numpy.ndarray'>) was specified."
+            msg = ": Variable 'sh1' must be an array-like object of shape (2, 2), but a shape of (1, 2) (<type 'numpy.ndarray'>) was specified."
             self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')

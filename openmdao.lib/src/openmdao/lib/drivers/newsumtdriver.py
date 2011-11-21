@@ -29,8 +29,7 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from enthought.traits.api import Array
-                                 
+from openmdao.main.datatypes.array import Array
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
@@ -283,7 +282,7 @@ class NEWSUMTdriver(DriverUsesDerivatives):
                                 'difference stepsize. Parameters with ' \
                                 'specified values override this.')
 
-    ilin = Array(dtype=numpy_int, value=zeros(0,'i4'), iotype='in', 
+    ilin = Array(dtype=numpy_int, default_value=zeros(0,'i4'), iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
     # Control parameters for NEWSUMT.

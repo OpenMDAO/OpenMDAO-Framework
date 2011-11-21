@@ -2,12 +2,8 @@ import unittest
 import math
 import ast
 
-try:
-    import numpy
-    from openmdao.lib.datatypes.api import Array
-except ImportError:
-    numpy = None
-
+from openmdao.main.numpy_fallback import array
+from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
@@ -245,14 +241,10 @@ class ExprPrinter(ast.NodeVisitor):
 
 class A(Component):
     f = Float(iotype='in')
-    if numpy:
-        a1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='in')
-        a2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='in')
-        b1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='out')
-        b2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
-    else:
-        a1d = List([1.0, 1.0, 2.0, 3.0], iotype='in')
-        b1d = List([1.0, 1.0, 2.0, 3.0], iotype='out')
+    a1d = Array(array([1.0, 1.0, 2.0, 3.0]), iotype='in')
+    a2d = Array(array([[1.0, 1.0], [2.0, 3.0]]), iotype='in')
+    b1d = Array(array([1.0, 1.0, 2.0, 3.0]), iotype='out')
+    b2d = Array(array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
         
     def some_funct(self, a, b, op='add'):
         if op == 'add':
@@ -436,35 +428,39 @@ class ExprEvalTestCase(unittest.TestCase):
         ex = ExprEvaluator("comp.get_cont(1).a1d[2]", self.top)
         self.assertEqual(ex.evaluate(), 4)
         
-        if numpy:
-            ex = ExprEvaluator("a2d[1][0]", self.top.a)
-            self.assertEqual(ex.evaluate(), 2.)
-            ex.set(7.)
-            self.assertEqual(self.top.a.a2d[1][0], 7.)
+        ex = ExprEvaluator("a2d[1][0]", self.top.a)
+        self.assertEqual(ex.evaluate(), 2.)
+        ex.set(7.)
+        self.assertEqual(self.top.a.a2d[1][0], 7.)
+    
+        ex = ExprEvaluator("a2d[1,0]", self.top.a)
+        self.assertEqual(ex.evaluate(), 7.)
+        ex.set(11.)
+        self.assertEqual(self.top.a.a2d[1][0], 11.)
+    
+        ex = ExprEvaluator("a2d[1]", self.top.a)
+        self.assertTrue(all(ex.evaluate() == array([11.,3.])))
+        ex.set([0.1,0.2])
+        self.assertTrue(all(self.top.a.a2d[1] == array([0.1,0.2])))
+    
+        self.top.comp.cont = A()
         
-            ex = ExprEvaluator("a2d[1,0]", self.top.a)
-            self.assertEqual(ex.evaluate(), 7.)
-            ex.set(11.)
-            self.assertEqual(self.top.a.a2d[1][0], 11.)
+        ex = ExprEvaluator("comp.cont.a2d[1][0]", self.top)
+        self.assertEqual(ex.evaluate(), 2.)
+        ex.set(7.)
+        self.assertEqual(self.top.comp.cont.a2d[1][0], 7.)
         
-            ex = ExprEvaluator("a2d[1]", self.top.a)
-            self.assertTrue(all(ex.evaluate() == numpy.array([11.,3.])))
-            ex.set([0.1,0.2])
-            self.assertTrue(all(self.top.a.a2d[1] == numpy.array([0.1,0.2])))
-        
-            self.top.comp.cont = A()
-            
-            ex = ExprEvaluator("comp.cont.a2d[1][0]", self.top)
-            self.assertEqual(ex.evaluate(), 2.)
-            ex.set(7.)
-            self.assertEqual(self.top.comp.cont.a2d[1][0], 7.)
-            
-            ex = ExprEvaluator("comp.cont.a2d[1,0]", self.top)
-            self.assertEqual(ex.evaluate(), 7.)
-            ex.set(11.)
-            self.assertEqual(self.top.comp.cont.a2d[1][0], 11.)
-        
-            # try a numpy function
+        ex = ExprEvaluator("comp.cont.a2d[1,0]", self.top)
+        self.assertEqual(ex.evaluate(), 7.)
+        ex.set(11.)
+        self.assertEqual(self.top.comp.cont.a2d[1][0], 11.)
+    
+        # try a numpy function
+        try:
+            import numpy
+        except ImportError:
+            pass
+        else:
             ex = ExprEvaluator("numpy.eye(2)", self.top.a)
             val = ex.evaluate()
             self.assertTrue((val==numpy.eye(2)).all())
@@ -556,15 +552,15 @@ class ExprEvalTestCase(unittest.TestCase):
         
     def test_slice(self):
         ex = ExprEvaluator('a1d[1::2]', self.top.a)
-        self.assertTrue(all(numpy.array([2.,4.,6.]) == ex.evaluate()))
+        self.assertTrue(all(array([2.,4.,6.]) == ex.evaluate()))
         ex.text = 'a1d[2:4]'
-        self.assertTrue(all(numpy.array([3.,4.]) == ex.evaluate()))
+        self.assertTrue(all(array([3.,4.]) == ex.evaluate()))
         ex.text = 'a1d[2:]'
-        self.assertTrue(all(numpy.array([3.,4.,5.,6.]) == ex.evaluate()))
+        self.assertTrue(all(array([3.,4.,5.,6.]) == ex.evaluate()))
         ex.text = 'a1d[::-1]'
-        self.assertTrue(all(numpy.array([6.,5.,4.,3.,2.,1.]) == ex.evaluate()))
+        self.assertTrue(all(array([6.,5.,4.,3.,2.,1.]) == ex.evaluate()))
         ex.text = 'a1d[:2]'
-        self.assertTrue(all(numpy.array([1.,2.]) == ex.evaluate()))
+        self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
 
     def test_boolean(self):
         comp = self.top.comp

@@ -40,7 +40,7 @@ except ImportError as err:
 from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
+from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
