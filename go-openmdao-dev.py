@@ -1580,7 +1580,7 @@ def adjust_options(options, args):
 
 
 
-def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
+def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
         extarg = '-Z'
@@ -1590,12 +1590,15 @@ def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %s" % ' '.join(cmdline))
-    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
+    try:
+        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+    except OSError:
+        failures.append(req)
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['SetupDocs==1.0.5', 'docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4', 'argparse==1.2.1']
+    reqs = ['SetupDocs==1.0.5', 'docutils==0.6', 'Pyevolve==0.6', 'Jinja2==2.4', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'virtualenv==1.6.4', 'argparse==1.2.1']
     guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'Django==1.3']
     
     if options.findlinks is None:
@@ -1631,29 +1634,28 @@ def after_install(options, home_dir):
             __import__(pkg)
         except ImportError:
             failed_imports.append(pkg)
-    if failed_imports and not options.noprereqs:
-        logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
-        logger.error("These must be installed in the system level python before installing OpenMDAO.")
-        sys.exit(-1)
+    if failed_imports:
+        if options.noprereqs:
+            logger.warning("The following prerequisites could not be imported: %s." % failed_imports)
+            logger.warning("As a result, some OpenMDAO components will not work.")
+        else:
+            logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
+            logger.error("These must be installed in the system level python before installing OpenMDAO.")
+            sys.exit(-1)
     
     cmds = ['-f', url]
     openmdao_cmds = ['-f', openmdao_url]
-    if options.noprereqs:
-        strict = False
-    else:
-        strict = True
     try:
-        for req in reqs:
-            if req.startswith('openmdao.'):
-                _single_install(openmdao_cmds, req, bin_dir, strict=strict)
-            else:
-                _single_install(cmds, req, bin_dir, strict=strict)
+        allreqs = reqs[:]
+        failures = []
         if not options.nogui:
-            for req in guireqs:
-                if req.startswith('openmdao.'):
-                    _single_install(openmdao_cmds, req, bin_dir, strict=strict)
-                else:
-                    _single_install(cmds, req, bin_dir, strict=strict)
+            allreqs = allreqs + guireqs
+            
+        for req in allreqs:
+            if req.startswith('openmdao.'):
+                _single_install(openmdao_cmds, req, bin_dir, failures)
+            else:
+                _single_install(cmds, req, bin_dir, failures)
         
 
         # now install dev eggs for all of the openmdao packages
@@ -1680,14 +1682,14 @@ def after_install(options, home_dir):
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
-                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
+                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
         finally:
             os.chdir(startdir)
         
 
         # add any additional packages specified on the command line
         for req in options.reqs:
-            _single_install(cmds, req, bin_dir, True, strict=strict)
+            _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
     except Exception as err:
         logger.error("ERROR: build failed: %s" % str(err))
@@ -1695,8 +1697,15 @@ def after_install(options, home_dir):
 
     abshome = os.path.abspath(home_dir)
     
-
-    print '\n\nThe OpenMDAO virtual environment has been installed in %s.' % abshome
+    if failures:
+        failmsg = '(with failures)'
+        print '\n\n***** THE FOLLOWING PACKAGES FAILED TO INSTALL ****'
+        for f in failures.sort():
+            print f
+        print '****'
+    else:
+        failmsg = ''
+    print '\n\nThe OpenMDAO virtual environment has been installed in %s %s' % (abshome, failmsg)
     print 'From %s, type:\n' % abshome
     if sys.platform == 'win32':
         print r'Scripts\activate'

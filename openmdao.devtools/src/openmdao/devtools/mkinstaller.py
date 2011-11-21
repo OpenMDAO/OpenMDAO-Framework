@@ -119,7 +119,7 @@ def main(args=None):
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
-                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
+                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
         finally:
             os.chdir(startdir)
         """ % pkgstr
@@ -148,7 +148,7 @@ def extend_parser(parser):
 
 %(adjust_options)s
 
-def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
+def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
         extarg = '-Z'
@@ -158,7 +158,10 @@ def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %%s" %% ' '.join(cmdline))
-    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
+    try:
+        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+    except OSError:
+        failures.append(req)
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
@@ -210,28 +213,23 @@ def after_install(options, home_dir):
     
     cmds = ['-f', url]
     openmdao_cmds = ['-f', openmdao_url]
-    if options.noprereqs:
-        strict = False
-    else:
-        strict = True
     try:
-        for req in reqs:
-            if req.startswith('openmdao.'):
-                _single_install(openmdao_cmds, req, bin_dir, strict=strict)
-            else:
-                _single_install(cmds, req, bin_dir, strict=strict)
+        allreqs = reqs[:]
+        failures = []
         if not options.nogui:
-            for req in guireqs:
-                if req.startswith('openmdao.'):
-                    _single_install(openmdao_cmds, req, bin_dir, strict=strict)
-                else:
-                    _single_install(cmds, req, bin_dir, strict=strict)
+            allreqs = allreqs + guireqs
+            
+        for req in allreqs:
+            if req.startswith('openmdao.'):
+                _single_install(openmdao_cmds, req, bin_dir, failures)
+            else:
+                _single_install(cmds, req, bin_dir, failures)
         
 %(make_dev_eggs)s
 
         # add any additional packages specified on the command line
         for req in options.reqs:
-            _single_install(cmds, req, bin_dir, True, strict=strict)
+            _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
     except Exception as err:
         logger.error("ERROR: build failed: %%s" %% str(err))
@@ -239,8 +237,15 @@ def after_install(options, home_dir):
 
     abshome = os.path.abspath(home_dir)
     
-
-    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% abshome
+    if failures:
+        failmsg = '(with failures)'
+        print '\\n\\n***** THE FOLLOWING PACKAGES FAILED TO INSTALL ****'
+        for f in failures.sort():
+            print f
+        print '****'
+    else:
+        failmsg = ''
+    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s %%s' %% (abshome, failmsg)
     print 'From %%s, type:\\n' %% abshome
     if sys.platform == 'win32':
         print r'Scripts\\activate'
