@@ -207,8 +207,8 @@ def after_install(options, home_dir):
             failed_imports.append(pkg)
     if failed_imports:
         if options.noprereqs:
-            logger.warn("\n**** The following prerequisites could not be imported: %%s." %% failed_imports)
-            logger.warn("****As a result, some OpenMDAO components will not work.")
+            logger.warn("\\n**** The following prerequisites could not be imported: %%s." %% failed_imports)
+            logger.warn("**** As a result, some OpenMDAO components will not work.")
         else:
             logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
             logger.error("These must be installed in the system level python before installing OpenMDAO.")
