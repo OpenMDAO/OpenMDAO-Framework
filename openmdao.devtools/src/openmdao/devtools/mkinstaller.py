@@ -243,7 +243,8 @@ def after_install(options, home_dir):
     if failures:
         failmsg = '(with failures)'
         print '\\n\\n***** THE FOLLOWING PACKAGES FAILED TO INSTALL ****'
-        for f in failures.sort():
+        failures.sort()
+        for f in failures:
             print f
         print '****'
     else:
