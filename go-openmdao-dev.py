@@ -1636,8 +1636,8 @@ def after_install(options, home_dir):
             failed_imports.append(pkg)
     if failed_imports:
         if options.noprereqs:
-            logger.warning("The following prerequisites could not be imported: %s." % failed_imports)
-            logger.warning("As a result, some OpenMDAO components will not work.")
+            logger.warn("The following prerequisites could not be imported: %s." % failed_imports)
+            logger.warn("As a result, some OpenMDAO components will not work.")
         else:
             logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
             logger.error("These must be installed in the system level python before installing OpenMDAO.")
@@ -1682,7 +1682,10 @@ def after_install(options, home_dir):
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
-                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+                try:
+                    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+                except OSError:
+                    failures.append(pkg)
         finally:
             os.chdir(startdir)
         
@@ -1712,6 +1715,8 @@ def after_install(options, home_dir):
     else:
         print '. bin/activate'
     print "\nto activate your environment and start using OpenMDAO."
+    
+    sys.exit(1 if failures else 0)
     
 
 def convert(s):
