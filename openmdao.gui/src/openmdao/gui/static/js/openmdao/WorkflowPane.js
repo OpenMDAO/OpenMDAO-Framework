@@ -7,7 +7,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         comp_figs = {},
         flow_figs = {},
         workflowID = "#"+pathname.replace(/\./g,'-')+"-workflow",
-        workflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;'
+        workflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
         workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">').appendTo(elm),
         workflow = new draw2d.Workflow(workflowID);
         

@@ -133,8 +133,10 @@ openmdao.WorkflowFigure.prototype.addComponentFigure=function(comp_fig){
 
 /** resize workflow (container) figure to contain all it's children */
 openmdao.WorkflowFigure.prototype.resize=function(){
-    var figWidth = 110,figHeight = 60;
-    var i=0, xmin=999999, xmax=0, ymin=999999, ymax=0,
+    var i=0, 
+        xmin=999999, xmax=0, 
+        ymin=999999, ymax=0,
+        width = 100, height = 50,
         children = this.getChildren();
     for (i=0;i<children.size;i++) {
         child = children.get(i);
@@ -145,7 +147,7 @@ openmdao.WorkflowFigure.prototype.resize=function(){
             };
             if (x > xmax) {
                 xmax = x;
-                figWidth = child.getWidth();
+                width = child.getWidth();
             };
             y = child.getAbsoluteY();
             if (y < ymin) {
@@ -153,12 +155,27 @@ openmdao.WorkflowFigure.prototype.resize=function(){
             };
             if (y > ymax) {
                 ymax = y;
-                figHeight = child.getHeight();
+                height = child.getHeight();
             };
         };
     };
-    this.setDimension(xmax+figWidth-xmin,
-                      ymax+figHeight-ymin+20)
+    width = xmax+width-xmin;
+    height = ymax+height-ymin+20;
+    this.setDimension(width,height);
+    
+    // if we outgrew the workflow, grow it a bit
+    // var workflow = this.getWorkflow();
+    // debug.info('width',width,'workflow',workflow.getWidth());
+    // if (workflow.getWidth() < width) {
+        // workflow.setWidth(width+100);
+    // }
+    // debug.info('width',width,'workflow',workflow.getWidth());
+    // debug.info('height',height,'workflow',workflow.getHeight());
+    // if (workflow.getHeight() < height) {
+        // workflow.setHeight(height+100);
+    // }
+    // debug.info('height',height,'workflow',workflow.getHeight());
+    // workflow.setBackgroundImage( "/static/images/grid_10.png", true);    
 };
 
 /** redraw workflow (container) figure */
