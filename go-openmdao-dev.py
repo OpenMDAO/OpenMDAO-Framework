@@ -1636,8 +1636,9 @@ def after_install(options, home_dir):
             failed_imports.append(pkg)
     if failed_imports:
         if options.noprereqs:
-            logger.warn("The following prerequisites could not be imported: %s." % failed_imports)
-            logger.warn("As a result, some OpenMDAO components will not work.")
+            logger.warn("
+**** The following prerequisites could not be imported: %s." % failed_imports)
+            logger.warn("****As a result, some OpenMDAO components will not work.")
         else:
             logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
             logger.error("These must be installed in the system level python before installing OpenMDAO.")
@@ -1701,15 +1702,13 @@ def after_install(options, home_dir):
     abshome = os.path.abspath(home_dir)
     
     if failures:
-        failmsg = '(with failures)'
-        print '\n\n***** THE FOLLOWING PACKAGES FAILED TO INSTALL ****'
-        for f in failures.sort():
-            print f
-        print '****'
+        failmsg = ' (with failures).'
+        failures.sort()
+        print '\n\n***** The following packages failed to install: %s.' % failures
     else:
-        failmsg = ''
-    print '\n\nThe OpenMDAO virtual environment has been installed in %s %s' % (abshome, failmsg)
-    print 'From %s, type:\n' % abshome
+        failmsg = '.'
+    print '\n\nThe OpenMDAO virtual environment has been installed in\n %s%s' % (abshome, failmsg)
+    print '\nFrom %s, type:\n' % abshome
     if sys.platform == 'win32':
         print r'Scripts\activate'
     else:
