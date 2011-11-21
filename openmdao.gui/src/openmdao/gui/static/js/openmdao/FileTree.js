@@ -21,7 +21,8 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
     var self = this,
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id),
         filter_beg = '_.',
-        filter_ext = [ 'pyc', 'pyd' ];
+        filter_ext = [ 'pyc', 'pyd' ],
+        filter_active = true;
         
     // ask model for an update whenever something changes
     model.addListener(update);
@@ -35,7 +36,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             ext = name.split('.'),
             ext = ext[ext.length-1];
             
-        if (filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0) {        
+        if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
             var html = "<li><a"
             if (typeof val === 'object') {    // a folder
                 html += " class='folder' path='"+path+"'>"+name+"</a>"
@@ -196,19 +197,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         }
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
-            "action" :  function(node) { 
-                            var save_beg, save_ext;
-                            if (filter_beg.length > 0) {
-                                save_beg = filter_beg;
-                                save_ext = filter_ext;
-                                filter_beg = '';
-                                filter_ext = [];
-                            }
-                            else {
-                                filter_beg = save_beg;
-                                filter_ext = save_ext;
-                            }
-                            update();                        }
+            "action" :  function(node) { filter_active = !filter_active; update(); }
         };
         
         return menu
