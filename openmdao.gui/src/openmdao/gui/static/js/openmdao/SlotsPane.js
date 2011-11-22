@@ -12,6 +12,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
         
     self.pathname = pathname;
     
+    slotsDiv.css({'background':'gray'});
     //slots.setBackgroundImage( "/static/images/grid_10.png", true);
         
     // make the slots pane droppable

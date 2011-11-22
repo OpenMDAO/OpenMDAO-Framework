@@ -12,23 +12,28 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
     this.setDimension(100,50);
     this.originalHeight=-1;
     
-    var tok = pathname.split('.')
-    if (tok.length > 1) {
-        this.name = tok[tok.length-1];
-        if (this.name === 'driver') {
-            this.name = tok[tok.length-2] + '.' + this.name
-        }
+    // get name for this figure and set title appropriately
+    this.name = openmdao.Util.getName(pathname);
+    if (this.name === 'driver') {
+        var parent = openmdao.Util.getPath(pathname),
+            parentName = openmdao.Util.getName(parent);
+        this.name = parentName + '.driver';
+        this.setTitle(parentName);
     }
-    else
-        this.name = pathname
-    this.setTitle(this.name)
+    else {
+        this.setTitle(this.name);
+    }
     
-    var tok = type.split('.')
-    if (tok.length > 1)
-        this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>')
-    else
-        this.setContent('<center><i>'+type+''+'</i></center>')
+    // set the content text to be the type name (in italics)
+    var tok = type.split('.');
+    if (tok.length > 1) {
+        this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>');
+    }
+    else {
+        this.setContent('<center><i>'+type+''+'</i></center>');
+    }
 
+    // do not allow moving
     this.setCanDrag(false);
 };
 

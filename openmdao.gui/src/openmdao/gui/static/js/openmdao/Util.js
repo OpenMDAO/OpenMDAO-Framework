@@ -228,22 +228,22 @@ openmdao.Util = {
         }
     },
 
-    /** get the pathname of the parent component */
-    getParentPath: function(path) {
-        parent_path = '';
-        if (path) {
-            var lastdot = path.lastIndexOf('.');
+    /** get the path from the pathname */
+    getPath: function(pathname) {
+        path = '';
+        if (pathname) {
+            var lastdot = pathname.lastIndexOf('.');
             if (lastdot > 0) {
-                parent_path = path.substring(0,lastdot);
+                path = pathname.substring(0,lastdot);
             }
         }
-        return parent_path;
+        return path;
     },
    
     /** get the name from the pathname */
     getName: function(pathname) {
-        var tok = pathname.split('.'),
-            name = pathname;        
+        var name = pathname,
+            tok = pathname.split('.');
         if (tok.length > 1) {
             name = tok[tok.length-1];
         }
