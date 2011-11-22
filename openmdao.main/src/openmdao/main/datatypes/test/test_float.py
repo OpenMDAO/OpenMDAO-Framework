@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.api import Container
-from openmdao.lib.datatypes.float import Float
+from openmdao.main.datatypes.float import Float
 from openmdao.units import convert_units
 
 class FloatTestCase(unittest.TestCase):

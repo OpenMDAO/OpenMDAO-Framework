@@ -1,14 +1,20 @@
 import struct
 import sys
+import logging
 
-import numpy
+try:
+    import numpy
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 _SZ_INT = 4
 _SZ_LONG = 8
 _SZ_FLOAT = 4
 _SZ_DOUBLE = 8
 
+from openmdao.util.decorators import stub_if_missing_deps
 
+@stub_if_missing_deps('numpy')
 class Stream(object):
     """
     Wrapper of standard Python :class:`file` object.

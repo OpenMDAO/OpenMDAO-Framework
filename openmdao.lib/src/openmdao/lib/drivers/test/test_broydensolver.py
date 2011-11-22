@@ -9,7 +9,7 @@ import numpy
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers.api import BroydenSolver
-from openmdao.lib.datatypes.float import Float
+from openmdao.main.datatypes.float import Float
 from openmdao.util.testutil import assert_rel_error
 
 # pylint: disable-msg=E1101,E1103

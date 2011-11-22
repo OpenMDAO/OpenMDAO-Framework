@@ -332,8 +332,13 @@ class ObjServer(object):
         # globals for numpy symbols that are initialized within
         # AbstractArray.__init__() which won't be executed if we simply
         # load up egg state (or don't do a real fork, like Windows).
-        from enthought.traits.trait_numeric import AbstractArray
-        dummy = AbstractArray()
+        try:
+            import numpy
+        except ImportError:
+            pass
+        else:
+            from enthought.traits.trait_numeric import AbstractArray
+            dummy = AbstractArray()
 
     # We only reset logging on the remote side.
     def _reset_logging(self, filename='server.out'):  #pragma no cover

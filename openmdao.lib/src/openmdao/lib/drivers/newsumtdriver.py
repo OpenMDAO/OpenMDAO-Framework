@@ -22,18 +22,20 @@
 #public symbols
 __all__ = ['NEWSUMTdriver']
 
+import logging
+try:
+    from numpy import zeros, ones
+    from numpy import int as numpy_int
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
-from numpy import zeros, ones
-from numpy import int as numpy_int
-
-from enthought.traits.api import Array
-                                 
+from openmdao.main.datatypes.array import Array
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 
@@ -260,6 +262,7 @@ class _countr(object):
 
         
 # pylint: disable-msg=R0913,R0902
+@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class NEWSUMTdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of NEWSUMT. 
@@ -279,7 +282,7 @@ class NEWSUMTdriver(DriverUsesDerivatives):
                                 'difference stepsize. Parameters with ' \
                                 'specified values override this.')
 
-    ilin = Array(dtype=numpy_int, value=zeros(0,'i4'), iotype='in', 
+    ilin = Array(dtype=numpy_int, default_value=zeros(0,'i4'), iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
     # Control parameters for NEWSUMT.
