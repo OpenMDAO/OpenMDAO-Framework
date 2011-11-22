@@ -34,8 +34,8 @@ except ImportError as err:
         }
     
     class _FakeNumpyArray(list):
-        """A list (possible recursive) that mimics some of the behavior of
-        a numpy array.
+        """A list (possibly recursive) that mimics some of the behavior of
+        a numpy array. This is a work in progress...
         """
         def __init__(self, lst, dtype=None):
             super(_FakeNumpyArray, self).__init__(lst)
@@ -44,144 +44,128 @@ except ImportError as err:
             self.dtype = dtype
 
         def __eq__(self, other):
-            if not isinstance(other, type(self)):
-                return False
-            if len(self) != len(other):
+            try:
+                if len(self) != len(other):
+                    return False
+            except:
                 return False
             return self.__class__([x==y for x,y in zip(self, other)])
         
-        def _get_val(self, args):
-            val = self
-            for arg in args:
-                val = val.__getitem__(arg)
-            return val
-            
         def __getitem__(self, *args):
             if isinstance(args[0], tuple):
-                return self._get_val(args[0]) 
+                val = self
+                for arg in args[0]:
+                    val = val.__getitem__(arg)
+                return val
+            elif isinstance(args[0], slice):
+                return _FakeNumpyArray(super(_FakeNumpyArray, self).__getitem__(args[0]))
             return super(_FakeNumpyArray, self).__getitem__(args[0])
         
-        def __call__(self, *args):
-            return self._get_val(args)
+        def __setitem__(self, *args):
+            if isinstance(args[0], tuple):
+                val = self
+                for arg in args[0][:-1]:
+                    val = val.__getitem__(arg)
+                val.__setitem__(args[0][-1], args[1])
+            else:
+                super(_FakeNumpyArray, self).__setitem__(args[0], args[1])
         
         def __add__(self, other):
             if isinstance(other, (int, float, long, complex)):
-                return _FakeNumpyArray([v+other for v in self])
+                return _FakeNumpyArray([v+other for v in self], self.dtype)
+            elif len(self) == len(other):
+                return _FakeNumpyArray([v+o for v,o in zip(self, other)],
+                                       self.dtype)
             else:
-                if len(self) == len(other):
-                    return _FakeNumpyArray([v+o for v,o in zip(self, other)])
-                else:
-                    raise ValueError("arrays have different shapes")
+                raise ValueError("arrays have different shapes")
                 
         __radd__ = __add__
         
         def __sub__(self, other):
             if isinstance(other, (int, float, long, complex)):
-                return _FakeNumpyArray([v-other for v in self])
+                return _FakeNumpyArray([v-other for v in self], self.dtype)
+            elif len(self) == len(other):
+                return _FakeNumpyArray([v-o for v,o in zip(self, other)],
+                                       self.dtype)
             else:
-                if len(self) == len(other):
-                    return _FakeNumpyArray([v-o for v,o in zip(self, other)])
-                else:
-                    raise ValueError("arrays have different shapes")
+                raise ValueError("arrays have different shapes")
                 
         def __rsub__(self, other):
             if isinstance(other, (int, float, long, complex)):
-                return _FakeNumpyArray([other-v for v in self])
+                return _FakeNumpyArray([other-v for v in self], self.dtype)
+            elif len(self) == len(other):
+                return _FakeNumpyArray([o-v for v,o in zip(self, other)],
+                                       self.dtype)
             else:
-                if len(self) == len(other):
-                    return _FakeNumpyArray([o-v for v,o in zip(self, other)])
-                else:
-                    raise ValueError("arrays have different shapes")
+                raise ValueError("arrays have different shapes")
                 
         def __mul__(self, other):
             if isinstance(other, (int, float, long, complex)):
-                return _FakeNumpyArray([v*other for v in self])
+                return _FakeNumpyArray([v*other for v in self], self.dtype)
+            elif len(self) == len(other):
+                return _FakeNumpyArray([v*o for v,o in zip(self, other)],
+                                       self.dtype)
             else:
-                if len(self) == len(other):
-                    return _FakeNumpyArray([v*o for v,o in zip(self, other)])
-                else:
-                    raise ValueError("arrays have different shapes")
+                raise ValueError("arrays have different shapes")
                 
         __rmul__ = __mul__
         
         def __div__(self, other):
             if isinstance(other, (int, float, long, complex)):
-                return _FakeNumpyArray([v/other for v in self])
+                return _FakeNumpyArray([v/other for v in self], self.dtype)
+            elif len(self) == len(other):
+                return _FakeNumpyArray([v/o for v,o in zip(self, other)],
+                                       self.dtype)
             else:
-                if len(self) == len(other):
-                    return _FakeNumpyArray([v/o for v,o in zip(self, other)])
-                else:
-                    raise ValueError("arrays have different shapes")
+                raise ValueError("arrays have different shapes")
         
         def __rdiv__(self, other):
             if isinstance(other, (int, float, long, complex)):
-                return _FakeNumpyArray([other/v for v in self])
+                return _FakeNumpyArray([other/v for v in self], self.dtype)
+            elif len(self) == len(other):
+                return _FakeNumpyArray([o/v for v,o in zip(self, other)],
+                                       self.dtype)
             else:
-                if len(self) == len(other):
-                    return _FakeNumpyArray([o/v for v,o in zip(self, other)])
-                else:
-                    raise ValueError("arrays have different shapes")
+                raise ValueError("arrays have different shapes")
         
         __truediv__ = __div__
         
         def flatten(self):
             """Return a copy of the array collapsed into one dimension"""
-            ret = []
-            for val in self:
-                if isinstance(val, _FakeNumpyArray):
+            if len(self) == 0:
+                return _FakeNumpyArray([], self.dtype)
+            elif not isinstance(self[0], _FakeNumpyArray):
+                return _FakeNumpyArray(self, self.dtype)
+            else:
+                ret = []
+                for val in self:
                     ret.extend(val.flatten())
-                else:
-                    ret.append(val)
-            return ret
+                return _FakeNumpyArray(ret, self.dtype)
     
     # this ndarray doesn't have the same __init__ signature as the real one, but
     # people aren't supposed to construct them directly anyway 
     # (should use zeros, ones, etc. instead)
     ndarray = _FakeNumpyArray
     
-    def _array_factory(shape, init_val):
+    def _array_factory(shape, init_val, dtype=None):
         if isinstance(shape, (tuple, list)):
             if len(shape) == 1:
-                return _array_factory(shape[0], init_val)
+                return _array_factory(shape[0], init_val, dtype)
             else:
-                arr = _FakeNumpyArray([_array_factory(shape[1:], init_val) for i in range(shape[0])])
-        else:
-            if isinstance(init_val, (float, int, long, str)):
-                arr = _FakeNumpyArray([init_val]*shape)
-            else:
-                arr = _FakeNumpyArray([deepcopy(init_val) for v in range(shape)])
-        return arr
+                return _FakeNumpyArray([_array_factory(shape[1:], init_val, dtype) 
+                                        for i in range(shape[0])], dtype)
+        elif isinstance(init_val, (float, int, long, str)):
+            return _FakeNumpyArray([init_val]*shape, dtype)
+        return _FakeNumpyArray([deepcopy(init_val) for v in range(shape)],
+                               dtype)
         
     def zeros(shape, dtype=float):
         dtype = _dtype_dct[dtype]
-        arr = _array_factory(shape, dtype(0))
-        arr.dtype = dtype
-        return arr
+        return _array_factory(shape, dtype(0), dtype)
     
     def ones(shape, dtype=float):
         dtype = _dtype_dct[dtype]
-        arr = _array_factory(shape, dtype(1))
-        arr.dtype = dtype
-        return arr
-    
-    #def _guess_shape(arr):
-        #"""This is only correct for arrays with uniform length subarrays"""
-        #shape = []
-        #val = arr
-        #while True:
-            #try:
-                #sz = len(val)
-            #except TypeError:
-                #break
-            #shape.append(sz)
-            #if sz > 0:
-                #val = val[0]
-            #else:
-                #shape.append(0)
-                #break
-        #if len(shape) == 0:
-            #raise ValueError("can't guess the shape of an object that has no length")
-        #return tuple(shape)
+        return _array_factory(shape, dtype(1), dtype)
     
     def append(arr1, arr2):
         """Add values to the end of an array. Returns a flattened copy."""
@@ -189,7 +173,7 @@ except ImportError as err:
             arr1 = _FakeNumpyArray(arr1)
         if not isinstance(arr2, _FakeNumpyArray):
             arr2 = _FakeNumpyArray(arr2)
-        return _FakeNumpyArray(arr1.flatten() + arr2.flatten())
+        return arr1.flatten() + arr2.flatten()
         
     def _guess_dtype(obj):
         val = obj
@@ -250,10 +234,19 @@ if __name__ == '__main__':
     y = array([[1,2,3],[4,5,6]])
     a = x[1][1]
     b = x[1,1]
-    c = x(1,1)
     assert(a == b)
-    assert(b == c)
+    assert(b == a)
     assert(all(x==y))
+    
+    z = array([1,2,3,4,5,6])
+    assert(z[::-1] == array([6,5,4,3,2,1]))
+    
+    x[1,1] = 99
+    assert(x[0] == array([1, 2, 3]))
+    assert(x[1] == array([4, 99, 6]))
+    
+    z[2:4] = [44, 55, 66]
+    assert(all(z == array([1,2,44,55,66,5,6])))
     
     
     

@@ -630,7 +630,8 @@ class ExprEvalTestCase(unittest.TestCase):
             ex = ExprEvaluator('abcd.efg', self.top)
             ex.evaluate()
         except AttributeError, err:
-            self.assertEqual(str(err), "can't evaluate expression 'abcd.efg': : 'Assembly' object has no attribute 'abcd'")
+            self.assertEqual(str(err), 
+                "can't evaluate expression 'abcd.efg': : 'Assembly' object has no attribute 'abcd'")
         else:
             raise AssertionError('AttributeError expected')
         
