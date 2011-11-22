@@ -59,8 +59,8 @@ def stub_if_missing_deps(*deps):
     def _find_failed_imports():
         failed = []
         for dep in deps:
-            if ',' in dep:  # comma indicates a platform specific import
-                dep, plat = dep.split(',',1)
+            if ':' in dep:  # comma indicates a platform specific import
+                dep, plat = dep.split(':',1)
                 if plat != sys.platform:
                     continue  # skip import, wrong platform
             parts = dep.split(':')
@@ -70,7 +70,7 @@ def stub_if_missing_deps(*deps):
             try:
                 __import__(modname)
             except ImportError as err:
-                failed.append(err.message.split()[-1])
+                failed.append(str(err).split()[-1])
                 continue
             
             if attrname and not hasattr(sys.modules[modname], attrname):
