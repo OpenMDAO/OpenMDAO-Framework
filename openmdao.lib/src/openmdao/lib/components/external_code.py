@@ -2,6 +2,7 @@
 
 import glob
 import os.path
+import shlex
 import shutil
 import subprocess
 import stat
@@ -155,6 +156,24 @@ class ExternalCode(ComponentWithDerivatives):
         return_code = -88888888
         error_msg = ''
         try:
+            # Create resource description for command.
+            rdesc = self.resources.copy()
+            rdesc['job_name'] = self.get_pathname()
+            items = shlex.split(self.command)
+            rdesc['remote_command'] = items[0]
+            if len(items) > 1:
+                rdesc['args'] = items[1:]
+            if self.stdin:
+                rdesc['input_path'] = self.stdin
+            if self.stdout:
+                rdesc['output_path'] = self.stdout
+            if self.stderr:
+                rdesc['error_path'] = self.stderr
+            if self.env_vars:
+                rdesc['job_environment'] = self.env_vars
+            if self.timeout:
+                rdesc['hard_run_duration_limit'] = self.timeout
+
             # Send inputs.
             patterns = []
             for metadata in self.external_files:
@@ -169,10 +188,7 @@ class ExternalCode(ComponentWithDerivatives):
             self._logger.info("executing '%s'...", self.command)
             start_time = time.time()
             return_code, error_msg = \
-                self._server.execute_command(self.command, self.stdin,
-                                             self.stdout, self.stderr,
-                                             self.env_vars, self.poll_delay,
-                                             self.timeout)
+                self._server.execute_command(rdesc)
             et = time.time() - start_time
             if et >= 60:  #pragma no cover
                 self._logger.info('elapsed time: %f sec.', et)

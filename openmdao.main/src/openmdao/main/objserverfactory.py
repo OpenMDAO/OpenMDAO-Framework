@@ -82,6 +82,9 @@ class ObjServerFactory(Factory):
         self._logger.info('PID: %d, %r, allow_shell %s', os.getpid(),
                           keytype(self._authkey), allow_shell)
         self.host = platform.node()
+        self.pid = os.getpid()
+        self.manager_class = _ServerManager
+        self.server_classname = 'openmdao_main_objserverfactory_ObjServer'
 
     @rbac('*', proxy_types=[object])  # ResourceAllocationManager import loop.
     def get_ram(self):
@@ -231,8 +234,8 @@ class ObjServerFactory(Factory):
                 # Network access via same IP as factory, system-selected port.
                 address = (self._address[0], 0)
 
-            manager = _ServerManager(address, self._authkey, name=name,
-                                     allowed_users=allowed_users)
+            manager = self.manager_class(address, self._authkey, name=name,
+                                         allowed_users=allowed_users)
             root_dir = name
             count = 1
             while os.path.exists(root_dir):
@@ -264,9 +267,9 @@ class ObjServerFactory(Factory):
             self._logger.info('new server %r for %s', name, owner)
             self._logger.info('    in dir %s', root_dir)
             self._logger.info('    listening on %s', manager.address)
-            server = manager.openmdao_main_objserverfactory_ObjServer(name=name,
-                                                  allow_shell=self._allow_shell,
-                                              allowed_types=self._allowed_types)
+            server_class = getattr(manager, self.server_classname)
+            server = server_class(name=name, allow_shell=self._allow_shell,
+                                  allowed_types=self._allowed_types)
             self._managers[server] = (manager, root_dir, owner)
 
         if typname:
@@ -321,8 +324,9 @@ class ObjServer(object):
         self._logger = logging.getLogger(self.name)
         self._logger.info('PID: %d, allow_shell %s',
                           os.getpid(), self._allow_shell)
-        print 'ObjServer %r PID: %d, allow_shell %s' \
-              % (self.name, os.getpid(), self._allow_shell)
+        print '%s %r PID: %d, allow_shell %s' \
+              % (self.__class__.__name__, self.name, os.getpid(),
+                 self._allow_shell)
         sys.stdout.flush()
 
         SimulationRoot.chroot(self._root_dir)
@@ -372,37 +376,58 @@ class ObjServer(object):
             raise TypeError('%r is not an allowed type' % typname)
 
     @rbac('owner')
-    def execute_command(self, command, stdin, stdout, stderr, env_vars,
-                        poll_delay, timeout):
+    def execute_command(self, resource_desc):
         """
-        Run `command` in a subprocess if this server's `allow_shell`
-        attribute is True.
+        Run command described by `resource_desc` in a subprocess if this
+        server's `allow_shell` attribute is True.
 
-        command: string
-            Command line to be executed.
-
-        stdin, stdout, stderr: string
-            Filenames for the corresponding stream.
-
-        env_vars: dict
-            Environment variables for the command.
-
-        poll_delay: float (seconds)
-            Delay between polling subprocess for completion.
-
-        timeout: float (seconds)
-            Maximum time to wait for command completion. A value of zero
-            implies no timeout.
+        resource_desc: dict
+            Contains job description.
         """
-        self._logger.debug('execute_command %r', command)
+        try:
+            job_name = resource_desc['job_name']
+        except KeyError:
+            job_name = ''
+
+        command = resource_desc['remote_command']
+        if 'args' in resource_desc:
+            command = '%s %s' % (command, ' '.join(resource_desc['args']))
+
+        self._logger.debug('execute_command %s %r', job_name, command)
         if not self._allow_shell:
             self._logger.error('attempt to execute %r by %r', command,
                                get_credentials().user)
             raise RuntimeError('shell access is not allowed by this server')
 
-        for arg in (stdin, stdout, stderr):
-            if isinstance(arg, basestring):
-                self._check_path(arg, 'execute_command')
+        try:
+            env_vars = resource_desc['job_environment']
+        except KeyError:
+            env_vars = None
+
+        try:
+            stdin = resource_desc['input_path']
+            self._check_path(stdin, 'execute_command')
+        except KeyError:
+            stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
+
+        try:
+            stdout = resource_desc['output_path']
+            self._check_path(stdout, 'execute_command')
+        except KeyError:
+            stdout = resource_desc['remote_command']+'.stdout'
+
+        try:
+            stderr = resource_desc['error_path']
+            self._check_path(stderr, 'execute_command')
+        except KeyError:
+            stderr = resource_desc['remote_command']+'.stderr'
+
+        try:
+            timeout = resource_desc['hard_run_duration_limit']
+        except KeyError:
+            timeout = 0
+        poll_delay = 1
+
         try:
             process = ShellProc(command, stdin, stdout, stderr, env_vars)
         except Exception as exc:
@@ -651,7 +676,7 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None):
 
 def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
                  allowed_hosts=None, allowed_users=None, allow_shell=False,
-                 allowed_types=None, timeout=None, tunnel=False):
+                 allowed_types=None, timeout=None, tunnel=False, resources=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -698,6 +723,9 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
         If True, report host IP address but listen for connections from a
         local SSH tunnel.
 
+    resources: string
+        Filename for resource configuration.
+
     Returns ``(server_proc, config_filename)``.
     """
     if timeout is None:
@@ -725,6 +753,10 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
 
     if tunnel:
         args.append('--tunnel')
+
+    if resources is not None:
+        args.append('--resources')
+        args.append(resources)
 
     if allowed_users is not None:
         write_authorized_keys(allowed_users, 'users.allow', logging.getLogger())
@@ -806,7 +838,7 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--address=address][--port=number][--prefix=name][--tunnel]
+    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--address=address][--port=number][--prefix=name][--tunnel][--resources=filename]
 
     --allow-public:
         Allows access by anyone from any allowed host. Use with care!
@@ -851,6 +883,10 @@ def main():  #pragma no cover
         Report host IP address but listen for connections from a local
         SSH tunnel.
 
+    --resources: string
+        Filename for resource configuration. If not specified then the
+        default of ``~/.openmdao/resources.cfg`` will be used.
+
     If ``prefix.key`` exists, it is read for an authorization key string.
     Otherwise public key authorization and encryption is used.
 
@@ -881,6 +917,8 @@ def main():  #pragma no cover
     parser.add_option('--tunnel', action='store_true', default=False,
                       help='Report host IP address but listen for connections'
                            ' from a local SSH tunnel')
+    parser.add_option('--resources', action='store', type='str',
+                      default=None, help='Filename for resource configuration')
 
     options, arguments = parser.parse_args()
     if arguments:
@@ -972,6 +1010,12 @@ def main():  #pragma no cover
             logger.error(msg)
             print msg
             sys.exit(1)
+
+    # Optionally configure resources.
+    if options.resources:
+        # Import here to avoid import loop.
+        from openmdao.main.resource import ResourceAllocationManager as RAM
+        RAM.configure(options.resources)
 
     # Get address and create manager.
     if options.port >= 0:

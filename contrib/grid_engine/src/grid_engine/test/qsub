@@ -1,0 +1,63 @@
+#!/bin/sh
+# Fake 'qsub'.
+join_eo=0
+echo $*
+while [ "$*" != "" ] ; do
+    opt="$1"
+    shift
+    case $opt in
+        -V | -sync | -cwd)
+            echo $opt
+            ;;
+        -N | -wd | -M | -m | -a | -dl)
+            arg="$1"
+            shift
+            echo "$opt arg $arg"
+            ;;
+        -i)
+            stdin="$1"
+            shift
+            echo "$opt stdin $stdin"
+            ;;
+        -o)
+            stdout="$1"
+            shift
+            echo "$opt stdout $stdout"
+            ;;
+        -e)
+            stderr="$1"
+            shift
+            echo "$opt stderr $stderr"
+            ;;
+        -j)
+            join="$1"
+            shift
+            echo "$opt join $join"
+            case $join in
+                y*)
+                    join_eo=1
+                    ;;
+            esac
+            ;;
+        -l)
+            resource="$1"
+            shift
+            value="$1"
+            shift
+            echo "$opt resource $resource value $value"
+            ;;
+        *)
+            cmd=$opt
+            args=$*
+            break
+            ;;
+    esac
+done
+
+set -x
+if [ $join_eo -eq 1 ] ; then
+    $cmd $args <$stdin >$stdout 2>&1
+else
+    $cmd $args <$stdin >$stdout 2>$stderr
+fi
+

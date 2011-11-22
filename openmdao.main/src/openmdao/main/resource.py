@@ -3,9 +3,10 @@ Support for allocation of servers from one or more resources
 (i.e., the local host, a cluster of remote hosts, etc.)
 """
 
+import ConfigParser
 import logging
 import multiprocessing
-import os
+import os.path
 import pkg_resources
 import Queue
 import socket
@@ -22,6 +23,37 @@ from openmdao.main.rbac import get_credentials, set_credentials, rbac
 from openmdao.util.eggloader import check_requirements
 from openmdao.util.wrkpool import WorkerPool
 
+# DRMAA-inspired constants.
+HOME_DIRECTORY = '$drmaa_hd_ph$'
+WORKING_DIRECTORY = '$drmaa_wd_ph$'
+
+# DRMAA-inspired keys.
+QUEUING_SYSTEM_KEYS = set([
+    'job_name',
+    'remote_command',
+    'args',
+    'job_environment',
+    'working_directory',
+    'job_category',
+    'native_specification',
+    'input_path',
+    'output_path',
+    'error_path',
+    'join_files',
+    'email',
+    'block_email',
+    'start_time',
+    'deadline_time',
+    'hard_wallclock_time_limit',
+    'soft_wallclock_time_limit',
+    'hard_run_duration_limit',
+    'soft_run_duration_limit',
+
+    # Others found to be useful (reduces 'native_specification' usage).
+    'email_events',
+    'parallel_environment',
+])
+
 
 class ResourceAllocationManager(object):
     """
@@ -29,21 +61,85 @@ class ResourceAllocationManager(object):
     which are used to select the "best fit" for a particular resource request.
     The manager is initialized with a :class:`LocalAllocator` for the local
     host, using `authkey` of 'PublicKey', and allowing 'shell' access.
-    Additional allocators can be added and the manager will look for the best
-    fit across all the allocators.
+
+    By default ``~/.openmdao/resources.cfg`` will be used for additional
+    configuraton information. To avoid this, call :meth:`configure` before
+    any other allocation routines.
     """
 
     _lock = threading.Lock()
     _RAM = None  # Singleton.
 
-    def __init__(self):
+    def __init__(self, config_filename=None):
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []
+        self._deployed_servers = {}
         self._allocators.append(LocalAllocator('LocalHost',
                                                authkey='PublicKey',
                                                allow_shell=True))
-        self._deployed_servers = {}
+        if config_filename is None:
+            config_filename = os.path.join('~', '.openmdao', 'resources.cfg')
+            if not os.path.exists(config_filename):
+                return
+
+        if config_filename:
+            self._configure(config_filename)
+
+    @staticmethod
+    def configure(config_filename):
+        """
+        Configure allocators. This *must* be called before any other accesses
+        if you want to avoid getting the default configuration as specified
+        by ``~/.openmdao/resources.cfg``.
+
+        config_filename: string
+            Name of configuration file.
+            If null, no additional configuration is performed.
+        """
+        with ResourceAllocationManager._lock:
+            if ResourceAllocationManager._RAM is None:
+                ResourceAllocationManager._RAM = \
+                    ResourceAllocationManager(config_filename)
+            elif config_filename:
+                ram = ResourceAllocationManager._RAM
+                ram._configure(config_filename)
+
+    def _configure(self, config_filename):
+        """ Configure manager instance. """
+        with open(config_filename, 'r') as inp:
+            cfg = ConfigParser.ConfigParser()
+            cfg.readfp(inp)
+            for name in cfg.sections():
+                for allocator in self._allocators:
+                    if allocator.name == name:
+                        allocator.configure(cfg)
+                        break
+                else:
+                    classname = cfg.get(name, 'classname')
+                    mod_name, dot, cls_name = classname.rpartition('.')
+                    try:
+                        __import__(mod_name)
+                    except ImportError as exc:
+                        raise RuntimeError("%s: Can't import %r: %s"
+                                           % (name, mod_name, exc))
+                    module = sys.modules[mod_name]
+                    if not hasattr(module, cls_name):
+                        raise RuntimeError("%s: no class %r in %s"
+                                           % (name, cls_name, mod_name))
+                    cls = getattr(module, cls_name)
+                    if cfg.has_option(name, 'authkey'):
+                        authkey = cfg.get(name, 'authkey')
+                    else:
+                        authkey = 'PublicKey'
+                    if cfg.has_option(name, 'allow_shell'):
+                        allow_shell = cfg.getboolean(name, 'allow_shell')
+                    else:
+                        allow_shell = False
+                    allocator = cls(name=name, authkey=authkey,
+                                    allow_shell=allow_shell)
+                    allocator.configure(cfg)
+                    self._allocators.append(allocator)
 
     @staticmethod
     def get_instance():
@@ -345,6 +441,20 @@ class ResourceAllocator(ObjServerFactory):
         return self._name
 
     # To be implemented by real allocator.
+    def configure(self, cfg):  #pragma no cover
+        """
+        Configure allocator from :class:`ConfigParser` instance.
+        Normally only called during manager initialization.
+
+        cfg: :class:`ConfigParser`
+            Configuration data is located under the section matching
+            this allocator's `name`.
+
+        The default implementation does nothing
+        """
+        return
+
+    # To be implemented by real allocator.
     def max_servers(self, resource_desc):  #pragma no cover
         """
         Return the maximum number of servers which could be deployed for
@@ -393,7 +503,9 @@ class ResourceAllocator(ObjServerFactory):
         """
         keys = []
         for key, value in resource_desc.items():
-            if key == 'required_distributions':
+            if key in QUEUING_SYSTEM_KEYS:
+                pass
+            elif key == 'required_distributions':
                 missing = self.check_required_distributions(value)
                 if missing:
                     return (-2, {key: missing})
@@ -491,7 +603,6 @@ class LocalAllocator(ResourceAllocator):
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
                  authkey=None, allow_shell=False):
         super(LocalAllocator, self).__init__(name, authkey, allow_shell)
-        self.pid = os.getpid()  # We may be a process on a remote host.
         if total_cpus > 0:
             self.total_cpus = total_cpus
         else:
@@ -501,6 +612,34 @@ class LocalAllocator(ResourceAllocator):
             except NotImplementedError:  # pragma no cover
                 self.total_cpus = 1
         self.max_load = max(max_load, 0.5)  # Ensure > 0!
+
+    @rbac('*')
+    def configure(self, cfg):
+        """
+        Configure allocator from :class:`ConfigParser` instance.
+        Normally only called during manager initialization.
+
+        cfg: :class:`ConfigParser`
+            Configuration data is located under the section matching
+            this allocator's `name`.
+
+        Allows modifying `total_cpus` and `max_load`.
+        """
+        if cfg.has_option(self.name, 'total_cpus'):
+            value = cfg.getint(self.name, 'total_cpus')
+            if value > 0:
+                self.total_cpus = value
+            else:
+                raise ValueError('%s: total_cpus must be > 0, got %d'
+                                 % self.name, value)
+
+        if cfg.has_option(self.name, 'max_load'):
+            value = cfg.getfloat(self.name, 'max_load')
+            if value > 0.:
+                self.max_load = value
+            else:
+                raise ValueError('%s: max_load must be > 0, got %g'
+                                 % self.name, value)
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -642,6 +781,11 @@ class RemoteAllocator(object):
         return self._name
 
     @rbac('*')
+    def configure(self, cfg):
+        """ Configuration of remote allocators is not allowed. """
+        return
+
+    @rbac('*')
     def max_servers(self, resource_desc):
         """ Return maximum number of servers for remote allocator. """
         rdesc = self._check_local(resource_desc)
@@ -771,6 +915,10 @@ class ClusterAllocator(object):  #pragma no cover
     def name(self):
         """ Name of this allocator. """
         return self._name
+
+    def configure(self, cfg):
+        """ Allocator configuration is not supported. """
+        return
 
     def max_servers(self, resource_desc):
         """
