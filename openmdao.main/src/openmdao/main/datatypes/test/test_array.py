@@ -4,7 +4,6 @@ import unittest
 
 from openmdao.main.numpy_fallback import array
 
-from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Component
 from openmdao.main.datatypes.array import Array
 from openmdao.units import convert_units
