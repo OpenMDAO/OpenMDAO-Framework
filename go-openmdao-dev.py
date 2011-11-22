@@ -1554,7 +1554,7 @@ def extend_parser(parser):
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
     parser.add_option("--nogui", action="store_true", dest='nogui', 
-                      help="don't install the openmdao graphical user interface")
+                      help="don't install the openmdao graphical user interface or its dependencies")
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
@@ -1641,6 +1641,7 @@ def after_install(options, home_dir):
         else:
             logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
             logger.error("These must be installed in the system level python before installing OpenMDAO.")
+            logger.error("To run a limited version of OpenMDAO without the prerequisites, try 'python %s --noprereqs'" % __file__)
             sys.exit(-1)
     
     cmds = ['-f', url]
