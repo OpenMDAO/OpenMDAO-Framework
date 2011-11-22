@@ -5,6 +5,7 @@ try:
     # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
     from math import gamma
 except ImportError as err:
+    import logging
     logging.warn("In %s: %r" % (__file__, err))
     try:
         from scipy.special import gamma
