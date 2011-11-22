@@ -10,7 +10,7 @@ import thread
 import threading
 import traceback
 
-from openmdao.lib.datatypes.api import Bool, Enum
+from openmdao.main.datatypes.api import Bool, Enum, Int, Slot
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
@@ -18,9 +18,7 @@ from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
-from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
-from openmdao.main.datatypes.slot import Slot
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
