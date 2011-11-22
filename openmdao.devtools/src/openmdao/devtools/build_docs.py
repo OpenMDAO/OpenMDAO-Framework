@@ -309,9 +309,17 @@ def _make_license_table(docdir, reqs=None):
     excludes = [] #["openmdao.*"]
     license_fname = os.path.join(docdir,'licenses','licenses_table.txt')
     
+    def _installer(req):
+        """to keep build_docs from failing if some deps are missing"""
+        dist = working_set.find(req)
+        if dist is None:
+            return working_set.find(Requirement.parse('openmdao.main'))
+        
     if reqs is None:
         reqs = [Requirement.parse(p) for p in get_openmdao_packages()]
-    dists = working_set.resolve(reqs)
+    
+    dists = working_set.resolve(reqs, installer=_installer)
+    dists = set(dists)
         
     metadict = {}
     for dist in dists:
