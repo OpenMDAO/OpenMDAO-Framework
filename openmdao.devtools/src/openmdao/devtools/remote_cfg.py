@@ -4,6 +4,7 @@ import getpass
 import datetime
 import time
 import socket
+import pprint
 
 from optparse import OptionParser
 import ConfigParser
@@ -203,6 +204,10 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
                 ver = py[6:]
                 py = 'C:/Python%s/python.exe' % ver.replace('.','')
             kw_args['pyversion'] = py
+            if debug:
+                print "creating Process"
+                print "   args = %s" % proc_args
+                print "   kw_args = %s" % pprint.pformat(kw_args)
             p = Process(target=runner,
                         name=host,
                         args=proc_args,

@@ -11,6 +11,7 @@ from optparse import OptionParser
 
 from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
                                     repo_top, fabric_cleanup
+from openmdao.util.fileutil import find_in_path
 
 
 def _push_release(release_dir, destination, obj, py='python'):
@@ -128,6 +129,9 @@ def main():
         print "release directory %s not found" % args[0]
         sys.exit(-1)
     
+    if find_in_path(options.py) is None:
+        options.py = 'python'
+
     if not ('@' in args[1] or ':' in args[1]): # it's a local release test area
         if not os.path.isdir(args[1]):
             _setup_local_release_dir(args[1])
