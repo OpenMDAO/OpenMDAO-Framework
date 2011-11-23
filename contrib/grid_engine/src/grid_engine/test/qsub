@@ -6,10 +6,10 @@ while [ "$*" != "" ] ; do
     opt="$1"
     shift
     case $opt in
-        -V | -sync | -cwd)
+        -V | -cwd)
             echo $opt
             ;;
-        -N | -wd | -M | -m | -a | -dl)
+        -sync | -N | -wd | -M | -m | -a | -dl)
             arg="$1"
             shift
             echo "$opt arg $arg"
@@ -40,11 +40,9 @@ while [ "$*" != "" ] ; do
             esac
             ;;
         -l)
-            resource="$1"
+            resource_value="$1"
             shift
-            value="$1"
-            shift
-            echo "$opt resource $resource value $value"
+            echo "$opt resource $resource_value"
             ;;
         *)
             cmd=$opt

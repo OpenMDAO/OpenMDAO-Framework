@@ -1,6 +1,91 @@
 """
 Support for allocation of servers from one or more resources
 (i.e., the local host, a cluster of remote hosts, etc.)
+Some types of allocated servers (i.e. :class:`GridEngineServer`) are
+capable of submitting jobs to queuing systems. A resource description is
+a dictionary that can include both allocation and queuing information.
+
+====================== ====== ==========================================
+Allocation Key         Value  Description
+====================== ====== ==========================================
+allocator              string Name of allocator to use.
+---------------------- ------ ------------------------------------------
+localhost              bool   Must be/must not be on the local host.
+---------------------- ------ ------------------------------------------
+exclude                list   Hostnames to exclude.
+---------------------- ------ ------------------------------------------
+required_distributions list   List of :class:`pkg_resources.Distribution`
+                              or package requirement strings.
+---------------------- ------ ------------------------------------------
+orphan_modules         list   List of 'orphan' module names.
+---------------------- ------ ------------------------------------------
+python_version         string Python version required (i.e '2.7').
+---------------------- ------ ------------------------------------------
+n_cpus                 int    Number of CPUs/cores required.
+====================== ====== ==========================================
+
+Values for `required_distributions` and `orphan_modules` are typically taken
+from the return value of :meth:`save_to_egg`. The `n_cpus` key is also used as
+a queuing key for parallel applications.
+
+Most of the queuing keys are derived from the Distributed Resource Management
+Application API (DRMAA) standard:
+
+========================= ====== ===============================================
+Queuing Key               Value  Description
+========================= ====== ===============================================
+job_name                  string Name for the submitted job.
+------------------------- ------ -----------------------------------------------
+remote_command            string Command to execute
+                                 (just the command, no arguments).
+------------------------- ------ -----------------------------------------------
+args                      list   Arguments for the command.
+------------------------- ------ -----------------------------------------------
+job_environment           dict   Any additional environment variables needed.
+------------------------- ------ -----------------------------------------------
+working_directory         string Directory to execute in (use with care).
+------------------------- ------ -----------------------------------------------
+parallel_environment      string Used by some systems for parallel applications.
+------------------------- ------ -----------------------------------------------
+input_path                string Path for stdin.
+------------------------- ------ -----------------------------------------------
+output_path               string Path for stdout.
+------------------------- ------ -----------------------------------------------
+error_path                string Path for stderr.
+------------------------- ------ -----------------------------------------------
+join_files                bool   If True, stderr is joined with stdout.
+------------------------- ------ -----------------------------------------------
+email                     list   List of email addresses to notify.
+------------------------- ------ -----------------------------------------------
+block_email               bool   If True, do not send notifications.
+------------------------- ------ -----------------------------------------------
+email_events              string When to send notifications. \
+                                 ('b'=>beginning, 'e'=>end, 'a'=>abort, \
+                                  's'=>suspension)
+------------------------- ------ -----------------------------------------------
+start_time                string Timestamp for when to start the job.
+------------------------- ------ -----------------------------------------------
+deadline_time             string Timestamp for when the job must be complete.
+------------------------- ------ -----------------------------------------------
+hard_wallclock_time_limit int    Time limit while running or suspended (sec).
+------------------------- ------ -----------------------------------------------
+soft_wallclock_time_limit int    Estimated time running or suspended (sec).
+------------------------- ------ -----------------------------------------------
+hard_run_duration_limit   int    Time limit while running (sec).
+------------------------- ------ -----------------------------------------------
+soft_run_duration_limit   int    Estimated time while running (sec).
+------------------------- ------ -----------------------------------------------
+job_category              string Used to try to portably select site-specific
+                                 queuing options.
+------------------------- ------ -----------------------------------------------
+native_specification      string Queuing system specific options.
+========================= ====== ===============================================
+
+Use of 'native_specification' is discouraged since that makes the submitting
+application less portable.
+
+``HOME_DIRECTORY`` and ``WORKING_DIRECTORY`` are constants that may be used
+as placeholders in path specifications. They are translated at the server.
 """
 
 import ConfigParser
@@ -34,8 +119,6 @@ QUEUING_SYSTEM_KEYS = set([
     'args',
     'job_environment',
     'working_directory',
-    'job_category',
-    'native_specification',
     'input_path',
     'output_path',
     'error_path',
@@ -48,10 +131,12 @@ QUEUING_SYSTEM_KEYS = set([
     'soft_wallclock_time_limit',
     'hard_run_duration_limit',
     'soft_run_duration_limit',
+    'job_category',
+    'native_specification',
 
     # Others found to be useful (reduces 'native_specification' usage).
-    'email_events',
     'parallel_environment',
+    'email_events',
 ])
 
 
@@ -63,7 +148,7 @@ class ResourceAllocationManager(object):
     host, using `authkey` of 'PublicKey', and allowing 'shell' access.
 
     By default ``~/.openmdao/resources.cfg`` will be used for additional
-    configuraton information. To avoid this, call :meth:`configure` before
+    configuration information. To avoid this, call :meth:`configure` before
     any other allocation routines.
     """
 
@@ -80,6 +165,7 @@ class ResourceAllocationManager(object):
                                                allow_shell=True))
         if config_filename is None:
             config_filename = os.path.join('~', '.openmdao', 'resources.cfg')
+            config_filename = os.path.expanduser(config_filename)
             if not os.path.exists(config_filename):
                 return
 
@@ -393,7 +479,7 @@ class ResourceAllocationManager(object):
                 allocator = remote_ram.get_allocator_proxy(i)
                 proxy = RemoteAllocator('%s/%s' % (prefix, allocator.name),
                                         allocator)
-            ram._allocators.append(proxy)
+                ram._allocators.append(proxy)
 
     @rbac('*')
     def get_total_allocators(self):
@@ -528,7 +614,7 @@ class ResourceAllocator(ObjServerFactory):
 
     def check_required_distributions(self, resource_value):
         """
-        Returns a list of distributions that are not availabled.
+        Returns a list of distributions that are not available.
 
         resource_value: list
             List of Distributions or Requirements.
@@ -598,6 +684,17 @@ class LocalAllocator(ResourceAllocator):
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed
         in created servers. Use with caution!
+
+    Resource configuration file entry equivalent to the default
+    ``LocalHost`` allocator::
+
+        [LocalHost]
+        classname: openmdao.main.resource.LocalAllocator
+        total_cpus: 1
+        max_load: 1.0
+        authkey: PublicKey
+        allow_shell: True
+
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,

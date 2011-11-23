@@ -50,9 +50,9 @@ class TestCase(unittest.TestCase):
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
         self.assertEqual(''.join(lines), """\
--V -sync -cwd -i /dev/null -o echo.stdout -j yes echo hello world
+-V -sync yes -cwd -i /dev/null -o echo.stdout -j yes echo hello world
 -V
--sync
+-sync arg yes
 -cwd
 -i stdin /dev/null
 -o stdout echo.stdout

@@ -383,6 +383,21 @@ class ObjServer(object):
 
         resource_desc: dict
             Contains job description.
+
+        The current environment, along with any 'job_environment' specification,
+        is in effect while running 'remote_command'.
+
+        If 'input_path' is not specified, ``/dev/null`` or ``nul:`` is used.
+        If 'output_path' is not specified, ``<remote_command>.stdout`` is used.
+        If neither 'error_path' nor 'join_files' are specified,
+        ``<remote_command>.stderr`` is used.
+
+        If specified, 'hard_run_duration_limit' is used as a timeout.
+
+        All other queuing resource keys are ignored.
+
+        The ``HOME_DIRECTORY`` and ``WORKING_DIRECTORY`` placeholders are
+        ignored.
         """
         try:
             job_name = resource_desc['job_name']
@@ -390,6 +405,8 @@ class ObjServer(object):
             job_name = ''
 
         command = resource_desc['remote_command']
+        self._check_path(command, 'execute_command')
+        base = os.path.basename(command)
         if 'args' in resource_desc:
             command = '%s %s' % (command, ' '.join(resource_desc['args']))
 
@@ -399,10 +416,7 @@ class ObjServer(object):
                                get_credentials().user)
             raise RuntimeError('shell access is not allowed by this server')
 
-        try:
-            env_vars = resource_desc['job_environment']
-        except KeyError:
-            env_vars = None
+        env_vars = resource_desc.get('job_environment')
 
         try:
             stdin = resource_desc['input_path']
@@ -414,18 +428,20 @@ class ObjServer(object):
             stdout = resource_desc['output_path']
             self._check_path(stdout, 'execute_command')
         except KeyError:
-            stdout = resource_desc['remote_command']+'.stdout'
+            stdout = base+'.stdout'
 
         try:
             stderr = resource_desc['error_path']
             self._check_path(stderr, 'execute_command')
         except KeyError:
-            stderr = resource_desc['remote_command']+'.stderr'
+            try:
+                join_files = resource_desc['join_files']
+            except KeyError:
+                stderr = base+'.stderr'
+            else:
+                stderr = STDOUT if join_files else base+'.stderr'
 
-        try:
-            timeout = resource_desc['hard_run_duration_limit']
-        except KeyError:
-            timeout = 0
+        timeout = resource_desc.get('hard_run_duration_limit', 0)
         poll_delay = 1
 
         try:

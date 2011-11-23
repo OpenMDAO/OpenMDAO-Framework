@@ -3,40 +3,45 @@ GridEngine resource allocator and object server.
 """
 
 import fnmatch
+import os.path
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.objserverfactory import ObjServer
 from openmdao.main.rbac import rbac, get_credentials
-from openmdao.main.resource import ResourceAllocator
+from openmdao.main.resource import ResourceAllocator, \
+                                   HOME_DIRECTORY, WORKING_DIRECTORY
 
 from openmdao.util.shellproc import ShellProc, STDOUT, PIPE
-
-HOME_DIRECTORY = '$drmaa_hd_ph$'
-WORKING_DIRECTORY = '$drmaa_wd_ph$'
 
 
 class GridEngineAllocator(ResourceAllocator):
     """
-    Knows about GridEngine cluster resources (via 'qhost').
-    Uses :class:`GridEngineServer` instead of :class:`ObjServer`.
+    Knows about GridEngine cluster resources (via `qhost`).
+    Uses :class:`GridEngineServer` instead of :class:`ObjServer` when deploying.
 
     name: string
         Name of allocator, used in log messages, etc.
 
     pattern: string
-        :mod:`glob`-style pattern used to select hosts from 'qhost' output,
+        :mod:`fnmatch`-style pattern used to select hosts from `qhost` output,
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
 
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed
-        in created servers. Use with caution!
+        in created servers. Since :meth:`execute_command` is required, this
+        is defaulted to be True.
+
+    .. warning::
+
+        There is a security risk with `allow_shell` True. Be careful to limit
+        factory servers to the intended set of users!
 
     Resource configuration file entry equivalent to defaults::
 
         [GridEngine]
-        classname: grid_engine.grid_engine.GridEngineAllocator
+        classname: grid_engine.GridEngineAllocator
         authkey: PublicKey
         allow_shell: True
         pattern: *
@@ -46,7 +51,7 @@ class GridEngineAllocator(ResourceAllocator):
     _QHOST = 'qhost'  # Replaced with path to fake for testing.
 
     def __init__(self, name='GridEngine', pattern='*', authkey=None,
-                 allow_shell=False):
+                 allow_shell=True):
         super(GridEngineAllocator, self).__init__(name, authkey, allow_shell)
         self.pattern = pattern
         self.manager_class = _ServerManager
@@ -212,7 +217,7 @@ class GridEngineAllocator(ResourceAllocator):
 
 
 class GridEngineServer(ObjServer):
-    """ Knows about executing a command via 'qsub' """
+    """ Knows about executing a command via `qsub`. """
 
     _QSUB = 'qsub'  # Replaced with path to fake for testing.
 
@@ -223,22 +228,93 @@ class GridEngineServer(ObjServer):
 
         resource_desc: dict
             Description of command and required resources.
+
+        The '-V' `qsub` option is always used to export the current environment
+        to the job. This environment is first updated with any 'job_environment'
+        data. The '-sync yes' `qsub` option is used to wait for job completion.
+
+        Other job resource keys are processed as follows:
+
+        ========================= ====================
+        Resource Key              Translation
+        ========================= ====================
+        job_name                  -N `value`
+        ------------------------- --------------------
+        working_directory         -wd `value`
+        ------------------------- --------------------
+        parallel_environment      -pe `value` `n_cpus`
+        ------------------------- --------------------
+        input_path                -i `value`
+        ------------------------- --------------------
+        output_path               -o `value`
+        ------------------------- --------------------
+        error_path                -e `value`
+        ------------------------- --------------------
+        join_files                -j yes|no
+        ------------------------- --------------------
+        email                     -M `value`
+        ------------------------- --------------------
+        block_email               -m n
+        ------------------------- --------------------
+        email_events              -m `value`
+        ------------------------- --------------------
+        start_time                -a `value`
+        ------------------------- --------------------
+        deadline_time             Not supported
+        ------------------------- --------------------
+        hard_wallclock_time_limit -l h_rt= `value`
+        ------------------------- --------------------
+        soft_wallclock_time_limit -l s_rt= `value`
+        ------------------------- --------------------
+        hard_run_duration_limit   -l h_cpu= `value`
+        ------------------------- --------------------
+        soft_run_duration_limit   -l s_cpu= `value`
+        ------------------------- --------------------
+        job_category              Not supported
+        ========================= ====================
+
+        Where `value` is the corresponding resource value and
+        `n_cpus` is the value of the 'n_cpus' resource, or 1.
+
+        If 'working_directory' is not specified, add ``-cwd``.
+        If 'input_path' is not specified, add ``-i /dev/null``.
+        If 'output_path' is not specified, add ``-o <remote_command>.stdout``.
+        If 'error_path' is not specified, add ``-j yes``.
+
+        If 'native_specification' is specified, it is added to the `qsub`
+        command just before 'remote_command' and 'args'.
+
+        Output from `qsub` itself is routed to ``qsub.out``.
         """
-        cmd = [self._QSUB, '-V', '-sync']
+        self.home_dir = os.environ['HOME']
+        self.work_dir = ''
+
+        cmd = [self._QSUB, '-V', '-sync', 'yes']
         env = None
-        cwd = None
         inp, out, err = None, None, None
 
+        # Set working directory now, for possible path fixing.
+        try:
+            value = resource_desc['working_directory']
+        except KeyError:
+            pass
+        else:
+            self.work_dir = self._fix_path(value)
+            cmd.append('-wd')
+            cmd.append(value)
+
+        # Process description in hash order.
         for key, value in resource_desc.items():
             if key == 'job_name':
                 cmd.append('-N')
                 cmd.append(value)
-            elif key == 'working_directory':
-                cmd.append('-wd')
-                cmd.append(value)
-                cwd = value
             elif key == 'job_environment':
                 env = value
+            elif key == 'parallel_environment':
+                n_cpus = resource_desc.get('n_cpus', 1)
+                cmd.append('-pe')
+                cmd.append(value)
+                cmd.append(str(n_cpus))
             elif key == 'input_path':
                 cmd.append('-i')
                 cmd.append(self._fix_path(value))
@@ -268,32 +344,21 @@ class GridEngineServer(ObjServer):
                 cmd.append(value)
             elif key == 'start_time':
                 cmd.append('-a')
-                cmd.append(value)       # May need to translate
-            elif key == 'deadline_time':
-                cmd.append('-dl')
-                cmd.append(value)       # May need to translate
+                cmd.append(value)               # May need to translate
             elif key == 'hard_wallclock_time_limit':
                 cmd.append('-l')
-                cmd.append('h_rt')
-                cmd.append(str(value))  # May need to translate
+                cmd.append('h_rt=%s' % value)   # May need to translate
             elif key == 'soft_wallclock_time_limit':
-                cmd.append('-soft')
                 cmd.append('-l')
-                cmd.append('s_rt')
-                cmd.append(str(value))  # May need to translate
-                cmd.append('-hard')
+                cmd.append('s_rt=%s' % value)   # May need to translate
             elif key == 'hard_run_duration_limit':
                 cmd.append('-l')
-                cmd.append('h_cpu')
-                cmd.append(str(value))  # May need to translate
+                cmd.append('h_cpu=%s' % value)  # May need to translate
             elif key == 'soft_run_duration_limit':
-                cmd.append('-soft')
                 cmd.append('-l')
-                cmd.append('s_cpu')
-                cmd.append(str(value))  # May need to translate
-                cmd.append('-hard')
+                cmd.append('s_cpu=%s' % value)  # May need to translate
 
-        if cwd is None:
+        if not self.work_dir:
             cmd.append('-cwd')
 
         if inp is None:
@@ -301,7 +366,8 @@ class GridEngineServer(ObjServer):
             cmd.append('/dev/null')
         if out is None:
             cmd.append('-o')
-            cmd.append('%s.stdout' % resource_desc['remote_command'])
+            cmd.append('%s.stdout'
+                       % os.path.basename(resource_desc['remote_command']))
         if err is None:
             cmd.append('-j')
             cmd.append('yes')
@@ -327,13 +393,12 @@ class GridEngineServer(ObjServer):
         self._logger.debug('    returning %s', (return_code, error_msg))
         return (return_code, error_msg)
 
-    @staticmethod
-    def _fix_path(path):
+    def _fix_path(self, path):
         """ Translates special prefixes. """
         if path.startswith(HOME_DIRECTORY):
-            path = '$HOME' + path[len(HOME_DIRECTORY):]
+            path = os.path.join(self.home_dir, path[len(HOME_DIRECTORY):])
         elif path.startswith(WORKING_DIRECTORY):
-            path = path[len(WORKING_DIRECTORY):]  # Valid?
+            path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
         return path
 
 
@@ -345,5 +410,4 @@ class _ServerManager(OpenMDAO_Manager):
 
 register(GridEngineServer, _ServerManager,
          'openmdao.contrib.grid_engine.grid_engine')
-
 
