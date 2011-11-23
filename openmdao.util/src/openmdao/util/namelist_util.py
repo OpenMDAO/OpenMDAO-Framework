@@ -2,11 +2,17 @@
 Utilities for reading and writing Fortran namelists.
 """
 
+import logging
+
 # pylint: disable-msg=E0611,F0401
 import ordereddict
 
-from numpy import ndarray, array, append, vstack, zeros, \
-                  int32, int64, float32, float64
+try:
+    from numpy import ndarray, array, append, vstack, zeros, \
+         int32, int64, float32, float64
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+
 from enthought.traits.trait_handlers import TraitListObject 
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
@@ -14,6 +20,7 @@ from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       oneOf, nums, TokenConverter, Group
 
 from openmdao.util.filewrap import ToFloat, ToInteger
+from openmdao.util.decorators import stub_if_missing_deps
 
 def _floatfmt(val):
     """ Returns the output format for a floating point number.
@@ -101,7 +108,7 @@ class ToBool(TokenConverter):
             raise RuntimeError('Unexpected error while trying to identify a'
                                ' Boolean value in the namelist.')
 
-    
+@stub_if_missing_deps('numpy')
 class Namelist(object):
     """Utility to ease the task of constructing a formatted output file."""
     

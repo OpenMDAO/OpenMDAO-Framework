@@ -19,7 +19,7 @@ Justin Gray."""
 import re, ConfigParser
 import os.path
 
-import numpy as N
+from math import sin, cos, tan, floor
 
 # pylint: disable-msg=E0611,F0401, E1101
 try: 
@@ -308,7 +308,8 @@ class PhysicalQuantity(object):
     def sin(self):
         """Parsing Sine."""
         if self.unit.is_angle():
-            return N.sin(self.value * \
+            #return N.sin(self.value * \
+            return sin(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
         else:
             raise TypeError('Argument of sin must be an angle')
@@ -316,7 +317,8 @@ class PhysicalQuantity(object):
     def cos(self):
         """Parsing Cosine."""
         if self.unit.is_angle():
-            return N.cos(self.value * \
+            #return N.cos(self.value * \
+            return cos(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
         else:
             raise TypeError('Argument of cos must be an angle')
@@ -324,7 +326,8 @@ class PhysicalQuantity(object):
     def tan(self):
         """Parsing tangent."""
         if self.unit.is_angle():
-            return N.tan(self.value * \
+            #return N.tan(self.value * \
+            return tan(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
         else:
             raise TypeError('Argument of tan must be an angle')
@@ -418,7 +421,8 @@ class PhysicalUnit(object):
                                 [x*other for x in self.powers])
         if isinstance(other, float):
             inv_exp = 1./other
-            rounded = int(N.floor(inv_exp+0.5))
+            #rounded = int(N.floor(inv_exp+0.5))
+            rounded = int(floor(inv_exp+0.5))
             if abs(inv_exp-rounded) < 1.e-10:
               
                 if all([x%rounded==0 for x in self.powers]):

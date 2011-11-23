@@ -6,8 +6,6 @@ if needed.
 #public symbols
 __all__ = ['logger']
 
-__version__ = '0.1'
-
 
 import logging
 

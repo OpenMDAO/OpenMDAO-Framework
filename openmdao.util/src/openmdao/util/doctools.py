@@ -12,7 +12,7 @@ from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event, \
 from enthought.traits.trait_types import _InstanceArgs
 from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
 
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 excludes = (Any, Python, Event, type)
 

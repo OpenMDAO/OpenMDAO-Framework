@@ -6,11 +6,6 @@ import atexit
 import tempfile
 import tarfile
 
-from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
-from fabric.state import connections
-
-import paramiko.util
-
 from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
@@ -24,6 +19,8 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
     ship it over to host, build it, and bring it back, placing it
     in the specified destination directory.
     """
+    from fabric.api import run, put, get
+
     locdistbld = os.path.join(os.path.dirname(__file__), 'locdistbld.py')
     pkgs = []
     if remote_dir is None:
@@ -69,6 +66,8 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
     return 0
 
 def main(argv=None):
+    import paramiko.util
+
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
     if argv is None:

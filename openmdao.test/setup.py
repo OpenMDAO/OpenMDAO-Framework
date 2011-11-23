@@ -42,9 +42,8 @@ setup(name='openmdao.test',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'setuptools',
-          'openmdao.lib',
           'nose',
+          'openmdao.main',
       ],
       entry_points={
       "openmdao.component": [
