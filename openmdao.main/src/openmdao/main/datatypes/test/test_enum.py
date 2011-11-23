@@ -4,7 +4,7 @@ import unittest
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Container
-from openmdao.lib.datatypes.enum import Enum
+from openmdao.main.datatypes.enum import Enum
 
 class IntTestCase(unittest.TestCase):
 

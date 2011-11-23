@@ -4,12 +4,10 @@ Test for setting input variables back to their default values.
 
 import unittest
 
-import numpy
-
 from openmdao.main.api import Component, Assembly
-from openmdao.lib.datatypes.api import Float, Array, List
-
-
+from openmdao.main.datatypes.api import Float, List, Array
+from openmdao.main.numpy_fallback import array, zeros
+    
 class MyDefComp(Component):
     f_in = Float(3.14, iotype='in')
     f_out = Float(iotype='out')
@@ -17,8 +15,7 @@ class MyDefComp(Component):
     list_in = List(value=['a','b','c'], iotype='in')
     
     def execute(self):
-        self.f_out = self.f_in + 1.
-        
+        self.f_out = self.f_in + 1.        
 
 class MyNoDefComp(Component):
     f_in = Float(iotype='in')
@@ -36,7 +33,7 @@ class SetDefaultsTestCase(unittest.TestCase):
         comp = MyNoDefComp()
         self.assertEqual(0., comp.f_in)
         comp.f_in = 42.
-        comp.arr_in = numpy.array([88., 32.])
+        comp.arr_in = array([88., 32.])
         comp.list_in = [1,2,3]
         self.assertEqual(comp.get_valid(['f_out']), [False])
         comp.run()
@@ -45,15 +42,15 @@ class SetDefaultsTestCase(unittest.TestCase):
         # make sure reverting to defaults invalidates our outputs
         self.assertEqual(comp.get_valid(['f_out']), [False])
         self.assertEqual(0., comp.f_in)
-        self.assertTrue(numpy.all(numpy.zeros(0,'d')==comp.arr_in))
+        self.assertTrue(all(zeros(0,'d')==comp.arr_in))
         self.assertEqual([], comp.list_in)
     
     def test_set_to_default(self):
         comp = MyDefComp()
         self.assertEqual(3.14, comp.f_in)
         comp.f_in = 42.
-        comp.arr_in = numpy.array([88., 32.])
-        self.assertFalse(numpy.all(numpy.array([1.,2.,3.])==comp.arr_in))
+        comp.arr_in = array([88., 32.])
+        self.assertFalse(array([1.,2.,3.])==comp.arr_in)
         self.assertEqual(comp.get_valid(['f_out']), [False])
         comp.run()
         self.assertEqual(comp.get_valid(['f_out']), [True])
@@ -61,7 +58,7 @@ class SetDefaultsTestCase(unittest.TestCase):
         # make sure reverting to defaults invalidates our outputs
         self.assertEqual(comp.get_valid(['f_out']), [False])
         self.assertEqual(3.14, comp.f_in)
-        self.assertTrue(numpy.all(numpy.array([1.,2.,3.])==comp.arr_in))
+        self.assertTrue(all(array([1.,2.,3.])==comp.arr_in))
         
     def test_set_recursive(self):
         asm = Assembly()

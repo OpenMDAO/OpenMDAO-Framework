@@ -1,6 +1,6 @@
 import openmdao.units as units
 import unittest
-import numpy
+import math
 
 from pkg_resources import resource_string, resource_stream
 
@@ -430,9 +430,9 @@ class test__PhysicalQuantity(unittest.TestCase):
         
         x=units.PhysicalQuantity('0 rad')
         x.sin()
-        self.assertEqual(x.sin(),numpy.sin(x.value))
-        self.assertEqual(x.cos(),numpy.cos(x.value))
-        self.assertEqual(x.tan(),numpy.tan(x.value))
+        self.assertEqual(x.sin(),math.sin(x.value))
+        self.assertEqual(x.cos(),math.cos(x.value))
+        self.assertEqual(x.tan(),math.tan(x.value))
         
         x=units.PhysicalQuantity('1m')
         try:

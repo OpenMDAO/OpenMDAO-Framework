@@ -1,11 +1,12 @@
 """
 Some useful decorators
 """
+import sys
 import types
 import time
 
 from decorator import FunctionMaker
-from inspect import getmembers, ismethod, getargspec, formatargspec, getmro
+from inspect import getmembers, ismethod, isfunction, isclass, getargspec, formatargspec, getmro
 
 # this decorator is based on a code snippet by vegaseat at daniweb.
 # See http://www.daniweb.com/code/snippet216689.html
@@ -31,9 +32,67 @@ def forwarder(cls, fnc, delegatename):
     f = FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
                              doc=fnc.__doc__)
     return types.MethodType(f, None, cls)
+
+
+def replace_funct(fnc, body):
+    """Returns a function with a new body that replaces the given function. The
+    signature of the original function is preserved in the new function.
+    """
+    fname = fnc.__name__
+    spec = getargspec(fnc)
+    sig = formatargspec(*spec)
+    return FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
+                                doc=fnc.__doc__)
         
     
+def stub_if_missing_deps(*deps):
+    """A class decorator that will try to import the specified modules and in
+    the event of failure will stub out the class, raising a RuntimeError that
+    explains the missing dependencies whenever an attempt is made to
+    instatiate the class.
+    
+    deps: str args
+        args in deps may have the form a.b.c or a.b.c:attr, where attr would be 
+        searched for within the module a.b.c after a.b.c is successfully imported.
+    """
+    
+    def _find_failed_imports():
+        failed = []
+        for dep in deps:
+            if ':' in dep:  # comma indicates a platform specific import
+                dep, plat = dep.split(':',1)
+                if plat != sys.platform:
+                    continue  # skip import, wrong platform
+            parts = dep.split(':')
+            modname = parts[0]
+            attrname = parts[1] if len(parts)>1 else None
+            
+            try:
+                __import__(modname)
+            except ImportError as err:
+                failed.append(str(err).split()[-1])
+                continue
+            
+            if attrname and not hasattr(sys.modules[modname], attrname):
+                failed.append('.'.join([modname, attrname]))
+        return failed
+    
+    def _stub_if_missing(obj):
+        failed = _find_failed_imports()        
+        if failed:
+            if isclass(obj):
+                def _error(obj, *args, **kwargs):
+                    msg = "The %s class depends on the following modules or attributes which were not found on your system: %s"
+                    raise RuntimeError(msg % (obj.__name__, failed))
+                obj.__new__ = staticmethod(_error)
+            elif isfunction(obj):
+                body = "raise RuntimeError(\"The %s function depends on the following modules or attributes which were not found on your system: %s\")" 
+                return replace_funct(obj, body % (obj.__name__, failed))
+        return obj
+            
+    return _stub_if_missing
 
+    
 def add_delegate(*delegates):
     """A class decorator that takes delegate classes or (name,delegate) tuples as
     args. For each tuple, an instance with the given name will be created in the

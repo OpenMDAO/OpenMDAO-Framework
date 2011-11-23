@@ -667,6 +667,12 @@ class IHasObjective(IHasObjectives):
         """Returns the value of the evaluated objective."""
 
 
+class IVariable(Interface):
+    def validate(obj, name, value):
+        """ Validates that the specified value is valid and can be assigned
+        to the data value corresponding to this Variable.
+        """
+
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""
@@ -675,3 +681,4 @@ def obj_has_interface(obj, *ifaces):
             return True
     return False
     
+
