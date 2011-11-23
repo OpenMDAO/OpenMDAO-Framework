@@ -187,11 +187,6 @@ def _write_src_docs(branchdir, docdir):
             os.remove(os.path.join(moddir, name))
     
     for pack in get_openmdao_packages():
-        if pack == 'openmdao.devtools':  # hack
-            try:
-                import fabric # this will fail on win32 boxen without pywin32 and cause doc test to fail
-            except ImportError:
-                continue
         print 'creating autodoc file for %s' % pack
         with open(os.path.join(pkgdir, pack+'.rst'), 'w') as f:
             _pkg_sphinx_info(branchdir, pack, f, show_undoc=True, underline='-')
