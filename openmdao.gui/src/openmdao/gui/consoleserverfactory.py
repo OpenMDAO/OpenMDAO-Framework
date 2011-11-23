@@ -226,7 +226,7 @@ class ConsoleServer(cmd.Cmd):
         self._globals['__name__'] = '__main__'
         print "Executing",file,"..."
         try:
-            execfile(file,self._globals,self._locals)
+            execfile(file)
             print "Execution complete."
         except Exception, err:
             self.error(err,sys.exc_info())
@@ -546,22 +546,24 @@ class ConsoleServer(cmd.Cmd):
         slots = []
         for name, value in comp.traits().items():
             if value.is_trait_type(Slot):
+                print name,'is a slot'
                 attr = {}
                 attr['name'] = name
+                attr['klass'] = value.klass
                 if getattr(comp, name) is None:
                     attr['value'] = None
                     attr['type'] = value.klass
                 else:
                     attr['value'] = 'filled'
                     attr['type'] = type(value).__name__
-                meta = comp.get_metadata(name);
-                if meta:
-                    for field in ['units','high','low','desc']:
-                        if field in meta:
-                            attr[field] = meta[field]
-                        else:
-                            attr[field] = ''
-                    attr['type'] = meta['vartypename']
+                # meta = comp.get_metadata(name);
+                # if meta:
+                    # for field in ['units','high','low','desc']:
+                        # if field in meta:
+                            # attr[field] = meta[field]
+                        # else:
+                            # attr[field] = ''
+                    # attr['type'] = meta['vartypename']
                 slots.append(attr)
         attrs['Slots'] = slots
 
