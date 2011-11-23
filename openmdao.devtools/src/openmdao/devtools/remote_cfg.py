@@ -212,7 +212,7 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
             p.start()
         
         while len(processes) > 0:
-            time.sleep(1)
+            time.sleep(10)
             for p in processes:
                 if p.exitcode is not None:
                     summary[p.name] = p.exitcode
