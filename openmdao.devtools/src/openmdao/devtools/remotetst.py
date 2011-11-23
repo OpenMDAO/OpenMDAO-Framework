@@ -86,6 +86,7 @@ def test_branch(argv=None):
 
     (options, args) = parser.parse_args(argv)
     
+    options.buildtype = 'branch'
     config, conn, ec2_hosts = process_options(options, parser)
     
     if not options.hosts:
@@ -174,6 +175,7 @@ def test_release(argv=None):
         print '\nyou must supply a release directory or the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
+    options.buildtype = 'release'
     config, conn, ec2_hosts = process_options(options, parser)
     
     startdir = os.getcwd()

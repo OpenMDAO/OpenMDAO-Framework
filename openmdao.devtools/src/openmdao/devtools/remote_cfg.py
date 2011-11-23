@@ -87,7 +87,14 @@ def read_config(options, parser):
     
     hostlist = config.sections()
     if options.allhosts:
-        hosts = hostlist
+        if options.buildtype:
+            btype = 'test_'+options.buildtype
+            hosts = [h for h in hostlist if config.has_option(h, btype) 
+                                           and config.getboolean(h, btype)]
+            if len(hosts) == 0:
+                print "WARNING: no hosts found with %s = true" % btype
+        else:
+            hosts = hostlist
     elif options.hosts:
         hosts = []
         for host in options.hosts:
