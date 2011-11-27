@@ -22,7 +22,7 @@ from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 @add_delegate(HasEvents)
 class Driver(Component):

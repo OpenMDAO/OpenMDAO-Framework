@@ -306,21 +306,27 @@ def _make_license_table(docdir, reqs=None):
     data_templates = ["%s", "%s", "%s", "%s"]
     col_spacer = ' '
     max_col_width = 80
-    excludes = [] #["openmdao.*"]
+
     license_fname = os.path.join(docdir,'licenses','licenses_table.txt')
     
     if reqs is None:
         reqs = [Requirement.parse(p) for p in get_openmdao_packages()]
-    dists = working_set.resolve(reqs)
+    
+    reqset = set(reqs)
+    dists = set()
+    done = set()
+    while reqset:
+        req = reqset.pop()
+        if req.project_name not in done:
+            done.add(req.project_name)
+            dist = working_set.find(req)
+            if dist is not None:
+                dists.add(dist)
+                reqset.update(dist.requires())
         
     metadict = {}
     for dist in dists:
         metadict[dist.project_name] = get_dist_metadata(dist)
-    to_remove = set()
-    for pattern in excludes:
-        to_remove.update(fnmatch.filter(metadict.keys(), pattern))
-    for rem in to_remove:
-        del metadict[rem]
     for projname,meta in metadict.items():
         for i,name in enumerate(meta_names):
             try:

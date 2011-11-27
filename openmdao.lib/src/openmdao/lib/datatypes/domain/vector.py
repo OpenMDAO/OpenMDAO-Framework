@@ -1,11 +1,12 @@
+import copy
 from math import atan2, cos, hypot, radians, sin
-
 import numpy
 
 
 class Vector(object):
     """
-    Vector data for a :class:`FlowSolution`.
+    Vector data for a :class:`FlowSolution`, also the base for
+    :class:`GridCoordinates`.
     In Cartesian coordinates, array indexing order is x,y,z;
     so an 'i-face' is a y,z surface.
     In cylindrical coordinates, array indexing order is z,r,t;
@@ -18,41 +19,47 @@ class Vector(object):
         self.z = None
         self.r = None
         self.t = None
+        self._ghosts = (0, 0, 0, 0, 0, 0)
+
+    def _get_ghosts(self):
+        return self._ghosts
+
+    def _set_ghosts(self, ghosts):
+        if len(ghosts) < 2*len(self.shape):
+            raise ValueError('ghosts must be a %d-element array'
+                             % (2*len(self.shape)))
+        for i in ghosts:
+            if i < 0:
+                raise ValueError('All ghost values must be >= 0')
+        self._ghosts = ghosts
+
+    ghosts = property(_get_ghosts, _set_ghosts,
+                      doc='Number of ghost/rind planes for each index direction.')
 
     @property
     def shape(self):
-        """ Tuple of index limits. """
+        """ Data index limits, not including 'ghost/rind' planes. """
+        ijk = self.real_shape
+        if len(ijk) < 1:
+            return ()
+        ghosts = self._ghosts
+        imax = ijk[0] - (ghosts[0] + ghosts[1])
+        if len(ijk) < 2:
+            return (imax,)
+        jmax = ijk[1] - (ghosts[2] + ghosts[3])
+        if len(ijk) < 3:
+            return (imax, jmax)
+        kmax = ijk[2] - (ghosts[4] + ghosts[5])
+        return (imax, jmax, kmax)
+
+    @property
+    def real_shape(self):
+        """ Data index limits, including any 'ghost/rind' planes. """
         for component in ('x', 'y', 'z', 'r', 't'):
             arr = getattr(self, component)
             if arr is not None:
                 return arr.shape
         return ()
-
-    @property
-    def extent(self):
-        """
-        Tuple of component ranges.
-        If Cartesian ``(xmin,xmax,ymin,ymax,zmin,zmax)``.
-        Otherwise ``(rmin,rmax,tmin,tmax,zmin,zmax)``.
-        """
-        if self.x is not None:
-            if self.y is not None:
-                if self.z is not None:
-                    return (self.x.min(), self.x.max(),
-                            self.y.min(), self.y.max(),
-                            self.z.min(), self.z.max())
-                return (self.x.min(), self.x.max(),
-                        self.y.min(), self.y.max())
-            return (self.x.min(), self.x.max())
-        elif self.r is not None:
-            if self.z is not None:
-                return (self.r.min(), self.r.max(),
-                        self.t.min(), self.t.max(),
-                        self.z.min(), self.z.max())
-            return (self.r.min(), self.r.max(),
-                    self.t.min(), self.t.max())
-        else:
-            return ()
 
     def is_equivalent(self, other, name, logger, tolerance=0.):
         """
@@ -79,6 +86,10 @@ class Vector(object):
             if not self._check_equivalent(other, name, component, logger,
                                           tolerance):
                 return False
+        if other.ghosts != self.ghosts:
+            logger.debug('ghost cell counts are not equal: %s vs. %s.',
+                         other.ghosts, self.ghosts)
+            return False
         return True
 
     def _check_equivalent(self, other, name, component, logger, tolerance):
@@ -109,7 +120,8 @@ class Vector(object):
                     return False
         return True
 
-    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None):
+    def extract(self, imin, imax, jmin=None, jmax=None, kmin=None, kmax=None,
+                ghosts=None):
         """
         Construct a new :class:`Vector` from data extracted from the
         specified region.
@@ -119,48 +131,70 @@ class Vector(object):
             Negative values are relative to the size in that dimension,
             so -1 refers to the last element. For 2D zones omit kmin and kmax.
             For 1D zones omit jmin, jmax, kmin, and kmax.
+
+        ghosts: int[]
+            Numer of ghost/rind planes for the new zone.
+            If ``None`` the existing specification is used.
         """
+        ghosts = ghosts or self._ghosts
         i = len(self.shape)
         if i == 3:
             if kmin is None or kmax is None or jmin is None or jmax is None:
                 raise ValueError('3D extract requires jmin, jmax, kmin, and kmax')
-            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax)
+            return self._extract_3d(imin, imax, jmin, jmax, kmin, kmax, ghosts)
         elif i == 2:
             if kmin is not None or kmax is not None:
                 raise ValueError('2D extract undefined for kmin or kmax')
             if jmin is None or jmax is None:
                 raise ValueError('2D extract requires jmin and jmax')
-            return self._extract_2d(imin, imax, jmin, jmax)
+            return self._extract_2d(imin, imax, jmin, jmax, ghosts)
         elif i == 1:
             if kmin is not None or kmax is not None:
                 raise ValueError('1D extract undefined for jmin, jmax, kmin, or kmax')
-            return self._extract_1d(imin, imax)
+            return self._extract_1d(imin, imax, ghosts)
         else:
             raise RuntimeError('Vector is empty!')
 
-    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax):
+    def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax, new_ghosts):
         """ 3D (index space) extraction. """
-        # Support end-relative indexing.
+        ghosts = self._ghosts
+
+        # Support end-relative indexing and adjust for existing ghost planes.
         vec_imax, vec_jmax, vec_kmax = self.shape
         if imin < 0:
             imin += vec_imax
+        imin += ghosts[0]
         if imax < 0:
             imax += vec_imax
+        imax += ghosts[0]
         if jmin < 0:
             jmin += vec_jmax
+        jmin += ghosts[2]
         if jmax < 0:
             jmax += vec_jmax
+        jmax += ghosts[2]
         if kmin < 0:
             kmin += vec_kmax
+        kmin += ghosts[4]
         if kmax < 0:
             kmax += vec_kmax
+        kmax += ghosts[4]
+
+        # Adjust for new ghost/rind planes.
+        imin -= new_ghosts[0]
+        imax += new_ghosts[1]
+        jmin -= new_ghosts[2]
+        jmax += new_ghosts[3]
+        kmin -= new_ghosts[4]
+        kmax += new_ghosts[5]
 
         # Check limits.
-        if imin < 0 or imax > vec_imax or \
-           jmin < 0 or jmax > vec_jmax or \
-           kmin < 0 or kmax > vec_kmax:
+        if imin < 0 or imax > vec_imax+ghosts[1] or \
+           jmin < 0 or jmax > vec_jmax+ghosts[3] or \
+           kmin < 0 or kmax > vec_kmax+ghosts[5]:
             region = (imin, imax, jmin, jmax, kmin, kmax)
-            original = (0, vec_imax, 0, vec_jmax, 0, vec_kmax)
+            original = (0, vec_imax+ghosts[1], 0, vec_jmax+ghosts[3],
+                        0, vec_kmax+ghosts[5])
             raise ValueError('Extraction region %s exceeds original %s'
                              % (region, original))
         # Extract.
@@ -172,23 +206,30 @@ class Vector(object):
                         arr[imin:imax+1, jmin:jmax+1, kmin:kmax+1])
         return vec
 
-    def _extract_2d(self, imin, imax, jmin, jmax):
+    def _extract_2d(self, imin, imax, jmin, jmax, new_ghosts):
         """ 2D (index space) extraction. """
-        # Support end-relative indexing.
+        ghosts = self._ghosts
+
+        # Support end-relative indexing and adjust for existing ghost planes.
         vec_imax, vec_jmax = self.shape
         if imin < 0:
             imin += vec_imax
+        imin += ghosts[0]
         if imax < 0:
             imax += vec_imax
+        imax += ghosts[0]
         if jmin < 0:
             jmin += vec_jmax
+        jmin += ghosts[2]
         if jmax < 0:
             jmax += vec_jmax
+        jmax += ghosts[2]
 
         # Check limits.
-        if imin < 0 or imax > vec_imax or jmin < 0 or jmax > vec_jmax:
+        if imin < 0 or imax > vec_imax+ghosts[1] or \
+           jmin < 0 or jmax > vec_jmax+ghosts[3]:
             region = (imin, imax, jmin, jmax)
-            original = (0, vec_imax, 0, vec_jmax)
+            original = (0, vec_imax+ghosts[1], 0, vec_jmax+ghosts[3])
             raise ValueError('Extraction region %s exceeds original %s'
                              % (region, original))
         # Extract.
@@ -200,19 +241,23 @@ class Vector(object):
                         arr[imin:imax+1, jmin:jmax+1])
         return vec
 
-    def _extract_1d(self, imin, imax):
+    def _extract_1d(self, imin, imax, new_ghosts):
         """ 1D (index space) extraction. """
-        # Support end-relative indexing.
-        vec_imax = self.shape[0]
+        ghosts = self._ghosts
+
+        # Support end-relative indexing and adjust for existing ghost planes.
+        vec_imax, = self.shape
         if imin < 0:
             imin += vec_imax
+        imin += ghosts[0]
         if imax < 0:
             imax += vec_imax
+        imax += ghosts[0]
 
         # Check limits.
-        if imin < 0 or imax > vec_imax:
+        if imin < 0 or imax > vec_imax+ghosts[1]:
             region = (imin, imax)
-            original = (0, vec_imax)
+            original = (0, vec_imax+ghosts[1])
             raise ValueError('Extraction region %s exceeds original %s'
                              % (region, original))
         # Extract.
@@ -259,16 +304,16 @@ class Vector(object):
 
     def _extend_3d(self, axis, delta, npoints):
         """ 3D (index space) extension. """
-        shape = self.shape
+        imax, jmax, kmax = self.real_shape
         if axis == 'i':
-            new_shape = (shape[0] + npoints, shape[1], shape[2])
-            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+            new_shape = (imax + npoints, jmax, kmax)
+            indx = imax if delta > 0 else npoints
         elif axis == 'j':
-            new_shape = (shape[0], shape[1] + npoints, shape[2])
-            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+            new_shape = (imax, jmax + npoints, kmax)
+            indx = jmax if delta > 0 else npoints
         else:
-            new_shape = (shape[0], shape[1], shape[2] + npoints)
-            indx = shape[2] if delta > 0 else new_shape[2] - shape[2]
+            new_shape = (imax, jmax, kmax + npoints)
+            indx = kmax if delta > 0 else npoints
 
         vec = Vector()
         for component in ('x', 'y', 'z', 'r', 't'):
@@ -303,17 +348,18 @@ class Vector(object):
                         for k in range(npoints):
                             new_arr[:, :, k] = arr[:, :, 0]
                 setattr(vec, component, new_arr)
+        vec.ghosts = copy.copy(self._ghosts)
         return vec
 
     def _extend_2d(self, axis, delta, npoints):
         """ 2D (index space) extension. """
-        shape = self.shape
+        imax, jmax = self.real_shape
         if axis == 'i':
-            new_shape = (shape[0] + npoints, shape[1])
-            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+            new_shape = (imax + npoints, jmax)
+            indx = imax if delta > 0 else npoints
         else:
-            new_shape = (shape[0], shape[1] + npoints)
-            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+            new_shape = (imax, jmax + npoints)
+            indx = jmax if delta > 0 else npoints
 
         vec = Vector()
         for component in ('x', 'y', 'z', 'r', 't'):
@@ -339,13 +385,14 @@ class Vector(object):
                         for j in range(npoints):
                             new_arr[:, j] = arr[:, 0]
                 setattr(vec, component, new_arr)
+        vec.ghosts = copy.copy(self._ghosts)
         return vec
 
     def _extend_1d(self, delta, npoints):
         """ 1D (index space) extension. """
-        shape = self.shape
-        new_shape = (shape[0] + npoints,)
-        indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+        imax, = self.real_shape
+        new_shape = (imax + npoints,)
+        indx = imax if delta > 0 else npoints
 
         vec = Vector()
         for component in ('x', 'y', 'z', 'r', 't'):
@@ -361,6 +408,7 @@ class Vector(object):
                     for i in range(npoints):
                         new_arr[i] = arr[0]
                 setattr(vec, component, new_arr)
+        vec.ghosts = copy.copy(self._ghosts)
         return vec
 
     def flip_z(self):
@@ -529,7 +577,7 @@ class Vector(object):
 
     def promote(self):
         """ Promote from N-dimensional to N+1 dimensional index space. """
-        shape = self.shape
+        shape = self.real_shape
 
         if len(shape) > 2:
             raise RuntimeError('Vector is 3D')
@@ -595,11 +643,15 @@ class Vector(object):
 
     def demote(self):
         """ Demote from N-dimensional to N-1 dimensional index space. """
-        shape = self.shape
+        shape = self.real_shape
+        ghosts = self._ghosts
 
         if len(shape) > 2:
             imax, jmax, kmax = shape
-            if imax == 1:
+            imx = imax - (ghosts[0] + ghosts[1])
+            jmx = jmax - (ghosts[2] + ghosts[3])
+            kmx = kmax - (ghosts[4] + ghosts[5])
+            if imx == 1:
                 if self.x is not None:
                     new_arr = numpy.zeros((jmax, kmax))
                     new_arr[:, :] = self.x[0, :, :]
@@ -617,7 +669,8 @@ class Vector(object):
                 new_arr = numpy.zeros((jmax, kmax))
                 new_arr[:, :] = self.z[0, :, :]
                 self.z = new_arr
-            elif jmax == 1:
+                self._ghosts = (ghosts[2], ghosts[3], ghosts[4], ghosts[5], 0, 0)
+            elif jmx == 1:
                 if self.x is not None:
                     new_arr = numpy.zeros((imax, kmax))
                     new_arr[:, :] = self.x[:, 0, :]
@@ -635,7 +688,8 @@ class Vector(object):
                 new_arr = numpy.zeros((imax, kmax))
                 new_arr[:, :] = self.z[:, 0, :]
                 self.z = new_arr
-            elif kmax == 1:
+                self._ghosts = (ghosts[0], ghosts[1], ghosts[4], ghosts[5], 0, 0)
+            elif kmx == 1:
                 if self.x is not None:
                     new_arr = numpy.zeros((imax, jmax))
                     new_arr[:, :] = self.x[:, :, 0]
@@ -653,12 +707,15 @@ class Vector(object):
                 new_arr = numpy.zeros((imax, jmax))
                 new_arr[:, :] = self.z[:, :, 0]
                 self.z = new_arr
+                self._ghosts = (ghosts[0], ghosts[1], ghosts[2], ghosts[3], 0, 0)
             else: 
                 raise RuntimeError('No i, j, or k plane to collapse')
 
         elif len(shape) > 1:
             imax, jmax = shape
-            if imax == 1:
+            imx = imax - (ghosts[0] + ghosts[1])
+            jmx = jmax - (ghosts[2] + ghosts[3])
+            if imx == 1:
                 if self.x is not None:
                     new_arr = numpy.zeros((jmax,))
                     new_arr[:] = self.x[0, :]
@@ -677,7 +734,8 @@ class Vector(object):
                     new_arr = numpy.zeros((jmax,))
                     new_arr[:] = self.z[0, :]
                     self.z = new_arr
-            elif jmax == 1:
+                self._ghosts = (ghosts[2], ghosts[3], 0, 0, 0, 0)
+            elif jmx == 1:
                 if self.x is not None:
                     new_arr = numpy.zeros((imax,))
                     new_arr[:] = self.x[:, 0]
@@ -696,8 +754,13 @@ class Vector(object):
                     new_arr = numpy.zeros((imax,))
                     new_arr[:] = self.z[:, 0]
                     self.z = new_arr
+                self._ghosts = (ghosts[0], ghosts[1], 0, 0, 0, 0)
             else:
                 raise RuntimeError('No i or j plane to collapse')
-        else:
+
+        elif len(shape) > 0:
             raise RuntimeError('Vector is 1D')
+
+        else:
+            raise RuntimeError('Vector is empty!')
 

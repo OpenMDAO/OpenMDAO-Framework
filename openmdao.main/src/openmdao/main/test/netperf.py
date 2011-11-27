@@ -64,8 +64,9 @@ def main():
                 os.mkdir(name)
                 os.chdir(name)
                 try:
-                    server_proc = start_server(authkey=authkey, port=ip_port)
-                    address, port, key = read_server_config('server.cfg')
+                    server_proc, server_cfg = \
+                        start_server(authkey=authkey, port=ip_port)
+                    address, port, tunnel, key = read_server_config(server_cfg)
                 finally:
                     os.chdir('..')
 

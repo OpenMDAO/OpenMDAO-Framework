@@ -4,8 +4,8 @@ from openmdao.main.api import Assembly, Component, Container, FileRef, \
                               VariableTree, set_as_top
 from openmdao.main.rbac import rbac
 
-from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, \
-                                       Int, List, Str
+from openmdao.main.datatypes.api import Array, Bool, Enum, File, Float, \
+                                        Int, List, Str
 
 class SubObj(VariableTree):
     """ Sub-object under TopObject. """

@@ -180,6 +180,8 @@ class DomainObj(object):
                 zone = self.zones[i]
                 name = self.zone_name(zone)
                 domain.add_zone(name, zone.extract(*args))
+        if self.reference_state is not None:
+            domain.reference_state = self.reference_state.copy()
         return domain
 
     def extend(self, zone_args):
