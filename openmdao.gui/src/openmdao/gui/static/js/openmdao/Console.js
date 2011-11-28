@@ -12,6 +12,7 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         historyBox = history.parent(),
         menuhtml = "<ul id="+historyID+"-menu class='context-menu'>" +
                    "<li><a onclick=jQuery('#"+historyID+"').text('')>Clear</a></li>" +
+                   "<li><a onclick=openmdao.Util.htmlWindow(jQuery('#"+historyID+"').html(),'Copy',800,600)>Copy</a></li>" +
                    "</ul>",
         interval = 0,  // ms
         timer = null                   
