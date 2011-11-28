@@ -6,7 +6,7 @@ import unittest
 import sys
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, SimulationRoot
-from openmdao.lib.datatypes.api import Float, Str, Slot, List
+from openmdao.main.datatypes.api import Float, Str, Slot, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
@@ -520,7 +520,7 @@ class AssemblyTestCase(unittest.TestCase):
 
         expected = [
             '%s.FloatProxy' % __name__,
-            'openmdao.lib.datatypes.float.Float',
+            'openmdao.main.datatypes.float.Float',
             'openmdao.main.variable.Variable',
             'enthought.traits.trait_handlers.TraitType',
             'enthought.traits.trait_handlers.BaseTraitHandler',

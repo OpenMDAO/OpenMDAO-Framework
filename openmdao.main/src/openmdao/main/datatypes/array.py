@@ -5,14 +5,39 @@ Trait for numpy array variables, with optional units.
 #public symbols
 __all__ = ["Array"]
 
+import logging
 
-# pylint: disable-msg=E0611,F0401
-from numpy import array, ndarray, zeros
-
-from enthought.traits.api import Array as TraitArray
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper
+
+# pylint: disable-msg=E0611,F0401
+try:
+    from numpy import array, ndarray, zeros
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+    from openmdao.main.numpy_fallback import array, ndarray, zeros
+    from openmdao.main.variable import Variable
+    
+    class TraitArray(Variable):
+        def __init__(self, **metadata):
+            self._shape = metadata.get('shape')
+            self._dtype = metadata.get('dtype')
+            super(TraitArray, self).__init__(**metadata)
+        
+        def validate(self, obj, name, value):
+            try:
+                it = iter(value)
+            except:
+                raise ValueError("attempted to assign non-iterable value to an array")
+            
+            # FIXME: improve type checking
+            if self._dtype:
+                return array(value, dtype=self._dtype)
+            else:
+                return array(value)
+else:
+    from enthought.traits.api import Array as TraitArray
 
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
@@ -35,7 +60,7 @@ class Array(TraitArray):
         elif isinstance(default_value, list):
             default_value = array(default_value)
         else:
-            raise TypeError("Default value should be a numpy array, "
+            raise TypeError("Default value should be an array-like object, "
                              "not a %s." % type(default_value))
         
         # Put iotype in the metadata dictionary
@@ -100,7 +125,7 @@ class Array(TraitArray):
         
         wtype = "value"
         wvalue = value
-        info = "a numpy array"
+        info = "an array-like object"
         
         # pylint: disable-msg=E1101
         if self.shape and value.shape:

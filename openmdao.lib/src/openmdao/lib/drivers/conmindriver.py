@@ -24,21 +24,28 @@
 #public symbols
 __all__ = ['CONMINdriver']
 
-# pylint: disable-msg=E0611,F0401
-from numpy import zeros, ones
-from numpy import int as numpy_int
+import logging
 
-import conmin.conmin as conmin
+# pylint: disable-msg=E0611,F0401
+try:
+    from numpy import zeros, ones
+    from numpy import int as numpy_int
+    import conmin.conmin as conmin
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+    # to keep class decl from barfing before being stubbed out
+    zeros = lambda *args, **kwargs: None 
+    numpy_int = int
 
 from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
+from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
 
 class _cnmn1(object):
@@ -170,6 +177,7 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
+@stub_if_missing_deps('numpy', 'conmin')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class CONMINdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of CONMIN. 
@@ -196,7 +204,7 @@ class CONMINdriver(DriverUsesDerivatives):
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
     
-    cons_is_linear = Array(zeros(0,'d'), dtype=numpy_int, iotype='in', 
+    cons_is_linear = Array(zeros(0,'i'), dtype=numpy_int, iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
     iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
