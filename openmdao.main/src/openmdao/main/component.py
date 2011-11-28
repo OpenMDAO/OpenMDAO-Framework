@@ -158,6 +158,7 @@ class Component (Container):
         self._dir_context = None
         
         self.ffd_order = 0
+        self._case_id = ''
 
 
     @property

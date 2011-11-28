@@ -130,7 +130,7 @@ class DistributionCaseDriver(CaseIterDriverBase):
         self.distribution_generator.num_parameters = len(params)
         
         for row in self.distribution_generator:
-            case = self.set_parameters(row, Case())
-            case.add_outputs(self.case_outputs)    
+            case = self.set_parameters(row, Case(parent_uuid=self._case_id))
+            case.add_outputs(self.case_outputs)
             
             yield case
