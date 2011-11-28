@@ -43,13 +43,15 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
     function updateFigures(json) {
         jQuery.each(json, function(idx,slot) {
             var name = slot['name'],
-                type = slot['type'];
+                type = slot['klass'],
+                filled = slot['filled'],
+                fig;
                 
             if (self.pathname) {
-                var fig = new openmdao.DataflowComponentFigure(model,self.pathname+'.'+name,type);
+                fig = new openmdao.SlotFigure(model,self.pathname+'.'+name,type,filled);
             }
             else {
-                var fig = new openmdao.DataflowComponentFigure(model,name,type);
+                fig = new openmdao.SlotFigure(model,name,type,filled);
             }
                     
             fig.setTitle(name)
