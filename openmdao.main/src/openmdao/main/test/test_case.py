@@ -56,7 +56,6 @@ class CaseTestCase(unittest.TestCase):
         self.assertFalse('comp1.z' in self.case)
         self.assertTrue('comp2.c+comp2.d' in self.case)
         
-        
     def test_len(self):
         self.assertEqual(len(self.case), 6)
 
