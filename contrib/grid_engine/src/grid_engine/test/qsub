@@ -14,6 +14,13 @@ while [ "$*" != "" ] ; do
             shift
             echo "$opt arg $arg"
             ;;
+        -pe)
+            arg="$1"
+            shift
+            ncpus="$1"
+            shift
+            echo $opt $arg $ncpus
+            ;;
         -i)
             stdin="$1"
             shift

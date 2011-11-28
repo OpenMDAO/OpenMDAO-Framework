@@ -951,7 +951,7 @@ class ClusterAllocator(object):  #pragma no cover
     by load average is reasonable.
     """
 
-    def __init__(self, name, machines, authkey=None, allow_shell=False):
+    def __init__(self, name, machines=None, authkey=None, allow_shell=False):
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
             if authkey is None:
@@ -966,6 +966,11 @@ class ClusterAllocator(object):  #pragma no cover
         self._reply_q = Queue.Queue()
         self._deployed_servers = {}
 
+        if machines is not None:
+            self._initialize(machines)
+
+    def _initialize(self, machines):
+        """ Setup allocators on the given machines. """
         hosts = []
         for machine in machines:
             host = mp_distributing.Host(machine['hostname'],
@@ -1014,8 +1019,42 @@ class ClusterAllocator(object):  #pragma no cover
         return self._name
 
     def configure(self, cfg):
-        """ Allocator configuration is not supported. """
-        return
+        """
+        Configure a cluster consisting of hosts with node-numbered hostnames
+        all using the same Python executable. Hostnames are generated from
+        `origin` to `nhosts`+`origin` from `format` (`origin` defaults to 0).
+        The Python executable is specified by the `python` option. It defaults
+        to the currently executing Python.
+
+        Resource configuration file entry for a cluster named ``HX`` consisting
+        of 19 hosts with the first host named ``hx00`` and using the current
+        OpenMDAO Python::
+
+            [HX]
+            classname: openmdao.main.resource.ClusterAllocator
+            nhosts: 19
+            origin: 0
+            format: hx%02d
+            authkey: PublicKey
+            allow_shell: True
+
+        """
+        nhosts = cfg.get('nhosts')
+        if cfg.has_option('origin'):
+            origin = cfg.getint('origin')
+        else:
+            origin = 0
+        pattern = cfg.get('format')
+        if cfg.has_option('python'):
+            python = cfg.get('python')
+        else:
+            python = sys.executable
+
+        machines = []
+        for i in range(origin, nhosts+origin):
+            hostname = pattern % i
+            machines.append(dict(hostname=hostname, python=python))
+        self._initialize(machines)
 
     def max_servers(self, resource_desc):
         """

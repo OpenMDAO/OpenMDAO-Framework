@@ -303,8 +303,29 @@ class GridEngineServer(ObjServer):
             cmd.append('-wd')
             cmd.append(value)
 
-        # Process description in hash order.
-        for key, value in resource_desc.items():
+        # Process description in fixed, repeatable order.
+        keys = ('job_name',
+                'job_environment',
+                'parallel_environment',
+                'input_path',
+                'output_path',
+                'error_path',
+                'join_files',
+                'email',
+                'block_email',
+                'email_events',
+                'start_time',
+                'hard_wallclock_time_limit',
+                'soft_wallclock_time_limit',
+                'hard_run_duration_limit',
+                'soft_run_duration_limit')
+
+        for key in keys:
+            try:
+                value = resource_desc[key]
+            except KeyError:
+                continue
+
             if key == 'job_name':
                 cmd.append('-N')
                 cmd.append(value)
@@ -344,19 +365,19 @@ class GridEngineServer(ObjServer):
                 cmd.append(value)
             elif key == 'start_time':
                 cmd.append('-a')
-                cmd.append(value)               # May need to translate
+                cmd.append(value)  # May need to translate
             elif key == 'hard_wallclock_time_limit':
                 cmd.append('-l')
-                cmd.append('h_rt=%s' % value)   # May need to translate
+                cmd.append('h_rt=%s' % self._make_time(value))
             elif key == 'soft_wallclock_time_limit':
                 cmd.append('-l')
-                cmd.append('s_rt=%s' % value)   # May need to translate
+                cmd.append('s_rt=%s' % self._make_time(value))
             elif key == 'hard_run_duration_limit':
                 cmd.append('-l')
-                cmd.append('h_cpu=%s' % value)  # May need to translate
+                cmd.append('h_cpu=%s' % self._make_time(value))
             elif key == 'soft_run_duration_limit':
                 cmd.append('-l')
-                cmd.append('s_cpu=%s' % value)  # May need to translate
+                cmd.append('s_cpu=%s' % self._make_time(value))
 
         if not self.work_dir:
             cmd.append('-cwd')
@@ -400,6 +421,17 @@ class GridEngineServer(ObjServer):
         elif path.startswith(WORKING_DIRECTORY):
             path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
         return path
+
+    @staticmethod
+    def _make_time(seconds):
+        """ Make time string from `seconds`. """
+        seconds = float(seconds)
+        hours = int(seconds / (60*60))
+        seconds -= hours * 60*60
+        minutes = int(seconds / 60)
+        seconds -= minutes * 60
+        seconds = int(seconds)
+        return '%d:%d:%d' % (hours, minutes, seconds)
 
 
 class _ServerManager(OpenMDAO_Manager):

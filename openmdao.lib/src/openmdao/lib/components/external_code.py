@@ -76,6 +76,31 @@ class ExternalCode(ComponentWithDerivatives):
         Then if `resources` have been specified, an appropriate server
         is allocated and the command is run on that server.
         Otherwise the command is run locally.
+
+        When running remotely, the following resources are set:
+
+        ======================= =====================================
+        Key                     Value
+        ======================= =====================================
+        job_name                self.get_pathname()
+        ----------------------- -------------------------------------
+        remote_command          self.command (first item)
+        ----------------------- -------------------------------------
+        args                    self.command (2nd through last items)
+        ----------------------- -------------------------------------
+        job_environment         self.env_vars
+        ----------------------- -------------------------------------
+        input_path              self.stdin
+        ----------------------- -------------------------------------
+        output_path             self.stdout
+        ----------------------- -------------------------------------
+        error_path              self.stderr (if != STDOUT)
+        ----------------------- -------------------------------------
+        join_files              If self.stderr == STDOUT
+        ----------------------- -------------------------------------
+        hard_run_duration_limit self.timeout (if non-zero)
+        ======================= =====================================
+
         """
         self.return_code = -12345678
         self.timed_out = False
@@ -163,14 +188,17 @@ class ExternalCode(ComponentWithDerivatives):
             rdesc['remote_command'] = items[0]
             if len(items) > 1:
                 rdesc['args'] = items[1:]
+            if self.env_vars:
+                rdesc['job_environment'] = self.env_vars
             if self.stdin:
                 rdesc['input_path'] = self.stdin
             if self.stdout:
                 rdesc['output_path'] = self.stdout
             if self.stderr:
-                rdesc['error_path'] = self.stderr
-            if self.env_vars:
-                rdesc['job_environment'] = self.env_vars
+                if self.stderr == self.STDOUT:
+                    rdesc['join_files'] = True
+                else:
+                    rdesc['error_path'] = self.stderr
             if self.timeout:
                 rdesc['hard_run_duration_limit'] = self.timeout
 
@@ -331,6 +359,7 @@ class ExternalCode(ComponentWithDerivatives):
                 mode = os.stat(dst_path).st_mode
                 mode |= stat.S_IWUSR
                 os.chmod(dst_path, mode)
+
 
 # This gets used by remote server.
 class _AccessController(AccessController):  #pragma no cover
