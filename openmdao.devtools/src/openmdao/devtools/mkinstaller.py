@@ -25,6 +25,8 @@ from optparse import OptionParser
 # The presence of these will be checked at the beginning and the install will abort
 # if they're not found, because otherwise easy_install will try to build them
 # and will fail with massive output of stuff that may be confusing to the user.
+# If the user runs the installer with a --noprereqs arg, then the prerequisites
+# won't be checked.
 openmdao_prereqs = ['numpy', 'scipy']
 
 # list of tuples of the form: (openmdao package, parent directory relative to
@@ -87,9 +89,10 @@ def main(args=None):
                       help="if present, a development script will be generated instead of a release script")
     parser.add_option("--dest", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
-    parser.add_option("--disturl", action="store", type="string", dest="disturl",
+    parser.add_option("-f", "--findlinks", action="store", type="string", 
+                      dest="findlinks",
                       default='http://openmdao.org/dists',
-                      help="OpenMDAO distribution URL (used for testing)")
+                      help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
     
     (options, args) = parser.parse_args(args)
     
@@ -116,11 +119,14 @@ def main(args=None):
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
-                call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
+                try:
+                    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+                except OSError:
+                    failures.append(pkg)
         finally:
             os.chdir(startdir)
         """ % pkgstr
-    else:
+    else:  # making a release installer
         make_dev_eggs = ''
 
     script_str = """
@@ -130,19 +136,22 @@ openmdao_prereqs = %(openmdao_prereqs)s
 def extend_parser(parser):
     parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
                       help="specify additional required distributions", default=[])
-    parser.add_option("--disturl", action="store", type="string", dest='disturl', 
-                      help="specify url where openmdao distribs are located")
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
     parser.add_option("--nogui", action="store_true", dest='nogui', 
-                      help="don't install the openmdao graphical user interface")
+                      help="don't install the openmdao graphical user interface or its dependencies")
+    parser.add_option("-f", "--findlinks", action="store", type="string", 
+                      dest="findlinks",
+                      help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
+    parser.add_option("--testurl", action="store", type="string", dest='testurl', 
+                      help="specify url where openmdao.* distribs are located (used for release testing only)")
                       
-    # hack to force use of setuptools for now
+    # hack to force use of setuptools for now because using 'distribute' causes issues
     os.environ['VIRTUALENV_USE_SETUPTOOLS'] = '1'
 
 %(adjust_options)s
 
-def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
+def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
         extarg = '-Z'
@@ -152,7 +161,10 @@ def _single_install(cmds, req, bin_dir, dodeps=False, strict=True):
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %%s" %% ' '.join(cmdline))
-    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=strict)
+    try:
+        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+    except OSError:
+        failures.append(req)
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
@@ -160,7 +172,10 @@ def after_install(options, home_dir):
     reqs = %(reqs)s
     guireqs = %(guireqs)s
     
-    url = '%(url)s'
+    if options.findlinks is None:
+        url = '%(url)s'
+    else:
+        url = options.findlinks
     # for testing we allow one to specify a url where the openmdao
     # package dists are located that may be different from the main
     # url where the dependencies are located. We do this because
@@ -169,10 +184,10 @@ def after_install(options, home_dir):
     # directory in order to test our releases because setuptools will
     # barf if it can't find everything in the same location (or on PyPI).
     # TODO: get rid of this after we quit using setuptools.
-    if options.disturl:
-        openmdao_url = options.disturl
+    if options.testurl:
+        openmdao_url = options.testurl
     else:
-        openmdao_url = '%(url)s'
+        openmdao_url = url
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
@@ -190,35 +205,35 @@ def after_install(options, home_dir):
             __import__(pkg)
         except ImportError:
             failed_imports.append(pkg)
-    if failed_imports and not options.noprereqs:
-        logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
-        logger.error("These must be installed in the system level python before installing OpenMDAO.")
-        sys.exit(-1)
+    if failed_imports:
+        if options.noprereqs:
+            logger.warn("\\n**** The following prerequisites could not be imported: %%s." %% failed_imports)
+            logger.warn("**** As a result, some OpenMDAO components will not work.")
+        else:
+            logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
+            logger.error("These must be installed in the system level python before installing OpenMDAO.")
+            logger.error("To run a limited version of OpenMDAO without the prerequisites, try 'python %%s --noprereqs'" %% __file__)
+            sys.exit(-1)
     
     cmds = ['-f', url]
     openmdao_cmds = ['-f', openmdao_url]
-    if options.noprereqs:
-        strict = False
-    else:
-        strict = True
     try:
-        for req in reqs:
-            if req.startswith('openmdao.'):
-                _single_install(openmdao_cmds, req, bin_dir, strict=strict)
-            else:
-                _single_install(cmds, req, bin_dir, strict=strict)
+        allreqs = reqs[:]
+        failures = []
         if not options.nogui:
-            for req in guireqs:
-                if req.startswith('openmdao.'):
-                    _single_install(openmdao_cmds, req, bin_dir, strict=strict)
-                else:
-                    _single_install(cmds, req, bin_dir, strict=strict)
+            allreqs = allreqs + guireqs
+            
+        for req in allreqs:
+            if req.startswith('openmdao.'):
+                _single_install(openmdao_cmds, req, bin_dir, failures)
+            else:
+                _single_install(cmds, req, bin_dir, failures)
         
 %(make_dev_eggs)s
 
         # add any additional packages specified on the command line
         for req in options.reqs:
-            _single_install(cmds, req, bin_dir, True, strict=strict)
+            _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
     except Exception as err:
         logger.error("ERROR: build failed: %%s" %% str(err))
@@ -226,27 +241,39 @@ def after_install(options, home_dir):
 
     abshome = os.path.abspath(home_dir)
     
-
-    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% abshome
-    print 'From %%s, type:\\n' %% abshome
+    if failures:
+        failmsg = ' (with failures).'
+        failures.sort()
+        print '\\n\\n***** The following packages failed to install: %%s.' %% failures
+    else:
+        failmsg = '.'
+    print '\\n\\nThe OpenMDAO virtual environment has been installed in\\n %%s%%s' %% (abshome, failmsg)
+    print '\\nFrom %%s, type:\\n' %% abshome
     if sys.platform == 'win32':
         print r'Scripts\\activate'
     else:
         print '. bin/activate'
     print "\\nto activate your environment and start using OpenMDAO."
+    
+    sys.exit(1 if failures else 0)
     """
     
     reqs = set()
     guireqs = set()
     
     version = '?.?.?'
-    excludes = set(['setuptools', 'distribute']+openmdao_prereqs)
+    excludes = set(['setuptools', 'distribute', 'SetupDocs']+openmdao_prereqs)
     dists = working_set.resolve([Requirement.parse(r[0]) 
                                    for r in openmdao_packages if r[0]!='openmdao.gui'])
     distnames = set([d.project_name for d in dists])-excludes
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
     
+    try:
+        setupdoc_dist = working_set.resolve([Requirement.parse('setupdocs')])[0]
+    except:
+        setupdoc_dist = None
+        
     for dist in dists:
         if dist.project_name not in distnames:
             continue
@@ -267,14 +294,19 @@ def after_install(options, home_dir):
         else:
             guireqs.add('%s' % dist.as_requirement())
 
-    reqs = list(reqs)
+    # adding setupdocs req is a workaround to prevent Traits from looking elsewhere for it
+    if setupdoc_dist:
+        _reqs = [str(setupdoc_dist.as_requirement())]
+    else:
+        _reqs = ['setupdocs>=1.0']
+    reqs = _reqs + list(reqs) 
     guireqs = list(guireqs)
     
     optdict = { 
         'reqs': reqs, 
         'guireqs': guireqs,
         'version': version, 
-        'url': options.disturl,
+        'url': options.findlinks,
         'make_dev_eggs': make_dev_eggs,
         'adjust_options': _get_adjust_options(options, version),
         'openmdao_prereqs': openmdao_prereqs,

@@ -4,8 +4,6 @@ import os
 import atexit
 from optparse import OptionParser
 
-from fabric.api import run, put, settings
-
 from openmdao.devtools.utils import fabric_cleanup
 
 def _push_dist(dist, destination='~', py='python2.6'):
@@ -30,6 +28,8 @@ def _push_dist(dist, destination='~', py='python2.6'):
     run('cd %s/dists && %s mkegglistindex.py' % (destination, py))
 
 def main():
+    from fabric.api import run, put, settings
+
     atexit.register(fabric_cleanup, True)
     parser = OptionParser(usage="%prog DIST1 DIST2 ... DIST_N")
     (options, args) = parser.parse_args(sys.argv[1:])

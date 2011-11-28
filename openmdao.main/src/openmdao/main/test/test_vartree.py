@@ -6,7 +6,7 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Container, Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
-from openmdao.lib.datatypes.api import Float, Slot, File
+from openmdao.main.datatypes.api import Float, Slot, File
 
 class DumbVT3(VariableTree):
     def __init__(self):

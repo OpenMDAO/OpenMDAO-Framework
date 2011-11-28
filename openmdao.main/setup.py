@@ -43,7 +43,6 @@ setup(name='openmdao.main',
           'argparse',
           'decorator',
           'networkx==1.3',
-          'numpy',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
@@ -54,14 +53,13 @@ setup(name='openmdao.main',
           'Traits==3.3.0',
           'zope.interface',
       ],
+      extras_require = {
+          'numpy_comps': ['numpy'],
+      },
       entry_points = """
       [console_scripts]
       openmdao_docs=openmdao.util.view_docs:view_docs
-      plugin_docs=openmdao.main.plugin:plugin_docs
-      plugin_build_docs=openmdao.main.plugin:plugin_build_docs
-      plugin_install=openmdao.main.plugin:plugin_install
-      plugin_makedist=openmdao.main.plugin:plugin_makedist
-      plugin_quickstart=openmdao.main.plugin:plugin_quickstart
+      plugin=openmdao.main.plugin:plugin
       update_libpath=openmdao.main.plugin:update_libpath
       
       [openmdao.component]
@@ -71,6 +69,11 @@ setup(name='openmdao.main',
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       
       [openmdao.variable]
-      openmdao.main.slot.Slot = openmdao.main.slot:Slot
+      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
+      openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
+      openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
+      openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
+      openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
+      
       """,
     )

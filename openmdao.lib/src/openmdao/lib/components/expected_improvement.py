@@ -1,16 +1,28 @@
 """Expected Improvement calculation for one or more objectives.""" 
 
-from numpy import exp, abs, pi
-from scipy.special import erf
+import logging
+try:
+    from numpy import exp, abs, pi
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+try:
+    from math import erf   # py27 and later has erf in the math module
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+    try:
+        from scipy.special import erf
+    except ImportError as err:
+        logging.warn("In %s: %r" % (__file__, err))
 
-from openmdao.lib.datatypes.api import Slot, Str, Float
+from openmdao.main.datatypes.api import Slot, Str, Float
 from openmdao.lib.casehandlers.api import CaseSet
 
 from openmdao.main.api import Component
+from openmdao.util.decorators import stub_if_missing_deps
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-
+@stub_if_missing_deps('numpy', 'scipy.special:erf', 'math:erf')
 class ExpectedImprovement(Component):
     best_case = Slot(CaseSet, iotype="in",
                        desc="CaseSet which contains a single case, "

@@ -8,7 +8,7 @@ from xml.sax.saxutils import escape
 
 from openmdao.main.api import Container, VariableTree
 from openmdao.main.mp_support import is_instance
-from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, List, Str
+from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int, List, Str
 
 from analysis_server.units import get_translation
 

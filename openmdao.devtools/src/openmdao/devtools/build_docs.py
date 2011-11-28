@@ -11,21 +11,16 @@ from pkg_resources import Environment, WorkingSet, Requirement, working_set
 import tarfile
 import sphinx
 
-from openmdao.devtools.dumpdistmeta import get_dist_metadata
-#import openmdao.util.releaseinfo
+from openmdao.util.dumpdistmeta import get_dist_metadata
 
 # Specify modules and packages to be included in the OpenMDAO documentation here
 srcmods = [
 ]
 
-packages = [
-    'openmdao.main',
-    'openmdao.lib',
-    'openmdao.util',
-    'openmdao.units',
-    'openmdao.gui',
-]
-
+def get_openmdao_packages():
+    return [d.project_name for d in working_set 
+            if d.project_name.startswith('openmdao.') 
+                and not d.project_name.startswith('openmdao.examples.')]
 
 logger = logging.getLogger()
 
@@ -58,7 +53,7 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     outfile.write('%s.py\n' % modbase)
     outfile.write('+'*(3+len(short.split('.').pop()))+'\n\n')
     
-    rstfile = _get_rst_path(name)
+    rstfile = _get_rst_path(mod)
     if(rstfile):
         outfile.write('.. include:: %s\n' % rstfile)
     
@@ -127,15 +122,26 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
         print >> outfile, docs, '\n'
     
     #excluding traits now since they need to be sorted separately
-    names = list(_get_resource_files(dist,
-                                    ['*__init__.py','*setup.py','*/test/*.py','*datatypes*.py',
+    _names = list(_get_resource_files(dist,
+                                    ['*__init__.py','*setup.py','*datatypes*.py',
                                      '*/gui/*/views.py','*/gui/*/models.py','*/gui/manage.py',
                                      '*/gui/urls.py','*/gui/*/urls.py','*/gui/projdb/admin.py'],
                                     ['*.py']))
+    names = []
+    for n in _names:
+        parts = n.split('/')
+        if parts[0] == 'openmdao' and parts[1] == 'test':
+            if len(parts) > 2 and parts[2] != 'plugins':
+                names.append(n)
+        elif 'test' not in parts:
+            names.append(n)
+            
     names.sort()
     
     #wanted to sort traits separately based only on filenames despite differing paths
-    traitz = list(_get_resource_files(dist, ['*__init__.py','*setup.py','*/test/*.py'], ['*datatypes*.py']))
+    traitz = list(_get_resource_files(dist, 
+                                      ['*__init__.py','*setup.py','*/test/*.py'], 
+                                      ['*datatypes*.py']))
     sorted_traitz = sorted(traitz, cmp=_compare_traits_path)
     
     names.extend(sorted_traitz)
@@ -154,7 +160,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
                 break
             else:       
                 x = name.split('/')
-                #kind of dirty, but the other sections doesn't need api header.
+                #kind of dirty, but the other sections don't need api header.
                 if os.path.basename(name) == 'api.py' and x[1]=='lib':
                     newheader = 'api'
                 if len(x) >= 4:
@@ -180,7 +186,7 @@ def _write_src_docs(branchdir, docdir):
         if name != '.gitignore':
             os.remove(os.path.join(moddir, name))
     
-    for pack in packages:
+    for pack in get_openmdao_packages():
         print 'creating autodoc file for %s' % pack
         with open(os.path.join(pkgdir, pack+'.rst'), 'w') as f:
             _pkg_sphinx_info(branchdir, pack, f, show_undoc=True, underline='-')
@@ -300,21 +306,27 @@ def _make_license_table(docdir, reqs=None):
     data_templates = ["%s", "%s", "%s", "%s"]
     col_spacer = ' '
     max_col_width = 80
-    excludes = [] #["openmdao.*"]
+
     license_fname = os.path.join(docdir,'licenses','licenses_table.txt')
     
     if reqs is None:
-        reqs = [Requirement.parse(p) for p in packages]
-    dists = working_set.resolve(reqs)
+        reqs = [Requirement.parse(p) for p in get_openmdao_packages()]
+    
+    reqset = set(reqs)
+    dists = set()
+    done = set()
+    while reqset:
+        req = reqset.pop()
+        if req.project_name not in done:
+            done.add(req.project_name)
+            dist = working_set.find(req)
+            if dist is not None:
+                dists.add(dist)
+                reqset.update(dist.requires())
         
     metadict = {}
     for dist in dists:
         metadict[dist.project_name] = get_dist_metadata(dist)
-    to_remove = set()
-    for pattern in excludes:
-        to_remove.update(fnmatch.filter(metadict.keys(), pattern))
-    for rem in to_remove:
-        del metadict[rem]
     for projname,meta in metadict.items():
         for i,name in enumerate(meta_names):
             try:
@@ -369,36 +381,18 @@ def _get_rst_path(obj):
     bindir = os.path.dirname(sys.executable)
     branchdir = os.path.dirname(os.path.dirname(bindir))
     writedir = os.path.join(branchdir, 'docs', 'srcdocs', 'packages')
-    #grab the rightmost bit of the dotted filename and add .py & .rst to it
-    if(obj):
-        fname = obj.rsplit(".")
-        pyfile = fname[-1] + ".py"
-        rstfile = fname[-1] + ".rst"
-    else:
-        return
-    #then we'll walk down through the dirs until we find the py file
-    found = 0
-    for root, dirs, files in os.walk(branchdir):
-        #if we're in the directory that has
-        #the py file, record the root, and stop walking
-        if pyfile in files:
-            containing_dir = root
-            found = 1
-            break
-    if found:
-        docs_dir = os.path.join(containing_dir,"docs")
-        if os.path.isdir(docs_dir):
-            textfilepath = os.path.join(docs_dir, rstfile)
-            if os.path.isfile(textfilepath):
-                #The sphinx include directive needs a relative path
-                #to the text file, rel to the docs dir 
-                relpath= os.path.relpath(textfilepath, writedir)
-                if (relpath):
-                    return relpath
-    else:
-        return
     
-    
+    rstfile = os.path.basename(os.path.splitext(obj)[0] + ".rst")
+    pyabs = os.path.join(branchdir, '.'.join(obj.split('/')[:2]), 'src', obj)
+    textfilepath = os.path.join(os.path.dirname(pyabs), 'docs', rstfile)
+    if os.path.isfile(textfilepath):
+        #The sphinx include directive needs a relative path
+        #to the text file, rel to the docs dir 
+        relpath = os.path.relpath(textfilepath, writedir)
+        if (relpath):
+            return relpath
+
+        
 if __name__ == "__main__": #pragma: no cover
     build_docs()
 
