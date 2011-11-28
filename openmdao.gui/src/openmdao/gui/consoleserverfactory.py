@@ -195,7 +195,7 @@ class ConsoleServer(cmd.Cmd):
 
         if isStatement:
             try:
-                exec(line) in self._locals, self._globals
+                exec(line) in self._globals, self._locals
             except Exception, err:
                 self.error(err,sys.exc_info())
         else:
@@ -226,7 +226,7 @@ class ConsoleServer(cmd.Cmd):
         self._globals['__name__'] = '__main__'
         print "Executing",file,"..."
         try:
-            execfile(file)
+            execfile(file, self._globals)
             print "Execution complete."
         except Exception, err:
             self.error(err,sys.exc_info())
@@ -546,7 +546,8 @@ class ConsoleServer(cmd.Cmd):
         slots = []
         for name, value in comp.traits().items():
             if value.is_trait_type(Slot):
-                print name,'is a slot'
+                print name,'is a slot, value=',value,',klass=',value.klass,',type=',type(value).__name__
+                
                 attr = {}
                 attr['name'] = name
                 attr['klass'] = value.klass
@@ -556,15 +557,17 @@ class ConsoleServer(cmd.Cmd):
                 else:
                     attr['value'] = 'filled'
                     attr['type'] = type(value).__name__
-                # meta = comp.get_metadata(name);
-                # if meta:
-                    # for field in ['units','high','low','desc']:
-                        # if field in meta:
-                            # attr[field] = meta[field]
-                        # else:
-                            # attr[field] = ''
-                    # attr['type'] = meta['vartypename']
+                meta = comp.get_metadata(name);
+                if meta:
+                    for field in meta:
+                        print 'meta:',field,'=',meta[field]
+                        if field in meta:
+                            attr[field] = meta[field]
+                        else:
+                            attr[field] = ''
+                    attr['type'] = meta['vartypename']
                 slots.append(attr)
+            
         attrs['Slots'] = slots
 
         return attrs
