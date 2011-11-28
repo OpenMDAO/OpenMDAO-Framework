@@ -4,6 +4,8 @@
           in the neighborhood of a given point
 """
 
+import logging
+
 # pylint: disable-msg=E0611,F0401,E1101
 # E0611 - name cannot be found in a module
 # F0401 - Unable to import module
@@ -14,13 +16,14 @@ from openmdao.main.case import Case
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 
-from numpy import zeros
+from openmdao.main.numpy_fallback import zeros
 
 from enthought.traits.api import HasTraits
-from openmdao.lib.datatypes.api import Int, Enum
-from openmdao.main.interfaces import implements
 from zope.interface import implements, Attribute, Interface
 
+from openmdao.lib.datatypes.api import Int, Enum
+from openmdao.main.interfaces import implements
+from openmdao.util.decorators import stub_if_missing_deps
 
 class IDistributionGenerator(Interface):
     """An iterator that returns lists of input
@@ -127,7 +130,7 @@ class DistributionCaseDriver(CaseIterDriverBase):
         self.distribution_generator.num_parameters = len(params)
         
         for row in self.distribution_generator:
-            case = self.set_parameters(row, Case())
-            case.add_outputs(self.case_outputs)    
+            case = self.set_parameters(row, Case(parent_uuid=self._case_id))
+            case.add_outputs(self.case_outputs)
             
             yield case

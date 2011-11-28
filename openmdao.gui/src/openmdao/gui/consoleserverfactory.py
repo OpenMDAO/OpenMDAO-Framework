@@ -205,13 +205,13 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self.error(err,sys.exc_info())
 
-    def run(self):
+    def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
         if self.top:
             print "Executing..."
             try:
-                self.top.run()
+                self.top.run(*args, **kwargs)
                 print "Execution complete."
             except Exception, err:
                 self.error(err,sys.exc_info())

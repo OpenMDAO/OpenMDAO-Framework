@@ -12,7 +12,7 @@ Let's assume we want to have a variable that represents a set of Cartesian
 coordinates, with the value of the variable being a 3-tuple of floating point
 values representing the *x, y,* and *z* position.
 
-As before when we created a component plugin, we'll use ``plugin_quickstart`` to
+As before when we created a component plugin, we'll use ``plugin quickstart`` to
 generate the directory structure for our distribution, but this time we use
 the **-g** option to specify the plugin group as ``openmdao.variable``.  
 Also, this time around we'll specify a class name of *Coordinates* using
@@ -21,11 +21,11 @@ the **-c** option.
 ::
 
 
-    plugin_quickstart coord -c Coordinates -g openmdao.variable
+    plugin quickstart coord -c Coordinates -g openmdao.variable
 
 
 Since we said our distribution name is going to be *coord*, that means that
-``plugin_quickstart`` created a skeleton of our plugin class definition in 
+``plugin quickstart`` created a skeleton of our plugin class definition in 
 the ``src/coord/coord.py`` file.  After editing that file, it looks like this:
 
 ::
@@ -90,10 +90,10 @@ functional.  As in the earlier section, where we made a component plugin,
 we need to specify the metadata for our distribution by editing the 
 ``setup.cfg`` file and add any extra documentation that we want to the
 ``docs/usage.rst`` file and the ``README.txt`` file.  When that's done,
-as before, we run ``plugin_makedist``; the end result should be a
+as before, we run ``plugin makedist``; the end result should be a
 source distribution named ``coord-0.1.tar.gz``.  The version id of our 
 plugin defaulted to **0.1** because we didn't specify it when we ran
-``plugin_quickstart``.
+``plugin quickstart``.
 
 
 Building a Driver Plugin
@@ -102,16 +102,16 @@ Building a Driver Plugin
 Drivers are Components that have some extra API functions to let them
 deal with iterating over workflows, handling design variables, etc.
 Driver plugins are built and distributed in the same way as component
-plugins, so we can use the ``plugin_quickstart`` script to create a
+plugins, so we can use the ``plugin quickstart`` command to create a
 starting directory structure for our plugin:
 
 ::
 
 
-    plugin_quickstart mydriver -c MyDriver -g openmdao.driver
+    plugin quickstart mydriver -c MyDriver -g openmdao.driver
 
 
-By settng the **-g** option to ``openmdao.driver``, we tell ``plugin_quickstart``
+By settng the **-g** option to ``openmdao.driver``, we tell ``plugin quickstart``
 to generate a source file containing a Driver class.  The rest of the plugin
 development process is the same as described in the :ref:`build-pure-python-plugin-label`
 section.

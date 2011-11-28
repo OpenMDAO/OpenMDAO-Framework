@@ -25,7 +25,7 @@ from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -158,6 +158,7 @@ class Component (Container):
         self._dir_context = None
         
         self.ffd_order = 0
+        self._case_id = ''
 
 
     @property
@@ -1065,10 +1066,10 @@ class Component (Container):
                         rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
                 elif '_rel_dir_path' in top.traits():
-                    top.warning('No parent, using saved relative directory')
+                    top._logger.warning('No parent, using saved relative directory')
                     rel_path = top._rel_dir_path  # Set during save_to_egg().
                 else:
-                    top.warning('No parent, using null relative directory')
+                    top._logger.warning('No parent, using null relative directory')
                     rel_path = ''
 
             # Set top directory.
@@ -1113,8 +1114,10 @@ class Component (Container):
                     
         if call_post_load:
             top.post_load()
-
+            
         observer.complete(name)
+        
+        top.parent = None
         return top
 
     def _restore_files(self, package, rel_path, file_list, do_copy=True,
