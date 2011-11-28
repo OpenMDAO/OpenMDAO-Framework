@@ -51,7 +51,8 @@ class DOEdriver(CaseIterDriverBase):
                     newval=p.high
                 vals.append(newval)
             
-            case = self.set_parameters(vals,Case())
+            case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
+
             # now add events
             for varname in self.get_events(): 
                 case.add_input(varname,True)
