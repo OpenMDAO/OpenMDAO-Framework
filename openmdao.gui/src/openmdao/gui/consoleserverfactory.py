@@ -20,7 +20,7 @@ from openmdao.main.factorymanager import create
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.factorymanager import get_available_types
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
