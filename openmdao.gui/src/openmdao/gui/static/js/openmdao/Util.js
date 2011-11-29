@@ -93,8 +93,10 @@ openmdao.Util = {
      * h:       the height of the window
      * w:       the width of the window
      */
-    htmlWindow: function(html,title,h,w) {
-        var win =  window.open('',title,'width='+w+',height='+h);
+    htmlWindow: function(html,name,h,w) {
+        h = h || 600;
+        w = w || 800;
+        var win =  window.open('',name,'width='+w+',height='+h);
         win.document.open();
         win.document.write(html);
         win.document.close();
