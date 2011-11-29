@@ -21,16 +21,11 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
+    contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
+        promptForRefresh();
+    }));
     historyBox.append(contextMenu)
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
-
-    /** could make a menu/toolbar with this stuff... * /
-    var rateButton = jQuery('<div style="position:absolute; top:3px; right:30px; border:outset">&nbsp Poll &nbsp</div>');
-    rateButton.click(function(){
-         promptForRefresh();
-    });    
-    historyBox.parent().append(rateButton);
-    /**/
 
     // submit a command
     jQuery('#'+formID).submit(function() {
@@ -79,7 +74,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
                     setRefresh(rate*1000);
                 }
                 else {
-                    alert('Invalid refresh rate:',rate);                
+                    alert('Invalid polling rate, polling is disabled.');
+                    setRefresh(0);
                 }
             }
         })
