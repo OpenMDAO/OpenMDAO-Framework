@@ -21,7 +21,8 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
     var self = this,
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id),
         filter_beg = '_.',
-        filter_ext = [ 'pyc', 'pyd' ];
+        filter_ext = [ 'pyc', 'pyd' ],
+        filter_active = true;
         
     // ask model for an update whenever something changes
     model.addListener(update);
@@ -35,75 +36,79 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             ext = name.split('.'),
             ext = ext[ext.length-1];
             
-        if (filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0) {        
-            var html = "<li><a"
+        if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
+            var html = "<li><a";
             if (typeof val === 'object') {    // a folder
-                html += " class='folder' path='"+path+"'>"+name+"</a>"
-                html += "<ul>"
+                html += " class='folder' path='"+path+"'>"+name+"</a>";
+                html += "<ul>";
                 jQuery.each(val,function(path,val) {
-                    html += getFileHTML(path,val)
+                    html += getFileHTML(path,val);
                 })
-                html += "</ul>"
+                html += "</ul>";
             }
-            else
-                html += " class='file' path='"+path+"'>"+name+"</a>"
-            html += "</li>"
+            else {
+                html += " class='file' path='"+path+"'>"+name+"</a>";
+            }
+            html += "</li>";
         }
-        return html
+        return html;
     }
     
     /** if we have an edit function, then call it on the specified file */
     function editFile(pathname) {
         if (typeof code_fn == 'function')
-            code_fn(pathname)
+            code_fn(pathname);
         else
-            alert("Edit function is not defined")
+            alert("Edit function is not defined");
     }
 
     /** display the file in a new window (probably not in a useful format) */
     function viewFile(pathname) {
-        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname,600,800)
+        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname,600,800);
     }
 
 
     /** if we have a view geometry function, then call it on the specified file */
     function viewGeometry(pathname) {
         if (typeof geom_fn == 'function')
-            geom_fn(pathname)
+            geom_fn(pathname);
         else
-            alert("View Geometry function is not defined")
+            alert("View Geometry function is not defined");
     }
 
     /** get a context menu for the specified node */
     function contextMenu(node) {
         // first let's see what was clicked on
-        var isFolder = false, isEmptyFolder = false
+        var isFolder = false, 
+            isEmptyFolder = false;
         if (node.is('.jstree-leaf')) {
-            filenode = node.find('.file')
+            filenode = node.find('.file');
             if (filenode.length == 0) {
-                filenode = node.find('.folder')
+                filenode = node.find('.folder');
                 if (filenode.length > 0) {
-                    isFolder = true
-                    isEmptyFolder = true
+                    isFolder = true;
+                    isEmptyFolder = true;
                 }
-                else
-                    alert("WTF?!") // leaf node that's not a file or empty folder?
+                else {
+                    debug.error("FileTree: leaf node that's not a file or empty folder?",node);
+                }
             }
         }
         else {
-            filenode = node.find('.folder')
+            filenode = node.find('.folder');
             if (filenode.length > 0) {
-                isFolder = true
-                isEmptyFolder = false
+                isFolder = true;
+                isEmptyFolder = false;
             }
-            else
-                alert("WTF?!") // non-leaf node that's not a folder?
+            else {
+                debug.error("FileTree: non-leaf node that's not a folder?",node);
+            }
         }
         
-        var path = filenode.attr('path')
+        var path = filenode.attr('path');
 
         // now create the menu
-        var menu = {}
+        var menu = {};
         
         // if they clicked on a folder then create new files inside that folder
         if (isFolder) {
@@ -138,7 +143,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         // TODO: implement rename()
         menu.rename = {
             "label"  : 'Rename',
-            "action" : function(node) { alert("Rename") }
+            "action" : function(node) { alert("Rename is not implemented yet, sorry :(") }
         }
         
         // if it's not a folder, 
@@ -196,19 +201,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         }
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
-            "action" :  function(node) { 
-                            var save_beg, save_ext;
-                            if (filter_beg.length > 0) {
-                                save_beg = filter_beg;
-                                save_ext = filter_ext;
-                                filter_beg = '';
-                                filter_ext = [];
-                            }
-                            else {
-                                filter_beg = save_beg;
-                                filter_ext = save_ext;
-                            }
-                            update();                        }
+            "action" :  function(node) { filter_active = !filter_active; update(); }
         };
         
         return menu
@@ -234,7 +227,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             "contextmenu" : { "items":  contextMenu }
         })
         .bind("loaded.jstree", function (e) {
-            jQuery('#'+id+' .file').draggable({ helper: 'clone', appendTo: 'body' })
+            jQuery('#'+id+' .file').draggable({ helper: 'clone', appendTo: 'body' });
         })
         .bind("dblclick.jstree", function (e,tree) {
             var node = jQuery(e.target),            

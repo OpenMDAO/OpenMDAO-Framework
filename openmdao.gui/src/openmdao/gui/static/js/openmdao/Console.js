@@ -10,15 +10,19 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         command = jQuery('#'+commandID),
         history = jQuery('#'+historyID),
         historyBox = history.parent(),
-        menuhtml = "<ul id="+historyID+"-menu class='context-menu'>" +
-                   "<li><a onclick=jQuery('#"+historyID+"').text('')>Clear</a></li>" +
-                   "</ul>",
+        contextMenu = jQuery("<ul id="+historyID+"-menu class='context-menu'>"),
         interval = 0,  // ms
         timer = null                   
 
-    // create context menu for history
-    historyBox.append(menuhtml)
-    ContextMenu.set(historyID+"-menu", historyBox.attr('id'));
+    // create context menu for history    
+    contextMenu.append(jQuery('<li>Clear</li>').click(function(ev) {
+        history.html('');
+    }));
+    contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
+        openmdao.Util.htmlWindow(history.html());
+    }));
+    historyBox.append(contextMenu)
+    ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
     /** could make a menu/toolbar with this stuff... * /
     var rateButton = jQuery('<div style="position:absolute; top:3px; right:30px; border:outset">&nbsp Poll &nbsp</div>');

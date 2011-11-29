@@ -76,7 +76,7 @@ var ContextMenu = {
 		ContextMenu.hide(); //Remove any existing menus.
 		left=left||0;top=top||0;//Default values for top and left
 		var menu = document.getElementById(menu_id);
-		menu.style.position = "fixed";
+        menu.style.position = "fixed";
         menu.style.top = top + "px";
 		menu.style.left= left + "px";
 		menu.style.visibility= "visible";
