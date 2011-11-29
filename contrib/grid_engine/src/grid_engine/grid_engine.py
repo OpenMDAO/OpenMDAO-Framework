@@ -1,5 +1,10 @@
 """
 GridEngine resource allocator and object server.
+
+By adding the allocator to the resource allocation manager, resource requests
+will interrogate the allocator to see if it could be used. This would typically
+be done by :class:`ExternalCode` to execute a compute-intensive or parallel
+application.
 """
 
 import fnmatch

@@ -1,8 +1,10 @@
 import ConfigParser
+import glob
 import logging
 import nose
 import os.path
 import pkg_resources
+import shutil
 import sys
 import unittest
 
@@ -29,9 +31,11 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         GridEngineServer._QSUB = self.orig_qsub
         GridEngineAllocator._QHOST = self.orig_qhost
-        for name in ('echo.in, echo.out', 'qsub.out'):
+        for name in ('echo.in', 'echo.out', 'qsub.out'):
             if os.path.exists(name):
                 os.remove(name)
+        for name in glob.glob('GridEngineTestServer*'):
+            shutil.rmtree(name)
 
     def test_allocator(self):
         logging.debug('')

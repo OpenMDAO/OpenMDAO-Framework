@@ -959,6 +959,8 @@ class ClusterAllocator(object):  #pragma no cover
                 multiprocessing.current_process().authkey = authkey
 
         self._name = name
+        self._authkey = authkey
+        self._allow_shell = allow_shell
         self._lock = threading.Lock()
         self._allocators = {}
         self._last_deployed = None
@@ -978,8 +980,8 @@ class ClusterAllocator(object):  #pragma no cover
             host.register(LocalAllocator)
             hosts.append(host)
 
-        self.cluster = mp_distributing.Cluster(hosts, authkey=authkey,
-                                               allow_shell=allow_shell)
+        self.cluster = mp_distributing.Cluster(hosts, authkey=self._authkey,
+                                               allow_shell=self._allow_shell)
         self.cluster.start()
         self._logger.debug('server listening on %r', (self.cluster.address,))
 
@@ -999,7 +1001,7 @@ class ClusterAllocator(object):  #pragma no cover
             if host_ip not in self._allocators:
                 allocator = \
                     manager.openmdao_main_resource_LocalAllocator(name=la_name,
-                                                        allow_shell=allow_shell)
+                                                  allow_shell=self._allow_shell)
                 self._allocators[host_ip] = allocator
                 self._logger.debug('%s allocator %r pid %s', host.hostname,
                                    la_name, allocator.pid)
@@ -1039,14 +1041,14 @@ class ClusterAllocator(object):  #pragma no cover
             allow_shell: True
 
         """
-        nhosts = cfg.get('nhosts')
-        if cfg.has_option('origin'):
-            origin = cfg.getint('origin')
+        nhosts = cfg.getint(self.name, 'nhosts')
+        if cfg.has_option(self.name, 'origin'):
+            origin = cfg.getint(self.name, 'origin')
         else:
             origin = 0
-        pattern = cfg.get('format')
-        if cfg.has_option('python'):
-            python = cfg.get('python')
+        pattern = cfg.get(self.name, 'format')
+        if cfg.has_option(self.name, 'python'):
+            python = cfg.get(self.name, 'python')
         else:
             python = sys.executable
 
