@@ -233,7 +233,12 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             var node = jQuery(e.target),            
                 path = node.attr("path");
             if (node.hasClass('file')) {
-                editFile(path);
+                if (/.geom$/.test(path)) {
+                    viewGeometry('file'+path.replace(/\\/g,'/'));
+                }
+                else {
+                    editFile(path);
+                }
             }
             else if (node.hasClass('folder')) {
                 // what do, what do
