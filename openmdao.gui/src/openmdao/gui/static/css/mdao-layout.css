@@ -162,6 +162,7 @@ dl {
   top: 0;
   bottom: 0;
   margin-bottom: 2.5em;
+  word-wrap: break-word;
   overflow: auto;
 }
 #cmdform {
