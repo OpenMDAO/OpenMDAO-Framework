@@ -8,9 +8,7 @@ openmdao.Model=function() {
      ***********************************************************************/
      
     var self = this,
-        callbacks = [],
-        modes = ['design', 'analysis'],
-        mode = modes[0]
+        callbacks = [];
         
     /***********************************************************************
      *  privileged
