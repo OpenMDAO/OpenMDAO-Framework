@@ -1,0 +1,4 @@
+
+graft src/grid_engine/sphinx_build/html
+recursive-include src/grid_engine/test *.py qsub qhost
+
