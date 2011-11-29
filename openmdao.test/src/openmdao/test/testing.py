@@ -3,6 +3,9 @@ import os
 
 import nose
 
+from openmdao.main.resource import ResourceAllocationManager
+
+
 def run_openmdao_suite():
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao_test.
@@ -36,6 +39,9 @@ def run_openmdao_suite():
     path = os.path.join(base, 'eggsaver.dat')
     if os.path.exists(path):
         os.remove(path)
+
+    # Avoid having any user-defined resources causing problems during testing.
+    ResourceAllocationManager.configure('')
 
     if '--with-coverage' in args:
         args.append('--cover-erase')

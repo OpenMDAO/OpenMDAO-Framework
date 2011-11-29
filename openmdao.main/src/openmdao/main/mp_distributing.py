@@ -369,7 +369,7 @@ class Host(object):  #pragma no cover
         cPickle.dump(data, self.proc.stdin, cPickle.HIGHEST_PROTOCOL)
         self.proc.stdin.close()
 # TODO: put timeout in accept() to avoid this hack.
-        time.sleep(0.5)  # Give the proc time to register startup problems.
+        time.sleep(1)  # Give the proc time to register startup problems.
         self.poll()
         if self.state != 'failed':
             self.state = 'started'
