@@ -277,7 +277,7 @@ if __name__ == '__main__':
                       help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
     parser.add_option("-d","--dir", action="store", type='string', 
                       dest='directory', default='.',
-                      help="name of a directory the build will be created")
+                      help="name of a directory the build will be created in")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     

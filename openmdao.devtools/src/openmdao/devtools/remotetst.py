@@ -3,6 +3,7 @@ import os
 import subprocess
 import atexit
 import fnmatch
+import tempfile
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
@@ -156,7 +157,7 @@ def _is_release_dir(dname):
 def test_release(argv=None):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
-    cleanup_files = ['paramiko.log']
+    cleanup_files = [os.path.join(os.getcwd(), 'paramiko.log')]
     
     if argv is None:
         argv = sys.argv[1:]
@@ -215,7 +216,20 @@ def test_release(argv=None):
         retval = run_host_processes(config, conn, ec2_hosts, options, 
                                     funct=_remote_build_and_test, 
                                     funct_kwargs=funct_kwargs)
-    if not options.keep:
+    else: # just run test locally
+        print 'testing locally...'
+        loctst = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
+        tdir = tempfile.mkdtemp()
+        cleanup_files.append(tdir)
+        if os.path.isdir(fname):
+            if not _is_release_dir(fname):
+                fname = release_dir
+            fname = os.path.join(fname, 'downloads', 'latest', 'go-openmdao.py')
+        subprocess.check_call([sys.executable, loctst, '-f', fname, '-d', tdir])
+    
+    if options.keep:
+        print "the following files/directories were not cleaned up: %s" % cleanup_files
+    else:
         cleanup(*cleanup_files)
 
         

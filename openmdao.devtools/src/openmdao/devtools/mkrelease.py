@@ -256,9 +256,12 @@ def make_release():
                       help="path of config file where info for hosts is located")
     (options, args) = parser.parse_args(sys.argv[1:])
     
-    if not options.version or not options.destdir:
+    if not options.version:
         parser.print_help()
         sys.exit(-1)
+        
+    if not options.destdir:
+        options.destdir = "rel_%s" % options.version
         
     _check_version(options.version)
 
