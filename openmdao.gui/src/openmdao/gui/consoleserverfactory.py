@@ -20,6 +20,7 @@ from openmdao.main.factorymanager import create
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
 from openmdao.main.factorymanager import get_available_types
+from openmdao.main.datatypes.slot import Slot
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
@@ -115,7 +116,6 @@ class ConsoleServer(cmd.Cmd):
         self.prompt = 'OpenMDAO>> '
         
         self._hist    = []      ## No history yet
-        self._locals  = {}      ## Initialize execution namespace for user
         self._globals = {}
 
         self.host = host
@@ -194,12 +194,12 @@ class ConsoleServer(cmd.Cmd):
 
         if isStatement:
             try:
-                exec(line) in self._locals, self._globals
+                exec(line) in self._globals
             except Exception, err:
                 self.error(err,sys.exc_info())
         else:
             try:
-                result = eval(line, self._globals, self._locals)
+                result = eval(line, self._globals)
                 if result is not None:
                     print result
             except Exception, err:
@@ -225,7 +225,7 @@ class ConsoleServer(cmd.Cmd):
         self._globals['__name__'] = '__main__'
         print "Executing",file,"..."
         try:
-            execfile(file,self._globals,self._locals)
+            execfile(file, self._globals)
             print "Execution complete."
         except Exception, err:
             self.error(err,sys.exc_info())
@@ -542,6 +542,27 @@ class ConsoleServer(cmd.Cmd):
                 constraints.append(attr)
             attrs['IneqConstraints'] = constraints
             
+        slots = []
+        for name, value in comp.traits().items():
+            if value.is_trait_type(Slot):
+                attr = {}
+                attr['name'] = name
+                attr['klass'] = value.trait_type.klass.__name__
+                if getattr(comp, name) is None:
+                    attr['filled'] = False
+                else:
+                    attr['filled'] = True
+                meta = comp.get_metadata(name);
+                if meta:
+                    for field in [ 'desc' ]:    # just desc?
+                        if field in meta:
+                            attr[field] = meta[field]
+                        else:
+                            attr[field] = ''
+                    attr['type'] = meta['vartypename']
+                slots.append(attr)            
+        attrs['Slots'] = slots
+
         return attrs
         
     def get_attributes(self,name):

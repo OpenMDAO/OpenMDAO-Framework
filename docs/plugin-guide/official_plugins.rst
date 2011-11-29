@@ -158,7 +158,7 @@ Here is a quick reference for these commands:
 
 .. index:: plugin_install quick command reference
     
-**Quick Command Reference for ``plugin list and plugin install``**
+**Quick Command Reference for "plugin list" and "plugin install"**
 
 
 ==================================   ====================================

@@ -48,6 +48,36 @@ openmdao.PropertiesEditor = function(id,model) {
             nameHeader.html(properties['type']+': '+self.pathname)
             inputs.loadData(properties['Inputs'])
             outputs.loadData(properties['Outputs'])
+            
+            /** experiment using dat.GUI * /
+            var inp_gui = new dat.GUI({ autoPlace: false });
+            inputsDiv.html('')
+            inputsDiv[0].appendChild(inp_gui.domElement);
+            var inp = {};
+            jQuery.each(properties['Inputs'],function(idx,obj) {
+                var name = obj['name'],
+                    val = obj['value'];
+                debug.info(obj,name,val);
+                if (!val || val['py/object']) { val = '' };
+                inp[name] = val;
+                inp_gui.add(inp,name);
+            })
+            debug.info('inp',inp)
+            
+            var out_gui = new dat.GUI({ autoPlace: false });
+            outputsDiv.html('')
+            outputsDiv[0].appendChild(out_gui.domElement);
+            var out = {};
+            jQuery.each(properties['Outputs'],function(idx,obj) {
+                var name = obj['name'],
+                    val = obj['value'];
+                debug.info(obj,name,val);
+                if (!val || val['py/object']) { val = '' };
+                out[name] = val;
+                out_gui.add(out,name);
+            })
+            debug.info('out',out)    
+            /**/
         }
         else {
             nameHeader.html(self.pathname)

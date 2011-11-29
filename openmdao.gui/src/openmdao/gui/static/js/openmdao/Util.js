@@ -93,8 +93,10 @@ openmdao.Util = {
      * h:       the height of the window
      * w:       the width of the window
      */
-    htmlWindow: function(html,title,h,w) {
-        var win =  window.open('',title,'width='+w+',height='+h);
+    htmlWindow: function(html,name,h,w) {
+        h = h || 600;
+        w = w || 800;
+        var win =  window.open('',name,'width='+w+',height='+h);
         win.document.open();
         win.document.write(html);
         win.document.close();
@@ -228,26 +230,42 @@ openmdao.Util = {
         }
     },
 
-    /** get the pathname of the parent component */
-    getParentPath: function(path) {
-        parent_path = '';
-        if (path) {
-            var lastdot = path.lastIndexOf('.');
+    /** get the path from the pathname */
+    getPath: function(pathname) {
+        path = '';
+        if (pathname) {
+            var lastdot = pathname.lastIndexOf('.');
             if (lastdot > 0) {
-                parent_path = path.substring(0,lastdot);
+                path = pathname.substring(0,lastdot);
             }
         }
-        return parent_path;
+        return path;
     },
    
     /** get the name from the pathname */
     getName: function(pathname) {
-        var tok = pathname.split('.'),
-            name = pathname;        
+        var name = pathname,
+            tok = pathname.split('.');
         if (tok.length > 1) {
             name = tok[tok.length-1];
         }
         return name;
+    },
+    
+    /** find the element with the highest z-index of those specified by the jQuery selector */
+    getHighest: function (selector) {
+        var elems = jQuery(selector);
+        var highest_elm = null;
+        var highest_idx = 0;
+        for (var i = 0; i < elems.length; i++)  {
+            var elem = elems[i][0];
+            var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
+            if ((zindex > highest_idx) && (zindex != 'auto')) {
+                highest_elm = elem;
+                highest_idx = zindex;
+            }
+        }
+        return highest_elm;
     },
     
     /** rotate the page */
@@ -260,6 +278,6 @@ openmdao.Util = {
                       + ' transform: rotate('+x+'deg); transform-origin: 50% 50%;';
         document.body.setAttribute('style',rotateCSS);
     },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;}
-    
-    
+
+
 }
