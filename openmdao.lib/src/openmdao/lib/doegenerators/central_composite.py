@@ -4,7 +4,6 @@ into the DOEgenerator socket on a DOEdriver."""
 from itertools import product, permutations, chain
 
 # pylint: disable-msg=E0611,F0401
-from numpy import linspace
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Int, Float, Enum
 

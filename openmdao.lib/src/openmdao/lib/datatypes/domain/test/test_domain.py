@@ -43,8 +43,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(domain.extent[0][:2], (0., 5.))
         self.assertEqual(domain.xyzzy.flow_solution.momentum.shape,
                          (30, 20, 10))
-        self.assertEqual(domain.xyzzy.flow_solution.momentum.extent[:2],
-                         (0., 5.))
 
         domain.rename_zone('wedge', domain.xyzzy)
         self.assertFalse(domain.is_equivalent(wedge, logger))
@@ -193,7 +191,7 @@ class TestCase(unittest.TestCase):
         assert_raises(self,
                       "domain.xyzzy.flow_solution.add_vector('empty', Vector())",
                       globals(), locals(), ValueError,
-                      'vector shape () != existing shape (30, 20, 10)')
+                      'vector real shape () != existing real shape (30, 20, 10)')
 
         self.assertTrue(domain.is_equivalent(wedge, logger))
         pressure2[0][0][0] += 1.
@@ -289,7 +287,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(vec.r, None)
         self.assertEqual(vec.t, None)
         self.assertEqual(vec.shape, ())
-        self.assertEqual(vec.extent, ())
 
         self.assertFalse(vec.is_equivalent([], 'vec', logger))
 
@@ -313,9 +310,7 @@ class TestCase(unittest.TestCase):
         assert_raises(self, 'vec.rotate_about_y(0.)', globals(), locals(),
                       AttributeError, 'rotate_about_y: no Z component')
 
-        self.assertEqual(len(vec.extent), 4)
         wedge.make_cylindrical()
-        self.assertEqual(vec.extent[:2], (0.5, 2.))
 
         wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
         grid = wedge.xyzzy.grid_coordinates
@@ -341,7 +336,6 @@ class TestCase(unittest.TestCase):
         vec.make_cylindrical(grid)
         self.assertFalse(vec.is_equivalent(wedge.xyzzy.flow_solution.momentum,
                                            'momentum', logger))
-        self.assertEqual(vec.extent, (0., 5., -2.5, 0., 0., 5.))
 
     def test_zone(self):
         logging.debug('')
@@ -521,7 +515,7 @@ class TestCase(unittest.TestCase):
                       'FlowSolution is empty!')
         assert_raises(self, 'GridCoordinates().extract(0, -1)',
                       globals(), locals(), RuntimeError,
-                      'Grid is empty!')
+                      'Vector is empty!')
         assert_raises(self, 'Vector().extract(0, -1)',
                       globals(), locals(), RuntimeError,
                       'Vector is empty!')

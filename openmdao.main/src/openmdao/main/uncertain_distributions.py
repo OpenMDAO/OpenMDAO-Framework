@@ -1,6 +1,18 @@
-#import sqlite3
+
 from random import gauss, weibullvariate, uniform
-from scipy.special import gamma
+
+try:
+    # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
+    from math import gamma
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r" % (__file__, err))
+    try:
+        from scipy.special import gamma
+    except ImportError as err:
+        logging.warn("In %s: %r" % (__file__, err))
+    
+from openmdao.util.decorators import stub_if_missing_deps
 
 class UncertainDistribution(object):
     """Base class for uncertain variables."""
@@ -116,6 +128,7 @@ class TriangularDistribution(UncertainDistribution):
     def expected(self):
         return (self.max+self.mode+self.min)/3.
         
+        
 class WeibullDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 
     weibull distribution of uncertainty.
@@ -134,8 +147,12 @@ class WeibullDistribution(UncertainDistribution):
         self.beta = beta
 
     def sample(self):
-        return weibullvariate(self.alpha,self.beta)
+        return weibullvariate(self.alpha, self.beta)
         
     def expected(self):
         return self.alpha*gamma(1.+1./self.beta)
-        
+
+
+if 'gamma' not in globals():
+    WeibullDistribution = stub_if_missing_deps('scipy', 'math:gamma')(WeibullDistribution)
+    

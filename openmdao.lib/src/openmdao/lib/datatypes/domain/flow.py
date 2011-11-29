@@ -27,7 +27,8 @@ class FlowSolution(object):
         self._grid_location = loc
 
     grid_location = property(_get_grid_location, _set_grid_location,
-                             doc='Position at which data is located.')
+                             doc='Position at which data is located,'
+                                 ' must be one of %s' % (_GRID_LOCATIONS,))
     def _get_ghosts(self):
         return self._ghosts
 
@@ -39,6 +40,8 @@ class FlowSolution(object):
             if i < 0:
                 raise ValueError('All ghost values must be >= 0')
         self._ghosts = ghosts
+        for vector in self._vectors:
+            vector.ghosts = ghosts
 
     ghosts = property(_get_ghosts, _set_ghosts,
                       doc='Number of ghost cells for each index direction.')
@@ -55,12 +58,7 @@ class FlowSolution(object):
     @property
     def shape(self):
         """ Data index limits, not including 'ghost/rind' planes. """
-        if self._arrays:
-            ijk = self._arrays[0].shape
-        elif self._vectors:
-            ijk = self._vectors[0].shape
-        else:
-            ijk = ()
+        ijk = self.real_shape
         if len(ijk) < 1:
             return ()
         ghosts = self._ghosts
@@ -72,6 +70,16 @@ class FlowSolution(object):
             return (imax, jmax)
         kmax = ijk[2] - (ghosts[4] + ghosts[5])
         return (imax, jmax, kmax)
+
+    @property
+    def real_shape(self):
+        """ Data index limits, including any 'ghost/rind' planes. """
+        if self._vectors:
+            return self._vectors[0].real_shape
+        elif self._arrays:
+            return self._arrays[0].shape
+        else:
+            return ()
 
     def add_array(self, name, array):
         """
@@ -112,17 +120,13 @@ class FlowSolution(object):
         """
         if hasattr(self, name):
             raise ValueError('name %r is already bound' % name)
-        if self._arrays:
-            ijk = self._arrays[0].shape
-        elif self._vectors:
-            ijk = self._vectors[0].shape
-        else:
-            ijk = ()
-        if ijk and vector.shape != ijk:
-            raise ValueError('vector shape %s != existing shape %s'
-                             % (vector.shape, ijk))
+        shape = self.real_shape
+        if shape and vector.real_shape != shape:
+            raise ValueError('vector real shape %s != existing real shape %s'
+                             % (vector.real_shape, shape))
         setattr(self, name, vector)
         self._vectors.append(vector)
+        vector.ghosts = self.ghosts
         return vector
 
     def copy(self):
@@ -207,7 +211,7 @@ class FlowSolution(object):
             For 1D zones omit jmin, jmax, kmin, and kmax.
 
         ghosts: int[]
-            Numer of ghost/rind planes for the new zone.
+            Number of ghost/rind planes for the new zone.
             If ``None`` the existing specification is used.
         """
         ghosts = ghosts or self._ghosts
@@ -232,37 +236,29 @@ class FlowSolution(object):
 
     def _extract_3d(self, imin, imax, jmin, jmax, kmin, kmax, new_ghosts):
         """ 3D (index space) extraction. """
+        imn, imx, jmn, jmx, kmn, kmx = imin, imax, jmin, jmax, kmin, kmax
         ghosts = self._ghosts
 
         # Support end-relative indexing and adjust for existing ghostplanes.
-        if self._arrays:
-            flow_imax, flow_jmax, flow_kmax = self._arrays[0].shape
-        else:
-            flow_imax, flow_jmax, flow_kmax = self._vectors[0].shape
+        flow_imax, flow_jmax, flow_kmax = self.shape
         if imin < 0:
-            imin += (flow_imax - ghosts[1])
-        else:
-            imin += ghosts[0]
+            imin += flow_imax
+        imin += ghosts[0]
         if imax < 0:
-            imax += (flow_imax - ghosts[1])
-        else:
-            imax += ghosts[0]
+            imax += flow_imax
+        imax += ghosts[0]
         if jmin < 0:
-            jmin += (flow_jmax - ghosts[3])
-        else:
-            jmin += ghosts[2]
+            jmin += flow_jmax
+        jmin += ghosts[2]
         if jmax < 0:
-            jmax += (flow_jmax - ghosts[3])
-        else:
-            jmax += ghosts[2]
+            jmax += flow_jmax
+        jmax += ghosts[2]
         if kmin < 0:
-            kmin += (flow_kmax - ghosts[5])
-        else:
-            kmin += ghosts[4]
+            kmin += flow_kmax
+        kmin += ghosts[4]
         if kmax < 0:
-            kmax += (flow_kmax - ghosts[5])
-        else:
-            kmax += ghosts[4]
+            kmax += flow_kmax
+        kmax += ghosts[4]
 
         # Adjust for new ghost/rind planes.
         imin -= new_ghosts[0]
@@ -273,11 +269,12 @@ class FlowSolution(object):
         kmax += new_ghosts[5]
 
         # Check limits.
-        if imin < 0 or imax > flow_imax or \
-           jmin < 0 or jmax > flow_jmax or \
-           kmin < 0 or kmax > flow_kmax:
+        if imin < 0 or imax > flow_imax+ghosts[1] or \
+           jmin < 0 or jmax > flow_jmax+ghosts[3] or \
+           kmin < 0 or kmax > flow_kmax+ghosts[5]:
             region = (imin, imax, jmin, jmax, kmin, kmax)
-            original = (0, flow_imax, 0, flow_jmax, 0, flow_kmax)
+            original = (0, flow_imax+ghosts[1], 0, flow_jmax+ghosts[3],
+                        0, flow_kmax+ghosts[5])
             raise ValueError('Extraction region %s exceeds original %s'
                              % (region, original))
         # Extract.
@@ -287,7 +284,8 @@ class FlowSolution(object):
                            arr[imin:imax+1, jmin:jmax+1, kmin:kmax+1])
         for vector in self._vectors:
             flow.add_vector(self.name_of_obj(vector),
-                            vector.extract(imin, imax, jmin, jmax, kmin, kmax))
+                            vector.extract(imn, imx, jmn, jmx, kmn, kmx,
+                                           ghosts=new_ghosts))
         flow.grid_location = self.grid_location
         flow.ghosts = new_ghosts
         flow._copy_scalars(self)
@@ -295,29 +293,23 @@ class FlowSolution(object):
 
     def _extract_2d(self, imin, imax, jmin, jmax, new_ghosts):
         """ 2D (index space) extraction. """
+        imn, imx, jmn, jmx, = imin, imax, jmin, jmax
         ghosts = self._ghosts
 
-        # Support end-relative indexing and Adjust for existing ghost planes.
-        if self._arrays:
-            flow_imax, flow_jmax = self._arrays[0].shape
-        else:
-            flow_imax, flow_jmax = self._vectors[0].shape
+        # Support end-relative indexing and adjust for existing ghost planes.
+        flow_imax, flow_jmax = self.shape
         if imin < 0:
-            imin += (flow_imax - ghosts[1])
-        else:
-            imin += ghosts[0]
+            imin += flow_imax
+        imin += ghosts[0]
         if imax < 0:
-            imax += (flow_imax - ghosts[1])
-        else:
-            imax += ghosts[0]
+            imax += flow_imax
+        imax += ghosts[0]
         if jmin < 0:
-            jmin += (flow_jmax - ghosts[3])
-        else:
-            jmin += ghosts[2]
+            jmin += flow_jmax
+        jmin += ghosts[2]
         if jmax < 0:
-            jmax += (flow_jmax - ghosts[3])
-        else:
-            jmax += ghosts[2]
+            jmax += flow_jmax
+        jmax += ghosts[2]
 
         # Adjust for new ghost/rind planes.
         imin -= new_ghosts[0]
@@ -326,9 +318,10 @@ class FlowSolution(object):
         jmax += new_ghosts[3]
 
         # Check limits.
-        if imin < 0 or imax > flow_imax or jmin < 0 or jmax > flow_jmax:
+        if imin < 0 or imax > flow_imax+ghosts[1] or \
+           jmin < 0 or jmax > flow_jmax+ghosts[3]:
             region = (imin, imax, jmin, jmax)
-            original = (0, flow_imax, 0, flow_jmax)
+            original = (0, flow_imax+ghosts[1], 0, flow_jmax+ghosts[3])
             raise ValueError('Extraction region %s exceeds original %s'
                              % (region, original))
         # Extract.
@@ -338,7 +331,8 @@ class FlowSolution(object):
                            arr[imin:imax+1, jmin:jmax+1])
         for vector in self._vectors:
             flow.add_vector(self.name_of_obj(vector),
-                            vector.extract(imin, imax, jmin, jmax))
+                            vector.extract(imn, imx, jmn, jmx,
+                                           ghosts=new_ghosts))
         flow.grid_location = self.grid_location
         flow.ghosts = new_ghosts
         flow._copy_scalars(self)
@@ -346,30 +340,26 @@ class FlowSolution(object):
 
     def _extract_1d(self, imin, imax, new_ghosts):
         """ 1D (index space) extraction. """
+        imn, imx = imin, imax
         ghosts = self._ghosts
 
         # Support end-relative indexing and adjust for existing ghost planes.
-        if self._arrays:
-            flow_imax = self._arrays[0].shape[0]
-        else:
-            flow_imax = self._vectors[0].shape[0]
+        flow_imax, = self.shape
         if imin < 0:
-            imin += (flow_imax - ghosts[1])
-        else:
-            imin += ghosts[0]
+            imin += flow_imax
+        imin += ghosts[0]
         if imax < 0:
-            imax += (flow_imax - ghosts[1])
-        else:
-            imax += ghosts[0]
+            imax += flow_imax
+        imax += ghosts[0]
 
         # Adjust for new ghost/rind planes.
         imin -= new_ghosts[0]
         imax += new_ghosts[1]
 
         # Check limits.
-        if imin < 0 or imax > flow_imax:
+        if imin < 0 or imax > flow_imax+ghosts[1]:
             region = (imin, imax)
-            original = (0, flow_imax)
+            original = (0, flow_imax+ghosts[1])
             raise ValueError('Extraction region %s exceeds original %s'
                              % (region, original))
         # Extract.
@@ -377,7 +367,8 @@ class FlowSolution(object):
         for arr in self._arrays:
             flow.add_array(self.name_of_obj(arr), arr[imin:imax+1])
         for vector in self._vectors:
-            flow.add_vector(self.name_of_obj(vector), vector.extract(imin, imax))
+            flow.add_vector(self.name_of_obj(vector),
+                            vector.extract(imn, imx, ghosts=new_ghosts))
         flow.grid_location = self.grid_location
         flow.ghosts = new_ghosts
         flow._copy_scalars(self)
@@ -420,20 +411,16 @@ class FlowSolution(object):
 
     def _extend_3d(self, axis, delta, npoints):
         """ 3D (index space) extension. """
-        if self._arrays:
-            shape = self._arrays[0].shape
-        else:
-            shape = self._vectors[0].shape
-
+        imax, jmax, kmax = self.real_shape
         if axis == 'i':
-            new_shape = (shape[0] + npoints, shape[1], shape[2])
-            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+            new_shape = (imax + npoints, jmax, kmax)
+            indx = imax if delta > 0 else npoints
         elif axis == 'j':
-            new_shape = (shape[0], shape[1] + npoints, shape[2])
-            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+            new_shape = (imax, jmax + npoints, kmax)
+            indx = jmax if delta > 0 else npoints
         else:
-            new_shape = (shape[0], shape[1], shape[2] + npoints)
-            indx = shape[2] if delta > 0 else new_shape[2] - shape[2]
+            new_shape = (imax, jmax, kmax + npoints)
+            indx = kmax if delta > 0 else npoints
 
         flow = FlowSolution()
         for arr in self._arrays:
@@ -472,23 +459,20 @@ class FlowSolution(object):
                             vector.extend(axis, delta, npoints))
 
         flow.grid_location = self.grid_location
-        flow.ghosts = self._ghosts
+        flow.ghosts = copy.copy(self._ghosts)
         flow._copy_scalars(self)
         return flow
 
     def _extend_2d(self, axis, delta, npoints):
         """ 2D (index space) extension. """
-        if self._arrays:
-            shape = self._arrays[0].shape
-        else:
-            shape = self._vectors[0].shape
+        imax, jmax = self.real_shape
 
         if axis == 'i':
-            new_shape = (shape[0] + npoints, shape[1])
-            indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+            new_shape = (imax + npoints, jmax)
+            indx = imax if delta > 0 else npoints
         else:
-            new_shape = (shape[0], shape[1] + npoints)
-            indx = shape[1] if delta > 0 else new_shape[1] - shape[1]
+            new_shape = (imax, jmax + npoints)
+            indx = jmax if delta > 0 else npoints
 
         flow = FlowSolution()
         for arr in self._arrays:
@@ -518,19 +502,15 @@ class FlowSolution(object):
                             vector.extend(axis, delta, npoints))
 
         flow.grid_location = self.grid_location
-        flow.ghosts = self._ghosts
+        flow.ghosts = copy.copy(self._ghosts)
         flow._copy_scalars(self)
         return flow
 
     def _extend_1d(self, delta, npoints):
         """ 1D (index space) extension. """
-        if self._arrays:
-            shape = self._arrays[0].shape
-        else:
-            shape = self._vectors[0].shape
-
-        new_shape = (shape[0] + npoints,)
-        indx = shape[0] if delta > 0 else new_shape[0] - shape[0]
+        imax, = self.real_shape
+        new_shape = (imax + npoints,)
+        indx = imax if delta > 0 else npoints
 
         flow = FlowSolution()
         for arr in self._arrays:
@@ -550,7 +530,7 @@ class FlowSolution(object):
                             vector.extend('i', delta, npoints))
 
         flow.grid_location = self.grid_location
-        flow.ghosts = self._ghosts
+        flow.ghosts = copy.copy(self._ghosts)
         flow._copy_scalars(self)
         return flow
 
@@ -624,84 +604,97 @@ class FlowSolution(object):
 
     def promote(self):
         """ Promote from N-dimensional to N+1 dimensional index space. """
-        if self._arrays:
-            shape = self._arrays[0].shape
-        elif self._vectors:
-            shape = self._vectors[0].shape
-        else:
-            raise RuntimeError('FlowSolution is empty!')
-
+        shape = self.real_shape
         if len(shape) > 2:
             raise RuntimeError('FlowSolution is 3D')
 
         elif len(shape) > 1:
             imax, jmax = shape
-            for arr in self._arrays:
+            for i, arr in enumerate(self._arrays):
                 name = self.name_of_obj(arr)
                 new_arr = numpy.zeros((imax, jmax, 1))
                 new_arr[:, :, 0] = arr[:, :]
                 setattr(self, name, new_arr)
-        else:
+                self._arrays[i] = new_arr
+        elif len(shape) > 0:
             imax = shape[0]
-            for arr in self._arrays:
+            for i, arr in enumerate(self._arrays):
                 name = self.name_of_obj(arr)
                 new_arr = numpy.zeros((imax, 1))
                 new_arr[:, 0] = arr[:]
                 setattr(self, name, new_arr)
+                self._arrays[i] = new_arr
+        else:
+            raise RuntimeError('FlowSolution is empty!')
 
         for vector in self._vectors:
             vector.promote()
 
     def demote(self):
         """ Demote from N-dimensional to N-1 dimensional index space. """
-        if self._arrays:
-            shape = self._arrays[0].shape
-        elif self._vectors:
-            shape = self._vectors[0].shape
-        else:
-            raise RuntimeError('FlowSolution is empty!')
+        shape = self.real_shape
+        ghosts = self._ghosts
 
         if len(shape) > 2:
             imax, jmax, kmax = shape
-            if imax == 1:
-                for arr in self._arrays:
+            imx = imax - (ghosts[0] + ghosts[1])
+            jmx = jmax - (ghosts[2] + ghosts[3])
+            kmx = kmax - (ghosts[4] + ghosts[5])
+            if imx == 1:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((jmax, kmax))
-                    new_arr[:, :] = arr[0, :, :]
+                    new_arr[:, :] = arr[ghosts[0], :, :]
                     setattr(self, name, new_arr)
-            elif jmax == 1:
-                for arr in self._arrays:
+                    self._arrays[i] = new_arr
+                self._ghosts = (ghosts[2], ghosts[3], ghosts[4], ghosts[5], 0, 0)
+            elif jmx == 1:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((imax, kmax))
-                    new_arr[:, :] = arr[:, 0, :]
+                    new_arr[:, :] = arr[:, ghosts[1], :]
                     setattr(self, name, new_arr)
-            elif kmax == 1:
-                for arr in self._arrays:
+                    self._arrays[i] = new_arr
+                self._ghosts = (ghosts[0], ghosts[1], ghosts[4], ghosts[5], 0, 0)
+            elif kmx == 1:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((imax, jmax))
-                    new_arr[:, :] = arr[:, :, 0]
+                    new_arr[:, :] = arr[:, :, ghosts[2]]
                     setattr(self, name, new_arr)
+                    self._arrays[i] = new_arr
+                self._ghosts = (ghosts[0], ghosts[1], ghosts[2], ghosts[3], 0, 0)
             else:
                 raise RuntimeError('No i, j, or k plane to collapse')
 
         elif len(shape) > 1:
             imax, jmax = shape
-            if imax == 1:
-                for arr in self._arrays:
+            imx = imax - (ghosts[0] + ghosts[1])
+            jmx = jmax - (ghosts[2] + ghosts[3])
+            if imx == 1:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((jmax,))
-                    new_arr[:] = arr[0, :]
+                    new_arr[:] = arr[ghosts[0], :]
                     setattr(self, name, new_arr)
-            elif jmax == 1:
-                for arr in self._arrays:
+                    self._arrays[i] = new_arr
+                self._ghosts = (ghosts[2], ghosts[3], 0, 0, 0, 0)
+            elif jmx == 1:
+                for i, arr in enumerate(self._arrays):
                     name = self.name_of_obj(arr)
                     new_arr = numpy.zeros((imax,))
-                    new_arr[:] = arr[:, 0]
+                    new_arr[:] = arr[:, ghosts[1]]
                     setattr(self, name, new_arr)
+                    self._arrays[i] = new_arr
+                self._ghosts = (ghosts[0], ghosts[1], 0, 0, 0, 0)
             else:
                 raise RuntimeError('No i or j plane to collapse')
-        else:
+
+        elif len(shape) > 0:
             raise RuntimeError('FlowSolution is 1D')
+
+        else:
+            raise RuntimeError('FlowSolution is empty!')
 
         for vector in self._vectors:
             vector.demote()

@@ -9,13 +9,13 @@ from optparse import OptionParser
 import ConfigParser
 from multiprocessing import Process
 
-from fabric.api import settings, show, hide, run, local, put, get
-
 from openmdao.devtools.ec2 import run_on_ec2
 from openmdao.util.debug import print_fuct_call
 
 def run_on_host(host, config, conn, funct, outdir, **kwargs):
     """Runs the given funct on the specified host."""
+    from fabric.api import settings, show, hide
+
     hostdir = os.path.join(outdir, host)
     if not os.path.isdir(hostdir):
         os.makedirs(hostdir)

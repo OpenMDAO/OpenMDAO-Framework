@@ -9,9 +9,6 @@ import tarfile
 import atexit
 from optparse import OptionParser
 
-from fabric.api import run, env, local, put, cd, prompt, hide, hosts, get, settings
-from fabric.state import connections
-
 from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
                                     repo_top, fabric_cleanup
 
@@ -112,6 +109,8 @@ class _CommObj(object):
     pass
 
 def main():
+    from fabric.api import run, local, put, settings
+
     atexit.register(fabric_cleanup, True)
     parser = OptionParser(usage="%prog [options] RELEASE_DIR DESTINATION")
     parser.add_option("--py", action="store", type="string", dest="py",

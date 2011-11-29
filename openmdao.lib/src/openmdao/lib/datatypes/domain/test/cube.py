@@ -1,7 +1,8 @@
 import numpy
 
 from openmdao.units import PhysicalQuantity
-from openmdao.lib.datatypes.domain import DomainObj, Vector, Zone, write_plot3d_q
+from openmdao.lib.datatypes.domain import DomainObj, Vector, Zone, \
+                                          write_plot3d_q
 
 
 def create_cube(shape, width, height, depth):

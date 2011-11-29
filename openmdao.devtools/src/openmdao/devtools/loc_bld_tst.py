@@ -154,7 +154,7 @@ def install_release(url):
     dpath = os.path.join(dn(dn(dn(url))), 'dists')
     args = []
     if os.path.isdir(dpath): 
-        args.append('--disturl=%s' % dpath)
+        args.append('--testurl=%s' % dpath)
     
     print "building openmdao environment [%s]" % ' '.join(args)
     

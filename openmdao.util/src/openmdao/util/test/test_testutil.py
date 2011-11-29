@@ -7,8 +7,6 @@ import os.path
 import sys
 import unittest
 
-import numpy.testing
-
 from openmdao.util.testutil import assert_rel_error
 
 class TestCase(unittest.TestCase):
@@ -25,7 +23,7 @@ class TestCase(unittest.TestCase):
         try:
             assert_rel_error(self, float('nan'), 6.5, 0.0001)
         except AssertionError, exc:
-            msg = "actual nan, desired 6.5, error nan, tolerance 0.0001"
+            msg = "actual nan, desired 6.5, rel error nan, tolerance 0.0001"
             self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected AssertionError')
@@ -33,7 +31,7 @@ class TestCase(unittest.TestCase):
         try:
             assert_rel_error(self, float('inf'), 6.5, 0.0001)
         except AssertionError, exc:
-            msg = "actual inf, desired 6.5, error inf, tolerance 0.0001"
+            msg = "actual inf, desired 6.5, rel error inf, tolerance 0.0001"
             self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected AssertionError')

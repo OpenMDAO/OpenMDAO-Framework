@@ -3,8 +3,6 @@ import os
 import subprocess
 import atexit
 import fnmatch
-from fabric.api import run, env, local, put, cd, get, settings, prompt, \
-                       hide, show
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\

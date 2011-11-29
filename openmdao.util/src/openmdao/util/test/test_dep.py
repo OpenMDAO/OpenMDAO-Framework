@@ -18,19 +18,28 @@ class DepTestCase(unittest.TestCase):
             # don't perform this test if openmdao.main 
             # and openmdao.lib aren't present
             raise SkipTest("this test requires openmdao.main and openmdao.lib")
+        
+        def exclude_tests(pname):
+            parts = pname.split(os.sep)
+            return 'test' in parts
+        
         startdirs = [os.path.dirname(openmdao.main.__file__), 
                      os.path.dirname(openmdao.lib.__file__)]
-        psta = PythonSourceTreeAnalyser(startdirs, os.path.join('*','test','*'))
+        psta = PythonSourceTreeAnalyser(startdirs, exclude_tests)
         
         self.assertTrue('openmdao.main.component.Component' in 
                         psta.graph['openmdao.main.container.Container'])
         self.assertTrue('openmdao.main.assembly.Assembly' in 
                         psta.graph['openmdao.main.component.Component'])
         
-        self.assertTrue('openmdao.lib.datatypes.float.Float' in
+        self.assertTrue('openmdao.main.datatypes.float.Float' in
                         psta.graph['openmdao.main.variable.Variable'])
         
         comps = psta.find_inheritors('openmdao.main.component.Component')
+        icomps = psta.find_inheritors('IComponent')
+        
+        self.assertTrue('openmdao.main.assembly.Assembly' in icomps)
+        
         comps.extend(psta.find_inheritors('openmdao.main.variable.Variable'))
         comps.extend(psta.find_inheritors('enthought.traits.api.Array'))
         comps = [x.rsplit('.',1)[1] for x in comps if '.examples.' not in x and '.optproblems.' not in x]
@@ -43,17 +52,12 @@ class DepTestCase(unittest.TestCase):
             'PassthroughTrait',
             'PassthroughProperty',
             'OptProblem',
+            'TraitArray',
             ])
         cset = cset - excludes
         
         from openmdao.main.api import get_available_types
-        from openmdao.main.factorymanager import _container_groups
-        groups = [ 'openmdao.component',
-                   'openmdao.driver',
-                   'openmdao.variable',
-                   'openmdao.surrogatemodel',
-                   'openmdao.differentiator']
-        types = set([x[0] for x in get_available_types(groups)])
+        types = set([x[0] for x in get_available_types()])
         types = [x.rsplit('.',1)[1] for x in types if x.startswith('openmdao.')]
         
         tset = set(types)

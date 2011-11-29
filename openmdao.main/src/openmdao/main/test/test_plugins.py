@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from subprocess import check_call
 
-from openmdao.main.plugin import plugin_quickstart, plugin_build_docs, plugin_makedist
+from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, plugin_build_docs, plugin_makedist
 from openmdao.util.fileutil import find_files
 
 class PluginsTestCase(unittest.TestCase):
@@ -17,8 +17,9 @@ class PluginsTestCase(unittest.TestCase):
         shutil.rmtree(self.tdir)
 
     def test_quickstart(self):
-        argv = ['foobar', '-v', '1.1', '-d', self.tdir]
-        plugin_quickstart(argv)
+        argv = ['quickstart', 'foobar', '-v', '1.1', '-d', self.tdir]
+        options = _get_plugin_parser().parse_args(argv)
+        plugin_quickstart(options)
         fandd = find_files(self.tdir, nodirs=False)
         self.assertEqual(set([os.path.basename(f) for f in fandd]), 
                          set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',

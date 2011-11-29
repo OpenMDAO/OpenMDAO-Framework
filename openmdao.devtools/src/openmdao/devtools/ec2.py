@@ -6,9 +6,6 @@ import atexit
 import time
 from socket import gethostname
 from optparse import OptionParser
-from fabric.api import run, env, local, put, cd, get, settings, prompt, \
-                       hide, show, hosts
-from fabric.state import connections
 from boto.ec2.connection import EC2Connection
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
@@ -171,6 +168,10 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     the instance being stopped but not terminated.  If the instance was
     pre-existing, then it will just be stopped instead of terminated.
     """
+    # put fabric import here to prevent sphinx doc generation failure
+    # on windows when win32api isn't installed
+    from fabric.api import settings, hide, show
+    
     hostdir = os.path.join(outdir, host)
     if not os.path.isdir(hostdir):
         os.makedirs(hostdir)

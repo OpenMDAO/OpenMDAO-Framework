@@ -1,5 +1,5 @@
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.main.expreval import ExprEvaluator
 
 
@@ -34,11 +34,9 @@ class ExecComp(Component):
                 else:
                     iotype = 'in'
                 self.add(var, Float(iotype=iotype))
-        self.runcount = 0
         
     def execute(self):
         for expr in self.codes:
             exec expr in self.__dict__
-        self.runcount += 1
 
 

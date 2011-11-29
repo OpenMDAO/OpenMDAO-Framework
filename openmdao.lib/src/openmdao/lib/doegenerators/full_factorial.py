@@ -2,16 +2,15 @@
 generates a set of design points that fully span the range of the parameters at the requested
 resolution. It plugs into the DOEgenerator socket on a DOEdriver."""
 
+import logging
 from itertools import product
 
 # pylint: disable-msg=E0611,F0401
-from numpy import linspace
+from openmdao.main.numpy_fallback import linspace
+
 from enthought.traits.api import HasTraits
-from openmdao.main.interfaces import implements
+from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.lib.datatypes.api import Int
-
-from openmdao.main.interfaces import IDOEgenerator
-
 
 class FullFactorial(HasTraits):
     """ DOEgenerator that performs a full-factorial Design of Experiments. Plugs

@@ -42,14 +42,13 @@ setup(name='openmdao.test',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'setuptools',
-          'openmdao.lib',
           'nose',
+          'openmdao.main',
       ],
       entry_points={
-      'openmdao.component': [
+      "openmdao.component": [
           'openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp'
-      ],
+          ],
       "console_scripts": [
           'openmdao_test = openmdao.test.testing:run_openmdao_suite'
           ]
