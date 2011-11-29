@@ -20,7 +20,7 @@ NEWSUMT treats inequality constraints in a way that is especially well suited to
 applications. 
 
 More information on NEWSUMT can be found in the `NEWSUMT Users Guide
-<http://openmdao.org/downloads/user_guides/newsumt-manual.pdf>`_.
+<http://openmdao.org/releases/misc/newsumt-manual.pdf>`_.
 
 
 **Basic Interface**
@@ -217,7 +217,7 @@ Parameter   Description                                          Default
 **Advanced Options** 
 
 There are additional options for advanced users.  More information on these parameters can be
-found in the `NEWSUMT Users Guide <http://openmdao.org/downloads/user_guides/newsumt-manual.pdf>`_. (This doc is
+found in the `NEWSUMT Users Guide <http://openmdao.org/releases/misc/newsumt-manual.pdf>`_. (This doc is
 slow to load.)
 
 
