@@ -168,89 +168,186 @@ def process_options(options, parser):
 
     return (config, conn, ec2_hosts)
 
+def get_times(t1, t2):
+    secs = t2-t1
+    hours = int(secs)/3600
+    mins = int(secs-hours*3600.)/60
+    secs = secs-(hours*3600.)-(mins*60.)
+    return (hours, mins, secs)
+    
+
+def _print_host_codes(processes, p):
+    if len(processes) > 0:
+        remaining = '\nremaining hosts: %s' % ([pr.name for pr in processes],)
+    else:
+        remaining = ''
+    print '%s finished. exit code=%d %s\n' % (p.name, 
+                                              p.exitcode, 
+                                              remaining)
 
 def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
+    t1 = time.time()
+    
+    processes = start_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs)
+    summary = collect_host_processes(processes, _print_host_codes)
+    
+    t2 = time.time()
+    
+    print '\nResult Summary:  Host, Return Code'
+    for k,v in summary.items():
+        print '  %s, %s' % (k, v)
+        
+    hours, mins, secs = get_times(t1, t2)
+    print '\n\nElapsed time:',
+    if hours > 0:
+        print ' %d hours' % hours,
+    if mins > 0:
+        print ' %d minutes' % mins,
+    print ' %5.2f seconds\n\n' % secs
+        
+    return retcode
+
+    
+def collect_host_processes(processes, done_funct=None):
+    summary = {}
+    retcode = 0
+    processes = processes[:]
+    while len(processes) > 0:
+        time.sleep(10)
+        for p in processes:
+            if p.exitcode is not None:
+                summary[p.name] = p.exitcode
+                processes.remove(p)
+                if done_funct is not None:
+                    done_funct(processes, p)
+                break
+            
+    return summary
+
+def start_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
     """Start up a different process for each host in options.hosts. Hosts can
     be either EC2 images, EC2 instances, or any other kind of host as long
     as the caller has ssh access to it.  This routine returns after funct
     has been run on all hosts. Displays total elapsed time when finished.
     """
-    t1 = time.time()
     socket.setdefaulttimeout(30)
-    
-    startdir = os.getcwd()
-    
     processes = []
     
-    retcode = 0
+    for host in options.hosts:
+        if host in ec2_hosts:
+            runner = run_on_ec2
+        else:
+            runner = run_on_host
+        proc_args = [host, config, conn, funct, options.outdir]
+        kw_args = funct_kwargs.copy()
+        debug = config.getboolean(host, 'debug')
+        platform = config.get(host, 'platform')
+        kw_args['debug'] = debug
+        kw_args['hostname'] = host
+        py = config.get(host, 'py')
+        if platform.startswith('win') and '.' in py:
+            # convert pythonX.Y form over to C:/PythonXY/python.exe
+            ver = py[6:]
+            py = 'C:/Python%s/python.exe' % ver.replace('.','')
+        kw_args['pyversion'] = py
+        if debug:
+            print "creating Process"
+            print "   args = %s" % proc_args
+            print "   kw_args = %s" % pprint.pformat(kw_args)
+        p = Process(target=runner,
+                    name=host,
+                    args=proc_args,
+                    kwargs=kw_args)
+        processes.append(p)
+        print "starting process for %s" % p.name
+        p.start()
+        
+    return processes
     
-    summary = {}
+
+
+#def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
+    #"""Start up a different process for each host in options.hosts. Hosts can
+    #be either EC2 images, EC2 instances, or any other kind of host as long
+    #as the caller has ssh access to it.  This routine returns after funct
+    #has been run on all hosts. Displays total elapsed time when finished.
+    #"""
+    #t1 = time.time()
+    #socket.setdefaulttimeout(30)
     
-    try:
-        for host in options.hosts:
-            if host in ec2_hosts:
-                runner = run_on_ec2
-            else:
-                runner = run_on_host
-            proc_args = [host, config, conn, funct, options.outdir]
-            kw_args = funct_kwargs.copy()
-            debug = config.getboolean(host, 'debug')
-            platform = config.get(host, 'platform')
-            kw_args['debug'] = debug
-            kw_args['hostname'] = host
-            py = config.get(host, 'py')
-            if platform.startswith('win') and '.' in py:
-                # convert pythonX.Y form over to C:/PythonXY/python.exe
-                ver = py[6:]
-                py = 'C:/Python%s/python.exe' % ver.replace('.','')
-            kw_args['pyversion'] = py
-            if debug:
-                print "creating Process"
-                print "   args = %s" % proc_args
-                print "   kw_args = %s" % pprint.pformat(kw_args)
-            p = Process(target=runner,
-                        name=host,
-                        args=proc_args,
-                        kwargs=kw_args)
-            processes.append(p)
-            print "starting process for %s" % p.name
-            p.start()
+    #startdir = os.getcwd()
+    
+    #processes = []
+    
+    #retcode = 0
+    
+    #summary = {}
+    
+    #try:
+        #for host in options.hosts:
+            #if host in ec2_hosts:
+                #runner = run_on_ec2
+            #else:
+                #runner = run_on_host
+            #proc_args = [host, config, conn, funct, options.outdir]
+            #kw_args = funct_kwargs.copy()
+            #debug = config.getboolean(host, 'debug')
+            #platform = config.get(host, 'platform')
+            #kw_args['debug'] = debug
+            #kw_args['hostname'] = host
+            #py = config.get(host, 'py')
+            #if platform.startswith('win') and '.' in py:
+                ## convert pythonX.Y form over to C:/PythonXY/python.exe
+                #ver = py[6:]
+                #py = 'C:/Python%s/python.exe' % ver.replace('.','')
+            #kw_args['pyversion'] = py
+            #if debug:
+                #print "creating Process"
+                #print "   args = %s" % proc_args
+                #print "   kw_args = %s" % pprint.pformat(kw_args)
+            #p = Process(target=runner,
+                        #name=host,
+                        #args=proc_args,
+                        #kwargs=kw_args)
+            #processes.append(p)
+            #print "starting process for %s" % p.name
+            #p.start()
         
-        while len(processes) > 0:
-            time.sleep(10)
-            for p in processes:
-                if p.exitcode is not None:
-                    summary[p.name] = p.exitcode
-                    processes.remove(p)
-                    if len(processes) > 0:
-                        remaining = '\nremaining hosts: %s' % ([pr.name for pr in processes],)
-                    else:
-                        remaining = ''
-                    print '%s finished. exit code=%d %s\n' % (p.name, 
-                                                              p.exitcode, 
-                                                              remaining)
-                    if p.exitcode != 0:
-                        retcode = p.exitcode
-                    break
-    finally:
-        os.chdir(startdir)
+        #while len(processes) > 0:
+            #time.sleep(10)
+            #for p in processes:
+                #if p.exitcode is not None:
+                    #summary[p.name] = p.exitcode
+                    #processes.remove(p)
+                    #if len(processes) > 0:
+                        #remaining = '\nremaining hosts: %s' % ([pr.name for pr in processes],)
+                    #else:
+                        #remaining = ''
+                    #print '%s finished. exit code=%d %s\n' % (p.name, 
+                                                              #p.exitcode, 
+                                                              #remaining)
+                    #if p.exitcode != 0:
+                        #retcode = p.exitcode
+                    #break
+    #finally:
+        #os.chdir(startdir)
         
-        t2 = time.time()
-        secs = t2-t1
+        #t2 = time.time()
+        #secs = t2-t1
         
-        hours = int(secs)/3600
-        mins = int(secs-hours*3600.0)/60
-        secs = secs-(hours*3600.)-(mins*60.)
+        #hours = int(secs)/3600
+        #mins = int(secs-hours*3600.0)/60
+        #secs = secs-(hours*3600.)-(mins*60.)
         
-        print '\nResult Summary:  Host, Return Code'
-        for k,v in summary.items():
-            print '  %s, %s' % (k, v)
+        #print '\nResult Summary:  Host, Return Code'
+        #for k,v in summary.items():
+            #print '  %s, %s' % (k, v)
             
-        print '\n\nElapsed time:',
-        if hours > 0:
-            print ' %d hours' % hours,
-        if mins > 0:
-            print ' %d minutes' % mins,
-        print ' %5.2f seconds\n\n' % secs
+        #print '\n\nElapsed time:',
+        #if hours > 0:
+            #print ' %d hours' % hours,
+        #if mins > 0:
+            #print ' %d minutes' % mins,
+        #print ' %5.2f seconds\n\n' % secs
         
-    return retcode
+    #return retcode
