@@ -205,7 +205,10 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
         print ' %d minutes' % mins,
     print ' %5.2f seconds\n\n' % secs
         
-    return retcode
+    for v in summary.values():
+        if v != 0:
+            return v
+    return 0
 
     
 def collect_host_processes(processes, done_funct=None):
