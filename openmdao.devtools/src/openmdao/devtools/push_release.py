@@ -11,6 +11,7 @@ from optparse import OptionParser
 
 from openmdao.devtools.utils import get_openmdao_version, put_dir, tar_dir, \
                                     repo_top, fabric_cleanup
+from openmdao.util.fileutil import find_in_path
 
 
 def _push_release(release_dir, destination, obj, py='python'):
@@ -120,28 +121,44 @@ def main():
     
     comm_obj = _CommObj()
     
-    if len(args) != 2:
+    if len(args) < 1 or len(args) > 2:
         parser.print_help()
         sys.exit(-1)
         
+    if len(args) == 2:
+        destdir = args[1]
+    elif os.path.basename(args[0]).startswith('rel_'):
+        destdir = os.path.join(os.path.dirname(args[0]), 
+                               "release_%s" % os.path.basename(args[0]).split('_', 1)[1])
+        if os.path.isdir(destdir):
+            print "destination dir '%s' already exists" % destdir
+            sys.exit(-1)
+    else:
+        print "destination directory not supplied"
+        parser.print_help()
+        sys.exit(-1)
+            
     if not os.path.isdir(args[0]):
         print "release directory %s not found" % args[0]
         sys.exit(-1)
     
-    if not ('@' in args[1] or ':' in args[1]): # it's a local release test area
-        if not os.path.isdir(args[1]):
-            _setup_local_release_dir(args[1])
+    if find_in_path(options.py) is None:
+        options.py = 'python'
+
+    if not ('@' in destdir or ':' in destdir): # it's a local release test area
+        if not os.path.isdir(destdir):
+            _setup_local_release_dir(destdir)
         comm_obj.put = shutil.copy
         comm_obj.put_dir = shutil.copytree
         comm_obj.run = local
         
-        _push_release(args[0], args[1], comm_obj, py=options.py)
+        _push_release(args[0], destdir, comm_obj, py=options.py)
     else: # assume args[1] is a remote user@host:destdir
         comm_obj.put = put
         comm_obj.put_dir = put_dir
         comm_obj.run = run
         
-        destparts = args[1].split(':', 1)
+        destparts = destdir.split(':', 1)
         if len(destparts) > 1:
             home = destparts[1]
         else:

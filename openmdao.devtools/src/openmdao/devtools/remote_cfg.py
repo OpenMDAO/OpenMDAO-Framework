@@ -4,6 +4,7 @@ import getpass
 import datetime
 import time
 import socket
+import pprint
 
 from optparse import OptionParser
 import ConfigParser
@@ -87,7 +88,14 @@ def read_config(options, parser):
     
     hostlist = config.sections()
     if options.allhosts:
-        hosts = hostlist
+        if options.buildtype:
+            btype = 'test_'+options.buildtype
+            hosts = [h for h in hostlist if config.has_option(h, btype) 
+                                           and config.getboolean(h, btype)]
+            if len(hosts) == 0:
+                print "WARNING: no hosts found with %s = true" % btype
+        else:
+            hosts = hostlist
     elif options.hosts:
         hosts = []
         for host in options.hosts:
@@ -196,6 +204,10 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
                 ver = py[6:]
                 py = 'C:/Python%s/python.exe' % ver.replace('.','')
             kw_args['pyversion'] = py
+            if debug:
+                print "creating Process"
+                print "   args = %s" % proc_args
+                print "   kw_args = %s" % pprint.pformat(kw_args)
             p = Process(target=runner,
                         name=host,
                         args=proc_args,
@@ -205,7 +217,7 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
             p.start()
         
         while len(processes) > 0:
-            time.sleep(1)
+            time.sleep(10)
             for p in processes:
                 if p.exitcode is not None:
                     summary[p.name] = p.exitcode

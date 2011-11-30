@@ -71,7 +71,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     reservation = img.run(key_name=key_name, 
                           security_groups=security_groups,
                           instance_type=instance_type)
-    
+        
     inst = reservation.instances[0]
     check_inst_state(inst, u'running', imgname=name, debug=debug)
     if inst.state != u'running':
@@ -241,7 +241,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
         with open('console.out', 'wb') as f:
             f.write(out)
     except:
-        pass
+        outf.write("\ncouldn't retrieve console output\n")
 
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
