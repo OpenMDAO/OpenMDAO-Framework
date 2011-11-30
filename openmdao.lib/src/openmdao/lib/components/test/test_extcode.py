@@ -43,7 +43,7 @@ class Unique(ExternalCode):
         self.external_files = [
             FileMetadata(path='sleep.py', input=True, constant=True),
         ]
-        self.command = 'python sleep.py 1'
+        self.command = ['python', 'sleep.py', '1']
 
 
 class Model(Assembly):
@@ -87,7 +87,7 @@ class TestCase(unittest.TestCase):
 
         extcode = set_as_top(ExternalCode())
         extcode.timeout = 5
-        extcode.command = 'python sleep.py 1 %s' % dummy
+        extcode.command = ['python', 'sleep.py', '1', dummy]
         extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
         extcode.external_files.extend((
             FileMetadata(path='sleep.py', input=True),
@@ -104,7 +104,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
 
         # Now show that existing outputs are removed before execution.
-        extcode.command = 'python sleep.py 1'
+        extcode.command = ['python', 'sleep.py', '1']
         extcode.run()
         msg = "[Errno 2] No such file or directory: 'dummy_output'"
         assert_raises(self, "open(dummy, 'r')", globals(), locals(),
@@ -121,7 +121,7 @@ class TestCase(unittest.TestCase):
 
         extcode = set_as_top(ExternalCode())
         extcode.timeout = 5
-        extcode.command = 'python sleep.py 1 %s' % dummy
+        extcode.command = ['python', 'sleep.py', '1', dummy]
         extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
         extcode.external_files.extend((
             FileMetadata(path='sleep.py', input=True),
@@ -146,7 +146,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_bad_alloc')
 
         extcode = set_as_top(ExternalCode())
-        extcode.command = 'python sleep.py'
+        extcode.command = ['python', 'sleep.py']
         extcode.resources = {'no_such_resource': 1}
 
         try:
@@ -197,7 +197,7 @@ class TestCase(unittest.TestCase):
         extcode = set_as_top(ExternalCode())
         extcode.name = 'ExternalCode'
         extcode.timeout = 5
-        extcode.command = 'python sleep.py 1'
+        extcode.command = ['python', 'sleep.py', '1']
         extcode.external_files = [
             FileMetadata(path='sleep.py', input=True, constant=True),
         ]
@@ -213,7 +213,7 @@ class TestCase(unittest.TestCase):
         # Set timeout to less than execution time.
         extcode = set_as_top(ExternalCode())
         extcode.timeout = 1
-        extcode.command = 'python sleep.py 5'
+        extcode.command = ['python', 'sleep.py', '5']
         try:
             extcode.run()
         except RunInterrupted as exc:
@@ -228,25 +228,19 @@ class TestCase(unittest.TestCase):
 
         # Set command to nonexistant path.
         extcode = set_as_top(ExternalCode())
-        extcode.command = 'xyzzy'
-        extcode.stdout = 'badcmd.out'
-        extcode.stderr = ExternalCode.STDOUT
+        extcode.command = ['xyzzy']
         try:
             extcode.run()
-        except RuntimeError as exc:
-            if sys.platform == 'win32':
-                self.assertTrue('Operation not permitted' in str(exc))
-                self.assertEqual(extcode.return_code, 1)
-            else:
-                msg = ': return_code = 127'
-                self.assertEqual(str(exc).startswith(msg), True)
-                self.assertEqual(extcode.return_code, 127)
-            self.assertEqual(os.path.exists(extcode.stdout), True)
+        except OSError as exc:
+            msg = '[Errno 2] No such file or directory'
+            self.assertEqual(str(exc), msg)
+            self.assertEqual(extcode.return_code, -999999)
+        except WindowsError as exc:
+            msg = '[Error 2] The system cannot find the file specified'
+            self.assertEqual(str(exc), msg)
+            self.assertEqual(extcode.return_code, -999999)
         else:
-            self.fail('Expected RuntimeError')
-        finally:
-            if os.path.exists(extcode.stdout):
-                os.remove(extcode.stdout)
+            self.fail('Expected OSError or WindowsError')
 
     def test_nullcmd(self):
         logging.debug('')
@@ -308,7 +302,7 @@ class TestCase(unittest.TestCase):
             cmd = exec_comp.command
 
             try:
-                exec_comp.command = 'this-should-fail'
+                exec_comp.command = ['this-should-fail']
             except RemoteError as exc:
                 msg = "RoleError: No __setattr__ access to 'command'"
                 logging.debug('msg: %s', msg)
@@ -317,14 +311,14 @@ class TestCase(unittest.TestCase):
             else:
                 self.fail('Expected RemoteError')
 
-            exec_comp.set('command', 'this-should-pass')
+            exec_comp.set('command', ['this-should-pass'])
 
             # Try to set via remote-looking access.
             creds = get_credentials()
             creds.client_creds = Credentials()
             logging.debug('    using %s', creds)
             try:
-                code = "exec_comp.set('command', 'this-should-fail')"
+                code = "exec_comp.set('command', ['this-should-fail'])"
                 assert_raises(self, code, globals(), locals(), RuntimeError,
                               ": 'command' may not be set() remotely")
             finally:
