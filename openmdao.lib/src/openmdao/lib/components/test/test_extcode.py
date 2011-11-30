@@ -232,15 +232,14 @@ class TestCase(unittest.TestCase):
         try:
             extcode.run()
         except OSError as exc:
-            msg = '[Errno 2] No such file or directory'
-            self.assertEqual(str(exc), msg)
-            self.assertEqual(extcode.return_code, -999999)
-        except WindowsError as exc:
-            msg = '[Error 2] The system cannot find the file specified'
+            if sys.platform == 'win32':
+                msg = '[Error 2] The system cannot find the file specified'
+            else:
+                msg = '[Errno 2] No such file or directory'
             self.assertEqual(str(exc), msg)
             self.assertEqual(extcode.return_code, -999999)
         else:
-            self.fail('Expected OSError or WindowsError')
+            self.fail('Expected OSError')
 
     def test_nullcmd(self):
         logging.debug('')
