@@ -315,10 +315,13 @@ class Container(HasTraits):
         if self._cached_traits_ is None:
             self._cached_traits_ = self.traits()
             self._cached_traits_.update(self._instance_traits())
-        trait = self._cached_traits_.get(name)
-        if copy and trait:
-            return self.trait(name, copy=copy)
-        return trait
+        if copy:
+            if self._cached_traits_.get(name):
+                return self.trait(name, copy=copy)
+            else:
+                return None
+        else:
+            return self._cached_traits_.get(name)
 
     #
     #  HasTraits overrides
@@ -407,8 +410,7 @@ class Container(HasTraits):
 
     def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
-        keep track of dynamically added traits for serialization and to add
-        callbacks for input Variables.
+        keep track of dynamically added traits for serialization.
         """
         # When a trait with sub-traits is added (like a List or Dict),
         # HasTraits calls add_trait AGAIN for the sub-trait, so we
@@ -427,9 +429,6 @@ class Container(HasTraits):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
         """
-        ## this just forces the regeneration (lazily) of the lists of
-        ## inputs, outputs, and containers
-        #self._trait_added_changed(name)
         try:
             del self._added_traits[name]
         except KeyError:
