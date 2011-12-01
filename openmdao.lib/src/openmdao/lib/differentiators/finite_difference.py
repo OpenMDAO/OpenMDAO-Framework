@@ -1,5 +1,7 @@
-""" Differentiates a driver's workflow using the finite difference method. A
-variety of difference types are available for both first and second order."""
+""" Differentiates a driver's workflow using the Finite Difference with Analytical
+Derivatives (FDAD) method.
+
+A variety of difference types are available for both first and second order."""
 
 import logging
 from ordereddict import OrderedDict
@@ -35,9 +37,9 @@ def diff_2nd_xy(fpp, fpm, fmp, fmm, eps1, eps2):
 
 
 class FiniteDifference(HasTraits):
-    """ Differentiates a driver's workflow using the finite difference method.
-    A variety of difference types are available for both first and second
-    order."""
+    """ Differentiates a driver's workflow using the Finite Difference with
+    Analytical Derivatives (FDAD) method. A variety of difference types are
+    available for both first and second order."""
 
     implements(IDifferentiator)
     
