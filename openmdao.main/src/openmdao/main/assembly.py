@@ -168,6 +168,9 @@ class Assembly (Component):
         except ValueError:
             return (None, self, path)
         
+        t = self.get_trait(compname)
+        if t and t.iotype:
+            return (None, self, path)
         return (compname, getattr(self, compname), varname)
 
     @rbac(('owner', 'user'))
