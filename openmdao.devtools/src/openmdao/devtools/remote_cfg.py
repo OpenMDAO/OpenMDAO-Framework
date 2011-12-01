@@ -177,6 +177,7 @@ def get_times(t1, t2):
     
 
 def _print_host_codes(processes, p):
+    """This is called after the given process has completed."""
     if len(processes) > 0:
         remaining = '\nremaining hosts: %s' % ([pr.name for pr in processes],)
     else:
@@ -186,10 +187,13 @@ def _print_host_codes(processes, p):
                                               remaining)
 
 def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
+    """This routine returns after funct has been run on all hosts. Displays
+    total elapsed time when finished.
+    """
     t1 = time.time()
     
     processes = start_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs)
-    summary = collect_host_processes(processes, _print_host_codes)
+    summary = collect_host_processes(processes, [_print_host_codes])
     
     t2 = time.time()
     
@@ -211,7 +215,15 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
     return 0
 
     
-def collect_host_processes(processes, done_funct=None):
+def collect_host_processes(processes, done_functs=()):
+    """Returns a summary of return codes for each process after
+    they are all finished.
+    
+    done_functs: iter of functs
+        Each function in done_functs will be executed with the args (processes, p)
+        where p is the process that has just completed and processes is the list
+        of remaining processes still (possibly) running.
+    """
     summary = {}
     retcode = 0
     processes = processes[:]
@@ -221,8 +233,8 @@ def collect_host_processes(processes, done_funct=None):
             if p.exitcode is not None:
                 summary[p.name] = p.exitcode
                 processes.remove(p)
-                if done_funct is not None:
-                    done_funct(processes, p)
+                for f in done_functs:
+                    f(processes, p)
                 break
             
     return summary
@@ -230,8 +242,7 @@ def collect_host_processes(processes, done_funct=None):
 def start_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
     """Start up a different process for each host in options.hosts. Hosts can
     be either EC2 images, EC2 instances, or any other kind of host as long
-    as the caller has ssh access to it.  This routine returns after funct
-    has been run on all hosts. Displays total elapsed time when finished.
+    as the caller has ssh access to it.  
     """
     socket.setdefaulttimeout(30)
     processes = []
