@@ -21,6 +21,9 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
+    contextMenu.append(jQuery('<li>Update</li>').click(function(ev) {
+        update();
+    }));
     contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
         promptForRefresh();
     }));

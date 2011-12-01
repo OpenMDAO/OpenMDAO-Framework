@@ -163,9 +163,13 @@ def Connections(request,pathname):
         return HttpResponse(connections,mimetype='application/json')
 
 @never_cache
-def Dataflow(request,name):
+def Structure(request,name):
+    ''' get the structure of the specified assembly, or of the global 
+        namespace if no pathname is specified, consisting of the list
+        of components and the connections between them
+    '''
     cserver = server_mgr.console_server(request.session.session_key)
-    json = cserver.get_dataflow(name)
+    json = cserver.get_structure(name)
     return HttpResponse(json,mimetype='application/json')
 
 @never_cache

@@ -30,12 +30,12 @@ jQuery(function() {
     (function() {
         var model = openmdao.model;
         
-        var data = new openmdao.DataflowDiagram("dataflow",model,''),
-            work = new openmdao.WorkflowDiagram("workflow",model,'driver'),
+        var data = new openmdao.DataflowDiagram("structure",model,''),
+            work = new openmdao.WorkflowDiagram("workflow",model,''),
             code = new openmdao.CodeEditor("code",model),
             prop = new openmdao.PropertiesEditor("propertieseditor",model);
             
-        function data_fn(path) { data.showDataflow(path); jQuery('#dataflow_tab').click(); }
+        function data_fn(path) { data.showDataflow(path); jQuery('#structure_tab').click(); }
         function work_fn(path) { work.showWorkflow(path); jQuery('#workflow_tab').click(); }
         function code_fn(path) { code.editFile(path);     jQuery('#code_tab').click(); }
         function prop_fn(path) { prop.editObject(path);   }
@@ -55,6 +55,6 @@ jQuery(function() {
     
     // start with objects, workflow & properties visible
     jQuery('#otree_tab').click();
-    jQuery('#dataflow_tab').click();
+    jQuery('#structure_tab').click();
     jQuery('#properties_tab').click();
 });
