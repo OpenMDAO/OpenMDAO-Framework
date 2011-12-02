@@ -113,13 +113,17 @@ class TestCase(unittest.TestCase):
                       globals(), locals(), RuntimeError,
                       "'no-such-file' does not exist")
 
-        # Try non-private file.
+        # Try insecure file.
         if sys.platform != 'win32' or HAVE_PYWIN32:
             with open('hosts.allow', 'w') as out:
                 out.write('\n')
-        assert_raises(self, "read_allowed_hosts('hosts.allow')",
-                      globals(), locals(), RuntimeError,
-                      "'hosts.allow' is not private")
+            os.chmod('hosts.allow', 0666)
+            try:
+                assert_raises(self, "read_allowed_hosts('hosts.allow')",
+                              globals(), locals(), RuntimeError,
+                              "'hosts.allow' is not private")
+            finally:
+                os.remove('hosts.allow')
 
 
 if __name__ == '__main__':

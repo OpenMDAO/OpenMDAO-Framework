@@ -198,7 +198,7 @@ class ResourceAllocationManager(object):
             cfg = ConfigParser.ConfigParser()
             cfg.readfp(inp)
             for name in cfg.sections():
-                self._logger.debug('    name: %s', name)
+                self._logger.debug('  name: %s', name)
                 for allocator in self._allocators:
                     if allocator.name == name:
                         self._logger.debug('        existing allocator')

@@ -6,6 +6,7 @@ import atexit
 import ConfigParser
 import cPickle
 import errno
+import getpass
 import inspect
 import logging
 import os.path
@@ -111,7 +112,8 @@ def setup_tunnel(address, port):
 
     - The remote login name matches the local login name.
     - `port` is available on the local host.
-    - 'putty' is available on Windows, 'ssh' on other platforms.
+    - 'plink' is available on Windows, 'ssh' on other platforms.
+    - No user interaction is required to connect via 'plink'/'ssh'.
 
     address: string
         IPv4 address to tunnel to.
@@ -125,12 +127,15 @@ def setup_tunnel(address, port):
     logname = os.path.join(os.getcwd(), logname)
     stdout = open(logname, 'w')
 
+    user = getpass.getuser()
     if sys.platform == 'win32':  # pragma no cover
         stdin = open('nul:', 'r')
-        args = ['putty', '-L', '%d:localhost:%d' % (port, port), address]
+        args = ['plink', '-ssh', '-l', user,
+                '-L', '%d:localhost:%d' % (port, port), address]
     else:
         stdin = open('/dev/null', 'r')
-        args = ['ssh', '-L', '%d:localhost:%d' % (port, port), address]
+        args = ['ssh', '-l', user,
+                '-L', '%d:localhost:%d' % (port, port), address]
 
     tunnel_proc = ShellProc(args, stdin=stdin, stdout=stdout, stderr=STDOUT)
     sock = socket.socket(socket.AF_INET)
