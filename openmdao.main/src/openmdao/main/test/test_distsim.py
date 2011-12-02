@@ -326,8 +326,11 @@ class TestCase(unittest.TestCase):
                                               allowed_users=allowed_users,
                                               allowed_types=allowed_types)
             self.servers.append(server)
-            self.address, self.port, self.tunnel, self.key = \
-                read_server_config(server_cfg)
+            cfg = read_server_config(server_cfg)
+            self.address = cfg['address']
+            self.port = cfg['port']
+            self.tunnel = cfg['tunnel']
+            self.key = cfg['key']
             logging.debug('server pid: %s', server.pid)
             logging.debug('server address: %s', self.address)
             logging.debug('server port: %s', self.port)
@@ -588,10 +591,13 @@ class TestCase(unittest.TestCase):
             server, server_cfg = start_server(authkey=authkey,
                                               allowed_types=allowed_types,
                                               timeout=30)
-            address, port, tunnel, key = read_server_config(server_cfg)
+            cfg = read_server_config(server_cfg)
+            address = cfg['address']
+            port = cfg['port']
+            key = cfg['key']
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
-            logging.debug('server tunnel: %s', tunnel)
+            logging.debug('server tunnel: %s', cfg['tunnel'])
             logging.debug('server key: %s', key)
         finally:
             os.chdir('..')
