@@ -77,6 +77,7 @@ class GridEngineAllocator(ResourceAllocator):
         """
         if cfg.has_option(self.name, 'pattern'):
             self.pattern = cfg.get(self.name, 'pattern')
+            self._logger.debug('    pattern: %s', self.pattern)
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -124,8 +125,8 @@ class GridEngineAllocator(ResourceAllocator):
         if 'n_cpus' in resource_desc:
             value = resource_desc['n_cpus']
             if len(hostnames) < value:
-                return (-2, {'ncpus': (value, len(hostnames))})
-
+                return (-2, {'ncpus': 'want %s, have %s'
+                                      %(value, len(hostnames))})
         criteria = {
             'hostnames'  : hostnames,
             'total_cpus' : len(hostnames),
@@ -153,11 +154,11 @@ class GridEngineAllocator(ResourceAllocator):
             value = resource_desc[key]
             if key == 'localhost':
                 if value:
-                    return (-2, {key : value})
+                    return (-2, {key: 'requested local host'})
             elif key == 'n_cpus':
                 pass  # Handle in upper layer.
             else:
-                return (-2, {key : (value, 'unrecognized key')})
+                return (-2, {key: 'unrecognized key'})
         return (0, {})
 
     def _get_hosts(self):
@@ -407,7 +408,7 @@ class GridEngineServer(ObjServer):
             for arg in resource_desc['args']:
                 cmd.append(self._fix_path(arg))
 
-        self._logger.critical('%r', ' '.join(cmd))
+        self._logger.info('%r', ' '.join(cmd))
         try:
             process = ShellProc(cmd, '/dev/null', 'qsub.out', STDOUT, env)
         except Exception as exc:
