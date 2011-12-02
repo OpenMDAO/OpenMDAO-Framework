@@ -193,35 +193,41 @@ class ResourceAllocationManager(object):
 
     def _configure(self, config_filename):
         """ Configure manager instance. """
+        self._logger.debug('Configuring from %r', config_filename)
         with open(config_filename, 'r') as inp:
             cfg = ConfigParser.ConfigParser()
             cfg.readfp(inp)
             for name in cfg.sections():
+                self._logger.debug('    name: %s', name)
                 for allocator in self._allocators:
                     if allocator.name == name:
+                        self._logger.debug('        existing allocator')
                         allocator.configure(cfg)
                         break
                 else:
                     classname = cfg.get(name, 'classname')
+                    self._logger.debug('    classname: %s', classname)
                     mod_name, dot, cls_name = classname.rpartition('.')
                     try:
                         __import__(mod_name)
                     except ImportError as exc:
-                        raise RuntimeError("%s: Can't import %r: %s"
+                        raise RuntimeError("RAM configure %s: can't import %r: %s"
                                            % (name, mod_name, exc))
                     module = sys.modules[mod_name]
                     if not hasattr(module, cls_name):
-                        raise RuntimeError("%s: no class %r in %s"
+                        raise RuntimeError('RAM configure %s: no class %r in %s'
                                            % (name, cls_name, mod_name))
                     cls = getattr(module, cls_name)
                     if cfg.has_option(name, 'authkey'):
                         authkey = cfg.get(name, 'authkey')
                     else:
                         authkey = 'PublicKey'
+                    self._logger.debug('    authkey: %s', authkey)
                     if cfg.has_option(name, 'allow_shell'):
                         allow_shell = cfg.getboolean(name, 'allow_shell')
                     else:
                         allow_shell = False
+                    self._logger.debug('    allow_shell: %s', allow_shell)
                     allocator = cls(name=name, authkey=authkey,
                                     allow_shell=allow_shell)
                     allocator.configure(cfg)
@@ -404,8 +410,10 @@ class ResourceAllocationManager(object):
         for allocator in self._allocators:
             estimate, criteria = allocator.time_estimate(resource_desc)
             if estimate == -2:
-                self._logger.debug('%r returned %g %s',
-                                   allocator.name, estimate, criteria)
+                key = criteria.keys()[0]
+                info = criteria[key]
+                self._logger.debug('%r incompatible: key %s: %s',
+                                   allocator.name, key, info)
             else:
                 self._logger.debug('%r returned %g',
                                    allocator.name, estimate)
@@ -594,20 +602,20 @@ class ResourceAllocator(ObjServerFactory):
             elif key == 'required_distributions':
                 missing = self.check_required_distributions(value)
                 if missing:
-                    return (-2, {key: missing})
+                    return (-2, {key: 'missing %s' % missing})
             elif key == 'orphan_modules':
                 missing = self.check_orphan_modules(value)
                 if missing:
-                    return (-2, {key: missing})
+                    return (-2, {key: 'missing %s' % missing})
             elif key == 'python_version':
                 if sys.version[:3] != value:
-                    return (-2, {key : (value, sys.version[:3])})
+                    return (-2, {key : 'want %s, have %s' % (value, sys.version[:3])})
             elif key == 'exclude':
                 if socket.gethostname() in value:
-                    return (-2, {key : (value, socket.gethostname())})
+                    return (-2, {key : 'excluded host %s' % socket.gethostname()})
             elif key == 'allocator':
                 if self.name != value:
-                    return (-2, {key : (value, self.name)})
+                    return (-2, {key : 'wrong allocator'})
             else:
                 keys.append(key)
         return (0, keys)
@@ -724,6 +732,7 @@ class LocalAllocator(ResourceAllocator):
         """
         if cfg.has_option(self.name, 'total_cpus'):
             value = cfg.getint(self.name, 'total_cpus')
+            self._logger.debug('    total_cpus: %s', value)
             if value > 0:
                 self.total_cpus = value
             else:
@@ -732,6 +741,7 @@ class LocalAllocator(ResourceAllocator):
 
         if cfg.has_option(self.name, 'max_load'):
             value = cfg.getfloat(self.name, 'max_load')
+            self._logger.debug('    max_load: %s', value)
             if value > 0.:
                 self.max_load = value
             else:
@@ -820,12 +830,13 @@ class LocalAllocator(ResourceAllocator):
             value = resource_desc[key]
             if key == 'localhost':
                 if not value:
-                    return (-2, {key : value})
+                    return (-2, {key : 'requested remote host'})
             elif key == 'n_cpus':
                 if value > self.total_cpus:
-                    return (-2, {key : (value, self.total_cpus)})
+                    return (-2, {key : 'want %s, have %s'
+                                       % (value, self.total_cpus)})
             else:
-                return (-2, {key : (value, 'unrecognized key')})
+                return (-2, {key : 'unrecognized key'})
         return (0, {})
 
     @rbac('*')
@@ -907,10 +918,10 @@ class RemoteAllocator(object):
             value = rdesc[key]
             if key == 'localhost':
                 if value:
-                    return None, (-2, {'localhost': value})
+                    return None, (-2, {key: 'requested local host'})
             if key == 'allocator':
                 if value != self.name:
-                    return None, (-2, {'allocator': (value, self.name)})
+                    return None, (-2, {key: 'wrong allocator'})
             del rdesc[key]
         return (rdesc, None)
 
@@ -1042,15 +1053,19 @@ class ClusterAllocator(object):  #pragma no cover
 
         """
         nhosts = cfg.getint(self.name, 'nhosts')
+        self._logger.debug('    nhosts: %s', nhosts)
         if cfg.has_option(self.name, 'origin'):
             origin = cfg.getint(self.name, 'origin')
         else:
             origin = 0
+        self._logger.debug('    origin: %s', origin)
         pattern = cfg.get(self.name, 'format')
+        self._logger.debug('    format: %s', pattern)
         if cfg.has_option(self.name, 'python'):
             python = cfg.get(self.name, 'python')
         else:
             python = sys.executable
+        self._logger.debug('    python: %s', python)
 
         machines = []
         for i in range(origin, nhosts+origin):
@@ -1158,7 +1173,7 @@ class ClusterAllocator(object):  #pragma no cover
         value = resource_desc.get(key, '')
         if value:
             if self.name != value:
-                return (-2, {key: (value, self.name)})
+                return (-2, {key: 'wrong allocator'})
             else:
                 # Any host in our cluster is OK.
                 resource_desc = resource_desc.copy()

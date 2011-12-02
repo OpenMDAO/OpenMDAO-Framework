@@ -21,7 +21,7 @@ from multiprocessing.managers import BaseProxy
 
 from openmdao.main.rbac import rbac_methods
 
-from openmdao.util.publickey import decode_public_key
+from openmdao.util.publickey import decode_public_key, is_private, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
 
 # Names of attribute access methods requiring special handling.
@@ -44,7 +44,7 @@ def keytype(authkey):
 # This happens on the remote server side and we'll check when connecting.
 def write_server_config(server, filename, real_ip=None):  #pragma no cover
     """
-    Write server connection information.
+    Write server configuration information.
 
     server: OpenMDAO_Server
         Server to be recorded.
@@ -72,30 +72,37 @@ def write_server_config(server, filename, real_ip=None):  #pragma no cover
         parser.set(section, 'port', '-1')
         parser.set(section, 'tunnel', str(False))
     parser.set(section, 'key', server.public_key_text)
+    logfile = os.path.join(os.getcwd(), 'openmdao_log.txt')
+    parser.set(section, 'logfile', '%s:%s' % (socket.gethostname(), logfile))
+
     with open(filename, 'w') as cfg:
         parser.write(cfg)
 
 def read_server_config(filename):
     """
-    Read a server's connection information.
+    Read a server's configuration information.
 
     filename: string
         Path to file to be read.
 
-    Returns ``(address, port, tunnel, key)``.
+    Returns a dictionary containing 'address', 'port', 'tunnel', 'key', and
+    'logfile' information
     """
     if not os.path.exists(filename):
         raise IOError('No such file %r' % filename)
     parser = ConfigParser.ConfigParser()
     parser.read(filename)
     section = 'ServerInfo'
-    address = parser.get(section, 'address')
-    port = parser.getint(section, 'port')
-    tunnel = parser.getboolean(section, 'tunnel')
+    cfg = {}
+    cfg['address'] = parser.get(section, 'address')
+    cfg['port'] = parser.getint(section, 'port')
+    cfg['tunnel'] = parser.getboolean(section, 'tunnel')
     key = parser.get(section, 'key')
     if key:
         key = decode_public_key(key)
-    return (address, port, tunnel, key)
+    cfg['key'] = key
+    cfg['logfile'] = parser.get(section, 'logfile')
+    return cfg
 
 
 def setup_tunnel(address, port):
@@ -292,9 +299,19 @@ def read_allowed_hosts(path):
     or hostnames, one per line. Blank lines are ignored, and '#' marks the
     start of a comment which continues to the end of the line.
     """
+    if not os.path.exists(path):
+        raise RuntimeError('%r does not exist' % path)
+
+    if not is_private(path):
+        if sys.platform != 'win32' or HAVE_PYWIN32:
+            raise RuntimeError('%r is not private' % path)
+        else:  #pragma no cover
+            logging.warning('Allowed hosts file %r is not private', path)
+
     ipv4_host = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
     ipv4_domain = re.compile(r'([0-9]+\.){1,3}$')
 
+    errors = 0
     count = 0
     allowed_hosts = []
     with open(path, 'r') as inp:
@@ -308,23 +325,26 @@ def read_allowed_hosts(path):
                 continue
 
             if ipv4_host.match(line):
-                logging.debug('%s line %d: IPv4 host %r',
-                              path, count, line)
+                logging.debug('%s line %d: IPv4 host %r', path, count, line)
                 allowed_hosts.append(line)
+
             elif ipv4_domain.match(line):
-                logging.debug('%s line %d: IPv4 domain %r',
-                              path, count, line)
+                logging.debug('%s line %d: IPv4 domain %r', path, count, line)
                 allowed_hosts.append(line)
+
             else:
                 try:
                     addr = socket.gethostbyname(line)
                 except socket.gaierror:
                     logging.error('%s line %d: unrecognized host %r',
                                   path, count, line)
+                    errors += 1
                 else:
                     logging.debug('%s line %d: host %r at %r',
                                   path, count, line, addr)
                     allowed_hosts.append(addr)
-
+    if errors:
+        raise RuntimeError('%d errors in %r, check log for details'
+                           % (errors, path))
     return allowed_hosts
 
