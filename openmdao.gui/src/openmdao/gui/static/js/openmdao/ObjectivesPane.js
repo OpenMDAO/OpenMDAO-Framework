@@ -35,14 +35,14 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
     if (editable) {
         objectives.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
+            cmd = pathname+'.'+args.item.name+'='+args.item.value
             model.issueCommand(cmd)
         });
    }
     
     /** add a new objective */
     function addObjective(expr,name,scope) {
-        cmd = "top."+pathname+".add_objective('"+expr+"'";
+        cmd = pathname+".add_objective('"+expr+"'";
         if (name) {
             cmd = cmd + ",name="+name;
         }            
@@ -88,7 +88,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
 
     /** clear all objectives */
     function clearObjectives() {
-        cmd = "top."+pathname+".clear_objectives();"
+        cmd = pathname+".clear_objectives();"
         model.issueCommand(cmd);        
     }
      

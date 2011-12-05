@@ -46,7 +46,7 @@ openmdao.Model=function() {
     }
 
     /** get a new (empty) model */
-    this.newModel = function(typepath,name,x,y) {
+    this.newModel = function() {
         jQuery.ajax({
             type: 'POST',
             url:  'model',

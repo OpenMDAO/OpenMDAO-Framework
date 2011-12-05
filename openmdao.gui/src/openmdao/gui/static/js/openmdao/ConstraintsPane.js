@@ -36,14 +36,14 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
     if (editable) {
         constraints.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
+            cmd = pathname+'.'+args.item.name+'='+args.item.value
             model.issueCommand(cmd)
         });
    }
     
     /** add a new constraint */
     function addConstraint(expr,scaler,adder,name,scope) {
-        cmd = "top."+pathname+".add_constraint('"+expr+"'";
+        cmd = pathname+".add_constraint('"+expr+"'";
         if (scaler) {
             cmd = cmd + ",scaler="+scaler;
         }            
@@ -100,7 +100,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
 
     /** clear all constraints */
     function clearConstraints() {
-        cmd = "top."+pathname+".clear_constraints();"
+        cmd = pathname+".clear_constraints();"
         model.issueCommand(cmd);        
     }
      

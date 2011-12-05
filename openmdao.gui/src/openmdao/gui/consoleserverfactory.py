@@ -662,7 +662,7 @@ class ConsoleServer(cmd.Cmd):
         ''' add a new component of the given type to the specified parent. 
         '''
         if (parentname and len(parentname)>0):
-            parent = self.get_comtainer(parentname)
+            parent = self.get_container(parentname)
             if parent:
                 try:
                     if classname in self._globals:

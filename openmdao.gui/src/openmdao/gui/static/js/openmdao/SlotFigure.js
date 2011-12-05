@@ -240,11 +240,11 @@ openmdao.SlotFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
-        var cmd = 'top.'+oThis.pathname + '.run();';
+        var cmd = oThis.pathname + '.run();';
         oThis.myModel.issueCommand(cmd);
     }));
     menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-        var asm = 'top.'+openmdao.Util.getPath(oThis.pathname),
+        var asm = openmdao.Util.getPath(oThis.pathname),
             cmd = asm + '.disconnect("'+oThis.name+'");'
                 + asm + '.config_changed(update_parent=True);';
         oThis.myModel.issueCommand(cmd);

@@ -225,13 +225,13 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
-        var cmd = 'top.'+oThis.pathname + '.run();';
+        var cmd = oThis.pathname + '.run();';
         oThis.myModel.issueCommand(cmd);
     }));
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
         var parent = oThis.getParent();
         if (parent) {
-            var cmd = "top."+parent.pathname+".workflow.remove('";
+            var cmd = parent.pathname+".workflow.remove('";
             if (/.driver$/.test(oThis.name)) {
                 cmd = cmd + oThis.name.replace(/.driver/g,'') + "')";
             }
