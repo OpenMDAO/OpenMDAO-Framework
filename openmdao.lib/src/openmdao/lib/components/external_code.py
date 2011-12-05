@@ -2,14 +2,13 @@
 
 import glob
 import os.path
-import shlex
 import shutil
 import subprocess
 import stat
 import time
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int
+from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int, List
 
 from openmdao.main.api import ComponentWithDerivatives
 from openmdao.main.exceptions import RunInterrupted, RunStopped
@@ -27,8 +26,7 @@ class ExternalCode(ComponentWithDerivatives):
     STDOUT = subprocess.STDOUT
 
     # pylint: disable-msg=E1101
-    command = Str('', 
-                  desc='The command to be executed.')
+    command = List(Str, desc='The command to be executed.')
     env_vars = Dict({}, iotype='in',
                     desc='Environment variables required by the command.')
     resources = Dict({}, iotype='in',
@@ -40,10 +38,8 @@ class ExternalCode(ComponentWithDerivatives):
     timeout = Float(0., low=0., iotype='in', units='s',
                     desc='Maximum time to wait for command completion.'
                          ' A value of zero implies an infinite wait.')
-    timed_out = Bool(False, iotype='out',
-                     desc='True if the command timed-out.')
-    return_code = Int(0, iotype='out',
-                      desc='Return code from the command.')
+    timed_out = Bool(False, iotype='out', desc='True if the command timed-out.')
+    return_code = Int(0, iotype='out', desc='Return code from the command.')
 
     def __init__(self, *args, **kwargs):
         super(ExternalCode, self).__init__(*args, **kwargs)
@@ -129,13 +125,12 @@ class ExternalCode(ComponentWithDerivatives):
                 else:
                     self.timed_out = True
                     self.raise_exception('Timed out', RunInterrupted)
-            elif return_code:
 
+            elif return_code:
                 if isinstance(self.stderr, str):
                     stderrfile = open(self.stderr, 'r')
                     error_desc = stderrfile.read()
                     stderrfile.close()
-                    
                     err_fragment = "\nError Output:\n%s" % error_desc
                 else:
                     err_fragment = error_msg
@@ -147,7 +142,7 @@ class ExternalCode(ComponentWithDerivatives):
 
     def _execute_local(self):
         """ Run command. """
-        self._logger.info("executing '%s'...", self.command)
+        self._logger.info('executing %s...', self.command)
         start_time = time.time()
 
         self._process = \
@@ -184,10 +179,9 @@ class ExternalCode(ComponentWithDerivatives):
             # Create resource description for command.
             rdesc = self.resources.copy()
             rdesc['job_name'] = self.get_pathname()
-            items = shlex.split(self.command)
-            rdesc['remote_command'] = items[0]
-            if len(items) > 1:
-                rdesc['args'] = items[1:]
+            rdesc['remote_command'] = self.command[0]
+            if len(self.command) > 1:
+                rdesc['args'] = self.command[1:]
             if self.env_vars:
                 rdesc['job_environment'] = self.env_vars
             if self.stdin:
@@ -210,10 +204,10 @@ class ExternalCode(ComponentWithDerivatives):
             if patterns:
                 self._send_inputs(patterns)
             else:
-                self._logger.debug("No input metadata paths")
+                self._logger.debug('No input metadata paths')
 
             # Run command.
-            self._logger.info("executing '%s'...", self.command)
+            self._logger.info('executing %s...', self.command)
             start_time = time.time()
             return_code, error_msg = \
                 self._server.execute_command(rdesc)
@@ -229,7 +223,7 @@ class ExternalCode(ComponentWithDerivatives):
             if patterns:
                 self._retrieve_results(patterns)
             else:
-                self._logger.debug("No output metadata paths")
+                self._logger.debug('No output metadata paths')
 
         finally:
             RAM.release(self._server)

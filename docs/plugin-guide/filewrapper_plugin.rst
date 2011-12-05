@@ -131,7 +131,6 @@ To do this, we create a component that looks like this:
         def __init__(self, directory=''):
             """Constructor for the PdcylComp component"""
     
-    
             super(WrappedComp, self).__init__(directory)
     
             # External Code public variables
@@ -150,7 +149,7 @@ To do this, we create a component that looks like this:
             
             # (Prepare input file here)
 
-            #Execute the component
+            # Execute the component
             super(WrappedComp, self).execute()
             
             # (Parse output file here)
@@ -192,7 +191,7 @@ at the command prompt, then you need to set the command attribute as follows:
 .. testcode:: External_Code
 
     MyComp = WrappedComp()
-    MyComp.command = '/usr/bin/externalcode -v -r1'
+    MyComp.command = ['/usr/bin/externalcode', '-v', '-r1']
     
 Note that you could also declare this in the ``__init__`` method of ``WrappedComp`` if it
 is something that you don't expect the user will need to change. The same is true
@@ -216,7 +215,7 @@ line.
 
 .. testcode:: External_Code
 
-    MyComp.command = '/usr/bin/externalcode -v -r1'
+    MyComp.command = ['/usr/bin/externalcode', '-v', '-r1']
     MyComp.stdin = 'myinput.txt'
     MyComp.stdout = 'myoutput.txt'
     
