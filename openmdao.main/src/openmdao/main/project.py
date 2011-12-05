@@ -58,11 +58,12 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
 
     os.mkdir(projpath)
     startdir = os.getcwd()
-    tf = tarfile.open(archive_name)
-    try:
-        tf.extractall(projpath)
-    finally:
-        tf.close()
+    if os.path.getsize(archive_name) > 0:
+        tf = tarfile.open(archive_name)
+        try:
+            tf.extractall(projpath)
+        finally:
+            tf.close()
     proj = Project(projpath)
     return proj
 
