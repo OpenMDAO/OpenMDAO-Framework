@@ -5,16 +5,18 @@ import atexit
 import fnmatch
 import tempfile
 
+import paramiko.util
+from optparse import OptionParser
+
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
                                     ssh_test, put_dir, cleanup
-from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
+from openmdao.devtools.remote_cfg import add_config_options, process_options, \
                                          run_host_processes, get_tmp_user_dir
 
 from openmdao.devtools.ec2 import run_on_ec2
 
-import paramiko.util
 
 def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
                           branch=None, testargs=(), hostname='', 
@@ -73,7 +75,8 @@ def test_branch(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = CfgOptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
+    parser = OptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
+    add_config_options(parser)
     parser.add_option("-k","--keep", action="store_true", dest='keep',
                       help="Don't delete the temporary build directory. "
                            "If testing on EC2 stop the instance instead of terminating it.")
@@ -88,7 +91,7 @@ def test_branch(argv=None):
     (options, args) = parser.parse_args(argv)
     
     options.buildtype = 'branch'
-    config, conn, ec2_hosts = process_options(options, parser)
+    config, conn, ec2_hosts = process_options(options)
     
     if not options.hosts:
         parser.print_help()
@@ -154,30 +157,17 @@ def _is_release_dir(dname):
         return False
     return 'downloads' in dirstuff
 
-def test_release(argv=None):
+def test_release(options):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
     cleanup_files = [os.path.join(os.getcwd(), 'paramiko.log')]
     
-    if argv is None:
-        argv = sys.argv[1:]
-        
-    parser = CfgOptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
-    parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="Don't delete the temporary build directory. "
-                           "If testing on EC2 stop the instance instead of terminating it.")
-    parser.add_option("-f","--file", action="store", type='string', dest='fname',
-                      help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
-
-    (options, args) = parser.parse_args(argv)
-    
     if options.fname is None:
-        parser.print_help()
         print '\nyou must supply a release directory or the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
     options.buildtype = 'release'
-    config, conn, ec2_hosts = process_options(options, parser)
+    config, conn, ec2_hosts = process_options(options)
     
     startdir = os.getcwd()
     

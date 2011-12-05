@@ -9,7 +9,7 @@ import tarfile
 from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
-from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
+from openmdao.devtools.remote_cfg import add_config_options, process_options, \
                                          run_host_processes, get_tmp_user_dir
 from openmdao.util.fileutil import cleanup
     
@@ -73,7 +73,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    parser = CfgOptionParser()
+    parser = OptionParser()
     parser.add_option("-d", "--dest", action="store", type='string', 
                       dest="dest", default='.',
                       help="destination directory where built package will go")

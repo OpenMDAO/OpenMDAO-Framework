@@ -56,25 +56,23 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     with settings(*settings_args, **settings_kwargs):
         return funct(**kwargs)
             
-
-class CfgOptionParser(OptionParser):
-    def __init__(self, *args, **kwargs):
-        OptionParser.__init__(self, *args, **kwargs)
-        self.add_option("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
-                          default='~/.openmdao/testhosts.cfg',
-                          help="Path of config file where info for hosts is located")
-        self.add_option("--host", action='append', dest='hosts', metavar='HOST',
-                          default=[],
-                          help="Select host from config file to run on. "
-                               "To run on multiple hosts, use multiple --host args")
-        self.add_option("--all", action="store_true", dest='allhosts',
+        
+def add_config_options(parser):
+    parser.add_argument("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
+                        default='~/.openmdao/testhosts.cfg',
+                        help="Path of config file where info for hosts is located")
+    parser.add_argument("--host", action='append', dest='hosts', metavar='HOST',
+                        default=[],
+                        help="Select host from config file to run on. "
+                             "To run on multiple hosts, use multiple --host args")
+    parser.add_argument("--all", action="store_true", dest='allhosts',
                         help="If True, run on all hosts in config file.")
-        self.add_option("-o","--outdir", action="store", type='string', 
-                          dest='outdir', default='host_results',
-                          help="Output directory for results "
-                               "(defaults to ./host_results)")
+    parser.add_argument("-o","--outdir", action="store", type=str, 
+                        dest='outdir', default='host_results',
+                        help="Output directory for results "
+                             "(defaults to ./host_results)")
 
-def read_config(options, parser):
+def read_config(options):
     """Reads the config file specified in options.cfg and looks for sections
     in the config file that match the host names specified in options.hosts.
     
@@ -121,11 +119,11 @@ def get_tmp_user_dir():
     # in the name, you'll get errors ('no module named os', etc.) 
     return udir.replace(' ','_').replace(':','.')
     
-def process_options(options, parser):
-    """Handles some options found in CfgOptionParser so that the code
-    doesn't have to be duplicated when inheriting from CfgOptionParser.
+def process_options(options):
+    """Handles some config-related options so that the code
+    doesn't have to be duplicated in multiple parsers.
     """
-    hosts, config = read_config(options, parser)
+    hosts, config = read_config(options)
         
     # find out which hosts are ec2 images, if any
     ec2_hosts = set()

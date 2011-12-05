@@ -8,7 +8,7 @@ import logging
 import urllib2
 from subprocess import Popen, STDOUT, PIPE, check_call
 from datetime import date
-from optparse import OptionParser
+from argparse import ArgumentParser
 import ConfigParser
 import tempfile
 import StringIO
@@ -21,6 +21,9 @@ from openmdao.devtools.mkinstaller import openmdao_packages
 from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import get_git_branch, get_git_branches, \
                                     get_git_log_info, repo_top
+from openmdao.devtools.push_release import push_release
+from openmdao.devtools.remote_cfg import add_config_options
+from openmdao.devtools.remotetst import test_release
 from openmdao.util.fileutil import cleanup
 
 relfile_template = """
@@ -212,8 +215,13 @@ def _rollback_releaseinfo_files():
     finally:
         os.chdir(startdir)
     
-    
-def make_release():
+def finalize_release(options):
+    """Push the specified release up to the production server and tag
+    the repository with the version number.
+    """
+    raise NotImplementedError('finalize_release')
+
+def build_release(options):
     """Create an OpenMDAO release, placing the following files in the 
     specified destination directory:
     
@@ -230,37 +238,11 @@ def make_release():
     number of releaseinfo.py files will be updated with new version
     information and committed.
     """
-    parser = OptionParser()
-    parser.add_option("-d", "--destination", action="store", type="string", 
-                      dest="destdir",
-                      help="directory where distributions and docs will be placed")
-    parser.add_option("-v", "--version", action="store", type="string", 
-                      dest="version",
-                      help="version string applied to all openmdao distributions")
-    parser.add_option("-m", action="store", type="string", dest="comment",
-                      help="optional comment for version tag")
-    parser.add_option("-b", "--basebranch", action="store", type="string", 
-                      dest="base", default='dev', 
-                      help="base branch for release. defaults to dev")
-    parser.add_option("-t", "--test", action="store_true", dest="test",
-                      help="used for testing. A release branch will not be created")
-    parser.add_option("-n", "--nodocbuild", action="store_true", 
-                      dest="nodocbuild",
-                      help="used for testing. The docs will not be rebuilt if they already exist")
-    parser.add_option("--host", action='append', dest='hosts', metavar='HOST',
-                      default=[],
-                      help="host from config file to build bdist_eggs on. "
-                           "Multiple --host args are allowed.")
-    parser.add_option("-c", "--config", action='store', dest='cfg', 
-                      metavar='CONFIG', default='~/.openmdao/testhosts.cfg',
-                      help="path of config file where info for hosts is located")
-    (options, args) = parser.parse_args(sys.argv[1:])
-    
-    if not options.version:
-        parser.print_help()
+    if options.version is None:
+        print "version was not specified"
         sys.exit(-1)
         
-    if not options.destdir:
+    if options.destdir is None:
         options.destdir = "rel_%s" % options.version
         
     _check_version(options.version)
@@ -287,7 +269,7 @@ def make_release():
         
     orig_branch = get_git_branch()
     if not orig_branch:
-        print "You must run mkrelease from within a git repository. aborting"
+        print "You must make a release from within a git repository. aborting"
         sys.exit(-1)
 
     if not options.test:
@@ -296,7 +278,7 @@ def make_release():
             sys.exit(-1)
     
         if _has_checkouts():
-            print "There are uncommitted changes. You must run mkrelease.py from a clean branch"
+            print "There are uncommitted changes. You must create a release from a clean branch"
             sys.exit(-1)
         
         if orig_branch == 'dev':
@@ -392,5 +374,77 @@ def make_release():
     finally:
         os.chdir(startdir)
     
+        
+def _get_release_parser():
+    """Sets up the plugin arg parser and all of its subcommand parsers."""
+    
+    top_parser = ArgumentParser()
+    subparsers = top_parser.add_subparsers(title='subcommands')
+        
+    parser = subparsers.add_parser('finalize',
+               description="push the release to the production area and tag the production repository")
+    parser.set_defaults(func=finalize_release)
+
+    
+    parser = subparsers.add_parser('push',
+               description="push release dists and docs into an OpenMDAO release directory structure (downloads, dists, etc.)")
+    parser.usage="%(prog)s releasedir destdir [options] "
+    
+    parser.add_argument('releasedir', nargs='?',
+                        help='directory where release files are located')
+    parser.add_argument('destdir', nargs='?',
+                        help='location where structured release files will be placed')
+    parser.add_argument("--py", action="store", type=str, dest="py",
+                        default="python",
+                        help="python version to use on target host")
+    parser.set_defaults(func=push_release)
+
+    
+    parser = subparsers.add_parser('test',
+                                   description="test an OpenMDAO release")
+    add_config_options(parser)
+    parser.add_argument("-k","--keep", action="store_true", dest='keep',
+                      help="Don't delete the temporary build directory. "
+                           "If testing on EC2 stop the instance instead of terminating it.")
+    parser.add_argument("-f","--file", action="store", type=str, dest='fname',
+                      help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
+    parser.set_defaults(func=test_release)
+    
+    
+    parser = subparsers.add_parser('build',
+               description="create release versions of all OpenMDAO dists")
+    parser.add_argument("-d", "--dest", action="store", type=str, 
+                      dest="destdir",
+                      help="directory where all release distributions and docs will be placed")
+    parser.add_argument("-v", "--version", action="store", type=str, 
+                      dest="version",
+                      help="version string applied to all openmdao distributions")
+    parser.add_argument("-m", action="store", type=str, dest="comment",
+                      help="optional comment for version tag")
+    #parser.add_argument("-b", "--basebranch", action="store", type=str, 
+                      #dest="base", default='dev', 
+                      #help="base branch for release. defaults to dev")
+    parser.add_argument("-t", "--test", action="store_true", dest="test",
+                      help="used for testing. A release branch will not be created")
+    parser.add_argument("-n", "--nodocbuild", action="store_true", 
+                      dest="nodocbuild",
+                      help="used for testing. The docs will not be rebuilt if they already exist")
+    parser.add_argument("--host", action='append', dest='hosts', metavar='HOST',
+                      default=[],
+                      help="host from config file to build bdist_eggs on. "
+                           "Multiple --host args are allowed.")
+    parser.add_argument("-c", "--config", action='store', dest='cfg', 
+                      metavar='CONFIG', default='~/.openmdao/testhosts.cfg',
+                      help="path of config file where info for hosts is located")
+    parser.set_defaults(func=build_release)
+    
+    return top_parser
+
+
+def release():
+    options = _get_release_parser().parse_args()
+    options.func(options)
+
+
 if __name__ == '__main__':
-    make_release()
+    release()

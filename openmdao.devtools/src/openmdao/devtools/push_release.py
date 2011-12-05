@@ -109,42 +109,33 @@ def _setup_local_release_dir(dpath):
 class _CommObj(object):
     pass
 
-def main():
+def push_release(options):
     from fabric.api import run, local, put, settings
-
     atexit.register(fabric_cleanup, True)
-    parser = OptionParser(usage="%prog [options] RELEASE_DIR DESTINATION")
-    parser.add_option("--py", action="store", type="string", dest="py",
-                      default="python2.6",
-                      help="python version to use on target host")
-    (options, args) = parser.parse_args(sys.argv[1:])
     
     comm_obj = _CommObj()
     
-    if len(args) < 1 or len(args) > 2:
-        parser.print_help()
+    if options.releasedir is None:
+        print "release directory was not specified"
         sys.exit(-1)
-        
-    if len(args) == 2:
-        destdir = args[1]
-    elif os.path.basename(args[0]).startswith('rel_'):
-        destdir = os.path.join(os.path.dirname(args[0]), 
-                               "release_%s" % os.path.basename(args[0]).split('_', 1)[1])
+    
+    destdir = options.destdir
+    if destdir is None and os.path.basename(options.releasedir).startswith('rel_'):
+        destdir = os.path.join(os.path.dirname(options.releasedir), 
+                               "release_%s" % 
+                               os.path.basename(options.releasedir).split('_', 1)[1])
         if os.path.isdir(destdir):
             print "destination dir '%s' already exists" % destdir
             sys.exit(-1)
     else:
+        print options.releasedir, destdir
         print "destination directory not supplied"
-        parser.print_help()
         sys.exit(-1)
             
-    if not os.path.isdir(args[0]):
-        print "release directory %s not found" % args[0]
+    if not os.path.isdir(options.releasedir):
+        print "release directory %s not found" % options.releasedir
         sys.exit(-1)
     
-    if find_in_path(options.py) is None:
-        options.py = 'python'
-
     if not ('@' in destdir or ':' in destdir): # it's a local release test area
         if not os.path.isdir(destdir):
             _setup_local_release_dir(destdir)
@@ -152,8 +143,15 @@ def main():
         comm_obj.put_dir = shutil.copytree
         comm_obj.run = local
         
-        _push_release(args[0], destdir, comm_obj, py=options.py)
-    else: # assume args[1] is a remote user@host:destdir
+        _push_release(options.releasedir, destdir, comm_obj, 
+                      py=options.py)
+    else: # assume destdir is a remote user@host:destdir
+        
+        # the only remote push destination should be the production server
+        # at openmdao.org, which doesn't have python 2.6 or 2.7 as default, so...
+        if options.py == 'python':
+            options.py = 'python2.6'
+        
         comm_obj.put = put
         comm_obj.put_dir = put_dir
         comm_obj.run = run
@@ -165,9 +163,7 @@ def main():
             home = '~'
 
         with settings(host_string=destparts[0]):
-            _push_release(args[0], home, comm_obj, py=options.py)
-
-if __name__ == '__main__':
-    main()
+            _push_release(options.releasedir, home, comm_obj, 
+                          py=options.py)
     
     
