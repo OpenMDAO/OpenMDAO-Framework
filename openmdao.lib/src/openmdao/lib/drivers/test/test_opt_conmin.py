@@ -6,8 +6,8 @@ import unittest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, Str
+from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
+from openmdao.main.datatypes.api import Float, Array, Str, Slot
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
@@ -323,6 +323,40 @@ class CONMINdriverTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
             
+            
+class TestContainer(VariableTree):
+    dummy1 = Float(desc='default value of 0.0') #this value is being grabbed by the optimizer
+    dummy2 = Float(11.0) 
+
+class TestComponent(Component):
+    dummy_data = Slot(TestContainer(),iotype='in')
+    x = Float(iotype='out')
+    def __init__(self): 
+        super(TestComponent,self).__init__()
+        self.add('dummy_data',TestContainer())
+
+    def execute(self):
+        self.x = (self.dummy_data.dummy1-3)**2 - self.dummy_data.dummy2
+
+class TestAssembly(Assembly):
+    def __init__(self):
+        super(TestAssembly,self).__init__()
+        self.add('dummy_top',TestContainer())
+        self.add('comp',TestComponent())
+        self.add('driver', CONMINdriver())
+
+        self.driver.workflow.add(['comp'])
+        #self.driver.iprint = 4 #debug verbosity
+        self.driver.add_objective('comp.x') 
+        self.driver.add_parameter('comp.dummy_data.dummy1',low= -10.0 , high= 10.0)
+
+class CONMINdriverTestCase2(unittest.TestCase):
+
+    def test_vartree_opt(self):
+        blah = set_as_top(TestAssembly())
+        blah.run()
+        self.assertAlmostEqual(blah.comp.dummy_data.dummy1, 3.0, 1) #3.0 should be minimum
+    
 if __name__ == "__main__":
     unittest.main()
 

@@ -643,11 +643,13 @@ def connect_to_server(config_filename):
     config_filename: string:
         Name of server configuration file.
     """
-    address, port, tunnel, pubkey = read_server_config(config_filename)
-    return connect(address, port, tunnel, pubkey=pubkey)
+    cfg = read_server_config(config_filename)
+    return connect(cfg['address'], cfg['port'], cfg['tunnel'],
+                   pubkey=cfg['key'], logfile=cfg['logfile'])
 
 
-def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None):
+def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
+            logfile=None):
     """
     Connects to the the server at `address` and `port` using `key` and returns
     a (shared) proxy for the associated :class:`ObjServerFactory`.
@@ -666,6 +668,9 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None):
 
     pubkey:
         Server public key, required if `authkey` is 'PublicKey'.
+
+    logfile:
+        Location of server's log file, if known.
     """
     if port < 0:
         key = address
@@ -678,18 +683,19 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None):
             location = setup_tunnel(address, port)
         else:
             location = key
+        via = ' (via tunnel)' if tunnel else ''
+        log = ' at %s' % logfile if logfile else ''
         if not OpenMDAO_Proxy.manager_is_alive(location):
-            via = ' (via tunnel)' if tunnel else ''
             raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
-                               " to be offline." % (address, port, via))
+                               " to be offline. Please check the server log%s."
+                               % (address, port, via, log))
         mgr = _FactoryManager(location, authkey, pubkey=pubkey)
         try:
             mgr.connect()
         except EOFError:
-            via = ' (via tunnel)' if tunnel else ''
             raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
                                " to be rejecting the connection. Please check"
-                               " the server log." % (address, port, via))
+                               " the server log%s." % (address, port, via, log))
         proxy = mgr.openmdao_main_objserverfactory_ObjServerFactory()
         _PROXIES[key] = proxy
         return proxy
@@ -874,6 +880,8 @@ def main():  #pragma no cover
         The file should contain IPv4 host addresses, IPv4 domain addresses,
         or hostnames, one per line. Blank lines are ignored, and '#' marks the
         start of a comment which continues to the end of the line.
+        For security reasons this file must be accessible only by the user
+        running this server.
 
     --types: string
         Filename for allowed types specification.
@@ -885,8 +893,13 @@ def main():  #pragma no cover
         Filename for allowed users specification.
         Ignored if '--allow-public' is specified.
         Default is ``~/.ssh/authorized_keys``, other files should be of the
-        same format.
-        The host portions of user strings are used for allowed hosts.
+        same format: each line has ``key-type public-key-data user@host``,
+        where `user` is the username on `host`. `host` will be translated to an
+        IPv4 address and included in the allowed hosts list.
+        Note that this ``user@host`` form is not necessarily enforced by
+        programs which generate keys.
+        For security reasons this file must be accessible only by the user
+        running this server.
 
     --address: string
         IPv4 address, hostname, or pipe name.
@@ -996,20 +1009,28 @@ def main():  #pragma no cover
                 sys.exit(1)
 
             if not allowed_hosts:
-                msg = 'No allowed hosts!?.'
+                msg = 'No hosts in allowed hosts file %r.' % options.hosts
                 logger.error(msg)
                 print msg
                 sys.exit(1)
     else:
         if os.path.exists(options.users):
-            allowed_users = read_authorized_keys(options.users, logger)
-            if not allowed_users:
-                msg = 'No authorized keys?'
+            try:
+                allowed_users = read_authorized_keys(options.users, logger)
+            except Exception as exc:
+                msg = "Can't read allowed users file %r: %s" \
+                      % (options.users, exc)
                 logger.error(msg)
                 print msg
                 sys.exit(1)
         else:
             msg = 'Allowed users file %r does not exist.' % options.users
+            logger.error(msg)
+            print msg
+            sys.exit(1)
+
+        if not allowed_users:
+            msg = 'No users in allowed users file %r.' % options.users
             logger.error(msg)
             print msg
             sys.exit(1)
