@@ -475,7 +475,7 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
    Alternatively, pziegfeld could select ``OpenMDAO-Framework``, the fork listed under **Repositories**
    (circled in green above). If she did that, when she goes to her personal OpenMDAO fork page she would
    be on the `master` branch.  In the next figure, on the right side of the page, it shows that the 
-   `Current branch` (circled in green) is the master. 
+   *Current branch* (circled in green) is the master. 
 
       
 .. figure:: personal_fork1.png
@@ -485,13 +485,13 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
   
    
 2. If you are on the master branch as in the above figure, you need to switch branches before issuing a
-   pull request. Click on down arrow next to the current branch name. A drop-down list of branches will
+   pull request. Click on down the arrow next to the current branch name. A drop-down list of branches will
    appear in alphabetical order. Scroll down until you find the desired branch. If you mouse over the
    branch name, it will be highlighted and a check mark will appear in front of it. Click on the branch
    name to go to that branch. 
 
 
-3. Once you're on the correct branch, click on the *Pull Request* button located in the upper right of
+3. Once you're on the correct branch, click on the **Pull Request** button located in the upper right of
    the page (circled in red above). 
 
 
