@@ -17,6 +17,10 @@ class VariableTree(Container):
         super(VariableTree, self).__init__(doc=doc)
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
+        # register callbacks for our class traits
+        for name,trait in self.class_traits().items():
+            if not name.startswith('_'):
+                self.on_trait_change(self._trait_modified, name)
 
     @property
     def iotype(self):

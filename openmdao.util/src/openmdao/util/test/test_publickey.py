@@ -14,6 +14,8 @@ import nose
 from openmdao.util.publickey import get_key_pair, _KEY_CACHE, \
                                     is_private, make_private, HAVE_PYWIN32, \
                                     read_authorized_keys, write_authorized_keys
+from openmdao.util.testutil import assert_raises
+
 
 class TestCase(unittest.TestCase):
     """ Test mp_util.py """
@@ -63,13 +65,16 @@ class TestCase(unittest.TestCase):
         # Try various line formats.
         hostname = socket.gethostname()
 
-        key_data = """
+        good_key_data = """
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAt9gTm9qX3pKOvFbn8vdkWL/W4kAdtNxRQQXO6QXX7ihuYxv09ZMuqkFPCD1ZxwZNZG0BYstSytPyYQDAGbOglmsjfQ0PRtwDLvK4utGiGLuRsf8ig/cS8NDfSJ/I1B+DBlV1uMaGmzamsFDsavv4Qxf/X50Fl5JTBiPp9W17xkz+JyDCsNMaQd2iSx+GjLbxT/QG2xM9/qrF8bQAAMLdNoKHwVNW+lLXyww6YI9pPj7Tep/dg3xk5Ggf5L6eJGRzmJVMYSfFK+TIX4r49SNddo3Vy/K2H02Yxu6dIBXUTwa+AUC+Mfh5LisAJiM/Oj4NBngWVRgDjN9NH6nQD08R8Q== user1@%(host)s
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAv7QM8MwxkX9yCKIebEH0o14b6Uik3KZnkQo2uF0NyuzDeeZntFym7v0mx7HV4KncjA5Ix2UBw4VKB2virDInO/YKYOC3ZqEJH/CvJkBFggPaZyJyzrEname0+NRXg+PnB2yIDKH0dpwEKVDkwAhEaAqcb9xoahEgXmd4kOmNGylJcwAJhSNqAC9BJO+gAdukGmKodM3nkwKo1BJc2ozqoYar8MYH/FQK8GPBOp4w2LHlm2yXuPB/dqd9/b9N4/ivf5LEthNMn1AnLS37tZIbQ4rSaxLGb72p0iBHSM5oHh1JKDn3mGDKIGxR1cxQ6PuuH6wNB5giNU9U76M4y2QGvw== user2@%(host)s
 
 # another user entry
 ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIEA4hKDhZ7g/qlNrZuCG4EmYIfeUJLpsJQ4JOHylFwahJEy/A8VQEZpZADynouAhkM4AN96dYfyIRFxLR7EiO9ZSIg5FTF8qcpz2VuV0RBKjwO3R7GD966oRqZ6cz4Otx7LcZfDEVw2ybfe+uYnZZCF69ZpdVkNpg6IUjEqw/VZtpM= user3@%(host)s
 
+""" % {'host': hostname}
+
+        bad_key_data = good_key_data + """
 # missing host
 ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIEA4hKDhZ7g/qlNrZuCG4EmYIfeUJLpsJQ4JOHylFwahJEy/A8VQEZpZADynouAhkM4AN96dYfyIRFxLR7EiO9ZSIg5FTF8qcpz2VuV0RBKjwO3R7GD966oRqZ6cz4Otx7LcZfDEVw2ybfe+uYnZZCF69ZpdVkNpg6IUjEqw/VZtpM= user4
 
@@ -85,8 +90,9 @@ ssh-dsa AAAAB3NzaC1yc2EAAAABIwAAAQEAvD2QBWO4pSgMTkuGo9AqCBNTlAvnDSfKXPnwZZsHSNiW
 # munged data
 ssh-rsa ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZA61mId65+WtIbTJUnyLyAnRGv1uK4CcpCLAt0SrAbe9l+YAOnit6UQLIaysyrafjgbXgQDC6vFffxP9idJAhPveVV9jVoGvrf6XTAGByRKZzuPlKLIlHunIOOryOLl9FK0IbA7jYeoZ/ESt9mrheECcpAzW4jrEuU0LccN57ODKtT3Mc/sOnBVWIcIJ+5nv2dPsI2fphGrtZuyu+ckIcqhM5ydHHBius8IQ== user7@%(host)s
 """ % {'host': hostname}
+
         with open('key_data', 'w') as out:
-            out.write(key_data)
+            out.write(good_key_data)
         if sys.platform != 'win32' or HAVE_PYWIN32:
             make_private('key_data')
         try:
@@ -116,32 +122,44 @@ ssh-rsa ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
                         self.fail('new_keys is missing %r', user)
                     self.assertEqual(new_pubkey.n, pubkey.n)
                     self.assertEqual(new_pubkey.e, pubkey.e)
-            
-            if sys.platform != 'win32':
-                os.chmod(key_file, 0644)
-                new_keys = read_authorized_keys(key_file)
-                self.assertEqual(new_keys, {})
         finally:
             if os.path.exists(key_file):
                 os.remove(key_file)
 
         # Try default file, which may or may not exist.
-        keys = read_authorized_keys(logger=logging.getLogger())
+        try: 
+            keys = read_authorized_keys(logger=logging.getLogger())
+        except RuntimeError:
+            pass
 
         # Try nonexistent file.
-        keys = read_authorized_keys('no-such-file', logging.getLogger())
-        self.assertEqual(keys.keys(), [])
+        code = "read_authorized_keys('key_data', logging.getLogger())"
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "'key_data' does not exist")
 
         # Try insecure file.
         if sys.platform != 'win32':
             with open('key_data', 'w') as out:
-                out.write(key_data)
+                out.write(good_key_data)
             os.chmod('key_data', 0666)
             try: 
-                keys = read_authorized_keys('key_data', logging.getLogger())
-                self.assertEqual(keys.keys(), [])
+                code = "read_authorized_keys('key_data', logging.getLogger())"
+                assert_raises(self, code, globals(), locals(), RuntimeError,
+                              "'key_data' is not private")
             finally:
                 os.remove('key_data')
+
+        # Try bad file.
+        with open('key_data', 'w') as out:
+            out.write(bad_key_data)
+        if sys.platform != 'win32' or HAVE_PYWIN32:
+            make_private('key_data')
+        try:
+            code = "read_authorized_keys('key_data', logging.getLogger())"
+            assert_raises(self, code, globals(), locals(), RuntimeError,
+                          "5 errors in 'key_data', check log for details")
+        finally:
+            os.remove('key_data')
 
 
 if __name__ == '__main__':
