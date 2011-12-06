@@ -6,7 +6,7 @@ import fnmatch
 import tempfile
 
 import paramiko.util
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
@@ -19,7 +19,7 @@ from openmdao.devtools.ec2 import run_on_ec2
 
 
 def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
-                          branch=None, testargs=(), hostname='', 
+                          branch=None, testargs='', hostname='', 
                           **kwargs):
     if fname is None:
         raise RuntimeError("_remote_build_and_test: missing arg 'fname'")
@@ -54,9 +54,8 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     if branch:
         remoteargs.append('--branch=%s' % branch)
         
-    if len(testargs) > 0:
-        remoteargs.append('--')
-        remoteargs.extend(testargs)
+    if testargs:
+        remoteargs.append('-t "%s"' % testargs)
         
     try:
         result = push_and_run(pushfiles, runner=pyversion,
@@ -75,20 +74,23 @@ def test_branch(argv=None):
     if argv is None:
         argv = sys.argv[1:]
         
-    parser = OptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
+    parser = ArgumentParser()
     add_config_options(parser)
-    parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="Don't delete the temporary build directory. "
-                           "If testing on EC2 stop the instance instead of terminating it.")
-    parser.add_option("-f","--file", action="store", type='string', 
-                      dest='fname',
-                      help="Pathname of a tarfile or URL of a git repo. "
-                           "Defaults to the current repo.")
-    parser.add_option("-b","--branch", action="store", type='string', 
-                      dest='branch',
-                      help="If file is a git repo, supply branch name here")
+    parser.add_argument("-k","--keep", action="store_true", dest='keep',
+                        help="Don't delete the temporary build directory. "
+                             "If testing on EC2 stop the instance instead of terminating it.")
+    parser.add_argument("-f","--file", action="store", type=str, 
+                        dest='fname',
+                        help="Pathname of a tarfile or URL of a git repo. "
+                             "Defaults to the current repo.")
+    parser.add_argument("-b","--branch", action="store", type=str, 
+                        dest='branch',
+                        help="If file is a git repo, supply branch name here")
+    parser.add_argument("-t","--testargs", action="store", type=str, dest='testargs',
+                        default='',
+                        help="args to be passed to openmdao_test")
 
-    (options, args) = parser.parse_args(argv)
+    options = parser.parse_args()
     
     options.buildtype = 'branch'
     config, conn, ec2_hosts = process_options(options)
@@ -129,7 +131,7 @@ def test_branch(argv=None):
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
-                     'testargs': args,
+                     'testargs': options.testargs,
                      'fname': fname,
                      'remotedir': get_tmp_user_dir(),
                      'branch': options.branch,
@@ -157,7 +159,7 @@ def _is_release_dir(dname):
         return False
     return 'downloads' in dirstuff
 
-def test_release(options):
+def test_release(parser, options):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
     cleanup_files = [os.path.join(os.getcwd(), 'paramiko.log')]
@@ -198,7 +200,7 @@ def test_release(options):
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
-                     'testargs': args,
+                     'testargs': options.testargs.split(),
                      'fname': fname,
                    }
     retval = 0
@@ -215,7 +217,8 @@ def test_release(options):
             if not _is_release_dir(fname):
                 fname = release_dir
             fname = os.path.join(fname, 'downloads', 'latest', 'go-openmdao.py')
-        subprocess.check_call([sys.executable, loctst, '-f', fname, '-d', tdir])
+        subprocess.check_call([sys.executable, loctst, '-f', fname, '-d', tdir, '-t', options.testargs],
+                              stdout=sys.stdout, stderr=sys.stderr)
     
     if options.keep:
         print "the following files/directories were not cleaned up: %s" % cleanup_files

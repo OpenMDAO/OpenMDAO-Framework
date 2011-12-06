@@ -215,13 +215,13 @@ def _rollback_releaseinfo_files():
     finally:
         os.chdir(startdir)
     
-def finalize_release(options):
+def finalize_release(parser, options):
     """Push the specified release up to the production server and tag
     the repository with the version number.
     """
     raise NotImplementedError('finalize_release')
 
-def build_release(options):
+def build_release(parser, options):
     """Create an OpenMDAO release, placing the following files in the 
     specified destination directory:
     
@@ -239,6 +239,7 @@ def build_release(options):
     information and committed.
     """
     if options.version is None:
+        parser.print_usage()
         print "version was not specified"
         sys.exit(-1)
         
@@ -402,12 +403,16 @@ def _get_release_parser():
     
     parser = subparsers.add_parser('test',
                                    description="test an OpenMDAO release")
+    parser.add_argument('fname', nargs='?',
+                        help='pathname of release directory or go-openmdao.py file')
     add_config_options(parser)
     parser.add_argument("-k","--keep", action="store_true", dest='keep',
                       help="Don't delete the temporary build directory. "
                            "If testing on EC2 stop the instance instead of terminating it.")
     parser.add_argument("-f","--file", action="store", type=str, dest='fname',
                       help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
+    parser.add_argument("-t","--testargs", action="store", type=str, dest='testargs',
+                        help="args to be passed to openmdao_test")
     parser.set_defaults(func=test_release)
     
     
@@ -442,8 +447,9 @@ def _get_release_parser():
 
 
 def release():
-    options = _get_release_parser().parse_args()
-    options.func(options)
+    parser = _get_release_parser()
+    options = parser.parse_args()
+    options.func(parser, options)
 
 
 if __name__ == '__main__':

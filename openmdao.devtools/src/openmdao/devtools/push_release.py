@@ -109,7 +109,7 @@ def _setup_local_release_dir(dpath):
 class _CommObj(object):
     pass
 
-def push_release(options):
+def push_release(parser, options):
     from fabric.api import run, local, put, settings
     atexit.register(fabric_cleanup, True)
     

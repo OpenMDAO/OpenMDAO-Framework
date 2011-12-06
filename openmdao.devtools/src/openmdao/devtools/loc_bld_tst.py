@@ -123,7 +123,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
     if retcode != 0:
         sys.exit(retcode)
     
-    print '\ntesting...'
+    print '\ntesting  (testargs=%s ...' % testargs
 
     try:
         retcode = activate_and_test(envdir, testargs)
@@ -278,9 +278,12 @@ if __name__ == '__main__':
     parser.add_option("-d","--dir", action="store", type='string', 
                       dest='directory', default='.',
                       help="name of a directory the build will be created in")
+    parser.add_option("-t","--testargs", action="store", type='string', 
+                      dest='testargs', default='',
+                      help="args to pass to openmdao_test")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
-                            branch=options.branch, testargs=args))
+                            branch=options.branch, testargs=options.testargs.split()))
     

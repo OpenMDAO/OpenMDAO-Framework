@@ -6,7 +6,6 @@ import time
 import socket
 import pprint
 
-from optparse import OptionParser
 import ConfigParser
 from multiprocessing import Process
 
