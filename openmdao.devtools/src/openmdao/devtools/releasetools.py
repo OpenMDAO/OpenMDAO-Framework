@@ -219,7 +219,47 @@ def finalize_release(parser, options):
     """Push the specified release up to the production server and tag
     the repository with the version number.
     """
-    raise NotImplementedError('finalize_release')
+    reldir = 'rel_%s' % options.version
+    brname = 'release_%s' % options.version
+    # check validity
+    if not os.path.isdir(reldir):
+        raise RuntimeError("release directory %s was not found. Did you run 'release build'?" % reldir)
+    for f in os.listdir(reldir):
+        if os.path.isdir(os.path.join(reldir, f)):
+            raise RuntimeError("release directory is not flat. You must call 'release finalize' on the directory built by 'release build'")
+    if brname not in get_git_branches():
+        raise RuntimeError("branch %s doesn't exist. Did you run 'release build'?" % brname)
+
+    if _has_checkouts():
+        raise RuntimeError("the current branch still has uncommitted files")
+    
+    start_branch = get_git_branch()
+    
+    try:
+        print "checking out branch %s" % brname
+        check_call(['git', 'checkout', brname])
+        if _has_checkouts():
+            raise RuntimeError("branch %s still has uncommitted files" % brname)
+    
+        # push files up to openmdao.org
+        print "pushing release files up to openmdao.org"
+        if options.dry_run:
+            print 'skipping...'
+        else:
+            pass
+            #check_call(['release', 'push', reldir, 'openmdao@web103.webfaction.com'])
+            
+        # push release files to official repo on github (dev branch)
+        print "pushing branch %s up to the official dev branch" % brname
+        if options.dry_run:
+            print 'skipping...'
+        else:
+            pass
+            #check_call(['git', 'push', '--tags', 'origin', '%s:dev' % brname])
+    finally:
+        print 'returning to original branch (%s)' % start_branch
+        check_call(['git', 'checkout', start_branch])
+
 
 def build_release(parser, options):
     """Create an OpenMDAO release, placing the following files in the 
@@ -360,9 +400,7 @@ def build_release(parser, options):
         else:
             comment = 'creating release %s' % options.version
         
-        if options.test:
-            _rollback_releaseinfo_files()
-        else:
+        if not options.test:
             # tag the current revision with the release version id
             print "tagging release with '%s'" % options.version
             check_call(['git', 'tag', '-f', '-a', options.version, '-m', comment])
@@ -373,6 +411,8 @@ def build_release(parser, options):
         print "new release files have been placed in %s" % destdir
         
     finally:
+        if options.test:
+            _rollback_releaseinfo_files()
         os.chdir(startdir)
     
         
@@ -384,9 +424,13 @@ def _get_release_parser():
         
     parser = subparsers.add_parser('finalize',
                description="push the release to the production area and tag the production repository")
+    parser.add_argument("-v", "--version", action="store", type=str, 
+                        dest="version",
+                        help="release version of OpenMDAO to be finalized")
+    parser.add_argument("-d","--dryrun", action="store_true", dest='dry_run',
+                        help="don't actually push any changes up to github or openmdao.org")
     parser.set_defaults(func=finalize_release)
 
-    
     parser = subparsers.add_parser('push',
                description="push release dists and docs into an OpenMDAO release directory structure (downloads, dists, etc.)")
     parser.usage="%(prog)s releasedir destdir [options] "
