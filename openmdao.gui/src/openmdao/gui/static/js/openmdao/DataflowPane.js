@@ -5,7 +5,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
     // initialize private variables
     var self = this,
         figures = {},
-        dataflowID = "#"+pathname.replace(/\./g,'-')+"-dataflow",
+        dataflowID = pathname.replace(/\./g,'-')+"-dataflow",
         dataflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">').appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID);

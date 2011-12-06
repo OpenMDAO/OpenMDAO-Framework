@@ -11,7 +11,7 @@ openmdao.CodeEditor = function(id,model) {
     // initialize private variables
     var self = this,
         filepath = "",
-        editor = null,editorID = id+'-content',
+        editorID = id+'-textarea',
         editorArea = jQuery('<textarea id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height),
         editor = CodeMirror.fromTextArea(editorID, {
             parserfile: ["../contrib/python/js/parsepython.js"],
