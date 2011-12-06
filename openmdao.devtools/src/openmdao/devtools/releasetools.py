@@ -225,7 +225,7 @@ def finalize_release(parser, options):
     if not os.path.isdir(reldir):
         raise RuntimeError("release directory %s was not found. Did you run 'release build'?" % reldir)
     for f in os.listdir(reldir):
-        if os.path.isdir(os.path.join(reldir, f)):
+        if os.path.isdir(os.path.join(reldir, f)) and f != 'docs':
             raise RuntimeError("release directory is not flat. You must call 'release finalize' on the directory built by 'release build'")
     if brname not in get_git_branches():
         raise RuntimeError("branch %s doesn't exist. Did you run 'release build'?" % brname)
