@@ -10,28 +10,14 @@ from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import tar_dir, fabric_cleanup
 
 
-def push_docs(argv=None):
+def push_docs(options):
     """A script (push_docs) points to this. By default it pushes the current
     copy of the docs up to the development doc area on openmdao.org.
     """
     from fabric.api import run, put, cd, settings
+    atexit.register(fabric_cleanup, True)
 
-    if argv is None:
-        argv = sys.argv[1:]
-
-    parser = OptionParser(usage='%prog [OPTIONS] host')
-    parser.add_option("-d", "--destination", action="store", type="string", 
-                      dest="docdir", default='downloads',
-                      help="directory where dev_docs directory will be placed")
-    parser.add_option("-n", "--nodocbuild", action="store_true", dest="nodocbuild",
-                      help="used for testing. The docs will not be rebuilt if they already exist")
-    (options, args) = parser.parse_args(argv)
-    
-    if len(args) != 1:
-        parser.print_help()
-        sys.exit(-1)
-
-    host = args[0]
+    host = options.host
 
     startdir = os.getcwd()
     branchdir = dirname(dirname(dirname(sys.executable)))
@@ -55,8 +41,5 @@ def push_docs(argv=None):
             run('mv html dev_docs')
             run('rm -f %s' % tarname)
 
-if __name__ == "__main__": #pragma: no cover
-    atexit.register(fabric_cleanup, True)
-    push_docs(sys.argv[1:])
 
 

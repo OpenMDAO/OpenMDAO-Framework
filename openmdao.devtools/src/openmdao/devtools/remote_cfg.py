@@ -10,7 +10,8 @@ import ConfigParser
 from multiprocessing import Process
 
 from openmdao.devtools.ec2 import run_on_ec2
-from openmdao.util.debug import print_fuct_call
+from openmdao.util.debug import print_funct_call
+from openmdao.test.testing import read_config, filter_config
 
 def run_on_host(host, config, conn, funct, outdir, **kwargs):
     """Runs the given funct on the specified host."""
@@ -48,7 +49,7 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
     if debug:
         settings_args.append(show('debug'))
         orig_stdout.write("<%s>: calling %s" % 
-                          (host, print_fuct_call(funct, **kwargs)))
+                          (host, print_funct_call(funct, **kwargs)))
     else:
         settings_args.append(hide('running'))
         
@@ -64,50 +65,13 @@ def add_config_options(parser):
                         default=[],
                         help="Select host from config file to run on. "
                              "To run on multiple hosts, use multiple --host args")
-    parser.add_argument("--all", action="store_true", dest='allhosts',
-                        help="If True, run on all hosts in config file.")
     parser.add_argument("-o","--outdir", action="store", type=str, 
                         dest='outdir', default='host_results',
                         help="Output directory for results "
                              "(defaults to ./host_results)")
-
-def read_config(options):
-    """Reads the config file specified in options.cfg and looks for sections
-    in the config file that match the host names specified in options.hosts.
-    
-    Returns a tuple of the form (hosts, config), where hosts is the list of
-    host names and config is the ConfigParser object for the config file.
-    """
-    options.cfg = os.path.expanduser(options.cfg)
-    
-    config = ConfigParser.ConfigParser()
-    config.readfp(open(options.cfg))
-    
-    hostlist = config.sections()
-    if options.allhosts:
-        if options.buildtype:
-            btype = 'test_'+options.buildtype
-            hosts = [h for h in hostlist if config.has_option(h, btype) 
-                                           and config.getboolean(h, btype)]
-            if len(hosts) == 0:
-                print "WARNING: no hosts found with %s = true" % btype
-        else:
-            hosts = hostlist
-    elif options.hosts:
-        hosts = []
-        for host in options.hosts:
-            if host in hostlist:
-                hosts.append(host)
-            else:
-                raise RuntimeError("host '%s' is not in config file %s" % 
-                                   (host, options.cfg))
-
-        if not hosts:
-            raise RuntimeError("no hosts were found in config file %s" % options.cfg)
-    else:
-        hosts = []
-
-    return (hosts, config)
+    parser.add_argument("-f", "--filter", action='append', dest='filters', 
+                        default=[],
+                        help="boolean expression to filter hosts")
 
 def get_tmp_user_dir():
     """Generate a directory name based on username and the current
@@ -122,7 +86,8 @@ def process_options(options):
     """Handles some config-related options so that the code
     doesn't have to be duplicated in multiple parsers.
     """
-    hosts, config = read_config(options)
+    hostlist, config = read_config(options)
+    hosts = filter_config(hostlist, config, options)
         
     # find out which hosts are ec2 images, if any
     ec2_hosts = set()

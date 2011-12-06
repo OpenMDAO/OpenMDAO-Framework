@@ -24,6 +24,7 @@ from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir
 from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
+from openmdao.util.view_docs import view_docs
 from openmdao.main.pkg_res_factory import _plugin_groups
 from openmdao.main import __version__
 
@@ -847,10 +848,9 @@ def plugin_docs(options):
     the Sphinx documentation for the named plugin in a browser.
     """
     if options.plugin_dist_name is None:
-        parser.print_help()
-        sys.exit(-1)
-        
-    _plugin_docs(options.plugin_dist_name, options.browser)
+        view_docs(options.browser)
+    else:
+        _plugin_docs(options.plugin_dist_name, options.browser)
         
         
 def _plugin_docs(plugin_name, browser=None):

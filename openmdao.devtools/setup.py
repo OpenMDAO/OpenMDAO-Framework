@@ -48,10 +48,7 @@ setup(name='openmdao.devtools',
       ],
       entry_points = {
           "console_scripts": [
-                "openmdao_build_docs=openmdao.devtools.build_docs:build_docs",
                 "wingproj=openmdao.devtools.wingproj:run_wing",
-                "openmdao_testdocs=openmdao.devtools.build_docs:test_docs",
-                "push_docs=openmdao.devtools.push_docs:push_docs",
                 "test_branch=openmdao.devtools.remotetst:test_branch",
                 "make_installer=openmdao.devtools.mkinstaller:main",
                 "release=openmdao.devtools.releasetools:release",

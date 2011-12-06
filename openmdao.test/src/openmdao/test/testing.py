@@ -1,9 +1,67 @@
 import sys
 import os
 
+import ConfigParser
+
 import nose
 
 from openmdao.main.resource import ResourceAllocationManager
+
+def read_config(options):
+    """Reads the config file specified in options.cfg.
+    
+    Returns a tuple of the form (hosts, config), where hosts is the list of
+    host names and config is the ConfigParser object for the config file.
+    """
+    options.cfg = os.path.expanduser(options.cfg)
+    
+    config = ConfigParser.ConfigParser()
+    config.readfp(open(options.cfg))
+    
+    hostlist = config.sections()
+    
+    return (hostlist, config)
+    
+
+def filter_config(hostlist, config, options):
+    """Looks for sections in the config file that match the host names 
+    specified in options.hosts.
+    
+    Returns a list of host names that match the given options.
+    """
+    hosts = []
+    if options.hosts:
+        for host in options.hosts:
+            if host in hostlist:
+                hosts.append(host)
+            else:
+                raise RuntimeError("host '%s' is not in config file %s" % 
+                                   (host, options.cfg))
+
+        if not hosts:
+            raise RuntimeError("no hosts were found in config file %s" % options.cfg)
+    else:
+        hosts = hostlist
+
+    if options.filters:
+        final_hosts = []
+        for h in hosts:
+            for f in options.filters:
+                parts = [p.strip() for p in f.split('==') if p.strip()]
+                if len(parts) == 2:
+                    pass
+                else:
+                    raise RuntimeError("filter '%s' is invalid" % f)
+                if config.has_option(h, parts[0]) and config.get(h, parts[0]) == parts[1]:
+                    continue
+                else:
+                    break
+            else:
+                final_hosts.append(h)
+    else:
+        final_hosts = hosts
+    
+    return final_hosts
 
 
 def run_openmdao_suite():
