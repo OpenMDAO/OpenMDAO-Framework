@@ -1,3 +1,4 @@
+"""OpenMDAO Command Line Interface stuff"""
 
 import os
 import sys

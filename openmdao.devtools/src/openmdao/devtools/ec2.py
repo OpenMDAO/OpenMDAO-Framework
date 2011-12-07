@@ -12,7 +12,7 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     rm_remote_tree, make_git_archive, \
                                     fabric_cleanup, ssh_test, fab_connect
 
-from openmdao.util.debug import print_fuct_call
+from openmdao.util.debug import print_funct_call
 
 
 def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
@@ -226,7 +226,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
                                  settings_kwargs['host_string'], debug=debug)
             if debug:
                 outf.write("<%s>: calling %s\n" % 
-                                  (host, print_fuct_call(funct, **kwargs)))
+                                  (host, print_funct_call(funct, **kwargs)))
             retval = funct(**kwargs)
     except (SystemExit, Exception) as err:
         outf.write(str(err))
