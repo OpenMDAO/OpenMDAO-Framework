@@ -6,7 +6,7 @@ import atexit
 import tempfile
 import tarfile
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
@@ -75,7 +75,8 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    parser = OptionParser()
+    parser = add_config_options(ArgumentParser())
+    
     parser.add_option("-d", "--dest", action="store", type='string', 
                       dest="dest", default='.',
                       help="destination directory where built package will go")
@@ -93,7 +94,7 @@ def main(argv=None):
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
 
-    (options, args) = parser.parse_args(argv)
+    options = parser.parse_args()
     
     config, conn, image_hosts = process_options(options, parser)
     

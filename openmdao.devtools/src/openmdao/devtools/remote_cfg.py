@@ -72,6 +72,7 @@ def add_config_options(parser):
     parser.add_argument("--filter", action='append', dest='filters', 
                         default=[],
                         help="boolean expression to filter hosts")
+    return parser
 
 def get_tmp_user_dir():
     """Generate a directory name based on username and the current
