@@ -9,6 +9,7 @@ import re
 import pprint
 import socket
 import sys
+import inspect
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -200,7 +201,23 @@ class Container(HasTraits):
             elif self._call_tree_rooted is False:
                 self._name = ''
             else:
-                return ''
+                # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                # print 'searching for name of',self
+                # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                for frame_record in inspect.stack():
+                    # print '=============================='
+                    # print 'checking frame:',frame_record
+                    # print '--------------------------'
+                    for key,val in frame_record[0].f_globals.iteritems():
+                        # print 'checking globals'
+                        if val == self:
+                            self._name = key
+                            # print 'FOUND name = "',self._name,'"in globals of',frame_record
+                            break
+                    if self._name is not None:
+                        break
+                else:
+					return ''
         return self._name
 
     @name.setter
