@@ -272,13 +272,13 @@ class ResourceAllocationManager(object):
         """
         ram = ResourceAllocationManager.get_instance()
         with ResourceAllocationManager._lock:
-            if isinstance(index, basestring):
+            if isinstance(selector, basestring):
                 for allocator in ram._allocators:
-                    if allocator.name == index:
+                    if allocator.name == selector:
                         return allocator
-                raise ValueError('allocator %r not found' % index)
+                raise ValueError('allocator %r not found' % selector)
             else:
-                return ram._allocators[index]
+                return ram._allocators[selector]
 
     @staticmethod
     def list_allocators():
