@@ -96,7 +96,7 @@ def main(argv=None):
 
     options = parser.parse_args()
     
-    config, conn, image_hosts = process_options(options, parser)
+    config, conn, image_hosts = process_options(options)
     
     if not options.srcs:
         print "You must specify one or more source directories"
