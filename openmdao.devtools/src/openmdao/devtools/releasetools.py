@@ -297,10 +297,10 @@ def build_release(parser, options):
     if options.binaries:
         for host in hostlist:
             if config.has_section(host):
-                if config.has_attribute(host, 'build_binaries') and config.getboolean(host, 'build_binaries'):
-                    if config.has_attribute(host, 'platform'):
+                if config.has_option(host, 'build_binaries') and config.getboolean(host, 'build_binaries'):
+                    if config.has_option(host, 'platform'):
                         platform = config.get(host, 'platform')
-                        if config.has_attribute(host, 'py'):
+                        if config.has_option(host, 'py'):
                             py = config.get(host, 'py')
                             if (platform, py) in required_binaries:
                                 required_binaries.remove((platform, py))
