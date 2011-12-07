@@ -190,8 +190,8 @@ def test_release(parser, options):
         pass
     elif os.path.isdir(fname):
         #create a structured release directory
-        release_dir = "%s__release" % fname
-        subprocess.check_call(['push_release', fname, release_dir])
+        release_dir = fname.replace('rel_', 'release_')
+        subprocess.check_call(['release', 'push', fname, release_dir])
         fname = options.fname = release_dir
         cleanup_files.append(release_dir)
     else:

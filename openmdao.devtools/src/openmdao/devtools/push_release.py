@@ -120,16 +120,17 @@ def push_release(parser, options):
         sys.exit(-1)
     
     destdir = options.destdir
-    if destdir is None and os.path.basename(options.releasedir).startswith('rel_'):
-        destdir = os.path.join(os.path.dirname(options.releasedir), 
-                               "release_%s" % 
-                               os.path.basename(options.releasedir).split('_', 1)[1])
-        if os.path.isdir(destdir):
-            print "destination dir '%s' already exists" % destdir
+    if destdir is None:
+        if os.path.basename(options.releasedir).startswith('rel_'):
+            destdir = os.path.join(os.path.dirname(options.releasedir), 
+                                   "release_%s" % 
+                                   os.path.basename(options.releasedir).split('_', 1)[1])
+        else:
+            print "destination directory not supplied"
             sys.exit(-1)
-    else:
-        print options.releasedir, destdir
-        print "destination directory not supplied"
+            
+    if os.path.isdir(destdir):
+        print "destination dir '%s' already exists" % destdir
         sys.exit(-1)
             
     if not os.path.isdir(options.releasedir):

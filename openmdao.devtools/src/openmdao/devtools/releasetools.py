@@ -456,6 +456,7 @@ def _get_release_parser():
     parser.add_argument("-f","--file", action="store", type=str, dest='fname',
                       help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
     parser.add_argument("-t","--testargs", action="store", type=str, dest='testargs',
+                        default='',
                         help="args to be passed to openmdao_test")
     parser.set_defaults(func=test_release)
     

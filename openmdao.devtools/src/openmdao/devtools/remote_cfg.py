@@ -72,6 +72,8 @@ def add_config_options(parser):
     parser.add_argument("--filter", action='append', dest='filters', 
                         default=[],
                         help="boolean expression to filter hosts")
+    parser.add_argument("--all", action="store_true", dest='allhosts',
+                        help="Use all hosts found in testhosts.cfg file")
     return parser
 
 def get_tmp_user_dir():

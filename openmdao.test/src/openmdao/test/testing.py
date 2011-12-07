@@ -4,8 +4,13 @@ import os
 import ConfigParser
 
 import nose
+from pkg_resources import working_set
 
 from openmdao.main.resource import ResourceAllocationManager
+
+def _get_openmdao_packages():
+    return [d.project_name for d in working_set 
+            if d.project_name.startswith('openmdao.')]
 
 def read_config(options):
     """Reads the config file specified in options.cfg.
@@ -40,7 +45,7 @@ def filter_config(hostlist, config, options):
 
         if not hosts:
             raise RuntimeError("no hosts were found in config file %s" % options.cfg)
-    else:
+    elif options.allhosts:
         hosts = hostlist
 
     if options.filters:
@@ -73,7 +78,7 @@ def run_openmdao_suite():
     """
     
     #Add any default packages/directories to search for tests to tlist.
-    tlist = ['openmdao']
+    tlist = _get_openmdao_packages()
     
     break_check = ['--help', '-h', '--all']
     
