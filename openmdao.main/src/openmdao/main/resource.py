@@ -263,16 +263,22 @@ class ResourceAllocationManager(object):
             ram._allocators.insert(index, allocator)
 
     @staticmethod
-    def get_allocator(index):
+    def get_allocator(selector):
         """
-        Return allocator at `index`.
+        Return allocator at `selector` or whose name is `selector`.
 
-        index: int
-            List index for allocator to be returned.
+        selector: int or string
+            List index or name of allocator to be returned.
         """
         ram = ResourceAllocationManager.get_instance()
         with ResourceAllocationManager._lock:
-            return ram._allocators[index]
+            if isinstance(index, basestring):
+                for allocator in ram._allocators:
+                    if allocator.name == index:
+                        return allocator
+                raise ValueError('allocator %r not found' % index)
+            else:
+                return ram._allocators[index]
 
     @staticmethod
     def list_allocators():
