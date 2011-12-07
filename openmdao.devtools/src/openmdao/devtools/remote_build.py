@@ -77,20 +77,20 @@ def main(argv=None):
 
     parser = add_config_options(ArgumentParser())
     
-    parser.add_option("-d", "--dest", action="store", type='string', 
-                      dest="dest", default='.',
-                      help="destination directory where built package will go")
-    parser.add_option("-s", "--src", action="append", type='string', 
-                      dest="srcs", default=[],
-                      help="source directory where package is located")  
-    parser.add_option("-b", "--buildtype", action="store", type='string', 
-                      dest="btype", default='bdist_egg',
-                      help="type of distribution to build")
-    parser.add_option("--py", action="store", type='string', 
-                      dest="py", default='python',
-                      help="which python to use (default='python'")
-    parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="if there are build failures, don't delete "
+    parser.add_argument("-d", "--dest", action="store", type=str, 
+                        dest="dest", default='.',
+                        help="destination directory where built package will go")
+    parser.add_argument("-s", "--src", action="append", type=str, 
+                        dest="srcs", default=[],
+                        help="source directory where package is located")  
+    parser.add_argument("-b", "--buildtype", action="store", type=str, 
+                        dest="btype", default='bdist_egg',
+                        help="type of distribution to build")
+    parser.add_argument("--py", action="store", type=str, 
+                        dest="py", default='python',
+                        help="which python to use (default='python'")
+    parser.add_argument("-k","--keep", action="store_true", dest='keep',
+                        help="if there are build failures, don't delete "
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
 
