@@ -6,6 +6,8 @@ import atexit
 import tempfile
 import tarfile
 
+from optparse import OptionParser
+
 from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
