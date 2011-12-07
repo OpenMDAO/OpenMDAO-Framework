@@ -4,12 +4,14 @@ import os
 import ConfigParser
 
 import nose
-from pkg_resources import working_set
+from pkg_resources import working_set, to_filename
 
 from openmdao.main.resource import ResourceAllocationManager
 
 def _get_openmdao_packages():
-    return [d.project_name for d in working_set 
+    # pkg_resources uses a 'safe' name for dists, which replaces all 'illegal' chars with '-'
+    # '_' is an illegal char used in one of our packages
+    return [to_filename(d.project_name) for d in working_set 
             if d.project_name.startswith('openmdao.')]
 
 def read_config(options):

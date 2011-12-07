@@ -123,7 +123,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
     if retcode != 0:
         sys.exit(retcode)
     
-    print '\ntesting  (testargs=%s ...' % testargs
+    print '\ntesting  (testargs=%s) ...' % testargs
 
     try:
         retcode = activate_and_test(envdir, testargs)
@@ -257,11 +257,12 @@ def activate_and_test(envdir, testargs=()):
     # activate the environment and run tests
     devbinpath = os.path.join(envdir, devbindir)
     os.chdir(devbinpath)
-    print("running tests from %s" % devbinpath)
+    print "running tests from %s" % devbinpath 
     env = os.environ.copy()
     for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
         if name in env: 
             del env[name]
+    print "command = ",command
     return _run_sub('test.out', command, env=env)
     
 
