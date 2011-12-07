@@ -69,7 +69,7 @@ def add_config_options(parser):
                         dest='outdir', default='host_results',
                         help="Output directory for results "
                              "(defaults to ./host_results)")
-    parser.add_argument("-f", "--filter", action='append', dest='filters', 
+    parser.add_argument("--filter", action='append', dest='filters', 
                         default=[],
                         help="boolean expression to filter hosts")
 

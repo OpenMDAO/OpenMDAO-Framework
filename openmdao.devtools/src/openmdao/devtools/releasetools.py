@@ -303,7 +303,7 @@ def build_release(parser, options):
             if platform == 'windows':
                 haswin = True
     if not haswin:
-        print "WARNING: no windows host was specified, so can't build binary eggs for windows"
+        print "WARNING: no windows host was specified, so can't build binary eggs for windows."
         if not options.test:
             print 'aborting...'
             sys.exit(-1)
@@ -323,7 +323,7 @@ def build_release(parser, options):
             sys.exit(-1)
         
         if orig_branch == 'dev':
-            print "pulling %s" % orig_branch
+            print "pulling dev branch from origin..."
             os.system("git pull origin %s" % orig_branch)
             if _has_checkouts():
                 print "something went wrong during pull.  aborting"
@@ -470,9 +470,9 @@ def _get_release_parser():
                       help="version string applied to all openmdao distributions")
     parser.add_argument("-m", action="store", type=str, dest="comment",
                       help="optional comment for version tag")
-    #parser.add_argument("-b", "--basebranch", action="store", type=str, 
-                      #dest="base", default='dev', 
-                      #help="base branch for release. defaults to dev")
+    parser.add_argument("-b", "--basebranch", action="store", type=str, 
+                      dest="base", default='dev', 
+                      help="base branch for release. defaults to dev")
     parser.add_argument("-t", "--test", action="store_true", dest="test",
                       help="used for testing. A release branch will not be created")
     parser.add_argument("-n", "--nodocbuild", action="store_true", 

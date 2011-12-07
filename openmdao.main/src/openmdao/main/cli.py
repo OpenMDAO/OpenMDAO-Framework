@@ -28,7 +28,7 @@ def _get_openmdao_parser():
     parser.add_argument("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                         default='~/.openmdao/testhosts.cfg',
                         help="Path of config file where info for remote testing/building hosts is located")
-    parser.add_argument("-f", "--filter", action='append', dest='filters', 
+    parser.add_argument("--filter", action='append', dest='filters', 
                         default=[],
                         help="boolean expression to filter hosts")
     parser.add_argument("--host", action='append', dest='hosts', metavar='HOST',
