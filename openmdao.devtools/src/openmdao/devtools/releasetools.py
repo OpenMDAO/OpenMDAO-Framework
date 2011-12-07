@@ -291,7 +291,7 @@ def build_release(parser, options):
 
     options.cfg = os.path.expanduser(options.cfg)
     
-    hostlist, config = read_config(options.cfg)
+    hostlist, config = read_config(options)
     required_binaries = set([('windows', 'python2.6'), 
                              ('windows', 'python2.7')])
     if options.binaries:
