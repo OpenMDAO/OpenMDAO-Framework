@@ -294,6 +294,7 @@ def build_release(parser, options):
     hostlist, config = read_config(options)
     required_binaries = set([('windows', 'python2.6'), 
                              ('windows', 'python2.7')])
+    binary_hosts = []
     if options.binaries:
         for host in hostlist:
             if config.has_section(host):
@@ -304,6 +305,7 @@ def build_release(parser, options):
                             py = config.get(host, 'py')
                             if (platform, py) in required_binaries:
                                 required_binaries.remove((platform, py))
+                                binary_hosts.append(host)
     if required_binaries:
         print "WARNING: binary distributions are required for the following and no hosts were specified: %s" % list(required_binaries)
         if not options.test:
@@ -389,7 +391,7 @@ def build_release(parser, options):
                 proj_dirs.append(pdir)
                 
         os.chdir(startdir)
-        _build_bdist_eggs(proj_dirs, destdir, options.hosts, cfgpath)
+        _build_bdist_eggs(proj_dirs, destdir, binary_hosts, cfgpath)
             
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(os.path.dirname(__file__),
