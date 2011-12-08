@@ -412,11 +412,12 @@ class ResourceAllocationManager(object):
             if estimate == -2:
                 key = criteria.keys()[0]
                 info = criteria[key]
-                self._logger.debug('%r incompatible: key %s: %s',
+                self._logger.debug('%r incompatible: key %r: %s',
                                    allocator.name, key, info)
             else:
-                self._logger.debug('%r returned %g',
-                                   allocator.name, estimate)
+                msg = 'OK' if estimate == 0 else 'returned %g' % estimate
+                self._logger.debug('%r %s', allocator.name, msg)
+
             if (best_estimate == -2 and estimate >= -1) or \
                (best_estimate == 0  and estimate >  0) or \
                (best_estimate >  0  and estimate < best_estimate):

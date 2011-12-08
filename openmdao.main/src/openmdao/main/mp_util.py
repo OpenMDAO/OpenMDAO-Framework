@@ -168,7 +168,10 @@ def _cleanup_tunnel(tunnel_proc, logname):
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
     if os.path.exists(logname):
-        os.remove(logname)
+        try:
+            os.remove(logname)
+        except WindowsError:
+            pass  # (Temporarily?) Ignore problem where logfile is still in use.
 
 
 def encrypt(obj, session_key):
