@@ -279,7 +279,7 @@ if __name__ == '__main__':
     parser.add_option("-d","--dir", action="store", type='string', 
                       dest='directory', default='.',
                       help="name of a directory the build will be created in")
-    parser.add_option("-t","--testargs", action="store", type='string', 
+    parser.add_option("--testargs", action="store", type='string', 
                       dest='testargs', default='',
                       help="args to pass to openmdao_test")
 

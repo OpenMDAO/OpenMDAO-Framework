@@ -56,7 +56,7 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         remoteargs.append('--branch=%s' % branch)
         
     if testargs:
-        remoteargs.append('-t "%s"' % testargs)
+        remoteargs.append('--testargs="%s"' % testargs)
         
     try:
         result = push_and_run(pushfiles, runner=pyversion,
@@ -202,7 +202,7 @@ def test_release(parser, options):
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
-                     'testargs': options.testargs.split(),
+                     'testargs': options.testargs,
                      'fname': fname,
                    }
     retval = 0
