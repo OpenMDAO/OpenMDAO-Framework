@@ -179,6 +179,7 @@ def _build_bdist_eggs(projdirs, destdir, hosts, configfile):
                 cmd.extend(['-s', pdir])
             for host in hostlist:
                 cmd.append('--host=%s' % host)
+                print 'calling: %s' % ' '.join(cmd)
                 check_call(cmd)
     finally:
         os.chdir(startdir)
