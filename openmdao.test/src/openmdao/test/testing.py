@@ -80,14 +80,16 @@ def run_openmdao_suite_deprecated():
         print "Please use 'openmdao test' instead"
         print '***'
         
-def run_openmdao_suite():
+def run_openmdao_suite(argv=None):
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao test.
     
     This function wraps nosetests, so any valid nose args should also
     work here.
     """
-    
+    if argv is None:
+        argv = sys.argv
+
     #Add any default packages/directories to search for tests to tlist.
     tlist = _get_openmdao_packages()
     
@@ -96,7 +98,7 @@ def run_openmdao_suite():
     covpkg = False # if True, --cover-package was specified by the user
     
     # check for args not starting with '-'
-    args = sys.argv
+    args = argv
     for i, arg in enumerate(args):
         if arg.startswith('--cover-package'):
             covpkg = True

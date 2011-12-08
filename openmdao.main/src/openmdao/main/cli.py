@@ -18,7 +18,7 @@ def list_testhosts(options):
         print host.ljust(30), plat.ljust(10), py
 
 def test_openmdao(options, args=None):
-    run_openmdao_suite()
+    run_openmdao_suite(sys.argv[1:])
     
 def _get_openmdao_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
