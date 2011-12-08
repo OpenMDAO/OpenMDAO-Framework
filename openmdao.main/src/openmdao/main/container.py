@@ -10,6 +10,7 @@ import pprint
 import socket
 import sys
 import inspect
+import re
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -201,19 +202,24 @@ class Container(HasTraits):
             elif self._call_tree_rooted is False:
                 self._name = ''
             else:
-                # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                # print 'searching for name of',self
-                # print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-                for frame_record in inspect.stack():
-                    # print '=============================='
-                    # print 'checking frame:',frame_record
-                    # print '--------------------------'
-                    for key,val in frame_record[0].f_globals.iteritems():
-                        # print 'checking globals'
-                        if val == self:
-                            self._name = key
-                            # print 'FOUND name = "',self._name,'"in globals of',frame_record
-                            break
+                print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                print 'searching for name of',self
+                print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+                frame_stack = inspect.stack()
+                for (frame, filename, linenum, funcname, context, index) in frame_stack:
+                    #print '============================================================='
+                    print 'checking frame:',filename,'[',linenum,'], ',funcname,'()',context[index]
+                    print '-------------------------------------------------------------'
+                    g = frame.f_globals
+                    #print 'checking globals:',g.keys()
+                    try:
+                        for key in g.keys():
+                            if g[key] == self:
+                                self._name = key
+                                print 'FOUND name = "',self._name,'"in globals of',filename
+                                break
+                    finally:
+                        del g   # explicitly remove frame reference to ensure cleanup
                     if self._name is not None:
                         break
                 else:
