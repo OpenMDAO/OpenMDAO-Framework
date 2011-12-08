@@ -247,7 +247,7 @@ class ObjServerFactory(Factory):
             # starting the process starts a new Nose test session, which
             # will eventually get here and start a new Nose session, which...
             if sys.platform == 'win32' and \
-               sys.modules['__main__'].__file__.endswith('openmdao_test-script.py'):  #pragma no cover
+               sys.modules['__main__'].__file__.endswith('openmdao-script.py'):  #pragma no cover
                 orig_main = sys.modules['__main__'].__file__
                 sys.modules['__main__'].__file__ = \
                     pkg_resources.resource_filename('openmdao.main',
