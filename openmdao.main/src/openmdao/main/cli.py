@@ -23,7 +23,7 @@ def _get_openmdao_parser():
     top_parser = ArgumentParser()
     subparsers = top_parser.add_subparsers(title='subcommands')
     
-    parser = subparsers.add_parser('testhosts', 
+    parser = subparsers.add_parser('list_testhosts', 
                                    description="build sphinx doc files")
     parser.add_argument("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                         default='~/.openmdao/testhosts.cfg',
