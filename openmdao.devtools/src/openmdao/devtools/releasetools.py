@@ -261,6 +261,12 @@ def finalize_release(parser, options):
         print 'returning to original branch (%s)' % start_branch
         check_call(['git', 'checkout', start_branch])
 
+def _get_cfg_val(config, section, option):
+    """Just returns None if option isn't there, rather than raising an exception."""
+    try:
+        return config.get(section, option)
+    except ConfigParser.NoOptionError:
+        return None
 
 def build_release(parser, options):
     """Create an OpenMDAO release, placing the following files in the 
@@ -299,13 +305,11 @@ def build_release(parser, options):
         for host in hostlist:
             if config.has_section(host):
                 if config.has_option(host, 'build_binaries') and config.getboolean(host, 'build_binaries'):
-                    if config.has_option(host, 'platform'):
-                        platform = config.get(host, 'platform')
-                        if config.has_option(host, 'py'):
-                            py = config.get(host, 'py')
-                            if (platform, py) in required_binaries:
-                                required_binaries.remove((platform, py))
-                                binary_hosts.append(host)
+                    platform = _get_cfg_val(config, host, 'platform')
+                    py = _get_cfg_val(config, host, 'py')
+                    if (platform, py) in required_binaries:
+                        required_binaries.remove((platform, py))
+                        binary_hosts.append(host)
     if required_binaries:
         print "WARNING: binary distributions are required for the following and no hosts were specified: %s" % list(required_binaries)
         if not options.test:
