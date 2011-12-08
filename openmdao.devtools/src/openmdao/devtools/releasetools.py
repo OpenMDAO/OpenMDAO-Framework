@@ -251,16 +251,14 @@ def finalize_release(parser, options):
         if options.dry_run:
             print 'skipping...'
         else:
-            pass
-            #check_call(['release', 'push', reldir, 'openmdao@web103.webfaction.com'])
+            check_call(['release', 'push', reldir, 'openmdao@web103.webfaction.com'])
             
         # push release files to official repo on github (dev branch)
         print "pushing branch %s up to the official dev branch" % brname
         if options.dry_run:
             print 'skipping...'
         else:
-            pass
-            #check_call(['git', 'push', '--tags', 'origin', '%s:dev' % brname])
+            check_call(['git', 'push', '--tags', 'origin', '%s:dev' % brname])
     finally:
         print 'returning to original branch (%s)' % start_branch
         check_call(['git', 'checkout', start_branch])
