@@ -116,7 +116,7 @@ def main(argv=None):
     retval = run_host_processes(config, conn, image_hosts, options, 
                                 funct=remote_build, 
                                 funct_kwargs=funct_kwargs,
-                                done_functs=[_print_host_codes])
+                                done_functs=[print_host_codes])
     
     if retval == 0:
         cleanup('paramiko.log')
