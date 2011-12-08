@@ -16,6 +16,13 @@ that will be contributed to the OpenMDAO-Framework repository.
   ::
 
     git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git  
+    
+         
+  or, if you have trouble connecting, try:
+	 
+  ::  
+    
+    git clone http://github.com/OpenMDAO/OpenMDAO-Framework.git
   
 * Finally, if you haven't done this already, you can save some typing by defining a remote branch in
   your local repo. Again, you have to do this just once, which is why it's included here rather than
@@ -101,7 +108,7 @@ repository (assuming the maintainers approve the change).
 
     ::
 
-      openmdao_test
+      openmdao test
 
     Fix any errors found during testing.
 
@@ -112,27 +119,27 @@ repository (assuming the maintainers approve the change).
     
     ::
     
-      openmdao_build_docs
-      openmdao_docs
+      openmdao build_docs
+      openmdao docs
 
 
 12. Test the docs. 
-                 	 
+                
     ::
     
-      openmdao_testdocs
+      openmdao test_docs
  
-    Note: The doctests are automatically run whenever you run ``openmdao_test``. Step 11 builds and tests
+    Note: The doctests are automatically run whenever you run ``openmdao test``. Step 11 builds and tests
     `only` the docs.
 
     Fix errors if any.
 
 13. If you have not done so, visually inspect the docs using the default browser. 
                  
-		 
+            
     ::
      
-      openmdao_docs
+      openmdao docs
 
 14.  Stage the updated content for the next commit.
                  
@@ -154,13 +161,14 @@ repository (assuming the maintainers approve the change).
     
       git push myfork 529-fix_bug
 
-17. Ask the OpenMDAO maintainers to merge your changes (issue a pull request).
+17. Ask the OpenMDAO maintainers to merge your changes (you issue a pull request).
  
-*  Go to your personal OpenMDAO-Framework fork on GitHub. 
+*  Go to your personal OpenMDAO-Framework fork on GitHub, for example:
 
-   https://github.com/hschilling/OpenMDAO-Framework
-
-*  Use the **Switch Branches** menu (upper left) to select branch ``529-fix_bug``
+   https://github.com/hschilling/OpenMDAO-Framework 
+   
+*  On the right side of the page, you'll see the **Current branch**. Click on the down arrow next to the
+   branch name to display the list of branches, and then switch to the ``529-fix_bug`` branch. 
 
 *  Click the **Pull Request** button in the upper right corner. 
  

@@ -20,7 +20,10 @@ from openmdao.util.shellproc import ShellProc
 
 
 class ExternalCode(ComponentWithDerivatives):
-    """ Run an external code as a component. """
+    """
+    Run an external code as a component. The component can be configured to
+    run the code on a remote server, see :meth:`execute`.
+    """
 
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
@@ -58,7 +61,7 @@ class ExternalCode(ComponentWithDerivatives):
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
-        """ Don't allow setting of 'command' by remote client. """
+        """ Don't allow setting of 'command' by a remote client. """
         if path in ('command', 'get_access_controller') and remote_access():
             self.raise_exception('%r may not be set() remotely' % path,
                                  RuntimeError)
@@ -96,6 +99,22 @@ class ExternalCode(ComponentWithDerivatives):
         ----------------------- -------------------------------------
         hard_run_duration_limit self.timeout (if non-zero)
         ======================= =====================================
+
+        .. note::
+
+            Input files to be sent to the remote server are defined by
+            :class:`FileMetadata` entries in the `external_files` list
+            with `input` True.  Similarly, output files to be retrieved
+            from the remote server are defined by entries with `output`
+            True.
+
+        .. warning::
+
+            Any file **not** labelled with `binary` True will undergo
+            newline translation if the local and remote machines have
+            different newline representations. Newline translation will
+            corrupt a file which is binary but hasn't been labelled as
+            such.
 
         """
         self.return_code = -12345678
@@ -198,11 +217,14 @@ class ExternalCode(ComponentWithDerivatives):
 
             # Send inputs.
             patterns = []
+            textfiles = []
             for metadata in self.external_files:
                 if metadata.get('input', False):
                     patterns.append(metadata.path)
+                    if not metadata.binary:
+                        textfiles.append(metadata.path)
             if patterns:
-                self._send_inputs(patterns)
+                self._send_inputs(patterns, textfiles)
             else:
                 self._logger.debug('No input metadata paths')
 
@@ -213,15 +235,18 @@ class ExternalCode(ComponentWithDerivatives):
                 self._server.execute_command(rdesc)
             et = time.time() - start_time
             if et >= 60:  #pragma no cover
-                self._logger.info('elapsed time: %f sec.', et)
+                self._logger.info('elapsed time: %.1f sec.', et)
 
             # Retrieve results.
             patterns = []
+            textfiles = []
             for metadata in self.external_files:
                 if metadata.get('output', False):
                     patterns.append(metadata.path)
+                    if not metadata.binary:
+                        textfiles.append(metadata.path)
             if patterns:
-                self._retrieve_results(patterns)
+                self._retrieve_results(patterns, textfiles)
             else:
                 self._logger.debug('No output metadata paths')
 
@@ -231,7 +256,7 @@ class ExternalCode(ComponentWithDerivatives):
 
         return (return_code, error_msg)
 
-    def _send_inputs(self, patterns):
+    def _send_inputs(self, patterns, textfiles):
         """ Sends input files matching `patterns`. """
         self._logger.info('sending inputs...')
         start_time = time.time()
@@ -240,7 +265,8 @@ class ExternalCode(ComponentWithDerivatives):
         pfiles, pbytes = pack_zipfile(patterns, filename, self._logger)
         try:
             filexfer(None, filename, self._server, filename, 'b')
-            ufiles, ubytes = self._server.unpack_zipfile(filename)
+            ufiles, ubytes = self._server.unpack_zipfile(filename,
+                                                         textfiles=textfiles)
         finally:
             os.remove(filename)
 
@@ -254,19 +280,20 @@ class ExternalCode(ComponentWithDerivatives):
         if et >= 60:  #pragma no cover
             self._logger.info('elapsed time: %f sec.', et)
 
-    def _retrieve_results(self, patterns):
+    def _retrieve_results(self, patterns, textfiles):
         """ Retrieves result files matching `patterns`. """
         self._logger.info('retrieving results...')
         start_time = time.time()
 
         filename = 'outputs.zip'
-        pfiles, pbytes = self._server.pack_zipfile(tuple(patterns), filename)
+        pfiles, pbytes = self._server.pack_zipfile(patterns, filename)
         filexfer(self._server, filename, None, filename, 'b')
 
         # Valid, but empty, file causes unpack_zipfile() problems.
         try:
             if os.path.getsize(filename) > 0:
-                ufiles, ubytes = unpack_zipfile(filename, self._logger)
+                ufiles, ubytes = unpack_zipfile(filename, logger=self._logger,
+                                                textfiles=textfiles)
             else:
                 ufiles, ubytes = 0, 0
         finally:
