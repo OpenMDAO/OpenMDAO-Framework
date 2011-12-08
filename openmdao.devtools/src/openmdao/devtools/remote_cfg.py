@@ -141,7 +141,7 @@ def get_times(t1, t2):
     return (hours, mins, secs)
     
 
-def _print_host_codes(processes, p):
+def print_host_codes(processes, p):
     """This is called after the given process has completed."""
     if len(processes) > 0:
         remaining = '\nremaining hosts: %s' % ([pr.name for pr in processes],)
@@ -151,14 +151,14 @@ def _print_host_codes(processes, p):
                                               p.exitcode, 
                                               remaining)
 
-def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
+def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs, done_functs=()):
     """This routine returns after funct has been run on all hosts. Displays
     total elapsed time when finished.
     """
     t1 = time.time()
     
     processes = start_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs)
-    summary = collect_host_processes(processes, [_print_host_codes])
+    summary = collect_host_processes(processes, done_functs)
     
     t2 = time.time()
     

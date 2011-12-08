@@ -12,7 +12,8 @@ from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
 from openmdao.devtools.remote_cfg import add_config_options, process_options, \
-                                         run_host_processes, get_tmp_user_dir
+                                         run_host_processes, get_tmp_user_dir, \
+                                         print_host_codes
 from openmdao.util.fileutil import cleanup
     
 def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
@@ -114,7 +115,8 @@ def main(argv=None):
     
     retval = run_host_processes(config, conn, image_hosts, options, 
                                 funct=remote_build, 
-                                funct_kwargs=funct_kwargs)
+                                funct_kwargs=funct_kwargs,
+                                done_functs=[_print_host_codes])
     
     if retval == 0:
         cleanup('paramiko.log')

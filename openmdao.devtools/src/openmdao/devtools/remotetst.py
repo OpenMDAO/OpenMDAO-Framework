@@ -13,7 +13,8 @@ from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
                                     ssh_test, put_dir, cleanup
 from openmdao.devtools.remote_cfg import add_config_options, process_options, \
-                                         run_host_processes, get_tmp_user_dir
+                                         run_host_processes, get_tmp_user_dir, \
+                                         print_host_codes
 
 from openmdao.devtools.ec2 import run_on_ec2
 
@@ -139,7 +140,8 @@ def test_branch(argv=None):
     try:
         retcode = run_host_processes(config, conn, ec2_hosts, options, 
                                      funct=_remote_build_and_test, 
-                                     funct_kwargs=funct_kwargs)
+                                     funct_kwargs=funct_kwargs,
+                                     done_functs=[print_host_codes])
     finally:
         if cleanup_tar:
             cleanup(ziptarname)
@@ -207,7 +209,8 @@ def test_release(parser, options):
     if len(options.hosts) > 0:
         retval = run_host_processes(config, conn, ec2_hosts, options, 
                                     funct=_remote_build_and_test, 
-                                    funct_kwargs=funct_kwargs)
+                                    funct_kwargs=funct_kwargs,
+                                    done_functs=[print_host_codes])
     else: # just run test locally
         print 'testing locally...'
         loctst = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
