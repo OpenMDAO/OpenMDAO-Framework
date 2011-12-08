@@ -197,7 +197,7 @@ def _write_src_docs(branchdir, docdir):
             logger.info('creating autodoc file for %s' % src)
             _mod_sphinx_info(os.path.basename(src), f)
 
-def build_docs(options=None):
+def build_docs(options=None, args=None):
     """A script (openmdao build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
@@ -262,7 +262,7 @@ def view_docs(browser=None):
     wb.open(idxpath)
 
 
-def test_docs(options):
+def test_docs(options, args=None):
     """Tests the openmdao sphinx documentation.  
     A console script (openmdao test_docs) calls this.
     This forces a build of the docs before testing.

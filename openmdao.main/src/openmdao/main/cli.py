@@ -8,7 +8,7 @@ from argparse import ArgumentParser
 from subprocess import call, check_call
 
 from openmdao.main.plugin import plugin_docs, plugin_build_docs
-from openmdao.test.testing import read_config, filter_config
+from openmdao.test.testing import read_config, filter_config, run_openmdao_suite
 
 def list_testhosts(options):
     hostlist, config = read_config(options)
@@ -17,6 +17,9 @@ def list_testhosts(options):
         py = config.get(host, 'py')
         print host.ljust(30), plat.ljust(10), py
 
+def test_openmdao(options, args=None):
+    run_openmdao_suite()
+    
 def _get_openmdao_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
     
@@ -46,8 +49,14 @@ def _get_openmdao_parser():
                         help="browser name")
     parser.set_defaults(func=plugin_docs)
     
+    parser = subparsers.add_parser('test', 
+                                   description="run the OpenMDAO test suite")
+    parser.set_defaults(func=test_openmdao)
+        
     try:
         from openmdao.devtools.build_docs import build_docs, test_docs
+        from openmdao.devtools.push_docs import push_docs
+        
         parser = subparsers.add_parser('build_docs', 
                                        description="build OpenMDAO docs")
         parser.add_argument("-v", "--version", action="store", type=str, 
@@ -68,6 +77,7 @@ def _get_openmdao_parser():
         parser.add_argument("-n", "--nodocbuild", action="store_true", 
                             dest="nodocbuild",
                             help="used for testing. The docs will not be rebuilt if they already exist")
+        parser.set_defaults(func=push_docs)
     except ImportError:
         pass
     
@@ -76,8 +86,8 @@ def _get_openmdao_parser():
 
 def openmdao():
     parser = _get_openmdao_parser()
-    options = parser.parse_args()
-    options.func(options)
+    options, args = parser.parse_known_args()
+    options.func(options, args)
     
 if __name__ == '__main__':
     openmdao()

@@ -10,7 +10,7 @@ from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import tar_dir, fabric_cleanup
 
 
-def push_docs(options):
+def push_docs(options, args=None):
     """A script (push_docs) points to this. By default it pushes the current
     copy of the docs up to the development doc area on openmdao.org.
     """
