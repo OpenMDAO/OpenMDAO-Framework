@@ -61,6 +61,7 @@ setup(name='openmdao.main',
       openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
       update_libpath=openmdao.main.plugin:update_libpath
+      openmdao=openmdao.main.cli:openmdao
       
       [openmdao.component]
       openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
