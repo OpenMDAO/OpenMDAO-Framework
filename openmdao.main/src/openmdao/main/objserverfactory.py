@@ -496,16 +496,22 @@ class ObjServer(object):
         return pack_zipfile(patterns, filename, self._logger)
 
     @rbac('owner')
-    def unpack_zipfile(self, filename):
+    def unpack_zipfile(self, filename, textfiles=None):
         """
         Unpack ZipFile `filename` if `filename` is legal.
 
         filename: string
             Name of ZipFile to unpack.
+
+        textfiles: list
+            List of :mod:`fnmatch` style patterns specifying which upnapcked
+            files are text files possibly needing newline translation. If not
+            supplied, the first 4KB of each is scanned for a zero byte. If not
+            found then the file is assumed to be a text file.
         """
         self._logger.debug('unpack_zipfile %r', filename)
         self._check_path(filename, 'unpack_zipfile')
-        return unpack_zipfile(filename, self._logger)
+        return unpack_zipfile(filename, self._logger, textfiles)
 
     @rbac('owner')
     def chmod(self, path, mode):
