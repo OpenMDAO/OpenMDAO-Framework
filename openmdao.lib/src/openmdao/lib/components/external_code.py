@@ -198,11 +198,14 @@ class ExternalCode(ComponentWithDerivatives):
 
             # Send inputs.
             patterns = []
+            textfiles = []
             for metadata in self.external_files:
                 if metadata.get('input', False):
                     patterns.append(metadata.path)
+                    if not metadata.binary:
+                        textfiles.append(metadata.path)
             if patterns:
-                self._send_inputs(patterns)
+                self._send_inputs(patterns, textfiles)
             else:
                 self._logger.debug('No input metadata paths')
 
@@ -217,11 +220,14 @@ class ExternalCode(ComponentWithDerivatives):
 
             # Retrieve results.
             patterns = []
+            textfiles = []
             for metadata in self.external_files:
                 if metadata.get('output', False):
                     patterns.append(metadata.path)
+                    if not metadata.binary:
+                        textfiles.append(metadata.path)
             if patterns:
-                self._retrieve_results(patterns)
+                self._retrieve_results(patterns, textfiles)
             else:
                 self._logger.debug('No output metadata paths')
 
@@ -231,7 +237,7 @@ class ExternalCode(ComponentWithDerivatives):
 
         return (return_code, error_msg)
 
-    def _send_inputs(self, patterns):
+    def _send_inputs(self, patterns, textfiles):
         """ Sends input files matching `patterns`. """
         self._logger.info('sending inputs...')
         start_time = time.time()
@@ -240,7 +246,8 @@ class ExternalCode(ComponentWithDerivatives):
         pfiles, pbytes = pack_zipfile(patterns, filename, self._logger)
         try:
             filexfer(None, filename, self._server, filename, 'b')
-            ufiles, ubytes = self._server.unpack_zipfile(filename)
+            ufiles, ubytes = self._server.unpack_zipfile(filename,
+                                                         textfiles=textfiles)
         finally:
             os.remove(filename)
 
@@ -254,19 +261,20 @@ class ExternalCode(ComponentWithDerivatives):
         if et >= 60:  #pragma no cover
             self._logger.info('elapsed time: %f sec.', et)
 
-    def _retrieve_results(self, patterns):
+    def _retrieve_results(self, patterns, textfiles):
         """ Retrieves result files matching `patterns`. """
         self._logger.info('retrieving results...')
         start_time = time.time()
 
         filename = 'outputs.zip'
-        pfiles, pbytes = self._server.pack_zipfile(tuple(patterns), filename)
+        pfiles, pbytes = self._server.pack_zipfile(patterns, filename)
         filexfer(self._server, filename, None, filename, 'b')
 
         # Valid, but empty, file causes unpack_zipfile() problems.
         try:
             if os.path.getsize(filename) > 0:
-                ufiles, ubytes = unpack_zipfile(filename, self._logger)
+                ufiles, ubytes = unpack_zipfile(filename, logger=self._logger,
+                                                textfiles=textfiles)
             else:
                 ufiles, ubytes = 0, 0
         finally:
