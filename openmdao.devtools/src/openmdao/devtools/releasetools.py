@@ -221,6 +221,9 @@ def finalize_release(parser, options):
     """Push the specified release up to the production server and tag
     the repository with the version number.
     """
+    if options.version is None:
+        raise RuntimeError("you must specify the version")
+    
     reldir = 'rel_%s' % options.version
     brname = 'release_%s' % options.version
     # check validity
@@ -462,8 +465,6 @@ def _get_release_parser():
     parser.add_argument("-k","--keep", action="store_true", dest='keep',
                       help="Don't delete the temporary build directory. "
                            "If testing on EC2 stop the instance instead of terminating it.")
-    parser.add_argument("-f","--file", action="store", type=str, dest='fname',
-                      help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
     parser.add_argument("--testargs", action="store", type=str, dest='testargs',
                         default='',
                         help="args to be passed to openmdao_test")
