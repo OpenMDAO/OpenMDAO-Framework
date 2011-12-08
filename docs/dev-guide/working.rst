@@ -144,8 +144,8 @@ After your virtual Python environment has been activated, you can add other
 distributions to the environment by using ``easy_install`` or :term:`pip` in
 the same manner that you would add packages to the system level Python.
 
-If you need to build the OpenMDAO docs, you can run ``openmdao_build_docs``.
-Running ``openmdao_docs`` will display the documents in HTML in the default browser.
+If you need to build the OpenMDAO docs, you can run ``openmdao build_docs``.
+Running ``openmdao docs`` will display the documents in HTML in the default browser.
 
 You can deactivate the environment by typing:
 
@@ -435,7 +435,7 @@ Here's a little checklist to go through to make sure that your update is
 actually finished:
 
 1. If you've changed anything that needs to be documented, update the OpenMDAO docs.
-2. If you updated the docs, rebuild them by running ``openmdao_build_docs`` to make sure
+2. If you updated the docs, rebuild them by running ``openmdao build_docs`` to make sure
    that you didn't break them.
 3. Add unit tests for whatever functionality you updated.  If it was a bug fix, put in a test
    that shows the bug is fixed. If you added a new feature, then add some tests to verify

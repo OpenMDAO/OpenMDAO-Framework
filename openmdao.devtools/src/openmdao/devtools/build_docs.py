@@ -197,11 +197,11 @@ def _write_src_docs(branchdir, docdir):
             logger.info('creating autodoc file for %s' % src)
             _mod_sphinx_info(os.path.basename(src), f)
 
-def build_docs(options):
-    """A script (openmdao_build_docs) points to this.  It generates the Sphinx
+def build_docs(options=None):
+    """A script (openmdao build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
-    if options.version:
+    if options is not None and options.version:
         version = options.version
         shtitle = 'OpenMDAO Documentation v%s' % version
     else:
@@ -242,7 +242,7 @@ def build_docs(options):
         os.chdir(startdir)
 
 def view_docs(browser=None):
-    """A script (openmdao_docs) points to this. It just pops up a browser to 
+    """A script (openmdao docs) points to this. It just pops up a browser to 
     view the openmdao sphinx docs. If the docs are not already built, it
     builds them before viewing, but if the docs already exist, it's not smart enough
     to rebuild them if they've changed since the last build.
@@ -264,12 +264,12 @@ def view_docs(browser=None):
 
 def test_docs(options):
     """Tests the openmdao sphinx documentation.  
-    A console script (openmdao_testdocs) calls this.
+    A console script (openmdao test_docs) calls this.
     This forces a build of the docs before testing.
     """
     branchdir, docdir, bindir =_get_dirnames()
     # force a new build before testing
-    build_docs(options)
+    build_docs()
     sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
                       os.path.join(docdir, '_build', 'doctrees'), 
                       docdir, os.path.join(docdir, '_build', 'html')])
@@ -390,7 +390,4 @@ def _get_rst_path(obj):
             return relpath
 
         
-if __name__ == "__main__": #pragma: no cover
-    build_docs()
-
 

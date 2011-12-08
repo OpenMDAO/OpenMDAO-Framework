@@ -54,6 +54,7 @@ def _get_openmdao_parser():
                             dest="version",
                             help="the OpenMDAO version")
         parser.set_defaults(func=build_docs)
+        
         parser = subparsers.add_parser('test_docs', 
                                        description="test the OpenMDAO docs")
         parser.set_defaults(func=test_docs)

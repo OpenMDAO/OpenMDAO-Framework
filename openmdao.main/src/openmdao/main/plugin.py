@@ -907,7 +907,7 @@ def _plugin_docs(plugin_name, browser=None):
                                    '_build', 'html')
             if not os.path.isfile(os.path.join(htmldir,'index.html')): #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
-                check_call(['openmdao_build_docs'])
+                check_call(['openmdao', 'build_docs'])
             url = 'file://'+os.path.join(htmldir, anchorpath)
             url = url.replace('\\', '/')
     else:

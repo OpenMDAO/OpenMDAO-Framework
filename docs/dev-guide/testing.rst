@@ -387,7 +387,7 @@ also run them separately. In an active openmdao virtual environment, type:
 
 ::
 
-    openmdao_testdocs
+    openmdao test_docs
 
 This command builds the documents and then runs the doctests. If the test was successful, you should
 see output similar to the following:
