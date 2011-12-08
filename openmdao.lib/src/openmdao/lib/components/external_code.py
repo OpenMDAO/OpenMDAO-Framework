@@ -20,7 +20,10 @@ from openmdao.util.shellproc import ShellProc
 
 
 class ExternalCode(ComponentWithDerivatives):
-    """ Run an external code as a component. """
+    """
+    Run an external code as a component. The component can be configured to
+    run the code on a remote server, see :meth:`execute`.
+    """
 
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
@@ -58,7 +61,7 @@ class ExternalCode(ComponentWithDerivatives):
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
-        """ Don't allow setting of 'command' by remote client. """
+        """ Don't allow setting of 'command' by a remote client. """
         if path in ('command', 'get_access_controller') and remote_access():
             self.raise_exception('%r may not be set() remotely' % path,
                                  RuntimeError)
@@ -96,6 +99,22 @@ class ExternalCode(ComponentWithDerivatives):
         ----------------------- -------------------------------------
         hard_run_duration_limit self.timeout (if non-zero)
         ======================= =====================================
+
+        .. note::
+
+            Input files to be sent to the remote server are defined by
+            :class:`FileMetadata` entries in the `external_files` list
+            with `input` True.  Similarly, output files to be retrieved
+            from the remote server are defined by entries with `output`
+            True.
+
+        .. warning::
+
+            Any file **not** labelled with `binary` True will undergo
+            newline translation if the local and remote machines have
+            different newline representations. Newline translation will
+            corrupt a file which is binary but hasn't been labelled as
+            such.
 
         """
         self.return_code = -12345678
@@ -216,7 +235,7 @@ class ExternalCode(ComponentWithDerivatives):
                 self._server.execute_command(rdesc)
             et = time.time() - start_time
             if et >= 60:  #pragma no cover
-                self._logger.info('elapsed time: %f sec.', et)
+                self._logger.info('elapsed time: %.1f sec.', et)
 
             # Retrieve results.
             patterns = []

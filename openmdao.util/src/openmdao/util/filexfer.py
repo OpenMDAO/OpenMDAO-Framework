@@ -150,7 +150,7 @@ def unpack_zipfile(filename, logger=NullLogger, textfiles=None):
 
 def translate_newlines(filename):
     """
-    Translate the newlines of `filename`.
+    Translate the newlines of `filename` to the local standard.
 
     filename: string
         Name of the file to be translated.
