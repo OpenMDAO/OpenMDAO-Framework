@@ -98,7 +98,7 @@ To run all tests, type the following:
 
 ::
 
-   openmdao_test
+   openmdao test
    
 If you don't get any errors or failed tests, everything worked. If you did have some problems, the 
 `Community Q&A forum <http://openmdao.org/forum/questions>`_ is your next stop!

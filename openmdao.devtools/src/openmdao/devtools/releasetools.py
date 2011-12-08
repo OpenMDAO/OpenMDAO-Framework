@@ -465,7 +465,7 @@ def _get_release_parser():
                            "If testing on EC2 stop the instance instead of terminating it.")
     parser.add_argument("--testargs", action="store", type=str, dest='testargs',
                         default='',
-                        help="args to be passed to openmdao_test")
+                        help="args to be passed to openmdao test")
     parser.set_defaults(func=test_release)
     
     

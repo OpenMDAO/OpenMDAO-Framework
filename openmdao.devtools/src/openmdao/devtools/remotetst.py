@@ -89,7 +89,7 @@ def test_branch(argv=None):
                         help="If file is a git repo, supply branch name here")
     parser.add_argument("--testargs", action="store", type=str, dest='testargs',
                         default='',
-                        help="args to be passed to openmdao_test")
+                        help="args to be passed to openmdao test")
 
     options = parser.parse_args()
     

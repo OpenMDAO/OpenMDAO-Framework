@@ -249,10 +249,10 @@ def activate_and_test(envdir, testargs=()):
     """
     if sys.platform.startswith('win'):
         devbindir = 'Scripts'
-        command = 'activate.bat && openmdao_test %s' % ' '.join(testargs)
+        command = 'activate.bat && openmdao test %s' % ' '.join(testargs)
     else:
         devbindir = 'bin'
-        command = '. ./activate && openmdao_test %s' % ' '.join(testargs)
+        command = '. ./activate && openmdao test %s' % ' '.join(testargs)
         
     # activate the environment and run tests
     devbinpath = os.path.join(envdir, devbindir)
@@ -281,7 +281,7 @@ if __name__ == '__main__':
                       help="name of a directory the build will be created in")
     parser.add_option("--testargs", action="store", type='string', 
                       dest='testargs', default='',
-                      help="args to pass to openmdao_test")
+                      help="args to pass to openmdao test")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     

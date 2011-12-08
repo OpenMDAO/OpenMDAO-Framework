@@ -381,7 +381,7 @@ After a merge, it's good practice to confirm that all tests still pass by typing
 
 ::
 
-  openmdao_test
+  openmdao test
   
  
 You are now ready to continue development on your branch.
@@ -414,7 +414,7 @@ You can edit your personal Git configuration to make it use whatever your favori
 graphical diff tool may be.
 
 Once you've updated the conflicted files, you tell Git that the conflicts are resolved
-by running ``git add`` on each file. After resolving all conflicts, run ``openmdao_test``
+by running ``git add`` on each file. After resolving all conflicts, run ``openmdao test``
 to verify that everything is in working order, then commit the changes from the
 merge:
 
@@ -440,7 +440,7 @@ actually finished:
 3. Add unit tests for whatever functionality you updated.  If it was a bug fix, put in a test
    that shows the bug is fixed. If you added a new feature, then add some tests to verify
    that it works as expected.
-4. Run the OpenMDAO test suite using the ``openmdao_test`` command.  If any tests fail,
+4. Run the OpenMDAO test suite using the ``openmdao test`` command.  If any tests fail,
    fix them and rerun the tests until they all pass.
 
 Once you've done all of these things, you're ready to push your changes up to

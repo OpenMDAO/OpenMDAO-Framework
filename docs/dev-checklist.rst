@@ -101,7 +101,7 @@ repository (assuming the maintainers approve the change).
 
     ::
 
-      openmdao_test
+      openmdao test
 
     Fix any errors found during testing.
 
@@ -122,7 +122,7 @@ repository (assuming the maintainers approve the change).
     
       openmdao test_docs
  
-    Note: The doctests are automatically run whenever you run ``openmdao_test``. Step 11 builds and tests
+    Note: The doctests are automatically run whenever you run ``openmdao test``. Step 11 builds and tests
     `only` the docs.
 
     Fix errors if any.

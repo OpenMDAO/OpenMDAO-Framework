@@ -71,9 +71,18 @@ def filter_config(hostlist, config, options):
     return final_hosts
 
 
+def run_openmdao_suite_deprecated():
+    try:
+        run_openmdao_suite()
+    finally:
+        print '\n***'
+        print "'openmdao_test' is deprecated and will be removed in a later release."
+        print "Please use 'openmdao test' instead"
+        print '***'
+        
 def run_openmdao_suite():
     """This function is exported as a script that is runnable as part of
-    an OpenMDAO virtual environment as openmdao_test.
+    an OpenMDAO virtual environment as openmdao test.
     
     This function wraps nosetests, so any valid nose args should also
     work here.
