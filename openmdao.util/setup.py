@@ -38,7 +38,7 @@ setup(name='openmdao.util',
           'pycrypto',
           'pyparsing',
           'Traits==3.3.0',
-          'PyYAML==3.09',
+          #'PyYAML==3.09',
       ],
       entry_points = """
       [console_scripts]
