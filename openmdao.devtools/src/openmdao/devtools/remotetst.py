@@ -220,7 +220,7 @@ def test_release(parser, options):
             if not _is_release_dir(fname):
                 fname = release_dir
             fname = os.path.join(fname, 'downloads', 'latest', 'go-openmdao.py')
-        subprocess.check_call([sys.executable, loctst, '-f', fname, '-d', tdir, '-t', options.testargs],
+        subprocess.check_call([sys.executable, loctst, '-f', fname, '-d', tdir, '--testargs="%s"' % options.testargs],
                               stdout=sys.stdout, stderr=sys.stderr)
     
     if options.keep:
