@@ -578,7 +578,7 @@ def _find_unit(unit):
             
                 unit = eval(name, {'__builtins__':None}, _unit_lib.unit_table)
         
-                _unit_cache[name] = unit
+            _unit_cache[name] = unit
 
     if not isinstance(unit, PhysicalUnit):
         raise TypeError(str(unit) + ' is not a unit')

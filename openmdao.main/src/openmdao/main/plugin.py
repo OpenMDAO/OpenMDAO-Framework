@@ -23,6 +23,8 @@ from openmdao.main.factorymanager import get_available_types, _plugin_groups
 from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir
 from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
+from openmdao.util.git import download_github_tar
+from openmdao.util.view_docs import view_docs
 from openmdao.main.pkg_res_factory import _plugin_groups
 from openmdao.main import __version__
 
@@ -846,10 +848,9 @@ def plugin_docs(options):
     the Sphinx documentation for the named plugin in a browser.
     """
     if options.plugin_dist_name is None:
-        parser.print_help()
-        sys.exit(-1)
-        
-    _plugin_docs(options.plugin_dist_name, options.browser)
+        view_docs(options.browser)
+    else:
+        _plugin_docs(options.plugin_dist_name, options.browser)
         
         
 def _plugin_docs(plugin_name, browser=None):
@@ -906,7 +907,7 @@ def _plugin_docs(plugin_name, browser=None):
                                    '_build', 'html')
             if not os.path.isfile(os.path.join(htmldir,'index.html')): #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
-                check_call(['openmdao_build_docs'])
+                check_call(['openmdao', 'build_docs'])
             url = 'file://'+os.path.join(htmldir, anchorpath)
             url = url.replace('\\', '/')
     else:
@@ -1049,32 +1050,13 @@ def update_libpath(options=None):
             print "changes to take effect\n"
 
 
-def download_github_tar(name, version, dest='.'):
-    """Pull a tarfile of an OpenMDAO-Plugins repo and place it in the 
-    specified destination directory.
-    """
-    dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))
-    url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
-    
-    try:
-        resp = urllib2.urlopen(url)
-    except urllib2.HTTPError as err:
-        print str(err)
-        exit(-1)
-    
-    tarpath = os.path.join(dest, "%s-%s.tar.gz" % (name, version))
-    with open(tarpath, 'wb') as out:
-        out.write(resp.fp.read())
-
-    return tarpath
-    
     
 def build_docs_and_install(name, version, findlinks):
     tdir = tempfile.mkdtemp()
     startdir = os.getcwd()
     os.chdir(tdir)
     try:
-        tarpath = download_github_tar(name, version)
+        tarpath = download_github_tar('OpenMDAO-Plugins', name, version)
         
         # extract the repo tar file
         tar = tarfile.open(tarpath)

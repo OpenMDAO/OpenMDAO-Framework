@@ -50,7 +50,7 @@ setup(name='openmdao.test',
           'openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp'
           ],
       "console_scripts": [
-          'openmdao_test = openmdao.test.testing:run_openmdao_suite'
+          'openmdao_test = openmdao.test.testing:run_openmdao_suite_deprecated'
           ]
       },
       )

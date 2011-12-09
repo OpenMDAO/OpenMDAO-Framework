@@ -7,14 +7,15 @@ Testing
 =======
 
 By default, your top level ``devenv/bin`` directory will contain a script
-called ``openmdao_test`` that uses a Python package called `nose
+called ``openmdao`` that has a subcommand called 'test' that uses a Python 
+package called `nose
 <http://readthedocs.org/docs/nose/en/latest/>`_ to run all of the unit
 tests for any package that you specify. For example, to run the full set
 of openmdao unit tests, type:
 
 ::
 
-   openmdao_test
+   openmdao test
    
 which should generate output something like this:
 
@@ -33,13 +34,13 @@ To run unit tests for a package only, for example ``openmdao.main``, type:
 
 ::
 
-    openmdao_test openmdao.main
+    openmdao test openmdao.main
     
     
-To get a list of options available with ``openmdao_test``, type  ``openmdao_test --help``
-from the ``devenv`` directory.  Since the ``openmdao_test`` script uses the *nose* testing
+To get a list of options available with ``openmdao test``, type  ``openmdao test --help``
+from the ``devenv`` directory.  Since the ``openmdao test`` command uses the *nose* testing
 framework internally, all options available when running *nosetests* should also be
-available when using ``openmdao_test``.
+available when using ``openmdao test``.
 
 .. index: test coverage
 
@@ -49,13 +50,13 @@ Test Coverage
 
 A Python package called `coverage 
 <http://nedbatchelder.com/code/coverage/>`_, which is accessible through
-``openmdao_test``, makes it easy to determine if your tests cover every
+``openmdao test``, makes it easy to determine if your tests cover every
 line of code in your source files.  To get a coverage report for the openmdao
 package, go to the ``devenv`` directory and type the following:
 
 ::
 
-   openmdao_test openmdao --with-coverage --cover-package=openmdao
+   openmdao test openmdao --with-coverage --cover-package=openmdao
    
 The report should look something like this:
 
@@ -113,7 +114,7 @@ clear the coverage database by issuing the following command:
 
 ::
 
-   openmdao_test openmdao --cover-erase
+   openmdao test openmdao --cover-erase
 
 .. index: pair: tests; adding
 .. index: pair: tests; unit
@@ -382,12 +383,12 @@ More details on the ``literalinclude`` directive can be found at http://sphinx.p
 *Running the Tests*
 +++++++++++++++++++
 
-The doctests are automatically run whenever you run ``openmdao_test``, but you can
+The doctests are automatically run whenever you run ``openmdao test``, but you can
 also run them separately. In an active openmdao virtual environment, type:
 
 ::
 
-    openmdao_testdocs
+    openmdao test_docs
 
 This command builds the documents and then runs the doctests. If the test was successful, you should
 see output similar to the following:
