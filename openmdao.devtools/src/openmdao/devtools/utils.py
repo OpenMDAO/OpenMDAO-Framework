@@ -4,7 +4,6 @@ import time
 import shutil
 import logging
 import urllib2
-from optparse import OptionParser
 from subprocess import Popen, STDOUT, PIPE, check_call
 import socket
 
