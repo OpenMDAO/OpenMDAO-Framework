@@ -68,30 +68,9 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
             print "removing remote directory: %s" % remotedir
             rm_remote_tree(remotedir)
 
-def test_branch(argv=None):
+def test_branch(options, args=None):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
-    
-    if argv is None:
-        argv = sys.argv[1:]
-        
-    parser = ArgumentParser()
-    add_config_options(parser)
-    parser.add_argument("-k","--keep", action="store_true", dest='keep',
-                        help="Don't delete the temporary build directory. "
-                             "If testing on EC2 stop the instance instead of terminating it.")
-    parser.add_argument("-f","--file", action="store", type=str, 
-                        dest='fname',
-                        help="Pathname of a tarfile or URL of a git repo. "
-                             "Defaults to the current repo.")
-    parser.add_argument("-b","--branch", action="store", type=str, 
-                        dest='branch',
-                        help="If file is a git repo, supply branch name here")
-    parser.add_argument("--testargs", action="store", type=str, dest='testargs',
-                        default='',
-                        help="args to be passed to openmdao test")
-
-    options = parser.parse_args()
     
     options.filters = ['test_branch==true']
     config, conn, ec2_hosts = process_options(options)
