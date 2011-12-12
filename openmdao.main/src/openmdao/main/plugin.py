@@ -714,10 +714,9 @@ def _verify_dist_dir(dpath):
             raise IOError("directory '%s' does not contain '%s'" %
                           (dpath, f))
 
-
+_excl_set = set(['test', 'docs', 'sphinx_build', '_downloads'])
 def _exclude_funct(path):
-    parts = path.split(os.sep)
-    return 'test' in parts or 'docs' in parts
+    return _excl_set.intersection(path.split(os.sep))
 
 #
 # FIXME: this still needs some work, but for testing purposes it's ok for now
@@ -1097,6 +1096,7 @@ def build_docs_and_install(name, version, findlinks):
                 req = Requirement.parse(r)
                 d = ws.find(req)
                 if d is None:
+                    print "**findlinks = ",findlinks
                     check_call(['easy_install', '-NZ', '-f', findlinks, r])
                     d = ws.find(req)
                     if d is None:
