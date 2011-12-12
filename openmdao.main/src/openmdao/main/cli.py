@@ -59,6 +59,7 @@ def _get_openmdao_parser():
         from openmdao.devtools.build_docs import build_docs, test_docs
         from openmdao.devtools.push_docs import push_docs
         from openmdao.devtools.remotetst import test_branch
+        from openmdao.devtools.remote_cfg import add_config_options
 
         parser = subparsers.add_parser('test_branch', 
                                        description="test OpenMDAO branch remotely")

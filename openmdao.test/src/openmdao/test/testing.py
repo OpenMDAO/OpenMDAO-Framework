@@ -98,7 +98,7 @@ def run_openmdao_suite(argv=None):
     covpkg = False # if True, --cover-package was specified by the user
     
     # check for args not starting with '-'
-    args = argv
+    args = argv[:]
     for i, arg in enumerate(args):
         if arg.startswith('--cover-package'):
             covpkg = True

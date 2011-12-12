@@ -19,13 +19,13 @@ from ordereddict import OrderedDict
 from setuptools import find_packages
 from pkg_resources import WorkingSet, Requirement
 
-from openmdao.main.factorymanager import get_available_types, _plugin_groups
+from openmdao.main.factorymanager import get_available_types, plugin_groups
 from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir
 from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
 from openmdao.util.view_docs import view_docs
-from openmdao.main.pkg_res_factory import _plugin_groups
+from openmdao.main.pkg_res_factory import plugin_groups
 from openmdao.main import __version__
 
 #from sphinx.setup_command import BuildDoc
@@ -300,6 +300,7 @@ _class_templates = {}
 # developers will start with these when they create new plugins.
 
 _class_templates['openmdao.component'] = '''
+__all__ = ['%(classname)s']
 
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
@@ -322,6 +323,7 @@ class %(classname)s(Component):
 '''
 
 _class_templates['openmdao.driver'] = '''
+__all__ = ['%(classname)s']
 
 from openmdao.main.api import Driver
 from openmdao.main.hasparameters import HasParameters
@@ -358,6 +360,8 @@ class %(classname)s(Driver):
 '''
 
 _class_templates['openmdao.variable'] = '''
+__all__ = ['%(classname)s']
+
 from openmdao.main.variable import Variable
 
 class %(classname)s(Variable):
@@ -375,6 +379,9 @@ class %(classname)s(Variable):
 '''
 
 _class_templates['openmdao.surrogatemodel'] = '''
+
+__all__ = ['%(classname)s']
+
 from enthought.traits.api import HasTraits
 
 from openmdao.main.interfaces import implements, ISurrogate
@@ -716,7 +723,7 @@ def _verify_dist_dir(dpath):
 
 _excl_set = set(['test', 'docs', 'sphinx_build', '_downloads'])
 def _exclude_funct(path):
-    return _excl_set.intersection(path.split(os.sep))
+    return len(_excl_set.intersection(path.split(os.sep))) > 0
 
 #
 # FIXME: this still needs some work, but for testing purposes it's ok for now
@@ -749,19 +756,8 @@ def _find_all_plugins(searchdir):
     dirs = [os.path.dirname(m.__file__) for m in modules]+[searchdir]
     psta = PythonSourceTreeAnalyser(dirs, exclude=_exclude_funct)
     
-    comps = psta.find_inheritors('IComponent')
-    comps = set(comps)
-    
-    drivers = psta.find_inheritors('IDriver')
-    drivers = set(drivers)
-    
-    comps = comps - drivers
-    
-    dct['openmdao.component'] = comps
-    dct['openmdao.driver'] = drivers
-    
-    variables = psta.find_inheritors('IVariable')
-    dct['openmdao.variable'] = set(variables)
+    for key, val in plugin_groups.items():
+        dct[key] = set(psta.find_inheritors(val))
 
     return dct
 
@@ -1096,11 +1092,11 @@ def build_docs_and_install(name, version, findlinks):
                 req = Requirement.parse(r)
                 d = ws.find(req)
                 if d is None:
-                    print "**findlinks = ",findlinks
                     check_call(['easy_install', '-NZ', '-f', findlinks, r])
                     d = ws.find(req)
                     if d is None:
                         raise RuntimeError("Couldn't find distribution '%s'" % r)
+                    d.activate()
                     dct = get_metadata(d.egg_name().split('-')[0])
                     for new_r in dct.get('requires',[]):
                         reqs.append(new_r)
@@ -1263,7 +1259,7 @@ def _get_plugin_parser():
                         action='store_true')
     parser.add_argument("-g", "--group", action="append", type=str, dest='groups',
                         default=[], 
-                        choices=[p.split('.',1)[1] for p in _plugin_groups],
+                        choices=[p.split('.',1)[1] for p in plugin_groups.keys()],
                         help="specify plugin group")
     parser.set_defaults(func=plugin_list)
     
@@ -1313,7 +1309,7 @@ def _get_plugin_parser():
                         help="directory where new plugin directory will be created (defaults to current dir)")
     parser.add_argument("-g", "--group", action="store", type=str, dest='group', 
                         default = 'openmdao.component',
-                        help="specify plugin group %s (defaults to 'openmdao.component')" % _plugin_groups)
+                        help="specify plugin group %s (defaults to 'openmdao.component')" % plugin_groups.keys())
     parser.set_defaults(func=plugin_quickstart)
     
     

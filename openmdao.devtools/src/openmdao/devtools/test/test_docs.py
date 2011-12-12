@@ -9,7 +9,8 @@ from openmdao.devtools.build_docs import test_docs
 
 class SphinxDocsTestCase(unittest.TestCase):
     def test_docs(self):
-        p = Popen('openmdao test_docs', stdout=PIPE, stderr=STDOUT, 
+        
+        p = Popen('openmdao test_docs', stdout=PIPE, stderr=STDOUT, stdin=None,
                   env=os.environ, shell=True)
         output = p.communicate()[0]
         retval = p.returncode
