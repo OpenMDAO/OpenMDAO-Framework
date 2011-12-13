@@ -20,6 +20,9 @@ def list_testhosts(options):
 def test_openmdao(options, args=None):
     run_openmdao_suite(sys.argv[1:])
     
+def openmdao_docs(options, args=None):
+    plugin_docs(options)
+
 def _get_openmdao_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
     
@@ -47,7 +50,7 @@ def _get_openmdao_parser():
     parser.add_argument("-b", "--browser", action="store", type=str, 
                         dest='browser', choices=webbrowser._browsers.keys(),
                         help="browser name")
-    parser.set_defaults(func=plugin_docs)
+    parser.set_defaults(func=openmdao_docs)
     
     parser = subparsers.add_parser('test', 
                                    description="run the OpenMDAO test suite")
