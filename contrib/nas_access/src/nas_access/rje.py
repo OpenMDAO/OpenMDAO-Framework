@@ -7,6 +7,7 @@ import logging
 import optparse
 import os
 import signal
+import socket
 import sys
 import threading
 import time
@@ -14,11 +15,12 @@ import time
 from openmdao.main.resource import ResourceAllocationManager as RAM
 
 from nas_access.protocol import server_init, server_accept, server_heartbeat, \
-                                server_cleanup
+                                server_cleanup, configure_ssh, configure_scp
 from nas_access.wrapper import AllocatorWrapper
 
 
 _DMZ_HOST = None
+
 
 def main(): # pragma no cover
     """
@@ -50,6 +52,10 @@ def main(): # pragma no cover
                       help='Seconds between checks for new client connections')
     parser.add_option('--resources', action='store', type='str', default=None,
                       help='Filename for resource configuration')
+    parser.add_option('--ssh', action='store', type='str', default=None,
+                      help='ssh command (used during testing)')
+    parser.add_option('--scp', action='store', type='str', default=None,
+                      help='scp command (used during testing)')
 
     options, arguments = parser.parse_args()
     if arguments:
@@ -58,6 +64,14 @@ def main(): # pragma no cover
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
+    logging.critical('started')
+    logging.debug('started')
+
+    # Configure ssh and scp.
+    if options.ssh:
+        configure_ssh(options.ssh.split())
+    if options.scp:
+        configure_scp(options.scp.split())
 
     # Optionally configure resources.
     if options.resources:
@@ -75,7 +89,7 @@ def main(): # pragma no cover
     dmz_host = options.dmz_host
     poll_delay = options.poll_delay
 
-    # Initialize DMZ.
+    # Initialize protocol.
     server_init(dmz_host)
     global _DMZ_HOST
     _DMZ_HOST = dmz_host
@@ -89,14 +103,19 @@ def main(): # pragma no cover
         while True:
             connection = server_accept(dmz_host)
             if connection is not None:
+                print 'New connection at %r' % connection.root
                 logger.info('New connection at %r', connection.root)
                 wrapper = AllocatorWrapper(allocator, connection)
-                handler = threading.Thread(target=wrapper.process_requests)
+                name = '%s_handler' % os.path.basename(connection.root)
+                handler = threading.Thread(name=name,
+                                           target=wrapper.process_requests)
                 handler.daemon = True
                 handler.start()
             else:
                 server_heartbeat(dmz_host)
                 time.sleep(poll_delay)
+    except KeyboardInterrupt:
+        pass
     finally:
         _cleanup()
     sys.exit(0)
@@ -113,6 +132,7 @@ def _sigterm_handler(signum, frame):  # pragma no cover
 
 def _cleanup():  # pragma no cover
     """ Cleanup in preparation to shut down. """
+    return
     keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     if not keep_dirs:
         server_cleanup(_DMZ_HOST)

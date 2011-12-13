@@ -140,7 +140,6 @@ class TestCase(unittest.TestCase):
 -l resource s_rt=0:0:2
 -l resource h_cpu=0:0:3
 -l resource s_cpu=0:0:4
-+ '[' 1 -eq 1 ']'
 + echo hello world
 """)
 

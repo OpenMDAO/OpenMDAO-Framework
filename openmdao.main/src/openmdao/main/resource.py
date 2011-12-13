@@ -287,6 +287,24 @@ class ResourceAllocationManager(object):
                 return ram._allocators[selector]
 
     @staticmethod
+    def remove_allocator(selector):
+        """
+        Remove allocator at `selector` or whose name is `selector`.
+
+        selector: int or string
+            List index or name of allocator to be removed.
+        """
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            if isinstance(selector, basestring):
+                for i, allocator in enumerate(ram._allocators):
+                    if allocator.name == selector:
+                        return ram._allocators.pop(i)
+                raise ValueError('allocator %r not found' % selector)
+            else:
+                return ram._allocators.pop(selector)
+
+    @staticmethod
     def list_allocators():
         """ Return list of allocators. """
         ram = ResourceAllocationManager.get_instance()

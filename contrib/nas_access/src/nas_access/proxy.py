@@ -1,11 +1,12 @@
 """
 Proxy classes for resource allocators and object servers accessed via
-DMZ file protocol.
+the DMZ file protocol.
 """
 
 from __future__ import absolute_import
 
 import logging
+import os.path
 
 from openmdao.main.rbac import rbac
 
@@ -35,7 +36,7 @@ class NAS_Allocator(object):
 
         [Pleiades]
         classname: nas_access.NAS_Allocator
-        dmz-host: dmzfs1
+        dmz_host: dmzfs1
         server_host: pfe1
 
     """
@@ -45,8 +46,9 @@ class NAS_Allocator(object):
         self._servers = []
         self.dmz_host = dmz_host
         self.server_host = server_host
+        self.logger = logging.getLogger(name)
         if dmz_host and server_host:
-            self.conn = connect(dmz_host, server_host, name)
+            self.conn = connect(dmz_host, server_host, name, self.logger)
 
     @property
     def name(self):
@@ -86,7 +88,7 @@ class NAS_Allocator(object):
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
             return 0
-        return self.conn.invoke('max_servers', resource_desc)
+        return self.conn.invoke('max_servers', (rdesc,))
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -110,7 +112,7 @@ class NAS_Allocator(object):
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
             return info
-        return self.conn.invoke('time_estimate', resource_desc)
+        return self.conn.invoke('time_estimate', (rdesc,))
 
     def _check_local(self, resource_desc):
         """ Check locally-relevant resources. """
@@ -144,39 +146,54 @@ class NAS_Allocator(object):
             The dictionary returned by :meth:`time_estimate`.
         """
         name = name or 'sim-%d' % (len(self._servers) + 1)
-        path = '%s/%s' % (self.name, name)
-        self.conn.invoke('deploy', name, resource_desc, criteria, path)
-        server = NAS_Server(self.dmz_host, self.server_host, path)
+        path = '%s/%s' % (self.conn.root, name)
+        result = self.conn.invoke('deploy', (name, resource_desc, criteria))
+        server = NAS_Server(name, self.dmz_host, self.server_host,
+                            result.pid, path)
         self._servers.append(server)
         return server
 
     @rbac(('owner', 'user'))
     def release(self, server):
         """
-        Shut-down `server`.
+        Release `server`.
 
         server: :class:`NAS_Server`
-            Server to be shut down.
+            Server to be released.
         """
+        print self.name, 'release'
         if server in self._servers:
             self._servers.remove(server)
+            result = self.conn.invoke('release', (server.conn.root,))
             server.shutdown()
         else:
+            print 'No such server %r' % server
             raise ValueError('No such server %r' % server)
+
+    def shutdown(self):
+        """ Shut-down this allocator. """
+        print self.name, 'shutdown'
+        self.conn.invoke('shutdown')
+        self.conn.close()
 
 
 class NAS_Server(object):
     """ Knows about executing a command via DMZ protocol. """
 
-    def __init__(self, name, dmz_host, server_host, path):
+    def __init__(self, name, dmz_host, server_host, pid, path):
         self.name = name
+        self.host = server_host
+        self.pid = pid
         self._logger = logging.getLogger(self.name)
-        self.conn = connect(dmz_host, server_host, path)
+        self.conn = connect(dmz_host, server_host, path, self._logger)
+        self._logger.debug('connection to %s pid %s at %s:%s',
+                           server_host, pid, dmz_host, path)
+        self._close = _Finalizer()
 
     def shutdown(self):
         """ Shut-down this server. """
+        print self.name, 'shutdown'
         self._logger.debug('shutdown')
-        self.conn.send_request('shutdown')  # One-way.
         self.conn.close()
 
     @rbac('*')
@@ -185,7 +202,7 @@ class NAS_Server(object):
         Simply return the arguments. This can be useful for latency/thruput
         masurements, connectivity testing, firewall keepalives, etc.
         """
-        return self.conn.invoke('echo', *args)
+        return self.conn.invoke('echo', args)
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -205,7 +222,7 @@ class NAS_Server(object):
         if 'args' in resource_desc:
             command = '%s %s' % (command, ' '.join(resource_desc['args']))
         self._logger.debug('execute_command %s %r', job_name, command)
-        return self.conn.invoke('execute_command', resource_desc)
+        return self.conn.invoke('execute_command', (resource_desc,))
 
     @rbac('owner')
     def pack_zipfile(self, patterns, filename):
@@ -219,10 +236,10 @@ class NAS_Server(object):
             Name of ZipFile to create.
         """
         self._logger.debug('pack_zipfile %r', filename)
-        return self.conn.invoke('pack_zipfile', patterns, filename)
+        return self.conn.invoke('pack_zipfile', (patterns, filename))
 
     @rbac('owner')
-    def unpack_zipfile(self, filename):
+    def unpack_zipfile(self, filename, textfiles=None):
         """
         Unpack ZipFile `filename` if `filename` is legal.
 
@@ -230,7 +247,7 @@ class NAS_Server(object):
             Name of ZipFile to unpack.
         """
         self._logger.debug('unpack_zipfile %r', filename)
-        return self.conn.invoke('unpack_zipfile', filename)
+        return self.conn.invoke('unpack_zipfile', (filename, textfiles))
 
     @rbac('owner')
     def chmod(self, path, mode):
@@ -244,7 +261,7 @@ class NAS_Server(object):
             New mode bits (permissions).
         """
         self._logger.debug('chmod %r %o', path, mode)
-        return self.conn.invoke('chmod', path, mode)
+        return self.conn.invoke('chmod', (path, mode))
 
     @rbac('owner')
     def isdir(self, path):
@@ -255,7 +272,7 @@ class NAS_Server(object):
             Path to check.
         """
         self._logger.debug('isdir %r', path)
-        return self.conn.invoke('isdir', path)
+        return self.conn.invoke('isdir', (path,))
 
     @rbac('owner')
     def listdir(self, path):
@@ -266,7 +283,7 @@ class NAS_Server(object):
             Path to directory to list.
         """
         self._logger.debug('listdir %r', path)
-        return self.conn.invoke('listdir', path)
+        return self.conn.invoke('listdir', (path,))
 
     @rbac('owner')
     def open(self, filename, mode='r', bufsize=-1):
@@ -277,13 +294,21 @@ class NAS_Server(object):
             Name of file to open.
 
         mode: string
-            Accees mode.
+            Access mode.
 
         bufsize: int
             Size of buffer to use.
         """
         self._logger.debug('open %r %r %s', filename, mode, bufsize)
-        raise NotImplementedError('open')
+        if 'r' in mode:
+            # Transfer file here and then return regular file object.
+            self.conn.invoke('putfile', (filename,))
+            self.conn.recv_file(filename)
+            self.conn.remove_file(filename)
+            return open(os.path.join(self.conn.root, filename), mode, bufsize)
+        else:
+            # Write file here and upon closing transfer to remote.
+            return _File(filename, mode, bufsize, self.conn)
 
     @rbac('owner')
     def remove(self, path):
@@ -294,7 +319,7 @@ class NAS_Server(object):
             Path to file to remove.
         """
         self._logger.debug('remove %r', path)
-        return self.conn.invoke('remove', path)
+        return self.conn.invoke('remove', (path,))
 
     @rbac('owner')
     def stat(self, path):
@@ -305,5 +330,37 @@ class NAS_Server(object):
             Path to file to interrogate.
         """
         self._logger.debug('stat %r', path)
-        raise NotImplementedError('stat')
+        return self.conn.invoke('stat', (path,))
+
+
+class _File(object):
+    """ Something that acts like a file, but via DMZ protocol. """
+
+    def __init__(self, filename, mode, bufsize, conn):
+        self.filename = filename
+        self.mode = mode
+        self.fileobj = open(os.path.join(conn.root, filename), mode, bufsize)
+        self.conn = conn
+
+    def close(self):
+        self.fileobj.close()
+        self.conn.send_file(self.filename)
+        self.conn.invoke('getfile', (self.filename,))
+
+    def flush(self):
+        self.fileobj.flush()
+
+    def write(self, data):
+        self.fileobj.write(data)
+
+    def writelines(self, data):
+        self.fileobj.writelines(data)
+
+
+class _Finalizer(object):
+    """ Fake finalizer to look like 'real' proxy. """
+
+    def cancel(self):
+        """ Called during RAM.release(). """
+        pass
 

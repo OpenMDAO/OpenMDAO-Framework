@@ -59,10 +59,11 @@ while [ "$*" != "" ] ; do
     esac
 done
 
-set -x
 if [ $join_eo -eq 1 ] ; then
+    set -x
     $cmd $args <$stdin >$stdout 2>&1
 else
+    set -x
     $cmd $args <$stdin >$stdout 2>$stderr
 fi
 
