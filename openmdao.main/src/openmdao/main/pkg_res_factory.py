@@ -14,21 +14,20 @@ Factory = openmdao.main.factory.Factory
 
 
 
-# This is a list of all of the entry point groups that OpenMDAO uses to
-# identify plugins.
-_plugin_groups = [ 'openmdao.container',
-                   'openmdao.component',
-                   'openmdao.driver',
-                   'openmdao.surrogatemodel',
-                   'openmdao.differentiator',
-                   'openmdao.variable',
-                   'openmdao.architecture',
-                   'openmdao.caseiterator',
-                   'openmdao.caserecorder',
-                   'openmdao.doegenerator',
-                   'openmdao.optproblem',
-                ]
-
+# This is a dict containing all of the entry point groups that OpenMDAO uses to
+# identify plugins, and their corresponding Interface.
+plugin_groups = { 'openmdao.container': 'IContainer',
+                  'openmdao.component': 'IComponent', 
+                  'openmdao.driver': 'IDriver', 
+                  'openmdao.variable': 'IVariable', 
+                  'openmdao.surrogatemodel': 'ISurrogate',
+                  'openmdao.doegenerator': 'IDOEgenerator', 
+                  'openmdao.caseiterator': 'ICaseIterator', 
+                  'openmdao.caserecorder': 'ICaseRecorder', 
+                  'openmdao.architecture': 'IArchitecture', 
+                  'openmdao.optproblem': 'IOptProblem', 
+                  'openmdao.differentiator': 'IDifferentiator',
+                  }
                 
 class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
@@ -37,7 +36,7 @@ class PkgResourcesFactory(Factory):
     openmdao.component, openmdao.variable, etc.
     """
     
-    def __init__(self, groups=_plugin_groups, search_path=None):
+    def __init__(self, groups=plugin_groups.keys(), search_path=None):
         super(PkgResourcesFactory, self).__init__()
         self._have_new_types = True
         self._groups = copy.copy(groups)
@@ -87,7 +86,7 @@ class PkgResourcesFactory(Factory):
     def _get_type_dict(self):
         if self._have_new_types:
             dct = {}
-            for group in _plugin_groups:
+            for group in plugin_groups.keys():
                 for dist in working_set:
                     d = dist.get_entry_map(group)
                     for name in d:
@@ -104,7 +103,7 @@ class PkgResourcesFactory(Factory):
         ret = []
         
         if groups is None:
-            groups = _plugin_groups
+            groups = plugin_groups.keys()
         groups = set(groups)
         
         typ_dict = self._get_type_dict()
