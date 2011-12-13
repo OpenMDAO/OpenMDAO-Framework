@@ -252,25 +252,6 @@ openmdao.Model=function() {
         })
     }
 
-    /** set the working directory of the model */
-    this.setWD = function(folder) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'cwd',
-            data: { 'folder': folder },
-            success: self.updateListeners
-        })
-    }
-
-    /** get the working directory of the model */
-    this.getWD = function() {
-        jQuery.ajax({
-            type: 'GET',
-            url:  'cwd',
-            success: function(folder) { return folder }
-        })
-    }
-
     /** get a recursize file listing of the model working directory (as JSON) */
     this.getFiles = function(callback, errorHandler) {
         if (typeof callback != 'function')
@@ -360,6 +341,7 @@ openmdao.Model=function() {
             data: { 'file': filepath },
             success: self.updateListeners,
             error: function(jqXHR, textStatus, errorThrown) {
+                        // not sure why this always returns a false error
                        debug.warn("model.removeFile",jqXHR,textStatus,errorThrown);
                        self.updateListeners();
                    }
@@ -367,17 +349,16 @@ openmdao.Model=function() {
     }
     
     /** import the contents of the specified file into the model */
-    this.importFile = function(filepath) {
+    this.importFile = function(filepath, callback, errorHandler) {
         // change path to package notation and import
-        var path = filepath.replace(/^./,'').
-                            replace(/.py/g,'').
+        var path = filepath.replace(/\.py$/g,'').
                             replace(/\\/g,'.').
                             replace(/\//g,'.');
-        self.issueCommand("from "+path+" import *");
+        self.issueCommand("from "+path+" import *", callback, errorHandler);
     }
 
     /** execute the model */
-    this.runModel = function() {
+    this.runModel = function(, callback, errorHandler) {
         // make the call
         jQuery.ajax({
             type: 'POST',

@@ -192,13 +192,6 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             }
         }
         
-        // set WD
-        if (isFolder) {
-            menu.setWD = {
-                "label"  : 'Set as WD',
-                "action" : function(node) { model.setFolder(path) }
-            }    
-        }
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
             "action" :  function(node) { filter_active = !filter_active; update(); }
