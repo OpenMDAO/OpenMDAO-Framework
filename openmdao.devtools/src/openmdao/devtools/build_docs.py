@@ -270,9 +270,9 @@ def test_docs(options, args=None):
     branchdir, docdir, bindir =_get_dirnames()
     # force a new build before testing
     build_docs()
-    sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
-                      os.path.join(docdir, '_build', 'doctrees'), 
-                      docdir, os.path.join(docdir, '_build', 'html')])
+    return sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
+                             os.path.join(docdir, '_build', 'doctrees'), 
+                             docdir, os.path.join(docdir, '_build', 'html')])
 
 # make nose ignore this function
 test_docs.__test__ = False
