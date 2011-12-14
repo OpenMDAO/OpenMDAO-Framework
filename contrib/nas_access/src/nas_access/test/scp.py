@@ -4,7 +4,6 @@ Fake version of 'scp' for testing.
 
 import os.path
 import pkg_resources
-import subprocess
 import sys
 
 

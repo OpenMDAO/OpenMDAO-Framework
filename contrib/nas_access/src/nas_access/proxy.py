@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 import logging
 import os.path
+import shutil
 
 from openmdao.main.rbac import rbac
 
@@ -36,19 +37,19 @@ class NAS_Allocator(object):
 
         [Pleiades]
         classname: nas_access.NAS_Allocator
-        dmz_host: dmzfs1
-        server_host: pfe1
+        dmz_host: dmzfs1.nas.nasa.gov
+        server_host: pfe1.nas.nasa.gov
 
     """
 
     def __init__(self, name='NAS_Allocator', dmz_host=None, server_host=None):
         self._name = name
         self._servers = []
-        self.dmz_host = dmz_host
-        self.server_host = server_host
-        self.logger = logging.getLogger(name)
+        self._dmz_host = dmz_host
+        self._server_host = server_host
+        self._logger = logging.getLogger(name)
         if dmz_host and server_host:
-            self.conn = connect(dmz_host, server_host, name, self.logger)
+            self._conn = connect(dmz_host, server_host, name, self._logger)
 
     @property
     def name(self):
@@ -68,11 +69,14 @@ class NAS_Allocator(object):
         Allows modifying 'dmz_host' and 'server_host'.
         """
         if cfg.has_option(self.name, 'dmz_host'):
-            self.dmz_host = cfg.get(self.name, 'dmz_host')
+            self._dmz_host = cfg.get(self.name, 'dmz_host')
+            self._logger.debug('    dmz_host: %s', self._dmz_host)
         if cfg.has_option(self.name, 'server_host'):
-            self.server_host = cfg.get(self.name, 'server_host')
-        if self.dmz_host and self.server_host:
-            self.conn = connect(self.dmz_host, self.server_host, self.name)
+            self._server_host = cfg.get(self.name, 'server_host')
+            self._logger.debug('    server_host: %s', self._server_host)
+        if self._dmz_host and self._server_host:
+            self._conn = connect(self._dmz_host, self._server_host, self.name,
+                                 self._logger)
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -88,7 +92,7 @@ class NAS_Allocator(object):
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
             return 0
-        return self.conn.invoke('max_servers', (rdesc,))
+        return self._conn.invoke('max_servers', (rdesc,))
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -112,7 +116,7 @@ class NAS_Allocator(object):
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
             return info
-        return self.conn.invoke('time_estimate', (rdesc,))
+        return self._conn.invoke('time_estimate', (rdesc,))
 
     def _check_local(self, resource_desc):
         """ Check locally-relevant resources. """
@@ -145,10 +149,9 @@ class NAS_Allocator(object):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
-        name = name or 'sim-%d' % (len(self._servers) + 1)
-        path = '%s/%s' % (self.conn.root, name)
-        result = self.conn.invoke('deploy', (name, resource_desc, criteria))
-        server = NAS_Server(name, self.dmz_host, self.server_host,
+        path = '%s/%s' % (self._conn.root, name)
+        result = self._conn.invoke('deploy', (name, resource_desc, criteria))
+        server = NAS_Server(name, self._dmz_host, self._server_host,
                             result.pid, path)
         self._servers.append(server)
         return server
@@ -164,7 +167,7 @@ class NAS_Allocator(object):
         print self.name, 'release'
         if server in self._servers:
             self._servers.remove(server)
-            result = self.conn.invoke('release', (server.conn.root,))
+            self._conn.invoke('release', (server.conn.root,))
             server.shutdown()
         else:
             print 'No such server %r' % server
@@ -173,28 +176,49 @@ class NAS_Allocator(object):
     def shutdown(self):
         """ Shut-down this allocator. """
         print self.name, 'shutdown'
-        self.conn.invoke('shutdown')
-        self.conn.close()
+        for server in self._servers:
+            server.shutdown()
+        self._conn.invoke('shutdown')
+        self._conn.close()
+        shutil.rmtree(os.path.dirname(self._conn.root))
 
 
 class NAS_Server(object):
     """ Knows about executing a command via DMZ protocol. """
 
     def __init__(self, name, dmz_host, server_host, pid, path):
-        self.name = name
-        self.host = server_host
-        self.pid = pid
-        self._logger = logging.getLogger(self.name)
-        self.conn = connect(dmz_host, server_host, path, self._logger)
-        self._logger.debug('connection to %s pid %s at %s:%s',
-                           server_host, pid, dmz_host, path)
+        self._name = name
+        self._host = server_host
+        self._pid = pid
+        self._logger = logging.getLogger(name)
+        self._conn = connect(dmz_host, server_host, path, self._logger)
         self._close = _Finalizer()
+
+    @property
+    def name(self):
+        """ Name of this server. """
+        return self._name
+
+    @property
+    def host(self):
+        """ Host this server is running on. """
+        return self._host
+
+    @property
+    def pid(self):
+        """ Process ID of server. """
+        return self._pid
+
+    @property
+    def conn(self):
+        """ DMZ protocol connection. """
+        return self._conn
 
     def shutdown(self):
         """ Shut-down this server. """
         print self.name, 'shutdown'
         self._logger.debug('shutdown')
-        self.conn.close()
+        self._conn.close()
 
     @rbac('*')
     def echo(self, *args):
@@ -202,7 +226,7 @@ class NAS_Server(object):
         Simply return the arguments. This can be useful for latency/thruput
         masurements, connectivity testing, firewall keepalives, etc.
         """
-        return self.conn.invoke('echo', args)
+        return self._conn.invoke('echo', args)
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -214,15 +238,7 @@ class NAS_Server(object):
 
         Forwards request via DMZ protocol and waits for reply.
         """
-        try:
-            job_name = resource_desc['job_name']
-        except KeyError:
-            job_name = ''
-        command = resource_desc['remote_command']
-        if 'args' in resource_desc:
-            command = '%s %s' % (command, ' '.join(resource_desc['args']))
-        self._logger.debug('execute_command %s %r', job_name, command)
-        return self.conn.invoke('execute_command', (resource_desc,))
+        return self._conn.invoke('execute_command', (resource_desc,))
 
     @rbac('owner')
     def pack_zipfile(self, patterns, filename):
@@ -235,8 +251,7 @@ class NAS_Server(object):
         filename: string
             Name of ZipFile to create.
         """
-        self._logger.debug('pack_zipfile %r', filename)
-        return self.conn.invoke('pack_zipfile', (patterns, filename))
+        return self._conn.invoke('pack_zipfile', (patterns, filename))
 
     @rbac('owner')
     def unpack_zipfile(self, filename, textfiles=None):
@@ -246,8 +261,7 @@ class NAS_Server(object):
         filename: string
             Name of ZipFile to unpack.
         """
-        self._logger.debug('unpack_zipfile %r', filename)
-        return self.conn.invoke('unpack_zipfile', (filename, textfiles))
+        return self._conn.invoke('unpack_zipfile', (filename, textfiles))
 
     @rbac('owner')
     def chmod(self, path, mode):
@@ -260,8 +274,7 @@ class NAS_Server(object):
         mode: int
             New mode bits (permissions).
         """
-        self._logger.debug('chmod %r %o', path, mode)
-        return self.conn.invoke('chmod', (path, mode))
+        return self._conn.invoke('chmod', (path, mode))
 
     @rbac('owner')
     def isdir(self, path):
@@ -271,8 +284,7 @@ class NAS_Server(object):
         path: string
             Path to check.
         """
-        self._logger.debug('isdir %r', path)
-        return self.conn.invoke('isdir', (path,))
+        return self._conn.invoke('isdir', (path,))
 
     @rbac('owner')
     def listdir(self, path):
@@ -282,8 +294,7 @@ class NAS_Server(object):
         path: string
             Path to directory to list.
         """
-        self._logger.debug('listdir %r', path)
-        return self.conn.invoke('listdir', (path,))
+        return self._conn.invoke('listdir', (path,))
 
     @rbac('owner')
     def open(self, filename, mode='r', bufsize=-1):
@@ -302,13 +313,14 @@ class NAS_Server(object):
         self._logger.debug('open %r %r %s', filename, mode, bufsize)
         if 'r' in mode:
             # Transfer file here and then return regular file object.
-            self.conn.invoke('putfile', (filename,))
-            self.conn.recv_file(filename)
-            self.conn.remove_file(filename)
-            return open(os.path.join(self.conn.root, filename), mode, bufsize)
+            # Local copy will be removed when connection is closed.
+            self._conn.invoke('putfile', (filename,))
+            self._conn.recv_file(filename)
+            self._conn.remove_file(filename)
+            return open(os.path.join(self._conn.root, filename), mode, bufsize)
         else:
             # Write file here and upon closing transfer to remote.
-            return _File(filename, mode, bufsize, self.conn)
+            return _File(filename, mode, bufsize, self._conn)
 
     @rbac('owner')
     def remove(self, path):
@@ -318,8 +330,7 @@ class NAS_Server(object):
         path: string
             Path to file to remove.
         """
-        self._logger.debug('remove %r', path)
-        return self.conn.invoke('remove', (path,))
+        return self._conn.invoke('remove', (path,))
 
     @rbac('owner')
     def stat(self, path):
@@ -329,32 +340,60 @@ class NAS_Server(object):
         path: string
             Path to file to interrogate.
         """
-        self._logger.debug('stat %r', path)
-        return self.conn.invoke('stat', (path,))
+        return self._conn.invoke('stat', (path,))
 
 
 class _File(object):
-    """ Something that acts like a file, but via DMZ protocol. """
+    """
+    Something that acts like a file, but via DMZ protocol.
+    This is only used for files being written.
+
+    filename: string
+        Name of file to open.
+
+    mode: string
+        Access mode.
+
+    bufsize: int
+        Size of buffer to use.
+    
+    conn: :class:`Connection`
+        Connection to remote server.
+    """
 
     def __init__(self, filename, mode, bufsize, conn):
-        self.filename = filename
-        self.mode = mode
-        self.fileobj = open(os.path.join(conn.root, filename), mode, bufsize)
-        self.conn = conn
+        self._filename = filename
+        self._fileobj = open(os.path.join(conn.root, filename), mode, bufsize)
+        self._conn = conn
 
     def close(self):
-        self.fileobj.close()
-        self.conn.send_file(self.filename)
-        self.conn.invoke('getfile', (self.filename,))
+        """ Close the file and send to remote. """
+        self._fileobj.close()
+        self._conn.send_file(self._filename)
+        self._conn.invoke('getfile', (self._filename,))
+        os.remove(os.path.join(self._conn.root, self._filename))
 
     def flush(self):
-        self.fileobj.flush()
+        """ Flush buffered data. """
+        self._fileobj.flush()
 
     def write(self, data):
-        self.fileobj.write(data)
+        """
+        Write `data`.
+
+        data: string
+            Bytes to be written.
+        """
+        self._fileobj.write(data)
 
     def writelines(self, data):
-        self.fileobj.writelines(data)
+        """
+        Write `data`.
+
+        data: sequence
+            Lines to be written.
+        """
+        self._fileobj.writelines(data)
 
 
 class _Finalizer(object):

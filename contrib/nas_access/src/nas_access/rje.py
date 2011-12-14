@@ -7,7 +7,6 @@ import logging
 import optparse
 import os
 import signal
-import socket
 import sys
 import threading
 import time
@@ -17,7 +16,6 @@ from openmdao.main.resource import ResourceAllocationManager as RAM
 from nas_access.protocol import server_init, server_accept, server_heartbeat, \
                                 server_cleanup, configure_ssh, configure_scp
 from nas_access.wrapper import AllocatorWrapper
-
 
 _DMZ_HOST = None
 
@@ -90,7 +88,7 @@ def main(): # pragma no cover
     poll_delay = options.poll_delay
 
     # Initialize protocol.
-    server_init(dmz_host)
+    server_init(dmz_host, logger)
     global _DMZ_HOST
     _DMZ_HOST = dmz_host
     msg = 'RJE server ready'
@@ -101,7 +99,7 @@ def main(): # pragma no cover
     signal.signal(signal.SIGTERM, _sigterm_handler)
     try:
         while True:
-            connection = server_accept(dmz_host)
+            connection = server_accept(dmz_host, logger)
             if connection is not None:
                 print 'New connection at %r' % connection.root
                 logger.info('New connection at %r', connection.root)
@@ -112,7 +110,7 @@ def main(): # pragma no cover
                 handler.daemon = True
                 handler.start()
             else:
-                server_heartbeat(dmz_host)
+                server_heartbeat(dmz_host, logger)
                 time.sleep(poll_delay)
     except KeyboardInterrupt:
         pass
@@ -135,7 +133,7 @@ def _cleanup():  # pragma no cover
     return
     keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     if not keep_dirs:
-        server_cleanup(_DMZ_HOST)
+        server_cleanup(_DMZ_HOST, logger)
 
 
 if __name__ == '__main__':

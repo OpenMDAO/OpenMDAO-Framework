@@ -7,11 +7,10 @@ from __future__ import absolute_import
 
 import logging
 import os.path
+import shutil
 import threading
 import time
 import traceback
-
-from openmdao.main.objserverfactory import ObjServer
 
 from openmdao.util.filexfer import filexfer
 
@@ -29,16 +28,16 @@ class AllocatorWrapper(object):
         The connection to serve.
     """
 
-    legal_methods = set(('max_servers', 'time_estimate', 'deploy'))
-    local_methods = set(('release', 'shutdown'))
+    _legal_methods = set(('max_servers', 'time_estimate', 'deploy'))
+    _local_methods = set(('release', 'shutdown'))
 
     def __init__(self, allocator, connection):
         print 'AllocatorWrapper %r %r' % (allocator.name, connection)
-        self.allocator = allocator
-        self.conn = connection
-        self.poll_delay = 1
-        self.logger = connection.logger
-        self.wrappers = {}
+        self._allocator = allocator
+        self._conn = connection
+        self._poll_delay = 1
+        self._logger = connection._logger
+        self._wrappers = {}
         self.stop = False
 
     def process_requests(self):
@@ -46,60 +45,78 @@ class AllocatorWrapper(object):
         Wait for a request, process it, and send the reply.
         If the request result is a :class:`ObjectServer`, then a
         :class:`ServerWrapper` is created for it and the reply data is
-        the associated :class:`ServerWrapperInfo`.
+        the associated :class:`_ServerWrapperInfo`.
         """
         while not self.stop:
             print 'AW process_requests: waiting...'
-            if not self.conn.poll_request():
-                time.sleep(self.poll_delay)
+            if not self._conn.poll_request():
+                time.sleep(self._poll_delay)
                 continue
-            method, args, kwargs = self.conn.recv_request(wait=False)
+            method, args, kwargs = self._conn.recv_request(wait=False)
             print 'AW received request: %r %r %r' % (method, args, kwargs)
-            self.logger.debug('received request: %r %r %r',
-                              method, args, kwargs)
+            self._logger.debug('received request: %r %r %r',
+                               method, args, kwargs)
             try:
-                if method in self.legal_methods:
-                    function = getattr(self.allocator, method)
-                elif method in self.local_methods:
+                if method in self._legal_methods:
+                    function = getattr(self._allocator, method)
+                elif method in self._local_methods:
                     function = getattr(self, method)
                 else:
                     raise RuntimeError('illegal method %r' % method)
                 result = function(*args, **kwargs)
             except Exception as exc:
                 traceback.print_exc()
-                self.logger.error('Exception: %s', exc)
-                self.conn.send_exception(exc)
+                self. logger.error('Exception: %s', exc)
+                self._conn.send_exception(exc)
             else:
                 if method == 'deploy':
                     # Return how to connect to server thread.
-                    path = '%s/%s' % (self.conn.root, result.name)
+                    path = '%s/%s' % (self._conn.root, result.name)
                     name = '%s_wrapper' % result.name
                     logger = logging.getLogger(name)
-                    connection = Connection(self.conn.dmz_host, path, True,
+                    connection = Connection(self._conn.dmz_host, path, True,
                                             logger)
                     wrapper = ServerWrapper(result, connection)
                     handler = threading.Thread(name=name,
                                                target=wrapper.process_requests)
                     handler.daemon = True
                     handler.start()
-                    result = ServerWrapperInfo(wrapper)
+                    result = _ServerWrapperInfo(wrapper)
                     self.add_wrapper(wrapper, handler)
                 print 'sending reply %r' % (result,)
-                self.logger.debug('sending reply')
-                self.conn.send_reply(result)
+                self._logger.debug('sending reply')
+                self._conn.send_reply(result)
+
         print 'AW done'
+        for root in self._wrappers.keys():
+            self.release(root)
+        shutil.rmtree(self._conn.root)
 
     def add_wrapper(self, wrapper, handler):
-        """ Remember server for later release. """
+        """
+        Remember server for later release.
+
+        wrapper: :class:`ServerWrapper`
+            Wrapper to be added.
+
+        handler: :class:`Thread`
+            Thread associated with `wrapper` to be added.
+        """
         print 'add_wrapper', wrapper, wrapper.conn.root
         print '    handler', handler
-        self.wrappers[wrapper.conn.root] = (wrapper, handler)
+        self._wrappers[wrapper.conn.root] = (wrapper, handler)
 
     def release(self, root):
-        """ Lookup real server and have allocator release that. """
+        """
+        Lookup server associated with `root` and have allocator release that.
+
+        root: string
+            Path to communications root directory.
+        """
         print 'release', root
-        wrapper, handler = self.wrappers[root]
-        self.allocator.release(wrapper.server)
+        wrapper, handler = self._wrappers[root]
+        del self._wrappers[root]
+        self._allocator.release(wrapper.server)
         wrapper.stop = True
         handler.join(wrapper.poll_delay*3)
         print 'handler %r joined' % handler
@@ -107,14 +124,6 @@ class AllocatorWrapper(object):
     def shutdown(self):
         """ Shutdown this allocator. """
         self.stop = True
-
-
-class AllocatorWrapperInfo(object):
-    """ Information used to connect to an :class:`AllocatorWrapper`. """
-
-    def __init__(self, wrapper):
-        self.dmz_host = wrapper.dmz_host
-        self.root = wrapper.root
 
 
 class ServerWrapper(object):
@@ -127,61 +136,95 @@ class ServerWrapper(object):
         The connection to serve.
     """
 
-    legal_methods = set(('echo', 'execute_command',
-                         'pack_zipfile', 'unpack_zipfile',
-                         'chmod', 'isdir', 'listdir', 'remove', 'stat'))
-    local_methods = set(('getfile', 'putfile'))
+    _legal_methods = set(('echo', 'execute_command',
+                          'pack_zipfile', 'unpack_zipfile',
+                          'chmod', 'isdir', 'listdir', 'remove', 'stat'))
+    _local_methods = set(('getfile', 'putfile'))
 
     def __init__(self, server, connection):
-        self.server = server
-        self.conn = connection
-        self.poll_delay = 1
-        self.logger = connection.logger
+        self._server = server
+        self._conn = connection
+        self._poll_delay = 1
+        self._logger = connection._logger
         self.stop = False
+
+    @property
+    def server(self):
+        """ Object server. """
+        return self._server
+
+    @property
+    def conn(self):
+        """ DMZ protocol connection. """
+        return self._conn
+
+    @property
+    def poll_delay(self):
+        """ Delay between polling for a new request. """
+        return self._poll_delay
 
     def process_requests(self):
         """ Wait for a request, process it, and send the reply. """
         while not self.stop:
             print 'SW process_requests: waiting...'
-            if not self.conn.poll_request():
-                time.sleep(self.poll_delay)
+            if not self._conn.poll_request():
+                time.sleep(self._poll_delay)
                 continue
-            method, args, kwargs = self.conn.recv_request(wait=False)
+            method, args, kwargs = self._conn.recv_request(wait=False)
             print 'SW received request: %r %r %r' % (method, args, kwargs)
-            self.logger.debug('received request: %r %r %r',
-                              method, args, kwargs)
+            self._logger.debug('received request: %r %r %r',
+                               method, args, kwargs)
             try:
-                if method in self.legal_methods:
-                    function = getattr(self.server, method)
-                elif method in self.local_methods:
+                if method in self._legal_methods:
+                    function = getattr(self._server, method)
+                elif method in self._local_methods:
                     function = getattr(self, method)
                 else:
                     raise RuntimeError('illegal method %r' % method)
                 result = function(*args, **kwargs)
             except Exception as exc:
                 traceback.print_exc()
-                self.logger.error('Exception: %s', exc)
-                self.conn.send_exception(exc)
+                self._logger.error('Exception: %s', exc)
+                self._conn.send_exception(exc)
             else:
-                self.conn.send_reply(result)
+                self._conn.send_reply(result)
+
         print 'SW done'
+        shutil.rmtree(self._conn.root)
 
     def getfile(self, filename):
-        """ Copy `filename` from remote file server. """
-        self.conn.recv_file(filename)
-        filexfer(None, os.path.join(self.conn.root, filename),
-                 self.server, filename)
-        self.conn.remove_file(filename)
+        """
+        Copy `filename` from remote file server.
+
+        filename: string
+            Name of file to receive.
+        """
+        self._conn.recv_file(filename)
+        local = os.path.join(self._conn.root, filename)
+        filexfer(None, local, self._server, filename)
+        self._conn.remove_file(filename)
+        os.remove(local)
 
     def putfile(self, filename):
-        """ Copy `filename` to remote file server. """
-        filexfer(self.server, filename,
-                 None, os.path.join(self.conn.root, filename))
-        self.conn.send_file(filename)
+        """
+        Copy `filename` to remote file server.
+
+        filename: string
+            Name fo file to send.
+        """
+        # Local copy will be removed when connection is closed.
+        filexfer(self._server, filename,
+                 None, os.path.join(self._conn.root, filename))
+        self._conn.send_file(filename)
 
 
-class ServerWrapperInfo(object):
-    """ Information used to connect to an :class:`AllocatorWrapper`. """
+class _ServerWrapperInfo(object):
+    """
+    Information used to connect to `wrapper`.
+
+    wrapper: :class:`ServerWrapper`
+        Wrapper to connect to.
+    """
 
     def __init__(self, wrapper):
         self.dmz_host = wrapper.conn.dmz_host
