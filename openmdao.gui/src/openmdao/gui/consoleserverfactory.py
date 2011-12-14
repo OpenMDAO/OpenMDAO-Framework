@@ -117,6 +117,7 @@ class ConsoleServer(cmd.Cmd):
         
         self._hist    = []      ## No history yet
         self._globals = {}
+        self.known_types = []
 
         self.host = host
         self.pid = os.getpid()
@@ -618,17 +619,17 @@ class ConsoleServer(cmd.Cmd):
     def get_workingtypes(self):
         ''' Return this server's user defined types. 
         '''
-        types = []
         try:
             g = self._globals.items()
             for k,v in g:
-                if (type(v).__name__ == 'classobj') or str(v).startswith('<class'):
+                if not k in self.known_types and \
+                   ((type(v).__name__ == 'classobj') or str(v).startswith('<class')):
                     obj = self._globals[k]()
                     if is_instance(obj, HasTraits):
-                        types.append( ( k , 'n/a') )
+                        self.known_types.append( ( k , 'n/a') )
         except Exception, err:
             self.error(err,sys.exc_info())
-        return packagedict(types)
+        return packagedict(self.known_types)
 
     def load_project(self,filename):
         print 'loading project from:',filename

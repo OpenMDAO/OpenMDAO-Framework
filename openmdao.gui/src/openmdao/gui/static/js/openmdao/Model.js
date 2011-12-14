@@ -358,7 +358,7 @@ openmdao.Model=function() {
     }
 
     /** execute the model */
-    this.runModel = function(, callback, errorHandler) {
+    this.runModel = function() {
         // make the call
         jQuery.ajax({
             type: 'POST',
