@@ -187,12 +187,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                 dataflow_fn(path);
                             }
             }
-            menu.set_top = {
-                "label"  : 'Set as Top',
-                "action" :  function(node) { 
-                                model.setTop(path)
-                            }
-            };
         };
         menu.run = {
             "label"  : 'Run this Component',

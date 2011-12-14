@@ -62,53 +62,7 @@ openmdao.Model=function() {
             success: self.updateListeners   // not really necessary?
         })
     }
-    
-    /** set top assembly */
-    this.setTop = function(name, errorHandler) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'top',
-            data: { 'name': name },            
-            success: self.updateListeners,
-            error: errorHandler
-        })
-    }
-    
-    /** get a JSON representation of the model */
-    this.getJSON = function(callback, errorHandler) {
-        if (typeof callback != 'function')
-            return
-            
-        jQuery.ajax({
-            type: 'GET',
-            url:  'model',
-            dataType: 'json',
-            success: callback,
-            error: errorHandler
-        })
-    }
-
-    /** get a JSON representation the specified object in the model */
-    this.getObject = function(pathname, callback, errorHandler) {
-        if (typeof callback != 'function')
-            return
-
-        var obj = self.getJSON()
-
-        if (pathname.length >0) {
-            var tokens = pathname.split('.'),
-                len=tokens.length
-            for (i=0;i<len;i++) {
-                if (typeof obj[tokens[i]] !== "undefined")
-                    obj = obj[tokens[i]]
-                else    // may be under py/state
-                    obj = obj["py/state"][tokens[i]]
-            }
-        }
-        
-        callback(obj)
-    }
-    
+   
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
