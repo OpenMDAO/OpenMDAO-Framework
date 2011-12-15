@@ -13,23 +13,20 @@ openmdao.DataflowComponentFigure=function(myModel,pathname,type){
     this.setDimension(100,50);
     this.originalHeight=-1;
     
-    var tok = pathname.split('.')
-    if (tok.length > 1) {
-        this.name = tok[tok.length-1];
-        if (this.name === 'driver') {
-            this.name = tok[tok.length-2] + '.' + this.name
-        }
-    }
-    else
-        this.name = pathname
-    this.setTitle(this.name)
+    // get name for this figure and set title appropriately
+    this.name = openmdao.Util.getName(pathname);
+    this.setTitle(this.name);
     
-    var tok = type.split('.')
-    if (tok.length > 1)
-        this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>')
-    else
-        this.setContent('<center><i>'+type+''+'</i></center>')
+    // set the content text to be the type name (in italics)
+    var tok = type.split('.');
+    if (tok.length > 1) {
+        this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>');
+    }
+    else {
+        this.setContent('<center><i>'+type+''+'</i></center>');
+    }
 
+    // do not allow moving (TODO: allow moving)
     this.setCanDrag(false);
 };
 
@@ -207,7 +204,7 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
                     return null;
                 }
                 if (request.source instanceof draw2d.InputPort) {
-                    var path = openmdao.Util.getParentPath(oThis.pathname),
+                    var path = openmdao.Util.getPath(oThis.pathname),
                         src  = oThis.name,
                         dst  = request.source.getParent().name;            
                     new openmdao.DataConnectionEditor(oThis.myModel,path,src,dst)
@@ -239,11 +236,12 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
         oThis.myModel.issueCommand(cmd);
     }));
     menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-        var asm = 'top.'+openmdao.Util.getParentPath(oThis.pathname),
+        var asm = 'top.'+openmdao.Util.getPath(oThis.pathname),
             cmd = asm + '.disconnect("'+oThis.name+'");'
                 + asm + '.config_changed(update_parent=True);';
         oThis.myModel.issueCommand(cmd);
     }));
+    menu.setZOrder(999999);
     return menu;
 };
 

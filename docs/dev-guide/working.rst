@@ -144,8 +144,8 @@ After your virtual Python environment has been activated, you can add other
 distributions to the environment by using ``easy_install`` or :term:`pip` in
 the same manner that you would add packages to the system level Python.
 
-If you need to build the OpenMDAO docs, you can run ``openmdao_build_docs``.
-Running ``openmdao_docs`` will display the documents in HTML in the default browser.
+If you need to build the OpenMDAO docs, you can run ``openmdao build_docs``.
+Running ``openmdao docs`` will display the documents in HTML in the default browser.
 
 You can deactivate the environment by typing:
 
@@ -381,7 +381,7 @@ After a merge, it's good practice to confirm that all tests still pass by typing
 
 ::
 
-  openmdao_test
+  openmdao test
   
  
 You are now ready to continue development on your branch.
@@ -414,7 +414,7 @@ You can edit your personal Git configuration to make it use whatever your favori
 graphical diff tool may be.
 
 Once you've updated the conflicted files, you tell Git that the conflicts are resolved
-by running ``git add`` on each file. After resolving all conflicts, run ``openmdao_test``
+by running ``git add`` on each file. After resolving all conflicts, run ``openmdao test``
 to verify that everything is in working order, then commit the changes from the
 merge:
 
@@ -435,12 +435,12 @@ Here's a little checklist to go through to make sure that your update is
 actually finished:
 
 1. If you've changed anything that needs to be documented, update the OpenMDAO docs.
-2. If you updated the docs, rebuild them by running ``openmdao_build_docs`` to make sure
+2. If you updated the docs, rebuild them by running ``openmdao build_docs`` to make sure
    that you didn't break them.
 3. Add unit tests for whatever functionality you updated.  If it was a bug fix, put in a test
    that shows the bug is fixed. If you added a new feature, then add some tests to verify
    that it works as expected.
-4. Run the OpenMDAO test suite using the ``openmdao_test`` command.  If any tests fail,
+4. Run the OpenMDAO test suite using the ``openmdao test`` command.  If any tests fail,
    fix them and rerun the tests until they all pass.
 
 Once you've done all of these things, you're ready to push your changes up to
@@ -475,7 +475,7 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
    Alternatively, pziegfeld could select ``OpenMDAO-Framework``, the fork listed under **Repositories**
    (circled in green above). If she did that, when she goes to her personal OpenMDAO fork page she would
    be on the `master` branch.  In the next figure, on the right side of the page, it shows that the 
-   `Current branch` (circled in green) is the master. 
+   *Current branch* (circled in green) is the master. 
 
       
 .. figure:: personal_fork1.png
@@ -485,13 +485,13 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
   
    
 2. If you are on the master branch as in the above figure, you need to switch branches before issuing a
-   pull request. Click on down arrow next to the current branch name. A drop-down list of branches will
+   pull request. Click on down the arrow next to the current branch name. A drop-down list of branches will
    appear in alphabetical order. Scroll down until you find the desired branch. If you mouse over the
    branch name, it will be highlighted and a check mark will appear in front of it. Click on the branch
    name to go to that branch. 
 
 
-3. Once you're on the correct branch, click on the *Pull Request* button located in the upper right of
+3. Once you're on the correct branch, click on the **Pull Request** button located in the upper right of
    the page (circled in red above). 
 
 

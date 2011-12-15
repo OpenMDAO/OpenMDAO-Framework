@@ -28,7 +28,7 @@ class PluginsTestCase(unittest.TestCase):
                               'README.txt',
                               'test','test_foobar.py']))
     
-    # FIXME: all of the output from this currently shows up in the openmdao_test
+    # FIXME: all of the output from this currently shows up in the openmdao test
     # output even when the test is successful, so leave it out for now...
     #def test_makedist(self):
         #argv = ['foobar', '-v', '1.1', '-d', self.tdir]
