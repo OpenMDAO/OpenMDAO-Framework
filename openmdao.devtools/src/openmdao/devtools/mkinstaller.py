@@ -14,6 +14,7 @@ import sys, os
 import virtualenv
 import pprint
 import StringIO
+import shutil
 from pkg_resources import working_set, Requirement
 from optparse import OptionParser
 
@@ -114,7 +115,7 @@ def main(args=None):
         openmdao_packages = %s
         try:
             for pkg, pdir, _ in openmdao_packages:
-                if options.nogui and pkg == 'openmdao.gui':
+                if not options.gui and pkg == 'openmdao.gui':
                     continue
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
@@ -138,8 +139,8 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
-    parser.add_option("--nogui", action="store_true", dest='nogui', 
-                      help="don't install the openmdao graphical user interface or its dependencies")
+    parser.add_option("--gui", action="store_true", dest='gui', 
+                      help="install the openmdao graphical user interface and its dependencies")
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
@@ -151,6 +152,36 @@ def extend_parser(parser):
 
 %(adjust_options)s
 
+
+def download(url, dest='.'):
+    import urllib2
+    dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))
+    
+    resp = urllib2.urlopen(url)
+    outpath = os.path.join(dest, os.path.basename(url))
+    bs = 1024*8
+    with open(outpath, 'wb') as out:
+        while True:
+            block = resp.fp.read(bs)
+            if block == '':
+                break
+            out.write(block)
+    return outpath
+
+def _get_mingw_dlls():
+    # first, check if MinGW/bin is already in PATH
+    for entry in sys.path:
+        if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
+            print 'MinGW is already installed, skipping download.'
+            break
+    else:
+        import zipfile
+        dest = os.path.dirname(sys.executable)
+        zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
+        zipped = zipfile.ZipFile(zippath, 'r')
+        zipped.extractall(dest)
+        os.remove(zippath)
+    
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
@@ -207,12 +238,12 @@ def after_install(options, home_dir):
             failed_imports.append(pkg)
     if failed_imports:
         if options.noprereqs:
-            logger.warn("\\n**** The following prerequisites could not be imported: %%s." %% failed_imports)
-            logger.warn("**** As a result, some OpenMDAO components will not work.")
+            print "\\n**** The following prerequisites could not be imported: %%s." %% failed_imports
+            print "**** As a result, some OpenMDAO components will not work."
         else:
-            logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
-            logger.error("These must be installed in the system level python before installing OpenMDAO.")
-            logger.error("To run a limited version of OpenMDAO without the prerequisites, try 'python %%s --noprereqs'" %% __file__)
+            print "ERROR: the following prerequisites could not be imported: %%s." %% failed_imports
+            print "These must be installed in the system level python before installing OpenMDAO."
+            print "To run a limited version of OpenMDAO without the prerequisites, try 'python %%s --noprereqs'" %% __file__
             sys.exit(-1)
     
     cmds = ['-f', url]
@@ -220,7 +251,7 @@ def after_install(options, home_dir):
     try:
         allreqs = reqs[:]
         failures = []
-        if not options.nogui:
+        if options.gui:
             allreqs = allreqs + guireqs
             
         for req in allreqs:
@@ -235,8 +266,16 @@ def after_install(options, home_dir):
         for req in options.reqs:
             _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
+        if sys.platform.startswith('win'): # retrieve MinGW DLLs from server
+            try:
+                _get_mingw_dlls()
+            except Exception as err:
+                print str(err)
+                print "\\n\\n**** Failed to download MinGW DLLs, so OpenMDAO extension packages may fail to load."
+                print "If you install MinGW yourself (including c,c++, and fortran compilers) and put "
+                print "the MinGW bin directory in your path, that should fix the problem."
     except Exception as err:
-        logger.error("ERROR: build failed: %%s" %% str(err))
+        print "ERROR: build failed: %%s" %% str(err)
         sys.exit(-1)
 
     abshome = os.path.abspath(home_dir)
@@ -317,6 +356,9 @@ def after_install(options, home_dir):
         scriptname = os.path.join(dest,'go-openmdao-dev.py')
     else:
         scriptname = os.path.join(dest,'go-openmdao-%s.py' % version)
+    if os.path.isfile(scriptname):
+        shutil.copyfile(scriptname, scriptname+'.old'
+                        )
     with open(scriptname, 'wb') as f:
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
     os.chmod(scriptname, 0755)
