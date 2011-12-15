@@ -232,7 +232,7 @@ def install_dev_env(url, branch=None):
     
     gopath = os.path.join(treedir, 'go-openmdao-dev.py')
     
-    retcode = _run_gofile(startdir, gopath)
+    retcode = _run_gofile(startdir, gopath, args=['--gui'])
             
     envdir = os.path.join(treedir, 'devenv')
     print 'new openmdao environment built in %s' % envdir
