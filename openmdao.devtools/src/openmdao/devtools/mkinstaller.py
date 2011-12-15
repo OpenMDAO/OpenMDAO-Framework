@@ -238,12 +238,12 @@ def after_install(options, home_dir):
             failed_imports.append(pkg)
     if failed_imports:
         if options.noprereqs:
-            logger.warn("\\n**** The following prerequisites could not be imported: %%s." %% failed_imports)
-            logger.warn("**** As a result, some OpenMDAO components will not work.")
+            print "\\n**** The following prerequisites could not be imported: %%s." %% failed_imports
+            print "**** As a result, some OpenMDAO components will not work."
         else:
-            logger.error("ERROR: the following prerequisites could not be imported: %%s." %% failed_imports)
-            logger.error("These must be installed in the system level python before installing OpenMDAO.")
-            logger.error("To run a limited version of OpenMDAO without the prerequisites, try 'python %%s --noprereqs'" %% __file__)
+            print "ERROR: the following prerequisites could not be imported: %%s." %% failed_imports
+            print "These must be installed in the system level python before installing OpenMDAO."
+            print "To run a limited version of OpenMDAO without the prerequisites, try 'python %%s --noprereqs'" %% __file__
             sys.exit(-1)
     
     cmds = ['-f', url]
@@ -275,7 +275,7 @@ def after_install(options, home_dir):
                 print "If you install MinGW yourself (including c,c++, and fortran compilers) and put "
                 print "the MinGW bin directory in your path, that should fix the problem."
     except Exception as err:
-        logger.error("ERROR: build failed: %%s" %% str(err))
+        print "ERROR: build failed: %%s" %% str(err)
         sys.exit(-1)
 
     abshome = os.path.abspath(home_dir)
