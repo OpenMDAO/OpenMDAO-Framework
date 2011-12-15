@@ -165,10 +165,18 @@ class Project(object):
             pass
 
     def save(self):
-        """Saves the state of the project to its project directory."""
+        """ Save the state of the project to its project directory.
+            entries in the project dictionary that start with double 
+            underscores (e.g. __builtins__) are excluded
+        """
         fname = os.path.join(self.path, '_project_state')
+        # copy stuff we want to save to a new dict
+        state = {}
+        for k in self.__dict__:
+            if not k.startswith('__'):
+                state[k] = self.__dict__[k]
         with open(fname, 'w') as f:
-            pickle.dump(self.__dict__, f)
+            pickle.dump(state, f)
         
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export. 

@@ -172,19 +172,19 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             new openmdao.PropertiesEditor(id,model).editObject(path)
                         }
         };
-        if (jQuery.inArray('IDriver',interfaces) >= 0) {
-            menu.show_workflow = {
-                "label"  : 'Show Workflow',
-                "action" :  function(node) { 
-                                workflow_fn(path);
-                            }
-            }
-        };
         if (isAssembly) {
             menu.show_dataflow = {
                 "label"  : 'Show Structure',
                 "action" :  function(node) { 
                                 dataflow_fn(path);
+                            }
+            }
+        };
+        if (isAssembly || jQuery.inArray('IDriver',interfaces) >= 0) {
+            menu.show_workflow = {
+                "label"  : 'Show Workflow',
+                "action" :  function(node) { 
+                                workflow_fn(path);
                             }
             }
         };
