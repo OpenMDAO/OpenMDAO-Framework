@@ -14,6 +14,7 @@ import sys, os
 import virtualenv
 import pprint
 import StringIO
+import shutil
 from pkg_resources import working_set, Requirement
 from optparse import OptionParser
 
@@ -114,7 +115,7 @@ def main(args=None):
         openmdao_packages = %s
         try:
             for pkg, pdir, _ in openmdao_packages:
-                if options.nogui and pkg == 'openmdao.gui':
+                if not options.gui and pkg == 'openmdao.gui':
                     continue
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
@@ -138,8 +139,8 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
-    parser.add_option("--nogui", action="store_true", dest='nogui', 
-                      help="don't install the openmdao graphical user interface or its dependencies")
+    parser.add_option("--gui", action="store_true", dest='gui', 
+                      help="install the openmdao graphical user interface and its dependencies")
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
@@ -220,7 +221,7 @@ def after_install(options, home_dir):
     try:
         allreqs = reqs[:]
         failures = []
-        if not options.nogui:
+        if options.gui:
             allreqs = allreqs + guireqs
             
         for req in allreqs:
@@ -317,6 +318,9 @@ def after_install(options, home_dir):
         scriptname = os.path.join(dest,'go-openmdao-dev.py')
     else:
         scriptname = os.path.join(dest,'go-openmdao-%s.py' % version)
+    if os.path.isfile(scriptname):
+        shutil.copyfile(scriptname, scriptname+'.old'
+                        )
     with open(scriptname, 'wb') as f:
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
     os.chmod(scriptname, 0755)
