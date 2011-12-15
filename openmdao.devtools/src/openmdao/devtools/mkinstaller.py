@@ -152,6 +152,36 @@ def extend_parser(parser):
 
 %(adjust_options)s
 
+
+def download(url, dest='.'):
+    import urllib2
+    dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))
+    
+    resp = urllib2.urlopen(url)
+    outpath = os.path.join(dest, os.path.basename(url))
+    bs = 1024*8
+    with open(outpath, 'wb') as out:
+        while True:
+            block = resp.fp.read(bs)
+            if block == '':
+                break
+            out.write(block)
+    return outpath
+
+def _get_mingw_dlls():
+    # first, check if MinGW/bin is already in PATH
+    for entry in sys.path:
+        if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
+            print 'MinGW is already installed, skipping download.'
+            break
+    else:
+        import zipfile
+        dest = os.path.dirname(sys.executable)
+        zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
+        zipped = zipfile.ZipFile(zippath, 'r')
+        zipped.extractall(dest)
+        os.remove(zippath)
+    
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
@@ -236,6 +266,14 @@ def after_install(options, home_dir):
         for req in options.reqs:
             _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
+        if sys.platform.startswith('win'): # retrieve MinGW DLLs from server
+            try:
+                _get_mingw_dlls()
+            except Exception as err:
+                print str(err)
+                print "\\n\\n**** Failed to download MinGW DLLs, so OpenMDAO extension packages may fail to load."
+                print "If you install MinGW yourself (including c,c++, and fortran compilers) and put "
+                print "the MinGW bin directory in your path, that should fix the problem."
     except Exception as err:
         logger.error("ERROR: build failed: %%s" %% str(err))
         sys.exit(-1)

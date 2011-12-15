@@ -979,7 +979,7 @@ def plugin_install(options):
         
 def update_libpath(options=None):
     """Find all of the shared libraries in the current virtual environment and modify
-    the activate script to put their directories in LD_LIBRARY_PATH
+    the activate script to put their directories in LD_LIBRARY_PATH (or its equivalent)
     """
     ldict = {
         'linux2': 'LD_LIBRARY_PATH',
