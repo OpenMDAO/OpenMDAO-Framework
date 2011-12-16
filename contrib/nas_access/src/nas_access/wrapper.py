@@ -1,5 +1,5 @@
 """
-Wrappers to translate from the file protocol to :class:`ResourceAllocator` and
+Wrappers to translate from the DMZ protocol to :class:`ResourceAllocator` and
 :class:`ObjServer`.
 """
 
@@ -19,7 +19,7 @@ from .protocol import Connection
 
 class AllocatorWrapper(object):
     """
-    Wraps a :class:`ResourceAllocator` in the file protocol.
+    Wraps a :class:`ResourceAllocator` in the DMZ protocol.
 
     allocator: :class:`ResourceAllocator`
         The allocator to wrap.
@@ -32,11 +32,10 @@ class AllocatorWrapper(object):
     _local_methods = set(('release', 'shutdown'))
 
     def __init__(self, allocator, connection):
-        print 'AllocatorWrapper %r %r' % (allocator.name, connection)
         self._allocator = allocator
         self._conn = connection
         self._poll_delay = 1
-        self._logger = connection._logger
+        self._logger = connection.logger
         self._wrappers = {}
         self.stop = False
 
@@ -48,14 +47,11 @@ class AllocatorWrapper(object):
         the associated :class:`_ServerWrapperInfo`.
         """
         while not self.stop:
-            print 'AW process_requests: waiting...'
             if not self._conn.poll_request():
                 time.sleep(self._poll_delay)
                 continue
             method, args, kwargs = self._conn.recv_request(wait=False)
-            print 'AW received request: %r %r %r' % (method, args, kwargs)
-            self._logger.debug('received request: %r %r %r',
-                               method, args, kwargs)
+            self._logger.debug('request: %r %r %r', method, args, kwargs)
             try:
                 if method in self._legal_methods:
                     function = getattr(self._allocator, method)
@@ -66,7 +62,7 @@ class AllocatorWrapper(object):
                 result = function(*args, **kwargs)
             except Exception as exc:
                 traceback.print_exc()
-                self. logger.error('Exception: %s', exc)
+                self._logger.error('Exception: %s', exc)
                 self._conn.send_exception(exc)
             else:
                 if method == 'deploy':
@@ -83,11 +79,8 @@ class AllocatorWrapper(object):
                     handler.start()
                     result = _ServerWrapperInfo(wrapper)
                     self.add_wrapper(wrapper, handler)
-                print 'sending reply %r' % (result,)
-                self._logger.debug('sending reply')
                 self._conn.send_reply(result)
 
-        print 'AW done'
         for root in self._wrappers.keys():
             self.release(root)
         shutil.rmtree(self._conn.root)
@@ -102,8 +95,6 @@ class AllocatorWrapper(object):
         handler: :class:`Thread`
             Thread associated with `wrapper` to be added.
         """
-        print 'add_wrapper', wrapper, wrapper.conn.root
-        print '    handler', handler
         self._wrappers[wrapper.conn.root] = (wrapper, handler)
 
     def release(self, root):
@@ -113,13 +104,11 @@ class AllocatorWrapper(object):
         root: string
             Path to communications root directory.
         """
-        print 'release', root
         wrapper, handler = self._wrappers[root]
         del self._wrappers[root]
         self._allocator.release(wrapper.server)
         wrapper.stop = True
         handler.join(wrapper.poll_delay*3)
-        print 'handler %r joined' % handler
 
     def shutdown(self):
         """ Shutdown this allocator. """
@@ -127,7 +116,7 @@ class AllocatorWrapper(object):
 
 
 class ServerWrapper(object):
-    """ Wraps an :class:`ObjServer` in the file protocol.
+    """ Wraps an :class:`ObjServer` in the DMZ protocol.
 
     server: :class:`ObjServer`
         The server to wrap.
@@ -145,7 +134,7 @@ class ServerWrapper(object):
         self._server = server
         self._conn = connection
         self._poll_delay = 1
-        self._logger = connection._logger
+        self._logger = connection.logger
         self.stop = False
 
     @property
@@ -166,14 +155,11 @@ class ServerWrapper(object):
     def process_requests(self):
         """ Wait for a request, process it, and send the reply. """
         while not self.stop:
-            print 'SW process_requests: waiting...'
             if not self._conn.poll_request():
                 time.sleep(self._poll_delay)
                 continue
             method, args, kwargs = self._conn.recv_request(wait=False)
-            print 'SW received request: %r %r %r' % (method, args, kwargs)
-            self._logger.debug('received request: %r %r %r',
-                               method, args, kwargs)
+            self._logger.debug('request: %r %r %r', method, args, kwargs)
             try:
                 if method in self._legal_methods:
                     function = getattr(self._server, method)
@@ -189,7 +175,6 @@ class ServerWrapper(object):
             else:
                 self._conn.send_reply(result)
 
-        print 'SW done'
         shutil.rmtree(self._conn.root)
 
     def getfile(self, filename):

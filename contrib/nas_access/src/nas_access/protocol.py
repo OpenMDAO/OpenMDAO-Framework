@@ -1,5 +1,5 @@
 """
-Remote procedure call protocol using an intermediary file server as the
+'DMZ' remote procedure call protocol using an intermediary file server as the
 communications channel acessed via 'ssh' and 'scp'.  Really.
 
 Each server has its own directory (``RJE-<host>``). This contains a
@@ -46,30 +46,42 @@ import socket
 import subprocess
 import time
 
-_CLIENTS = []
+DEBUG2 = logging.DEBUG - 2  # Show polling.
+DEBUG3 = logging.DEBUG - 3  # Show ssh/scp.
+
+if logging.getLevelName(DEBUG2) == 'Level 8':
+    logging.addLevelName(DEBUG2, 'D2')
+if logging.getLevelName(DEBUG3) == 'Level 7':
+    logging.addLevelName(DEBUG3, 'D3')
+
+_CLIENTS = []  # Server client names.
+
 
 # These get reconfigured & restored during testing.
 _SSH = ['ssh']
 _SCP = ['scp']
 
 def configure_ssh(cmdlist):
-    """ Configure 'ssh' command' """
+    """ Configure 'ssh' command', returns previous configuration. """
+    logging.debug('configure_ssh %r', cmdlist)
+    previous = list(_SSH)
     _SSH[:] = cmdlist
+    return previous
 
 def configure_scp(cmdlist):
-    """ Configure 'scp' command' """
+    """ Configure 'scp' command', returns previous configuration. """
+    logging.debug('configure_scp %r', cmdlist)
+    previous = list(_SCP)
     _SCP[:] = cmdlist
+    return previous
 
 
-def _ssh(host, args, directory, logger):
+def _ssh(host, args, logger):
     """
-    Return lines from `host` executing `args` with output in `directory`.
+    Return lines from `host` executing `args`.
 
     args: list[string]
         Command and arguments to be executed.
-
-    directory: string
-        Directory to place ``ssh.stdout`` and ``ssh.stderr``.
 
     logger: :class:`Logger`
         Displays full command being executed.
@@ -79,38 +91,19 @@ def _ssh(host, args, directory, logger):
     cmd.append(host)
     cmd.extend(args)
 
-    stdout = os.path.join(directory, 'ssh.stdout')
-    stderr = os.path.join(directory, 'ssh.stderr')
-    out = open(stdout, 'w')
-    err = open(stderr, 'w')
-
-    logger.debug('%s' % cmd)
+    logger.log(DEBUG3, '%s', cmd)
     try:
-        retcode = subprocess.call(cmd, stdout=out, stderr=err)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, universal_newlines=True)
     except Exception as exc:
-        out.close()
-        err.close()
-        with open(stdout, 'rU') as inp:
-            outlines = inp.read()
-        with open(stderr, 'rU') as inp:
-            errlines = inp.read()
-        msg = '%s: %s: stdout: %s stderr: %s' % (cmd, exc, outlines, errlines)
+        raise RuntimeError('%s: %s' % (cmd, exc))
+
+    stdout, stderr = proc.communicate()
+    if proc.returncode:
+        msg = '%s: returncode %s: stdout: %s stderr: %s' \
+              % (cmd, proc.returncode, stdout, stderr)
         raise RuntimeError(msg)
-    else:
-        out.close()
-        err.close()
-        with open(stdout, 'rU') as inp:
-            outlines = inp.read()
-        with open(stderr, 'rU') as inp:
-            errlines = inp.read()
-        if retcode:
-            msg = '%s: retcode %s: stdout: %s stderr: %s' \
-                  % (cmd, retcode, outlines, errlines)
-            raise RuntimeError(msg)
-        return outlines.split()
-    finally:
-        os.remove(stdout)
-        os.remove(stderr)
+    return stdout.split()
 
 
 def _scp_send(host, directory, filename, logger):
@@ -131,7 +124,7 @@ def _scp_send(host, directory, filename, logger):
     """
     src = os.path.join(directory, filename)
     dst = '%s:%s/%s' % (host, directory, filename)
-    _scp(src, dst, directory, logger)
+    _scp(src, dst, logger)
 
 
 def _scp_recv(host, directory, filename, logger):
@@ -152,18 +145,15 @@ def _scp_recv(host, directory, filename, logger):
     """
     src = '%s:%s/%s' % (host, directory, filename)
     dst = os.path.join(directory, filename)
-    _scp(src, dst, directory, logger)
+    _scp(src, dst, logger)
 
 
-def _scp(src, dst, directory, logger):
+def _scp(src, dst, logger):
     """
-    Use 'scp' to copy `src` to `dst` with output in `directory`.
+    Use 'scp' to copy `src` to `dst`.
 
     src, dst: string
         Source and destination designations.
-
-    directory: string
-        Directory for ``scp.stdout`.
 
     filename: string
         File to transfer.
@@ -175,37 +165,28 @@ def _scp(src, dst, directory, logger):
     cmd.extend(_SCP)
     cmd.extend((src, dst))
 
-    stdout = os.path.join(directory, 'scp.stdout')
-    out = open(stdout, 'w')
-
-    logger.debug('%s' % cmd)
+    logger.log(DEBUG3, '%s', cmd)
     try:
-        retcode = subprocess.call(cmd, stdout=out, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, universal_newlines=True)
     except Exception as exc:
-        out.close()
-        with open(stdout, 'rU') as inp:
-            lines = inp.read()
-        msg = '%s: %s: %s' % (cmd, exc, lines)
+        raise RuntimeError('%s: %s' % (cmd, exc))
+
+    stdout, stderr = proc.communicate()
+    if proc.returncode:
+        msg = '%s: returncode %s: stdout: %s stderr: %s' \
+              % (cmd, proc.returncode, stdout, stderr)
         raise RuntimeError(msg)
-    else:
-        out.close()
-        if retcode:
-            with open(stdout, 'rU') as inp:
-                lines = inp.read()
-            msg = '%s: retcode %s: %s' % (cmd, retcode, lines)
-            raise RuntimeError(msg)
-    finally:
-        os.remove(stdout)
 
 
 def connect(dmz_host, server_host, path, logger):
     """
     Connect client to server. Returns :class:`Connection`.
 
-    Top-level connections are initiated by client creating communication
+    Top-level connections are initiated by the client creating communication
     directory in server's root directory.
 
-    Lower-level connections are made by client sending a request for a new
+    Lower-level connections are made by the client sending a request for a new
     resource, server creates communication directory, starts polling thread,
     and returns the name of the new directory.
 
@@ -221,13 +202,12 @@ def connect(dmz_host, server_host, path, logger):
     logger: :class:`Logger`
         Displays progress messages, passed to created :class:`Connection`.
     """
-    logger.debug('connecting to %s at %s:%s', server_host, dmz_host, path)
-
     root = _server_root(server_host)
+    logger.debug('connecting to %s at %s', root, dmz_host)
     if not os.path.exists(root):  # Ensure we have a local tree.
         os.mkdir(root)
 
-    lines = _ssh(dmz_host, ('ls', '-1'), root, logger)
+    lines = _ssh(dmz_host, ('ls', '-1'), logger)
     if root not in lines:
         raise RuntimeError('Server directory %r not found' % root)
 
@@ -240,11 +220,10 @@ def connect(dmz_host, server_host, path, logger):
 
     if root != path:  # Create communications directory.
         parent, slash, child = root.rpartition('/')
-        lines = _ssh(dmz_host, ('ls', '-1', parent), root, logger)
+        lines = _ssh(dmz_host, ('ls', '-1', parent), logger)
         if child in lines:  # Need a clean directory.
-            raise RuntimeError('Communications directory %r already exists',
-                               root)
-        _ssh(dmz_host, ('mkdir', root), root, logger)
+            raise RuntimeError('Client directory %r already exists', root)
+        _ssh(dmz_host, ('mkdir', root), logger)
 
     return Connection(dmz_host, root, False, logger)
 
@@ -276,10 +255,10 @@ def server_init(dmz_host, logger):
         shutil.rmtree(root)
     os.mkdir(root)
 
-    lines = _ssh(dmz_host, ('ls', '-1'), root, logger)
+    lines = _ssh(dmz_host, ('ls', '-1'), logger)
     if root in lines:  # Ensure a clean remote tree.
-        _ssh(dmz_host, ('rm', '-r', root), root, logger)
-    _ssh(dmz_host, ('mkdir',  root), root, logger)
+        _ssh(dmz_host, ('rm', '-r', root), logger)
+    _ssh(dmz_host, ('mkdir',  root), logger)
 
 
 def server_accept(dmz_host, logger):
@@ -293,11 +272,11 @@ def server_accept(dmz_host, logger):
         Displays progress messages, passed to created :class:`Connection`.
     """
     root = _server_root()
-    lines = _ssh(dmz_host, ('ls', '-1', root), root, logger)
+    lines = _ssh(dmz_host, ('ls', '-1', root), logger)
 
     for client in _CLIENTS:
         if client not in lines:
-            print 'Client %r closed' % client
+            logger.info('Client %r closed', client)
             _CLIENTS.remove(client)
 
     for line in lines:
@@ -305,11 +284,9 @@ def server_accept(dmz_host, logger):
             continue
         if line not in _CLIENTS:
             _CLIENTS.append(line)
+            logger.info('New client %r', line)
             root = '%s/%s' % (root, line)
-            logging.debug('server_accept: new connection at %s:%s',
-                          dmz_host, root)
-            print 'server_accept: new connection at %s:%s' % (dmz_host, root)
-            logger = logging.getLogger('%s_handler' % line)
+            logger = logging.getLogger(line)
             return Connection(dmz_host, root, True, logger)
     
     return None
@@ -322,6 +299,7 @@ def server_heartbeat(dmz_host, logger):
     dmz_host: string
         Intermediary file server.
     """
+    logger.log(DEBUG2, 'heartbeat')
     root = _server_root()
     heartbeat = os.path.join(root, 'heartbeat')
     with open(heartbeat, 'w') as out:
@@ -340,6 +318,7 @@ def check_server_heartbeat(dmz_host, server_host, logger):
     server_host: string
         Remote server.
     """
+    logger.log(DEBUG2, 'check_server_heartbeat')
     root = _server_root(server_host)
     heartbeat = os.path.join(root, 'heartbeat')
     _scp_recv(dmz_host, root, heartbeat, logger)
@@ -359,8 +338,9 @@ def server_cleanup(dmz_host, logger):
         Displays progress messages.
     """
     root = _server_root()
-    _ssh(dmz_host, ('rm', '-rf', root), root, logger)
-    shutil.rmtree(root)
+    _ssh(dmz_host, ('rm', '-rf', root), logger)
+    if os.path.exists(root):
+        shutil.rmtree(root)
 
 
 class Connection(object):
@@ -385,29 +365,33 @@ class Connection(object):
         self.dmz_host = dmz_host
         self.root = root
         self._logger = logger
-        self.seqno = 0        # Outgoing increments at send.
-        self.remote_seqno = 1 # Incoming assumes increment.
+        self._seqno = 0        # Outgoing increments at send.
+        self._remote_seqno = 1 # Incoming assumes increment.
         if server:
-            self.prefix = 'S-'
-            self.remote_prefix = 'C-'
+            self._prefix = 'S-'
+            self._remote_prefix = 'C-'
         else:
-            self.prefix = 'C-'
-            self.remote_prefix = 'S-'
-        logger.debug('New connection %s:%s', dmz_host, root)
+            self._prefix = 'C-'
+            self._remote_prefix = 'S-'
+        logger.info('initializing')
         if os.path.exists(root):
             shutil.rmtree(root)
         os.mkdir(root)
         parent, slash, child = root.partition('/')
-        lines = _ssh(self.dmz_host, ('ls', '-1', parent), root, logger)
+        lines = _ssh(self.dmz_host, ('ls', '-1', parent), logger)
         if server:
             if not child in lines:
-                _ssh(self.dmz_host, ('mkdir', root), root, logger)
+                _ssh(self.dmz_host, ('mkdir', root), logger)
+
+    @property
+    def logger(self):
+        """ This connection's logger. """
+        return self._logger
 
     def close(self):
         """ Close connection, removing all communication files. """
-        print 'closing %r' % self.root
         self._logger.debug('close')
-        _ssh(self.dmz_host, ('rm', '-rf', self.root), self.root, self._logger)
+        _ssh(self.dmz_host, ('rm', '-rf', self.root), self._logger)
         shutil.rmtree(self.root)
 
     def invoke(self, method, args=None, kwargs=None, timeout=0, poll_delay=0):
@@ -429,34 +413,27 @@ class Connection(object):
         poll_delay: int
             Seconds between polls. Zero implies an internal default.
         """
-        self._logger.debug('invoke %r', method)
         args = args or ()
         kwargs = kwargs or {}
-        self.send_request(method, args, kwargs)
-        return self.recv_reply(True, timeout, poll_delay)
+        self._logger.debug('request: %r %r %r', method, args, kwargs)
+        self.send_request((method, args, kwargs))
+        result = self.recv_reply(True, timeout, poll_delay)
+        self._logger.debug('reply: %s', result)
+        return result
 
-    def send_request(self, method, args=None, kwargs=None):
+    def send_request(self, data):
         """
-        Send request to execute `method` with `args` and `kwargs`.
+        Send request `data`.
 
-        method: string
-            Remote method to be invoked.
-
-        args: tuple
-            Positional arguments for `method`.
-
-        kwargs: dictionary
-            Keyword arguments for `method`.
+        data: string
+            Request to be sent.
         """
-        self._logger.debug('send_request %r', method)
-        args = args or ()
-        kwargs = kwargs or {}
-        self.seqno += 1
-        self._send('%srequest' % self.prefix, (method, args, kwargs), self.seqno)
+        self._seqno += 1
+        self._send('%srequest' % self._prefix, data, self._seqno)
 
     def poll_reply(self):
         """ Return True if reply is ready. """
-        return self._poll('%sreply' % self.remote_prefix, self.seqno)
+        return self._poll('%sreply' % self._remote_prefix, self._seqno)
 
     def recv_reply(self, wait=True, timeout=0, poll_delay=0):
         """
@@ -471,12 +448,12 @@ class Connection(object):
         poll_delay: int
             Seconds between polls. Zero implies an internal default.
         """
-        return self._recv('%sreply' % self.remote_prefix, self.seqno,
+        return self._recv('%sreply' % self._remote_prefix, self._seqno,
                           wait, timeout, poll_delay)
 
     def poll_request(self):
         """ Return True if request is ready. """
-        return self._poll('%srequest' % self.remote_prefix, self.remote_seqno)
+        return self._poll('%srequest' % self._remote_prefix, self._remote_seqno)
 
     def recv_request(self, wait=True, timeout=0, poll_delay=0):
         """
@@ -491,7 +468,7 @@ class Connection(object):
         poll_delay: int
             Seconds between polls. Zero implies an internal default.
         """
-        return self._recv('%srequest' % self.remote_prefix, self.remote_seqno,
+        return self._recv('%srequest' % self._remote_prefix, self._remote_seqno,
                           wait, timeout, poll_delay)
 
     def send_reply(self, data):
@@ -501,9 +478,9 @@ class Connection(object):
         data: string
             Data to be sent.
         """
-        self._logger.debug('send_reply')
-        self._send('%sreply' % self.prefix, data, self.remote_seqno)
-        self.remote_seqno += 1
+        self._logger.debug('reply: %s', data)
+        self._send('%sreply' % self._prefix, data, self._remote_seqno)
+        self._remote_seqno += 1
 
     def send_exception(self, exc):
         """
@@ -512,12 +489,14 @@ class Connection(object):
         exc: :class:`Exception`
             Exception to be sent.
         """
-        self._send('%sreply' % self.prefix, exc, self.remote_seqno)
-        self.remote_seqno += 1
+        self._logger.debug('exception: %s', exc)
+        self._send('%sreply' % self._prefix, exc, self._remote_seqno)
+        self._remote_seqno += 1
 
     def _heartbeat(self):
         """ Update heartbeat file. """
-        heartbeat = os.path.join(self.root, '%sheartbeat' % self.prefix)
+        self._logger.log(DEBUG2, 'heartbeat')
+        heartbeat = os.path.join(self.root, '%sheartbeat' % self._prefix)
         with open(heartbeat, 'w') as out:
             out.write(datetime.datetime.utcnow().isoformat(' '))
         self.send_file(os.path.basename(heartbeat))
@@ -525,7 +504,8 @@ class Connection(object):
 
     def _check_heartbeat(self):
         """" Check that other end's heartbeat file is 'current'. """
-        heartbeat = '%sheartbeat' % self.remote_prefix
+        self._logger.log(DEBUG2, 'check_heartbeat')
+        heartbeat = '%sheartbeat' % self._remote_prefix
         self.recv_file(heartbeat)
         heartbeat = os.path.join(self.root, heartbeat)
         with open(heartbeat, 'r') as inp:
@@ -561,8 +541,8 @@ class Connection(object):
             Used to form receive filename.
         """
         ready = '%s-ready.%s' % (prefix, seqno)
-        lines = _ssh(self.dmz_host, ('ls', '-1', self.root), self.root, self._logger)
-        print 'poll %s %s' % (ready, lines)
+        lines = _ssh(self.dmz_host, ('ls', '-1', self.root), self._logger)
+        self._logger.log(DEBUG2, 'poll %s %s', ready, lines)
         return ready in lines
 
     def _wait(self, prefix, seqno, timeout=0, poll_delay=0):
@@ -654,7 +634,7 @@ class Connection(object):
         name: string
             Name of file to remove.
         """
-        _ssh(self.dmz_host, ('rm', '%s/%s' % (self.root, name)), self.root, self._logger)
+        _ssh(self.dmz_host, ('rm', '%s/%s' % (self.root, name)), self._logger)
 
     def touch_file(self, name):
         """

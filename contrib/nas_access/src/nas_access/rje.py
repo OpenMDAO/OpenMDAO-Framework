@@ -62,8 +62,6 @@ def main(): # pragma no cover
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    logging.critical('started')
-    logging.debug('started')
 
     # Configure ssh and scp.
     if options.ssh:
@@ -87,7 +85,7 @@ def main(): # pragma no cover
     dmz_host = options.dmz_host
     poll_delay = options.poll_delay
 
-    # Initialize protocol.
+    # Initialize DMZ protocol.
     server_init(dmz_host, logger)
     global _DMZ_HOST
     _DMZ_HOST = dmz_host
@@ -101,8 +99,6 @@ def main(): # pragma no cover
         while True:
             connection = server_accept(dmz_host, logger)
             if connection is not None:
-                print 'New connection at %r' % connection.root
-                logger.info('New connection at %r', connection.root)
                 wrapper = AllocatorWrapper(allocator, connection)
                 name = '%s_handler' % os.path.basename(connection.root)
                 handler = threading.Thread(name=name,
@@ -121,8 +117,7 @@ def main(): # pragma no cover
 
 def _sigterm_handler(signum, frame):  # pragma no cover
     """ Try to go down gracefully. """
-    logging.getLogger().info('sigterm_handler invoked')
-    print 'sigterm_handler invoked'
+    logging.info('sigterm_handler invoked')
     sys.stdout.flush()
     _cleanup()
     sys.exit(1)
@@ -130,10 +125,9 @@ def _sigterm_handler(signum, frame):  # pragma no cover
 
 def _cleanup():  # pragma no cover
     """ Cleanup in preparation to shut down. """
-    return
     keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     if not keep_dirs:
-        server_cleanup(_DMZ_HOST, logger)
+        server_cleanup(_DMZ_HOST, logging.getLogger())
 
 
 if __name__ == '__main__':

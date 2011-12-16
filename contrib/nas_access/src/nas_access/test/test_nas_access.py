@@ -11,28 +11,38 @@ import unittest
 
 from openmdao.main.resource import ResourceAllocationManager as RAM
 
+from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
+
 from nas_access import protocol, NAS_Allocator
+
+_TST_ROOT = \
+    os.path.realpath(pkg_resources.resource_filename('nas_access', 'test'))
+_DMZ_ROOT = 'Fake_DMZ'
+_RJE_ROOT = 'RJE'
 
 
 class TestCase(unittest.TestCase):
 
-    directory = \
-        os.path.realpath(pkg_resources.resource_filename('nas_access', 'test'))
-
     def setUp(self):
         """ Force use of fake 'ssh' and 'scp'. """
-        self.orig_ssh = protocol._SSH
-        protocol.configure_ssh(
-            ('python', os.path.join(TestCase.directory, 'ssh.py')))
+        ssh = ('python', os.path.join(_TST_ROOT, 'ssh.py'), _DMZ_ROOT)
+        scp = ('python', os.path.join(_TST_ROOT, 'scp.py'), _DMZ_ROOT)
 
-        self.orig_scp = protocol._SCP 
-        protocol.configure_scp(
-            ('python', os.path.join(TestCase.directory, 'scp.py')))
+        self.orig_ssh = protocol.configure_ssh(ssh)
+        self.orig_scp = protocol.configure_scp(scp)
 
     def tearDown(self):
         """ Restore 'ssh' and 'scp' configuration. """
         protocol.configure_ssh(self.orig_ssh)
         protocol.configure_scp(self.orig_scp)
+
+        for name in ('echo.out', 'junk.dat'):
+            if os.path.exists(name):
+                os.remove(name)
+
+        for name in (_RJE_ROOT, _DMZ_ROOT):
+            if os.path.exists(name):
+                shutil.rmtree(name)
 
     def test_nas_access(self):
         logging.debug('')
@@ -44,93 +54,127 @@ class TestCase(unittest.TestCase):
 
         try:
             # Add NAS_Allocator referring to server.
+            logging.debug('create allocator')
             allocator = NAS_Allocator(dmz_host=hostname, server_host=hostname)
             RAM.add_allocator(allocator)
             try:
-                # Run a fake job.
-                server = RAM.allocate(dict(allocator=allocator.name))
-                logging.debug('testing...')
-                time.sleep(10)
-                logging.debug('    done')
-                RAM.release(server)
+                # Run a fake job in style of ExternalCode component.
+                logging.debug('allocate server')
+                server, server_info = RAM.allocate(dict(allocator=allocator.name))
+                try:
+                    with open('junk.dat', 'w') as out:
+                        out.write('just some junk')
+                    filename = 'inputs.zip'
+
+                    logging.debug('pack inputs')
+                    pfiles, pbytes = pack_zipfile(('junk.dat',), filename,
+                                                  logging.getLogger())
+                    os.remove('junk.dat')
+
+                    logging.debug('transfer inputs')
+                    filexfer(None, filename, server, filename, 'b')
+
+                    logging.debug('unpack inputs')
+                    ufiles, ubytes = server.unpack_zipfile(filename)
+
+                    logging.debug('remove inputs')
+                    os.remove(filename)
+                    server.remove(filename)
+
+                    logging.debug('execute command')
+                    server.execute_command(dict(job_name='Testing',
+                                                remote_command='echo',
+                                                args=('Hello', 'World!'),
+                                                output_path='echo.out'))
+
+                    logging.debug('pack outputs')
+                    filename = 'outputs.zip'
+                    pfiles, pbytes = server.pack_zipfile(('echo.out', 'junk.dat'),
+                                                         filename)
+                    logging.debug('transfer outputs')
+                    filexfer(server, filename, None, filename, 'b')
+
+                    logging.debug('unpack outputs')
+                    ufiles, ubytes = unpack_zipfile(filename)
+
+                    logging.debug('remove outputs')
+                    os.remove(filename)
+                    server.remove(filename)
+
+                except Exception as exc:
+                    logging.debug('Server Exception: %s', exc)
+
+                finally:
+                    logging.debug('release')
+                    RAM.release(server)
+
+            except Exception as exc:
+                logging.debug('Allocator Exception: %s', exc)
+
             finally:
-                RAM.remove_allocator(allocator.name)
+                logging.debug('remove')
+                allocator = RAM.remove_allocator(allocator.name)
+
+                logging.debug('shutdown')
+                allocator.shutdown()
+
+        except Exception as exc:
+            logging.debug('Global Exception: %s', exc)
+
         finally:
-            # Stop server.
-            stop_server(proc)
+            proc.terminate()
+
+        self.assertTrue(os.path.exists('echo.out'))
+        with open('echo.out', 'rU') as out:
+            data = out.read()
+        self.assertEqual(data, 'Hello World!\n')
+
+        self.assertTrue(os.path.exists('junk.dat'))
+        with open('junk.dat', 'rU') as out:
+            data = out.read()
+        self.assertEqual(data, 'just some junk')
 
 
 def start_server(hostname):
     """ Start RJE server with DMZ host `hostname` using 'LocalHost'. """
-    if os.path.exists('RJE'):
-        shutil.rmtree('RJE')
-    os.mkdir('RJE')
+    for name in (_DMZ_ROOT, _RJE_ROOT):
+        if os.path.exists(name):
+            shutil.rmtree(name)
+        os.mkdir(name)
+
+    # Configure ssh to use special test code and DMZ root.
+    ssh = ('python', os.path.join(_TST_ROOT, 'ssh.py'),
+                     os.path.join('..', _DMZ_ROOT))
+
+    # Configure scp to use special test code and DMZ root, and special RJE root.
+    scp = ('python', os.path.join(_TST_ROOT, 'scp.py'),
+                     os.path.join('..', _DMZ_ROOT), '--rje')
+
     orig_dir = os.getcwd()
-    os.chdir('RJE')
+    os.chdir(_RJE_ROOT)
     try:
-        root = protocol.server_root()
-        ssh = ' '.join(protocol._SSH)
-        scp = ' '.join(protocol._SCP) + ' --rje'
+        root = protocol._server_root()
         args = ('python', '-m', 'nas_access.rje',
                 '--allocator', 'LocalHost',
                 '--dmz-host', hostname,
                 '--poll-delay', '1',
-                '--ssh', ssh,
-                '--scp', scp)
-
+                '--ssh', ' '.join(ssh),
+                '--scp', ' '.join(scp))
         out = open('rje.stdout', 'w')
         proc = subprocess.Popen(args, stdout=out, stderr=subprocess.STDOUT)
     finally:
         os.chdir(orig_dir)
 
-    root = os.path.join('Fake-DMZ', root)
+    root = os.path.join(_DMZ_ROOT, root)
     for retry in range(20):
         time.sleep(0.5)
         if os.path.exists(root):
             return proc
     raise RuntimeError('server startup timeout')
 
-def stop_server(proc):
-    """ Stop RJE server `proc`. """
-    proc.terminate()
-#    if os.path.exists('RJE'):
-#        shutil.rmtree('RJE')
-
 
 if __name__ == '__main__':
-#    sys.argv.append('--cover-package=nas_access.')
-#    sys.argv.append('--cover-erase')
-#    nose.runmodule()
-
-    logging.getLogger().setLevel(logging.DEBUG)
-
-    protocol.configure_ssh(
-        ('python', os.path.join(TestCase.directory, 'ssh.py')))
-
-    protocol.configure_scp(
-        ('python', os.path.join(TestCase.directory, 'scp.py')))
-
-    logging.debug('')
-    logging.debug('test_nas_access')
-
-    # Start RJE server.
-    hostname = socket.gethostname()
-    proc = start_server(hostname)
-
-    try:
-        # Add NAS_Allocator referring to server.
-        allocator = NAS_Allocator(dmz_host=hostname, server_host=hostname)
-        RAM.add_allocator(allocator)
-        try:
-            # Run a fake job.
-            server = RAM.allocate(dict(allocator=allocator.name))
-            logging.debug('testing...')
-            time.sleep(10)
-            logging.debug('    done')
-            RAM.release(server)
-        finally:
-            RAM.remove_allocator(allocator.name)
-    finally:
-        # Stop server.
-        stop_server(proc)
+    sys.argv.append('--cover-package=nas_access.')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 

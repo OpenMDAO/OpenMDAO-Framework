@@ -3,24 +3,21 @@ Fake version of 'scp' for testing.
 """
 
 import os.path
-import pkg_resources
 import sys
 
 
 def main():
-    """ python scp.py src dst """
-    directory = \
-        os.path.realpath(pkg_resources.resource_filename('nas_access', 'test'))
-    root = os.path.join(directory, 'Fake-DMZ')
+    """ python scp.py root [--rje] src dst """
+    root = sys.argv[1]
     if not os.path.exists(root):
         os.mkdir(root)
     os.chdir(root)
-    if sys.argv[1] == '--rje':
-        src = fixup(sys.argv[2], rje=True)
-        dst = fixup(sys.argv[3], rje=True)
+    if sys.argv[2] == '--rje':
+        src = fixup(sys.argv[3], rje=True)
+        dst = fixup(sys.argv[4], rje=True)
     else:
-        src = fixup(sys.argv[1], rje=False)
-        dst = fixup(sys.argv[2], rje=False)
+        src = fixup(sys.argv[2], rje=False)
+        dst = fixup(sys.argv[3], rje=False)
     with open(src, 'r') as inp:
         with open(dst, 'w') as out:
             out.write(inp.read())

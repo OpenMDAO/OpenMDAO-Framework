@@ -1,6 +1,6 @@
 """
 Proxy classes for resource allocators and object servers accessed via
-the DMZ file protocol.
+the DMZ protocol.
 """
 
 from __future__ import absolute_import
@@ -48,8 +48,10 @@ class NAS_Allocator(object):
         self._dmz_host = dmz_host
         self._server_host = server_host
         self._logger = logging.getLogger(name)
+        self._logger.debug('%s init', name)
         if dmz_host and server_host:
             self._conn = connect(dmz_host, server_host, name, self._logger)
+            self._logger.debug('%s connected', name)
 
     @property
     def name(self):
@@ -149,10 +151,10 @@ class NAS_Allocator(object):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
-        path = '%s/%s' % (self._conn.root, name)
         result = self._conn.invoke('deploy', (name, resource_desc, criteria))
-        server = NAS_Server(name, self._dmz_host, self._server_host,
-                            result.pid, path)
+        proxy_name = '%s/%s' % (self.name, name)
+        server = NAS_Server(proxy_name, self._dmz_host, self._server_host,
+                            result.pid, result.root)
         self._servers.append(server)
         return server
 
@@ -164,18 +166,15 @@ class NAS_Allocator(object):
         server: :class:`NAS_Server`
             Server to be released.
         """
-        print self.name, 'release'
         if server in self._servers:
             self._servers.remove(server)
             self._conn.invoke('release', (server.conn.root,))
             server.shutdown()
         else:
-            print 'No such server %r' % server
             raise ValueError('No such server %r' % server)
 
     def shutdown(self):
         """ Shut-down this allocator. """
-        print self.name, 'shutdown'
         for server in self._servers:
             server.shutdown()
         self._conn.invoke('shutdown')
@@ -216,7 +215,6 @@ class NAS_Server(object):
 
     def shutdown(self):
         """ Shut-down this server. """
-        print self.name, 'shutdown'
         self._logger.debug('shutdown')
         self._conn.close()
 
