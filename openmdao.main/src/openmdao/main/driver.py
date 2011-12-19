@@ -216,6 +216,7 @@ class Driver(Component):
         """Called prior to each iteration.  This is where iteration events are set."""
         self.set_events()
         
+        
     def run_iteration(self):
         """Runs workflow."""
         wf = self.workflow
