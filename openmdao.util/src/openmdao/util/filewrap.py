@@ -9,7 +9,7 @@ import logging
 
 from pyparsing import CaselessLiteral, Combine, OneOrMore, Optional, \
                       TokenConverter, Word, nums, oneOf, printables, \
-                      ParserElement
+                      ParserElement, alphanums
 
 from openmdao.util.decorators import stub_if_missing_deps
 
@@ -122,10 +122,30 @@ class ToInf(TokenConverter):
         return float('inf')
     
     
-def _parse_line():
+def _parse_line(delimiters=' \t'):
     """Parse a single data line that may contain string or numerical data.
     Float and Int 'words' are converted to their appropriate type. 
     Exponentiation is supported, as are NaN and Inf."""
+    
+    # Somewhat of a hack, but we can only use printables if the delimiter is
+    # just whitespace. Otherwise, some seprators (like ',' or '=') potentially
+    # get parsed into the general string text. So, if we have non whitespace
+    # delimiters, we need to fall back to just alphanums, and then add in any
+    # missing but important symbols to parse.
+    if delimiters.isspace():
+        textchars = printables
+    else:
+        textchars = alphanums
+        
+        symbols = ['.', '/', '+', '*', '^', '(', ')', '[', ']', '=',
+                   ':', ';', '?', '%', '&', '!', '#', '|', '<', '>',
+                   '{', '}', '-', '_', '@', '$', '~']
+        
+        for symbol in symbols:
+            if symbol not in delimiters:
+                textchars = textchars + symbol
+                
+    string_text = Word(textchars)
         
     digits = Word(nums)
     dot = "."
@@ -150,7 +170,7 @@ def _parse_line():
     # sep = Literal(" ") | Literal("\n")
     
     data = ( OneOrMore( (nan | num_float | mixed_exp | num_int |
-                         Word(printables)) ) )
+                         string_text) ) )
     
     return data
 
@@ -464,7 +484,7 @@ class FileParser(object):
         self.delimiter = delimiter
         if delimiter != "columns":
             ParserElement.setDefaultWhitespaceChars(str(delimiter))
-        
+            
     def mark_anchor(self, anchor, occurrence=1):
         """Marks the location of a landmark, which lets you describe data by
         relative position. Note that a forward search begins at the old anchor 
@@ -590,7 +610,7 @@ class FileParser(object):
             else:
                 return data[0]
         else:
-            data = _parse_line().parseString(line)
+            data = _parse_line(self.delimiter).parseString(line)
             return data[field-1]
 
     def transfer_keyvar(self, key, field, occurrence=1, rowoffset=0):
@@ -640,7 +660,7 @@ class FileParser(object):
         j = self.current_row + row + rowoffset
         line = self.data[j]
         
-        fields = _parse_line().parseString(line.replace(key,"Key_Field"))
+        fields = _parse_line(self.delimiter).parseString(line.replace(key,"KeyField"))
         
         return fields[field]
 
@@ -699,7 +719,7 @@ class FileParser(object):
                 data = append(data, newdata)
                 
             else:
-                parsed = _parse_line().parseString(line)
+                parsed = _parse_line(self.delimiter).parseString(line)
                 if i == j2-j1-1:
                     data = append(data, array(parsed[(fieldstart-1):fieldend]))
                 else:
