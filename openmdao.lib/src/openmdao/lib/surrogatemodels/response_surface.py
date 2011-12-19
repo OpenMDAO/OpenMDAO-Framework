@@ -7,8 +7,6 @@ from enthought.traits.api import HasTraits
 from openmdao.main.interfaces import implements,ISurrogate
 from openmdao.lib.datatypes.api import Float, Bool
 
-from LeastSquaresMethods import housels, givensls, mgsls, normalls, svdls, svdls2
-
 class ResponseSurface(HasTraits): 
     implements(ISurrogate) 
     
@@ -44,22 +42,8 @@ class ResponseSurface(HasTraits):
             for j in range(i+1,self.n+1):
                 X = concatenate((X,multiply(X[:,i],X[:,j])),1)
         
-        # print X[0,:]
-        U, s, V = linalg.svd(X)
-        print "Smax = ", s[0]
-        print "Smin = ", s[-1]
-        print "Cond = ", s[0]/s[-1]
-        
         # Determine response surface equation coefficients (betas) using least squares
         self.betas, rs, r, s = linalg.lstsq(X,Y)
-        #self.betas, rs, Q = housels(X,Y)
-        #self.betas, rs, Q = givensls(X,Y)
-        #self.betas, rs, Q = mgsls(X,Y)
-        #self.betas, rs, Q = normalls(X,Y)
-        #self.betas, rs, Q = svdls2(X,Y)
-        print "rs = ", rs
-        # print "r = ", r
-        # print "s = ", s
         
     def predict(self,new_x): 
         """Calculates a predicted value of the response based on the current response surface modelfor the supplied list of inputs. """ 
