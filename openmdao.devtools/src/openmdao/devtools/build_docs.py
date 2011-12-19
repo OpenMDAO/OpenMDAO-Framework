@@ -17,10 +17,20 @@ from openmdao.util.dumpdistmeta import get_dist_metadata
 srcmods = [
 ]
 
+_is_release = False
+
+def _include_pkg(name):
+    if name.startswith('openmdao.'):
+        if name.startswith('openmdao.examples'):
+            return False
+        if _is_release and name.startswith('openmdao.devtools'):
+            return False
+        return True
+    return False
+
 def get_openmdao_packages():
-    return [d.project_name for d in working_set 
-            if d.project_name.startswith('openmdao.') 
-                and not d.project_name.startswith('openmdao.examples.')]
+    return [d.project_name for d in working_set if _include_pkg(d.project_name)]
+
 
 logger = logging.getLogger()
 
@@ -113,11 +123,10 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     print >> outfile, underline*(len('Package ')+len(pkg))
     print >> outfile, '\n\n'
     
-    # this behaves strangely, maybe because we use namespace pkgs?
-    # mod points to module 'openmdao', not 'openmdao.whatever', so we
-    # have to access 'whatever' through the 'openmdao' module
-    mod = __import__(pkg)
-    docs = getattr(mod, pkg.split('.')[1]).__doc__
+    __import__(pkg)
+    mod = sys.modules[pkg]
+    docs = mod.__doc__
+    
     if docs:
         print >> outfile, docs, '\n'
     
@@ -141,7 +150,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     #wanted to sort traits separately based only on filenames despite differing paths
     traitz = list(_get_resource_files(dist, 
                                       ['*__init__.py','*setup.py','*/test/*.py'], 
-                                      ['*datatypes*.py']))
+                                      ['*/lib/datatypes*.py']))
     sorted_traitz = sorted(traitz, cmp=_compare_traits_path)
     
     names.extend(sorted_traitz)
@@ -201,10 +210,13 @@ def build_docs(options=None, args=None):
     """A script (openmdao build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
+    global _is_release
     if options is not None and options.version:
         version = options.version
         shtitle = 'OpenMDAO Documentation v%s' % version
+        _is_release = True
     else:
+        _is_release = False
         try:
             tag, ncommits, commit = get_rev_info()
             version = "%s-%s-%s" % (tag, ncommits, commit)
@@ -270,9 +282,9 @@ def test_docs(options, args=None):
     branchdir, docdir, bindir =_get_dirnames()
     # force a new build before testing
     build_docs()
-    sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
-                      os.path.join(docdir, '_build', 'doctrees'), 
-                      docdir, os.path.join(docdir, '_build', 'html')])
+    return sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
+                             os.path.join(docdir, '_build', 'doctrees'), 
+                             docdir, os.path.join(docdir, '_build', 'html')])
 
 # make nose ignore this function
 test_docs.__test__ = False
