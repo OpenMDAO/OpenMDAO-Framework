@@ -10,7 +10,7 @@ from subprocess import call, check_call
 from openmdao.main.plugin import plugin_docs, plugin_build_docs
 from openmdao.test.testing import read_config, filter_config, run_openmdao_suite
 
-def list_testhosts(options):
+def list_testhosts(options, args=None):
     hostlist, config = read_config(options)
     for host in filter_config(hostlist, config, options):
         plat = config.get(host, 'platform')
@@ -41,6 +41,8 @@ def _get_openmdao_parser():
                         default=[],
                         help="Select host from config file to run on. "
                              "To run on multiple hosts, use multiple --host args")
+    parser.add_argument("--all", action="store_true", dest='allhosts',
+                        help="Use all hosts found in testhosts.cfg file")
     parser.set_defaults(func=list_testhosts)
 
     parser = subparsers.add_parser('docs', 
@@ -66,7 +68,6 @@ def _get_openmdao_parser():
 
         parser = subparsers.add_parser('test_branch', 
                                        description="test OpenMDAO branch remotely")
-        add_config_options(parser)
         parser.add_argument("-k","--keep", action="store_true", dest='keep',
                             help="Don't delete the temporary build directory. "
                                  "If testing on EC2 stop the instance instead of terminating it.")
@@ -80,6 +81,7 @@ def _get_openmdao_parser():
         parser.add_argument("--testargs", action="store", type=str, dest='testargs',
                             default='',
                             help="args to be passed to openmdao test")
+        parser = add_config_options(parser)
         parser.set_defaults(func=test_branch)
 
         parser = subparsers.add_parser('build_docs', 
@@ -111,8 +113,8 @@ def _get_openmdao_parser():
 
 def openmdao():
     parser = _get_openmdao_parser()
-    options, args = parser.parse_known_args()
-    options.func(options, args)
+    options = parser.parse_args()
+    options.func(options, [])
     
 if __name__ == '__main__':
     openmdao()
