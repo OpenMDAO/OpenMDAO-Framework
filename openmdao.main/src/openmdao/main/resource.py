@@ -234,7 +234,7 @@ class ResourceAllocationManager(object):
                     self._allocators.append(allocator)
 
     @staticmethod
-    def get_instance():
+    def _get_instance():
         """ Return singleton instance. """
         with ResourceAllocationManager._lock:
             if ResourceAllocationManager._RAM is None:
@@ -249,7 +249,7 @@ class ResourceAllocationManager(object):
         allocator: ResourceAllocator
             The allocator to be added.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             ram._allocators.append(allocator)
 
@@ -264,7 +264,7 @@ class ResourceAllocationManager(object):
         allocator: ResourceAllocator
             The allocator to be inserted.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             ram._allocators.insert(index, allocator)
 
@@ -276,7 +276,7 @@ class ResourceAllocationManager(object):
         selector: int or string
             List index or name of allocator to be returned.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             if isinstance(selector, basestring):
                 for allocator in ram._allocators:
@@ -294,7 +294,7 @@ class ResourceAllocationManager(object):
         selector: int or string
             List index or name of allocator to be removed.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             if isinstance(selector, basestring):
                 for i, allocator in enumerate(ram._allocators):
@@ -307,7 +307,7 @@ class ResourceAllocationManager(object):
     @staticmethod
     def list_allocators():
         """ Return list of allocators. """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             return ram._allocators
 
@@ -321,7 +321,7 @@ class ResourceAllocationManager(object):
         resource_desc: dict
             Description of required resources.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             return ram._max_servers(resource_desc)
 
@@ -352,7 +352,7 @@ class ResourceAllocationManager(object):
                 if h:
                     h.flush()
 
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             return ram._allocate(resource_desc)
 
@@ -406,7 +406,7 @@ class ResourceAllocationManager(object):
         resource_desc: dict
             Description of required resources.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             return ram._get_hostnames(resource_desc)
 
@@ -464,15 +464,15 @@ class ResourceAllocationManager(object):
         server: :class:`OpenMDAO_Proxy`
             Server to be released.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
+        # Lock in _release() so we don't keep the lock unnecessarily.
         return ram._release(server)
 
     def _release(self, server):
         """ Release a server (proxy). """
         with ResourceAllocationManager._lock:
             try:
-                allocator, server, server_info = \
-                    self._deployed_servers[id(server)]
+                allocator, server, server_info = self._deployed_servers[id(server)]
             # Just being defensive.
             except KeyError:  #pragma no cover
                 self._logger.error('server %r not found', server)
@@ -502,25 +502,29 @@ class ResourceAllocationManager(object):
             Prefix for the local names of the remote allocators.
             The default is the remote hostname.
         """
-        ram = ResourceAllocationManager.get_instance()
+        ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
-            remote_ram = server.get_ram()
-            total = remote_ram.get_total_allocators()
-            if not prefix:
-                prefix = server.host
-            for i in range(total):
-                allocator = remote_ram.get_allocator_proxy(i)
-                proxy = RemoteAllocator('%s/%s' % (prefix, allocator.name),
-                                        allocator)
-                ram._allocators.append(proxy)
+            ram._add_remotes(server, prefix)
+
+    def _add_remotes(server, prefix=''):
+        """ Add allocators from a remote server. """
+        remote_ram = server.get_ram()
+        total = remote_ram._get_total_allocators()
+        if not prefix:
+            prefix = server.host
+        for i in range(total):
+            allocator = remote_ram._get_allocator_proxy(i)
+            proxy = RemoteAllocator('%s/%s' % (prefix, allocator.name),
+                                    allocator)
+            self._allocators.append(proxy)
 
     @rbac('*')
-    def get_total_allocators(self):
+    def _get_total_allocators(self):
         """ Return number of allocators for remote use. """
         return len(self._allocators)
 
     @rbac('*', proxy_types=[object])
-    def get_allocator_proxy(self, index):
+    def _get_allocator_proxy(self, index):
         """
         Return allocator for remote use.
 

@@ -93,7 +93,7 @@ class ObjServerFactory(Factory):
         Used by :meth:`ResourceAllocationManager.add_remotes`.
         """
         from openmdao.main.resource import ResourceAllocationManager
-        return ResourceAllocationManager.get_instance()
+        return ResourceAllocationManager._get_instance()
 
     @rbac('*')
     def echo(self, *args):

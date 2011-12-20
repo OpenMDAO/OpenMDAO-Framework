@@ -31,6 +31,10 @@ class TestCase(unittest.TestCase):
         self.orig_ssh = protocol.configure_ssh(ssh)
         self.orig_scp = protocol.configure_scp(scp)
 
+        # Avoid lots of polling log entries.
+        if logging.getLogger().getEffectiveLevel() < logging.DEBUG:
+            logging.getLogger().setLevel(logging.DEBUG)
+
     def tearDown(self):
         """ Restore 'ssh' and 'scp' configuration. """
         protocol.configure_ssh(self.orig_ssh)
