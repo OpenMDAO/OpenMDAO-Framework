@@ -1,3 +1,4 @@
+import fnmatch
 import glob
 import os
 import sys
@@ -75,7 +76,7 @@ def pack_zipfile(patterns, filename, logger=NullLogger):
     Returns ``(nfiles, nbytes)``.
 
     patterns: list
-        List of :mod:`glob` style patterns.
+        List of :mod:`fnmatch` style patterns.
 
     filename: string
         Name of zip file to create.
@@ -99,28 +100,66 @@ def pack_zipfile(patterns, filename, logger=NullLogger):
     return (nfiles, nbytes)
 
 
-def unpack_zipfile(filename, logger=NullLogger):
+def unpack_zipfile(filename, logger=NullLogger, textfiles=None):
     """
     Unpack 'zip' file `filename`.
     Returns ``(nfiles, nbytes)``.
 
     filename: string
-        Nmae of zip file to unpack.
+        Name of zip file to unpack.
 
     logger: Logger
         Used for recording progress.
+
+    textfiles: list
+        List of :mod:`fnmatch` style patterns specifying which upnapcked files
+        are text files possibly needing newline translation. If not supplied,
+        the first 4KB of each is scanned for a zero byte. If not found then the
+        file is assumed to be a text file.
     """
+    # ZipInfo.create_system code for local system.
+    local_system = 0 if sys.platform == 'win32' else 3
+
     nfiles = 0
     nbytes = 0
     zipped = zipfile.ZipFile(filename, 'r')
     try:
         for info in zipped.infolist():
+            filename = info.filename
             size = info.file_size
-            logger.debug("unpacking '%s' (%d)...", info.filename, size)
+            logger.debug('unpacking %r (%d)...', filename, size)
             zipped.extract(info)
+            if info.create_system != local_system:
+                if textfiles is None:
+                    with open(filename, 'rb') as inp:
+                        data = inp.read(1 << 12)
+                    if '\0' not in data:
+                        logger.debug('translating %r...', filename)
+                        translate_newlines(filename)
+                else:
+                    for pattern in textfiles:
+                        if fnmatch.fnmatch(filename, pattern):
+                            logger.debug('translating %r...', filename)
+                            translate_newlines(filename)
             nfiles += 1
             nbytes += size
     finally:
         zipped.close()
     return (nfiles, nbytes)
+
+
+def translate_newlines(filename):
+    """
+    Translate the newlines of `filename` to the local standard.
+
+    filename: string
+        Name of the file to be translated.
+        The translated file will replace this file.
+    """
+    with open(filename, 'rU') as inp:
+        with open('__translated__', 'w') as out:
+            for line in inp:
+                out.write(line)
+    os.remove(filename)
+    os.rename('__translated__', filename)
 

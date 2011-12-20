@@ -33,8 +33,7 @@ from openmdao.main.case import Case
 
 from openmdao.main.arch import Architecture
 
-from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
-                                   SAVE_PICKLE, SAVE_CPICKLE
+from openmdao.util.eggsaver import SAVE_PICKLE, SAVE_CPICKLE #, SAVE_YAML, SAVE_LIBYAML
 
 from openmdao.units import convert_units
 

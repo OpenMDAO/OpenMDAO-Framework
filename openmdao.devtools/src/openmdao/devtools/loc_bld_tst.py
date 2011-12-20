@@ -123,7 +123,7 @@ def build_and_test(fname=None, workdir='.', keep=False,
     if retcode != 0:
         sys.exit(retcode)
     
-    print '\ntesting...'
+    print '\ntesting  (testargs=%s) ...' % testargs
 
     try:
         retcode = activate_and_test(envdir, testargs)
@@ -232,7 +232,7 @@ def install_dev_env(url, branch=None):
     
     gopath = os.path.join(treedir, 'go-openmdao-dev.py')
     
-    retcode = _run_gofile(startdir, gopath)
+    retcode = _run_gofile(startdir, gopath, args=['--gui'])
             
     envdir = os.path.join(treedir, 'devenv')
     print 'new openmdao environment built in %s' % envdir
@@ -249,19 +249,20 @@ def activate_and_test(envdir, testargs=()):
     """
     if sys.platform.startswith('win'):
         devbindir = 'Scripts'
-        command = 'activate.bat && openmdao_test %s' % ' '.join(testargs)
+        command = 'activate.bat && openmdao test %s' % ' '.join(testargs)
     else:
         devbindir = 'bin'
-        command = '. ./activate && openmdao_test %s' % ' '.join(testargs)
+        command = '. ./activate && openmdao test %s' % ' '.join(testargs)
         
     # activate the environment and run tests
     devbinpath = os.path.join(envdir, devbindir)
     os.chdir(devbinpath)
-    print("running tests from %s" % devbinpath)
+    print "running tests from %s" % devbinpath 
     env = os.environ.copy()
     for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
         if name in env: 
             del env[name]
+    print "command = ",command
     return _run_sub('test.out', command, env=env)
     
 
@@ -277,10 +278,13 @@ if __name__ == '__main__':
                       help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
     parser.add_option("-d","--dir", action="store", type='string', 
                       dest='directory', default='.',
-                      help="name of a directory the build will be created")
+                      help="name of a directory the build will be created in")
+    parser.add_option("--testargs", action="store", type='string', 
+                      dest='testargs', default='',
+                      help="args to pass to openmdao test")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
-                            branch=options.branch, testargs=args))
+                            branch=options.branch, testargs=options.testargs.split()))
     

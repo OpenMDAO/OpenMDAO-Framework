@@ -181,7 +181,7 @@ class PdcylComp(ExternalCode):
         self.stdin = 'PDCYL.in'
         self.stdout = 'PDCYL.out'
         self.stderr = 'PDCYL.err'
-        self.command = 'PDCYL'
+        self.command = ['PDCYL']
         
         self.external_files = [
             FileMetadata(path=self.stdin, input=True),

@@ -10,10 +10,10 @@ When saving to an egg, the module named :mod:`__main__` changes when reloading.
 This requires finding the real module name and munging references to
 :mod:`__main__`.  References to old-style class types can't be restored
 correctly.
-
-Also note that YAML format doesn't handle more than one layer of back-pointers, 
-so it's only suitable for very flat object networks.
 """
+
+#Also note that YAML format doesn't handle more than one layer of back-pointers, 
+#so it's only suitable for very flat object networks.
 
 # Note that handling __main__ module references is exercised during testing by
 # running in separate process, so no coverage will be reported by this process.
@@ -22,14 +22,14 @@ so it's only suitable for very flat object networks.
 
 import pickle
 import cPickle
-import yaml
-try:
-    from yaml import CDumper as Dumper
-    _libyaml = True
-# Test machines have libyaml.
-except ImportError:  #pragma no cover
-    from yaml import Dumper
-    _libyaml = False
+#import yaml
+#try:
+    #from yaml import CDumper as Dumper
+    #_libyaml = True
+## Test machines have libyaml.
+#except ImportError:  #pragma no cover
+    #from yaml import Dumper
+    #_libyaml = False
 
 import copy
 import copy_reg
@@ -50,8 +50,8 @@ from openmdao.util.log import NullLogger
 from openmdao.util import eggobserver, eggwriter
 
 # Save formats.
-SAVE_YAML    = 1
-SAVE_LIBYAML = 2
+#SAVE_YAML    = 1
+#SAVE_LIBYAML = 2
 SAVE_PICKLE  = 3
 SAVE_CPICKLE = 4
 
@@ -869,13 +869,13 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
         cPickle.dump(root, outstream, proto)
     elif fmt is SAVE_PICKLE:
         pickle.dump(root, outstream, proto)
-    elif fmt is SAVE_YAML:
-        yaml.dump(root, outstream)
-    elif fmt is SAVE_LIBYAML:
-        # Test machines have libyaml.
-        if _libyaml is False:  #pragma no cover
-            logger.warning('libyaml not available, using yaml instead')
-        yaml.dump(root, outstream, Dumper=Dumper)
+    #elif fmt is SAVE_YAML:
+        #yaml.dump(root, outstream)
+    #elif fmt is SAVE_LIBYAML:
+        ## Test machines have libyaml.
+        #if _libyaml is False:  #pragma no cover
+            #logger.warning('libyaml not available, using yaml instead')
+        #yaml.dump(root, outstream, Dumper=Dumper)
     else:
         raise RuntimeError("Can't save object using format '%s'" % fmt)
 

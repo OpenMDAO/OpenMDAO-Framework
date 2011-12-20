@@ -283,23 +283,23 @@ class ContainerTestCase(unittest.TestCase):
     # TODO: all of these save/load test functions need to do more checking
     #       to verify that the loaded thing is equivalent to the saved thing
     
-    def test_save_load_yaml(self):
-        output = StringIO.StringIO()
-        c1 = Container()
-        c1.add('c2', Container())
-        c1.save(output, constants.SAVE_YAML)
+    #def test_save_load_yaml(self):
+        #output = StringIO.StringIO()
+        #c1 = Container()
+        #c1.add('c2', Container())
+        #c1.save(output, constants.SAVE_YAML)
         
-        inp = StringIO.StringIO(output.getvalue())
-        newc1 = Container.load(inp, constants.SAVE_YAML)
+        #inp = StringIO.StringIO(output.getvalue())
+        #newc1 = Container.load(inp, constants.SAVE_YAML)
                 
-    def test_save_load_libyaml(self):
-        output = StringIO.StringIO()
-        c1 = Container()
-        c1.add('c2', Container())
-        c1.save(output, constants.SAVE_LIBYAML)
+    #def test_save_load_libyaml(self):
+        #output = StringIO.StringIO()
+        #c1 = Container()
+        #c1.add('c2', Container())
+        #c1.save(output, constants.SAVE_LIBYAML)
         
-        inp = StringIO.StringIO(output.getvalue())
-        newc1 = Container.load(inp, constants.SAVE_LIBYAML)
+        #inp = StringIO.StringIO(output.getvalue())
+        #newc1 = Container.load(inp, constants.SAVE_LIBYAML)
                 
     def test_save_load_cpickle(self):
         output = StringIO.StringIO()
