@@ -53,6 +53,7 @@ class TestCase(unittest.TestCase):
         # Unused deployment.
         server = allocator.deploy('GridEngineTestServer', {}, {})
         self.assertTrue(is_instance(server, GridEngineServer))
+        allocator.release(server)
 
         # Too many CPUs.
         estimate, criteria = allocator.time_estimate({'n_cpus': 1000})

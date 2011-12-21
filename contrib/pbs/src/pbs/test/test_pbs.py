@@ -20,16 +20,18 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         # Force use of fake 'qsub'.
-        self.orig_qsub = PBS_Server._QSUB
-        PBS_Server._QSUB = os.path.join(TestCase.directory, 'qsub')
+        self.orig_qsub = list(PBS_Server._QSUB)
+        PBS_Server._QSUB[:] = \
+            ['python', os.path.join(TestCase.directory, 'qsub.py')]
 
         # Force use of fake 'qhost'.
-        self.orig_qhost = PBS_Allocator._QHOST
-        PBS_Allocator._QHOST = os.path.join(TestCase.directory, 'qhost')
+        self.orig_qhost = list(PBS_Allocator._QHOST)
+        PBS_Allocator._QHOST[:] = \
+            ['python', os.path.join(TestCase.directory, 'qhost.py')]
 
     def tearDown(self):
-        PBS_Server._QSUB = self.orig_qsub
-        PBS_Allocator._QHOST = self.orig_qhost
+        PBS_Server._QSUB[:] = self.orig_qsub
+        PBS_Allocator._QHOST[:] = self.orig_qhost
         for name in ('echo.in', 'echo.out', 'qsub.out'):
             if os.path.exists(name):
                 os.remove(name)
@@ -50,6 +52,7 @@ class TestCase(unittest.TestCase):
         # Unused deployment.
         server = allocator.deploy('PBS_TestServer', {}, {})
         self.assertTrue(is_instance(server, PBS_Server))
+        allocator.release(server)
 
         # Too many CPUs.
         estimate, criteria = allocator.time_estimate({'n_cpus': 1000})
@@ -80,7 +83,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(estimate, -2)
 
         # 'qhost' failure.
-        PBS_Allocator._QHOST = os.path.join('bogus-qhost')
+        PBS_Allocator._QHOST[:] = [os.path.join('bogus-qhost')]
         cfg.set('PBS', 'pattern', '*')
         allocator.configure(cfg)
         nhosts = allocator.max_servers({})
@@ -139,12 +142,11 @@ class TestCase(unittest.TestCase):
 -l resource s_rt=0:0:2
 -l resource h_cpu=0:0:3
 -l resource s_cpu=0:0:4
-+ '[' 1 -eq 1 ']'
-+ echo hello world
+echo hello world
 """)
 
         # 'qsub' failure.
-        PBS_Server._QSUB = os.path.join('bogus-qsub')
+        PBS_Server._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"
         assert_raises(self, code, globals(), locals(), OSError, '')
 

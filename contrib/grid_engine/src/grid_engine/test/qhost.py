@@ -1,4 +1,9 @@
-if __name__ == '__main__':
+"""
+Fake 'qhost' for testing.
+"""
+
+
+def main():
     print """\
 HOSTNAME                ARCH         NCPU  LOAD  MEMTOT  MEMUSE  SWAPTO  SWAPUS
 -------------------------------------------------------------------------------
@@ -30,3 +35,8 @@ hxv142b                 -               -     -       -       -       -       -
 hxv142c                 -               -     -       -       -       -       -
 hxv5                    -               -     -       -       -       -       -
 hxv54                   -               -     -       -       -       -       - """
+
+
+if __name__ == '__main__':
+    main()
+

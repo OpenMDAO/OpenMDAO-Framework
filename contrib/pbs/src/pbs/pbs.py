@@ -9,6 +9,7 @@ application.
 
 import fnmatch
 import os.path
+import sys
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.objserverfactory import ObjServer
@@ -47,13 +48,13 @@ class PBS_Allocator(FactoryAllocator):
 
         [PBS]
         classname: pbs.PBS_Allocator
+        pattern: *
         authkey: PublicKey
         allow_shell: True
-        pattern: *
 
     """
 
-    _QHOST = 'qhost'  # Replaced with path to fake for testing.
+    _QHOST = ['qhost']  # Replaced with path to fake for testing.
 
     def __init__(self, name='PBS', pattern='*', authkey=None,
                  allow_shell=True):
@@ -164,7 +165,7 @@ class PBS_Allocator(FactoryAllocator):
         """ Return list of hostnames sorted by load. """
         # Get host load information.
         try:
-            proc = ShellProc([self._QHOST], stdout=PIPE)
+            proc = ShellProc(self._QHOST, stdout=PIPE)
         except Exception as exc:
             self._logger.error('%r failed: %s' % (self._QHOST, exc))
             return []
@@ -199,7 +200,7 @@ class PBS_Allocator(FactoryAllocator):
 class PBS_Server(ObjServer):
     """ Knows about executing a command via `qsub`. """
 
-    _QSUB = 'qsub'  # Replaced with path to fake for testing.
+    _QSUB = ['qsub']  # Replaced with path to fake for testing.
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -266,10 +267,12 @@ class PBS_Server(ObjServer):
 
         Output from `qsub` itself is routed to ``qsub.out``.
         """
-        self.home_dir = os.environ['HOME']
+        self.home_dir = os.path.expanduser('~')
         self.work_dir = ''
+        dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
-        cmd = [self._QSUB, '-V', '-sync', 'yes']
+        cmd = list(self._QSUB)
+        cmd.extend(['-V', '-sync', 'yes'])
         env = None
         inp, out, err = None, None, None
 
@@ -364,7 +367,7 @@ class PBS_Server(ObjServer):
 
         if inp is None:
             cmd.append('-i')
-            cmd.append('/dev/null')
+            cmd.append(dev_null)
         if out is None:
             cmd.append('-o')
             cmd.append('%s.stdout'
@@ -382,9 +385,9 @@ class PBS_Server(ObjServer):
             for arg in resource_desc['args']:
                 cmd.append(self._fix_path(arg))
 
-        self._logger.critical('%r', ' '.join(cmd))
+        self._logger.info('%r', ' '.join(cmd))
         try:
-            process = ShellProc(cmd, '/dev/null', 'qsub.out', STDOUT, env)
+            process = ShellProc(cmd, dev_null, 'qsub.out', STDOUT, env)
         except Exception as exc:
             self._logger.error('exception creating process: %s', exc)
             raise

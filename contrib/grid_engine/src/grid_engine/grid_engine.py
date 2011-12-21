@@ -9,6 +9,7 @@ application.
 
 import fnmatch
 import os.path
+import sys
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.objserverfactory import ObjServer
@@ -267,10 +268,11 @@ class GridEngineServer(ObjServer):
 
         Output from `qsub` itself is routed to ``qsub.out``.
         """
-        self.home_dir = os.environ['HOME']
+        self.home_dir = os.path.expanduser('~')
         self.work_dir = ''
+        dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
-        cmd = self._QSUB
+        cmd = list(self._QSUB)
         cmd.extend(['-V', '-sync', 'yes'])
         env = None
         inp, out, err = None, None, None
@@ -366,7 +368,7 @@ class GridEngineServer(ObjServer):
 
         if inp is None:
             cmd.append('-i')
-            cmd.append('/dev/null')
+            cmd.append(dev_null)
         if out is None:
             cmd.append('-o')
             cmd.append('%s.stdout'
@@ -386,7 +388,7 @@ class GridEngineServer(ObjServer):
 
         self._logger.info('%r', ' '.join(cmd))
         try:
-            process = ShellProc(cmd, '/dev/null', 'qsub.out', STDOUT, env)
+            process = ShellProc(cmd, dev_null, 'qsub.out', STDOUT, env)
         except Exception as exc:
             self._logger.error('exception creating process: %s', exc)
             raise
