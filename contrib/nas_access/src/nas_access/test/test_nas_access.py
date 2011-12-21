@@ -44,6 +44,7 @@ class TestCase(unittest.TestCase):
             if os.path.exists(name):
                 os.remove(name)
 
+        time.sleep(2)
         for name in (_RJE_ROOT, _DMZ_ROOT):
             if os.path.exists(name):
                 shutil.rmtree(name)
@@ -105,15 +106,9 @@ class TestCase(unittest.TestCase):
                     os.remove(filename)
                     server.remove(filename)
 
-                except Exception as exc:
-                    logging.debug('Server Exception: %s', exc)
-
                 finally:
                     logging.debug('release')
                     RAM.release(server)
-
-            except Exception as exc:
-                logging.debug('Allocator Exception: %s', exc)
 
             finally:
                 logging.debug('remove')
@@ -121,9 +116,6 @@ class TestCase(unittest.TestCase):
 
                 logging.debug('shutdown')
                 allocator.shutdown()
-
-        except Exception as exc:
-            logging.debug('Global Exception: %s', exc)
 
         finally:
             proc.terminate()

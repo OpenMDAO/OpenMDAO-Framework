@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 import os.path
 import shutil
+import sys
 
 from openmdao.main.rbac import rbac
 from openmdao.main.resource import ResourceAllocator
@@ -147,10 +148,11 @@ class NAS_Allocator(ResourceAllocator):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
-        result = self._conn.invoke('deploy', (name, resource_desc, criteria))
+        r_root, r_pid = \
+            self._conn.invoke('deploy', (name, resource_desc, criteria))
         proxy_name = '%s/%s' % (self.name, name)
         server = NAS_Server(proxy_name, self._dmz_host, self._server_host,
-                            result.pid, result.root)
+                            r_pid, r_root)
         self._servers.append(server)
         return server
 
@@ -334,7 +336,13 @@ class NAS_Server(object):
         path: string
             Path to file to interrogate.
         """
-        return self._conn.invoke('stat', (path,))
+        info = self._conn.invoke('stat', (path,))
+        if sys.platform == 'win32':  #pragma no cover
+            import nt
+            return nt.stat_result(info)
+        else:
+            import posix
+            return posix.stat_result(info)
 
 
 class _File(object):

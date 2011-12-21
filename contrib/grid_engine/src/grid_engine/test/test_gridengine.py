@@ -21,16 +21,18 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         # Force use of fake 'qsub'.
-        self.orig_qsub = GridEngineServer._QSUB
-        GridEngineServer._QSUB = os.path.join(TestCase.directory, 'qsub')
+        self.orig_qsub = list(GridEngineServer._QSUB)
+        GridEngineServer._QSUB[:] = \
+            ['python', os.path.join(TestCase.directory, 'qsub.py')]
 
         # Force use of fake 'qhost'.
-        self.orig_qhost = GridEngineAllocator._QHOST
-        GridEngineAllocator._QHOST = os.path.join(TestCase.directory, 'qhost')
+        self.orig_qhost = list(GridEngineAllocator._QHOST)
+        GridEngineAllocator._QHOST[:] = \
+            ['python', os.path.join(TestCase.directory, 'qhost.py')]
 
     def tearDown(self):
-        GridEngineServer._QSUB = self.orig_qsub
-        GridEngineAllocator._QHOST = self.orig_qhost
+        GridEngineServer._QSUB[:] = self.orig_qsub
+        GridEngineAllocator._QHOST[:] = self.orig_qhost
         for name in ('echo.in', 'echo.out', 'qsub.out'):
             if os.path.exists(name):
                 os.remove(name)
@@ -81,7 +83,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(estimate, -2)
 
         # 'qhost' failure.
-        GridEngineAllocator._QHOST = os.path.join('bogus-qhost')
+        GridEngineAllocator._QHOST[:] = [os.path.join('bogus-qhost')]
         cfg.set('GridEngine', 'pattern', '*')
         allocator.configure(cfg)
         nhosts = allocator.max_servers({})
@@ -140,11 +142,11 @@ class TestCase(unittest.TestCase):
 -l resource s_rt=0:0:2
 -l resource h_cpu=0:0:3
 -l resource s_cpu=0:0:4
-+ echo hello world
+echo hello world
 """)
 
         # 'qsub' failure.
-        GridEngineServer._QSUB = os.path.join('bogus-qsub')
+        GridEngineServer._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"
         assert_raises(self, code, globals(), locals(), OSError, '')
 

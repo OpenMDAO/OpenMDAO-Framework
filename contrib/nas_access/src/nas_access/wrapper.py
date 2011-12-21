@@ -77,7 +77,7 @@ class AllocatorWrapper(object):
                                                target=wrapper.process_requests)
                     handler.daemon = True
                     handler.start()
-                    result = _ServerWrapperInfo(wrapper)
+                    result = (wrapper.conn.root, wrapper.server.pid)
                     self.add_wrapper(wrapper, handler)
                 self._conn.send_reply(result)
 
@@ -127,8 +127,8 @@ class ServerWrapper(object):
 
     _legal_methods = set(('echo', 'execute_command',
                           'pack_zipfile', 'unpack_zipfile',
-                          'chmod', 'isdir', 'listdir', 'remove', 'stat'))
-    _local_methods = set(('getfile', 'putfile'))
+                          'chmod', 'isdir', 'listdir', 'remove'))
+    _local_methods = set(('getfile', 'putfile', 'stat'))
 
     def __init__(self, server, connection):
         self._server = server
@@ -195,24 +195,23 @@ class ServerWrapper(object):
         Copy `filename` to remote file server.
 
         filename: string
-            Name fo file to send.
+            Name of file to send.
         """
         # Local copy will be removed when connection is closed.
         filexfer(self._server, filename,
                  None, os.path.join(self._conn.root, filename))
         self._conn.send_file(filename)
 
+    def stat(self, path):
+        """
+        Return portable portion of ``os.stat()`` on `path`.
 
-class _ServerWrapperInfo(object):
-    """
-    Information used to connect to `wrapper`.
-
-    wrapper: :class:`ServerWrapper`
-        Wrapper to connect to.
-    """
-
-    def __init__(self, wrapper):
-        self.dmz_host = wrapper.conn.dmz_host
-        self.root = wrapper.conn.root
-        self.pid = wrapper.server.pid
+        path: string
+            Name of file to interrogate.
+        """
+        info = self._server.stat(path)
+        data = []
+        for i in range(10):
+            data.append(info[i])
+        return data
 

@@ -53,7 +53,7 @@ class GridEngineAllocator(FactoryAllocator):
 
     """
 
-    _QHOST = 'qhost'  # Replaced with path to fake for testing.
+    _QHOST = ['qhost']  # Replaced with path to fake for testing.
 
     def __init__(self, name='GridEngine', pattern='*', authkey=None,
                  allow_shell=True):
@@ -165,7 +165,7 @@ class GridEngineAllocator(FactoryAllocator):
         """ Return list of hostnames sorted by load. """
         # Get host load information.
         try:
-            proc = ShellProc([self._QHOST], stdout=PIPE)
+            proc = ShellProc(self._QHOST, stdout=PIPE)
         except Exception as exc:
             self._logger.error('%r failed: %s' % (self._QHOST, exc))
             return []
@@ -200,7 +200,7 @@ class GridEngineAllocator(FactoryAllocator):
 class GridEngineServer(ObjServer):
     """ Knows about executing a command via `qsub`. """
 
-    _QSUB = 'qsub'  # Replaced with path to fake for testing.
+    _QSUB = ['qsub']  # Replaced with path to fake for testing.
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -270,7 +270,8 @@ class GridEngineServer(ObjServer):
         self.home_dir = os.environ['HOME']
         self.work_dir = ''
 
-        cmd = [self._QSUB, '-V', '-sync', 'yes']
+        cmd = self._QSUB
+        cmd.extend(['-V', '-sync', 'yes'])
         env = None
         inp, out, err = None, None, None
 
