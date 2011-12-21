@@ -12,14 +12,14 @@ import os.path
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.objserverfactory import ObjServer
-from openmdao.main.rbac import rbac, get_credentials
-from openmdao.main.resource import ResourceAllocator, \
+from openmdao.main.rbac import rbac
+from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
 
 from openmdao.util.shellproc import ShellProc, STDOUT, PIPE
 
 
-class PBS_Allocator(ResourceAllocator):
+class PBS_Allocator(FactoryAllocator):
     """
     Knows about PBS cluster resources (via `qhost`).
     Uses :class:`PBS_Server` instead of :class:`ObjServer` when deploying.
@@ -58,12 +58,11 @@ class PBS_Allocator(ResourceAllocator):
     def __init__(self, name='PBS', pattern='*', authkey=None,
                  allow_shell=True):
         super(PBS_Allocator, self).__init__(name, authkey, allow_shell)
-        self.pattern = pattern
-        self.manager_class = _ServerManager
-        self.server_classname = \
+        self.factory.manager_class = _ServerManager
+        self.factory.server_classname = \
             'openmdao_contrib_pbs_pbs_PBS_Server'
+        self.pattern = pattern
 
-    @rbac('*')
     def configure(self, cfg):
         """
         Configure allocator from :class:`ConfigParser` instance.
@@ -73,8 +72,9 @@ class PBS_Allocator(ResourceAllocator):
             Configuration data is located under the section matching
             this allocator's `name`.
 
-        Allows modifying `pattern`.
+        Allows modifying factory options and `pattern`.
         """
+        super(PBS_Allocator, self).configure(cfg)
         if cfg.has_option(self.name, 'pattern'):
             self.pattern = cfg.get(self.name, 'pattern')
 
@@ -194,31 +194,6 @@ class PBS_Allocator(ResourceAllocator):
             for i in range(ncpu):
                 hosts.append(hostname)
         return hosts
-
-    @rbac('*')
-    def deploy(self, name, resource_desc, criteria):
-        """
-        Deploy a server suitable for `resource_desc`.
-        Returns a proxy to the deployed server.
-
-        name: string
-            Name for server.
-
-        resource_desc: dict
-            Description of required resources.
-
-        criteria: dict
-            The dictionary returned by :meth:`time_estimate`.
-        """
-        credentials = get_credentials()
-        allowed_users = {credentials.user: credentials.public_key}
-        try:
-            return self.create(typname='', allowed_users=allowed_users,
-                               name=name)
-        # Shouldn't happen...
-        except Exception as exc:  #pragma no cover
-            self._logger.error('create failed: %r', exc)
-            return None
 
 
 class PBS_Server(ObjServer):

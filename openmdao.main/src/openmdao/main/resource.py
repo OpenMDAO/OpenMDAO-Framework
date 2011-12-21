@@ -218,18 +218,7 @@ class ResourceAllocationManager(object):
                         raise RuntimeError('RAM configure %s: no class %r in %s'
                                            % (name, cls_name, mod_name))
                     cls = getattr(module, cls_name)
-                    if cfg.has_option(name, 'authkey'):
-                        authkey = cfg.get(name, 'authkey')
-                    else:
-                        authkey = 'PublicKey'
-                    self._logger.debug('    authkey: %s', authkey)
-                    if cfg.has_option(name, 'allow_shell'):
-                        allow_shell = cfg.getboolean(name, 'allow_shell')
-                    else:
-                        allow_shell = False
-                    self._logger.debug('    allow_shell: %s', allow_shell)
-                    allocator = cls(name=name, authkey=authkey,
-                                    allow_shell=allow_shell)
+                    allocator = cls(name)
                     allocator.configure(cfg)
                     self._allocators.append(allocator)
 
@@ -344,14 +333,6 @@ class ResourceAllocationManager(object):
         resource_desc: dict
             Description of required resources.
         """
-        for handler in logging._handlerList:
-            try:
-                handler.flush()  # Try to keep log messages sane.
-            except AttributeError:  # in python2.7, handlers are weakrefs
-                h = handler()
-                if h:
-                    h.flush()
-
         ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
             return ram._allocate(resource_desc)
@@ -506,7 +487,7 @@ class ResourceAllocationManager(object):
         with ResourceAllocationManager._lock:
             ram._add_remotes(server, prefix)
 
-    def _add_remotes(server, prefix=''):
+    def _add_remotes(self, server, prefix):
         """ Add allocators from a remote server. """
         remote_ram = server.get_ram()
         total = remote_ram._get_total_allocators()
@@ -534,29 +515,18 @@ class ResourceAllocationManager(object):
         return self._allocators[index]
 
 
-class ResourceAllocator(ObjServerFactory):
+class ResourceAllocator(object):
     """
     Base class for allocators. Allocators estimate the suitability of a
     resource and can deploy on that resource.
 
     name: string
         Name of allocator, used in log messages, etc.
-
-    authkey: string
-        Authorization key for this allocator and any deployed servers.
-
-    allow_shell: bool
-        If True, :meth:`execute_command` and :meth:`load_model` are allowed
-        in created servers. Use with caution!
     """
 
-    def __init__(self, name, authkey=None, allow_shell=False):
-        if authkey is None:
-            authkey = multiprocessing.current_process().authkey
-            if authkey is None:
-                authkey = 'PublicKey'
-                multiprocessing.current_process().authkey = authkey
-        super(ResourceAllocator, self).__init__(name, authkey, allow_shell)
+    def __init__(self, name):
+        self._name = name
+        self._logger = logging.getLogger(name)
 
     @property
     def name(self):
@@ -588,7 +558,7 @@ class ResourceAllocator(ObjServerFactory):
         resource_desc: dict
             Description of required resources.
         """
-        raise NotImplementedError
+        raise NotImplementedError('max_servers')
 
     # To be implemented by real allocator.
     def time_estimate(self, resource_desc):  #pragma no cover
@@ -609,7 +579,7 @@ class ResourceAllocator(ObjServerFactory):
         resource_desc: dict
             Description of required resources.
         """
-        raise NotImplementedError
+        raise NotImplementedError('time_estimate')
 
     def check_compatibility(self, resource_desc):
         """
@@ -695,10 +665,101 @@ class ResourceAllocator(ObjServerFactory):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
-        raise NotImplementedError
+        raise NotImplementedError('deploy')
+
+    # To be implemented by real allocator.
+    def release(self, server):  #pragma no cover
+        """
+        Shut-down `server`.
+
+        server: :class:`ObjServer`
+            Server to be shut down.
+        """
+        raise NotImplementedError('release')
 
 
-class LocalAllocator(ResourceAllocator):
+class FactoryAllocator(ResourceAllocator):
+    """
+    Base class for allocators using :class:`ObjServerFactory`.
+
+    name: string
+        Name of allocator, used in log messages, etc.
+
+    authkey: string
+        Authorization key for this allocator and any deployed servers.
+
+    allow_shell: bool
+        If True, :meth:`execute_command` and :meth:`load_model` are allowed
+        in created servers. Use with caution!
+    """
+    def __init__(self, name, authkey=None, allow_shell=False):
+        super(FactoryAllocator, self).__init__(name)
+
+        if authkey is None:
+            authkey = multiprocessing.current_process().authkey
+            if authkey is None:
+                authkey = 'PublicKey'
+                multiprocessing.current_process().authkey = authkey
+        self.factory = ObjServerFactory(name, authkey, allow_shell)
+
+    def configure(self, cfg):
+        """
+        Configure allocator from :class:`ConfigParser` instance.
+        Normally only called during manager initialization.
+
+        cfg: :class:`ConfigParser`
+            Configuration data is located under the section matching
+            this allocator's `name`.
+
+        Allows modifying `auth_key` and `allow_shell`.
+        """
+        if cfg.has_option(self.name, 'authkey'):
+            value = cfg.get(self.name, 'authkey')
+            self._logger.debug('    authkey: %s', value)
+            self.factory._authkey = value
+
+        if cfg.has_option(self.name, 'allow_shell'):
+            value = cfg.getboolean(self.name, 'allow_shell')
+            self._logger.debug('    allow_shell: %s', value)
+            self.factory._allow_shell = value
+
+    @rbac('*')
+    def deploy(self, name, resource_desc, criteria):
+        """
+        Deploy a server suitable for `resource_desc`.
+        Returns a proxy to the deployed server.
+
+        name: string
+            Name for server.
+
+        resource_desc: dict
+            Description of required resources.
+
+        criteria: dict
+            The dictionary returned by :meth:`time_estimate`.
+        """
+        credentials = get_credentials()
+        allowed_users = {credentials.user: credentials.public_key}
+        try:
+            return self.factory.create(typname='', allowed_users=allowed_users,
+                                       name=name)
+        # Shouldn't happen...
+        except Exception as exc:  #pragma no cover
+            self._logger.error('create failed: %r', exc)
+            return None
+
+    @rbac(('owner', 'user'))
+    def release(self, server):
+        """
+        Release `server`.
+
+        server: typically :class:`ObjServer`
+            Previously deployed server to be shut down.
+        """
+        self.factory.release(server)
+
+
+class LocalAllocator(FactoryAllocator):
     """
     Purely local resource allocator.
 
@@ -745,9 +806,12 @@ class LocalAllocator(ResourceAllocator):
             # Just being defensive (according to docs this could happen).
             except NotImplementedError:  # pragma no cover
                 self.total_cpus = 1
-        self.max_load = max(max_load, 0.5)  # Ensure > 0!
+        if max_load > 0.:
+            self.max_load = max_load
+        else:
+            raise ValueError('%s: max_load must be > 0, got %g' \
+                             % (name, max_load))
 
-    @rbac('*')
     def configure(self, cfg):
         """
         Configure allocator from :class:`ConfigParser` instance.
@@ -757,8 +821,10 @@ class LocalAllocator(ResourceAllocator):
             Configuration data is located under the section matching
             this allocator's `name`.
 
-        Allows modifying `total_cpus` and `max_load`.
+        Allows modifying factory options, `total_cpus`, and `max_load`.
         """
+        super(LocalAllocator, self).configure(cfg)
+
         if cfg.has_option(self.name, 'total_cpus'):
             value = cfg.getint(self.name, 'total_cpus')
             self._logger.debug('    total_cpus: %s', value)
@@ -766,7 +832,7 @@ class LocalAllocator(ResourceAllocator):
                 self.total_cpus = value
             else:
                 raise ValueError('%s: total_cpus must be > 0, got %d'
-                                 % self.name, value)
+                                 % (self.name, value))
 
         if cfg.has_option(self.name, 'max_load'):
             value = cfg.getfloat(self.name, 'max_load')
@@ -775,7 +841,7 @@ class LocalAllocator(ResourceAllocator):
                 self.max_load = value
             else:
                 raise ValueError('%s: max_load must be > 0, got %g'
-                                 % self.name, value)
+                                 % (self.name, value))
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -868,38 +934,14 @@ class LocalAllocator(ResourceAllocator):
                 return (-2, {key : 'unrecognized key'})
         return (0, {})
 
-    @rbac('*')
-    def deploy(self, name, resource_desc, criteria):
-        """
-        Deploy a server suitable for `resource_desc`.
-        Returns a proxy to the deployed server.
-
-        name: string
-            Name for server.
-
-        resource_desc: dict
-            Description of required resources.
-
-        criteria: dict
-            The dictionary returned by :meth:`time_estimate`.
-        """
-        credentials = get_credentials()
-        allowed_users = {credentials.user: credentials.public_key}
-        try:
-            return self.create(typname='', allowed_users=allowed_users,
-                               name=name)
-        # Shouldn't happen...
-        except Exception as exc:  #pragma no cover
-            self._logger.error('create failed: %r', exc)
-            return None
-
 register(LocalAllocator, mp_distributing.Cluster)
 register(LocalAllocator, mp_distributing.HostManager)
 
 
-class RemoteAllocator(object):
+class RemoteAllocator(ResourceAllocator):
     """
     Allocator which delegates to a remote allocator.
+    Configuration of remote allocators is not allowed.
 
     name: string
         Local name for allocator.
@@ -909,18 +951,8 @@ class RemoteAllocator(object):
     """
 
     def __init__(self, name, remote):
-        self._name = name
+        super(RemoteAllocator, self).__init__(name)
         self._remote = remote
-
-    @property
-    def name(self):
-        """ The local name for the remote allocator. """
-        return self._name
-
-    @rbac('*')
-    def configure(self, cfg):
-        """ Configuration of remote allocators is not allowed. """
-        return
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -948,7 +980,7 @@ class RemoteAllocator(object):
             if key == 'localhost':
                 if value:
                     return None, (-2, {key: 'requested local host'})
-            if key == 'allocator':
+            elif key == 'allocator':
                 if value != self.name:
                     return None, (-2, {key: 'wrong allocator'})
             del rdesc[key]
@@ -966,7 +998,7 @@ class RemoteAllocator(object):
 
 
 # Cluster allocation requires ssh configuration and multiple hosts.
-class ClusterAllocator(object):  #pragma no cover
+class ClusterAllocator(ResourceAllocator):  #pragma no cover
     """
     Cluster-based resource allocator.  This allocator manages a collection
     of :class:`LocalAllocator`, one for each machine in the cluster.
@@ -992,19 +1024,19 @@ class ClusterAllocator(object):  #pragma no cover
     """
 
     def __init__(self, name, machines=None, authkey=None, allow_shell=False):
+        super(ClusterAllocator, self).__init__(name)
+
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
             if authkey is None:
                 authkey = 'PublicKey'
                 multiprocessing.current_process().authkey = authkey
 
-        self._name = name
         self._authkey = authkey
         self._allow_shell = allow_shell
         self._lock = threading.Lock()
         self._allocators = {}
         self._last_deployed = None
-        self._logger = logging.getLogger(name)
         self._reply_q = Queue.Queue()
         self._deployed_servers = {}
 
@@ -1055,11 +1087,6 @@ class ClusterAllocator(object):  #pragma no cover
     def __len__(self):
         return len(self._allocators)
 
-    @property
-    def name(self):
-        """ Name of this allocator. """
-        return self._name
-
     def configure(self, cfg):
         """
         Configure a cluster consisting of hosts with node-numbered hostnames
@@ -1083,18 +1110,29 @@ class ClusterAllocator(object):  #pragma no cover
         """
         nhosts = cfg.getint(self.name, 'nhosts')
         self._logger.debug('    nhosts: %s', nhosts)
+
         if cfg.has_option(self.name, 'origin'):
             origin = cfg.getint(self.name, 'origin')
         else:
             origin = 0
         self._logger.debug('    origin: %s', origin)
+
         pattern = cfg.get(self.name, 'format')
         self._logger.debug('    format: %s', pattern)
+
         if cfg.has_option(self.name, 'python'):
             python = cfg.get(self.name, 'python')
         else:
             python = sys.executable
         self._logger.debug('    python: %s', python)
+
+        if cfg.has_option(self.name, 'authkey'):
+            self._authkey = cfg.get(self.name, 'authkey')
+            self._logger.debug('    authkey: %s', self._authkey)
+
+        if cfg.has_option(self.name, 'allow_shell'):
+            self._allow_shell = cfg.getboolean(self.name, 'allow_shell')
+            self._logger.debug('    allow_shell: %s', self._allow_shell)
 
         machines = []
         for i in range(origin, nhosts+origin):
@@ -1112,15 +1150,9 @@ class ClusterAllocator(object):  #pragma no cover
         """
         credentials = get_credentials()
 
-        key = 'allocator'
-        value = resource_desc.get(key, '')
-        if value:
-            if self.name != value:
-                return 0
-            else:
-                # Any host in our cluster is OK.
-                resource_desc = resource_desc.copy()
-                del resource_desc[key]
+        rdesc, info = self._check_local(resource_desc)
+        if rdesc is None:
+            return 0
 
         with self._lock:
             # Drain _reply_q.
@@ -1198,21 +1230,14 @@ class ClusterAllocator(object):  #pragma no cover
         """
         credentials = get_credentials()
 
-        key = 'allocator'
-        value = resource_desc.get(key, '')
-        if value:
-            if self.name != value:
-                return (-2, {key: 'wrong allocator'})
-            else:
-                # Any host in our cluster is OK.
-                resource_desc = resource_desc.copy()
-                del resource_desc[key]
+        rdesc, info = self._check_local(resource_desc)
+        if rdesc is None:
+            return info
 
-        n_cpus = resource_desc.get('n_cpus', 0)
+        n_cpus = rdesc.get('n_cpus', 0)
         if n_cpus:
             # Spread across LocalAllocators.
-            resource_desc = resource_desc.copy()
-            resource_desc['n_cpus'] = 1
+            rdesc['n_cpus'] = 1
 
         with self._lock:
             best_estimate = -2
@@ -1239,7 +1264,7 @@ class ClusterAllocator(object):  #pragma no cover
                 if i < max_workers:
                     worker_q = WorkerPool.get()
                     worker_q.put((self._get_estimate,
-                                  (allocator, resource_desc, credentials),
+                                  (allocator, rdesc, credentials),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
@@ -1258,7 +1283,7 @@ class ClusterAllocator(object):  #pragma no cover
                     WorkerPool.release(worker_q)
                 else:
                     worker_q.put((self._get_estimate,
-                                  (next_allocator, resource_desc, credentials),
+                                  (next_allocator, rdesc, credentials),
                                   {}, self._reply_q))
 
                 if retval is None:
@@ -1314,6 +1339,22 @@ class ClusterAllocator(object):  #pragma no cover
                      for i in range(min(n_cpus, len(host_loads)))]
 
             return (best_estimate, best_criteria)
+
+    def _check_local(self, resource_desc):
+        """ Check locally-relevant resources. """
+        rdesc = resource_desc.copy()
+        for key in ('localhost', 'allocator'):
+            if key not in rdesc:
+                continue
+            value = rdesc[key]
+            if key == 'localhost':
+                if value:
+                    return None, (-2, {key: 'requested local host'})
+            elif key == 'allocator':
+                if value != self.name:
+                    return None, (-2, {key: 'wrong allocator'})
+            del rdesc[key]
+        return (rdesc, None)
 
     def _get_estimate(self, allocator, resource_desc, credentials):
         """ Get (estimate, criteria) from an allocator. """

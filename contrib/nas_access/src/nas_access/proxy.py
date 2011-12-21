@@ -10,11 +10,12 @@ import os.path
 import shutil
 
 from openmdao.main.rbac import rbac
+from openmdao.main.resource import ResourceAllocator
 
 from .protocol import connect
 
 
-class NAS_Allocator(object):
+class NAS_Allocator(ResourceAllocator):
     """
     Allocator which uses :class:`NAS_Server` instead of :class:`ObjServer`
     when deploying.
@@ -43,22 +44,15 @@ class NAS_Allocator(object):
     """
 
     def __init__(self, name='NAS_Allocator', dmz_host=None, server_host=None):
-        self._name = name
+        super(NAS_Allocator, self).__init__(name)
         self._servers = []
         self._dmz_host = dmz_host
         self._server_host = server_host
-        self._logger = logging.getLogger(name)
         self._logger.debug('%s init', name)
         if dmz_host and server_host:
             self._conn = connect(dmz_host, server_host, name, self._logger)
             self._logger.debug('%s connected', name)
 
-    @property
-    def name(self):
-        """ Name of this allocator. """
-        return self._name
-
-    @rbac('*')
     def configure(self, cfg):
         """
         Configure allocator from :class:`ConfigParser` instance.
@@ -73,9 +67,11 @@ class NAS_Allocator(object):
         if cfg.has_option(self.name, 'dmz_host'):
             self._dmz_host = cfg.get(self.name, 'dmz_host')
             self._logger.debug('    dmz_host: %s', self._dmz_host)
+
         if cfg.has_option(self.name, 'server_host'):
             self._server_host = cfg.get(self.name, 'server_host')
             self._logger.debug('    server_host: %s', self._server_host)
+
         if self._dmz_host and self._server_host:
             self._conn = connect(self._dmz_host, self._server_host, self.name,
                                  self._logger)
