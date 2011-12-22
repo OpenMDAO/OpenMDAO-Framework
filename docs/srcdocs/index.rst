@@ -2,6 +2,11 @@
 Source Documentation
 ====================
 
+..
+    The following lables are just to prevent warnings about
+    missing labels in Sphinx 1.1.x
+
+
 .. _enthought.traits.has_traits.py:
 
 .. _zope.interface.declarations.py:
