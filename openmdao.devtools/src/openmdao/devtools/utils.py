@@ -78,9 +78,10 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
         runner = 'python' if fpaths[0].endswith('.py') else ''
 
     print 'cd-ing to %s' % remotedir
-    cmd = "%s %s %s" % (runner, os.path.basename(fpaths[0]), 
+    cmd = '%s %s %s' % (runner, os.path.basename(fpaths[0]), 
                         ' '.join(args))
     with cd(remotedir):
+        print 'running: ',cmd
         return run(cmd)
 
 def tar_dir(dirpath, archive_name, destdir):
