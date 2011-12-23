@@ -959,8 +959,8 @@ delimiters. Now specify commas as your delimiter.
 
 With the correct delimiter set, you extract the second integer as expected.
 
-While the ability to sete the delimiters adds flexibility for parsing many
-different types of input file, you may find cases that are too complex to
+While the ability to set the delimiters adds flexibility for parsing many
+different types of input files, you may find cases that are too complex to
 parse (e.g., a field with separator characters inside of quotes.) In such cases
 you may need to read and extract the data manually.
     
@@ -989,14 +989,14 @@ output file:
     parser.reset_anchor() 
 
 The second line is a comment that helps the reader identify the column
-number (particularly on a printout), and does not need to be parsed.
+number (particularly on a printout) and does not need to be parsed.
 
-In the third line, the first 3 columns contain flags that are either ``'T'``
+In the third line, the first three columns contain flags that are either ``'T'``
 or ``'F'``. Columns 4-10 contain a floating point number, and columns 11
 through 20 contain another floating point number. Note that there isn't
 always a space between the two numbers in this format, particularly when the
 second number has a negative sign. We can't parse this with a regular
-separator, but we can use the special separator ``'columns'``
+separator, but we can use the special separator ``'columns'``.
 
 Let's parse this file to extract the third boolean flag and the two numbers.
 
@@ -1046,7 +1046,7 @@ differently than ``transfer_var``. Consider this output file:
     parser.data.append("NODE 44 55 66 STUFF")
     parser.reset_anchor() 
     
-In this example, we want to extract the 6 numerical values and place them in
+In this example, we want to extract the six numerical values and place them in
 an array. When the delimiter is set to columns, we can define a rectangular
 box from which all elements are parsed into an array. Note that the numbers
 inside of the box are parsed assuming standard separator characters (" \t").
@@ -1060,7 +1060,7 @@ inside of the box are parsed assuming standard separator characters (" \t").
     
     print var
     
-So here we've called ``transfer_array`` with 4 arguments -- starting row,
+So here we've called ``transfer_array`` with four arguments: starting row,
 starting column, ending row, ending column. This results in the following
 value for var:
 
