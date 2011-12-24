@@ -276,7 +276,6 @@ class ConsoleServer(cmd.Cmd):
         if root in self.proj.__dict__:
             if root == pathname:
                 cont = self.proj.__dict__[root]
-                root = None
             else:
                 rest = pathname[len(root)+1:]
                 try:
@@ -446,17 +445,18 @@ class ConsoleServer(cmd.Cmd):
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
         for comp in drvr.workflow:
+            pathname = root+'.'+comp.get_pathname() if root else comp.get_pathname()
             if is_instance(comp,Assembly) and comp.driver:
                 ret['workflow'].append({ 
                     'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
-                    'driver':   self._get_workflow(comp.driver,comp.driver.get_pathname(),root)
+                    'driver':   self._get_workflow(comp.driver,pathname+'.driver',root)
                 })
             elif is_instance(comp,Driver):
-                ret['workflow'].append(self._get_workflow(comp,comp.get_pathname(),root))            
+                ret['workflow'].append(self._get_workflow(comp,pathname,root))            
             else:
                 ret['workflow'].append({ 
-                    'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
+                    'pathname': pathname,
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
                 })
         return ret
