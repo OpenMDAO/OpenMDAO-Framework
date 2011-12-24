@@ -285,7 +285,7 @@ class ConsoleServer(cmd.Cmd):
                     self.error(err,sys.exc_info())
         return cont, root
         
-    def _get_components(self,cont,root=None):
+    def _get_components(self,cont,pathname=None):
         ''' get a heierarchical list of all the components in the given
             container or dictionary.  the name of the root container, if
             specified, is prepended to all pathnames
@@ -299,8 +299,8 @@ class ConsoleServer(cmd.Cmd):
                     comp['pathname'] = k
                     children = self._get_components(v,k)
                 else:
-                    comp['pathname'] = root+'.'+v.get_pathname() if root else v.get_pathname()
-                    children = self._get_components(v,root)
+                    comp['pathname'] = pathname+'.'+ k if pathname else k
+                    children = self._get_components(v,comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
                 comp['type'] = str(v.__class__.__name__)
@@ -391,7 +391,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self.error(err,sys.exc_info())
 
-    def _get_structure(self,asm, root):
+    def _get_structure(self,asm,pathname):
         ''' get the list of components and connections between them
             that make up the data flow for the given assembly 
         '''
@@ -405,7 +405,7 @@ class ConsoleServer(cmd.Cmd):
                     comp = asm.get(name)
                     if is_instance(comp,Component):
                         components.append({ 'name': comp.name,
-                                            'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
+                                            'pathname': pathname + '.' + name,
                                             'type': type(comp).__name__ })
             # list of connections (convert tuples to lists)
             conntuples = asm.list_connections(show_passthrough=False)
@@ -422,7 +422,7 @@ class ConsoleServer(cmd.Cmd):
         if pathname and len(pathname) > 0:
             try:
                 asm, root = self.get_container(pathname)
-                structure = self._get_structure(asm, root)
+                structure = self._get_structure(asm, pathname)
             except Exception, err:
                 self.error(err,sys.exc_info())
         else:
@@ -437,12 +437,12 @@ class ConsoleServer(cmd.Cmd):
             structure['connections'] = []
         return jsonpickle.encode(structure)
 
-    def _get_workflow(self,drvr,root):
+    def _get_workflow(self,drvr,pathname,root):
         ''' get the driver info and the list of components that make up the
             driver's workflow, recurse on nested drivers
         '''
         ret = {}
-        ret['pathname'] = root+'.'+drvr.get_pathname() if root else drvr.get_pathname()
+        ret['pathname'] = pathname
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
         for comp in drvr.workflow:
@@ -450,10 +450,10 @@ class ConsoleServer(cmd.Cmd):
                 ret['workflow'].append({ 
                     'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
-                    'driver':   self._get_workflow(comp.driver,root)
+                    'driver':   self._get_workflow(comp.driver,comp.driver.get_pathname(),root)
                 })
             elif is_instance(comp,Driver):
-                ret['workflow'].append(self._get_workflow(comp,root))            
+                ret['workflow'].append(self._get_workflow(comp,comp.get_pathname(),root))            
             else:
                 ret['workflow'].append({ 
                     'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
@@ -467,16 +467,15 @@ class ConsoleServer(cmd.Cmd):
         # allow for request on the parent assembly
         if is_instance(drvr,Assembly):
             drvr = drvr.get('driver')
-            if root is None:
-                root = pathname
+            pathname = pathname + '.driver'
         if drvr:
             try:
-                flow = self._get_workflow(drvr,root)
+                flow = self._get_workflow(drvr,pathname,root)
             except Exception, err:
                 self.error(err,sys.exc_info())
         return jsonpickle.encode(flow)
 
-    def _get_attributes(self,comp,root):
+    def _get_attributes(self,comp,pathname,root):
         ''' get attributes of object 
         '''
         attrs = {}
@@ -521,10 +520,10 @@ class ConsoleServer(cmd.Cmd):
             attrs['Outputs'] = outputs
 
         if is_instance(comp,Assembly):
-            attrs['Structure'] = self._get_structure(comp,root)
+            attrs['Structure'] = self._get_structure(comp,pathname)
         
         if has_interface(comp,IDriver):
-            attrs['Workflow'] = self._get_workflow(comp,root)
+            attrs['Workflow'] = self._get_workflow(comp,pathname,root)
         
         if has_interface(comp,IHasCouplingVars):
             couples = []
@@ -593,6 +592,10 @@ class ConsoleServer(cmd.Cmd):
                 attr = {}
                 attr['name'] = name
                 attr['klass'] = value.trait_type.klass.__name__
+                inames = []
+                for klass in list(implementedBy(attr['klass'])):
+                    inames.append(klass.__name__)
+                attr['interfaces'] = inames
                 if getattr(comp, name) is None:
                     attr['filled'] = False
                 else:
@@ -615,7 +618,7 @@ class ConsoleServer(cmd.Cmd):
         comp, root = self.get_container(pathname)
         if comp:
             try:
-                attr = self._get_attributes(comp,root)
+                attr = self._get_attributes(comp,pathname,root)
                 attr['type'] = type(comp).__name__
             except Exception, err:
                 self.error(err,sys.exc_info())
