@@ -68,7 +68,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                     dst_name = conn[1].split('.')[0],
                     src_fig = figures[src_name],
                     dst_fig = figures[dst_name];
-                    c = new openmdao.ContextMenuConnection()
+                    c = new openmdao.ContextMenuConnection();
                 // TODO: only create new connection if one doesn't already exist
                 c.setSource(src_fig.getPort("output"));
                 c.setTarget(dst_fig.getPort("input"));
@@ -79,8 +79,41 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 dataflow.addFigure(c);
             }
         })
+        
+        layout();
     }
-            
+
+    /** layout component figures */
+    function layout() {
+        var connected = [],
+            unconnected = [],
+            i=0, x=20, y=20;
+
+        jQuery.each(figures, function(idx,fig) {
+            if (fig.isConnected()) {
+                connected.push(fig);
+            }
+            else {
+                unconnected.push(fig);
+            }
+        });
+
+        // unconnected components are layed out in a row
+        jQuery.each(unconnected,function(idx,fig) {
+            x = idx*(fig.getWidth()+20) + 20;
+            fig.setPosition(x,y);
+        });
+
+        // connected components are layed out diagonally 
+        // (top left to bottom right)
+        x = 0;
+        jQuery.each(connected,function(idx,fig) {
+            x = idx*(fig.getWidth()+20) + 20;
+            y = y + (fig.getHeight()+20) + 20;
+            fig.setPosition(x,y);
+        });
+    };
+
     /** update dataflow diagram */
     this.loadData = function(json) {
         dataflow.clear()

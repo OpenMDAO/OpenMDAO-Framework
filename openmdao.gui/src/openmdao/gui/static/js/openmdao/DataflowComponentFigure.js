@@ -147,6 +147,10 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
     }
 };
 
+openmdao.DataflowComponentFigure.prototype.isConnected=function(){
+    return ((this.outputPort.getConnections().size > 0) || (this.inputPort.getConnections().size > 0));
+};
+
 openmdao.DataflowComponentFigure.prototype.setTitle=function(title){
     this.header.innerHTML=title;
 };
