@@ -91,13 +91,13 @@ def retrieve_docs(remote_dir):
              "else:",
              "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
              "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
-             "tar = tarfile.open('html.tar.gz', mode='w:gz')",
+             "tar = tarfile.open(os.path.join('%s','html.tar.gz', mode='w:gz')" % remote_dir,
              "tar.add(tardir, arcname='html')",
              "tar.close()",
              ]
     
     result = remote_py_cmd(cmds)
-    get(os.path.join(remote_dir, 'html.tar.gz'))
+    get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
     
 
 def test_branch(options, args=None):
