@@ -89,7 +89,7 @@ def retrieve_docs(remote_dir):
              "    if fname.startswith('OpenMDAO-OpenMDAO-Framework') and not fname.endswith('.gz'):",
              "        break",
              "else:",
-             "    raise RuntimeError('install dir not found in %%s') %% os.path.join(os.getcwd(),'%s')" % remote_dir,
+             "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
              "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
              "tar = tarfile.open('html.tar.gz', mode='w:gz')",
              "tar.add(tardir, arcname='html')",
