@@ -93,7 +93,7 @@ def retrieve_docs(remote_dir):
              "tar.add('tardir', arcname='html')",
              "tar.close()",
              ]
-    result = remote_py_cmd(cmds, remote_dir=working_dir)
+    result = remote_py_cmd(cmds, remote_dir=remote_dir)
     get('html.tar.gz')
     
 
