@@ -86,7 +86,7 @@ def retrieve_docs(remote_dir):
     cmds = [ "import tarfile",
              "import os",
              "for fname in os.listdir('%s'):" % remote_dir,
-             "    if '-OpenMDAO-Framework-') in fname and not fname.endswith('.gz'):",
+             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
              "        break",
              "else:",
              "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
