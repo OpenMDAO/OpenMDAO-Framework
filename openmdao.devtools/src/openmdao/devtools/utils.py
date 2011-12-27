@@ -185,7 +185,7 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
     # apparently put/get ignore the cd() context manager, but run doesn't  :(
     put(cmdfname, remotecmd)
     os.remove(cmdfname) # remove local version
-    return run('%s %s' % (py, cmdfname))
+    return run('%s %s' % (py, remotecmd))
 
 @stub_if_missing_deps('fabric')
 def remote_get_platform():
