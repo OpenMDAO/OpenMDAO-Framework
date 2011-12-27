@@ -85,7 +85,7 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
 def retrieve_docs(remote_dir):
     cmds = [ "import tarfile",
              "import os",
-             "for fname in os.listdir('.'):"
+             "for fname in os.listdir('.'):",
              "    if fname.startswith('OpenMDAO-OpenMDAO-Framework') and not fname.endswith('.gz'):",
              "        break",
              "tardir = os.path.join(fname, 'docs', '_build', 'html')",
