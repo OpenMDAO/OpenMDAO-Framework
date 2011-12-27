@@ -85,17 +85,18 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
 def retrieve_docs(remote_dir):
     cmds = [ "import tarfile",
              "import os",
-             "for fname in os.listdir('.'):",
+             "for fname in os.listdir('%s'):" % remote_dir,
              "    if fname.startswith('OpenMDAO-OpenMDAO-Framework') and not fname.endswith('.gz'):",
              "        break",
+             "else:",
+             "    raise RuntimeError('install dir not found')",
              "tardir = os.path.join(fname, 'docs', '_build', 'html')",
              "tar = tarfile.open('html.tar.gz', mode='w:gz')",
              "tar.add(tardir, arcname='html')",
              "tar.close()",
              ]
     
-    with cd(remote_dir):
-        result = remote_py_cmd(cmds, remote_dir=remote_dir)
+    result = remote_py_cmd(cmds, remote_dir=remote_dir)
     get(os.path.join(remote_dir, 'html.tar.gz'))
     
 
