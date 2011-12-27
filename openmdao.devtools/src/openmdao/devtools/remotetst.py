@@ -119,7 +119,7 @@ def test_branch(options, args=None):
         options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
         ziptarname = options.fname+'.gz'
         cleanup(ziptarname) # clean up the old tar file
-        make_git_archive(options.fname)
+        make_git_archive(options.fname, prefix='OpenMDAO-OpenMDAO-testbranch')
         subprocess.check_call(['gzip', options.fname])
         options.fname = os.path.abspath(ziptarname)
         print options.fname
