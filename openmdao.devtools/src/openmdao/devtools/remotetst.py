@@ -20,8 +20,8 @@ from openmdao.devtools.ec2 import run_on_ec2
 
 
 def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
-                          branch=None, testargs='', hostname='', config=None,
-                          **kwargs):
+                           branch=None, testargs='', hostname='', cfg=None,
+                           **kwargs):
     if fname is None:
         raise RuntimeError("_remote_build_and_test: missing arg 'fname'")
     
@@ -34,8 +34,8 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     
     build_type = 'release' if fname.endswith('.py') else 'dev'
         
-    if config and config.has_option(hostname, 'pull_docs'):
-        pull_docs = config.getboolean(hostname, 'pull_docs')
+    if cfg and cfg.has_option(hostname, 'pull_docs'):
+        pull_docs = cfg.getboolean(hostname, 'pull_docs')
     else:
         pull_docs = False
         
@@ -144,7 +144,7 @@ def test_branch(options, args=None):
                      'fname': fname,
                      'remotedir': get_tmp_user_dir(),
                      'branch': options.branch,
-                     'config': config
+                     'cfg': config
                      }
     try:
         retcode = run_host_processes(config, conn, ec2_hosts, options, 
