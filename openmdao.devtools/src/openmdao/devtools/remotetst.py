@@ -90,7 +90,7 @@ def retrieve_docs(remote_dir):
              "        break",
              "tardir = os.path.join(fname, 'docs', '_build', 'html')",
              "tar = tarfile.open('html.tar.gz', mode='w:gz')",
-             "tar.add('tardir', arcname='html')",
+             "tar.add(tardir, arcname='html')",
              "tar.close()",
              ]
     result = remote_py_cmd(cmds, remote_dir=remote_dir)
