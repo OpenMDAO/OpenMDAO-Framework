@@ -342,7 +342,7 @@ def get_git_branches():
     return [b.strip(' *') for b in p.communicate()[0].split('\n')]
 
 
-def make_git_archive(tarfilename, prefix='testbranch/'):
+def make_git_archive(tarfilename, prefix=''):
     """Make a tar file of the entire current repository."""
     startdir = os.getcwd()
     os.chdir(repo_top())
