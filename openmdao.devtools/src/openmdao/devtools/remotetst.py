@@ -91,7 +91,7 @@ def retrieve_docs(remote_dir):
              "else:",
              "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
              "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
-             "tar = tarfile.open(os.path.join('%s','html.tar.gz', mode='w:gz')" % remote_dir,
+             "tar = tarfile.open(os.path.join('%s','html.tar.gz', mode='w:gz'))" % remote_dir,
              "tar.add(tardir, arcname='html')",
              "tar.close()",
              ]
