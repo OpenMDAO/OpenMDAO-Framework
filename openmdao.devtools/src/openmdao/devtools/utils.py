@@ -83,6 +83,7 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
     with cd(remotedir):
         print 'running: ',cmd
         return run(cmd)
+    return retval
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
@@ -208,6 +209,7 @@ def remote_check_pywin32(py):
                               "import ntsecuritycon"],
                              py=py).succeeded
 
+@stub_if_missing_deps('fabric')
 def remote_untar(tarfile, remote_dir=None, delete=True):
     """Use internal python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
