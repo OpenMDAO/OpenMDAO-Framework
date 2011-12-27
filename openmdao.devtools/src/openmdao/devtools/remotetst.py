@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
-                                    ssh_test, put_dir, cleanup, remote_py_cmd, get
+                                    ssh_test, put_dir, cleanup, remote_py_cmd, get, cd
 from openmdao.devtools.remote_cfg import add_config_options, process_options, \
                                          run_host_processes, get_tmp_user_dir, \
                                          print_host_codes
@@ -93,8 +93,10 @@ def retrieve_docs(remote_dir):
              "tar.add(tardir, arcname='html')",
              "tar.close()",
              ]
-    result = remote_py_cmd(cmds, remote_dir=remote_dir)
-    get('html.tar.gz')
+    
+    with cd(remote_dir):
+        result = remote_py_cmd(cmds, remote_dir=remote_dir)
+    get(os.path.join(remote_dir, 'html.tar.gz'))
     
 
 def test_branch(options, args=None):
