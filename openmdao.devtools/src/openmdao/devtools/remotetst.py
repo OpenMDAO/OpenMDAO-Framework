@@ -86,7 +86,7 @@ def retrieve_docs(remote_dir):
     cmds = [ "import tarfile",
              "import os",
              "for fname in os.listdir('%s'):" % remote_dir,
-             "    if fname.startswith('OpenMDAO-OpenMDAO-Framework') and not fname.endswith('.gz'):",
+             "    if '-OpenMDAO-Framework-') in fname and not fname.endswith('.gz'):",
              "        break",
              "else:",
              "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
@@ -116,7 +116,7 @@ def test_branch(options, args=None):
     
     if options.fname is None: # assume we're testing the current repo
         print 'creating tar file of current branch: ',
-        options.fname = os.path.join(os.getcwd(), 'OpenMDAO-OpenMDAO-Framework-testbranch.tar')
+        options.fname = os.path.join(os.getcwd(), 'OpenMDAO-Framework-testbranch.tar')
         ziptarname = options.fname+'.gz'
         cleanup(ziptarname) # clean up the old tar file
         make_git_archive(options.fname, prefix='OpenMDAO-OpenMDAO-Framework-testbranch/')
