@@ -5,7 +5,6 @@ Test the ExternalCode component.
 import logging
 import os.path
 import pkg_resources
-import platform
 import shutil
 import sys
 import time
@@ -14,13 +13,15 @@ import nose
 
 from multiprocessing.managers import RemoteError
 
-from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
+from openmdao.main.api import Assembly, FileRef, FileMetadata, SimulationRoot, \
+                              set_as_top
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.main.objserverfactory import ObjServerFactory
 from openmdao.main.rbac import Credentials, get_credentials
 
 from openmdao.lib.components.external_code import ExternalCode
+from openmdao.lib.datatypes.api import Int, File, Str
 
 from openmdao.test.cluster import init_cluster
 
@@ -33,27 +34,56 @@ ORIG_DIR = os.getcwd()
 # Directory where we can find sleep.py.
 DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components', 'test')
 
+ENV_FILE = 'env-data'
+INP_FILE = 'input-data'
+INP_DATA = 'Froboz rulz!'
 
-class Unique(ExternalCode):
-    """ Used to test `create_instance_dir` functionality. """
+
+class Sleeper(ExternalCode):
+    """ Used to test external code functionality. """
+
+    delay = Int(1, units='s', iotype='in')
+    env_filename = Str(iotype='in')
+    infile = File(iotype='in', local_path='input')
+    outfile = File(iotype='out', path='output')
 
     def __init__(self):
-        super(Unique, self).__init__(directory=DIRECTORY)
-        self.create_instance_dir = True
+        super(Sleeper, self).__init__(directory=DIRECTORY)
         self.external_files = [
             FileMetadata(path='sleep.py', input=True, constant=True),
         ]
-        self.command = ['python', 'sleep.py', '1']
+
+    def execute(self):
+        """ Runs code and sets `outfile`. """
+        self.command = ['python', 'sleep.py', str(self.delay)]
+        if self.env_filename:
+            self.command.append(self.env_filename)
+        super(Sleeper, self).execute()
+        self.outfile = FileRef(self.outfile.path, self, output=True)
+
+
+class Unique(Sleeper):
+    """ Used to test `create_instance_dir` functionality. """
+
+    def __init__(self):
+        super(Unique, self).__init__()
+        self.create_instance_dir = True
 
 
 class Model(Assembly):
     """ Run multiple `Unique` component instances. """
 
+    infile = File(iotype='in', local_path='input')
+    outfile = File(iotype='out', path='output')
+
     def __init__(self):
         super(Model, self).__init__()
         self.add('a', Unique())
         self.add('b', Unique())
-        self.driver.workflow.add(['a','b'])
+        self.driver.workflow.add(['a', 'b'])
+        self.connect('infile', 'a.infile')
+        self.connect('a.outfile', 'b.infile')
+        self.connect('b.outfile', 'outfile')
 
 
 class TestCase(unittest.TestCase):
@@ -61,11 +91,18 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         SimulationRoot.chroot(DIRECTORY)
+        with open(INP_FILE, 'w') as out:
+            out.write(INP_DATA)
+        if os.path.exists(ENV_FILE):
+            os.remove(ENV_FILE)
         
     def tearDown(self):
         for directory in ('a', 'b'):
             if os.path.exists(directory):
                 shutil.rmtree(directory)
+        for name in (ENV_FILE, INP_FILE, 'input', 'output'):
+            if os.path.exists(name):
+                os.remove(name)
         if os.path.exists("error.out"):
             try:
                 os.remove("error.out")
@@ -81,65 +118,60 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_normal')
 
-        dummy = 'dummy_output'
-        if os.path.exists(dummy):
-            os.remove(dummy)
+        sleeper = set_as_top(Sleeper())
+        sleeper.env_filename = ENV_FILE
+        sleeper.env_vars = {'SLEEP_DATA': 'Hello world!'}
+        sleeper.external_files.append(
+            FileMetadata(path=ENV_FILE, output=True))
+        sleeper.infile = FileRef(INP_FILE, sleeper, input=True)
 
-        extcode = set_as_top(ExternalCode())
-        extcode.timeout = 5
-        extcode.command = ['python', 'sleep.py', '1', dummy]
-        extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
-        extcode.external_files.extend((
-            FileMetadata(path='sleep.py', input=True),
-            FileMetadata(path=dummy, output=True)
-        ))
+        sleeper.run()
 
-        extcode.run()
+        self.assertEqual(sleeper.return_code, 0)
+        self.assertEqual(sleeper.timed_out, False)
+        self.assertEqual(os.path.exists(ENV_FILE), True)
 
-        self.assertEqual(extcode.return_code, 0)
-        self.assertEqual(extcode.timed_out, False)
-        self.assertEqual(os.path.exists(dummy), True)
-        with open(dummy, 'r') as inp:
+        with open(ENV_FILE, 'rU') as inp:
             data = inp.readline().rstrip()
-        self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
+        self.assertEqual(data, sleeper.env_vars['SLEEP_DATA'])
+
+        with sleeper.outfile.open() as inp:
+            result = inp.read()
+        self.assertEqual(result, INP_DATA)
 
         # Now show that existing outputs are removed before execution.
-        extcode.command = ['python', 'sleep.py', '1']
-        extcode.run()
-        msg = "[Errno 2] No such file or directory: 'dummy_output'"
-        assert_raises(self, "open(dummy, 'r')", globals(), locals(),
-                      IOError, msg)
+        sleeper.env_filename = ''
+        sleeper.run()
+        msg = "[Errno 2] No such file or directory: '%s'" % ENV_FILE
+        assert_raises(self, "open('%s', 'rU')" % ENV_FILE,
+                      globals(), locals(), IOError, msg)
 
     def test_remote(self):
         logging.debug('')
         logging.debug('test_remote')
         init_cluster(allow_shell=True)
 
-        dummy = 'dummy_output'
-        if os.path.exists(dummy):
-            os.remove(dummy)
+        sleeper = set_as_top(Sleeper())
+        sleeper.env_filename = ENV_FILE
+        sleeper.env_vars = {'SLEEP_DATA': 'Hello world!'}
+        sleeper.external_files.append(
+            FileMetadata(path=ENV_FILE, output=True))
+        sleeper.infile = FileRef(INP_FILE, sleeper, input=True)
+        sleeper.resources = {'n_cpus': 1}
 
-        extcode = set_as_top(ExternalCode())
-        extcode.timeout = 5
-        extcode.command = ['python', 'sleep.py', '1', dummy]
-        extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
-        extcode.external_files.extend((
-            FileMetadata(path='sleep.py', input=True),
-            FileMetadata(path=dummy, output=True)
-        ))
-        extcode.resources = {'n_cpus': 1}
+        sleeper.run()
 
-        extcode.run()
+        self.assertEqual(sleeper.return_code, 0)
+        self.assertEqual(sleeper.timed_out, False)
+        self.assertEqual(os.path.exists(ENV_FILE), True)
 
-        self.assertEqual(extcode.return_code, 0)
-        self.assertEqual(extcode.timed_out, False)
-        self.assertEqual(os.path.exists(dummy), True)
-        try:
-            with open(dummy, 'r') as inp:
-                data = inp.readline().rstrip()
-            self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
-        finally:
-            os.remove(dummy)
+        with open(ENV_FILE, 'r') as inp:
+            data = inp.readline().rstrip()
+        self.assertEqual(data, sleeper.env_vars['SLEEP_DATA'])
+
+        with sleeper.outfile.open() as inp:
+            result = inp.read()
+        self.assertEqual(result, INP_DATA)
 
     def test_bad_alloc(self):
         logging.debug('')
@@ -194,16 +226,14 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        extcode = set_as_top(ExternalCode())
-        extcode.name = 'ExternalCode'
-        extcode.timeout = 5
-        extcode.command = ['python', 'sleep.py', '1']
-        extcode.external_files = [
-            FileMetadata(path='sleep.py', input=True, constant=True),
-        ]
+        sleeper = set_as_top(Sleeper())
+        sleeper.name = 'Sleepy'
+        sleeper.infile = FileRef(INP_FILE, sleeper, input=True)
+        import glob
+        logging.critical('%s', glob.glob('*'))
 
         # Exercise check_save_load().
-        retcode = check_save_load(extcode)
+        retcode = check_save_load(sleeper)
         self.assertEqual(retcode, 0)
 
     def test_timeout(self):
@@ -211,14 +241,14 @@ class TestCase(unittest.TestCase):
         logging.debug('test_timeout')
 
         # Set timeout to less than execution time.
-        extcode = set_as_top(ExternalCode())
-        extcode.timeout = 1
-        extcode.command = ['python', 'sleep.py', '5']
+        sleeper = set_as_top(Sleeper())
+        sleeper.delay = 5
+        sleeper.timeout = 1
         try:
-            extcode.run()
+            sleeper.run()
         except RunInterrupted as exc:
             self.assertEqual(str(exc), ': Timed out')
-            self.assertEqual(extcode.timed_out, True)
+            self.assertEqual(sleeper.timed_out, True)
         else:
             self.fail('Expected RunInterrupted')
 
@@ -277,10 +307,15 @@ class TestCase(unittest.TestCase):
         self.assertEqual(model.a.directory, 'a')
         self.assertEqual(model.b.directory, 'b')
 
+        model.infile = FileRef(INP_FILE, model, input=True)
         model.run()
         for comp in (model.a, model.b):
             self.assertEqual(comp.return_code, 0)
             self.assertEqual(comp.timed_out, False)
+
+        with model.outfile.open() as inp:
+            result = inp.read()
+        self.assertEqual(result, INP_DATA)
 
     def test_rsh(self):
         logging.debug('')
@@ -298,8 +333,6 @@ class TestCase(unittest.TestCase):
             typname = 'openmdao.lib.components.external_code.ExternalCode'
             factory = ObjServerFactory(allowed_types=[typname])
             exec_comp = factory.create(typname)
-            cmd = exec_comp.command
-
             try:
                 exec_comp.command = ['this-should-fail']
             except RemoteError as exc:
@@ -335,7 +368,6 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    import nose
     sys.argv.append('--cover-package=openmdao.components')
     sys.argv.append('--cover-erase')
     nose.runmodule()
