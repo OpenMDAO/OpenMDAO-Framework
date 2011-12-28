@@ -59,7 +59,6 @@ class Sleeper(ExternalCode):
         if self.env_filename:
             self.command.append(self.env_filename)
         super(Sleeper, self).execute()
-        self.outfile = FileRef(self.outfile.path, self, output=True)
 
 
 class Unique(Sleeper):
