@@ -61,7 +61,7 @@ class GridEngineAllocator(FactoryAllocator):
         super(GridEngineAllocator, self).__init__(name, authkey, allow_shell)
         self.factory.manager_class = _ServerManager
         self.factory.server_classname = \
-            'openmdao_contrib_grid_engine_grid_engine_GridEngineServer'
+            'grid_engine_grid_engine_GridEngineServer'
         self.pattern = pattern
 
     def configure(self, cfg):
@@ -242,7 +242,7 @@ class GridEngineServer(ObjServer):
         ------------------------- --------------------
         start_time                -a `value`
         ------------------------- --------------------
-        deadline_time             Not supported
+        deadline_time             Ignored
         ------------------------- --------------------
         hard_wallclock_time_limit -l h_rt= `value`
         ------------------------- --------------------
@@ -252,7 +252,7 @@ class GridEngineServer(ObjServer):
         ------------------------- --------------------
         soft_run_duration_limit   -l s_cpu= `value`
         ------------------------- --------------------
-        job_category              Not supported
+        job_category              Ignored
         ========================= ====================
 
         Where `value` is the corresponding resource value and
@@ -273,7 +273,7 @@ class GridEngineServer(ObjServer):
         dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
         cmd = list(self._QSUB)
-        cmd.extend(['-V', '-sync', 'yes'])
+        cmd.extend(('-V', '-sync', 'yes'))
         env = None
         inp, out, err = None, None, None
 
@@ -284,8 +284,7 @@ class GridEngineServer(ObjServer):
             pass
         else:
             self.work_dir = self._fix_path(value)
-            cmd.append('-wd')
-            cmd.append(value)
+            cmd.extend(('-wd', value))
 
         # Process description in fixed, repeatable order.
         keys = ('job_name',
@@ -311,71 +310,53 @@ class GridEngineServer(ObjServer):
                 continue
 
             if key == 'job_name':
-                cmd.append('-N')
-                cmd.append(value)
+                cmd.extend(('-N', value))
             elif key == 'job_environment':
                 env = value
             elif key == 'parallel_environment':
                 n_cpus = resource_desc.get('n_cpus', 1)
-                cmd.append('-pe')
-                cmd.append(value)
-                cmd.append(str(n_cpus))
+                cmd.extend(('-pe', value, str(n_cpus)))
             elif key == 'input_path':
-                cmd.append('-i')
-                cmd.append(self._fix_path(value))
+                cmd.extend(('-i', self._fix_path(value)))
                 inp = value
             elif key == 'output_path':
-                cmd.append('-o')
-                cmd.append(self._fix_path(value))
+                cmd.extend(('-o', self._fix_path(value)))
                 out = value
             elif key == 'error_path':
-                cmd.append('-e')
-                cmd.append(self._fix_path(value))
+                cmd.extend(('-e', self._fix_path(value)))
                 err = value
             elif key == 'join_files':
-                cmd.append('-j')
-                cmd.append('yes' if value else 'no')
+                cmd.extend(('-j', 'yes' if value else 'no'))
                 if value:
                     err = 'yes'
             elif key == 'email':
-                cmd.append('-M')
-                cmd.append(','.join(value))
+                cmd.extend(('-M', ','.join(value)))
             elif key == 'block_email':
                 if value:
-                    cmd.append('-m')
-                    cmd.append('n')
+                    cmd.extend(('-m', 'n'))
             elif key == 'email_events':
-                cmd.append('-m')
-                cmd.append(value)
+                cmd.extend(('-m', value))
             elif key == 'start_time':
-                cmd.append('-a')
-                cmd.append(value)  # May need to translate
+                cmd.extend(('-a', value))  # May need to translate
             elif key == 'hard_wallclock_time_limit':
-                cmd.append('-l')
-                cmd.append('h_rt=%s' % self._make_time(value))
+                cmd.extend(('-l', 'h_rt=%s' % self._make_time(value)))
             elif key == 'soft_wallclock_time_limit':
-                cmd.append('-l')
-                cmd.append('s_rt=%s' % self._make_time(value))
+                cmd.extend(('-l', 's_rt=%s' % self._make_time(value)))
             elif key == 'hard_run_duration_limit':
-                cmd.append('-l')
-                cmd.append('h_cpu=%s' % self._make_time(value))
+                cmd.extend(('-l', 'h_cpu=%s' % self._make_time(value)))
             elif key == 'soft_run_duration_limit':
-                cmd.append('-l')
-                cmd.append('s_cpu=%s' % self._make_time(value))
+                cmd.extend(('-l', 's_cpu=%s' % self._make_time(value)))
 
         if not self.work_dir:
             cmd.append('-cwd')
 
         if inp is None:
-            cmd.append('-i')
-            cmd.append(dev_null)
+            cmd.extend(('-i', dev_null))
         if out is None:
-            cmd.append('-o')
-            cmd.append('%s.stdout'
-                       % os.path.basename(resource_desc['remote_command']))
+            base = os.path.basename(resource_desc['remote_command'])
+            cmd.extend(('-o', '%s.stdout' % base))
         if err is None:
-            cmd.append('-j')
-            cmd.append('yes')
+            cmd.extend(('-j', 'yes'))
 
         if 'native_specification' in resource_desc:
             cmd.extend(resource_desc['native_specification'])
@@ -424,6 +405,5 @@ class _ServerManager(OpenMDAO_Manager):
     """
     pass
 
-register(GridEngineServer, _ServerManager,
-         'openmdao.contrib.grid_engine.grid_engine')
+register(GridEngineServer, _ServerManager, 'grid_engine.grid_engine')
 

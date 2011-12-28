@@ -23,8 +23,10 @@ class RunStopped(RuntimeError):
 
 class TracedError(Exception):
     """An exception that encapsulates another exception and its traceback"""
-    def __init__(self, orig_exc, tback):
-        self.traceback = tback.strip()
+    def __init__(self, orig_exc=None, tback=None):
+        # pickle passes no args when unpickling.
+        # __getstate__/__setstate__ had no effect on this.
+        self.traceback = None if tback is None else tback.strip()
         self.orig_exc = orig_exc
     
     def __str__(self):

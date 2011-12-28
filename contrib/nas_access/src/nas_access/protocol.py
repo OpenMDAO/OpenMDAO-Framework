@@ -46,6 +46,12 @@ import socket
 import subprocess
 import time
 
+from openmdao.main.exceptions import TracedError
+
+class RemoteError(TracedError):
+    """ Change name to make explicit this is from remote server. """
+    pass
+
 DEBUG2 = logging.DEBUG - 2  # Show polling.
 DEBUG3 = logging.DEBUG - 3  # Show ssh/scp.
 
@@ -240,7 +246,8 @@ def _server_root(hostname=None):
     return 'RJE-%s' % hostname
 
 
-def server_init(dmz_host, logger):
+# Server-side.
+def server_init(dmz_host, logger):  # pragma no cover
     """
     Server initialization.
 
@@ -261,7 +268,8 @@ def server_init(dmz_host, logger):
     _ssh(dmz_host, ('mkdir',  root), logger)
 
 
-def server_accept(dmz_host, logger):
+# Server-side.
+def server_accept(dmz_host, logger):  # pragma no cover
     """
     Look for new client. Returns :class:`Connection` if found.
 
@@ -292,7 +300,8 @@ def server_accept(dmz_host, logger):
     return None
 
 
-def server_heartbeat(dmz_host, logger):
+# Server-side.
+def server_heartbeat(dmz_host, logger):  # pragma no cover
     """
     Update top-level server heartbeat file.
 
@@ -327,7 +336,8 @@ def check_server_heartbeat(dmz_host, server_host, logger):
     os.remove(heartbeat)
 
 
-def server_cleanup(dmz_host, logger):
+# Server-side.
+def server_cleanup(dmz_host, logger):  # pragma no cover
     """
     Close connection, removing all communication files.
 
@@ -379,7 +389,7 @@ class Connection(object):
         os.mkdir(root)
         parent, slash, child = root.partition('/')
         lines = _ssh(self.dmz_host, ('ls', '-1', parent), logger)
-        if server:
+        if server:  # pragma no cover
             if not child in lines:
                 _ssh(self.dmz_host, ('mkdir', root), logger)
 
@@ -418,7 +428,11 @@ class Connection(object):
         self._logger.debug('request: %r %r %r', method, args, kwargs)
         self.send_request((method, args, kwargs))
         result = self.recv_reply(True, timeout, poll_delay)
-        self._logger.debug('reply: %s', result)
+        self._logger.debug('reply: %r', result)
+        if isinstance(result, TracedError):
+            raise RemoteError(result.orig_exc, result.traceback)
+        elif isinstance(result, Exception):
+            raise RemoteError(result, '')
         return result
 
     def send_request(self, data):
@@ -451,11 +465,13 @@ class Connection(object):
         return self._recv('%sreply' % self._remote_prefix, self._seqno,
                           wait, timeout, poll_delay)
 
-    def poll_request(self):
+    # Server-side.
+    def poll_request(self):  # pragma no cover
         """ Return True if request is ready. """
         return self._poll('%srequest' % self._remote_prefix, self._remote_seqno)
 
-    def recv_request(self, wait=True, timeout=0, poll_delay=0):
+    # Server-side.
+    def recv_request(self, wait=True, timeout=0, poll_delay=0):  # pragma no cover
         """
         Return request.
 
@@ -471,7 +487,8 @@ class Connection(object):
         return self._recv('%srequest' % self._remote_prefix, self._remote_seqno,
                           wait, timeout, poll_delay)
 
-    def send_reply(self, data):
+    # Server-side.
+    def send_reply(self, data):  # pragma no cover
         """
         Send reply `data`.
 
@@ -480,17 +497,6 @@ class Connection(object):
         """
         self._logger.debug('reply: %s', data)
         self._send('%sreply' % self._prefix, data, self._remote_seqno)
-        self._remote_seqno += 1
-
-    def send_exception(self, exc):
-        """
-        Send exception `exc`.
-
-        exc: :class:`Exception`
-            Exception to be sent.
-        """
-        self._logger.debug('exception: %s', exc)
-        self._send('%sreply' % self._prefix, exc, self._remote_seqno)
         self._remote_seqno += 1
 
     def _heartbeat(self):

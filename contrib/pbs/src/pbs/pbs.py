@@ -60,8 +60,7 @@ class PBS_Allocator(FactoryAllocator):
                  allow_shell=True):
         super(PBS_Allocator, self).__init__(name, authkey, allow_shell)
         self.factory.manager_class = _ServerManager
-        self.factory.server_classname = \
-            'openmdao_contrib_pbs_pbs_PBS_Server'
+        self.factory.server_classname = 'pbs_pbs_PBS_Server'
         self.pattern = pattern
 
     def configure(self, cfg):
@@ -212,55 +211,57 @@ class PBS_Server(ObjServer):
 
         The '-V' `qsub` option is always used to export the current environment
         to the job. This environment is first updated with any 'job_environment'
-        data. The '-sync yes' `qsub` option is used to wait for job completion.
+        data. The '-W block=true' `qsub` option is used to wait for job
+        completion.
 
         Other job resource keys are processed as follows:
 
-        ========================= ====================
+        ========================= ===========================
         Resource Key              Translation
-        ========================= ====================
+        ========================= ===========================
         job_name                  -N `value`
-        ------------------------- --------------------
-        working_directory         -wd `value`
-        ------------------------- --------------------
-        parallel_environment      -pe `value` `n_cpus`
-        ------------------------- --------------------
+        ------------------------- ---------------------------
+        working_directory         -W sandbox= `value`
+        ------------------------- ---------------------------
+        parallel_environment      Ignored
+        ------------------------- ---------------------------
+        n_cpus                    -l select= `value` :ncpus=1
+        ------------------------- ---------------------------
         input_path                -i `value`
-        ------------------------- --------------------
+        ------------------------- ---------------------------
         output_path               -o `value`
-        ------------------------- --------------------
+        ------------------------- ---------------------------
         error_path                -e `value`
-        ------------------------- --------------------
-        join_files                -j yes|no
-        ------------------------- --------------------
+        ------------------------- ---------------------------
+        join_files                -j oe
+        ------------------------- ---------------------------
         email                     -M `value`
-        ------------------------- --------------------
+        ------------------------- ---------------------------
         block_email               -m n
-        ------------------------- --------------------
+        ------------------------- ---------------------------
         email_events              -m `value`
-        ------------------------- --------------------
+        ------------------------- ---------------------------
         start_time                -a `value`
-        ------------------------- --------------------
-        deadline_time             Not supported
-        ------------------------- --------------------
-        hard_wallclock_time_limit -l h_rt= `value`
-        ------------------------- --------------------
-        soft_wallclock_time_limit -l s_rt= `value`
-        ------------------------- --------------------
-        hard_run_duration_limit   -l h_cpu= `value`
-        ------------------------- --------------------
-        soft_run_duration_limit   -l s_cpu= `value`
-        ------------------------- --------------------
-        job_category              Not supported
-        ========================= ====================
+        ------------------------- ---------------------------
+        deadline_time             Ignored
+        ------------------------- ---------------------------
+        hard_wallclock_time_limit -l walltime= `value`
+        ------------------------- ---------------------------
+        soft_wallclock_time_limit -l walltime= `value`
+        ------------------------- ---------------------------
+        hard_run_duration_limit   -l walltime= `value`
+        ------------------------- ---------------------------
+        soft_run_duration_limit   -l walltime= `value`
+        ------------------------- ---------------------------
+        job_category              Ignored
+        ========================= ===========================
 
-        Where `value` is the corresponding resource value and
-        `n_cpus` is the value of the 'n_cpus' resource, or 1.
+        Where `value` is the corresponding resource value.
 
-        If 'working_directory' is not specified, add ``-cwd``.
+        If 'working_directory' is not specified, add ``-W sandbox=<cwd>``.
         If 'input_path' is not specified, add ``-i /dev/null``.
         If 'output_path' is not specified, add ``-o <remote_command>.stdout``.
-        If 'error_path' is not specified, add ``-j yes``.
+        If 'error_path' is not specified, add ``-j oe``.
 
         If 'native_specification' is specified, it is added to the `qsub`
         command just before 'remote_command' and 'args'.
@@ -272,24 +273,24 @@ class PBS_Server(ObjServer):
         dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
         cmd = list(self._QSUB)
-        cmd.extend(['-V', '-sync', 'yes'])
+        cmd.extend(('-V', '-W', 'block=true'))
         env = None
         inp, out, err = None, None, None
 
         # Set working directory now, for possible path fixing.
+# FIXME: sandbox is HOME, not set, or PRIVATE
         try:
             value = resource_desc['working_directory']
         except KeyError:
             pass
         else:
             self.work_dir = self._fix_path(value)
-            cmd.append('-wd')
-            cmd.append(value)
+            cmd.extend(('-W', 'sandbox=%s' % value))
 
         # Process description in fixed, repeatable order.
         keys = ('job_name',
                 'job_environment',
-                'parallel_environment',
+                'n_cpus',
                 'input_path',
                 'output_path',
                 'error_path',
@@ -310,71 +311,52 @@ class PBS_Server(ObjServer):
                 continue
 
             if key == 'job_name':
-                cmd.append('-N')
-                cmd.append(value)
+                cmd.extend(('-N', value))
             elif key == 'job_environment':
                 env = value
-            elif key == 'parallel_environment':
-                n_cpus = resource_desc.get('n_cpus', 1)
-                cmd.append('-pe')
-                cmd.append(value)
-                cmd.append(str(n_cpus))
+            elif key == 'n_cpus':
+                cmd.extend(('-l', 'select=%d:ncpus=1' % value))
             elif key == 'input_path':
-                cmd.append('-i')
-                cmd.append(self._fix_path(value))
+                cmd.extend(('-i', self._fix_path(value)))
                 inp = value
             elif key == 'output_path':
-                cmd.append('-o')
-                cmd.append(self._fix_path(value))
+                cmd.extend(('-o', self._fix_path(value)))
                 out = value
             elif key == 'error_path':
-                cmd.append('-e')
-                cmd.append(self._fix_path(value))
+                cmd.extend(('-e', self._fix_path(value)))
                 err = value
             elif key == 'join_files':
-                cmd.append('-j')
-                cmd.append('yes' if value else 'no')
+                cmd.extend(('-j', 'yes' if value else 'no'))
                 if value:
                     err = 'yes'
             elif key == 'email':
-                cmd.append('-M')
-                cmd.append(','.join(value))
+                cmd.extend(('-M', ','.join(value)))
             elif key == 'block_email':
                 if value:
-                    cmd.append('-m')
-                    cmd.append('n')
+                    cmd.extend(('-m', 'n'))
             elif key == 'email_events':
-                cmd.append('-m')
-                cmd.append(value)
+                cmd.extend(('-m', value.replace('s', '')))  # No suspend event
             elif key == 'start_time':
-                cmd.append('-a')
-                cmd.append(value)  # May need to translate
+                cmd.extend(('-a', translate1(value)))
             elif key == 'hard_wallclock_time_limit':
-                cmd.append('-l')
-                cmd.append('h_rt=%s' % self._make_time(value))
+                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
             elif key == 'soft_wallclock_time_limit':
-                cmd.append('-l')
-                cmd.append('s_rt=%s' % self._make_time(value))
+                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
             elif key == 'hard_run_duration_limit':
-                cmd.append('-l')
-                cmd.append('h_cpu=%s' % self._make_time(value))
+                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
             elif key == 'soft_run_duration_limit':
-                cmd.append('-l')
-                cmd.append('s_cpu=%s' % self._make_time(value))
+                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
 
         if not self.work_dir:
-            cmd.append('-cwd')
+            cmd.extend(('-W', 'sandbox=%s' % os.getcwd()))
 
         if inp is None:
-            cmd.append('-i')
-            cmd.append(dev_null)
+            cmd.extend(('-i', dev_null))
         if out is None:
-            cmd.append('-o')
-            cmd.append('%s.stdout'
-                       % os.path.basename(resource_desc['remote_command']))
+            base = os.path.basename(resource_desc['remote_command'])
+            cmd.extend(('-o', '%s.stdout' % base))
         if err is None:
-            cmd.append('-j')
-            cmd.append('yes')
+            cmd.extend(('-j', 'oe'))
 
         if 'native_specification' in resource_desc:
             cmd.extend(resource_desc['native_specification'])
@@ -408,13 +390,15 @@ class PBS_Server(ObjServer):
     @staticmethod
     def _make_time(seconds):
         """ Make time string from `seconds`. """
+# FIXME: this is called for multiple different things!
+# FIXME: not handling > 99 hours correctly.
         seconds = float(seconds)
         hours = int(seconds / (60*60))
         seconds -= hours * 60*60
         minutes = int(seconds / 60)
         seconds -= minutes * 60
         seconds = int(seconds)
-        return '%d:%d:%d' % (hours, minutes, seconds)
+        return '%02d%02d.%02d' % (hours, minutes, seconds)
 
 
 class _ServerManager(OpenMDAO_Manager):
@@ -423,5 +407,5 @@ class _ServerManager(OpenMDAO_Manager):
     """
     pass
 
-register(PBS_Server, _ServerManager, 'openmdao.contrib.pbs.pbs')
+register(PBS_Server, _ServerManager, 'pbs.pbs')
 

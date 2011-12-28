@@ -12,6 +12,7 @@ import threading
 import time
 import traceback
 
+from openmdao.main.exceptions import TracedError
 from openmdao.util.filexfer import filexfer
 
 from .protocol import Connection
@@ -28,8 +29,8 @@ class AllocatorWrapper(object):
         The connection to serve.
     """
 
-    _legal_methods = set(('max_servers', 'time_estimate', 'deploy'))
-    _local_methods = set(('release', 'shutdown'))
+    _legal_methods = set(('max_servers', 'time_estimate'))
+    _local_methods = set(('deploy', 'release', 'shutdown'))
 
     def __init__(self, allocator, connection):
         self._allocator = allocator
@@ -61,41 +62,45 @@ class AllocatorWrapper(object):
                     raise RuntimeError('illegal method %r' % method)
                 result = function(*args, **kwargs)
             except Exception as exc:
-                traceback.print_exc()
+                tback = traceback.format_exc()
                 self._logger.error('Exception: %s', exc)
-                self._conn.send_exception(exc)
+                self._logger.error(tback)
+                self._conn.send_reply(TracedError(exc, tback))
             else:
-                if method == 'deploy':
-                    # Return how to connect to server thread.
-                    path = '%s/%s' % (self._conn.root, result.name)
-                    name = '%s_wrapper' % result.name
-                    logger = logging.getLogger(name)
-                    connection = Connection(self._conn.dmz_host, path, True,
-                                            logger)
-                    wrapper = ServerWrapper(result, connection)
-                    handler = threading.Thread(name=name,
-                                               target=wrapper.process_requests)
-                    handler.daemon = True
-                    handler.start()
-                    result = (wrapper.conn.root, wrapper.server.pid)
-                    self.add_wrapper(wrapper, handler)
                 self._conn.send_reply(result)
 
         for root in self._wrappers.keys():
             self.release(root)
         shutil.rmtree(self._conn.root)
 
-    def add_wrapper(self, wrapper, handler):
+    def deploy(self, name, resource_desc, criteria):
         """
-        Remember server for later release.
+        Deploy a server suitable for `resource_desc`.
+        Returns how to connect to server thread.
 
-        wrapper: :class:`ServerWrapper`
-            Wrapper to be added.
+        name: string
+            Name for server.
 
-        handler: :class:`Thread`
-            Thread associated with `wrapper` to be added.
+        resource_desc: dict
+            Description of required resources.
+
+        criteria: dict
+            The dictionary returned by :meth:`time_estimate`.
         """
+        server = self._allocator.deploy(name, resource_desc, criteria)
+
+        path = '%s/%s' % (self._conn.root, server.name)
+        name = '%s_wrapper' % server.name
+        logger = logging.getLogger(name)
+        connection = Connection(self._conn.dmz_host, path, True, logger)
+        wrapper = ServerWrapper(server, connection)
+
+        handler = threading.Thread(name=name, target=wrapper.process_requests)
+        handler.daemon = True
+        handler.start()
+
         self._wrappers[wrapper.conn.root] = (wrapper, handler)
+        return (wrapper.conn.root, wrapper.server.pid)
 
     def release(self, root):
         """
@@ -104,8 +109,7 @@ class AllocatorWrapper(object):
         root: string
             Path to communications root directory.
         """
-        wrapper, handler = self._wrappers[root]
-        del self._wrappers[root]
+        wrapper, handler = self._wrappers.pop(root)
         self._allocator.release(wrapper.server)
         wrapper.stop = True
         handler.join(wrapper.poll_delay*3)
@@ -169,9 +173,10 @@ class ServerWrapper(object):
                     raise RuntimeError('illegal method %r' % method)
                 result = function(*args, **kwargs)
             except Exception as exc:
-                traceback.print_exc()
+                tback = traceback.format_exc()
                 self._logger.error('Exception: %s', exc)
-                self._conn.send_exception(exc)
+                self._logger.error(tback)
+                self._conn.send_reply(TracedError(exc, tback))
             else:
                 self._conn.send_reply(result)
 

@@ -49,10 +49,10 @@ class NAS_Allocator(ResourceAllocator):
         self._servers = []
         self._dmz_host = dmz_host
         self._server_host = server_host
-        self._logger.debug('%s init', name)
+        self._logger.debug('init')
         if dmz_host and server_host:
             self._conn = connect(dmz_host, server_host, name, self._logger)
-            self._logger.debug('%s connected', name)
+            self._logger.debug('connected to %r on %r', server_host, dmz_host)
 
     def configure(self, cfg):
         """
@@ -76,6 +76,7 @@ class NAS_Allocator(ResourceAllocator):
         if self._dmz_host and self._server_host:
             self._conn = connect(self._dmz_host, self._server_host, self.name,
                                  self._logger)
+            self._logger.debug('connected')
 
     @rbac('*')
     def max_servers(self, resource_desc):
