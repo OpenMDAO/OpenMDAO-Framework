@@ -110,7 +110,6 @@ class SellarBLISS2000(Assembly):
         self.sysopt.add_parameter(['dis1_meta_model.z1','dis2_meta_model.z1'], low=-10, high=10.0,start=5.0)
         self.sysopt.add_parameter(['dis1_meta_model.z2','dis2_meta_model.z2'], low=0, high=10.0,start=2.0)        
         self.sysopt.add_parameter('dis1_meta_model.y2', low=0, high=20.0)
-        
         self.sysopt.add_parameter('dis2_meta_model.y1', low=0, high=20.0)
         
         #feasibility constraints
@@ -145,7 +144,7 @@ class SellarBLISS2000(Assembly):
         self.add('driver2', FixedPointIterator())
         self.driver2.max_iteration = 50
         self.driver2.tolerance = .0001        
-        self.driver2.workflow.add(['DOE_Trainer1','DOE_Trainer2','sysopt','disc1opt'])  
+        self.driver2.workflow.add(['DOE_Trainer1','DOE_Trainer2'])#,'sysopt','disc1opt'])  
         self.driver2.add_parameter('x1_store', low=0, high=10.0)
         self.driver2.add_constraint('dis1_meta_model.x1 = x1_store')
         self.driver2.add_event('dis2_meta_model.reset_training_data')
@@ -156,8 +155,7 @@ class SellarBLISS2000(Assembly):
         self.add('driver', IterateUntil())
         self.driver.max_iterations = 1
         self.driver.workflow=SequentialWorkflow()
-        #self.driver.workflow.add(['mda','driver2'])  
-        self.driver.workflow.add(['mda'])  
+        self.driver.workflow.add(['mda','driver2'])  
         
         
 
@@ -183,5 +181,6 @@ if __name__ == "__main__":
     prob.run()
 
     print "Minimum found at", prob.dis2_meta_model.z1,prob.dis2_meta_model.z2,prob.x1_store
+    print "Coupling Vars: ", prob.dis2_meta_model.y1, prob.dis1_meta_model.y2
     print "with objective function value:",(prob.dis1_meta_model.x1)**2 + prob.dis1_meta_model.z2 + \
           prob.dis1_meta_model.y1 + math.exp(-prob.dis2_meta_model.y2)
