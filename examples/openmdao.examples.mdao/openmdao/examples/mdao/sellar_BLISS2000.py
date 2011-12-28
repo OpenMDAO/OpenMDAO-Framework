@@ -23,6 +23,12 @@ from openmdao.lib.components.api import MetaModel
 from openmdao.lib.casehandlers.api import DBCaseRecorder
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 
+class Debug(Component): 
+    
+    def execute(self): 
+        print 'y1: ', self.parent.dis2_meta_model.y1
+        print 'y2: ', self.parent.dis1_meta_model.y2 
+
 
 class SellarBLISS2000(Assembly):
     """ Optimization of the Sellar problem using the BLISS2000 algorithm
@@ -69,7 +75,6 @@ class SellarBLISS2000(Assembly):
         self.mda.add_constraint('dis2_meta_model.y2 = dis1_meta_model.y2')
         self.mda.add_parameter('dis2_meta_model.y1', low=0, high=20,start=1.)
         self.mda.add_constraint('dis2_meta_model.y1 = dis1_meta_model.y1')
-        self.mda.force_execute = True    
         
         self.mda.workflow=SequentialWorkflow()
         self.mda.workflow.add(['dis1_meta_model','dis2_meta_model'])
@@ -85,71 +90,78 @@ class SellarBLISS2000(Assembly):
         self.DOE_Trainer_dis1.add_parameter("dis1_meta_model.z2",low=0,high=10,start=2.0)   
         self.DOE_Trainer_dis1.add_parameter("dis1_meta_model.y2",low=0,high=20)   
         self.DOE_Trainer_dis1.add_event("dis1_meta_model.train_next")
-        self.DOE_Trainer_dis1.force_execute = True        
-        
+        self.DOE_Trainer_dis1.force_execute = True
+
         #training metalmodel for disc1
         
         self.add("DOE_Trainer_dis2",DOEdriver())
         self.DOE_Trainer_dis2.DOEgenerator = CentralComposite()
         self.DOE_Trainer_dis2.alpha = .1
-        self.DOE_Trainer_dis2.add_parameter("meta_model_dis2.z1",low=-10,high=10,start=5.0)        
-        self.DOE_Trainer_dis2.add_parameter("meta_model_dis2.z2",low=0,high=10,start=2.0)   
-        self.DOE_Trainer_dis2.add_parameter("meta_model_dis2.y1",low=0,high=20)   
-        self.DOE_Trainer_dis2.add_event("meta_model_dis2.train_next")
-        self.DOE_Trainer_dis2.force_execute = True               
+        self.DOE_Trainer_dis2.add_parameter("dis2_meta_model.z1",low=-10,high=10,start=5.0)        
+        self.DOE_Trainer_dis2.add_parameter("dis2_meta_model.z2",low=0,high=10,start=2.0)   
+        self.DOE_Trainer_dis2.add_parameter("dis2_meta_model.y1",low=0,high=20)   
+        self.DOE_Trainer_dis2.add_event("dis2_meta_model.train_next")
+        self.DOE_Trainer_dis2.force_execute = True
         
         
         #optimization of global objective function
 
         self.add('sysopt', CONMINdriver())     
          
-        self.sysopt.add_objective('(x1_store)**2 + dis1_meta_model.z2 + dis1_meta_model.y1 + math.exp(-meta_model_dis2.y2)')
+        self.sysopt.add_objective('(x1_store)**2 + dis1_meta_model.z2 + dis1_meta_model.y1 + math.exp(-dis2_meta_model.y2)')
         
         self.sysopt.add_parameter(['dis1_meta_model.z1','dis2_meta_model.z1'], low=-10, high=10.0,start=5.0)
         self.sysopt.add_parameter(['dis1_meta_model.z2','dis2_meta_model.z2'], low=0, high=10.0,start=2.0)        
         self.sysopt.add_parameter('dis1_meta_model.y2', low=0, high=20.0)
         self.sysopt.add_parameter('dis2_meta_model.y1', low=0, high=20.0)
-
+        self.sysopt.force_execute = True
         
         #feasibility constraints
-        self.sysopt.add_constraint('dis1_meta_model.y2 <= meta_model_dis2.y2')
-        self.sysopt.add_constraint('dis1_meta_model.y2 >= meta_model_dis2.y2')
+        self.sysopt.add_constraint('dis1_meta_model.y2 <= dis2_meta_model.y2')
+        self.sysopt.add_constraint('dis1_meta_model.y2 >= dis2_meta_model.y2')
         
-        self.sysopt.add_constraint('meta_model_dis2.y1 <= dis1_meta_model.y1')
-        self.sysopt.add_constraint('meta_model_dis2.y1 >= dis1_meta_model.y1')
-        
+        self.sysopt.add_constraint('dis2_meta_model.y1 <= dis1_meta_model.y1')
+        self.sysopt.add_constraint('dis2_meta_model.y1 >= dis1_meta_model.y1')
         
         self.sysopt.add_constraint('3.16 < dis1_meta_model.y1')
-        self.sysopt.add_constraint('meta_model_dis2.y2 < 24.0')
-        self.sysopt.force_execute=True
+        self.sysopt.add_constraint('dis2_meta_model.y2 < 24.0')
+        
+        #self.sysopt.iprint = 1
         
         
         #optimization of discipline 1 (discipline 2 of the sellar problem has no local variables)
         
-        self.add('disc1opt', CONMINdriver())
-        self.disc1opt.add_objective('dis1_meta_model.y1')
-        self.disc1opt.add_parameter('dis1_meta_model.x1', low=0, high=10.0) 
-        self.disc1opt.add_constraint('3.16 < dis2_meta_model.y1')
-        self.disc1opt.add_event('dis1_meta_model.train_next')
-        self.local_opt_dis1.force_execute=True
+        self.add('local_opt_dis1', CONMINdriver())
+        self.local_opt_dis1.add_objective('dis1_meta_model.y1')
+        self.local_opt_dis1.add_parameter('dis1_meta_model.x1', low=0, high=10.0) 
+        self.local_opt_dis1.add_constraint('3.16 < dis2_meta_model.y1')
+        self.local_opt_dis1.add_event('dis1_meta_model.train_next')
         
-        self.disc1opt.workflow=SequentialWorkflow()
-        self.disc1opt.workflow.add(['dis1_meta_model'])
-
+        self.local_opt_dis1.workflow=SequentialWorkflow()
+        self.local_opt_dis1.workflow.add(['dis1_meta_model'])
+        self.local_opt_dis1.force_execute = True
+        
+        self.add('training_reset',Driver())
+        self.training_reset.add_event('dis2_meta_model.reset_training_data')
+        self.training_reset.add_event('dis1_meta_model.reset_training_data')
+        self.training_reset.force_execute = True
         
         
         #build workflow for bliss2000
         
-        self.add('driver2', FixedPointIterator())
-        self.driver2.max_iteration = 50
-        self.driver2.tolerance = .0001        
-        self.driver2.workflow.add(['DOE_Trainer1','DOE_Trainer2'])#,'sysopt','disc1opt'])  
-        self.driver2.add_parameter('x1_store', low=0, high=10.0)
-        self.driver2.add_constraint('dis1_meta_model.x1 = x1_store')
-        self.driver2.add_event('dis2_meta_model.reset_training_data')
-        self.driver2.add_event('dis1_meta_model.reset_training_data')
-
+        self.add('debug',Debug())
+        self.debug.force_execute = True
         
+        #self.add('main_driver', FixedPointIterator())
+        self.add('main_driver',IterateUntil())
+        self.main_driver.max_iterations = 3
+        #self.main_driver.tolerance = .000001      
+        self.main_driver.workflow = SequentialWorkflow()
+        self.main_driver.workflow.add(['debug','DOE_Trainer_dis1','DOE_Trainer_dis2','local_opt_dis1','sysopt','training_reset'])  
+        #self.main_driver.add_parameter('x1_store', low=0, high=10.0)
+        #self.main_driver.add_constraint('dis1_meta_model.x1 = x1_store')
+        #self.main_driver.add_event('dis2_meta_model.reset_training_data')
+        #self.main_driver.add_event('dis1_meta_model.reset_training_data')
         
         # Top level is sequential work flow. runs a single mda, then begins bliss2000 
         self.driver.workflow=SequentialWorkflow()
@@ -184,8 +196,8 @@ if __name__ == "__main__":
     print "with objective function value:",(prob.dis1_meta_model.x1)**2 + prob.dis1_meta_model.z2 + \
           prob.dis1_meta_model.y1 + math.exp(-prob.dis2_meta_model.y2)
 
-    
-    print "Check: ",prob.dis1.name
+    exit()
+    print "Check: ",prob.dis1_meta_model.name
     
     print "sysopt params"
     for k in prob.sysopt.get_parameters(): 
