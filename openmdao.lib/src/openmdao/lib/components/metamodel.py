@@ -189,7 +189,6 @@ class MetaModel(Component):
                     training_input_history = self._training_input_history
                 for name,tup in self._surrogate_info.items(): 
                     surrogate, output_history = tup  
-                    print "Training"
                     surrogate.train(training_input_history, output_history)
                     
                 self._new_train_data = False
