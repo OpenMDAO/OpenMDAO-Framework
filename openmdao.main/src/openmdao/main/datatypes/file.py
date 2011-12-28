@@ -15,11 +15,16 @@ from openmdao.main.variable import Variable
 
 class File(Variable):
     """
-    A trait wrapper for a :class:`FileRef` object. For input files
-    :attr:`legal_types` may be set to a list of expected 'content_type' strings.
-    Then upon assignment the actual 'content_type' must match one of the
-    :attr:`legal_types` strings.  Also for input files, if :attr:`local_path`
-    is set, then upon assignent the associated file will be copied to that path.
+    A trait wrapper for a :class:`FileRef` object.
+
+    For input files :attr:`legal_types` may be set to a list of expected
+    'content_type' strings. Then upon assignment the actual 'content_type'
+    must match one of the :attr:`legal_types` strings.  Also, if
+    :attr:`local_path` is set, then upon assignent the associated file will
+    be copied to that path.
+
+    For output files a `default_value` of None will cause a default
+    :class:`FileRef` object to be created from `metadata`.
     """
     
     def __init__(self, default_value=None, iotype=None, desc=None, **metadata):

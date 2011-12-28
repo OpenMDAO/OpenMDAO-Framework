@@ -3,20 +3,21 @@
 import glob
 import os.path
 import shutil
-import subprocess
 import stat
+import subprocess
+import sys
 import time
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int, List
 
-from openmdao.main.api import ComponentWithDerivatives
+from openmdao.main.api import ComponentWithDerivatives, FileRef
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
+
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
-
 
 
 class ExternalCode(ComponentWithDerivatives):
@@ -207,11 +208,15 @@ class ExternalCode(ComponentWithDerivatives):
                 rdesc['input_path'] = self.stdin
             if self.stdout:
                 rdesc['output_path'] = self.stdout
+            else:
+                rdesc['output_path'] = '%s.stdout' % self.command[0]
             if self.stderr:
                 if self.stderr == self.STDOUT:
                     rdesc['join_files'] = True
                 else:
                     rdesc['error_path'] = self.stderr
+            else:
+                rdesc['error_path'] = '%s.stderr' % self.command[0]
             if self.timeout:
                 rdesc['hard_run_duration_limit'] = self.timeout
 
@@ -223,10 +228,19 @@ class ExternalCode(ComponentWithDerivatives):
                     patterns.append(metadata.path)
                     if not metadata.binary:
                         textfiles.append(metadata.path)
+            for pathname, obj in self.items(iotype='in', recurse=True):
+                if isinstance(obj, FileRef):
+                    local_path = self.get_metadata(pathname, 'local_path')
+                    patterns.append(local_path)
+                    if not obj.binary:
+                        textfiles.append(local_path)
+            if self.stdin:
+                patterns.append(self.stdin)
+                textfiles.append(self.stdin)
             if patterns:
                 self._send_inputs(patterns, textfiles)
             else:
-                self._logger.debug('No input metadata paths')
+                self._logger.debug('No input files')
 
             # Run command.
             self._logger.info('executing %s...', self.command)
@@ -245,10 +259,29 @@ class ExternalCode(ComponentWithDerivatives):
                     patterns.append(metadata.path)
                     if not metadata.binary:
                         textfiles.append(metadata.path)
-            if patterns:
-                self._retrieve_results(patterns, textfiles)
-            else:
-                self._logger.debug('No output metadata paths')
+            for pathname, obj in self.items(iotype='out', recurse=True):
+                if isinstance(obj, FileRef):
+                    patterns.append(obj.path)
+                    if not obj.binary:
+                        textfiles.append(obj.path)
+            patterns.append(rdesc['output_path'])
+            textfiles.append(rdesc['output_path'])
+            if self.stderr != self.STDOUT:
+                patterns.append(rdesc['error_path'])
+                textfiles.append(rdesc['error_path'])
+            self._retrieve_results(patterns, textfiles)
+
+            # Echo stdout if not redirected.
+            if not self.stdout:
+                with open(rdesc['output_path'], 'rU') as inp:
+                    sys.stdout.write(inp.read())
+                os.remove(rdesc['output_path'])
+
+            # Echo stderr if not redirected.
+            if not self.stderr:
+                with open(rdesc['error_path'], 'rU') as inp:
+                    sys.stderr.write(inp.read())
+                os.remove(rdesc['error_path'])
 
         finally:
             RAM.release(self._server)
@@ -387,6 +420,7 @@ class _AccessController(AccessController):  #pragma no cover
     """ Don't allow setting of 'command' by remote client. """
 
     def check_access(self, role, methodname, obj, attr):
+        """ Raise :class:`RoleError` if invalid access. """
         if attr in ('command', 'get_access_controller') and \
            methodname == '__setattr__':
             raise RoleError('No %s access to %r' % (methodname, attr))
