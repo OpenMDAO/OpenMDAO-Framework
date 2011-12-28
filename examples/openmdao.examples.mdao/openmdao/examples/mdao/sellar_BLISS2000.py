@@ -44,8 +44,6 @@ class SellarBLISS2000(Assembly):
                 
         super(SellarBLISS2000, self).__init__()
         
-        #self.add('dis1', SellarDiscipline1())
-        #self.add('dis2', SellarDiscipline2())
         
         #objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + exp(-dis2.y2)'
         #constraint1 = 'dis1.y1 > 3.16'
@@ -135,26 +133,12 @@ class SellarBLISS2000(Assembly):
         self.local_opt_dis1.workflow=SequentialWorkflow()
         self.local_opt_dis1.workflow.add(['meta_model_dis1'])
         
-        """
-        self.add('local_opt_dis1', CONMINdriver())
-        self.local_opt_dis1.add_objective('dis1.y1')
-        self.local_opt_dis1.add_parameter(['dis1.x1','meta_model_dis1.x1'], low=0, high=10.0) 
-        self.local_opt_dis1.add_constraint('3.16 < dis1.y1')
-        
-        self.local_opt_dis1.force_execute=True
-        
-        self.local_opt_dis1.workflow=SequentialWorkflow()
-        self.local_opt_dis1.workflow.add(['dis1'])
-        """
-        
         self.add('reset_train',Driver())
         self.reset_train.add_event('meta_model_dis1.reset_training_data')
         self.reset_train.add_event('meta_model_dis2.reset_training_data')
         #self.reset_train.workflow = SequentialWorkflow()
         #self.reset_train.workflow.add(['meta_model_dis1','meta_model_dis2'])
         self.reset_train.force_execute = True
-        
-        
         
         #build workflow for bliss2000
         
@@ -172,7 +156,6 @@ class SellarBLISS2000(Assembly):
         self.main_driver.add_constraint('meta_model_dis1.z2 = z2_store')
         #self.main_driver.add_event('meta_model_dis1.reset_training_data')
         #self.main_driver.add_event('meta_model_dis2.reset_training_data')
-        
         
         # Top level is sequential work flow. runs a single mda, then begins bliss2000 
         self.driver.workflow=SequentialWorkflow()
