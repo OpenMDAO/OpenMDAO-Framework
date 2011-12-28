@@ -208,9 +208,7 @@ if __name__ == "__main__":
     print "Minimum found at", prob.meta_model_dis1.z1,prob.meta_model_dis1.z2,prob.meta_model_dis1.x1
     print "with objective function value:",(prob.meta_model_dis1.x1)**2 + \
           prob.meta_model_dis1.z2 + prob.meta_model_dis1.y1 + math.exp(-prob.meta_model_dis2
-                                                                       .y2)
-    exit()
-        
+                                                                       .y2)        
     print "sysopt params"
     for k in prob.sysopt.get_parameters(): 
         print k
