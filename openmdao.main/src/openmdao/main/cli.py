@@ -113,8 +113,12 @@ def _get_openmdao_parser():
 
 def openmdao():
     parser = _get_openmdao_parser()
-    options = parser.parse_args()
-    options.func(options, [])
+    if len(sys.argv) > 1 and sys.argv[1] == 'test':
+        options, args = parser.parse_known_args()
+    else:
+        options = parser.parse_args()
+        args = []
+    options.func(options, args)
     
 if __name__ == '__main__':
     openmdao()

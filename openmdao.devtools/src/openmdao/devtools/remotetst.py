@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
-                                    ssh_test, put_dir, cleanup
+                                    ssh_test, put_dir, cleanup, remote_py_cmd, get, cd
 from openmdao.devtools.remote_cfg import add_config_options, process_options, \
                                          run_host_processes, get_tmp_user_dir, \
                                          print_host_codes
@@ -20,8 +20,8 @@ from openmdao.devtools.ec2 import run_on_ec2
 
 
 def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
-                          branch=None, testargs='', hostname='', 
-                          **kwargs):
+                           branch=None, testargs='', hostname='', cfg=None,
+                           **kwargs):
     if fname is None:
         raise RuntimeError("_remote_build_and_test: missing arg 'fname'")
     
@@ -33,6 +33,11 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     pushfiles = [locbldtstfile]
     
     build_type = 'release' if fname.endswith('.py') else 'dev'
+        
+    if cfg and cfg.has_option(hostname, 'pull_docs'):
+        pull_docs = cfg.getboolean(hostname, 'pull_docs')
+    else:
+        pull_docs = False
         
     if os.path.isfile(fname):
         pushfiles.append(fname)
@@ -62,11 +67,38 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         result = push_and_run(pushfiles, runner=pyversion,
                               remotedir=remotedir, 
                               args=remoteargs)
+        if pull_docs:
+            if result.return_code == 0:
+                print "pulling docs from %s" % hostname
+                retrieve_docs(remotedir)
+            else:
+                print "not pulling docs from %s because test failed" % hostname
+        else:
+            print "not pulling docs from %s" % hostname
+            
         return result.return_code
     finally:
         if not keep:
             print "removing remote directory: %s" % remotedir
             rm_remote_tree(remotedir)
+
+def retrieve_docs(remote_dir):
+    cmds = [ "import tarfile",
+             "import os",
+             "for fname in os.listdir('%s'):" % remote_dir,
+             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
+             "        break",
+             "else:",
+             "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
+             "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
+             "tar = tarfile.open(os.path.join('%s','html.tar.gz'), mode='w:gz')" % remote_dir,
+             "tar.add(tardir, arcname='html')",
+             "tar.close()",
+             ]
+    
+    result = remote_py_cmd(cmds)
+    get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
+    
 
 def test_branch(options, args=None):
     atexit.register(fabric_cleanup, True)
@@ -84,10 +116,10 @@ def test_branch(options, args=None):
     
     if options.fname is None: # assume we're testing the current repo
         print 'creating tar file of current branch: ',
-        options.fname = os.path.join(os.getcwd(), 'testbranch.tar')
+        options.fname = os.path.join(os.getcwd(), 'OpenMDAO-Framework-testbranch.tar')
         ziptarname = options.fname+'.gz'
         cleanup(ziptarname) # clean up the old tar file
-        make_git_archive(options.fname)
+        make_git_archive(options.fname, prefix='OpenMDAO-OpenMDAO-Framework-testbranch/')
         subprocess.check_call(['gzip', options.fname])
         options.fname = os.path.abspath(ziptarname)
         print options.fname
@@ -115,6 +147,7 @@ def test_branch(options, args=None):
                      'fname': fname,
                      'remotedir': get_tmp_user_dir(),
                      'branch': options.branch,
+                     'cfg': config
                      }
     try:
         retcode = run_host_processes(config, conn, ec2_hosts, options, 
