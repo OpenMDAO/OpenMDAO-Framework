@@ -959,7 +959,10 @@ class Component (Container):
         for fvarname, fvar, ftrait in comp.get_file_vars():
             if fvar.owner is not comp:
                 continue
-            path = fvar.path
+            if hasattr(ftrait, 'local_path') and ftrait.local_path:
+                path = ftrait.local_path
+            else:
+                path = fvar.path
             if not path:
                 continue
             if not isabs(path):
