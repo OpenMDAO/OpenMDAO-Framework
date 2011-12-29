@@ -118,7 +118,8 @@ def openmdao():
     else:
         options = parser.parse_args()
         args = []
-    options.func(options, args)
+
+    sys.exit(options.func(options, args))
     
 if __name__ == '__main__':
     openmdao()
