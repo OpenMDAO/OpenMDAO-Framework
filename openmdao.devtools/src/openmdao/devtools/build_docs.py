@@ -12,6 +12,7 @@ import tarfile
 import sphinx
 
 from openmdao.util.dumpdistmeta import get_dist_metadata
+from openmdao.util.fileutil import get_ancestor_dir
 
 # Specify modules and packages to be included in the OpenMDAO documentation here
 srcmods = [
@@ -35,13 +36,10 @@ def get_openmdao_packages():
 logger = logging.getLogger()
 
 def get_rev_info():
-    try:
-        p = Popen('git describe --tags', 
-                  stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        out = p.communicate()[0].strip()
-        tag, ncommits, commit = out.rsplit('-', 2)
-    except:
-        return ('?','?','?')
+    p = Popen('git describe --tags', 
+              stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    out = p.communicate()[0].strip()
+    tag, ncommits, commit = out.rsplit('-', 2)
     return tag, ncommits, commit
 
 def _get_dirnames():
@@ -222,8 +220,17 @@ def build_docs(options=None, args=None):
             version = "%s-%s-%s" % (tag, ncommits, commit)
             shtitle = 'OpenMDAO Documentation (%s commits after version %s)' % (ncommits,tag)
         except:
-            version = "?-?-?"
-            shtitle = "OpenMDAO Documentation (unknown revision)"
+            # try to get commit id
+            try:
+                top = get_ancestor_dir(sys.executable, 3)
+                if '-OpenMDAO-Framework-' in top:
+                    version = top.split('-')[-1]
+                    shtitle = "OpenMDAO Documentation (commit id %s)" % version
+                else:
+                    raise RuntimeError("can't find commit id")
+            except:
+                version = "?-?-?"
+                shtitle = "OpenMDAO Documentation (unknown revision)"
     
     branchdir, docdir, bindir =_get_dirnames()
 
