@@ -224,8 +224,9 @@ def build_docs(options=None, args=None):
             try:
                 top = get_ancestor_dir(sys.executable, 3)
                 if '-OpenMDAO-Framework-' in top:
-                    version = top.split('-')[-1]
-                    shtitle = "OpenMDAO Documentation (commit id %s)" % version
+                    commit = top.split('-')[-1]
+                    version = "dev - commit id: %s" % commit
+                    shtitle = "OpenMDAO Documentation (commit id %s)" % commit
                 else:
                     raise RuntimeError("can't find commit id")
             except:
