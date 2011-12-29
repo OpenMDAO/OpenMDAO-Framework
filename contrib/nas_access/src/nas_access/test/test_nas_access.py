@@ -175,8 +175,12 @@ class TestCase(unittest.TestCase):
             logging.debug('execute bad command')
             return_code, error_msg = \
                 server.execute_command(dict(remote_command='no-such-command'))
-            self.assertEqual(return_code, 127)
-            self.assertEqual(error_msg, ': Key has expired')
+            if sys.platform == 'win32':
+                self.assertEqual(return_code, 1)
+                self.assertEqual(error_msg, ': Operation not permitted')
+            else:
+                self.assertEqual(return_code, 127)
+                self.assertEqual(error_msg, ': Key has expired')
 
             logging.debug('open bad file')
             assert_raises(self, "server.open('../../illegal-access', 'r')",

@@ -12,10 +12,9 @@ import threading
 import time
 import traceback
 
-from openmdao.main.exceptions import TracedError
 from openmdao.util.filexfer import filexfer
 
-from .protocol import Connection
+from .protocol import Connection, RemoteError
 
 
 class AllocatorWrapper(object):
@@ -65,7 +64,7 @@ class AllocatorWrapper(object):
                 tback = traceback.format_exc()
                 self._logger.error('Exception: %s', exc)
                 self._logger.error(tback)
-                self._conn.send_reply(TracedError(exc, tback))
+                self._conn.send_reply(RemoteError(exc, tback))
             else:
                 self._conn.send_reply(result)
 
@@ -176,7 +175,7 @@ class ServerWrapper(object):
                 tback = traceback.format_exc()
                 self._logger.error('Exception: %s', exc)
                 self._logger.error(tback)
-                self._conn.send_reply(TracedError(exc, tback))
+                self._conn.send_reply(RemoteError(exc, tback))
             else:
                 self._conn.send_reply(result)
 

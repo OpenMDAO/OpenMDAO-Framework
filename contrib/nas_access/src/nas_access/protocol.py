@@ -46,11 +46,29 @@ import socket
 import subprocess
 import time
 
-from openmdao.main.exceptions import TracedError
 
-class RemoteError(TracedError):
-    """ Change name to make explicit this is from remote server. """
-    pass
+class RemoteError(Exception):
+    """ Contains original exception as well as a traceback. """
+
+    def __init__(self, exc, traceback):
+        Exception.__init__(self, exc, traceback)
+
+    @property
+    def exc(self):
+        """ The original exception. """
+        return self.args[0]
+
+    @property
+    def traceback(self):
+        """ Traceback at point of exception. """
+        return self.args[1]
+
+    def __str__(self):
+        return str(self.exc)
+
+    def __repr__(self):
+        return '%s(%s)' % (self.exc.__class__.__name__, str(self.exc))
+
 
 DEBUG2 = logging.DEBUG - 2  # Show polling.
 DEBUG3 = logging.DEBUG - 3  # Show ssh/scp.
@@ -215,6 +233,7 @@ def connect(dmz_host, server_host, path, logger):
 
     lines = _ssh(dmz_host, ('ls', '-1'), logger)
     if root not in lines:
+        shutil.rmtree(root)
         raise RuntimeError('Server directory %r not found' % root)
 
     if '/' in path:  # Connect to existing communications directory.
@@ -228,6 +247,7 @@ def connect(dmz_host, server_host, path, logger):
         parent, slash, child = root.rpartition('/')
         lines = _ssh(dmz_host, ('ls', '-1', parent), logger)
         if child in lines:  # Need a clean directory.
+            shutil.rmtree(_server_root(server_host))
             raise RuntimeError('Client directory %r already exists', root)
         _ssh(dmz_host, ('mkdir', root), logger)
 
@@ -375,9 +395,9 @@ class Connection(object):
         self.dmz_host = dmz_host
         self.root = root
         self._logger = logger
-        self._seqno = 0        # Outgoing increments at send.
-        self._remote_seqno = 1 # Incoming assumes increment.
-        if server:
+        self._seqno = 0         # Outgoing increments at send.
+        self._remote_seqno = 1  # Incoming assumes increment.
+        if server:  # pragma no cover
             self._prefix = 'S-'
             self._remote_prefix = 'C-'
         else:
@@ -387,9 +407,9 @@ class Connection(object):
         if os.path.exists(root):
             shutil.rmtree(root)
         os.mkdir(root)
-        parent, slash, child = root.partition('/')
-        lines = _ssh(self.dmz_host, ('ls', '-1', parent), logger)
         if server:  # pragma no cover
+            parent, slash, child = root.partition('/')
+            lines = _ssh(self.dmz_host, ('ls', '-1', parent), logger)
             if not child in lines:
                 _ssh(self.dmz_host, ('mkdir', root), logger)
 
@@ -425,12 +445,13 @@ class Connection(object):
         """
         args = args or ()
         kwargs = kwargs or {}
-        self._logger.debug('request: %r %r %r', method, args, kwargs)
+        self._logger.debug('request %d: %r %r %r',
+                           self._seqno+1, method, args, kwargs)
         self.send_request((method, args, kwargs))
         result = self.recv_reply(True, timeout, poll_delay)
-        self._logger.debug('reply: %r', result)
-        if isinstance(result, TracedError):
-            raise RemoteError(result.orig_exc, result.traceback)
+        self._logger.debug('reply %d: %r', self._seqno, result)
+        if isinstance(result, RemoteError):
+            raise result
         elif isinstance(result, Exception):
             raise RemoteError(result, '')
         return result
@@ -495,7 +516,7 @@ class Connection(object):
         data: string
             Data to be sent.
         """
-        self._logger.debug('reply: %s', data)
+        self._logger.debug('reply %d: %s', self._remote_seqno, data)
         self._send('%sreply' % self._prefix, data, self._remote_seqno)
         self._remote_seqno += 1
 
