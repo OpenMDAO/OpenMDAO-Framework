@@ -26,15 +26,18 @@ class AllocatorWrapper(object):
 
     connection: :class:`Connection`
         The connection to serve.
+
+    poll_delay: int
+        Polling delay (seconds).
     """
 
     _legal_methods = set(('max_servers', 'time_estimate'))
     _local_methods = set(('deploy', 'release', 'shutdown'))
 
-    def __init__(self, allocator, connection):
+    def __init__(self, allocator, connection, poll_delay):
         self._allocator = allocator
         self._conn = connection
-        self._poll_delay = 1
+        self._poll_delay = poll_delay
         self._logger = connection.logger
         self._wrappers = {}
         self.stop = False
@@ -44,7 +47,7 @@ class AllocatorWrapper(object):
         Wait for a request, process it, and send the reply.
         If the request result is a :class:`ObjectServer`, then a
         :class:`ServerWrapper` is created for it and the reply data is
-        the associated :class:`_ServerWrapperInfo`.
+        the associated ``(connection-root, server-pid)``.
         """
         while not self.stop:
             if not self._conn.poll_request():
@@ -91,8 +94,9 @@ class AllocatorWrapper(object):
         path = '%s/%s' % (self._conn.root, server.name)
         name = '%s_wrapper' % server.name
         logger = logging.getLogger(name)
-        connection = Connection(self._conn.dmz_host, path, True, logger)
-        wrapper = ServerWrapper(server, connection)
+        connection = Connection(self._conn.dmz_host, path, True,
+                                self._poll_delay, logger)
+        wrapper = ServerWrapper(server, connection, self._poll_delay)
 
         handler = threading.Thread(name=name, target=wrapper.process_requests)
         handler.daemon = True
@@ -111,7 +115,7 @@ class AllocatorWrapper(object):
         wrapper, handler = self._wrappers.pop(root)
         self._allocator.release(wrapper.server)
         wrapper.stop = True
-        handler.join(wrapper.poll_delay*3)
+        handler.join(self._poll_delay*3)
 
     def shutdown(self):
         """ Shutdown this allocator. """
@@ -126,6 +130,9 @@ class ServerWrapper(object):
 
     connection: :class:`Connection`
         The connection to serve.
+
+    poll_delay: int
+        Polling delay (seconds).
     """
 
     _legal_methods = set(('echo', 'execute_command',
@@ -133,10 +140,10 @@ class ServerWrapper(object):
                           'chmod', 'isdir', 'listdir', 'remove'))
     _local_methods = set(('getfile', 'putfile', 'stat'))
 
-    def __init__(self, server, connection):
+    def __init__(self, server, connection, poll_delay):
         self._server = server
         self._conn = connection
-        self._poll_delay = 1
+        self._poll_delay = poll_delay
         self._logger = connection.logger
         self.stop = False
 
@@ -149,11 +156,6 @@ class ServerWrapper(object):
     def conn(self):
         """ DMZ protocol connection. """
         return self._conn
-
-    @property
-    def poll_delay(self):
-        """ Delay between polling for a new request. """
-        return self._poll_delay
 
     def process_requests(self):
         """ Wait for a request, process it, and send the reply. """

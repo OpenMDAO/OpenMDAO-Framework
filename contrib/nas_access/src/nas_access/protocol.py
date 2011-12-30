@@ -8,15 +8,15 @@ running.
 
 Each client allocator has its own directory within a server directory
 (``<host>-<pid>-<name>``). Within that each allocated server gets its own
-directory for the communication channel.
+directory for the communication channel::
 
-DMZ-root/
-    Server1-root/
-        Client1-root/
-            Sim-1/
-            Sim-2/
-        Client2-root/
-            Sim-1/
+    DMZ-root/
+        Server1-root/
+            Client1-root/
+                Sim-1/
+                Sim-2/
+            Client2-root/
+                Sim-1/
 
 Each communication direction has its own set of files within this directory
 prefixed by 'C' or 'S':
@@ -50,7 +50,7 @@ import time
 class RemoteError(Exception):
     """ Contains original exception as well as a traceback. """
 
-    def __init__(self, exc, traceback):
+    def __init__(self, exc, traceback=''):
         Exception.__init__(self, exc, traceback)
 
     @property
@@ -64,10 +64,11 @@ class RemoteError(Exception):
         return self.args[1]
 
     def __str__(self):
-        return str(self.exc)
+        return '%s(%r)' % (self.exc.__class__.__name__, str(self.exc))
 
     def __repr__(self):
-        return '%s(%s)' % (self.exc.__class__.__name__, str(self.exc))
+        return '%s(%s(%r))' % (self.__class__.__name__,
+                               self.exc.__class__.__name__, str(self.exc))
 
 
 DEBUG2 = logging.DEBUG - 2  # Show polling.
@@ -236,6 +237,8 @@ def connect(dmz_host, server_host, path, logger):
         shutil.rmtree(root)
         raise RuntimeError('Server directory %r not found' % root)
 
+    poll_delay = check_server_heartbeat(dmz_host, server_host, logger)
+
     if '/' in path:  # Connect to existing communications directory.
         root = path
     else:            # Create communications directory.
@@ -251,7 +254,7 @@ def connect(dmz_host, server_host, path, logger):
             raise RuntimeError('Client directory %r already exists', root)
         _ssh(dmz_host, ('mkdir', root), logger)
 
-    return Connection(dmz_host, root, False, logger)
+    return Connection(dmz_host, root, False, poll_delay, logger)
 
 
 def _server_root(hostname=None):
@@ -289,7 +292,7 @@ def server_init(dmz_host, logger):  # pragma no cover
 
 
 # Server-side.
-def server_accept(dmz_host, logger):  # pragma no cover
+def server_accept(dmz_host, poll_delay, logger):  # pragma no cover
     """
     Look for new client. Returns :class:`Connection` if found.
 
@@ -315,31 +318,35 @@ def server_accept(dmz_host, logger):  # pragma no cover
             logger.info('New client %r', line)
             root = '%s/%s' % (root, line)
             logger = logging.getLogger(line)
-            return Connection(dmz_host, root, True, logger)
+            return Connection(dmz_host, root, True, poll_delay, logger)
     
     return None
 
 
-# Server-side.
-def server_heartbeat(dmz_host, logger):  # pragma no cover
+def server_heartbeat(dmz_host, poll_delay, logger):
     """
     Update top-level server heartbeat file.
 
     dmz_host: string
         Intermediary file server.
+
+    poll_delay: int
+        Reported polling rate (seconds).
     """
     logger.log(DEBUG2, 'heartbeat')
     root = _server_root()
     heartbeat = os.path.join(root, 'heartbeat')
+    tstamp = datetime.datetime.utcnow()
     with open(heartbeat, 'w') as out:
-        out.write(datetime.datetime.utcnow().isoformat(' '))
+        out.write('%s\n%s\n' % (tstamp, poll_delay))
     _scp_send(dmz_host, root, os.path.basename(heartbeat), logger)
     os.remove(heartbeat)
 
 
 def check_server_heartbeat(dmz_host, server_host, logger):
     """
-    Check top-level server heartbeat file is 'current'.
+    Check that the server heartbeat file is 'current'.
+    Returns server polling rate.
 
     dmz_host: string
         Intermediary file server.
@@ -350,10 +357,30 @@ def check_server_heartbeat(dmz_host, server_host, logger):
     logger.log(DEBUG2, 'check_server_heartbeat')
     root = _server_root(server_host)
     heartbeat = os.path.join(root, 'heartbeat')
-    _scp_recv(dmz_host, root, heartbeat, logger)
-    with open(heartbeat, 'r') as inp:
-        timestamp = inp.read()
+    _scp_recv(dmz_host, root, os.path.basename(heartbeat), logger)
+    with open(heartbeat, 'rU') as inp:
+        tstamp = inp.readline().strip()
+        poll_delay = inp.readline().strip()
     os.remove(heartbeat)
+
+    tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%d %H:%M:%S.%f')
+    now = datetime.datetime.utcnow()
+    poll_delay = int(poll_delay)
+    delta = now - tstamp
+    if delta > datetime.timedelta(0, 3*poll_delay):
+        if delta.days:  # pragma no cover
+            plural = 's' if delta.days > 1 else ''
+            msg = '%d day%s' % (delta.days, plural)
+        else:
+            seconds = delta.seconds
+            hours = int(seconds / 3600)
+            seconds -= hours * 3600
+            minutes = int(seconds / 60)
+            seconds -= minutes * 60
+            msg = '%d:%02d:%02d' % (hours, minutes, seconds)
+        raise RuntimeError("Server heartbeat hasn't been updated in %s" % msg)
+
+    return int(poll_delay)
 
 
 # Server-side.
@@ -387,13 +414,17 @@ class Connection(object):
     server: bool
         Set True if this is the server end of the connection.
 
+    poll_delay: int
+        Seconds to wait between polls when no timeout is specified.
+
     logger: :class:`Logger`
         Displays progress messages.
     """
 
-    def __init__(self, dmz_host, root, server, logger):
+    def __init__(self, dmz_host, root, server, poll_delay, logger):
         self.dmz_host = dmz_host
         self.root = root
+        self._poll_delay = poll_delay
         self._logger = logger
         self._seqno = 0         # Outgoing increments at send.
         self._remote_seqno = 1  # Incoming assumes increment.
@@ -424,7 +455,7 @@ class Connection(object):
         _ssh(self.dmz_host, ('rm', '-rf', self.root), self._logger)
         shutil.rmtree(self.root)
 
-    def invoke(self, method, args=None, kwargs=None, timeout=0, poll_delay=0):
+    def invoke(self, method, args=None, kwargs=None, timeout=0):
         """
         Invoke `method` with `args` and `kwargs` and return the result.
 
@@ -439,18 +470,16 @@ class Connection(object):
 
         timeout: int
             Seconds before giving up on reply. Zero implies no timeout.
-
-        poll_delay: int
-            Seconds between polls. Zero implies an internal default.
         """
         args = args or ()
         kwargs = kwargs or {}
         self._logger.debug('request %d: %r %r %r',
                            self._seqno+1, method, args, kwargs)
         self.send_request((method, args, kwargs))
-        result = self.recv_reply(True, timeout, poll_delay)
+        result = self.recv_reply(True, timeout)
         self._logger.debug('reply %d: %r', self._seqno, result)
         if isinstance(result, RemoteError):
+            self._logger.debug(result.traceback)
             raise result
         elif isinstance(result, Exception):
             raise RemoteError(result, '')
@@ -470,7 +499,7 @@ class Connection(object):
         """ Return True if reply is ready. """
         return self._poll('%sreply' % self._remote_prefix, self._seqno)
 
-    def recv_reply(self, wait=True, timeout=0, poll_delay=0):
+    def recv_reply(self, wait=True, timeout=0):
         """
         Return reply.
 
@@ -479,12 +508,9 @@ class Connection(object):
 
         timeout: int
             Seconds before giving up on reply. Zero implies no timeout.
-
-        poll_delay: int
-            Seconds between polls. Zero implies an internal default.
         """
         return self._recv('%sreply' % self._remote_prefix, self._seqno,
-                          wait, timeout, poll_delay)
+                          wait, timeout)
 
     # Server-side.
     def poll_request(self):  # pragma no cover
@@ -492,7 +518,7 @@ class Connection(object):
         return self._poll('%srequest' % self._remote_prefix, self._remote_seqno)
 
     # Server-side.
-    def recv_request(self, wait=True, timeout=0, poll_delay=0):  # pragma no cover
+    def recv_request(self, wait=True, timeout=0):  # pragma no cover
         """
         Return request.
 
@@ -501,12 +527,9 @@ class Connection(object):
 
         timeout: int
             Seconds before giving up on reply. Zero implies no timeout.
-
-        poll_delay: int
-            Seconds between polls. Zero implies an internal default.
         """
         return self._recv('%srequest' % self._remote_prefix, self._remote_seqno,
-                          wait, timeout, poll_delay)
+                          wait, timeout)
 
     # Server-side.
     def send_reply(self, data):  # pragma no cover
@@ -519,25 +542,6 @@ class Connection(object):
         self._logger.debug('reply %d: %s', self._remote_seqno, data)
         self._send('%sreply' % self._prefix, data, self._remote_seqno)
         self._remote_seqno += 1
-
-    def _heartbeat(self):
-        """ Update heartbeat file. """
-        self._logger.log(DEBUG2, 'heartbeat')
-        heartbeat = os.path.join(self.root, '%sheartbeat' % self._prefix)
-        with open(heartbeat, 'w') as out:
-            out.write(datetime.datetime.utcnow().isoformat(' '))
-        self.send_file(os.path.basename(heartbeat))
-        os.remove(heartbeat)
-
-    def _check_heartbeat(self):
-        """" Check that other end's heartbeat file is 'current'. """
-        self._logger.log(DEBUG2, 'check_heartbeat')
-        heartbeat = '%sheartbeat' % self._remote_prefix
-        self.recv_file(heartbeat)
-        heartbeat = os.path.join(self.root, heartbeat)
-        with open(heartbeat, 'r') as inp:
-            timestamp = inp.read()
-        os.remove(heartbeat)
 
     def _send(self, prefix, data, seqno):
         """
@@ -572,7 +576,7 @@ class Connection(object):
         self._logger.log(DEBUG2, 'poll %s %s', ready, lines)
         return ready in lines
 
-    def _wait(self, prefix, seqno, timeout=0, poll_delay=0):
+    def _wait(self, prefix, seqno, timeout=0):
         """
         Return when `prefix` message `seqno` is ready.
 
@@ -584,17 +588,12 @@ class Connection(object):
 
         timeout: int
             Seconds before giving up on reply. Zero implies no timeout.
-
-        poll_delay: int
-            Seconds between polls. Zero implies an internal default.
         """
-        if poll_delay <= 0:
-            if timeout <= 0:
-                delay = 1
-            else:
-                delay = timeout / 10.
+        if timeout <= 0:
+            delay = self._poll_delay
         else:
-            delay = poll_delay
+            delay = max(timeout / 10., 1.)
+            delay = min(delay, self._poll_delay)
 
         start = time.time()
         while not self._poll(prefix, seqno):
@@ -604,7 +603,7 @@ class Connection(object):
                     raise RuntimeError('timeout')
             time.sleep(delay)
 
-    def _recv(self, prefix, seqno, wait=True, timeout=0, poll_delay=0):
+    def _recv(self, prefix, seqno, wait=True, timeout=0):
         """
         Return data contained in `prefix` message `seqno`.
 
@@ -619,19 +618,16 @@ class Connection(object):
 
         timeout: int
             Seconds before giving up on reply. Zero implies no timeout.
-
-        poll_delay: int
-            Seconds between polls. Zero implies an internal default.
         """
         if wait:
-            self._wait(prefix, seqno, timeout, poll_delay)
+            self._wait(prefix, seqno, timeout)
         name = '%s.%s' % (prefix, seqno)
         fullname = os.path.join(self.root, name)
         self.recv_file(name)
         with open(fullname, 'rb') as inp:
             data = cPickle.loads(inp.read())
-        os.remove(fullname)
         self.remove_file(name)
+        os.remove(fullname)
         ready = '%s-ready.%s' % (prefix, seqno)
         self.remove_file(ready)
         return data

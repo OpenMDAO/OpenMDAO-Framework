@@ -338,7 +338,7 @@ class NAS_Server(object):
             Path to file to interrogate.
         """
         info = self._conn.invoke('stat', (path,))
-        if sys.platform == 'win32':  #pragma no cover
+        if sys.platform == 'win32':  # pragma no cover
             import nt
             return nt.stat_result(info)
         else:

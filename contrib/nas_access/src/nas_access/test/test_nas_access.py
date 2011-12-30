@@ -58,10 +58,10 @@ class TestCase(unittest.TestCase):
         logging.debug('remove')
         RAM.remove_allocator(self.allocator.name)
 
-        logging.debug('shutdown')
-        self.allocator.shutdown()
-
-        self.proc.terminate()
+        if self.proc is not None:
+            logging.debug('shutdown')
+            self.allocator.shutdown()
+            self.proc.terminate()
 
         # Restore 'ssh' and 'scp' configuration.
         protocol.configure_ssh(self.orig_ssh)
@@ -183,23 +183,48 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(error_msg, ': Key has expired')
 
             logging.debug('open bad file')
+            msg = "Can't open '../../illegal-access', not within root"
+            msg = 'RuntimeError("%s' % msg
             assert_raises(self, "server.open('../../illegal-access', 'r')",
-                          globals(), locals(), protocol.RemoteError,
-                          "Can't open '../../illegal-access', not within root")
+                          globals(), locals(), protocol.RemoteError, msg)
 
             logging.debug('open missing file')
+            msg = "[Errno 2] No such file or directory: 'no-such-file'"
+            msg = 'IOError("%s' % msg
             assert_raises(self, "server.open('no-such-file', 'r')",
-                          globals(), locals(), protocol.RemoteError,
-                          "[Errno 2] No such file or directory: 'no-such-file'")
+                          globals(), locals(), protocol.RemoteError, msg)
         finally:
             logging.debug('release')
             RAM.release(server)
 
-        logging.debug('no server')
-        # Because we're faking remote access, the DMZ host is irrelevant.
-        code = "NAS_Allocator(dmz_host='dmz', server_host='no-such-server')"
+        # Test for exited or never started server.
+        logging.debug('dead server')
+        self.proc.terminate()
+        self.proc = None
+        time.sleep(2)
+        hostname = socket.gethostname()
+        code = 'NAS_Allocator(dmz_host=hostname, server_host=hostname)'
         assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Server directory 'RJE-no-such-server' not found")
+                      "Server directory 'RJE-%s' not found" % hostname)
+
+        # Test for missing heartbeat.
+        logging.debug('no heartbeat')
+        os.mkdir(os.path.join(_DMZ_ROOT, 'RJE-%s' % hostname))
+        try:
+            NAS_Allocator(dmz_host=hostname, server_host=hostname)
+        except RuntimeError as exc:
+            msg = "IOError: [Errno 2] No such file or directory:" \
+                  " 'RJE-%s/heartbeat'\n" % hostname
+            self.assertTrue(str(exc).endswith(msg))
+        else:
+            self.fail('Expected RuntimeError')
+
+        # Test for stale heartbeat.
+        logging.debug('stale heartbeat')
+        protocol.server_heartbeat(hostname, 1, logging.getLogger())
+        time.sleep(5)
+        assert_raises(self, code, globals(), locals(), RuntimeError,
+                      "Server heartbeat hasn't been updated in 0:00:05")
 
 
 def start_server(hostname):

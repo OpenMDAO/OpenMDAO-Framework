@@ -33,7 +33,7 @@ def main(): # pragma no cover
         DMZ file server to use. Default ``dmzfs1.nas.nasa.gov``.
 
     --poll-delay: int
-        Seconds between checks for new client connections. Default 60.
+        Seconds between checks for new client activity. Default 60.
 
     --resources: string
         Filename for resource configuration. If not specified then the
@@ -47,7 +47,7 @@ def main(): # pragma no cover
                       default='dmzfs1.nas.nasa.gov',
                       help='DMZ file server to use')
     parser.add_option('--poll-delay', action='store', type='int', default=60,
-                      help='Seconds between checks for new client connections')
+                      help='Seconds between checks for new client activity')
     parser.add_option('--resources', action='store', type='str', default=None,
                       help='Filename for resource configuration')
     parser.add_option('--ssh', action='store', type='str', default=None,
@@ -97,16 +97,16 @@ def main(): # pragma no cover
     signal.signal(signal.SIGTERM, _sigterm_handler)
     try:
         while True:
-            connection = server_accept(dmz_host, logger)
+            connection = server_accept(dmz_host, poll_delay, logger)
             if connection is not None:
-                wrapper = AllocatorWrapper(allocator, connection)
+                wrapper = AllocatorWrapper(allocator, connection, poll_delay)
                 name = '%s_handler' % os.path.basename(connection.root)
                 handler = threading.Thread(name=name,
                                            target=wrapper.process_requests)
                 handler.daemon = True
                 handler.start()
             else:
-                server_heartbeat(dmz_host, logger)
+                server_heartbeat(dmz_host, poll_delay, logger)
                 time.sleep(poll_delay)
     except KeyboardInterrupt:
         pass
