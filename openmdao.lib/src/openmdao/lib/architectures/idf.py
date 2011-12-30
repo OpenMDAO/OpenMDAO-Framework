@@ -2,9 +2,11 @@ from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import CONMINdriver
 
 class IDF(Architecture):
+    """ Architecture that uses a single top level optimizer, 
+    enforcing consitency with equality constraints"""
     
     def __init__(self, *args, **kwargs):
-        super(MDF, self).__init__(*args, **kwargs)
+        super(IDF, self).__init__(*args, **kwargs)
         
         # the following variables determine the behavior of check_config
         self.param_types = ['continuous']
@@ -13,17 +15,16 @@ class IDF(Architecture):
         self.has_coupling_vars = True
     
     def configure(self): 
-        """setup and MDF architecture inside this assembly.
+        """setup and IDF architecture inside this assembly.
         """
         #create the top level optimizer
         self.parent.add("driver",CONMINdriver())
-        self.parent.driver.cons_is_linear = [1]*len(self.parent.list_constraints())
         self.parent.driver.iprint = 0
         self.parent.driver.itmax = 30
-        self.parent.driver.fdch = .001
-        self.parent.driver.fdchm = .001
+        self.parent.driver.fdch = .0001
+        self.parent.driver.fdchm = .0001
         self.parent.driver.delfun = .0001
-        self.parent.driver.dabfun = .000001
+        self.parent.driver.dabfun = .0001
         self.parent.driver.ctlmin = 0.0001
         
         params = self.parent.get_parameters()
