@@ -1,7 +1,7 @@
 from openmdao.main.api import Driver, Architecture
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
+from openmdao.lib.drivers.api import CONMINdriver
 
-class MDF(Architecture):
+class IDF(Architecture):
     
     def __init__(self, *args, **kwargs):
         super(MDF, self).__init__(*args, **kwargs)
@@ -33,35 +33,24 @@ class MDF(Architecture):
 
         for k,v in self.parent.get_global_des_vars(): 
             global_dvs.append(v)
-            # and add the broadcast parameters to the driver            
-            self.parent.driver.add_parameter(v,name=k)   
+            self.parent.driver.add_parameter(v,name=k) # and add the broadcast parameters to the driver
         
         for k,v in self.parent.get_local_des_vars(): 
             local_dvs.append(v)
             #add the local design variables to the driver
             self.parent.driver.add_parameter(v,name=k)
-         
+
         #TODO: possibly add method for passing constraint directly?
         #add the constraints to the driver
         for const in self.parent.list_constraints(): 
             self.parent.driver.add_constraint(const)
             
-        #set the global objective
+        #set the objective
         objective = self.parent.get_objectives().items()[0]
         self.parent.driver.add_objective(objective[1].text, name=objective[0])
-            
-        #setup the inner loop solver
-        self.parent.add('solver', BroydenSolver())    
-        self.parent.solver.itmax = 10
-        self.parent.solver.alpha = .4
-        self.parent.solver.tol = .0000001
-        self.parent.solver.algorithm = "broyden2"
         
         #add the coupling vars parameters/constraints to the solver
         for key,couple in self.parent.get_coupling_vars().iteritems(): 
-            self.parent.solver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99,name=key)
-            self.parent.solver.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
-
-        #setup the workflows
-        self.parent.driver.workflow.add(['solver'])
-        #self.parent.solver.workflow.add(disciplines)
+            self.parent.driver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99,name=key)
+            self.parent.driver.add_constraint("%s<=%s"%(couple.indep.target,couple.dep.target))
+            self.parent.driver.add_constraint("%s>=%s"%(couple.indep.target,couple.dep.target))
