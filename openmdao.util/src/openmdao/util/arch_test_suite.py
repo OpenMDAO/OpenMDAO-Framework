@@ -2,22 +2,21 @@ import os
 
 import openmdao.lib.optproblems
 import openmdao.lib.architectures
-
 import openmdao.main
 from openmdao.main.arch import Architecture
 from openmdao.main.problem_formulation import OptProblem
 from openmdao.util.dep import PythonSourceTreeAnalyser
 
 
-def build_arch_list(include=[],exclude=[]):
+def build_arch_list(include=[], exclude=[]):
     """builds a list of architectures
     
-    includes: list of architecture names
+    include: list of architecture names
         the names of the architectures to test. Only architectures in this list 
         will be tested. Each name should just be the class name (e.g. 'MDF', 'CO'). 
         Must be set to None, if excludes is specified
     
-    includes: list of architecture names
+    exclude: list of architecture names
         the names of the architectures not to test. All architectures from
         openmdao.lib.architectures will be tested, except for the ones in this 
         list. Each name should just be the class name (e.g. 'MDF', 'CO'). 
@@ -44,16 +43,16 @@ def build_arch_list(include=[],exclude=[]):
     return archs
 
 
-def build_optproblem_list(include=[],exclude=[]):
+def build_optproblem_list(include=[], exclude=[]):
     """builds a list of optproblems
     
-    includes: (optional) list of optproblems names
+    include: (optional) list of optproblems names
         the names of the optproblems to test. Only optproblems in this list 
         will be tested. Each name should just be the class name (e.g. 'SellarProblem'). 
         Must be set to None, if excludes is specified. If not specified, 
         all OptProblems, except those in exclude are used. 
     
-    includes: (optional) list of optproblems names
+    exclude: (optional) list of optproblems names
         the names of the optproblems not to test. All optproblems from
         openmdao.lib.optproblems will be tested, except for the ones in this 
         list. Each name should just be the class name (e.g. 'SellarProblem'). 
@@ -80,10 +79,10 @@ def build_optproblem_list(include=[],exclude=[]):
 
     return probs
 
-def run_arch_test_suite(arch=[],optproblems=[]): 
+def run_arch_test_suite(arch=[], optproblems=[]): 
     """Runs the architectures against optproblems and records the results
     
-    architectures: list of Architectures 
+    arch: list of Architectures 
         the architectures to test
         
     optproblems: list of OptProblems 
@@ -109,11 +108,12 @@ def run_arch_test_suite(arch=[],optproblems=[]):
         compat_matrix.append(arch_row)
         
     return compat_matrix
+
 if __name__ == "__main__": 
     archs = build_arch_list()
     probs = build_optproblem_list()
     
-    data = run_arch_test_suite(archs,probs)
+    data = run_arch_test_suite(archs, probs)
     
     print data
     

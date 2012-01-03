@@ -66,11 +66,14 @@ def main():
                 try:
                     server_proc, server_cfg = \
                         start_server(authkey=authkey, port=ip_port)
-                    address, port, tunnel, key = read_server_config(server_cfg)
+                    cfg = read_server_config(server_cfg)
                 finally:
                     os.chdir('..')
 
                 # Connect to factory.
+                address = cfg['address']
+                port = cfg['port']
+                key = cfg['key']
                 print
                 print '%s, %s %d, hops: %d' % (authkey, address, port, hops)
                 factory = connect(address, port, authkey=authkey, pubkey=key)

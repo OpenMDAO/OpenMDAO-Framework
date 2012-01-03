@@ -13,7 +13,7 @@ from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 from openmdao.main.driver import Driver
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
@@ -168,6 +168,9 @@ class Assembly (Component):
         except ValueError:
             return (None, self, path)
         
+        t = self.get_trait(compname)
+        if t and t.iotype:
+            return (None, self, path)
         return (compname, getattr(self, compname), varname)
 
     @rbac(('owner', 'user'))

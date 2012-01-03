@@ -234,6 +234,8 @@ def build_directory(dct, force=False, topdir='.'):
     used to create a file and the value stored at that key is written to the
     file. All keys must be relative names or a RuntimeError will be raised.
     """
+    #TODO: if a value stored in the dict is a callable, then call it and store
+    #      its return value as the contents of the file
     startdir = os.getcwd()
     topdir = os.path.abspath(topdir)
     try:

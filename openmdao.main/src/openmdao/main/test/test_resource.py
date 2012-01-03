@@ -6,6 +6,7 @@ import getpass
 import glob
 import logging
 import multiprocessing
+import nose
 import os.path
 import platform
 import shutil
@@ -36,14 +37,8 @@ class TestCase(unittest.TestCase):
             self.skip_ssh = False
 
         self.machines = []
-        if self.node.startswith('gxterm'):
-            # User environment assumed OK on this GRC cluster front-end.
-            for i in range(1, 55):
-                self.machines.append({'hostname':'gx%02d' % i,
-                                      'python':self.python})
-        else:
-            self.machines.append({'hostname':self.node,
-                                  'python':self.python})
+        self.machines.append({'hostname':self.node,
+                              'python':self.python})
 
         # Ensure we aren't held up by local host load problems.
         for allocator in ResourceAllocationManager.list_allocators():
@@ -59,7 +54,7 @@ class TestCase(unittest.TestCase):
 #        if self.cluster is not None:
 #            self.cluster.shutdown()
 
-        if self.skip_ssh or self.node.startswith('gxterm'):
+        if self.skip_ssh:
             return
 
         # This cleanup *should* be OK, but it's not bulletproof.
@@ -79,22 +74,14 @@ class TestCase(unittest.TestCase):
             return
 
         self.cluster = ClusterAllocator(self.name, self.machines)
-        if self.node.startswith('gxterm'):
-            # GX isn't particularly reliable for some reason.
-            self.assertTrue(len(self.cluster) >= len(self.machines)*3/4)
-        else:
-            self.assertEqual(len(self.cluster), len(self.machines))
+        self.assertEqual(len(self.cluster), len(self.machines))
 
         n_servers = self.cluster.max_servers({'python_version':sys.version[:3]})
         try:
             n_cpus = multiprocessing.cpu_count()
         except (AttributeError, NotImplementedError):  # pragma no cover
             n_cpus = 1
-        if self.node.startswith('gxterm'):
-            # GX front-end n_cpus doesn't imply node n_cpus.
-            self.assertTrue(n_servers >= len(self.cluster))
-        else:
-            self.assertEqual(n_servers, len(self.cluster)*n_cpus)
+        self.assertEqual(n_servers, len(self.cluster)*n_cpus)
 
         n_servers = self.cluster.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
@@ -155,11 +142,7 @@ class TestCase(unittest.TestCase):
 
         self.machines.append({'hostname':'xyzzy', 'python':self.python})
         self.cluster = ClusterAllocator(self.name, self.machines)
-        if self.node.startswith('gxterm'):
-            # GX isn't particularly reliable for some reason.
-            self.assertTrue(len(self.cluster) >= len(self.machines)*3/4)
-        else:
-            self.assertEqual(len(self.cluster), len(self.machines)-1)
+        self.assertEqual(len(self.cluster), len(self.machines)-1)
 
     def test_bad_python(self):
         logging.debug('')
@@ -175,7 +158,8 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    import nose
+    # Avoid any user-defined resources from causing issues.
+    ResourceAllocationManager.configure('')
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()

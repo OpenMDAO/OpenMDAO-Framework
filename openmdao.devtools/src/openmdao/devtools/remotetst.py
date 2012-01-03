@@ -3,22 +3,24 @@ import os
 import subprocess
 import atexit
 import fnmatch
-from fabric.api import run, env, local, put, cd, get, settings, prompt, \
-                       hide, show
+import tempfile
+
+import paramiko.util
+from argparse import ArgumentParser
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
                                     ssh_test, put_dir, cleanup
-from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
-                                         run_host_processes, get_tmp_user_dir
+from openmdao.devtools.remote_cfg import add_config_options, process_options, \
+                                         run_host_processes, get_tmp_user_dir, \
+                                         print_host_codes
 
 from openmdao.devtools.ec2 import run_on_ec2
 
-import paramiko.util
 
 def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
-                          branch=None, testargs=(), hostname='', 
+                          branch=None, testargs='', hostname='', 
                           **kwargs):
     if fname is None:
         raise RuntimeError("_remote_build_and_test: missing arg 'fname'")
@@ -53,9 +55,8 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     if branch:
         remoteargs.append('--branch=%s' % branch)
         
-    if len(testargs) > 0:
-        remoteargs.append('--')
-        remoteargs.extend(testargs)
+    if testargs:
+        remoteargs.append('--testargs="%s"' % testargs)
         
     try:
         result = push_and_run(pushfiles, runner=pyversion,
@@ -67,28 +68,12 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
             print "removing remote directory: %s" % remotedir
             rm_remote_tree(remotedir)
 
-def test_branch(argv=None):
+def test_branch(options, args=None):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
     
-    if argv is None:
-        argv = sys.argv[1:]
-        
-    parser = CfgOptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
-    parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="Don't delete the temporary build directory. "
-                           "If testing on EC2 stop the instance instead of terminating it.")
-    parser.add_option("-f","--file", action="store", type='string', 
-                      dest='fname',
-                      help="Pathname of a tarfile or URL of a git repo. "
-                           "Defaults to the current repo.")
-    parser.add_option("-b","--branch", action="store", type='string', 
-                      dest='branch',
-                      help="If file is a git repo, supply branch name here")
-
-    (options, args) = parser.parse_args(argv)
-    
-    config, conn, ec2_hosts = process_options(options, parser)
+    options.filters = ['test_branch==true']
+    config, conn, ec2_hosts = process_options(options)
     
     if not options.hosts:
         parser.print_help()
@@ -126,7 +111,7 @@ def test_branch(argv=None):
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
-                     'testargs': args,
+                     'testargs': options.testargs,
                      'fname': fname,
                      'remotedir': get_tmp_user_dir(),
                      'branch': options.branch,
@@ -134,7 +119,8 @@ def test_branch(argv=None):
     try:
         retcode = run_host_processes(config, conn, ec2_hosts, options, 
                                      funct=_remote_build_and_test, 
-                                     funct_kwargs=funct_kwargs)
+                                     funct_kwargs=funct_kwargs,
+                                     done_functs=[print_host_codes])
     finally:
         if cleanup_tar:
             cleanup(ziptarname)
@@ -154,29 +140,17 @@ def _is_release_dir(dname):
         return False
     return 'downloads' in dirstuff
 
-def test_release(argv=None):
+def test_release(parser, options):
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
-    cleanup_files = ['paramiko.log']
-    
-    if argv is None:
-        argv = sys.argv[1:]
-        
-    parser = CfgOptionParser(usage="%prog [OPTIONS] -- [options to openmdao_test]")
-    parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="Don't delete the temporary build directory. "
-                           "If testing on EC2 stop the instance instead of terminating it.")
-    parser.add_option("-f","--file", action="store", type='string', dest='fname',
-                      help="URL or pathname of a go-openmdao.py file or pathname of a release dir")
-
-    (options, args) = parser.parse_args(argv)
+    cleanup_files = [os.path.join(os.getcwd(), 'paramiko.log')]
     
     if options.fname is None:
-        parser.print_help()
         print '\nyou must supply a release directory or the pathname or URL of a go-openmdao.py file'
         sys.exit(-1)
         
-    config, conn, ec2_hosts = process_options(options, parser)
+    options.filters = ['test_release==true']
+    config, conn, ec2_hosts = process_options(options)
     
     startdir = os.getcwd()
     
@@ -197,8 +171,8 @@ def test_release(argv=None):
         pass
     elif os.path.isdir(fname):
         #create a structured release directory
-        release_dir = "%s__release" % fname
-        subprocess.check_call(['push_release', fname, release_dir])
+        release_dir = fname.replace('rel_', 'release_')
+        subprocess.check_call(['release', 'push', fname, release_dir])
         fname = options.fname = release_dir
         cleanup_files.append(release_dir)
     else:
@@ -207,15 +181,32 @@ def test_release(argv=None):
         sys.exit(-1)
         
     funct_kwargs = { 'keep': options.keep,
-                     'testargs': args,
+                     'testargs': options.testargs,
                      'fname': fname,
                    }
     retval = 0
     if len(options.hosts) > 0:
         retval = run_host_processes(config, conn, ec2_hosts, options, 
                                     funct=_remote_build_and_test, 
-                                    funct_kwargs=funct_kwargs)
-    if not options.keep:
+                                    funct_kwargs=funct_kwargs,
+                                    done_functs=[print_host_codes])
+    else: # just run test locally
+        print 'testing locally...'
+        loctst = os.path.join(os.path.dirname(__file__), 'loc_bld_tst.py')
+        tdir = tempfile.mkdtemp()
+        cleanup_files.append(tdir)
+        if os.path.isdir(fname):
+            if not _is_release_dir(fname):
+                fname = release_dir
+            fname = os.path.join(fname, 'downloads', 'latest', 'go-openmdao.py')
+        cmd = [sys.executable, loctst, '-f', fname, '-d', tdir]
+        if options.testargs:
+            cmd.append('--testargs="%s"' % options.testargs)
+        subprocess.check_call(cmd, stdout=sys.stdout, stderr=sys.stderr)
+    
+    if options.keep:
+        print "the following files/directories were not cleaned up: %s" % cleanup_files
+    else:
         cleanup(*cleanup_files)
 
         

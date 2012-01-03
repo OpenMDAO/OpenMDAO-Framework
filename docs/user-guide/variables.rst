@@ -18,7 +18,7 @@ output would look like this:
 .. testcode:: creating_public_variables_1
 
     from openmdao.main.api import Component
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.datatypes.api import Float
     
     
     class Simple(Component):
@@ -41,7 +41,7 @@ the variables *x* and *y*.
 .. testcode:: creating_public_variables_2
 
     from openmdao.main.api import Component
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.datatypes.api import Float
     
     class Simple(Component):
         """ A simple multiplication """
@@ -56,9 +56,9 @@ an instance of ``Simple`` has been created:
 
     >>> equation = Simple()
     >>> equation.add('x',Float(1.0, iotype='in', desc='The input x'))
-    <openmdao.lib.datatypes.float.Float object at ...>
+    <openmdao.main.datatypes.float.Float object at ...>
     >>> equation.add('y',Float(iotype='out', desc='The output y'))
-    <openmdao.lib.datatypes.float.Float object at ...>
+    <openmdao.main.datatypes.float.Float object at ...>
     >>> equation.x=7
     >>> equation.run()
     >>> equation.y
@@ -75,7 +75,7 @@ point after the component has been created.
     ...
     AttributeError: 'Paraboloid' object has no attribute 'z
     >>> test.add('z',Int(7777, iotype='out', desc='An Int'))
-    <openmdao.lib.datatypes.int.Int object at ...>
+    <openmdao.main.datatypes.int.Int object at ...>
     >>> test.z
     7777
 

@@ -58,7 +58,7 @@ class _objdiff(object):
         self.o2names = o2names
         self.diffdict = diffdict
 
-def print_fuct_call(funct, *args, **kwargs):
+def print_funct_call(funct, *args, **kwargs):
     def quote_if_str(obj):
         if isinstance(obj, basestring):
             return "'%s'" % obj
