@@ -638,16 +638,18 @@ class ConsoleServer(cmd.Cmd):
     def get_workingtypes(self):
         ''' Return this server's user defined types. 
         '''
-        try:
-            g = self.proj.__dict__.items()
-            for k,v in g:
-                if not k in self.known_types and \
-                   ((type(v).__name__ == 'classobj') or str(v).startswith('<class')):
+        g = self.proj.__dict__.items()
+        for k,v in g:
+            if not k in self.known_types and \
+               ((type(v).__name__ == 'classobj') or str(v).startswith('<class')):
+                try:
                     obj = self.proj.__dict__[k]()
                     if is_instance(obj, HasTraits):
                         self.known_types.append( ( k , 'n/a') )
-        except Exception, err:
-            self.error(err,sys.exc_info())
+                except Exception, err:
+                    # print 'Class',k,'not included in working types'
+                    # self.error(err,sys.exc_info())
+                    pass
         return packagedict(self.known_types)
 
     def load_project(self,filename):
