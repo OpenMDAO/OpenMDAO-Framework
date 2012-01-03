@@ -83,7 +83,10 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
             print "removing remote directory: %s" % remotedir
             rm_remote_tree(remotedir)
 
-def test_branch(options, args=None):
+def test_branch(parser, options, args=None):
+    if args:
+        print_sub_help(parser, 'test_branch')
+        return -1
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
     
