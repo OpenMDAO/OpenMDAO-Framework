@@ -180,6 +180,7 @@ def _get_mingw_dlls():
         zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
         zipped = zipfile.ZipFile(zippath, 'r')
         zipped.extractall(dest)
+        zipped.close()
         os.remove(zippath)
     
 def _single_install(cmds, req, bin_dir, failures, dodeps=False):

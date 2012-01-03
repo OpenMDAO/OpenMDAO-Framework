@@ -61,7 +61,7 @@ def _get_openmdao_parser():
     # the following subcommands will only be available in a dev build, because
     # openmdao.devtools is not part of a normal OpenMDAO release
     try:
-        from openmdao.devtools.build_docs import build_docs, test_docs
+        # these commands will only be available on windows machines if pywin32 is available
         from openmdao.devtools.push_docs import push_docs
         from openmdao.devtools.remotetst import test_branch
         from openmdao.devtools.remote_cfg import add_config_options
@@ -83,17 +83,6 @@ def _get_openmdao_parser():
                             help="args to be passed to openmdao test")
         parser = add_config_options(parser)
         parser.set_defaults(func=test_branch)
-
-        parser = subparsers.add_parser('build_docs', 
-                                       description="build OpenMDAO docs")
-        parser.add_argument("-v", "--version", action="store", type=str, 
-                            dest="version",
-                            help="the OpenMDAO version")
-        parser.set_defaults(func=build_docs)
-        
-        parser = subparsers.add_parser('test_docs', 
-                                       description="test the OpenMDAO docs")
-        parser.set_defaults(func=test_docs)
         
         parser = subparsers.add_parser('push_docs', 
                                        description="push OpenMDAO dev docs to a server")
@@ -105,6 +94,23 @@ def _get_openmdao_parser():
                             dest="nodocbuild",
                             help="used for testing. The docs will not be rebuilt if they already exist")
         parser.set_defaults(func=push_docs)
+
+    except ImportError:
+        pass
+
+    try:
+        from openmdao.devtools.build_docs import build_docs, test_docs
+        parser = subparsers.add_parser('build_docs', 
+                                       description="build OpenMDAO docs")
+        parser.add_argument("-v", "--version", action="store", type=str, 
+                            dest="version",
+                            help="the OpenMDAO version")
+        parser.set_defaults(func=build_docs)
+        
+        parser = subparsers.add_parser('test_docs', 
+                                       description="test the OpenMDAO docs")
+        parser.set_defaults(func=test_docs)
+        
     except ImportError:
         pass
     
@@ -113,8 +119,13 @@ def _get_openmdao_parser():
 
 def openmdao():
     parser = _get_openmdao_parser()
-    options = parser.parse_args()
-    options.func(options, [])
+    if len(sys.argv) > 1 and sys.argv[1] == 'test':
+        options, args = parser.parse_known_args()
+    else:
+        options = parser.parse_args()
+        args = []
+
+    sys.exit(options.func(options, args))
     
 if __name__ == '__main__':
     openmdao()
