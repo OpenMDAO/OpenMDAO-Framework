@@ -216,10 +216,10 @@ class ConsoleServer(cmd.Cmd):
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
-        top = self.proj.__dict__['top']
-        if top:
+        if 'top' in self.proj.__dict__:
             print "Executing..."
             try:
+                top = self.proj.__dict__['top']
                 top.run(*args, **kwargs)
                 print "Execution complete."
             except Exception, err:
@@ -230,13 +230,21 @@ class ConsoleServer(cmd.Cmd):
     def execfile(self, filename):
         ''' execfile in server's globals. 
         '''
-        # set name so any "if __name__ == __main__" code will be executed
-        self.proj.__dict__['__name__'] = '__main__'
-        print "Executing",filename,"..."
         try:
+            # first import all definitions
+            basename = os.path.splitext(filename)[0]
+            cmd = 'from '+basename+' import *'
+            self.default(cmd)
+            # then execute anything after "if __name__ == __main__:"
             with open(filename) as file:
-                exec(compile(file.read(), filename, 'exec'), self.proj.__dict__)
-            print "Execution complete."
+                contents = file.read()
+            main_str = 'if __name__ == "__main__":'
+            contents.replace("if __name__ == '__main__':'",main_str)
+            idx = contents.find(main_str)
+            if idx >= 0:
+                idx = idx + len(main_str)
+                contents = 'if True:\n' + contents[idx:]
+                self.default(contents)
         except Exception, err:
             self.error(err,sys.exc_info())
 

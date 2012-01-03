@@ -10,9 +10,11 @@ import cPickle as pickle
 
 from pkg_resources import get_distribution, DistributionNotFound
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Container, Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.util.fileutil import get_module_path, expand_path
+
+from openmdao.main.mp_support import is_instance
 
 # extension for project files
 PROJ_FILE_EXT = '.proj'
@@ -133,8 +135,10 @@ class Project(object):
             	except Exception, e:
                     print 'Unable to restore project state:',e
                     self.top = Assembly()
+                    set_as_top(self.top)
             else:
                 self.top = Assembly()
+                set_as_top(self.top)
 
             
             self.path = expand_path(projpath) # set again in case loading project state changed it
@@ -142,8 +146,8 @@ class Project(object):
             os.makedirs(projpath)
             os.mkdir(modeldir)
             self.top = Assembly()
-
-        set_as_top(self.top)
+            set_as_top(self.top)
+            
         self.save()
 
         SimulationRoot.chroot(self.path)
@@ -170,13 +174,13 @@ class Project(object):
             underscores (e.g. __builtins__) are excluded
         """
         fname = os.path.join(self.path, '_project_state')
-        # copy stuff we want to save to a new dict
-        state = {}
+        # copy all openmdao containers to a new dict for saving
+        save_state = {}
         for k in self.__dict__:
-            if not k.startswith('__'):
-                state[k] = self.__dict__[k]
+            if is_instance(self.__dict__[k],Container):
+                save_state[k] = self.__dict__[k]
         with open(fname, 'w') as f:
-            pickle.dump(state, f)
+            pickle.dump(save_state, f)
         
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export. 
@@ -212,4 +216,3 @@ class Project(object):
                 tf.close()
         finally:
             os.chdir(startdir)
-            
