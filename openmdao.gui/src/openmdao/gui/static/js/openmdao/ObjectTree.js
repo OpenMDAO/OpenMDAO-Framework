@@ -215,7 +215,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         menu.remove = {
             "label"  : 'Remove',
             "action" :  function(node) { 
-                            var parent = openmdao.Util.getParentPath(path);
+                            var parent = openmdao.Util.getPath(path);
                             if (parent.length > 0 ) {
                                 parent = 'top.'+parent;
                             }

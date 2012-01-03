@@ -38,11 +38,9 @@ class DOEdriver(CaseIterDriverBase):
             temp= p.evaluate()
             P.append(temp)
             M.append((temp-p.low)/(p.high-p.low))
-
         for row in list(self.DOEgenerator)+[tuple(M)]:
             vals=[]
             for p,val,curval in zip(params,row,P):
-                
                 newval=(p.low+(p.high-p.low)*val-curval)*self.alpha+curval
 
                 if newval<p.low:
@@ -50,8 +48,8 @@ class DOEdriver(CaseIterDriverBase):
                 elif newval>p.high:
                     newval=p.high
                 vals.append(newval)
-            
-            case = self.set_parameters(vals,Case())
+            case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
+
             # now add events
             for varname in self.get_events(): 
                 case.add_input(varname,True)

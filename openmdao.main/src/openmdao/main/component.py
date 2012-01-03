@@ -25,7 +25,7 @@ from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -158,6 +158,7 @@ class Component (Container):
         self._dir_context = None
         
         self.ffd_order = 0
+        self._case_id = ''
 
 
     @property

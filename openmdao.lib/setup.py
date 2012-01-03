@@ -35,19 +35,22 @@ Component, Driver, and Variable plugins for OpenMDAO
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
       package_dir={'': 'src'},
-      package_data={'openmdao.lib': ['components/test/*.inp']},
+      package_data={'openmdao.lib': ['components/test/*.inp',
+                                     'datatypes/domain/test/grid.in',
+                                     'datatypes/domain/test/q.save',
+                                     'datatypes/domain/test/lpc-test.*']},
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
           'setuptools',
           'openmdao.main',
-          'conmin==1.0.1',
-          'newsumt==1.1.0',
           'Pyevolve==0.6',
           'ordereddict',
+          'conmin==1.0.1', 
+          'newsumt==1.1.0',
+          'numpy',
           'scipy',
-          #'ffnet>=0.7'
           ],
       entry_points="""
       [openmdao.driver]
@@ -77,10 +80,6 @@ Component, Driver, and Variable plugins for OpenMDAO
       
       [openmdao.variable]
       openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
-      openmdao.lib.datatypes.enum.Enum = openmdao.lib.datatypes.enum:Enum
-      openmdao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
-      openmdao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
-      openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
       
       [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate

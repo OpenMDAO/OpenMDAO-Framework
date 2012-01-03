@@ -3,16 +3,14 @@
 Overview
 ==========
 
-In this section, you are going to learn how to execute a simple optimization
-problem using the OpenMDAO script interface. To get the most out of this
-tutorial, you should be familiar (though you don't have to be proficient) with
-the Python language and the concepts presented in
-:ref:`Introduction-to-the-OpenMDAO-Framework`. You should understand the terms
-:term:`Component`, :term:`Assembly`, and :term:`Driver`. If you don't have
-much experience with Python, we recommend trying `Dive into Python
-<http://diveintopython.org/>`_. It is an excellent introduction to Python that
-is licensed under the GNU Free Documentation License, so you can download and
-use it as you wish.
+In this section, you are going to learn how to execute a simple optimization problem using the
+OpenMDAO script interface. To get the most out of this tutorial, you should be familiar (though you
+don't have to be proficient) with the Python language and the concepts presented in
+:ref:`Introduction-to-the-OpenMDAO-Framework`. You should understand the terms :term:`Component`,
+:term:`Assembly`, and :term:`Driver`. If you don't have much experience with Python, we recommend
+trying `Dive into Python <http://www.diveintopython.net/>`_. It is an excellent introduction to Python
+that is licensed under the GNU Free Documentation License, so you can download and use it as you
+wish.
 
 The problem we present here is a paraboloid that is a function of two input variables. Our goal is
 to find the minimum value of this function over a particular range of interest. First, we will solve

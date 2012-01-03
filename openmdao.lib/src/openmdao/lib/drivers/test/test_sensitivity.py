@@ -5,9 +5,9 @@ Test the SensitivityDriver component
 import unittest
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import SensitivityDriver
+from openmdao.lib.drivers.sensitivity import SensitivityDriver
 from openmdao.main.api import Component, Assembly
 from openmdao.util.testutil import assert_rel_error
 

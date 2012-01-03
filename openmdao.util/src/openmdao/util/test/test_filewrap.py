@@ -430,6 +430,59 @@ class TestCase(unittest.TestCase):
         gen.mark_anchor('Anchor')
         val = gen.transfer_var(1, 1)
         self.assertEqual(val, 'A')
+        
+    def test_more_delims(self):
+        
+        data = "anchor,1.0,2.0\n" + \
+               "abc=123.456\n" + \
+               "c=1,2,Word,6\n" + \
+               "d=C:/abc/def,a+b*c^2,(%#%),!true\n" + \
+               "a^33 1.#QNAN^#$%^"
+        
+        outfile = open(self.filename, 'w')
+        outfile.write(data)
+        outfile.close()
+        
+        op = FileParser()
+        op.set_file(self.filename)
+        
+        olddelims = op.delimiter
+        op.set_delimiters(' \t,=')
+        
+        op.mark_anchor('anchor')
+        
+        val = op.transfer_var(0, 1)
+        self.assertEqual(val, 'anchor')
+        val = op.transfer_var(0, 2)
+        self.assertEqual(val, 1.0)
+        val = op.transfer_var(1, 1)
+        self.assertEqual(val, 'abc')
+        val = op.transfer_var(1, 2)
+        self.assertEqual(val, 123.456)
+        val = op.transfer_var(2, 4)
+        self.assertEqual(val, 'Word')
+        val = op.transfer_var(2, 5)
+        self.assertEqual(val, 6)
+        val = op.transfer_var(3, 2)
+        self.assertEqual(val, 'C:/abc/def')
+        val = op.transfer_var(3, 3)
+        self.assertEqual(val, 'a+b*c^2')
+        val = op.transfer_var(3, 4)
+        self.assertEqual(val, '(%#%)')
+        val = op.transfer_var(3, 5)
+        self.assertEqual(val, '!true')
+        
+        op.set_delimiters(' \t^')
+        val = op.transfer_var(4, 1)
+        self.assertEqual(val, 'a')
+        val = op.transfer_var(4, 2)
+        self.assertEqual(val, 33)
+        val = op.transfer_var(4, 3)
+        self.assertEqual(isnan(val), True)
+        val = op.transfer_var(4, 4)
+        self.assertEqual(val, '#$%')
+        
+
             
 if __name__ == '__main__':
     import nose

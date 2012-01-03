@@ -2,46 +2,12 @@ import unittest
 import math
 import ast
 
-import numpy
-
+from openmdao.main.numpy_fallback import array
+from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Array, List, Slot, Dict
+from openmdao.main.datatypes.api import Float, List, Slot, Dict
 
-class A(Component):
-    f = Float(iotype='in')
-    a1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='in')
-    a2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='in')
-    b1d = Array(numpy.array([1.0, 1.0, 2.0, 3.0]), iotype='out')
-    b2d = Array(numpy.array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
-    
-    def some_funct(self, a, b, op='add'):
-        if op == 'add':
-            return a+b
-        elif op == 'mult':
-            return a*b
-        elif op == 'sub':
-            return a-b
-        raise RuntimeError("bad input to some_funct")
-    
-    @property
-    def some_prop(self):
-        return 7
-    
-class Comp(Component):
-    x = Float(iotype='in')
-    y = Float(iotype='in')
-    indct = Dict(iotype='in')
-    outdct = Dict(iotype='out')
-    cont = Slot(A, iotype='in')
-    contlist = List(Slot(A), iotype='in')
-    
-    def get_cont(self, i):
-        return self.contlist[i]
-    
-    def get_attr(self, name):
-        return getattr(self, name)
-    
 
 # dict with operator precedence.  We need this because otherwise we can't
 # tell where to put parens when we print out an expression with mixed operators.  
@@ -273,6 +239,41 @@ class ExprPrinter(ast.NodeVisitor):
         raise RuntimeError("ExprPrinter can't handle a node of type %s" % node.__class__.__name__)
 
 
+class A(Component):
+    f = Float(iotype='in')
+    a1d = Array(array([1.0, 1.0, 2.0, 3.0]), iotype='in')
+    a2d = Array(array([[1.0, 1.0], [2.0, 3.0]]), iotype='in')
+    b1d = Array(array([1.0, 1.0, 2.0, 3.0]), iotype='out')
+    b2d = Array(array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
+        
+    def some_funct(self, a, b, op='add'):
+        if op == 'add':
+            return a+b
+        elif op == 'mult':
+            return a*b
+        elif op == 'sub':
+            return a-b
+        raise RuntimeError("bad input to some_funct")
+    
+    @property
+    def some_prop(self):
+        return 7
+    
+class Comp(Component):
+    x = Float(iotype='in')
+    y = Float(iotype='in')
+    indct = Dict(iotype='in')
+    outdct = Dict(iotype='out')
+    cont = Slot(A, iotype='in')
+    contlist = List(Slot(A), iotype='in')
+    
+    def get_cont(self, i):
+        return self.contlist[i]
+    
+    def get_attr(self, name):
+        return getattr(self, name)
+    
+
 class Simple(Component):
     
     a = Float(iotype='in')
@@ -296,7 +297,7 @@ class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
         self.top.add('a', A())
-        self.top.a.a1d = numpy.array([1., 2, 3, 4, 5, 6])
+        self.top.a.a1d = [1., 2, 3, 4, 5, 6]
         self.top.add('comp', Comp())
         self.top.comp.x = 3.14
         self.top.comp.y = 42.
@@ -431,17 +432,17 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.evaluate(), 2.)
         ex.set(7.)
         self.assertEqual(self.top.a.a2d[1][0], 7.)
-        
+    
         ex = ExprEvaluator("a2d[1,0]", self.top.a)
         self.assertEqual(ex.evaluate(), 7.)
         ex.set(11.)
         self.assertEqual(self.top.a.a2d[1][0], 11.)
-        
+    
         ex = ExprEvaluator("a2d[1]", self.top.a)
-        self.assertTrue(all(ex.evaluate() == numpy.array([11.,3.])))
+        self.assertTrue(all(ex.evaluate() == array([11.,3.])))
         ex.set([0.1,0.2])
-        self.assertTrue(all(self.top.a.a2d[1] == numpy.array([0.1,0.2])))
-        
+        self.assertTrue(all(self.top.a.a2d[1] == array([0.1,0.2])))
+    
         self.top.comp.cont = A()
         
         ex = ExprEvaluator("comp.cont.a2d[1][0]", self.top)
@@ -453,22 +454,27 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.evaluate(), 7.)
         ex.set(11.)
         self.assertEqual(self.top.comp.cont.a2d[1][0], 11.)
+    
+        # try a numpy function
+        try:
+            import numpy
+        except ImportError:
+            pass
+        else:
+            ex = ExprEvaluator("numpy.eye(2)", self.top.a)
+            val = ex.evaluate()
+            self.assertTrue((val==numpy.eye(2)).all())
         
         ex = ExprEvaluator("comp.get_cont(1).a1d", self.top)
-        self.assertTrue(all(ex.evaluate() == numpy.array([4,4,4,123,4])))
+        self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
         
         ex = ExprEvaluator("comp.get_attr('get_cont')(1).a1d", self.top)
-        self.assertTrue(all(ex.evaluate() == numpy.array([4,4,4,123,4])))
+        self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
         
         # try an expression that's a simple assignment
         ex = ExprEvaluator("f = 10.333", self.top.a)
         self.assertEqual(ex.evaluate(), None)
         self.assertEqual(self.top.a.f, 10.333)
-        
-        # try a numpy function
-        ex = ExprEvaluator("numpy.eye(2)", self.top.a)
-        val = ex.evaluate()
-        self.assertTrue((val==numpy.eye(2)).all())
         
         
     def test_reparse_on_scope_change(self):
@@ -546,15 +552,15 @@ class ExprEvalTestCase(unittest.TestCase):
         
     def test_slice(self):
         ex = ExprEvaluator('a1d[1::2]', self.top.a)
-        self.assertTrue(all(numpy.array([2.,4.,6.]) == ex.evaluate()))
+        self.assertTrue(all(array([2.,4.,6.]) == ex.evaluate()))
         ex.text = 'a1d[2:4]'
-        self.assertTrue(all(numpy.array([3.,4.]) == ex.evaluate()))
+        self.assertTrue(all(array([3.,4.]) == ex.evaluate()))
         ex.text = 'a1d[2:]'
-        self.assertTrue(all(numpy.array([3.,4.,5.,6.]) == ex.evaluate()))
+        self.assertTrue(all(array([3.,4.,5.,6.]) == ex.evaluate()))
         ex.text = 'a1d[::-1]'
-        self.assertTrue(all(numpy.array([6.,5.,4.,3.,2.,1.]) == ex.evaluate()))
+        self.assertTrue(all(array([6.,5.,4.,3.,2.,1.]) == ex.evaluate()))
         ex.text = 'a1d[:2]'
-        self.assertTrue(all(numpy.array([1.,2.]) == ex.evaluate()))
+        self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
 
     def test_boolean(self):
         comp = self.top.comp
@@ -624,7 +630,8 @@ class ExprEvalTestCase(unittest.TestCase):
             ex = ExprEvaluator('abcd.efg', self.top)
             ex.evaluate()
         except AttributeError, err:
-            self.assertEqual(str(err), "can't evaluate expression 'abcd.efg': : 'Assembly' object has no attribute 'abcd'")
+            self.assertEqual(str(err), 
+                "can't evaluate expression 'abcd.efg': : 'Assembly' object has no attribute 'abcd'")
         else:
             raise AssertionError('AttributeError expected')
         

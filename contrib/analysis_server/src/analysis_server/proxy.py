@@ -13,8 +13,8 @@ from enthought.traits.api import TraitError
 
 from openmdao.main.api import Component, Container, FileRef, VariableTree
 from openmdao.main.mp_support import is_instance
-from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, Int, \
-                                       List, Str
+from openmdao.main.datatypes.api import Array, Bool, Enum, File, Float, Int, \
+                                        List, Str
 
 from analysis_server.client import Client
 from analysis_server.objxml import get_as_xml, set_from_xml, populate_from_xml

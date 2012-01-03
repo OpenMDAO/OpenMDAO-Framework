@@ -160,11 +160,11 @@ openmdao.DataflowVariableFigure.prototype.setWorkflow=function(wkflw){
                         return null;
                     }
                     if (request.source instanceof draw2d.InputPort) {
-                        var parentPath = openmdao.Util.getParentPath(oThis.pathname),
-                            parentAssm = openmdao.Util.getParentPath(parentPath),
-                            parentName = openmdao.Util.getName(parentPath),
+                        var parent     = openmdao.Util.getPath(oThis.pathname),
+                            parentName = openmdao.Util.getName(parent),
+                            parentAssm = openmdao.Util.getPath(parent),
                             dstName    = request.source.getParent().name,
-                            dstPath    = openmdao.Util.getParentPath(request.source.getParent().pathname),
+                            dstPath    = openmdao.Util.getPath(request.source.getParent().pathname),
                             dstParent  = openmdao.Util.getName(dstPath),
                             src = parentName + "." + oThis.name,
                             dst = dstParent + "." + dstName;
@@ -187,9 +187,9 @@ openmdao.DataflowVariableFigure.prototype.getContextMenu=function(){
     var oThis=this;
     if (oThis.inout == 'output') {
         menu.appendMenuItem(new draw2d.MenuItem("Create Passthrough",null,function(){
-            var parentPath = openmdao.Util.getParentPath(oThis.pathname),
-                parentAssm = openmdao.Util.getParentPath(parentPath),
-                parentName = openmdao.Util.getName(parentPath),
+            var parent     = openmdao.Util.getPath(oThis.pathname),
+                parentName = openmdao.Util.getName(parent),
+                parentAssm = openmdao.Util.getPath(parent),
                 cmd = "top."+parentAssm+".create_passthrough('"+parentName+"."+oThis.name+"')";
             oThis.myModel.issueCommand(cmd);
         }));

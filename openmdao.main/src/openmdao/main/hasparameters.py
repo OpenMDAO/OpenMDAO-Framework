@@ -1,9 +1,8 @@
 import ordereddict
 import weakref
 
-from numpy import float32, float64, int32, int64
-
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.util.typegroups import real_types, int_types
 from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 
@@ -85,8 +84,8 @@ class Parameter(object):
         if self.vartypename == 'Enum':
             return    # it's an Enum, so no need to set high or low
         
-        if not isinstance(val,(float,float32,float64,int,int32,int64)):
-            parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
+        if not isinstance(val, real_types) and not isinstance(val, int_types):
+            parent.raise_exception("The value of parameter '%s' must be a real or integral type, but its type is '%s'." %
                                    (target,type(val).__name__), ValueError)
         
         meta_low = metadata.get('low') # this will be None if 'low' isn't there

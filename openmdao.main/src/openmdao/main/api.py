@@ -22,7 +22,8 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.variable import Variable
-from openmdao.main.slot import Slot
+
+from openmdao.main.datatypes.slot import Slot
 
 from openmdao.main.exceptions import ConstraintError
 
@@ -32,8 +33,7 @@ from openmdao.main.case import Case
 
 from openmdao.main.arch import Architecture
 
-from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
-                                   SAVE_PICKLE, SAVE_CPICKLE
+from openmdao.util.eggsaver import SAVE_PICKLE, SAVE_CPICKLE #, SAVE_YAML, SAVE_LIBYAML
 
 from openmdao.units import convert_units
 

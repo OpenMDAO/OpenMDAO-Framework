@@ -192,6 +192,7 @@ class Case(object):
         """Take the values of all of the inputs in this case and apply them
         to the specified scope.
         """
+        scope._case_id = self.uuid
         if self._exprs:
             for name,value in self._inputs.items():
                 expr = self._exprs.get(name)

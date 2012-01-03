@@ -1,7 +1,7 @@
 import unittest
 
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
-from openmdao.lib.datatypes.api import Float, Int, Slot
+from openmdao.main.datatypes.api import Float, Int, Slot
 
 class TstContainer(VariableTree):
     dummy1 = Float(1.0) 

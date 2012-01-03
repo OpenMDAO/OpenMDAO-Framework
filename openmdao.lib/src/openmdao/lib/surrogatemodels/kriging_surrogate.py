@@ -1,19 +1,24 @@
 """ Surrogate model based on Kriging. """
 
 from math import log, e, sqrt
+import logging
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp, diag
-from numpy.linalg import det, linalg, lstsq
-from scipy.linalg import cho_factor, cho_solve
-from scipy.optimize import fmin
+try:
+    from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp, diag
+    from numpy.linalg import det, linalg, lstsq
+    from scipy.linalg import cho_factor, cho_solve
+    from scipy.optimize import fmin
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 import zope.interface
 
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.util.decorators import stub_if_missing_deps
 
-
+@stub_if_missing_deps('numpy', 'scipy')
 class KrigingSurrogate(object): 
     implements(ISurrogate)
     
@@ -51,6 +56,7 @@ class KrigingSurrogate(object):
         X, Y = self.X, self.Y
         thetas = 10.**self.thetas
         XX = array(X)
+        new_x = array(new_x)
         for i in range(self.n):
             r[i] = sum(thetas*(XX[i]-new_x)**2.)
         r = exp(-r)
@@ -107,6 +113,7 @@ class KrigingSurrogate(object):
         self.Y = Y
         self.m = len(X[0])
         self.n = len(X)
+                
         thetas = zeros(self.m)
         def _calcll(thetas):
             self.thetas = thetas

@@ -11,10 +11,11 @@
 #public symbols
 __all__ = ['SensitivityDriver']
 
-# pylint: disable-msg=E0611,F0401
-from numpy import zeros
+import logging
 
-from openmdao.lib.datatypes.api import Array, List
+from openmdao.main.numpy_fallback import zeros
+
+from openmdao.main.datatypes.api import Array, List
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters

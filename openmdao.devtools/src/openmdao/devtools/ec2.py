@@ -6,16 +6,13 @@ import atexit
 import time
 from socket import gethostname
 from optparse import OptionParser
-from fabric.api import run, env, local, put, cd, get, settings, prompt, \
-                       hide, show, hosts
-from fabric.state import connections
 from boto.ec2.connection import EC2Connection
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     rm_remote_tree, make_git_archive, \
                                     fabric_cleanup, ssh_test, fab_connect
 
-from openmdao.util.debug import print_fuct_call
+from openmdao.util.debug import print_funct_call
 
 
 def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
@@ -74,7 +71,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     reservation = img.run(key_name=key_name, 
                           security_groups=security_groups,
                           instance_type=instance_type)
-    
+        
     inst = reservation.instances[0]
     check_inst_state(inst, u'running', imgname=name, debug=debug)
     if inst.state != u'running':
@@ -171,6 +168,10 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     the instance being stopped but not terminated.  If the instance was
     pre-existing, then it will just be stopped instead of terminated.
     """
+    # put fabric import here to prevent sphinx doc generation failure
+    # on windows when win32api isn't installed
+    from fabric.api import settings, hide, show
+    
     hostdir = os.path.join(outdir, host)
     if not os.path.isdir(hostdir):
         os.makedirs(hostdir)
@@ -225,7 +226,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
                                  settings_kwargs['host_string'], debug=debug)
             if debug:
                 outf.write("<%s>: calling %s\n" % 
-                                  (host, print_fuct_call(funct, **kwargs)))
+                                  (host, print_funct_call(funct, **kwargs)))
             retval = funct(**kwargs)
     except (SystemExit, Exception) as err:
         outf.write(str(err))
@@ -240,7 +241,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
         with open('console.out', 'wb') as f:
             f.write(out)
     except:
-        pass
+        outf.write("\ncouldn't retrieve console output\n")
 
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
