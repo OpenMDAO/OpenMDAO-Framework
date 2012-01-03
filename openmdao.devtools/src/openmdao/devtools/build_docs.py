@@ -213,7 +213,7 @@ def build_docs(parser=None, options=None, args=None):
         print_sub_help(parser, 'build_docs')
         return -1
 
-    if options is not None and options.version:
+    if options is not None and hasattr(options, 'version') and options.version:
         version = options.version
         shtitle = 'OpenMDAO Documentation v%s' % version
         _is_release = True

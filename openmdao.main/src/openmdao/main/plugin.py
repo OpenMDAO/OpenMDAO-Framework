@@ -635,7 +635,7 @@ if __name__ == "__main__":
 """
 
 
-def plugin_quickstart(options):
+def plugin_quickstart(parser, options, args=None):
     """A command line script (plugin quickstart) points to this.  It generates a
     directory structure for an openmdao plugin package along with Sphinx docs.
     
