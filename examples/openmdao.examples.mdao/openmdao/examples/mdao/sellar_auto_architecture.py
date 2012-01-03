@@ -90,12 +90,9 @@ if __name__ == "__main__": # pragma: no cover
     prob = SellarProblem()
     prob.architecture = BLISS2000()
     
-    print prob.dis1.name
-    
     prob.configure()
     
-    print prob.dis1.name
-    exit()
+
     '''
     from openmdao.main.api import SequentialWorkflow
     prob.local_opt_dis1.workflow = SequentialWorkflow()
