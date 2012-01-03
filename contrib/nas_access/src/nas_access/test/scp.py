@@ -18,8 +18,8 @@ def main():
     else:
         src = fixup(sys.argv[2], rje=False)
         dst = fixup(sys.argv[3], rje=False)
-    with open(src, 'r') as inp:
-        with open(dst, 'w') as out:
+    with open(src, 'rb') as inp:
+        with open(dst, 'wb') as out:
             out.write(inp.read())
     sys.exit(0)
 

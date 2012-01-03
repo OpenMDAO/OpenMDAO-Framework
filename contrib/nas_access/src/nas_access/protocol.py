@@ -44,6 +44,7 @@ import os.path
 import shutil
 import socket
 import subprocess
+import sys
 import time
 
 
@@ -339,6 +340,8 @@ def server_heartbeat(dmz_host, poll_delay, logger):
     tstamp = datetime.datetime.utcnow()
     with open(heartbeat, 'w') as out:
         out.write('%s\n%s\n' % (tstamp, poll_delay))
+        if sys.platform == 'win32':
+            out.close()
     _scp_send(dmz_host, root, os.path.basename(heartbeat), logger)
     os.remove(heartbeat)
 
@@ -361,9 +364,14 @@ def check_server_heartbeat(dmz_host, server_host, logger):
     with open(heartbeat, 'rU') as inp:
         tstamp = inp.readline().strip()
         poll_delay = inp.readline().strip()
+        if sys.platform == 'win32':
+            inp.close()
     os.remove(heartbeat)
 
-    tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%d %H:%M:%S.%f')
+    if '.' in tstamp:
+        tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%d %H:%M:%S.%f')
+    else:
+        tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%d %H:%M:%S')
     now = datetime.datetime.utcnow()
     poll_delay = int(poll_delay)
     delta = now - tstamp
@@ -452,8 +460,14 @@ class Connection(object):
     def close(self):
         """ Close connection, removing all communication files. """
         self._logger.debug('close')
-        _ssh(self.dmz_host, ('rm', '-rf', self.root), self._logger)
-        shutil.rmtree(self.root)
+        try:
+            _ssh(self.dmz_host, ('rm', '-rf', self.root), self._logger)
+        except Exception as exc:
+            self._logger.error('Error during close: %s', exc)
+        try:
+            shutil.rmtree(self.root)
+        except Exception as exc:
+            self._logger.error('Error during close: %s', exc)
 
     def invoke(self, method, args=None, kwargs=None, timeout=0):
         """
@@ -555,7 +569,9 @@ class Connection(object):
         """
         name = os.path.join(self.root, '%s.%s' % (prefix, seqno))
         with open(name, 'wb') as out:
-            out.write(cPickle.dumps(data))
+            out.write(cPickle.dumps(data, -1))
+            if sys.platform == 'win32':
+                out.close()
         self.send_file(os.path.basename(name))
         ready = '%s-ready.%s' % (prefix, seqno)
         self.touch_file(ready)
@@ -626,6 +642,8 @@ class Connection(object):
         self.recv_file(name)
         with open(fullname, 'rb') as inp:
             data = cPickle.loads(inp.read())
+            if sys.platform == 'win32':
+                inp.close()
         self.remove_file(name)
         os.remove(fullname)
         ready = '%s-ready.%s' % (prefix, seqno)
@@ -670,6 +688,8 @@ class Connection(object):
         fullname = os.path.join(self.root, name)
         with open(fullname, 'w') as out:
             out.write('empty\n')
+            if sys.platform == 'win32':
+                out.close()
         self.send_file(name)
         os.remove(fullname)
 

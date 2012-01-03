@@ -203,6 +203,8 @@ class TestCase(unittest.TestCase):
         self.proc = None
         time.sleep(2)
         hostname = socket.gethostname()
+        if sys.platform == 'win32':  # Server doen't clean up.
+            shutil.rmtree(os.path.join(_DMZ_ROOT, _server_root(hostname)))
         code = 'NAS_Allocator(dmz_host=hostname, server_host=hostname)'
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Server directory 'RJE-%s' not found" % hostname)
@@ -224,7 +226,8 @@ class TestCase(unittest.TestCase):
         protocol.server_heartbeat(hostname, 1, logging.getLogger())
         time.sleep(5)
         assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Server heartbeat hasn't been updated in 0:00:05")
+                      "Server heartbeat hasn't been updated in 0:00:0")
+                      # Could wrap from 5 to 6 seconds based on timing.
 
 
 def start_server(hostname):
@@ -257,10 +260,10 @@ def start_server(hostname):
     finally:
         os.chdir(orig_dir)
 
-    root = os.path.join(_DMZ_ROOT, root)
+    heartbeat = os.path.join(_DMZ_ROOT, root, 'heartbeat')
     for retry in range(20):
         time.sleep(0.5)
-        if os.path.exists(root):
+        if os.path.exists(heartbeat):
             return proc
     raise RuntimeError('server startup timeout')
 
