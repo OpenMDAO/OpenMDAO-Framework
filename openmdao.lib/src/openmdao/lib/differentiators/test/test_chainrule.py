@@ -177,7 +177,7 @@ class ChainRuleTestCase(unittest.TestCase):
         
         self.top.driver.differentiator = ChainRule()
         
-        obj = 'comp2.y1'
+        obj = 'comp5.y1'
         con = 'comp5.y1-comp4.y1 > 0'
         self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
         self.top.driver.add_objective(obj)
@@ -197,6 +197,9 @@ class ChainRuleTestCase(unittest.TestCase):
         
         grad = self.top.driver.differentiator.get_gradient(obj)
         assert_rel_error(self, grad[0], 313.0, .001)
+        
+        grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp4.y1>0')
+        assert_rel_error(self, grad[0], -313.0+25.0, .001)
     
     def test_Hessian(self):
         

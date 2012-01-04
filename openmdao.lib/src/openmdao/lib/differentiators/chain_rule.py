@@ -161,15 +161,11 @@ class ChainRule(HasTraits):
                     
                     full_output_name = '.'.join([node.name, output_name])
                     derivs[full_output_name] = 0.0
-                    print local_outputs
-                    print incoming_deriv_names
                     
                     for input_name, full_input_name in incoming_deriv_names.iteritems():
                         derivs[full_output_name] += \
                             local_derivs[output_name][input_name] * \
                             derivs[full_input_name]
-                    print derivs
-                    print local_derivs
                 
             # Finite difference on the objectives.
             for obj_name, expr in self._parent.get_objectives().iteritems():
