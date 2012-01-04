@@ -3,19 +3,21 @@ Test of the Finite Difference differentiator.
 """
 
 import unittest
+from nose import SkipTest
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float, Int
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.main.api import Component, Assembly
+from openmdao.lib.differentiators.chain_rule import ChainRule
+from openmdao.main.api import ComponentWithDerivatives, Assembly, set_as_top
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective, HasObjectives
+from openmdao.main.hasparameters import HasParameters
+from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.decorators import add_delegate
 
-class Comp(Component):
+class Comp(ComponentWithDerivatives):
     """ Evaluates the equation y=x^2"""
     
     # set up interface to the framework  
@@ -24,12 +26,36 @@ class Comp(Component):
     u = Float(0.0, iotype='in')
     y = Float(0.0, iotype='out')
     v = Float(0.0, iotype='out')
+    
+
+    def __init__(self):
+        """ declare what derivatives that we can provide"""
+        
+        super(Comp, self).__init__()
+        
+        self.derivatives.declare_first_derivative('y', 'x')
+        self.derivatives.declare_first_derivative('y', 'u')
+        self.derivatives.declare_first_derivative('v', 'x')
+        self.derivatives.declare_first_derivative('v', 'u')
 
     def execute(self):
         """ Executes it """
         
-        self.y = (self.x)**2 + 3.0*self.u**3 + 4*self.u*self.x
+        self.y = (self.x)**2 + 3.0*self.u**3 + 4.0*self.u*self.x
         self.v = (self.x)**3 * (self.u)**2
+
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""
+        
+        dy_dx = 2.0*self.x + 4.0*self.u
+        dy_du = 9.0*self.u**2 + 4.0*self.x
+        dv_dx = 3.0*self.x**2
+        dv_du = 2.0*self.u
+    
+        self.derivatives.set_first_derivative('y', 'x', dy_dx)
+        self.derivatives.set_first_derivative('y', 'u', dy_du)
+        self.derivatives.set_first_derivative('v', 'x', dv_dx)
+        self.derivatives.set_first_derivative('v', 'u', dv_du)
 
         
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
@@ -55,7 +81,7 @@ class Assy(Assembly):
         self.add('driver', Driv())
         self.driver.workflow.add(['comp'])
         
-        self.driver.differentiator = FiniteDifference()
+        self.driver.differentiator = ChainRule()
         
         self.driver.add_objective('comp.y')
         self.driver.add_objective('comp.v')
@@ -75,7 +101,6 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         
     def test_first_order(self):
         
-        self.model.driver.form = 'central'
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
         self.model.run()
@@ -111,28 +136,10 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         assert_rel_error(self, grad[0], 7.0, .001)
         assert_rel_error(self, grad[1], 16.0, .001)
         
-        for key, item in self.model.driver.get_parameters().iteritems():
-            self.model.driver._hasparameters._parameters[key].ffd_step = None
-            
-        self.model.driver.differentiator.form = 'forward'
-        self.model.comp.x = 1.0
-        self.model.comp.u = 1.0
-        self.model.run()
-        self.model.driver.differentiator.default_stepsize = 0.1
-        self.model.driver.differentiator.calc_gradient()
-        assert_rel_error(self, self.model.driver.differentiator.get_derivative('comp.y',wrt='comp.x'),
-                               6.01, .01)
-
-        self.model.driver.differentiator.form = 'backward'
-        self.model.comp.x = 1.0
-        self.model.comp.u = 1.0
-        self.model.run()
-        self.model.driver.differentiator.default_stepsize = 0.1
-        self.model.driver.differentiator.calc_gradient()
-        assert_rel_error(self, self.model.driver.differentiator.get_derivative('comp.y',wrt='comp.x'),
-                               5.99, .01)
 
     def test_Hessian(self):
+        
+        raise SkipTest("Hessians not supported yet.")
         
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
@@ -154,12 +161,10 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         
         hess = self.model.driver.differentiator.get_Hessian('comp.y')
         
-        #assert_rel_error(self, hess[0][0], 2.0, .001)
-        #assert_rel_error(self, hess[1][1], 18.0, .001)
-        #assert_rel_error(self, hess[0][1], 4.0, .001)
-        #assert_rel_error(self, hess[1][0], 4.0, .001)
         
     def test_reset_state(self):
+        
+        raise SkipTest("Test not needed yet.")
         
         self.model.driver.form = 'central'
         self.model.comp.x = 1.0

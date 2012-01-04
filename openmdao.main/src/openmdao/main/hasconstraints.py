@@ -54,6 +54,20 @@ class Constraint(object):
         rhs = (self.rhs.evaluate(scope) + self.adder)*self.scaler
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
         
+    def evaluate_gradient(self, scope, stepsize=1.0e-6, wrt=None):
+        """Returns the gradient of the constraint eq/inep as a tuple of the
+        form (lhs, rhs, comparator, is_violated)."""
+        
+        lhs = self.lhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
+        for key, value in lhs.iteritems():
+            lhs[key] = (value + self.adder)*self.scaler
+            
+        rhs = self.rhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
+        for key, value in rhs.iteritems():
+            rhs[key] = (value + self.adder)*self.scaler
+            
+        return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
+        
     def get_referenced_compnames(self):
         return self.lhs.get_referenced_compnames().union(self.rhs.get_referenced_compnames())
 

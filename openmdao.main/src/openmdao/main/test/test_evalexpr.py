@@ -7,6 +7,7 @@ from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
+from openmdao.util.testutil import assert_rel_error
 
 
 # dict with operator precedence.  We need this because otherwise we can't
@@ -673,6 +674,40 @@ class ExprEvalTestCase(unittest.TestCase):
         exp = ExprEvaluator('sin(0.3)', top.driver)
         self.assertEqual(exp.get_required_compnames(top),
                          set())
+        
+    def test_eval_gradient(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', Simple())
+        
+        exp = ExprEvaluator('3.0*comp1.c', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        self.assertEqual(top.comp1.c, 7.0)
+        assert_rel_error(self, grad['comp1.c'], 3.0, 0.00001)
+        
+        # interface test: step size
+        # (for linear slope, larger stepsize more accurate because of
+        # python's rounding)
+        grad2 = exp.evaluate_gradient(scope=top, stepsize=0.1)
+        assert( abs(grad['comp1.c'] - 3.0) > abs(grad2['comp1.c'] - 3.0) )
+        
+        # More complicated, multiple comps
+        top.add('comp2', Simple())
+
+        exp = ExprEvaluator('comp2.b*comp1.c**2', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        self.assertEqual(len(grad), 2)
+        assert_rel_error(self, grad['comp1.c'], 70.0, 0.00001)
+        assert_rel_error(self, grad['comp2.b'], 49.0, 0.00001)
+
+        # test limited varset
+        grad = exp.evaluate_gradient(scope=top, wrt=['comp2.b'])
+        self.assertEqual(len(grad), 1)
+        
+        
+        #self.a = 4.
+        #self.b = 5.
+        #self.c = 7.
+        #self.d = 1.5
         
 if __name__ == "__main__":
     unittest.main()

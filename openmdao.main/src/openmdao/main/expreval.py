@@ -392,7 +392,63 @@ class ExprEvaluator(object):
         except Exception, err:
             raise type(err)("can't evaluate expression "+
                             "'%s': %s" %(self.text,str(err)))
+        
+    def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
+        """Return the gradient of the expression with respect to all of the
+        referenced varpaths. The gradient is calculated by 1st order central
+        difference for now. More options including symbolic differentiation
+        may be added in the future.
+        
+        stepsize: float
+            Step size for finite difference.
+            
+        wrt: list of varpaths
+            Varpaths for which we want to calculate the gradient
+        """
+        global _expr_dict
+        scope = self._get_updated_scope(scope)
+        
+        if not wrt:
+            wrt = list(self.get_referenced_varpaths())
+            
+        if self._parse_needed:
+            self._parse()
+        
+        # TODO - This should be saved/cached
+        grad_text = self.text
+        trans_dict = {}
+        var_dict = {}
+        for name in  list(self.get_referenced_varpaths()):
+            if name in wrt:
+                new_name = name.replace('.', '_')
+                new_name = name.replace('[', '__')
+                new_name = name.replace(']', '__')
+                trans_dict[name] = new_name
+                new_name = "var_dict['%s']" % new_name
+                grad_text = grad_text.replace(name, new_name)
+                var_dict[name] = scope.get(name)
+            else:
+                # If we don't need derivative of a var, replace with its value
+                grad_text = grad_text.replace(name, str(scope.get(name)))
+                
+        
+        grad_root = ast.parse(grad_text, mode='eval')
+        grad_code = compile(grad_root, '<string>', 'eval')
 
+        # Finite difference (1st order central)
+        gradient = {}
+        for name, new_name in trans_dict.iteritems():
+            
+            var_dict[new_name] += 0.5*stepsize
+            yp = eval(grad_code)
+            var_dict[new_name] -= stepsize
+            ym = eval(grad_code)
+            var_dict[new_name] += 0.5*stepsize
+            
+            gradient[name] = (yp-ym)/stepsize
+            
+        return gradient
+    
     def set(self, val, scope=None):
         """Set the value of the referenced object to the specified value."""
         global _expr_dict

@@ -8,3 +8,4 @@ from openmdao.lib.components.expected_improvement import ExpectedImprovement
 from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
 from openmdao.lib.components.mux import Mux, DeMux
 from openmdao.lib.components.broadcaster import Broadcaster
+from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
