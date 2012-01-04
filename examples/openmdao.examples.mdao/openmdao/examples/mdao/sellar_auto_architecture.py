@@ -122,11 +122,6 @@ if __name__ == "__main__": # pragma: no cover
     prob.configure()
     
 
-    '''
-    from openmdao.main.api import SequentialWorkflow
-    prob.local_opt_dis1.workflow = SequentialWorkflow()
-    prob.local_opt_dis1.workflow.add('dis1')
-    '''
    
     
     prob.driver.recorders = [DBCaseRecorder()]
@@ -135,6 +130,37 @@ if __name__ == "__main__": # pragma: no cover
     prob.run() 
     
     error = prob.check_solution()
+    
+    
+    print "sysopt params"
+    for k in prob.sysopt.get_parameters(): 
+        print k
+    print "sysopt objectives"
+    for k in prob.sysopt.get_objectives(): 
+        print k
+    print "sysopt constraints"
+    for k in prob.sysopt.list_constraints(): 
+        print k    
+    print "local_opt params"
+    for k in prob.local_opt_dis1.get_parameters():    
+        print k
+    print "local_opt objectives"
+    for k in prob.local_opt_dis1.get_objectives(): 
+        print k
+    print "local_opt constraints"
+    for k in prob.local_opt_dis1.list_constraints(): 
+        print k
+    print
+    print "driver constraints:"
+    for k in prob.driver.list_constraints(): 
+        print k
+    print "driver params:"
+    for k in prob.driver.get_parameters():    
+        print k   
+    print [x.name for x in prob.driver.workflow]
+    print [x.name for x in prob.sysopt.workflow]
+    print [x.name for x in prob.local_opt_dis1.workflow]
+    print "----------------------"
     
     print "\nUsing BLISS2000 Architecture"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
@@ -153,40 +179,9 @@ if __name__ == "__main__": # pragma: no cover
     print
     print "Check: ",prob.dis1.name
     
-    print "sysopt params"
-    for k in prob.sysopt.get_parameters(): 
-        print k
-    print "sysopt objectives"
-    for k in prob.sysopt.get_objectives(): 
-        print k
-    print "sysopt constraints"
-    for k in prob.sysopt.list_constraints(): 
-        print k
-    
-    print "local_opt params"
-    for k in prob.local_opt_dis1.get_parameters():    
-        print k
-    print "local_opt objectives"
-    for k in prob.local_opt_dis1.get_objectives(): 
-        print k
-    print "local_opt constraints"
-    for k in prob.local_opt_dis1.list_constraints(): 
-        print k
-    print
-    print "main_driver constraints:"
-    for k in prob.main_driver.list_constraints(): 
-        print k
-    print "main_driver params:"
-    for k in prob.main_driver.get_parameters():    
-        print k   
-    
-    
+
   
-    print [x.name for x in prob.driver.workflow]
-    print [x.name for x in prob.main_driver.workflow]
-    print [x.name for x in prob.sysopt.workflow]
-    print [x.name for x in prob.local_opt_dis1.workflow]
-    print "----------------------"
+
     
     
     
