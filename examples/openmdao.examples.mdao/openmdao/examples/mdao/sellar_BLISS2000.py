@@ -62,16 +62,6 @@ class SellarBLISS2000(Assembly):
         self.meta_model_dis2.model = SellarDiscipline2()
         self.meta_model_dis2.recorder = DBCaseRecorder()
         
-        # start with an initial mda
-        self.add('mda', BroydenSolver())
-        self.mda.add_parameter('meta_model_dis1.y2', low=0, high=20,start=1.)
-        self.mda.add_constraint('meta_model_dis2.y2 = meta_model_dis1.y2')
-        self.mda.add_parameter(['meta_model_dis2.y1'], low=0, high=20,start=1.)
-        self.mda.add_constraint('meta_model_dis2.y1 = meta_model_dis1.y1')
-        self.mda.add_event('meta_model_dis1.train_next')
-        self.mda.add_event('meta_model_dis2.train_next')
-        self.mda.force_execute = True  
-        
         #training metalmodel for disc1
         
         self.add("DOE_Trainer_dis1",DOEdriver())
@@ -99,7 +89,7 @@ class SellarBLISS2000(Assembly):
 
         self.add('sysopt', CONMINdriver())     
          
-        self.sysopt.add_objective('(x1_store)**2 + meta_model_dis1.z2 + meta_model_dis1.y1 + math.exp(-meta_model_dis2.y2)')
+        self.sysopt.add_objective('(meta_model_dis1.x1)**2 + meta_model_dis1.z2 + meta_model_dis1.y1 + math.exp(-meta_model_dis2.y2)')
         
         
         self.sysopt.add_parameter(['meta_model_dis1.z1','meta_model_dis2.z1'], low=-10, high=10.0,start=5.0)
@@ -160,7 +150,6 @@ class SellarBLISS2000(Assembly):
         # Top level is sequential work flow. runs a single mda, then begins bliss2000 
         self.driver.workflow=SequentialWorkflow()
         self.driver.workflow.add(['main_driver'])
-        #self.driver.workflow.add(['main_driver']) #note: this should just be driver then
         
 
         
@@ -187,8 +176,12 @@ if __name__ == "__main__":
     
     
     prob.run()
+    
+    
+    
+    
     print
-    print "Minimum found at", prob.meta_model_dis1.z1,prob.meta_model_dis1.z2,prob.meta_model_dis1.x1
+    print "Minimum found at", prob.meta_model_dis1.z1,prob.z2_store,prob.meta_model_dis1.x1
     print "with objective function value:",(prob.meta_model_dis1.x1)**2 + \
           prob.meta_model_dis1.z2 + prob.meta_model_dis1.y1 + math.exp(-prob.meta_model_dis2
                                                                        .y2)        

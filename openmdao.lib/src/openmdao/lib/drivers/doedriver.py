@@ -42,14 +42,15 @@ class DOEdriver(CaseIterDriverBase):
             vals=[]
             for p,val,curval in zip(params,row,P):
                 newval=(p.low+(p.high-p.low)*val-curval)*self.alpha+curval
-
+                #print '%s: %f,%f'%(p.name,curval,newval),
                 if newval<p.low:
                     newval=p.low
                 elif newval>p.high:
                     newval=p.high
                 vals.append(newval)
+                
             case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
-
+            #print 
             # now add events
             for varname in self.get_events(): 
                 case.add_input(varname,True)
