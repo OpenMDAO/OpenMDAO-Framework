@@ -12,6 +12,7 @@ import time
 import unittest
 import nose
 
+from openmdao.main.component import SimulationRoot
 from openmdao.main.objserverfactory import ObjServerFactory, ObjServer, \
                                            start_server
 from openmdao.util.testutil import assert_raises
@@ -62,7 +63,7 @@ class TestCase(unittest.TestCase):
         finally:
             if factory is not None:
                 factory.cleanup()
-            os.chdir('..')
+            SimulationRoot.chroot('..')
             if sys.platform == 'win32':
                 time.sleep(2)  # Wait for process shutdown.
             keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
@@ -95,7 +96,10 @@ class TestCase(unittest.TestCase):
 
             # Try to execute a command.
             cmd = 'dir' if sys.platform == 'win32' else 'ls'
-            code = "server.execute_command(cmd, None, 'cmd.out', None, None, 0, 10)"
+            rdesc = {'remote_command': cmd,
+                     'output_path': 'cmd.out',
+                     'hard_runtime_limit': 10}
+            code = 'server.execute_command(rdesc)'
             assert_raises(self, code, globals(), locals(), RuntimeError,
                           'shell access is not allowed by this server')
 
@@ -178,7 +182,7 @@ class TestCase(unittest.TestCase):
                 self.fail('Expected TypeError')
 
         finally:
-            os.chdir('..')
+            SimulationRoot.chroot('..')
             shutil.rmtree(testdir)
 
     def test_shell(self):
@@ -197,27 +201,19 @@ class TestCase(unittest.TestCase):
 
             # Execute a command.
             cmd = 'dir' if sys.platform == 'win32' else 'ls'
-            return_code, error_msg = \
-                server.execute_command(cmd, None, 'cmd.out', None, None, 0, 10)
+            rdesc = {'remote_command': cmd,
+                     'output_path': 'cmd.out',
+                     'hard_runtime_limit': 10}
+            return_code, error_msg = server.execute_command(rdesc)
             self.assertEqual(return_code, 0)
 
             # Non-zero return code.
-            return_code, error_msg = \
-                server.execute_command('no-such-command',
-                                       None, 'stdout1', 'stderr1', None, 0, 10)
+            rdesc = {'remote_command': 'no-such-command',
+                     'output_path': 'stdout1',
+                     'error_path': 'stderr1',
+                     'hard_runtime_limit': 10}
+            return_code, error_msg = server.execute_command(rdesc)
             self.assertNotEqual(return_code, 0)
-
-            # Exception creating process.
-# FIXME: despite the files being closed, Windows thinks they're in use :-(
-            if sys.platform != 'win32':
-                try:
-                    server.execute_command(['no-such-command'],
-                                           None, 'stdout2', 'stderr2', None, 0, 10)
-                except OSError as exc:
-                    msg = '[Errno 2] No such file or directory'
-                    self.assertEqual(str(exc), msg)
-                else:
-                    self.fail('Expected OSError')
 
             # Load a model.
             exec_comp = server.create('openmdao.test.execcomp.ExecComp')
@@ -230,7 +226,7 @@ class TestCase(unittest.TestCase):
                           globals(), locals(), ValueError,
                           "'no-such-egg' not found.")
         finally:
-            os.chdir('..')
+            SimulationRoot.chroot('..')
             shutil.rmtree(testdir)
 
 

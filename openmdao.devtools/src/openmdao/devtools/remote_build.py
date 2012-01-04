@@ -6,16 +6,14 @@ import atexit
 import tempfile
 import tarfile
 
-from fabric.api import run, env, local, put, cd, get, settings, prompt, hide, hosts
-from fabric.state import connections
-
-import paramiko.util
+from argparse import ArgumentParser
 
 from openmdao.devtools.utils import put_dir, remote_check_setuptools, \
                                     remote_tmpdir, \
                                     remote_listdir, rm_remote_tree, fabric_cleanup
-from openmdao.devtools.remote_cfg import CfgOptionParser, process_options, \
-                                         run_host_processes, get_tmp_user_dir
+from openmdao.devtools.remote_cfg import add_config_options, process_options, \
+                                         run_host_processes, get_tmp_user_dir, \
+                                         print_host_codes
 from openmdao.util.fileutil import cleanup
     
 def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
@@ -24,6 +22,8 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
     ship it over to host, build it, and bring it back, placing it
     in the specified destination directory.
     """
+    from fabric.api import run, put, get
+
     locdistbld = os.path.join(os.path.dirname(__file__), 'locdistbld.py')
     pkgs = []
     if remote_dir is None:
@@ -66,35 +66,38 @@ def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
             print 'removing %s' % remote_dir
         rm_remote_tree(remote_dir)
     
-    return pkgs
+    return 0
 
 def main(argv=None):
+    import paramiko.util
+
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
     if argv is None:
         argv = sys.argv[1:]
 
-    parser = CfgOptionParser()
-    parser.add_option("-d", "--dest", action="store", type='string', 
-                      dest="dest", default='.',
-                      help="destination directory where built package will go")
-    parser.add_option("-s", "--src", action="append", type='string', 
-                      dest="srcs", default=[],
-                      help="source directory where package is located")  
-    parser.add_option("-b", "--buildtype", action="store", type='string', 
-                      dest="btype", default='bdist_egg',
-                      help="type of distribution to build")
-    parser.add_option("--py", action="store", type='string', 
-                      dest="py", default='python',
-                      help="which python to use (default='python'")
-    parser.add_option("-k","--keep", action="store_true", dest='keep',
-                      help="if there are build failures, don't delete "
+    parser = add_config_options(ArgumentParser())
+    
+    parser.add_argument("-d", "--dest", action="store", type=str, 
+                        dest="dest", default='.',
+                        help="destination directory where built package will go")
+    parser.add_argument("-s", "--src", action="append", type=str, 
+                        dest="srcs", default=[],
+                        help="source directory where package is located")  
+    parser.add_argument("-b", "--buildtype", action="store", type=str, 
+                        dest="btype", default='bdist_egg',
+                        help="type of distribution to build")
+    parser.add_argument("--py", action="store", type=str, 
+                        dest="py", default='python',
+                        help="which python to use (default='python'")
+    parser.add_argument("-k","--keep", action="store_true", dest='keep',
+                        help="if there are build failures, don't delete "
                            "the temporary build directory "
                            "or terminate the remote instance if testing on EC2.")
 
-    (options, args) = parser.parse_args(argv)
+    options = parser.parse_args()
     
-    config, conn, image_hosts = process_options(options, parser)
+    config, conn, image_hosts = process_options(options)
     
     if not options.srcs:
         print "You must specify one or more source directories"
@@ -112,7 +115,8 @@ def main(argv=None):
     
     retval = run_host_processes(config, conn, image_hosts, options, 
                                 funct=remote_build, 
-                                funct_kwargs=funct_kwargs)
+                                funct_kwargs=funct_kwargs,
+                                done_functs=[print_host_codes])
     
     if retval == 0:
         cleanup('paramiko.log')

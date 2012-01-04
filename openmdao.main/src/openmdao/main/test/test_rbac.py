@@ -142,10 +142,11 @@ class TestCase(unittest.TestCase):
         # Result proxying.
         normal_value = object()
         proxy_value = ProxyRequired()
-        self.assertFalse(need_proxy(obj.no_rbac, proxy_value))
-        self.assertFalse(need_proxy(obj.single_role, normal_value))
-        self.assertFalse(need_proxy(obj.proxy_result, normal_value))
-        self.assertTrue(need_proxy(obj.proxy_result, proxy_value))
+        dummy = AccessController()
+        self.assertFalse(need_proxy(obj.no_rbac, proxy_value, dummy))
+        self.assertFalse(need_proxy(obj.single_role, normal_value, dummy))
+        self.assertFalse(need_proxy(obj.proxy_result, normal_value, dummy))
+        self.assertTrue(need_proxy(obj.proxy_result, proxy_value, dummy))
 
         # Access checking.
         assert_raises(self, "check_role('owner', obj.no_rbac)",

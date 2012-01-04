@@ -84,7 +84,8 @@ below.
       You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it, mingw32 will work fine,
       but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
       but others (Professional, Standard) should work too. To get this software,
-      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.     
+      go to the `downloads page <http://www.microsoft.com/visualstudio/en-us/products/2010-editions/express/#2008-Visual-CPP>`_.  
+         
          
 .. __: http://sourceforge.net/projects/mingw/files
 
@@ -108,7 +109,7 @@ for information on configuring proxy settings.
 
 The source repository for the OpenMDAO project is available on
 :term:`GitHub`.  There is a wealth of good documentation available online 
-about :term:`git` and Github itself. The 
+about :term:`Git` and Github itself. The 
 `GitHub help page <http://help.github.com/>`_ is a good place to start. If you're a 
 Windows user, make sure to read the details about using Git Bash on the `Windows 
 specific installation instructions <http://help.github.com/win-set-up-git/>`_. 
@@ -150,25 +151,18 @@ must issue a pull request to have your modifications merged in.
 *Git User Setup*
 ++++++++++++++++
 
-If you have not previously used Git on a particular machine where you intend
-to work with Git repositories, you should follow the instructions `here`__ to
-set your username, email, and API token.
-
+If you have not previously used Git on a particular machine where you intend to work with
+Git repositories, you should follow the instructions `here`__ to set your username, email,
+and API token. This way, your contact information will be included whenever you
+:term:`commit` to a :term:`repository` on that machine.
 
 .. __: http://help.github.com/set-your-user-name-email-and-github-token
 
 
 .. index:: repository
 
-This way, your contact information will be included whenever you :term:`commit`
-to a :term:`repository` on that machine.
-
-.. index:: pair: source code; location
-.. index:: pair: branch; creating
-
-
-
-
+If you're using Git on Windows, to follow the above instructions you'll first need to
+create a bash terminal by running ``Git -> Git Bash`` from the Windows start menu.
 
 .. accessing GitHub::
 
@@ -183,12 +177,12 @@ account. The following section describes how to register your SSH key with
 GitHub.
 
 These instructions assume that you already have a GitHub account. If you do
-not, please go to http://github.com and register for an account. Go ahead
+not, please go to https://github.com and register for an account. Go ahead
 and log in to your GitHub account, since you will need to be logged in to
 register your key.
 
 If you're using Git on Windows, to follow the instructions below
-you'll first need to create a bash terminal by running "Git --> Git Bash" from
+you'll first need to create a bash terminal by running ``Git --> Git Bash`` from
 the Windows start menu.
 
 
@@ -224,6 +218,7 @@ You need to register and upload the *public* portion of your SSH key to GitHub.
    text box) to continue. 
 
 
+.. index:: pair: source code; location
 
 .. _getting-the-source-code:
 
@@ -232,10 +227,7 @@ Getting the Source Code
 +++++++++++++++++++++++
 
 The *official* OpenMDAO-Framework repository lives on GitHub at
-http://github.com/OpenMDAO/OpenMDAO-Framework. 
-
-
-
+https://github.com/OpenMDAO/OpenMDAO-Framework. 
 
 To create a local
 OpenMDAO-Framework repository, you need to *clone* the OpenMDAO-Framework
@@ -262,7 +254,7 @@ Making a Personal Fork of OpenMDAO-Framework
 If you intend to make contributions to the project, you'll need to make your
 own personal fork of OpenMDAO-Framework on GitHub. Making your own fork is
 easy; just log into GitHub, go to the OpenMDAO-Framework repository page at
-http://github.com/OpenMDAO/OpenMDAO-Framework, and click the *Fork* button
+https://github.com/OpenMDAO/OpenMDAO-Framework, and click the *Fork* button
 near the top of the page.
 
 Later, when you finish working on a branch in your local repository, you'll be
@@ -282,7 +274,7 @@ The directory structure of your repository should look like this:
     The directory containing source to be packaged into distributions that can
     be released separately from OpenMDAO. These distributions may or may not depend upon
     OpenMDAO. Distributions that have not yet been approved to be part of
-    ``openmdao.lib`` can live here -- as long as their license is compatible with NOSA. No
+    ``openmdao.lib`` can live here -- as long as their license is compatible with Apache V2.0. No
     proprietary code or GPL code should be placed in the OpenMDAO-Framework repository.
 
 ``devenv``
@@ -362,4 +354,4 @@ namespace have a similar directory layout: ``openmdao.main``,
 
 ``openmdao.<package>/src/openmdao/<package>/test``
     Contains unit tests for this package. These are executed by
-    ``openmdao_test``.
+    ``openmdao test``.

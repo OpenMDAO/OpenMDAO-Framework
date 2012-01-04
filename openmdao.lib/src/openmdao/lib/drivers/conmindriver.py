@@ -24,20 +24,28 @@
 #public symbols
 __all__ = ['CONMINdriver']
 
-# pylint: disable-msg=E0611,F0401
-from numpy import zeros, ones
-from numpy import int as numpy_int
+import logging
 
-import conmin.conmin as conmin
+# pylint: disable-msg=E0611,F0401
+try:
+    from numpy import zeros, ones
+    from numpy import int as numpy_int
+    import conmin.conmin as conmin
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+    # to keep class decl from barfing before being stubbed out
+    zeros = lambda *args, **kwargs: None 
+    numpy_int = int
 
 from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
+from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
+from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
 
 class _cnmn1(object):
@@ -169,31 +177,34 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
+@stub_if_missing_deps('numpy', 'conmin')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class CONMINdriver(DriverUsesDerivatives):
     """ Driver wrapper of Fortran version of CONMIN. 
         
     Note on self.cnmn1.igoto, which reports CONMIN's operation state:
         0: Initial and final state
-	
+
         1: Initial evaluation of objective and constraint values
-	
+
         2: Evalute gradients of objective and constraints (internal only)
-	
+
         3: Evalute gradients of objective and constraints
-	
+
         4: One-dimensional search on unconstrained function
-	
+
         5: Solve 1D search problem for unconstrained function
             
     """
+    # I don't see an IUsesGradients
+    implements(IHasParameters, IHasIneqConstraints, IHasObjective)
     
     # pylint: disable-msg=E1101
     # Control parameters for CONMIN.
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
     
-    cons_is_linear = Array(zeros(0,'d'), dtype=numpy_int, iotype='in', 
+    cons_is_linear = Array(zeros(0,'i'), dtype=numpy_int, iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
     iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
@@ -432,15 +443,14 @@ class CONMINdriver(DriverUsesDerivatives):
         if self.iter_count != self.cnmn1.iter:
             self.iter_count = self.cnmn1.iter 
             
-            if self.recorder:
+            if self.recorders:
                 # Write out some relevant information to the recorder
                 
                 dvals = [float(val) for val in self.design_vals[:-2]]
                 
                 case_input = []
                 for var, val in zip(self.get_parameters().keys(), dvals):
-                    case_input.append([var, val])
-                
+                    case_input.append([var[0], val])
                 if self.printvars:
                     case_output = [(name,
                                     ExprEvaluator(name, scope=self.parent).evaluate())
@@ -452,11 +462,11 @@ class CONMINdriver(DriverUsesDerivatives):
                 for i, val in enumerate(self.constraint_vals):
                     case_output.append(["Constraint%d" % i, val])
                 
-                case = Case(case_input, case_output,
-                            desc='case%s' % self.iter_count,
-                            parent_uuid=self._case_id)
+                case = Case(case_input, case_output,parent_uuid=self._case_id)
                 
-                self.recorder.record(case)
+                #FIXME: the driver should probably just add its own recorder for this information
+                #       instead of just putting it into the first recorder it finds
+                self.recorders[0].record(case)
         
 
     def _config_conmin(self):

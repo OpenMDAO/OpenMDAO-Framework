@@ -29,15 +29,16 @@ def get_file(url):
             shutil.copy(url, fname)
     return fname
 
-def _run_gofile(startdir, gopath, pyversion, args=()):
+def _run_gofile(startdir, gopath, args=()):
     retcode = -1
     godir, gofile = os.path.split(gopath)
     os.chdir(godir)
     
     outname = 'build.out'
     f = open(outname, 'wb')
+    py = sys.executable.replace('\\','/')
     try:
-        p = subprocess.Popen('%s %s %s' % (pyversion, gofile, 
+        p = subprocess.Popen('%s %s %s' % (py, gofile, 
                                            ' '.join(args)), 
                              stdout=f, stderr=subprocess.STDOUT,
                              shell=True)
@@ -48,7 +49,11 @@ def _run_gofile(startdir, gopath, pyversion, args=()):
         # in some cases there are some unicode characters in the
         # output which cause fabric to barf, so strip out unicode
         # before returning
-        with codecs.open(outname, 'rt', encoding='ascii', errors='ignore') as f:
+        if sys.platform.startswith('win'):
+            mode = 'r'
+        else:
+            mode = 'rt'
+        with codecs.open(outname, mode, encoding='ascii', errors='ignore') as f:
             for line in f:
                 print line,
         os.chdir(startdir)
@@ -66,13 +71,17 @@ def _run_sub(outname, cmd, env=None):
         # in some cases there are some unicode characters in the
         # output which cause fabric to barf, so strip out unicode
         # before returning
-        with codecs.open(outname, 'rt', encoding='ascii', errors='ignore') as f:
+        if sys.platform.startswith('win'):
+            mode = 'r'
+        else:
+            mode = 'rt'
+        with codecs.open(outname, mode, encoding='ascii', errors='ignore') as f:
             for line in f:
                 print line,
     return p.returncode
         
 
-def build_and_test(fname=None, workdir='.', pyversion='python', keep=False, 
+def build_and_test(fname=None, workdir='.', keep=False, 
                    branch=None, testargs=()):
     """Builds OpenMDAO, either a dev build or a release build, and runs
     the test suite on it.
@@ -93,7 +102,6 @@ def build_and_test(fname=None, workdir='.', pyversion='python', keep=False,
         
     args = ['-f', fname]
         
-    args.append('--pyversion=%s' % pyversion)
     if branch:
         args.append('--branch=%s' % branch)
         
@@ -105,10 +113,9 @@ def build_and_test(fname=None, workdir='.', pyversion='python', keep=False,
     
     try:
         if build_type == 'release':
-            envdir, retcode = install_release(fname, pyversion=options.pyversion)
+            envdir, retcode = install_release(fname)
         else: # dev test
-            envdir, retcode = install_dev_env(fname, pyversion=options.pyversion,
-                                              branch=options.branch)
+            envdir, retcode = install_dev_env(fname, branch=options.branch)
     finally:
         os.chdir(workdir)
 
@@ -116,7 +123,7 @@ def build_and_test(fname=None, workdir='.', pyversion='python', keep=False,
     if retcode != 0:
         sys.exit(retcode)
     
-    print '\ntesting...'
+    print '\ntesting  (testargs=%s) ...' % testargs
 
     try:
         retcode = activate_and_test(envdir, testargs)
@@ -126,19 +133,13 @@ def build_and_test(fname=None, workdir='.', pyversion='python', keep=False,
     return retcode
 
 
-def install_release(url, pyversion):
+def install_release(url):
     """
     Installs an OpenMDAO release in the current directory.
     
     url: str
         The url of the go-openmdao.py file.
         
-    pyversion: str
-        The version of python, e.g., 'python2.6' or 'python2.7', to be
-        used to create the OpenMDAO virtual environment. Only
-        major version numbers should be used, i.e., use 'python2.6'
-        rather than 'python2.6.5'.
-    
     Returns the name of the newly built release directory.
     """
     gofile = get_file(url)
@@ -153,7 +154,7 @@ def install_release(url, pyversion):
     dpath = os.path.join(dn(dn(dn(url))), 'dists')
     args = []
     if os.path.isdir(dpath): 
-        args.append('--disturl=%s' % dpath)
+        args.append('--testurl=%s' % dpath)
     
     print "building openmdao environment [%s]" % ' '.join(args)
     
@@ -161,8 +162,7 @@ def install_release(url, pyversion):
     
     dirfiles = set(os.listdir('.'))
     
-    retcode = _run_gofile(startdir, os.path.join(startdir, gofile), 
-                          pyversion, args)
+    retcode = _run_gofile(startdir, os.path.join(startdir, gofile), args)
     
     newfiles = set(os.listdir('.')) - dirfiles - set(['build.out'])
     if len(newfiles) != 1:
@@ -173,7 +173,7 @@ def install_release(url, pyversion):
     return (releasedir, retcode)
     
 
-def install_dev_env(url, pyversion, branch=None):
+def install_dev_env(url, branch=None):
     """
     Installs an OpenMDAO dev environment given an OpenMDAO source
     tree.
@@ -181,12 +181,6 @@ def install_dev_env(url, pyversion, branch=None):
     url: str
         URL of tarfile or git repo containing an OpenMDAO source tree.  May be
         a local file path or an actual URL.
-
-    pyversion: str
-        The version of python, e.g., 'python2.6' or 'python2.7', to be
-        used to create the OpenMDAO virtual environment. Only
-        major version numbers should be used, i.e., use 'python2.6'
-        rather than 'python2.6.5'.
 
     branch: str
         For git repos, branch name must be supplied.
@@ -238,7 +232,7 @@ def install_dev_env(url, pyversion, branch=None):
     
     gopath = os.path.join(treedir, 'go-openmdao-dev.py')
     
-    retcode = _run_gofile(startdir, gopath, pyversion)
+    retcode = _run_gofile(startdir, gopath, args=['--gui'])
             
     envdir = os.path.join(treedir, 'devenv')
     print 'new openmdao environment built in %s' % envdir
@@ -255,19 +249,20 @@ def activate_and_test(envdir, testargs=()):
     """
     if sys.platform.startswith('win'):
         devbindir = 'Scripts'
-        command = 'activate.bat && openmdao_test %s' % ' '.join(testargs)
+        command = 'activate.bat && openmdao test %s' % ' '.join(testargs)
     else:
         devbindir = 'bin'
-        command = '. ./activate && openmdao_test %s' % ' '.join(testargs)
+        command = '. ./activate && openmdao test %s' % ' '.join(testargs)
         
     # activate the environment and run tests
     devbinpath = os.path.join(envdir, devbindir)
     os.chdir(devbinpath)
-    print("running tests from %s" % devbinpath)
+    print "running tests from %s" % devbinpath 
     env = os.environ.copy()
     for name in ['VIRTUAL_ENV','_OLD_VIRTUAL_PATH','_OLD_VIRTUAL_PROMPT']:
         if name in env: 
             del env[name]
+    print "command = ",command
     return _run_sub('test.out', command, env=env)
     
 
@@ -275,9 +270,6 @@ if __name__ == '__main__':
     from optparse import OptionParser
     
     parser = OptionParser(usage="%prog [OPTIONS]")
-    parser.add_option("--pyversion", action="store", type='string', 
-                      dest='pyversion', default="python", 
-                      help="python version to use, e.g., 'python2.6'")
     parser.add_option("--branch", action="store", type='string', 
                       dest='branch',
                       help="if file_url is a git repo, supply branch name here")
@@ -286,11 +278,13 @@ if __name__ == '__main__':
                       help="pathname or URL of a git repo, tar file, or go-openmdao.py file")
     parser.add_option("-d","--dir", action="store", type='string', 
                       dest='directory', default='.',
-                      help="name of a directory the build will be created")
+                      help="name of a directory the build will be created in")
+    parser.add_option("--testargs", action="store", type='string', 
+                      dest='testargs', default='',
+                      help="args to pass to openmdao test")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
     sys.exit(build_and_test(fname=options.fname, workdir=options.directory,
-                            pyversion=options.pyversion, 
-                            branch=options.branch, testargs=args))
+                            branch=options.branch, testargs=options.testargs.split()))
     

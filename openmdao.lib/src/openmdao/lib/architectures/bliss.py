@@ -23,23 +23,24 @@ class BLISS(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.requires_global_des_vars = True
         
     def configure(self): 
         
         global_dvs = self.parent.get_global_des_vars()
         local_dvs = self.parent.get_local_des_vars_by_comp()
-        objective = self.parent.get_objectives().keys()[0]
+        objective = self.parent.get_objectives().items()[0]
         constraints = self.parent.list_constraints()
-        coupling = self.parent.list_coupling_vars()
+        coupling = self.parent.get_coupling_vars()
         
         self.parent.add('driver',FixedPointIterator())
         self.parent.driver.max_iteration = 50
         self.parent.driver.tolerance = .001
         
-        initial_conditions = [self.parent.get(param.targets[0]) for comp,param in global_dvs]
+        initial_conditions = [self.parent.get(param.target) for comp,param in global_dvs]
         self.parent.add_trait('global_des_vars',Array(initial_conditions))
         for i,(comps,param) in enumerate(global_dvs): 
-            targets = comps
+            targets = param.targets
             self.parent.driver.add_parameter(targets,low=param.low,high=param.high)
             self.parent.driver.add_constraint("global_des_vars[%d]=%s"%(i,targets[0]))
             
@@ -53,18 +54,17 @@ class BLISS(Architecture):
         # Multidisciplinary Analysis
         mda = self.parent.add('mda', BroydenSolver())
         self.parent.force_execute=True
-        for indep,dep in coupling: 
-            mda.add_parameter(indep,low=-9.e99, high=9.e99)
-            mda.add_constraint("%s=%s"%(indep,dep))
+        for key,couple in coupling.iteritems(): 
+            mda.add_parameter(couple.indep.target,low=-9.e99, high=9.e99)
+            mda.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
                 
         #Global Sensitivity Analysis
-        #TODO: Need to solve GSE here instead of FD on MDA
         ssa = self.parent.add("ssa",SensitivityDriver())
         ssa.workflow.add("mda")
         ssa.differentiator = FiniteDifference()
         ssa.default_stepsize = 1.0e-6
         ssa.force_execute = True
-        ssa.add_objective(objective)
+        ssa.add_objective(objective[1].text,name=objective[0])
         for comps,param in global_dvs: 
             
             ssa.add_parameter(param.targets,low=param.low,high=param.high)
@@ -82,7 +82,7 @@ class BLISS(Architecture):
                 sa.add_parameter(param.targets,low=param.low,high=param.high,fd_step=.001)
             for constraint in constraints:
                 sa.add_constraint(constraint)
-            sa.add_objective(objective)
+            sa.add_objective(objective[1].text,name=objective[0])
             sa.differentiator = FiniteDifference()
 
         
@@ -173,4 +173,5 @@ class BLISS(Architecture):
         self.parent.driver.workflow.add(sa_s)
         self.parent.driver.workflow.add(bbopts)
         self.parent.driver.workflow.add("sysopt")
+    
         

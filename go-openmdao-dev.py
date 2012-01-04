@@ -588,7 +588,8 @@ def _install_req(py_executable, unzip=False, distribute=False,
 def file_search_dirs():
     here = os.path.dirname(os.path.abspath(__file__))
     dirs = ['.', here,
-            join(here, 'virtualenv_support')]
+            #join(here, 'virtualenv_support')]
+            '/usr/share/python-virtualenv/']
     if os.path.splitext(os.path.dirname(__file__))[0] != 'virtualenv':
         # Probably some boot script; just in case virtualenv is installed...
         try:
@@ -727,9 +728,16 @@ def main():
     parser.add_option(
         '--distribute',
         dest='use_distribute',
-        action='store_true',
-        help='Use Distribute instead of Setuptools. Set environ variable '
-        'VIRTUALENV_USE_DISTRIBUTE to make it the default ')
+        action='store_true', default=True,
+        help='Ignored.  Distribute is used by default. See --setuptools '
+        'to use Setuptools instead of Distribute.')
+
+    parser.add_option(
+        '--setuptools',
+        dest='use_distribute',
+        action='store_false',
+        help='Use Setuptools instead of Distribute. Set environ variable '
+        'VIRTUALENV_USE_SETUPTOOLS to make it the default.')
 
     default_search_dirs = file_search_dirs()
     parser.add_option(
@@ -885,7 +893,7 @@ def call_subprocess(cmd, show_stdout=True,
 
 
 def create_environment(home_dir, site_packages=True, clear=False,
-                       unzip_setuptools=False, use_distribute=False,
+                       unzip_setuptools=False, use_distribute=True,
                        prompt=None, search_dirs=None, never_download=False):
     """
     Creates a new environment in ``home_dir``.
@@ -904,11 +912,11 @@ def create_environment(home_dir, site_packages=True, clear=False,
 
     install_distutils(home_dir)
 
-    if use_distribute or os.environ.get('VIRTUALENV_USE_DISTRIBUTE'):
-        install_distribute(py_executable, unzip=unzip_setuptools, 
+    if not use_distribute or os.environ.get('VIRTUALENV_USE_SETUPTOOLS'):
+        install_setuptools(py_executable, unzip=unzip_setuptools, 
                            search_dirs=search_dirs, never_download=never_download)
     else:
-        install_setuptools(py_executable, unzip=unzip_setuptools, 
+        install_distribute(py_executable, unzip=unzip_setuptools, 
                            search_dirs=search_dirs, never_download=never_download)
 
     install_pip(py_executable, search_dirs=search_dirs, never_download=never_download)
@@ -1543,14 +1551,24 @@ openmdao_prereqs = ['numpy', 'scipy']
 def extend_parser(parser):
     parser.add_option("-r","--req", action="append", type="string", dest='reqs', 
                       help="specify additional required distributions", default=[])
-    parser.add_option("--disturl", action="store", type="string", dest='disturl', 
-                      help="specify url where openmdao distribs are located")
+    parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
+                      help="don't check for any prerequisites, e.g., numpy or scipy")
+    parser.add_option("--gui", action="store_true", dest='gui', 
+                      help="install the openmdao graphical user interface and its dependencies")
+    parser.add_option("-f", "--findlinks", action="store", type="string", 
+                      dest="findlinks",
+                      help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
+    parser.add_option("--testurl", action="store", type="string", dest='testurl', 
+                      help="specify url where openmdao.* distribs are located (used for release testing only)")
+                      
+    # hack to force use of setuptools for now because using 'distribute' causes issues
+    os.environ['VIRTUALENV_USE_SETUPTOOLS'] = '1'
 
 
 def adjust_options(options, args):
     major_version = sys.version_info[:2]
-    if major_version != (2,6):
-        print 'ERROR: python major version must be 2.6. yours is %s' % str(major_version)
+    if major_version < (2,6) or major_version > (3,0):
+        print 'ERROR: python major version must be 2.6 or 2.7. yours is %s' % str(major_version)
         sys.exit(-1)
 
     for arg in args:
@@ -1562,7 +1580,38 @@ def adjust_options(options, args):
 
 
 
-def _single_install(cmds, req, bin_dir, dodeps=False):
+
+def download(url, dest='.'):
+    import urllib2
+    dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))
+    
+    resp = urllib2.urlopen(url)
+    outpath = os.path.join(dest, os.path.basename(url))
+    bs = 1024*8
+    with open(outpath, 'wb') as out:
+        while True:
+            block = resp.fp.read(bs)
+            if block == '':
+                break
+            out.write(block)
+    return outpath
+
+def _get_mingw_dlls():
+    # first, check if MinGW/bin is already in PATH
+    for entry in sys.path:
+        if os.path.isfile(os.path.join(entry, 'libgfortran-3.dll')):
+            print 'MinGW is already installed, skipping download.'
+            break
+    else:
+        import zipfile
+        dest = os.path.dirname(sys.executable)
+        zippath = download('http://openmdao.org/releases/misc/mingwdlls.zip')
+        zipped = zipfile.ZipFile(zippath, 'r')
+        zipped.extractall(dest)
+        zipped.close()
+        os.remove(zippath)
+    
+def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     global logger
     if dodeps:
         extarg = '-Z'
@@ -1571,17 +1620,34 @@ def _single_install(cmds, req, bin_dir, dodeps=False):
     cmdline = [join(bin_dir, 'easy_install'), extarg] + cmds + [req]
         # pip seems more robust than easy_install, but won't install binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
-    logger.debug("running command: %s" % ' '.join(cmdline))
-    subprocess.check_call(cmdline)
+    #logger.debug("running command: %s" % ' '.join(cmdline))
+    try:
+        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+    except OSError:
+        failures.append(req)
 
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'PyYAML==3.09', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4']
-    if options.disturl:
-        url = options.disturl
-    else:
+    reqs = ['SetupDocs==1.0.5', 'docutils==0.6', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Traits==3.3.0', 'Sphinx==1.0.6', 'Fabric==0.9.3', 'Jinja2==2.4', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4', 'argparse==1.2.1']
+    guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'Django==1.3']
+    
+    if options.findlinks is None:
         url = 'http://openmdao.org/dists'
+    else:
+        url = options.findlinks
+    # for testing we allow one to specify a url where the openmdao
+    # package dists are located that may be different from the main
+    # url where the dependencies are located. We do this because
+    # setuptools only allows us to specify a single -f parameter,
+    # which would force us to mirror the entire openmdao distribution
+    # directory in order to test our releases because setuptools will
+    # barf if it can't find everything in the same location (or on PyPI).
+    # TODO: get rid of this after we quit using setuptools.
+    if options.testurl:
+        openmdao_url = options.testurl
+    else:
+        openmdao_url = url
     etc = join(home_dir, 'etc')
     if sys.platform == 'win32':
         lib_dir = join(home_dir, 'Lib')
@@ -1600,14 +1666,28 @@ def after_install(options, home_dir):
         except ImportError:
             failed_imports.append(pkg)
     if failed_imports:
-        logger.error("ERROR: the following prerequisites could not be imported: %s." % failed_imports)
-        logger.error("These must be installed in the system level python before installing OpenMDAO.")
-        sys.exit(-1)
+        if options.noprereqs:
+            print "\n**** The following prerequisites could not be imported: %s." % failed_imports
+            print "**** As a result, some OpenMDAO components will not work."
+        else:
+            print "ERROR: the following prerequisites could not be imported: %s." % failed_imports
+            print "These must be installed in the system level python before installing OpenMDAO."
+            print "To run a limited version of OpenMDAO without the prerequisites, try 'python %s --noprereqs'" % __file__
+            sys.exit(-1)
     
     cmds = ['-f', url]
+    openmdao_cmds = ['-f', openmdao_url]
     try:
-        for req in reqs:
-            _single_install(cmds, req, bin_dir)
+        allreqs = reqs[:]
+        failures = []
+        if options.gui:
+            allreqs = allreqs + guireqs
+            
+        for req in allreqs:
+            if req.startswith('openmdao.'):
+                _single_install(openmdao_cmds, req, bin_dir, failures)
+            else:
+                _single_install(cmds, req, bin_dir, failures)
         
 
         # now install dev eggs for all of the openmdao packages
@@ -1619,6 +1699,7 @@ def after_install(options, home_dir):
  ('openmdao.main', '', 'sdist'),
  ('openmdao.lib', '', 'sdist'),
  ('openmdao.test', '', 'sdist'),
+ ('openmdao.gui', '', 'sdist'),
  ('openmdao.examples.simple', 'examples', 'sdist'),
  ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
  ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
@@ -1628,40 +1709,52 @@ def after_install(options, home_dir):
 
         try:
             for pkg, pdir, _ in openmdao_packages:
+                if not options.gui and pkg == 'openmdao.gui':
+                    continue
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py', 
                            'develop', '-N'] + cmds
-                subprocess.check_call(cmdline)
+                try:
+                    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+                except OSError:
+                    failures.append(pkg)
         finally:
             os.chdir(startdir)
         
 
         # add any additional packages specified on the command line
         for req in options.reqs:
-            _single_install(cmds, req, bin_dir, True)
+            _single_install(cmds, req, bin_dir, failures, dodeps=True)
 
+        if sys.platform.startswith('win'): # retrieve MinGW DLLs from server
+            try:
+                _get_mingw_dlls()
+            except Exception as err:
+                print str(err)
+                print "\n\n**** Failed to download MinGW DLLs, so OpenMDAO extension packages may fail to load."
+                print "If you install MinGW yourself (including c,c++, and fortran compilers) and put "
+                print "the MinGW bin directory in your path, that should fix the problem."
     except Exception as err:
-        logger.error("ERROR: build failed: %s" % str(err))
+        print "ERROR: build failed: %s" % str(err)
         sys.exit(-1)
 
     abshome = os.path.abspath(home_dir)
     
-
-    # copy the wing project file into the virtualenv
-    proj_template = join(topdir,'config','wing_proj_template.wpr')
-    
-    shutil.copy(proj_template, 
-                join(abshome,'etc','wingproj.wpr'))
-                
-        
-
-    print '\n\nThe OpenMDAO virtual environment has been installed in %s.' % abshome
-    print 'From %s, type:\n' % abshome
+    if failures:
+        failmsg = ' (with failures).'
+        failures.sort()
+        print '\n\n***** The following packages failed to install: %s.' % failures
+    else:
+        failmsg = '.'
+    print '\n\nThe OpenMDAO virtual environment has been installed in\n %s%s' % (abshome, failmsg)
+    print '\nFrom %s, type:\n' % abshome
     if sys.platform == 'win32':
         print r'Scripts\activate'
     else:
         print '. bin/activate'
     print "\nto activate your environment and start using OpenMDAO."
+    
+    sys.exit(1 if failures else 0)
     
 
 def convert(s):

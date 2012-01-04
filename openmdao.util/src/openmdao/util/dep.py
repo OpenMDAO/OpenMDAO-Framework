@@ -57,11 +57,12 @@ def _real_name(name, finfo):
         return name
 
 class ClassInfo(object):
-    def __init__(self, name, bases, decorators):
+    def __init__(self, name, bases, decorators, impls):
         self.name = name
         self.bases = bases
         self.decorators = decorators
         self.entry_points = []
+        self.impls = impls
         
         for dec in decorators:
             if dec.func.id == 'entry_point':
@@ -83,6 +84,22 @@ class ClassInfo(object):
         """
         self.bases = [_real_name(b, finfo) for b in self.bases]
         
+
+class _ClassBodyVisitor(ast.NodeVisitor):
+    def __init__(self, impl_list):
+        self.impl_list = impl_list
+        ast.NodeVisitor.__init__(self)
+        
+    def visit_ClassDef(self, node):
+        for bnode in node.body:
+            self.visit(bnode)
+            
+    def visit_Call(self, node):
+        if isinstance(node.func, ast.Name) and node.func.id == 'implements':
+            for arg in node.args:
+                if isinstance(arg, ast.Name):
+                    self.impl_list.append(arg.id)
+
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
@@ -112,9 +129,15 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
         bases = [_to_str(b) for b in node.bases]
+
+        impl_list = []
+        bodyvisitor = _ClassBodyVisitor(impl_list)
+        bodyvisitor.visit(node)
+
         self.classes[fullname] = ClassInfo(fullname, 
                                            [self.localnames.get(b,b) for b in bases], 
-                                           node.decorator_list)
+                                           node.decorator_list,
+                                           impl_list)
         
     def visit_Import(self, node):
         """This executes every time an "import foo" style import statement 
@@ -153,6 +176,8 @@ class PythonSourceTreeAnalyser(object):
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
             
         self.exclude = exclude
+        
+        self.ifaces = set()
             
         self._analyze()
             
@@ -191,17 +216,21 @@ class PythonSourceTreeAnalyser(object):
         for visitor in fileinfo.values():
             visitor.translate(fileinfo)
     
-        # build the inheritance graph
+        # build the inheritance/interface graph
         for visitor in fileinfo.values():
             for classname, classinfo in visitor.classes.items():
                 for base in classinfo.bases:
                     self.graph.add_edge(classname, base)
+                for impl in classinfo.impls:
+                    self.ifaces.add(impl)
+                    self.graph.add_edge(classname, impl)
     
         # flip orientation of inheritance graph so we can find all classes
         # that inherit from a particular base more easily
         self.graph = self.graph.reverse(copy=False)
         
     def find_inheritors(self, base):
+        """Returns a list of names of classes that inherit from the given base class."""
         try:
             paths = nx.shortest_path(self.graph, source=base, target=None)
         except KeyError:

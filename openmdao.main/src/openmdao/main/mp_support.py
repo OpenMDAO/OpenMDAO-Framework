@@ -50,7 +50,7 @@ from multiprocessing import Process, current_process, connection, util
 from multiprocessing.forking import Popen
 from multiprocessing.managers import BaseManager, BaseProxy, RebuildProxy, \
                                      Server, State, Token, convert_to_error, \
-                                     dispatch, listener_client
+                                     dispatch
 
 if sys.platform == 'win32':  #pragma no cover
     from _multiprocessing import win32
@@ -62,8 +62,8 @@ from openmdao.main.mp_util import decrypt, encrypt, is_legal_connection, \
                                   keytype, make_typeid, public_methods, \
                                   SPECIALS
 from openmdao.main.rbac import AccessController, RoleError, check_role, \
-                               rbac_methods, need_proxy, \
-                               Credentials, get_credentials, set_credentials
+                               need_proxy, Credentials, \
+                               get_credentials, set_credentials
 
 from openmdao.util.publickey import decode_public_key, encode_public_key, \
                                     get_key_pair, HAVE_PYWIN32, \
@@ -150,10 +150,14 @@ class OpenMDAO_Server(Server):
         Dictionary of users and corresponding public keys allowed access.
         If None, any user may access. If empty, no user may access.
         The host portions of user strings are used for address patterns.
+
+    allow_tunneling: bool
+        If True, allow connections from 127.0.0.1 (localhost), even if not
+        listed otherwise.
     """
 
     def __init__(self, registry, address, authkey, serializer, name=None,
-                 allowed_hosts=None, allowed_users=None):
+                 allowed_hosts=None, allowed_users=None, allow_tunneling=False):
         super(OpenMDAO_Server, self).__init__(registry, address, authkey,
                                               serializer)
         self.name = name or 'OMS_%d' % os.getpid()
@@ -164,9 +168,14 @@ class OpenMDAO_Server(Server):
             for user_host in self._allowed_users.keys():
                 user, host = user_host.split('@')
                 hosts.add(socket.gethostbyname(host))
+                if host == socket.gethostname():
+                    hosts.add('127.0.0.1')
             self._allowed_hosts = list(hosts)
         else:
             self._allowed_hosts = allowed_hosts or []
+
+        if allow_tunneling and '127.0.0.1' not in self._allowed_hosts:
+            self._allowed_hosts.append('127.0.0.1')
 
         self._logger = logging.getLogger(name)
         self._logger.info('OpenMDAO_Server process %d started, %r',
@@ -423,10 +432,13 @@ class OpenMDAO_Server(Server):
                     # 'echo' is used for performance tests, keepalives, etc.
                     self._logger.debug('Invoke %s %s %s',
                                        methodname, role, credentials)
+#                    self._logger.debug('       %s %s', args, kwds)
+
                 # Invoke function.
                 try:
                     try:
                         res = function(*args, **kwds)
+#                        self._logger.debug('       res %r', res)
                     except AttributeError as exc:
                         if isinstance(obj, BaseProxy) and \
                            methodname == '__getattribute__':
@@ -450,6 +462,7 @@ class OpenMDAO_Server(Server):
                     orig_traceback = traceback.format_exc()
                     try:
                         fallback_func = self.fallback_mapping[methodname]
+                        self._logger.debug('Fallback %s', methodname)
                         result = fallback_func(self, conn, ident, obj,
                                                *args, **kwds)
                         msg = ('#RETURN', result)
@@ -581,10 +594,16 @@ class OpenMDAO_Server(Server):
         if isinstance(res, OpenMDAO_Proxy):  #pragma no cover
             res_address = res._token.address
             res_type = connection.address_type(res_address)
-            if (res_type != self._address_type) or \
-               (res_type == 'AF_INET' and res_address[0] != self.address[0]):
+            proxy_proxy = False
+            if res_type != self._address_type:
+                proxy_proxy = True  # Different type of connection.
+            elif res_type == 'AF_INET':
+                if res_address[0] != self.address[0]:
+                    proxy_proxy = True  # Different network.
+                elif res_address[0] == '127.0.0.1' and self._allow_tunneling:
+                    proxy_proxy = True  # Access through tunnel.
+            if proxy_proxy:
                 # Create proxy for proxy.
-                # (res is probably unreachable by our client)
                 typeid = res._token.typeid
                 proxyid = make_typeid(res)
                 self._logger.debug('Creating proxy for proxy %s', proxyid)
@@ -603,7 +622,7 @@ class OpenMDAO_Server(Server):
                     proxyid = typeid
                     if typeid not in self.registry:
                         self.registry[typeid] = (None, None, None, None)
-            elif need_proxy(function, res):
+            elif need_proxy(function, res, access_controller):
                 # Create proxy if in declared proxy types.
                 typeid = make_typeid(res)
                 proxyid = typeid
@@ -792,17 +811,23 @@ class OpenMDAO_Manager(BaseManager):
     allowed_users: dict
         Dictionary of users and corresponding public keys allowed access.
         If None, any user may access. If empty, no user may access.
+
+    allow_tunneling: bool
+        If True, allow connections from 127.0.0.1 (localhost), even if not
+        listed otherwise.
     """
 
     _Server = OpenMDAO_Server
 
     def __init__(self, address=None, authkey=None, serializer='pickle',
-                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None):
+                 pubkey=None, name=None, allowed_hosts=None, allowed_users=None,
+                 allow_tunneling=False):
         super(OpenMDAO_Manager, self).__init__(address, authkey, serializer)
         self._pubkey = pubkey
         self._name = name
         self._allowed_hosts = allowed_hosts
         self._allowed_users = allowed_users
+        self._allow_tunneling = allow_tunneling
 
     def get_server(self):
         """
@@ -811,7 +836,8 @@ class OpenMDAO_Manager(BaseManager):
         assert self._state.value == State.INITIAL
         return OpenMDAO_Server(self._registry, self._address, self._authkey,
                                self._serializer, self._name,
-                               self._allowed_hosts, self._allowed_users)
+                               self._allowed_hosts, self._allowed_users,
+                               self._allow_tunneling)
 
     def start(self, cwd=None):
         """
@@ -844,7 +870,8 @@ class OpenMDAO_Manager(BaseManager):
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
                   self._serializer, self._name, self._allowed_hosts,
-                  self._allowed_users, writer, credentials, cwd),
+                  self._allowed_users, self._allow_tunneling,
+                  writer, credentials, cwd),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -897,7 +924,7 @@ class OpenMDAO_Manager(BaseManager):
     # This happens on the remote server side and we'll check when using it.
     @classmethod
     def _run_server(cls, registry, address, authkey, serializer, name,
-                    allowed_hosts, allowed_users,
+                    allowed_hosts, allowed_users, allow_tunneling,
                     writer, credentials, cwd=None): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
@@ -918,7 +945,12 @@ class OpenMDAO_Manager(BaseManager):
 
                 # Reset stdout & stderr.
                 for handler in logging._handlerList:
-                    handler.flush()
+                    try:
+                        handler.flush()
+                    except AttributeError:
+                        h = handler()
+                        if h:
+                            h.flush()
                 sys.stdout.flush()
                 sys.stderr.flush()
                 sys.stdout = open('stdout', 'w')
@@ -933,7 +965,7 @@ class OpenMDAO_Manager(BaseManager):
 
             # Create server.
             server = cls._Server(registry, address, authkey, serializer, name,
-                                 allowed_hosts, allowed_users)
+                                 allowed_hosts, allowed_users, allow_tunneling)
         except Exception as exc:
             writer.send(exc)
             return
@@ -1068,6 +1100,13 @@ class OpenMDAO_Proxy(BaseProxy):
         key, and the entry is removed before being passed to :class:`BaseProxy`.
 
     This version sends credentials and provides dynamic result proxy generation.
+
+    .. note::
+
+        :meth:`BaseProxy.__str__` (used by :meth:`str` and the ``%s`` format)
+        will return :meth:`__repr__` of the remote object.  To avoid the
+        network round-trip delay, use :meth:`repr` or the ``%r`` format.
+
     """
 
     def __init__(self, *args, **kwds):
@@ -1102,8 +1141,8 @@ class OpenMDAO_Proxy(BaseProxy):
             try:
                 self._connect()
             except Exception as exc:
-                msg = "Can't connect to server at %r: %r" \
-                      % (self._token.address, exc)
+                msg = "Can't connect to server at %r for %r: %r" \
+                      % (self._token.address, methodname, exc)
                 logging.error(msg)
                 raise RuntimeError(msg)
             conn = self._tls.connection
@@ -1131,7 +1170,8 @@ class OpenMDAO_Proxy(BaseProxy):
             conn.send(encrypt((self._id, methodname, new_args, kwds,
                                get_credentials().encode()), session_key))
         except IOError as exc:
-            msg = "Can't send to server at %r: %r" % (self._token.address, exc)
+            msg = "Can't send to server at %r for %r: %r" \
+                  % (self._token.address, methodname, exc)
             logging.error(msg)
             raise RuntimeError(msg)
 
@@ -1177,13 +1217,6 @@ class OpenMDAO_Proxy(BaseProxy):
         text = encode_public_key(public_key)
 
         server_key = self._pubkey
-        # Just being defensive, this should never happen.
-        if not server_key:  #pragma no cover
-            msg = 'No server PublicKey for %s(%s, %s)' \
-                  % (methodname, args, kwds)
-            logging.error(msg)
-            raise RuntimeError(msg)
-
         encrypted = pk_encrypt(text, server_key)
         client_version = 1
         conn.send((client_version, server_key.n, server_key.e, encrypted))

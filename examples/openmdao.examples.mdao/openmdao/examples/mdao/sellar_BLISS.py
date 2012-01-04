@@ -8,13 +8,13 @@
     match the original Sobiesky-Agte implementation.
 """
 
-from openmdao.examples.mdao.disciplines import SellarDiscipline1,\
-                                               SellarDiscipline2
 from openmdao.main.api import Assembly
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
+
+from openmdao.lib.optproblems import sellar
 
 
 class SellarBLISS(Assembly):
@@ -35,8 +35,8 @@ class SellarBLISS(Assembly):
         super(SellarBLISS, self).__init__()        
 
         # Disciplines
-        self.add('dis1', SellarDiscipline1())
-        self.add('dis2', SellarDiscipline2())
+        self.add('dis1', sellar.Discipline1())
+        self.add('dis2', sellar.Discipline2())
         
         objective = '(dis1.x1)**2 + dis1.z2 + dis1.y1 + exp(-dis2.y2)'
         constraint1 = 'dis1.y1 > 3.16'
@@ -44,9 +44,9 @@ class SellarBLISS(Assembly):
         
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
-        self.driver.add_parameter('dis1.x1', low=  0.0, high=10.0)
-        self.driver.add_parameter(['dis1.z1','dis2.z1'], low=-10.0, high=10.0)
-        self.driver.add_parameter(['dis1.z2','dis2.z2'], low=  0.0, high=10.0)
+        self.driver.add_parameter('dis1.x1', low=  0.0, high=10.0, start=1.0)
+        self.driver.add_parameter(['dis1.z1','dis2.z1'], low=-10.0, high=10.0, start=5.0)
+        self.driver.add_parameter(['dis1.z2','dis2.z2'], low=  0.0, high=10.0,start=2.0)
         self.driver.add_constraint('x1_store = dis1.x1')
         self.driver.add_constraint('z_store[0] = dis1.z1')
         self.driver.add_constraint('z_store[1] = dis1.z2')
@@ -55,9 +55,9 @@ class SellarBLISS(Assembly):
         
         # Multidisciplinary Analysis
         self.add('mda', BroydenSolver())
-        self.mda.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.mda.add_parameter('dis1.y2', low=-9.e99, high=9.e99,start=0.0)
         self.mda.add_constraint('dis2.y2 = dis1.y2')
-        self.mda.add_parameter('dis2.y1', low=-9.e99, high=9.e99)
+        self.mda.add_parameter('dis2.y1', low=-9.e99, high=9.e99,start=3.16)
         self.mda.add_constraint('dis2.y1 = dis1.y1')
         self.mda.force_execute = True
         
@@ -92,7 +92,7 @@ class SellarBLISS(Assembly):
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
         self.add('bbopt1', CONMINdriver())
-        self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0)
+        self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0, start=1.0)
         self.bbopt1.add_objective('sa_dis1.F[0] + sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
         self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) < 0')
         #this one is technically unncessary
@@ -106,8 +106,8 @@ class SellarBLISS(Assembly):
         
         # Global Optimization
         self.add('sysopt', CONMINdriver())
-        self.sysopt.add_parameter('z_store[0]', low=-10.0, high=10.0)
-        self.sysopt.add_parameter('z_store[1]', low=0.0, high=10.0)
+        self.sysopt.add_parameter('z_store[0]', low=-10.0, high=10.0, start=5.0)
+        self.sysopt.add_parameter('z_store[1]', low=0.0, high=10.0, start=2.0)
         self.sysopt.add_objective('ssa.F[0]+ ssa.dF[0][0]*(z_store[0]-dis1.z1) + ssa.dF[0][1]*(z_store[1]-dis1.z2)')
         
         self.sysopt.add_constraint('ssa.G[0] + ssa.dG[0][0]*(z_store[0]-dis1.z1) + ssa.dG[0][1]*(z_store[1]-dis1.z2) < 0')
@@ -134,11 +134,6 @@ if __name__ == "__main__": # pragma: no cover
     prob.name = "top"
     set_as_top(prob)
             
-    prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0
-    prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0
-    prob.dis1.x1 = prob.x1_store = 1.0
-    
-    
     tt = time.time()
     prob.run()
     print "\n"

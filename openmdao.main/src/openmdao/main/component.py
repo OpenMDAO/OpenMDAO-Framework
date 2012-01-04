@@ -25,7 +25,7 @@ from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -116,6 +116,11 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        # register callbacks for all of our 'in' traits
+        for name,trait in self.class_traits().items():
+            if trait.iotype == 'in':
+                self._set_input_callback(name)
+
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
         self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
@@ -153,6 +158,7 @@ class Component (Container):
         self._dir_context = None
         
         self.ffd_order = 0
+        self._case_id = ''
 
 
     @property
@@ -162,6 +168,16 @@ class Component (Container):
             self._dir_context = DirectoryContext(self)
         return self._dir_context
 
+    # call this if any trait having 'iotype' metadata of 'in' is changed
+    def _input_trait_modified(self, obj, name, old, new):
+        #if name.endswith('_items'):
+            #n = name[:-6]
+            #if n in self._valid_dict:
+                #name = n
+        self._input_check(name, old)
+        self._call_execute = True
+        self._input_updated(name)
+            
     def _input_updated(self, name):
         if self._valid_dict[name]:  # if var is not already invalid
             outs = self.invalidate_deps(varnames=[name])
@@ -180,6 +196,15 @@ class Component (Container):
         state['_connected_outputs'] = None
         
         return state
+
+    def __setstate__(self, state):
+        super(Component, self).__setstate__(state)
+        
+        # make sure all input callbacks are in place.  If callback is
+        # already there, this will have no effect. 
+        for name, trait in self._alltraits().items():
+            if trait.iotype == 'in':
+                self._set_input_callback(name)
 
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -218,7 +243,7 @@ class Component (Container):
             except OSError, exc:
                 self.raise_exception("Can't create execution directory '%s': %s"
                                      % (path, exc.strerror), OSError)
-            
+
             # Populate with external files from config directory.
             config_dir = self.directory
             self.directory = new_dir
@@ -340,10 +365,10 @@ class Component (Container):
         
         pass
         
-    
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
-        Overrides of this function must call this version.
+        Overrides of this function must call this version.  This is only 
+        called if execute() actually ran.
         """
         self.exec_count += 1
         
@@ -355,6 +380,10 @@ class Component (Container):
         for name in self.list_inputs(valid=False):
             valids[name] = True
         self._call_execute = False
+        
+    def _post_run (self):
+        """"Runs at the end of the run function, whether execute() ran or not."""
+        pass
         
     @rbac('*', 'owner')
     def run (self, force=False, ffd_order=0, case_id=''):
@@ -406,6 +435,7 @@ class Component (Container):
                 self._post_execute()
             #else:
                 #print 'skipping: %s' % self.get_pathname()
+            self._post_run()
         finally:
             if self.directory:
                 self.pop_dir()
@@ -438,6 +468,11 @@ class Component (Container):
         added.
         """
         super(Component, self).add_trait(name, trait)
+        
+        # if it's an input trait, register a callback to be called whenever it's changed
+        if trait.iotype == 'in':
+            self._set_input_callback(name)
+            
         self.config_changed()
         if name not in self._valid_dict:
             if trait.iotype:
@@ -445,12 +480,23 @@ class Component (Container):
             if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
         
+    def _set_input_callback(self, name, remove=False):
+        #t = self.trait(name)
+        #if t.has_items or (t.trait_type and t.trait_type.has_items):
+        #    name = name+'[]'
+        self.on_trait_change(self._input_trait_modified, name, remove=remove)
+        
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
         trait = self.get_trait(name)
+        
+        # remove the callback if it's an input trait
+        if trait and trait.iotype == 'in':
+            self._set_input_callback(name, remove=True)
+
         super(Component, self).remove_trait(name)
         self.config_changed()
 
@@ -483,6 +529,42 @@ class Component (Container):
                         return False
         return True
         
+    #@rbac(('owner', 'user'))
+    #def get_configinfo(self, pathname='self'):
+        #"""Return a ConfigInfo object for this instance.  The
+        #ConfigInfo object should also contain ConfigInfo objects
+        #for children of this object.
+        #"""
+        #info = ConfigInfo(self, pathname)
+        #names = self.list_inputs()
+        #for name, trait in self.traits().items():
+            #if trait.is_trait_type(Instance):
+                #names.append(name)
+                
+        #nameset = set(names)
+        #for cont in self.list_containers():
+            #if cont not in nameset:
+                #names.append(cont)
+
+        #for name in names:
+            #val = getattr(self, name)
+            #if self.trait(name).default == val:
+                #continue
+            #vname = '.'.join([pathname, name])
+            #if isinstance(val, (float, int, long, complex, basestring, bool)):
+                #info.cmds.append('%s = %s' % (vname, val))
+            #elif hasattr(val, 'get_configinfo'):
+                #cfg = val.get_configinfo(vname)
+                #if issubclass(cfg.klass, Container):
+                    #addtxt = "%s.add('%s', %s)" % (pathname,name,cfg.get_ctor())
+                #else:
+                    #addtxt = '%s = %s' % (vname, cfg.get_ctor())
+                #info.cmds.append((cfg, addtxt))
+            #else:
+                #raise TypeError("get_configinfo: don't know how to handle type %s" % type(val))
+            
+        #return info
+    
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -877,7 +959,10 @@ class Component (Container):
         for fvarname, fvar, ftrait in comp.get_file_vars():
             if fvar.owner is not comp:
                 continue
-            path = fvar.path
+            if hasattr(ftrait, 'local_path') and ftrait.local_path:
+                path = ftrait.local_path
+            else:
+                path = fvar.path
             if not path:
                 continue
             if not isabs(path):
@@ -984,10 +1069,10 @@ class Component (Container):
                         rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
                 elif '_rel_dir_path' in top.traits():
-                    top.warning('No parent, using saved relative directory')
+                    top._logger.warning('No parent, using saved relative directory')
                     rel_path = top._rel_dir_path  # Set during save_to_egg().
                 else:
-                    top.warning('No parent, using null relative directory')
+                    top._logger.warning('No parent, using null relative directory')
                     rel_path = ''
 
             # Set top directory.
@@ -1032,8 +1117,10 @@ class Component (Container):
                     
         if call_post_load:
             top.post_load()
-
+            
         observer.complete(name)
+        
+        top.parent = None
         return top
 
     def _restore_files(self, package, rel_path, file_list, do_copy=True,

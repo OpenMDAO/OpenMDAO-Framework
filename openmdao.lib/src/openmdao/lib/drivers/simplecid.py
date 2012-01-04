@@ -4,7 +4,7 @@ with a CaseRecorder. """
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 testdict = {}
 
 class SimpleCaseIterDriver(Driver):
@@ -15,8 +15,8 @@ class SimpleCaseIterDriver(Driver):
     with similar functionality, see :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `recorder` socket is used to record results. This is inherited from
-                  the :class:`Driver` class.
+    - The `recorders` socket is used to record results. This is inherited from
+                      the :class:`Driver` class.
     
     For each case coming from the `iterator`, the workflow will
     be executed once.
@@ -40,7 +40,8 @@ class SimpleCaseIterDriver(Driver):
         """ Run each case in `iterator` and record results in `recorder`. """
         for case in self.iterator:
             self._run_case(case)
-            self.recorder.record(case)
+            for recorder in self.recorders:
+                recorder.record(case)
 
     def _run_case(self, case):
         msg = None

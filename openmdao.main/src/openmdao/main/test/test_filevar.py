@@ -8,14 +8,11 @@ import os.path
 import shutil
 import unittest
 
-from numpy.testing import assert_equal
-
 from openmdao.main.api import Assembly, Component, set_as_top, FileRef
-from openmdao.lib.datatypes.api import Array, Bool, File, Str
+from openmdao.main.datatypes.api import Bool, File, Str, List
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
-
 
 
 class Source(Component):
@@ -23,7 +20,7 @@ class Source(Component):
 
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
-    binary_data = Array(iotype='in')
+    binary_data = List([1.0], iotype='in')
     text_file = File(path='source.txt', iotype='out', content_type='txt')
     binary_file = File(path='source.bin', iotype='out', binary=True,
                             extra_stuff='Hello world!')
@@ -36,7 +33,7 @@ class Source(Component):
             out.close()
 
             out = open(self.binary_file.path, 'wb')
-            cPickle.dump(self.binary_data, out, 2)
+            cPickle.dump(list(self.binary_data), out, 2)
             out.close()
 
 
@@ -79,7 +76,7 @@ class Sink(Component):
 
     bogus_path = Str('', iotype='in')
     text_data = Str(iotype='out')
-    binary_data = Array(iotype='out')
+    binary_data = List([1.0], iotype='out')
     text_file = File(iotype='in')
     binary_file = File(iotype='in')
 
@@ -162,11 +159,12 @@ class TestCase(unittest.TestCase):
         # Verify data transferred.
         self.assertEqual(self.model.sink.text_data,
                          self.model.source.text_data)
-        assert_equal(self.model.sink.binary_data,
-                     self.model.source.binary_data)
+        self.assertEqual(self.model.sink.binary_data,
+                         self.model.source.binary_data)
         self.assertEqual(self.model.sink.binary_file.binary, True)
         self.assertEqual(self.model.sink.binary_file.extra_stuff,
                          self.model.source.binary_file.extra_stuff)
+
 
     def test_src_failure(self):
         logging.debug('')
@@ -270,14 +268,6 @@ class TestCase(unittest.TestCase):
         except Exception, exc:
             self.assertEqual(str(exc),
                              'File default value must be a FileRef.')
-        else:
-            self.fail('Expected Exception')
-
-        try:
-            File()
-        except Exception, exc:
-            self.assertEqual(str(exc),
-                             "File must have 'iotype' defined.")
         else:
             self.fail('Expected Exception')
 

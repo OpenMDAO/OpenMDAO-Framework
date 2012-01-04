@@ -13,7 +13,7 @@ from openmdao.lib.drivers.api import DOEdriver, Genetic, IterateUntil
 from openmdao.lib.doegenerators.api import OptLatinHypercube
 from openmdao.lib.casehandlers.api import DBCaseRecorder
 
-from openmdao.examples.expected_improvement.branin_component import BraninComponent
+from openmdao.lib.optproblems.branin import BraninComponent
         
     
 class MyDriver(Driver): 
@@ -31,7 +31,8 @@ class MyDriver(Driver):
         outputs = [(name,self.parent.get(name)) for name in self.outs]
         case = Case(inputs = inputs,
                     outputs = outputs)
-        self.recorder.record(case)
+        for recorder in self.recorders:
+            recorder.record(case)
         
 
         
@@ -61,27 +62,27 @@ class Analysis(Assembly):
         self.DOE_trainer.sequential = True
         self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=15)
         #self.DOE_trainer.DOEgenerator = FullFactorial(num_levels=5)
-        self.DOE_trainer.add_parameter("branin_meta_model.x")
-        self.DOE_trainer.add_parameter("branin_meta_model.y")
+        self.DOE_trainer.add_parameter("branin_meta_model.x",low=-5.,high=10.)
+        self.DOE_trainer.add_parameter("branin_meta_model.y",low=0.,high=15.)
 
         self.DOE_trainer.add_event("branin_meta_model.train_next")
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
-        self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
+        self.DOE_trainer.recorders = [DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))]
         
         self.add("EI_opt",Genetic())
         self.EI_opt.opt_type = "maximize"
         self.EI_opt.population_size = 100
         self.EI_opt.generations = 10
-        self.EI_opt.selection_method = "tournament"
-        self.EI_opt.add_parameter("branin_meta_model.x")
-        self.EI_opt.add_parameter("branin_meta_model.y")
+        #self.EI_opt.selection_method = "tournament"
+        self.EI_opt.add_parameter("branin_meta_model.x",low=-5.,high=10.)
+        self.EI_opt.add_parameter("branin_meta_model.y",low=0.,high=15.)
         
-        self.EI_opt.add_objective("EI.EI")
+        self.EI_opt.add_objective("EI.PI")
         self.EI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("branin_meta_model.train_next")
-        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
+        self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
         self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())

@@ -1,11 +1,62 @@
 import sys
 
 from openmdao.main.api import Assembly, Component, Container, FileRef, \
-                              set_as_top
+                              VariableTree, set_as_top
 from openmdao.main.rbac import rbac
 
-from openmdao.lib.datatypes.api import Array, Bool, Enum, File, Float, \
-                                       Int, List, Str
+from openmdao.main.datatypes.api import Array, Bool, Enum, File, Float, \
+                                        Int, List, Str
+
+class SubObj(VariableTree):
+    """ Sub-object under TopObject. """
+
+    def __init__(self, *args, **kwargs):
+        super(SubObj, self).__init__(*args, **kwargs)
+        self.add('sob', Bool(False))
+        self.add('sof', Float(0.284, units='lb/inch**3'))
+        self.add('soi', Int(3))
+        self.add('sos', Str('World'))
+
+
+class TopObj(VariableTree):
+    """ Top-level object variable. """
+
+    def __init__(self, *args, **kwargs):
+        super(TopObj, self).__init__(*args, **kwargs)
+        self.add('subobj', SubObj(iotype=kwargs['iotype']))
+        self.add('tob', Bool(True))
+        self.add('tof', Float(0.5, units='inch'))
+        self.add('toi', Int(42))
+        self.add('tos', Str('Hello'))
+        self.add('tofe', Enum(values=(2.781828, 3.14159),
+                              aliases=('e', 'pi'), desc='Float enum', units='m'))
+        self.add('toie', Enum(values=(9, 8, 7, 1), desc='Int enum'))
+        self.add('tose', Enum(values=('cold', 'hot', 'nice'), desc='Str enum'))
+
+        self.add('tof1d', Array(dtype=float, desc='1D float array', units='cm',
+                                default_value=[1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5],
+                                low=0, high=10))
+
+        self.add('tof2d', Array(dtype=float, desc='2D float array', units='mm',
+                                default_value=[ [1.5, 2.5, 3.5, 4.5],
+                                                [5.5, 6.5, 7.5, 8.5] ]))
+
+        self.add('tof3d', Array(dtype=float, desc='3D float array',
+                                default_value=[ [ [1.5, 2.5, 3.5],
+                                                  [4.5, 5.5, 6.5],
+                                                  [7.5, 8.5, 9.5] ],
+                                                [ [10.5, 20.5, 30.5],
+                                                  [40.5, 50.5, 60.5],
+                                                  [70.5, 80.5, 90.5] ] ]))
+
+        self.add('toi1d', Array(dtype=int, desc='1D int array',
+                                default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9]))
+
+        self.add('tos1d', List(Str, desc='1D string array',
+                               value=['Hello', 'from', 'TestComponent.tos1d']))
+
+        self.add('toflst', List(Float, desc='Float list'))
+        self.add('toilst', List(Int, desc='Int list'))
 
 
 class TestComponent(Component):
@@ -23,6 +74,8 @@ class TestComponent(Component):
     def __init__(self):
         super(TestComponent, self).__init__()
         self.add('sub_group', SubGroup())
+        self.add('obj_input', TopObj(iotype='in'))
+        self.add('obj_output', TopObj(iotype='out'))
 
     def execute(self):
         if self.x < 0:
@@ -39,13 +92,41 @@ class TestComponent(Component):
 #        sys.stderr.write('stderr: %s %s %s\n' % (self.x, self.y, self.z))
 #        sys.stderr.flush()
 
+        # Copy input object to output object.
+        self.obj_output.tob = self.obj_input.tob
+        self.obj_output.tof = self.obj_input.tof
+        self.obj_output.toi = self.obj_input.toi
+        self.obj_output.tos = self.obj_input.tos
+
+        self.obj_output.tofe = self.obj_input.tofe
+        self.obj_output.toie = self.obj_input.toie
+        self.obj_output.tose = self.obj_input.tose
+
+        self.obj_output.tof1d = self.obj_input.tof1d
+        self.obj_output.tof2d = self.obj_input.tof2d
+        self.obj_output.tof3d = self.obj_input.tof3d
+        self.obj_output.toi1d = self.obj_input.toi1d
+        self.obj_output.tos1d = self.obj_input.tos1d
+
+        self.obj_output.toflst = self.obj_input.toflst
+        self.obj_output.toilst = self.obj_input.toilst
+
+        self.obj_output.subobj.sob = self.obj_input.subobj.sob
+        self.obj_output.subobj.sof = self.obj_input.subobj.sof
+        self.obj_output.subobj.soi = self.obj_input.subobj.soi
+        self.obj_output.subobj.sos = self.obj_input.subobj.sos
+        
     @rbac(('owner', 'user'))
     def cause_exception(self):
         self.raise_exception("It's your own fault...", RuntimeError)
 
     @rbac(('owner', 'user'))
     def float_method(self):
-        return self.z
+        return self.x + self.y
+
+    @rbac(('owner', 'user'))
+    def int_method(self):
+        return self.exe_count
 
     @rbac(('owner', 'user'))
     def null_method(self):
@@ -91,10 +172,11 @@ class SubGroup(Container):
     i1d = Array(dtype=int, iotype='in', desc='1D int array',
                 default_value=[1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-#    s1d = Array(dtype=str, iotype='in', desc='1D string array',
-#                default_value=['Hello', 'from', 'TestComponent.SubGroup'])
     s1d = List(Str, iotype='in', desc='1D string array',
                value=['Hello', 'from', 'TestComponent.SubGroup'])
+
+    flst = List(Float, iotype='in', desc='List of floats')
+    ilst = List(Int, iotype='in', desc='List of ints')
 
 
 class Bogus(object):
@@ -112,6 +194,6 @@ if __name__ == '__main__':
     for path in ('x', 'y', 'z', 'exe_count',
                  'sub_group.b', 'sub_group.f', 'sub_group.i', 'sub_group.s',
                  'sub_group.fe', 'sub_group.ie', 'sub_group.se',
-                 'sub_group.f1d', 'sub_group.i1d'):
+                 'sub_group.f1d', 'sub_group.i1d', 'sub_group.s1d'):
         print '%s: %s' % (path, comp.get(path))
 

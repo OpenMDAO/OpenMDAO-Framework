@@ -125,7 +125,7 @@ class BoxDriver(Driver):
 
     def __init__(self):
         super(BoxDriver, self).__init__()
-        self.recorder = ListCaseRecorder()
+        self.recorders = [ListCaseRecorder()]
 
     def execute(self):
         """ Runs with various box parameter values. """
@@ -146,7 +146,8 @@ class BoxDriver(Driver):
                                     ('area', None, area),
                                     ('pid', None, self.parent.box.pid)]
                                    # Just to show access to remote from driver.
-                    self.recorder.record(case)
+                    for recorder in self.recorders:
+                        recorder.record(case)
 
 
 class BoxSource(ExecComp):
@@ -321,10 +322,15 @@ class TestCase(unittest.TestCase):
                              'openmdao.main.test.test_distsim.Box',
                              'openmdao.main.test.test_distsim.ProtectedBox']
 
-            server = start_server(port=port, allowed_users=allowed_users,
-                                  allowed_types=allowed_types)
+            server, server_cfg = start_server(port=port,
+                                              allowed_users=allowed_users,
+                                              allowed_types=allowed_types)
             self.servers.append(server)
-            self.address, self.port, self.key = read_server_config('server.cfg')
+            cfg = read_server_config(server_cfg)
+            self.address = cfg['address']
+            self.port = cfg['port']
+            self.tunnel = cfg['tunnel']
+            self.key = cfg['key']
             logging.debug('server pid: %s', server.pid)
             logging.debug('server address: %s', self.address)
             logging.debug('server port: %s', self.port)
@@ -332,7 +338,7 @@ class TestCase(unittest.TestCase):
         finally:
             os.chdir('..')
 
-        factory = connect(self.address, self.port, pubkey=self.key)
+        factory = connect(self.address, self.port, self.tunnel, pubkey=self.key)
         self.factories.append(factory)
         logging.debug('factory: %r', factory)
         return factory
@@ -435,7 +441,7 @@ class TestCase(unittest.TestCase):
         for width in range(1, 2):
             for height in range(1, 3):
                 for depth in range(1, 4):
-                    case = model.driver.recorder.cases.pop(0)
+                    case = model.driver.recorders[0].cases.pop(0)
                     self.assertEqual(case.outputs[0][2], width*height*depth)
 
         self.assertTrue(is_instance(model.box.parent, Assembly))
@@ -529,7 +535,7 @@ class TestCase(unittest.TestCase):
         for width in range(1, 2):
             for height in range(1, 3):
                 for depth in range(1, 4):
-                    case = model.driver.recorder.cases.pop(0)
+                    case = model.driver.recorders[0].cases.pop(0)
                     self.assertEqual(case.outputs[0][2], width*height*depth)
 
         # Check access protections.
@@ -582,11 +588,16 @@ class TestCase(unittest.TestCase):
         try:
             logging.debug('starting server (authkey %s)...', authkey)
             allowed_types = ['openmdao.main.test.test_distsim.Box']
-            server = start_server(authkey=authkey, allowed_types=allowed_types,
-                                  timeout=30)
-            address, port, key = read_server_config('server.cfg')
+            server, server_cfg = start_server(authkey=authkey,
+                                              allowed_types=allowed_types,
+                                              timeout=30)
+            cfg = read_server_config(server_cfg)
+            address = cfg['address']
+            port = cfg['port']
+            key = cfg['key']
             logging.debug('server address: %s', address)
             logging.debug('server port: %s', port)
+            logging.debug('server tunnel: %s', cfg['tunnel'])
             logging.debug('server key: %s', key)
         finally:
             os.chdir('..')
@@ -609,7 +620,7 @@ class TestCase(unittest.TestCase):
             for width in range(1, 2):
                 for height in range(1, 3):
                     for depth in range(1, 4):
-                        case = model.driver.recorder.cases.pop(0)
+                        case = model.driver.recorders[0].cases.pop(0)
                         self.assertEqual(case.outputs[0][2], width*height*depth)
         finally:
             if factory is not None:
@@ -681,7 +692,7 @@ class TestCase(unittest.TestCase):
         address = socket.gethostname()
         junk_port = 12345
         assert_raises(self, 'connect(address, junk_port, pubkey=self.key)',
-                      globals(), locals(), RuntimeError, "can't connect to ")
+                      globals(), locals(), RuntimeError, "Can't connect to ")
 
         # Unpickleable argument.
         code = compile('3 + 4', '<string>', 'eval')

@@ -6,16 +6,13 @@ import atexit
 import time
 from socket import gethostname
 from optparse import OptionParser
-from fabric.api import run, env, local, put, cd, get, settings, prompt, \
-                       hide, show, hosts
-from fabric.state import connections
 from boto.ec2.connection import EC2Connection
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     rm_remote_tree, make_git_archive, \
                                     fabric_cleanup, ssh_test, fab_connect
 
-from openmdao.util.debug import print_fuct_call
+from openmdao.util.debug import print_funct_call
 
 
 def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
@@ -27,14 +24,28 @@ def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
     tries = 1
     while True:
         time.sleep(sleeptime)
-        inst.update()
-        if debug:
-            stream.write("%s state = %s\n" % (imgname, inst.state))
-        if inst.state == state or tries >= maxtries:
+        try:
+            inst.update()
+        except Exception as err:
+            if debug:
+                stream.write("ERROR while attempting to get instance state: %s" % str(err))
+        else:
+            if debug:
+                stream.write("%s state = %s\n" % (imgname, inst.state))
+            if inst.state == state:
+                return state
+        if tries >= maxtries:
             break
         tries += 1
-    return inst.state
    
+def get_username():
+    """ Return username for current user. """
+    if sys.platform == 'win32':
+        return os.environ['USERNAME']
+    else:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_name
+
 def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     """Starts up an EC2 instance having the specified 'short' name and
     returns the instance.
@@ -60,7 +71,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
     reservation = img.run(key_name=key_name, 
                           security_groups=security_groups,
                           instance_type=instance_type)
-    
+        
     inst = reservation.instances[0]
     check_inst_state(inst, u'running', imgname=name, debug=debug)
     if inst.state != u'running':
@@ -81,7 +92,11 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
         raise RuntimeError("instance of '%s' ran but ssh connection attempts failed (%d attempts)" % (name,max_tries))
 
     time.sleep(20)
-        
+    
+    try:
+        conn.create_tags([inst.id], {'Name': "%s_%s" % (get_username(),name)} )
+    except Exception as err:
+        print str(err)
     return inst
 
 def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
@@ -112,16 +127,28 @@ def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
 
     return inst
 
-def stop_instance(inst, host, stream):
+def stop_instance(inst, host, stream, debug):
     inst.stop()
     check_inst_state(inst, u'stopped', imgname=host, 
-                     stream=stream)
+                     stream=stream, debug=debug)
     if inst.state == u'stopped':
         stream.write("instance of %s has stopped\n" % host)
         return True
     else:
         stream.write("instance of %s failed to stop! (state=%s)\n" % 
                      (host, inst.state))
+        return False
+
+def terminate_instance(inst, host, stream, debug):
+    stream.write("terminating %s\n" % host)
+    inst.terminate()
+    check_inst_state(inst, u'terminated', imgname=host, debug=debug,
+                     stream=stream)
+    if inst.state == u'terminated':
+        stream.write("instance of %s is terminated.\n" % host)
+        return True
+    else:
+        stream.write("instance of %s failed to terminate!\n" % host)
         return False
 
 class MultiFile(object):
@@ -141,6 +168,10 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     the instance being stopped but not terminated.  If the instance was
     pre-existing, then it will just be stopped instead of terminated.
     """
+    # put fabric import here to prevent sphinx doc generation failure
+    # on windows when win32api isn't installed
+    from fabric.api import settings, hide, show
+    
     hostdir = os.path.join(outdir, host)
     if not os.path.isdir(hostdir):
         os.makedirs(hostdir)
@@ -195,7 +226,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
                                  settings_kwargs['host_string'], debug=debug)
             if debug:
                 outf.write("<%s>: calling %s\n" % 
-                                  (host, print_fuct_call(funct, **kwargs)))
+                                  (host, print_funct_call(funct, **kwargs)))
             retval = funct(**kwargs)
     except (SystemExit, Exception) as err:
         outf.write(str(err))
@@ -210,31 +241,24 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
         with open('console.out', 'wb') as f:
             f.write(out)
     except:
-        pass
+        outf.write("\ncouldn't retrieve console output\n")
 
     keep = kwargs.get('keep', False)
     if retval == 0 or not keep:
         if terminate is True:
-            outf.write("terminating %s\n" % host)
-            inst.terminate()
-            check_inst_state(inst, u'terminated', imgname=host, debug=debug,
-                             stream=outf)
-            if inst.state == u'terminated':
-                outf.write("instance of %s is terminated.\n" % host)
-            else:
-                outf.write("instance of %s failed to terminate!\n" % host)
+            if not terminate_instance(inst, host, orig_stdout, debug):
                 retval = -1
         else:
-            if not stop_instance(inst, host, orig_stdout):
+            if not stop_instance(inst, host, orig_stdout, debug):
                 retval = -1
     else:
         outf.write("run failed, so stopping %s instead of terminating it.\n" % host)
         outf.write("%s will have to be terminated manually.\n" % host)
-        if not stop_instance(inst, host, orig_stdout):
+        if not stop_instance(inst, host, orig_stdout, debug):
             retval = -1
         
     if retval != 0:
-        raise RuntimeError("return value = %d" % retval)
+        raise RuntimeError("return value = %s" % retval)
 
 
 #def find_instance(inst_id):

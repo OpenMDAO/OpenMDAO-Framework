@@ -10,10 +10,8 @@ dist
 parts
 eggs
 develop-eggs
-*/**/pylint
 ~*
 licenses_table.txt
-engineCmodule.c
 wingproj.wpr
 .installed.cfg
 buildout/bin/
@@ -21,14 +19,10 @@ docs/readme.html
 wingproj.wpr
 _build
 doctrees
-html
 generated_images
 repo_lock
 docs/srcdocs/packages/*.rst
-docs/srcdocs/modules/*.rst
-cobertura.xml
 nosetests.xml
-examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-f2pywrappers.f
-examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3module.c
 devenv
-*.DS_Store
+
+

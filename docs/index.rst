@@ -18,6 +18,7 @@ Contents:
    srcdocs/index
    plugin-guide/index
    dev-guide/index
+   dev-checklist
    licenses/index
    documenting/index
    

@@ -1,0 +1,182 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* chrome puts 1em before and after ul */
+ul {
+    -webkit-margin-before: 0;
+    -webkit-margin-after: 0;
+    /* -moz-padding-start: 0; */
+    margin: 0;
+}
+
+/* desktop */
+#leftcol {
+  margin: 0;
+  float: left;
+  height: 100%;
+  overflow: auto;
+}
+#central {
+  margin: 0;
+  float: left;
+  height: 100%;
+  overflow: auto;
+}
+#rightcol {
+  margin: 0;
+  float: left;
+  height: 100%;
+  overflow: auto;
+}
+
+/* menus */
+nav {
+  display:block;
+  margin:0 auto 20px;
+  position:relative;
+  z-index: 1000;
+}
+nav ul {
+  padding: 0;
+  margin: 0;
+}
+nav ul:after {
+  content: ".";
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+nav li {
+  position: relative;
+  float: left;
+  list-style-type: none;
+  z-index: 1000;
+}
+nav li a {
+  display: block;
+  padding: 10px 20px;
+}
+nav a span {
+  display: block;
+  float: right;
+  margin-left: 5px;
+}
+nav ul ul {
+  display: none;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  z-index: 1000;
+}
+nav ul ul li {
+  float: none;
+}
+nav ul ul a {
+  padding: 5px 10px;
+}
+
+
+/* secondary menus */
+nav2 {
+  width: 100%;
+  display:block;
+  background-color:#6a6a6a; 
+  margin:0 auto;
+  position:relative;
+  z-index: 1000;
+}
+nav2 ul {
+  padding: 0;
+  margin: 0;
+}
+nav2 ul:after {
+  content: ".";
+  display: block;
+  background-color:#6a6a6a; 
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+nav2 li {
+  position: relative;
+  float: left;
+  list-style-type: none;
+}
+nav2 li a {
+  display: block;
+  background-color:#6a6a6a; 
+  padding: 5px 10px;
+}
+nav2 a span {
+  display: block;
+  background-color:#6a6a6a; 
+  float: right;
+  margin-left: 5px;
+}
+nav2 ul ul {
+  display: none;
+  width: 100%;
+  position: absolute;
+  left: 0;
+}
+nav2 ul ul li {
+  float: none;
+}
+nav2 ul ul a {
+  padding: 5px 10px;
+}
+
+
+.context-menu {
+  visibility: hidden; /* No, you cannot use display:none; */
+  position: absolute;
+}
+
+
+.ui-draggable-dragging {
+  z-index: 9999;
+}
+
+
+/* desktop tabbed panes (left, center & right) */
+
+dl {
+  margin: 0;
+}
+
+#otree, #ftree, #propertieseditor, #palette {
+  height: 100%;
+  width: 100%;
+}
+
+/* console (includes history and command form) */
+#historybox {
+  width: 99%;
+  clear: both;
+  height: auto;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin-bottom: 2.5em;
+  word-wrap: break-word;
+  overflow: auto;
+}
+#cmdform {
+  position: absolute;
+  width: 100%;
+  bottom: 0px;
+  left: 3px;
+  clear: both;
+}
+#command {
+  width: 89.5%;
+  float: left;
+}
+#command-button {
+  width: 9%;
+  float: left;
+}

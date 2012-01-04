@@ -8,8 +8,17 @@
 #public symbols
 __all__ = ['BroydenSolver']
 
-import numpy
-from scipy.optimize.nonlin import norm
+import logging
+
+try:
+    import numpy
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
+else:
+    # this little funct replaces a dependency on scipy
+    npnorm = numpy.linalg.norm
+    def norm(a, ord=None):
+        return npnorm(numpy.asarray_chkfinite(a), ord=ord)
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float, Int, Enum
@@ -18,9 +27,11 @@ from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
-from openmdao.util.decorators import add_delegate
+from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, implements
 
-        
+    
+@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasEqConstraints)
 class BroydenSolver(Driver):
     """ :term:`MIMO` Newton-Raphson Solver with Broyden approximation to the Jacobian.
@@ -50,6 +61,8 @@ class BroydenSolver(Driver):
     also very effective. The remaining nonlinear solvers from SciPy are, in
     their own words, of "mediocre quality," so they were not implemented.
     """ 
+
+    implements(IHasParameters, IHasEqConstraints)
     
     # pylint: disable-msg=E1101
     algorithm = Enum('broyden2', ['broyden2', 'broyden3', 'excitingmixing'],
@@ -79,7 +92,7 @@ class BroydenSolver(Driver):
         
     def execute(self):
         """Solver execution."""
-        
+                
         # get the initial values of the independents
         independents = self.get_parameters().values()
         self.xin = numpy.zeros(len(independents),'d')
@@ -87,7 +100,9 @@ class BroydenSolver(Driver):
             self.xin[i] = val.evaluate(self.parent)
             
         # perform an initial run for self-consistency
+        self.pre_iteration()
         self.run_iteration()
+        self.post_iteration()
 
         # get initial dependents
         dependents = self.get_eq_constraints().values()
@@ -130,7 +145,9 @@ class BroydenSolver(Driver):
             self.set_parameters(xm.flat)
 
             # run the model
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
@@ -193,7 +210,9 @@ class BroydenSolver(Driver):
             self.set_parameters(xm.flat)
 
             # run the model
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
@@ -247,7 +266,9 @@ class BroydenSolver(Driver):
             self.set_parameters(xm.flat)
 
             # run the model
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):

@@ -18,11 +18,9 @@ from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.datatypes.api import Float, Bool, Array
 from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.main.eggchecker import check_save_load
-from openmdao.util.testutil import find_python
 
 
 # Users who have ssh configured correctly for testing.
@@ -101,7 +99,7 @@ class TestCase(unittest.TestCase):
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
-        if end_dir.lower() != self.directory.lower():
+        if os.path.realpath(end_dir).lower() != os.path.realpath(self.directory).lower():
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
     def test_sequential(self):
@@ -158,14 +156,15 @@ class TestCase(unittest.TestCase):
         logging.debug('test_nooutput')
 
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
+        self.model.driver.error_policy = 'RETRY'
         self.model.driver.case_outputs.append('driven.sum_z')
         
         self.model.run()
 
         self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
         msg = "driver: Exception getting case outputs: " \
-            "driven: object has no attribute 'sum_z'"
+            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 
@@ -174,7 +173,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorder = ListCaseRecorder()
+        self.model.driver.recorders = [ListCaseRecorder()]
         self.model.driver.DOEgenerator = None
         try:
             self.model.run()
@@ -188,15 +187,48 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_norecorder')
 
-        self.model.driver.recorder = None
+        self.model.driver.recorders = []
         self.model.run()
+        
+    def test_output_error(self):
+        class Dummy(Component): 
+            x = Float(0,iotype="in")
+            y = Float(0,iotype="out")
+            z = Float(0,iotype="out")
+            
+            def execute(self): 
+                self.y = 10+self.x
+                
+        class Analysis(Assembly): 
+            
+            def __init__(self): 
+                super(Analysis,self).__init__(self)
+                
+                self.add('d',Dummy())
+                
+                self.add('driver',DOEdriver())
+                self.driver.DOEgenerator = FullFactorial(2) 
+                self.driver.recorders = [DumpCaseRecorder()]
+                self.driver.add_parameter('d.x',low=0,high=10)     
+                self.driver.case_outputs = ['d.y','d.bad','d.z']
+                
+        a = Analysis()
+        
+        try:
+            a.run()
+        except Exception as err:
+            self.assertTrue(str(err).startswith('driver: Run aborted: Traceback '))
+            self.assertTrue(str(err).endswith("d: 'Dummy' object has no attribute 'bad'"))
+        else:
+            self.fail("Exception expected")
+
 
     def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
         
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
             self.model.driver.add_event('driven.err_event')
@@ -219,7 +251,7 @@ class TestCase(unittest.TestCase):
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
         
-        for case in self.model.driver.recorder.cases:
+        for case in self.model.driver.recorders[0].cases:
             if forced_errors:
                 self.assertEqual(case.msg, 'driven: Forced error')
             else:

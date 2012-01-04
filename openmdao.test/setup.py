@@ -33,7 +33,7 @@ setup(name='openmdao.test',
       author='',
       author_email='',
       url='http://openmdao.org',
-      license='NASA Open Source Agreement 1.3',
+      license='Apache License, Version 2.0',
       namespace_packages=["openmdao"],
       packages=['openmdao', 'openmdao.test'],
       package_dir={'': 'src'},
@@ -42,16 +42,15 @@ setup(name='openmdao.test',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'setuptools',
-          'openmdao.lib',
           'nose',
+          'openmdao.main',
       ],
       entry_points={
-      'openmdao.component': [
+      "openmdao.component": [
           'openmdao.test.execcomp.ExecComp = openmdao.test.execcomp:ExecComp'
-      ],
+          ],
       "console_scripts": [
-          'openmdao_test = openmdao.test.testing:run_openmdao_suite'
+          'openmdao_test = openmdao.test.testing:run_openmdao_suite_deprecated'
           ]
       },
       )

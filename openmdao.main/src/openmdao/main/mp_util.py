@@ -2,22 +2,28 @@
 Multiprocessing support utilities.
 """
 
+import atexit
 import ConfigParser
 import cPickle
+import errno
+import getpass
 import inspect
 import logging
 import os.path
 import re
 import socket
+import sys
+import time
 
 from Crypto.Cipher import AES
 
 from multiprocessing import current_process, connection
-from multiprocessing.managers import BaseProxy, dispatch, listener_client
+from multiprocessing.managers import BaseProxy
 
 from openmdao.main.rbac import rbac_methods
 
-from openmdao.util.publickey import decode_public_key
+from openmdao.util.publickey import decode_public_key, is_private, HAVE_PYWIN32
+from openmdao.util.shellproc import ShellProc, STDOUT
 
 # Names of attribute access methods requiring special handling.
 SPECIALS = ('__getattribute__', '__getattr__', '__setattr__', '__delattr__')
@@ -37,15 +43,18 @@ def keytype(authkey):
 
 
 # This happens on the remote server side and we'll check when connecting.
-def write_server_config(server, filename):  #pragma no cover
+def write_server_config(server, filename, real_ip=None):  #pragma no cover
     """
-    Write server connection information.
+    Write server configuration information.
 
     server: OpenMDAO_Server
         Server to be recorded.
 
     filename: string
         Path to file to be written.
+
+    real_ip: string
+        If specified, the IP address to report (rather than possible tunnel)
 
     Connection information including IP address, port, and public key is
     written using :class:`ConfigParser`.
@@ -54,35 +63,115 @@ def write_server_config(server, filename):  #pragma no cover
     section = 'ServerInfo'
     parser.add_section(section)
     if connection.address_type(server.address) == 'AF_INET':
-        parser.set(section, 'address', str(server.address[0]))
+        parser.set(section, 'address', str(real_ip or server.address[0]))
         parser.set(section, 'port', str(server.address[1]))
+        tunnel = real_ip is not None and \
+            socket.gethostbyname(real_ip) != server.address[0]
+        parser.set(section, 'tunnel', str(tunnel))
     else:
         parser.set(section, 'address', server.address)
         parser.set(section, 'port', '-1')
+        parser.set(section, 'tunnel', str(False))
     parser.set(section, 'key', server.public_key_text)
+    logfile = os.path.join(os.getcwd(), 'openmdao_log.txt')
+    parser.set(section, 'logfile', '%s:%s' % (socket.gethostname(), logfile))
+
     with open(filename, 'w') as cfg:
         parser.write(cfg)
 
 def read_server_config(filename):
     """
-    Read a server's connection information.
+    Read a server's configuration information.
 
     filename: string
         Path to file to be read.
 
-    Returns ``(address, port, key)``.
+    Returns a dictionary containing 'address', 'port', 'tunnel', 'key', and
+    'logfile' information
     """
     if not os.path.exists(filename):
         raise IOError('No such file %r' % filename)
     parser = ConfigParser.ConfigParser()
     parser.read(filename)
     section = 'ServerInfo'
-    address = parser.get(section, 'address')
-    port = parser.getint(section, 'port')
+    cfg = {}
+    cfg['address'] = parser.get(section, 'address')
+    cfg['port'] = parser.getint(section, 'port')
+    cfg['tunnel'] = parser.getboolean(section, 'tunnel')
     key = parser.get(section, 'key')
     if key:
         key = decode_public_key(key)
-    return (address, port, key)
+    cfg['key'] = key
+    cfg['logfile'] = parser.get(section, 'logfile')
+    return cfg
+
+
+def setup_tunnel(address, port):
+    """
+    Setup tunnel to `address` and `port` assuming:
+
+    - The remote login name matches the local login name.
+    - `port` is available on the local host.
+    - 'plink' is available on Windows, 'ssh' on other platforms.
+    - No user interaction is required to connect via 'plink'/'ssh'.
+
+    address: string
+        IPv4 address to tunnel to.
+
+    port: int
+        Port at `address` to tunnel to.
+
+    Returns ``(local_address, local_port)``.
+    """
+    logname = 'tunnel-%s-%d.log' % (address, port)
+    logname = os.path.join(os.getcwd(), logname)
+    stdout = open(logname, 'w')
+
+    user = getpass.getuser()
+    if sys.platform == 'win32':  # pragma no cover
+        stdin = open('nul:', 'r')
+        args = ['plink', '-ssh', '-l', user,
+                '-L', '%d:localhost:%d' % (port, port), address]
+    else:
+        stdin = open('/dev/null', 'r')
+        args = ['ssh', '-l', user,
+                '-L', '%d:localhost:%d' % (port, port), address]
+
+    tunnel_proc = ShellProc(args, stdin=stdin, stdout=stdout, stderr=STDOUT)
+    sock = socket.socket(socket.AF_INET)
+    address = ('127.0.0.1', port)
+    for retry in range(20):
+        time.sleep(.5)
+        exitcode = tunnel_proc.poll()
+        if exitcode is not None:
+            msg = 'ssh tunnel process exited with exitcode %d,' \
+                  ' output in %s' % (exitcode, logname)
+            logging.error(msg)
+            raise RuntimeError(msg)
+        try:
+            sock.connect(address)
+        except socket.error as exc:
+            if exc.args[0] != errno.ECONNREFUSED and \
+               exc.args[0] != errno.ENOENT:
+                raise
+        else:
+            atexit.register(_cleanup_tunnel, tunnel_proc, logname)
+            sock.close()
+            return address
+
+    _cleanup_tunnel(tunnel_proc, logname)
+    raise RuntimeError('Timeout trying to connect through tunnel to %s'
+                       % address)
+
+def _cleanup_tunnel(tunnel_proc, logname):
+    """ Try to terminate `tunnel_proc` if it's still running. """
+    if tunnel_proc.poll() is None:
+        tunnel_proc.terminate(timeout=10)
+    if os.path.exists(logname):
+        try:
+            os.remove(logname)
+        except WindowsError:
+            pass  # (Temporarily?) Ignore problem where logfile is still in use.
 
 
 def encrypt(obj, session_key):
@@ -218,39 +307,52 @@ def read_allowed_hosts(path):
     or hostnames, one per line. Blank lines are ignored, and '#' marks the
     start of a comment which continues to the end of the line.
     """
+    if not os.path.exists(path):
+        raise RuntimeError('%r does not exist' % path)
+
+    if not is_private(path):
+        if sys.platform != 'win32' or HAVE_PYWIN32:
+            raise RuntimeError('%r is not private' % path)
+        else:  #pragma no cover
+            logging.warning('Allowed hosts file %r is not private', path)
+
     ipv4_host = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
     ipv4_domain = re.compile(r'([0-9]+\.){1,3}$')
 
+    errors = 0
     count = 0
     allowed_hosts = []
     with open(path, 'r') as inp:
         for line in inp:
             count += 1
-            hash = line.find('#')
-            if hash >= 0:
-                line = line[:hash]
+            sharp = line.find('#')
+            if sharp >= 0:
+                line = line[:sharp]
             line = line.strip()
             if not line:
                 continue
 
             if ipv4_host.match(line):
-                logging.debug('%s line %d: IPv4 host %r',
-                              path, count, line)
+                logging.debug('%s line %d: IPv4 host %r', path, count, line)
                 allowed_hosts.append(line)
+
             elif ipv4_domain.match(line):
-                logging.debug('%s line %d: IPv4 domain %r',
-                              path, count, line)
+                logging.debug('%s line %d: IPv4 domain %r', path, count, line)
                 allowed_hosts.append(line)
+
             else:
                 try:
                     addr = socket.gethostbyname(line)
                 except socket.gaierror:
                     logging.error('%s line %d: unrecognized host %r',
                                   path, count, line)
+                    errors += 1
                 else:
                     logging.debug('%s line %d: host %r at %r',
                                   path, count, line, addr)
                     allowed_hosts.append(addr)
-
+    if errors:
+        raise RuntimeError('%d errors in %r, check log for details'
+                           % (errors, path))
     return allowed_hosts
 

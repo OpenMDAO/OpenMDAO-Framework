@@ -14,8 +14,9 @@ from openmdao.main.container import Container, get_default_name, \
                                     deep_hasattr, get_default_name, find_name, \
                                     find_trait_and_value, _get_entry_group, \
                                     create_io_traits
+from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.variable import Variable
-from openmdao.lib.datatypes.api import Float, Int, Bool, List, Dict
+from openmdao.main.datatypes.api import Slot, Float, Int, Bool, List, Dict
 from openmdao.util.testutil import make_protected_dir
 
 # Various Pickle issues arise only when this test runs as the main module.
@@ -30,8 +31,11 @@ class DumbTrait(Variable):
         return value
 
 class MyContainer(Container):
+    uncertain = Slot(NormalDistribution(), iotype="out")
+
     def __init__(self, *args, **kwargs):
         super(MyContainer, self).__init__(*args, **kwargs)
+        self.uncertain = NormalDistribution()
         self.add('dyntrait', Float(9., desc='some desc'))
 
 
@@ -141,6 +145,11 @@ class ContainerTestCase(unittest.TestCase):
             self.assertEqual(str(err), "'MyClass' object has no attribute 'foo'")
         else:
             self.fail("expected AttributeError")
+            
+    def test_attrib_metadata(self):
+        cont = MyContainer()
+        io = cont.get_metadata('uncertain.mu', 'iotype')
+        self.assertEqual(io, 'out')
         
     def test_deep_hasattr(self):
         class MyClass(object):
@@ -274,33 +283,44 @@ class ContainerTestCase(unittest.TestCase):
     # TODO: all of these save/load test functions need to do more checking
     #       to verify that the loaded thing is equivalent to the saved thing
     
-    def test_save_load_yaml(self):
-        output = StringIO.StringIO()
-        c1 = Container()
-        c1.add('c2', Container())
-        c1.save(output, constants.SAVE_YAML)
+    #def test_save_load_yaml(self):
+        #output = StringIO.StringIO()
+        #c1 = Container()
+        #c1.add('c2', Container())
+        #c1.save(output, constants.SAVE_YAML)
         
-        inp = StringIO.StringIO(output.getvalue())
-        newc1 = Container.load(inp, constants.SAVE_YAML)
+        #inp = StringIO.StringIO(output.getvalue())
+        #newc1 = Container.load(inp, constants.SAVE_YAML)
                 
-    def test_save_load_libyaml(self):
-        output = StringIO.StringIO()
-        c1 = Container()
-        c1.add('c2', Container())
-        c1.save(output, constants.SAVE_LIBYAML)
+    #def test_save_load_libyaml(self):
+        #output = StringIO.StringIO()
+        #c1 = Container()
+        #c1.add('c2', Container())
+        #c1.save(output, constants.SAVE_LIBYAML)
         
-        inp = StringIO.StringIO(output.getvalue())
-        newc1 = Container.load(inp, constants.SAVE_LIBYAML)
+        #inp = StringIO.StringIO(output.getvalue())
+        #newc1 = Container.load(inp, constants.SAVE_LIBYAML)
                 
     def test_save_load_cpickle(self):
         output = StringIO.StringIO()
         c1 = Container()
         c1.add('c2', Container())
+        c1.add('list_in', List(Float, iotype='in'))
+        c1.list_in = [1., 2., 3.]
+        self.assertEqual(c1.list_in, [1., 2., 3.])
         c1.save(output)
         
         inp = StringIO.StringIO(output.getvalue())
         newc1 = Container.load(inp)
+        self.assertEqual(newc1.list_in, [1., 2., 3.])
         
+        # The List fixup issue occurs on the second save/load.
+        output = StringIO.StringIO()
+        newc1.save(output)
+        inp = StringIO.StringIO(output.getvalue())
+        newerc1 = Container.load(inp)
+        self.assertEqual(newerc1.list_in, [1., 2., 3.])
+
     def test_save_load_pickle(self):
         output = StringIO.StringIO()
         c1 = Container()

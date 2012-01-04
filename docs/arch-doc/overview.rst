@@ -29,9 +29,9 @@ Framework Layers
 ================
 
 .. note:: The following section describes the possibility of having a wxPython GUI
-   and a web-based GUI.  Due to limited programming resources, it is more likely
-   that there will be only one type of GUI, at least in the next few years. The
-   GUI will probably be web based, although a final decision has not been made.
+          and a web-based GUI.  Due to limited programming resources, it is more likely
+          that there will be only one type of GUI, at least in the next few years. The
+          GUI will probably be web based, although a final decision has not been made.
 
         
 The framework's capabilities can be viewed as a number of layers supporting
@@ -141,12 +141,11 @@ The current package layout of the project is as follows:
 Deployment
 ==========
 
-.. note:: Our packaging and deployment methods are likely to change in the
-    future due to changes that are happening to Python's overall packaging
-    strategy. When the Python community decides on a packaging *standard*, we
-    will adopt it. We are currently using a strategy based on *setuptools* and
-    :term:`virtualenv`, but it appears that a new package, *distutils2*, along
-    with *pip*, may  become the standard.
+.. note:: Our packaging and deployment methods are likely to change in the future due to changes
+   that are happening to Python's overall packaging strategy. When the Python community decides on a
+   packaging *standard*, we will adopt it. We are currently using a strategy based on *setuptools*
+   and :term:`virtualenv`, but it appears that a new package, *distutils2*, along with *pip*, may 
+   become the standard.
 
 
 Each OpenMDAO package will be distributable as a Python source distribution,

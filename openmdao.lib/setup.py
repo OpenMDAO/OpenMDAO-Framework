@@ -30,24 +30,27 @@ Component, Driver, and Variable plugins for OpenMDAO
       keywords='optimization multidisciplinary multi-disciplinary analysis',
       author='',
       author_email='',
-      url='http://openmdao.org/docs/srcdocs/packages/openmdao.lib.html',
-      license='NASA Open Source Agreement 1.3',
+      url='http://openmdao.org',
+      license='Apache License, Version 2.0',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
       package_dir={'': 'src'},
-      package_data={'openmdao.lib': ['components/test/*.inp']},
+      package_data={'openmdao.lib': ['components/test/*.inp',
+                                     'datatypes/domain/test/grid.in',
+                                     'datatypes/domain/test/q.save',
+                                     'datatypes/domain/test/lpc-test.*']},
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
           'setuptools',
           'openmdao.main',
-          'conmin==1.0.1',
-          'newsumt==1.1.0',
           'Pyevolve==0.6',
           'ordereddict',
+          'conmin==1.0.1', 
+          'newsumt==1.1.0',
+          'numpy',
           'scipy',
-          #'ffnet>=0.7'
           ],
       entry_points="""
       [openmdao.driver]
@@ -56,7 +59,6 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
-      openmdao.lib.drivers.gradient.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
       openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
@@ -72,21 +74,45 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
       openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
-      openmdao.lib.components.nastran.nastran.NastranComponent = openmdao.lib.components.nastran.nastran:NastranComponent
 
       [openmdao.differentiator]
       openmdao.lib.differentiators.finite_difference.FiniteDifference = openmdao.lib.differentiators.finite_difference:FiniteDifference
       
       [openmdao.variable]
       openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
-      openmdao.lib.datatypes.enum.Enum = openmdao.lib.datatypes.enum:Enum
-      openmdao.lib.datatypes.file.File = openmdao.lib.datatypes.file:File
-      openmdao.lib.datatypes.float.Float = openmdao.lib.datatypes.float:Float
-      openmdao.lib.datatypes.int.Int = openmdao.lib.datatypes.int:Int
       
-      [openmdao.surrogatesmodels]
-      openmdao.lib.surrogatemodels.kriging_surrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
-      openmdao.lib.surrogatemodels.logistic_regression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
-      openmdao.lib.surrogatemodels.nn_surrogate = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
+      [openmdao.surrogatemodel]
+      openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
+      openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
+      openmdao.lib.surrogatemodels.nn_surrogate.NeuralNet = openmdao.lib.surrogatemodels.nn_surrogate:NeuralNet
+      
+      [openmdao.optproblems]
+      openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
+      openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
+      
+      [openmdao.caserecorder]
+      openmdao.lib.casehandlers.dumpcaserecorder.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcaserecorder:DumpCaseRecorder
+      openmdao.lib.casehandlers.listcaserecorder.ListCaseRecorder = openmdao.lib.casehandlers.listcaserecorder:ListCaseRecorder
+      openmdao.lib.casehandlers.db.DBCaseRecorder = openmdao.lib.casehandlers.db:DBCaseRecorder
+      openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
+      openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
+
+      [openmdao.caseiterator]
+      openmdao.lib.casehandlers.listcaseiter.ListCaseIterator = openmdao.lib.casehandlers.listcaseiter:ListCaseIterator
+      openmdao.lib.casehandlers.db.DBCaseIterator = openmdao.lib.casehandlers.db:DBCaseIterator
+      openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
+      openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
+      
+      [openmdao.doegenerator]
+      openmdao.lib.doegenerators.full_factorial.FullFactorial = openmdao.lib.doegenerators.full_factorial:FullFactorial
+      openmdao.lib.doegenerators.central_composite.CentralComposite = openmdao.lib.doegenerators.central_composite:CentralComposite
+      openmdao.lib.doegenerators.optlh.OptLatinHypercube = openmdao.lib.doegenerators.optlh:OptLatinHypercube
+      openmdao.lib.doegenerators.uniform.Uniform = openmdao.lib.doegenerators.uniform:Uniform
+
+      [openmdao.architecture]
+      openmdao.lib.architectures.bliss.BLISS = openmdao.lib.architectures.bliss:BLISS
+      openmdao.lib.architectures.co.CO = openmdao.lib.architectures.co:CO
+      openmdao.lib.architectures.ego.EGO = openmdao.lib.architectures.ego:EGO
+      openmdao.lib.architectures.mdf.MDF = openmdao.lib.architectures.mdf:MDF
       """,
       )

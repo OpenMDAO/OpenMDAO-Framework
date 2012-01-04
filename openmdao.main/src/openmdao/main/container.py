@@ -8,6 +8,7 @@ import traceback
 import re
 import pprint
 import socket
+import sys
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -23,11 +24,11 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint apparently doesn't understand namespace packages...
 # pylint: disable-msg=E0611,F0401
 
-import zope.interface
+from zope.interface import Interface, implements
 
-from enthought.traits.api import HasTraits, Missing, Undefined, \
-                                 push_exception_handler, TraitType, CTrait
-from enthought.traits.trait_handlers import NoDefaultSpecified
+from enthought.traits.api import HasTraits, Missing, Undefined, Python, \
+                                 push_exception_handler, TraitType, CTrait, List
+from enthought.traits.trait_handlers import NoDefaultSpecified, TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait
 from enthought.traits.trait_base import not_none, not_event
 
@@ -35,7 +36,7 @@ from multiprocessing import connection
 
 from openmdao.main.variable import Variable
 from openmdao.main.filevar import FileRef
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
@@ -43,7 +44,7 @@ from openmdao.main.rbac import rbac
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, obj_has_interface
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
 from openmdao.main.expreval import INDEX,ATTR,CALL,SLICE
 
 _copydict = {
@@ -112,13 +113,21 @@ class _ContainerDepends(object):
         self._srcs = {}
         
     def connect(self, srcpath, destpath):
-        if destpath in self._srcs:
-            raise RuntimeError("'%s' is already connected to source '%s'" %
-                               (destpath,self._srcs[destpath]))
+        dpdot = destpath+'.'
+        for dst,src in self._srcs.items():
+            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
+                raise RuntimeError("'%s' is already connected to source '%s'" %
+                                   (dst, src))
         self._srcs[destpath] = srcpath
         
     def disconnect(self, srcpath, destpath):
-        del self._srcs[destpath]
+        try:
+            del self._srcs[destpath]
+        except KeyError:
+            pass
+        dpdot = destpath+'.'
+        for d in [k for k in self._srcs if k.startswith(dpdot)]:
+            del self._srcs[d]
     
     def get_source(self, destname):
         """For a given destination name, return the connected source, 
@@ -131,7 +140,9 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    def __init__(self, doc=None, iotype=None):
+    implements(IContainer)
+    
+    def __init__(self, doc=None):
         super(Container, self).__init__()
         
         self._managers = {}  # Object manager for remote access by authkey.
@@ -143,7 +154,7 @@ class Container(HasTraits):
         self._parent = None
         self._name = None
         self._cached_traits_ = None
-        
+
         self._call_tree_rooted = True
         
         if doc is not None:
@@ -160,11 +171,6 @@ class Container(HasTraits):
         for name, obj in self.items():
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
-                
-        # register callbacks for all of our 'in' traits
-        for name,trait in self.class_traits().items():
-            if trait.iotype == 'in':
-                self.on_trait_change(self._input_trait_modified, name)
 
     @property
     def parent(self):
@@ -206,6 +212,7 @@ class Container(HasTraits):
         self._name = name
         self._logger.rename(self._name)
         
+    @rbac(('owner', 'user'))
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -234,6 +241,26 @@ class Container(HasTraits):
             Pathname of destination variable.
         """
         cname = None
+        if not destpath.startswith('parent.'):
+            if not self.contains(destpath):
+                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+            parts = destpath.split('.')
+            for i in range(len(parts)):
+                dname = '.'.join(parts[:i+1])
+                sname = self._depgraph.get_source(dname)
+                if sname is not None:
+                    self.raise_exception(
+                        "'%s' is already connected to source '%s'" % 
+                        (dname, sname), RuntimeError)
+            cname2, _, restofpath = destpath.partition('.')
+            if cname == cname2 and cname is not None:
+                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
+                                     (srcpath,destpath), RuntimeError)
+            if restofpath:
+                child = getattr(self, cname2)
+                if is_instance(child, Container):
+                    child.connect('parent.'+srcpath, restofpath)
+                    
         if not srcpath.startswith('parent.'):
             if not self.contains(srcpath):
                 self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
@@ -242,23 +269,6 @@ class Container(HasTraits):
                 child = getattr(self, cname)
                 if is_instance(child, Container):
                     child.connect(restofpath, 'parent.'+destpath)
-        if not destpath.startswith('parent.'):
-            if not self.contains(destpath):
-                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            sname = self._depgraph.get_source(destpath)
-            if sname is not None:
-                self.raise_exception(
-                    "'%s' is already connected to source '%s'" % 
-                    (destpath, sname), RuntimeError)
-            cname2, _, restofpath = destpath.partition('.')
-            if cname == cname2 and cname is not None:
-                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
-                                     (srcpath,destpath), RuntimeError)
-
-            if restofpath:
-                child = getattr(self, cname2)
-                if is_instance(child, Container):
-                    child.connect('parent.'+srcpath, restofpath)
                 
         self._depgraph.connect(srcpath, destpath)
 
@@ -305,10 +315,13 @@ class Container(HasTraits):
         if self._cached_traits_ is None:
             self._cached_traits_ = self.traits()
             self._cached_traits_.update(self._instance_traits())
-        trait = self._cached_traits_.get(name)
-        if copy and trait:
-            return self.trait(name, copy=copy)
-        return trait
+        if copy:
+            if self._cached_traits_.get(name):
+                return self.trait(name, copy=copy)
+            else:
+                return None
+        else:
+            return self._cached_traits_.get(name)
 
     #
     #  HasTraits overrides
@@ -336,16 +349,25 @@ class Container(HasTraits):
         """Return dict representing this container's state."""
         state = super(Container, self).__getstate__()
         dct = {}
+        list_fixups = {}
         for name, trait in state['_added_traits'].items():
             if trait.transient is not True:
                 dct[name] = trait
+                # List trait values lose their 'name' for some reason.
+                # Remember the values here so we don't need to getattr()
+                # during __setstate__().
+                if isinstance(trait, List):
+                    val = getattr(self, name)
+                    if isinstance(val, TraitListObject):
+                        list_fixups[name] = val
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
-        
+        state['_list_fixups'] = list_fixups
         return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
+        list_fixups = state.pop('_list_fixups', {})
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
 
@@ -356,6 +378,11 @@ class Container(HasTraits):
         for name, trait in self._added_traits.items():
             if name not in traits:
                 self.add_trait(name, trait)
+
+        # List trait values lose their 'name' for some reason.
+        # Restore from remembered values.
+        for name in list_fixups:
+            list_fixups[name].name = name
 
         # Fix property traits that were not just added above.
         # For some reason they lost 'get()', but not 'set()' capability.
@@ -371,12 +398,6 @@ class Container(HasTraits):
                     self.add_trait(name, trait)
                     setattr(self, name, val)
 
-        # make sure all input callbacks are in place.  If callback is
-        # already there, this will have no effect. 
-        for name, trait in self._alltraits().items():
-            if trait.iotype == 'in':
-                self.on_trait_change(self._input_trait_modified, name)
-            
         # after unpickling, implicitly defined traits disappear, so we have to
         # recreate them by assigning them to themselves.       
         #TODO: I'm probably missing something. There has to be a better way to
@@ -389,8 +410,7 @@ class Container(HasTraits):
 
     def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
-        keep track of dynamically added traits for serialization and to add
-        callbacks for input Variables.
+        keep track of dynamically added traits for serialization.
         """
         # When a trait with sub-traits is added (like a List or Dict),
         # HasTraits calls add_trait AGAIN for the sub-trait, so we
@@ -399,68 +419,27 @@ class Container(HasTraits):
             super(Container, self).add_trait(name, trait)
             return
         
-        self._cached_traits_ = None
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
-        
-        # if it's an input trait, register a callback to be called whenever it's changed
-        if trait.iotype == 'in':
-            self.on_trait_change(self._input_trait_modified, name)
+        if self._cached_traits_ is not None:
+            self._cached_traits_[name] = self.trait(name)
         
     def remove_trait(self, name):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
         """
-        self._cached_traits_ = None
-        # this just forces the regeneration (lazily) of the lists of
-        # inputs, outputs, and containers
-        self._trait_added_changed(name)
         try:
             del self._added_traits[name]
         except KeyError:
             pass
+        try:
+            del self._cached_traits_[name]
+        except (KeyError, TypeError):
+            pass
         
-        trait = self.get_trait(name)
-        if trait and trait.iotype == 'in':
-            self.on_trait_change(self._input_trait_modified, name, remove=True)
-
         super(Container, self).remove_trait(name)
             
-    # call this if any trait having 'iotype' metadata of 'in' is changed
-    def _input_trait_modified(self, obj, name, old, new):
-        self._input_check(name, old)
-        self._call_execute = True
-        self._input_updated(name)
-            
-    def _input_check(self, name, old):
-        """This raises an exception if the specified input is attached
-        to a source.
-        """
-        if self._depgraph.get_source(name):
-            # bypass the callback here and set it back to the old value
-            self._trait_change_notify(False)
-            try:
-                setattr(self, name, old)
-            finally:
-                self._trait_change_notify(True)
-            self.raise_exception(
-                "'%s' is already connected to source '%s' and "
-                "cannot be directly set"%
-                (name, self._depgraph.get_source(name)), RuntimeError)
-            
-    def _input_nocheck(self, name, old):
-        """This method is substituted for _input_check to avoid source
-        checking during a set() call when we've already verified the source.
-        """
-        pass
-    
-    def _input_updated(self, name):
-        """This just exists so inherited classes can add behavior when
-        inputs are set.
-        """
-        pass
-
     @rbac(('owner', 'user'))
     def get_wrapped_attr(self, name):
         """If the variable can return an AttrWrapper, then this
@@ -509,12 +488,6 @@ class Container(HasTraits):
             self.raise_exception(
                 'add does not allow dotted path names like %s' %
                 name, ValueError)
-        if obj == self:
-            self.raise_exception('cannot make an object a child of itself',
-                                 RuntimeError)
-            
-        self._cached_traits_ = None # force regen of _cached_traits_
-
         if is_instance(obj, Container):
             if isinstance(obj, OpenMDAO_Proxy):
                 obj.parent = self._get_proxy(obj)
@@ -525,6 +498,10 @@ class Container(HasTraits):
                 self.remove(name)
             obj.name = name
             setattr(self, name, obj)
+            if self._cached_traits_ is None:
+                self.get_trait(name)
+            else:
+                self._cached_traits_[name] = self.trait(name)
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
@@ -556,6 +533,8 @@ class Container(HasTraits):
                 ip_addr = socket.gethostbyname(socket.gethostname())
                 address = (ip_addr, 0)
                 allowed_hosts = [addr]
+                if addr == ip_addr:
+                    allowed_hosts.append('127.0.0.1')
             else:
                 address = None
                 allowed_hosts = None
@@ -579,12 +558,9 @@ class Container(HasTraits):
                                  name, NameError)
         trait = self.get_trait(name)
         if trait is not None:
+            obj = getattr(self, name)
             # for Slot traits, set their value to None but don't remove
             # the trait
-            obj = getattr(self, name)
-            if obj is not None and not is_instance(obj, Container):
-                self.raise_exception('attribute %s is not a Container' % name,
-                                     RuntimeError)
             if trait.is_trait_type(Slot):
                 try:
                     setattr(self, name, None)
@@ -665,9 +641,16 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n, v in self.items() if is_instance(v, Container)]
     
+    def list_vars(self):
+        """Return a list of Variables in this Container."""
+        return [k for k,v in self.items(iotype=not_none)]
+    
+    # Can't use items() since it returns a generator (won't pickle).
+    @rbac(('owner', 'user'))
     def _alltraits(self, traits=None, events=False, **metadata):
-        """This returns a dict that contains all traits (class and instance)
-        that match the given metadata.
+        """This returns a dict that contains traits (class and instance)
+        that match the given metadata.  If the 'traits' argument is not
+        None, then it is assumed to be the dict of traits to be filtered.
         """
         if traits is None:
             if self._cached_traits_:
@@ -723,9 +706,19 @@ class Container(HasTraits):
         childname, _, restofpath = traitpath.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
+            if obj is Missing:
                 return self._get_metadata_failed(traitpath, metaname)
-            return obj.get_metadata(restofpath, metaname)
+            elif is_instance(obj, Container):
+                return obj.get_metadata(restofpath, metaname)
+            else:
+                # if the thing being accessed is an attribute of a Variable's
+                # data object, then we can assume that the iotype of the
+                # attribute is the same as the iotype of the Variable.
+                t = self.get_trait(childname)
+                if t is not None and t.iotype and metaname == 'iotype':
+                    return t.iotype
+                else:
+                    self._get_metadata_failed(traitpath, metaname)
             
         t = self.get_trait(traitpath)
         if not t:
@@ -747,12 +740,22 @@ class Container(HasTraits):
 
     def _get_failed(self, path, index=None):
         """If get() cannot locate the variable specified by the given
-        path, raise an exception.  Inherited classes can override this
+        path, either because the parent object is not a Container or because
+        getattr() fails, raise an exception.  Inherited classes can override this
         to return the value of the specified variable.
         """
-        self.raise_exception(
-            "object has no attribute '%s'" % path, 
-            AttributeError)
+        obj = self
+        try:
+            for name in path.split('.'):
+                obj = getattr(obj, name)
+        except AttributeError as err:
+            self.raise_exception(str(err), AttributeError)
+        if index is None:
+            return obj
+        else:
+            for idx in index:
+                obj = self._process_index_entry(obj, idx)
+            return obj
         
     @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
@@ -820,6 +823,9 @@ class Container(HasTraits):
                 "set by source '%s'" %
                 (path,source,src), RuntimeError)
 
+    def get_iotype(self, name):
+        return self.get_trait(name).iotype
+        
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
@@ -860,38 +866,39 @@ class Container(HasTraits):
                 src = 'parent.'+src
             obj.set(restofpath, value, index, src=src, force=force)
         else:
-            trait = self.get_trait(path)
-            if trait:
-                if trait.iotype == 'in': # setting an input, so have to check source
-                    if not force:
-                        self._check_source(path, src)
-                    if index is None:
-                        # bypass input source checking
-                        chk = self._input_check
-                        self._input_check = self._input_nocheck
-                        try:
-                            setattr(self, path, value)
-                        finally:
-                            self._input_check = chk
-                        # Note: This was done to make foo.bar = 3 behave the
-                        # same as foo.set('bar', 3).
-                        # Without this, the output of the comp was
-                        # always invalidated when you call set_parameters.
-                        # This meant that component was always executed
-                        # even when the inputs were unchanged.
-                        # _call_execute is set in the on-trait-changed
-                        # callback, so it's a good test for whether the
-                        # value changed.
-                        if hasattr(self, "_call_execute") and self._call_execute:
-                            self._input_updated(path)
-                    else:  # array index specified
-                        self._index_set(path, value, index)
-                elif index:  # array index specified for output
-                    self._index_set(path, value, index)
-                else: # output
-                    setattr(self, path, value)
-            else:
+            try:
+                iotype = self.get_iotype(path)
+            except Exception:
                 return self._set_failed(path, value, index, src, force)
+                
+            if iotype == 'in': # setting an input, so have to check source
+                if not force:
+                    self._check_source(path, src)
+                if index is None:
+                    # bypass input source checking
+                    chk = self._input_check
+                    self._input_check = self._input_nocheck
+                    try:
+                        setattr(self, path, value)
+                    finally:
+                        self._input_check = chk
+                    # Note: This was done to make foo.bar = 3 behave the
+                    # same as foo.set('bar', 3).
+                    # Without this, the output of the comp was
+                    # always invalidated when you call set_parameters.
+                    # This meant that component was always executed
+                    # even when the inputs were unchanged.
+                    # _call_execute is set in the on-trait-changed
+                    # callback, so it's a good test for whether the
+                    # value changed.
+                    if hasattr(self, "_call_execute") and self._call_execute:
+                        self._input_updated(path)
+                else:  # array index specified
+                    self._index_set(path, value, index)
+            elif index:  # array index specified for output
+                self._index_set(path, value, index)
+            else: # output
+                setattr(self, path, value)
 
     def _process_index_entry(self, obj, idx):
         """Return a new object based on a starting object and some operation
@@ -968,6 +975,32 @@ class Container(HasTraits):
             self._call_execute = True
             self._input_updated(name)
             
+    def _input_check(self, name, old):
+        """This raises an exception if the specified input is attached
+        to a source.
+        """
+        if self._depgraph.get_source(name):
+            # bypass the callback here and set it back to the old value
+            self._trait_change_notify(False)
+            try:
+                setattr(self, name, old)
+            finally:
+                self._trait_change_notify(True)
+            self.raise_exception(
+                "'%s' is already connected to source '%s' and "
+                "cannot be directly set"%
+                (name, self._depgraph.get_source(name)), RuntimeError)
+            
+    def _input_nocheck(self, name, old):
+        """This method is substituted for _input_check to avoid source
+        checking during a set() call when we've already verified the source.
+        """
+        pass
+    
+    def _add_path(self, msg):
+        """Adds our pathname to the beginning of the given message"""
+        return "%s: %s" % (self.get_pathname(), msg)
+        
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
                     observer=None, need_requirements=True):
@@ -1043,8 +1076,8 @@ class Container(HasTraits):
                                         src_dir, src_files, dst_dir,
                                         self._logger, observer.observer,
                                         need_requirements)
-        except Exception, exc:
-            self.raise_exception(str(exc), type(exc))
+        except Exception:
+            self.reraise_exception()  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1068,8 +1101,8 @@ class Container(HasTraits):
         self.parent = None  # Don't want to save stuff above us.
         try:
             eggsaver.save(self, outstream, fmt, proto, self._logger)
-        except Exception, exc:
-            self.raise_exception(str(exc), type(exc))
+        except Exception:
+            self.reraise_exception()  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1197,10 +1230,16 @@ class Container(HasTraits):
         else:
             trait = self.get_trait(cname)
             if trait is not None:
-                if iotype is not None and trait.iotype != iotype:
-                    self.raise_exception('%s must be an %s variable' % 
-                                         (pathname, _iodict[iotype]),
-                                         RuntimeError)
+                if iotype is not None:
+                    if isinstance(trait.trait_type, Python):  # VariableTree
+                        obj = getattr(self, cname)
+                        t_iotype = getattr(obj, 'iotype', None)
+                    else:  # Variable
+                        t_iotype = self.get_iotype(cname)
+                    if t_iotype != iotype:
+                        self.raise_exception('%s must be an %s variable' % 
+                                             (pathname, _iodict[iotype]),
+                                             RuntimeError)
                 return trait
             elif trait is None and self.contains(cname):
                 return None
@@ -1221,29 +1260,39 @@ class Container(HasTraits):
         iotype: str (optional)
             Expected iotype of the trait.
         """
-        trait = self.get_dyn_trait(pathname, iotype=iotype)
-        if trait is None:
-            return []
+        if not pathname:
+            obj = self
+        else:
+            trait = self.get_dyn_trait(pathname, iotype=iotype)
+            if trait is None:
+                return []
 
-        trait = trait.trait_type or trait.trait or trait
-        if trait.target:  # PassthroughTrait, PassthroughProperty
-            trait = self.get_dyn_trait(trait.target)
-            try:
-                ttype = trait.trait_type
-            except AttributeError:
-                pass
-            else:
-                if ttype is not None:
-                    trait = ttype
+            trait = trait.trait_type or trait.trait or trait
+            if trait.target:  # PassthroughTrait, PassthroughProperty
+                trait = self.get_dyn_trait(trait.target)
+                try:
+                    ttype = trait.trait_type
+                except AttributeError:
+                    pass
+                else:
+                    if ttype is not None:
+                        trait = ttype
 
-        def _bases(cls, names):
-            names.append('%s.%s' % (cls.__module__, cls.__name__))
-            for base in cls.__bases__:
-                _bases(base, names)
-        
+            if isinstance(trait, Python):  # Container
+                obj = self.get(pathname)
+            else:  # Variable
+                obj = trait
+
         names = []
-        _bases(type(trait), names)
+        Container._bases(type(obj), names)
         return names
+
+    @staticmethod
+    def _bases(cls, names):
+        """ Helper for :meth:`get_trait_typenames`. """
+        names.append('%s.%s' % (cls.__module__, cls.__name__))
+        for base in cls.__bases__:
+            Container._bases(base, names)
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
@@ -1251,9 +1300,23 @@ class Container(HasTraits):
         self._logger.error(msg)
         raise exception_class(full_msg)
     
+    def reraise_exception(self, msg=''):
+        """Re-raise an exception with updated message and original traceback."""
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        if msg:
+            msg = '%s: %s' % (msg, exc_value)
+        else:
+            msg = '%s' % exc_value
+        prefix = '%s: ' % self.get_pathname()
+        if not msg.startswith(prefix):
+            msg = prefix + msg
+        new_exc = exc_type(msg)
+        raise type(new_exc), new_exc, exc_traceback
 
-# By default we always proxy Containers.
+
+# By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
+CLASSES_TO_PROXY.append(FileRef)
 
     
 # Some utility functions
@@ -1278,7 +1341,7 @@ def _get_entry_group(obj):
         ]
 
     for cls, group in _get_entry_group.group_map:
-        if issubclass(cls, zope.interface.Interface):
+        if issubclass(cls, Interface):
             if cls.providedBy(obj):
                 return group
         else:

@@ -1,20 +1,24 @@
+"""
+.. _`caseiterdriver.py`:
+
+"""
+
 import os.path
 import Queue
 import sys
 import thread
 import threading
+import traceback
 
-from openmdao.lib.datatypes.api import Bool, Enum
+from openmdao.main.datatypes.api import Bool, Enum, Int, Slot
 
 from openmdao.main.api import Driver
-from openmdao.main.exceptions import RunStopped
+from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
-from openmdao.lib.datatypes.int import Int
 from openmdao.util.filexfer import filexfer
-from openmdao.main.slot import Slot
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
@@ -26,7 +30,6 @@ _EXECUTING = 'executing'
 class _ServerError(Exception):
     """ Raised when a server thread has problems. """
     pass
-
 
 class CaseIterDriverBase(Driver):
     """
@@ -120,7 +123,7 @@ class CaseIterDriverBase(Driver):
             if self._abort_exc is None:
                 self.raise_exception('Run stopped', RunStopped)
             else:
-                self.raise_exception('Run aborted: %r' % self._abort_exc,
+                self.raise_exception('Run aborted: %s' % traceback_str(self._abort_exc),
                                      RuntimeError)
 
     def step(self):
@@ -302,7 +305,7 @@ class CaseIterDriverBase(Driver):
                         except KeyError:
                             self._logger.error('    %r: no startup reply', name)
                         else:
-                            self._logger.error('    %r: %s %s %s', name,
+                            self._logger.error('    %r: %r %s %s', name,
                                                self._servers[name],
                                                self._server_states[name],
                                                self._server_info[name])
@@ -418,10 +421,11 @@ class CaseIterDriverBase(Driver):
             else:
                 self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
-                if self.error_policy == 'ABORT':
-                    if self._abort_exc is None:
-                        self._abort_exc = exc
-                    self._stop = True
+
+            if case.msg is not None and self.error_policy == 'ABORT':
+                if self._abort_exc is None:
+                    self._abort_exc = exc
+                self._stop = True
 
             # Record the data.
             self._record_case(case)
@@ -431,11 +435,11 @@ class CaseIterDriverBase(Driver):
 
         # Just being defensive, should never happen.
         else:  #pragma no cover
-            self._logger.error('unexpected state %r for server %r',
-                               state, server)
+            msg = 'unexpected state %r for server %r' % (state, server)
+            self._logger.error(msg)
             if self.error_policy == 'ABORT':
                 if self._abort_exc is None:
-                    self._abort_exc = exc
+                    self._abort_exc = RuntimeError(msg)
                 self._stop = True
             in_use = False
 
@@ -542,8 +546,8 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append(case)
         else:
-            if self.recorder is not None:
-                self.recorder.record(case)
+            for recorder in self.recorders:
+                recorder.record(case)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """
@@ -612,7 +616,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.error('server %r filexfer of %r failed: %r',
                                    server, self._egg_file, exc)
                 self._top_levels[server] = None
-                self._exceptions[server] = exc
+                self._exceptions[server] = TracedError(exc, traceback.format_exc())
                 return
             else:
                 self._server_info[server]['egg_file'] = self._egg_file
@@ -623,7 +627,7 @@ class CaseIterDriverBase(Driver):
             self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             self._top_levels[server] = None
-            self._exceptions[server] = exc
+            self._exceptions[server] = TracedError(exc, traceback.format_exc())
         else:
             self._top_levels[server] = tlo
 
@@ -646,9 +650,9 @@ class CaseIterDriverBase(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.workflow.run()
+                self.workflow.run(case_id=self._server_cases[server].uuid)
             except Exception as exc:
-                self._exceptions[server] = exc
+                self._exceptions[server] = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
@@ -658,7 +662,7 @@ class CaseIterDriverBase(Driver):
         try:
             self._top_levels[server].run()
         except Exception as exc:
-            self._exceptions[server] = exc
+            self._exceptions[server] = TracedError(exc, traceback.format_exc())
             self._logger.error('Caught exception from server %r, PID %d on %s: %r',
                                self._server_info[server]['name'],
                                self._server_info[server]['pid'],

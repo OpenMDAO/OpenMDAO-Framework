@@ -60,12 +60,23 @@ class DependencyGraph(object):
 
     def __init__(self):
         self._graph = nx.DiGraph()
-        self._graph.add_nodes_from(_fakes) 
+        self._graph.add_nodes_from(_fakes)
+        self._allsrcs = {}
         
     def __contains__(self, compname):
         """Return True if this graph contains the given component."""
         return compname in self._graph
     
+    def __eq__(self, other):
+        if isinstance(other, DependencyGraph):
+            if self._graph.nodes() == other._graph.nodes():
+                if self._graph.edges() == other._graph.edges():
+                    return True
+        return False
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+            
     def copy_graph(self):
         graph = self._graph.copy()
         graph.remove_nodes_from(_fakes)
@@ -249,10 +260,15 @@ class DependencyGraph(object):
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
         
-        oldsrc = self.get_source('.'.join([destcompname,destvarname]))
-        if oldsrc:
-            raise AlreadyConnectedError("%s is already connected to source %s" %
-                                        (destpath, oldsrc))
+        dpdot = destpath+'.'
+        for dst,src in self._allsrcs.items():
+            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
+                raise AlreadyConnectedError("%s is already connected to source %s" %
+                                            (dst, src))
+        #oldsrc = self.get_source('.'.join([destcompname,destvarname]))
+        #if oldsrc:
+            #raise AlreadyConnectedError("%s is already connected to source %s" %
+                                        #(destpath, oldsrc))
                 
         if srccompname == '@xin' and destcompname != '@bin':
             # this is an auto-passthrough input so we need 2 links
@@ -303,7 +319,8 @@ class DependencyGraph(object):
                                      (str(strcon), 
                                       '.'.join([srccompname,srcvarname]), 
                                       '.'.join([destcompname,destvarname])))
-
+        self._allsrcs[destpath] = srcpath
+        
     def _comp_connections(self, cname):
         """Returns a list of tuples of the form (srcpath, destpath) for all
         connections to and from the specified component.
@@ -384,6 +401,14 @@ class DependencyGraph(object):
                 link.disconnect(srcvarname, destvarname)
                 if len(link) == 0:
                     self._graph.remove_edge(srccompname, destcompname)
+        
+        try:
+            del self._allsrcs[destpath]
+        except KeyError:
+            pass
+        dpdot = destpath+'.'
+        for d in [k for k in self._allsrcs if k.startswith(dpdot)]:
+            del self._allsrcs[d]
 
     def dump(self, stream=sys.stdout):
         """Prints out a simple text representation of the graph."""

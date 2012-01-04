@@ -13,20 +13,10 @@ import os
 from pkg_resources import parse_version
 
 from openmdao.main.importfactory import ImportFactory
-from openmdao.main.pkg_res_factory import PkgResourcesFactory
+from openmdao.main.pkg_res_factory import PkgResourcesFactory, plugin_groups
 
 _factories = []
 _pkg_res_factory = None
-
-
-
-# this list should contain all openmdao entry point groups for Containers
-_container_groups = [ 'openmdao.container',
-                      'openmdao.component',
-                      'openmdao.driver',
-                    ]
-
-_plugin_groups = _container_groups + ['openmdao.variable']
 
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
@@ -61,7 +51,15 @@ def get_available_types(groups=None):
     If groups is None, return the set for all openmdao entry point groups.
     """
     if groups is None:
-        groups = _container_groups
+        groups = plugin_groups.keys()
+    else:
+        badgroups = []
+        for group in groups:
+            if group not in plugin_groups:
+                badgroups.append(group)
+        if badgroups:
+            raise RuntimeError("Didn't recognize the following entry point groups: %s. Allowed groups are: %s" %
+                               (badgroups, plugin_groups.keys()))
     types = []
     for fct in _factories:
         types.extend(fct.get_available_types(groups))
@@ -69,7 +67,7 @@ def get_available_types(groups=None):
 
 
 # register factory that loads plugins via pkg_resources
-_pkg_res_factory = PkgResourcesFactory(groups=_plugin_groups)
+_pkg_res_factory = PkgResourcesFactory()
 register_class_factory(_pkg_res_factory)
 
 # register factory for simple imports

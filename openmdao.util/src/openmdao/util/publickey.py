@@ -255,10 +255,14 @@ def is_private(path):
             return False  # No way to know.
 
         # Find the SIDs for user and system.
-        user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
+        username = win32api.GetUserName()
+
+        # Map Cygwin 'root' to 'Administrator'. Typically these are intended
+        # to be identical, but /etc/passwd might configure them differently.
+        if username == 'root':
+            username = 'Administrator'
+        user, domain, type = win32security.LookupAccountName('', username)
+        system, domain, type = win32security.LookupAccountName('', 'System')
 
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,
@@ -295,10 +299,14 @@ def make_private(path):
             raise ImportError('No pywin32')
 
         # Find the SIDs for user and system.
-        user, domain, type = \
-            win32security.LookupAccountName('', win32api.GetUserName())
-        system, domain, type = \
-            win32security.LookupAccountName('', 'System')
+        username = win32api.GetUserName()
+
+        # Map Cygwin 'root' to 'Administrator'. Typically these are intended
+        # to be identical, but /etc/passwd might configure them differently.
+        if username == 'root':
+            username = 'Administrator'
+        user, domain, type = win32security.LookupAccountName('', username)
+        system, domain, type = win32security.LookupAccountName('', 'System')
 
         # Find the DACL part of the Security Descriptor for the file
         sd = win32security.GetFileSecurity(path,
@@ -363,18 +371,17 @@ def read_authorized_keys(filename=None, logger=None):
 
     logger = logger or NullLogger()
 
-    keys = {}
     if not os.path.exists(filename):
-        logger.error('%r does not exist', filename)
-        return keys
+        raise RuntimeError('%r does not exist' % filename)
 
     if not is_private(filename):
         if sys.platform != 'win32' or HAVE_PYWIN32:
-            logger.error('%r is not private', filename)
-            return keys
+            raise RuntimeError('%r is not private' % filename)
         else:  #pragma no cover
-            logger.warning('%r is not private', filename)
+            logger.warning('Allowed users file %r is not private', filename)
 
+    errors = 0
+    keys = {}
     with open(filename, 'r') as inp:
         for line in inp:
             line = line.rstrip()
@@ -388,11 +395,13 @@ def read_authorized_keys(filename=None, logger=None):
             if len(fields) != 3:
                 logger.error('bad line (require exactly 3 fields):')
                 logger.error(line)
+                errors += 1
                 continue
 
             key_type, key_data, user_host = fields
             if key_type != 'ssh-rsa':
                 logger.error('unsupported key type: %r', key_type)
+                errors += 1
                 continue
 
             try:
@@ -400,6 +409,7 @@ def read_authorized_keys(filename=None, logger=None):
             except ValueError:
                 logger.error('bad line (require user@host):')
                 logger.error(line)
+                errors += 1
                 continue
 
             logger.debug('user %r, host %r', user, host)
@@ -408,6 +418,7 @@ def read_authorized_keys(filename=None, logger=None):
             except socket.gaierror:
                 logger.error('unknown host %r', host)
                 logger.error(line)
+                errors += 1
                 continue
 
             data = base64.b64decode(key_data)
@@ -418,6 +429,7 @@ def read_authorized_keys(filename=None, logger=None):
             if name != 'ssh-rsa':
                 logger.error('name error: %r vs. ssh-rsa', name)
                 logger.error(line)
+                errors += 1
                 continue
 
             start += name_len
@@ -432,15 +444,20 @@ def read_authorized_keys(filename=None, logger=None):
             if start != len(data):
                 logger.error('length error: %d vs. %d', start, len(data))
                 logger.error(line)
+                errors += 1
                 continue
 
             try:
                 pubkey = RSA.construct((n, e))
             except Exception as exc:
                 logger.error('key construct error: %r', exc)
+                errors += 1
             else:
                 keys[user_host] = pubkey
 
+    if errors:
+        raise RuntimeError('%d errors in %r, check log for details'
+                           % (errors, filename))
     return keys
 
 def _longint(buf, start, length):
@@ -484,7 +501,7 @@ def write_authorized_keys(allowed_users, filename, logger=None):
             out.write('ssh-rsa %s %s\n\n' % (data, user))
 
     if sys.platform == 'win32' and not HAVE_PYWIN32: #pragma no cover
-        logger.warning("Can't make %s private", filename)
+        logger.warning("Can't make authorized keys file %r private", filename)
     else:
         make_private(filename)
 

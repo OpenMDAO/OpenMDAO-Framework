@@ -737,8 +737,15 @@ class TestCase(unittest.TestCase):
             out.write("""\
 # EASY-INSTALL-ENTRY-SCRIPT: 'setuptools>=0.6c8','console_scripts','easy_install'
 __requires__ = 'setuptools>=0.6c8'
+import os
 import sys
 from pkg_resources import load_entry_point
+
+#print
+#print 'Installer Environment:'
+#for name, val in sorted(os.environ.items(), key=lambda item: item[0]):
+#    print '    %s = %r' % (name, val)
+#print
 
 sys.exit(
    load_entry_point('setuptools>=0.6c8', 'console_scripts', 'easy_install')()
@@ -754,10 +761,15 @@ sys.exit(
                 path += os.pathsep
             path += install_dir
             env['PYTHONPATH'] = path
-            cmdline = '%s %s -d %s %s' % \
-                      (python, installer, install_dir, self.egg_name)
+
+#            logging.debug('Test Environment:')
+#            for name, val in sorted(env.items(), key=lambda item: item[0]):
+#                logging.debug('    %s = %r', name, val)
+
+            cmdline = [python, installer, '-d', install_dir, self.egg_name]
+
             stdout = open(os.path.join(install_dir, 'installer.out'), 'w')
-            retcode = subprocess.call(cmdline, env=env, shell=True,
+            retcode = subprocess.call(cmdline, env=env,
                                       stdout=stdout, stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open(os.path.join(install_dir, 'installer.out'), 'r')
@@ -826,9 +838,9 @@ comp.run()
             # Load & run in subprocess.
             logging.debug("Load and run '%s' in subprocess...", entry_name)
             logging.debug('    %s', os.path.join(install_dir, self.egg_name))
-            cmdline = '%s load-n-run.py' % python
+            cmdline = [python, 'load-n-run.py']
             stdout = open('load-n-run.out', 'w')
-            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+            retcode = subprocess.call(cmdline, stdout=stdout,
                                       stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open('load-n-run.out', 'r')
@@ -861,16 +873,6 @@ comp.run()
         factory = PkgResourcesFactory(['openmdao.component',
                                        'openmdao.container'],
                                       [os.getcwd()])
-        logging.debug('    loaders:')
-        for key, value in factory._loaders.items():
-            logging.debug('        %s:', key)
-            for val in value:
-                logging.debug('                name: %s', val.name)
-                logging.debug('               group: %s', val.group)
-                logging.debug('                dist: %s', val.dist)
-                logging.debug('            entry_pt: %s', val.entry_pt)
-                logging.debug('                ctor: %s', val.ctor)
-                logging.debug('')
 
         # Create and move to test directory.
         orig_dir = os.getcwd()
@@ -921,10 +923,10 @@ comp.run()
                                   observer=observer)
             if comp is None:
                 self.fail('Create of test_comp failed.')
-            self.assertEqual(comp.get_pathname(), 'test_comp')
             self.assertEqual(comp.executions, 0)
             comp.run()
             self.assertEqual(comp.executions, 3)
+            self.assertEqual(comp.get_pathname(), 'test_comp')
 
             # Create a (sub)component.
             sub = factory.create('Egg_TestModel.Oddball.oddcomp',
@@ -1009,9 +1011,9 @@ comp.run()
         orig_dir = os.getcwd()
         os.chdir(PY_DIR)
         try:
-            cmdline = '%s test_egg_save.py' % python
+            cmdline = [python, 'test_egg_save.py']
             stdout = open('main_handling.out', 'w')
-            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+            retcode = subprocess.call(cmdline, stdout=stdout,
                                       stderr=subprocess.STDOUT)
             stdout.close()
             stdout = open('main_handling.out', 'r')

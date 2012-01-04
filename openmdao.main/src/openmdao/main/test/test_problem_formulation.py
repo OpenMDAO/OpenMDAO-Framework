@@ -44,41 +44,70 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.add("D4",Dummy()) 
         self.asm.add("D5",Dummy()) 
         self.asm.add("D6",Dummy()) 
+        
+        
+    def test_get_local_des_vars_by_comp(self): 
+        self.asm.add_parameter('D1.a',0,1e99)
+        self.asm.add_parameter('D1.b',0,1e99)
+        self.asm.add_parameter('D4.a',0,1e99)
+        
+        data = self.asm.get_local_des_vars_by_comp()
+        
+        self.assertEqual(set([param.target for param in data['D1']]),set(['D1.a','D1.b']))  
+        self.assertEqual(set([param.target for param in data['D4']]),set(['D4.a']))  
+        
+        
+    def test_get_global_des_vars_by_comp(self): 
+        self.asm.add_parameter(('D1.a','D2.a','D2.b'),0,1e99)
+        
+        data = self.asm.get_global_des_vars_by_comp()
+        
+        self.assertEqual(set(data.keys()),set(['D1','D2']))
+        
+        self.assertEqual(set([param.target for param in data['D1']]),set(['D1.a']))  
+        self.assertEqual(set([param.target for param in data['D2']]),set(['D2.a','D2.b']))  
          
         
     def test_coupling_vars(self): 
-        self.asm.add_coupling_var("D1.a","D2.a")
-        self.asm.add_coupling_var("D4.a","D5.a")
-        self.asm.add_coupling_var("D6.a","D5.b")
+        c1 = self.asm.add_coupling_var(("D1.a","D2.a"))
+        c2 = self.asm.add_coupling_var(("D4.a","D5.a"))
+        c3 = self.asm.add_coupling_var(("D6.a","D5.b"))
         
         try: 
-            self.asm.add_coupling_var("D1.a","D2.a")
+            self.asm.add_coupling_var(("D1.a","D2.a"))
         except Exception as err:
             self.assertEqual(": Coupling variable with indep 'D1.a' already exists in assembly",str(err))
         else: 
             self.fail("Exception expected")
         
         try: 
-            self.asm.add_coupling_var("D3.a","D2.a")
+            self.asm.add_coupling_var(("D3.a","D2.a"))
         except Exception as err:         
             self.assertEqual(": Coupling variable with dep 'D2.a' already exists in assembly",str(err))
         else: 
             self.fail("Exception expected")            
             
         try: 
-            self.asm.add_coupling_var("D1.z","D2.a")
+            self.asm.add_coupling_var(("D1.z","D2.a"))
         except Exception as err: 
             self.assertEqual(": Cant add coupling variable with indep 'D1.z' because is not a valid variable",str(err))
         else: 
             self.fail("Exception expected")
             
             
-        self.assertEqual([("D1.a","D2.a"),("D4.a","D5.a"),("D6.a","D5.b")],
-                         self.asm.list_coupling_vars())
+        self.assertEqual(ordereddict.OrderedDict(zip([("D1.a","D2.a"),("D4.a","D5.a"),("D6.a","D5.b")],[c1,c2,c3])),
+                         self.asm.get_coupling_vars())
+        
+        self.assertEqual({'D1':[c1],'D4':[c2],'D6':[c3]},
+                         self.asm.get_coupling_indeps_by_comp())
+        
+        self.assertEqual({'D2':[c1],'D5':[c2,c3]},
+                         self.asm.get_coupling_deps_by_comp())
+        
         
         self.asm.remove_coupling_var(('D1.a','D2.a'))
-        self.assertEqual([("D4.a","D5.a"),("D6.a","D5.b")],
-                         self.asm.list_coupling_vars())
+        self.assertEqual(ordereddict.OrderedDict(zip([("D4.a","D5.a"),("D6.a","D5.b")],[c2,c3])),
+                         self.asm.get_coupling_vars())
         try: 
             self.asm.remove_coupling_var(('D1.a','D2.a'))
         except Exception as err: 
@@ -98,9 +127,9 @@ class ProblemFormulationTest(unittest.TestCase):
         else:
             self.fail("Exception expected")
             
-        self.asm.add_coupling_var("D1.a","D2.a")
+        self.asm.add_coupling_var(("D1.a","D2.a"))
         self.asm.clear_coupling_vars()
-        self.assertEqual([],self.asm.list_coupling_vars())
+        self.assertEqual([],self.asm.get_coupling_vars())
         
     def test_double_set_arch(self):
         self.asm.architecture = DummyArchitecture()

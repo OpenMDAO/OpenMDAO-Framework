@@ -1,10 +1,14 @@
 
 from openmdao.main.case import Case
+from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 
 class CaseArray(object):
     """A CaseRecorder/CaseIterator containing Cases having the same set of
     input/output strings but different data. Cases are not necessarily unique.
     """
+    
+    implements(ICaseIterator, ICaseRecorder)
+    
     def __init__(self, obj=None, parent_uuid=None, names=None):
         """
         obj: dict, Case, or None
@@ -195,6 +199,7 @@ class CaseSet(CaseArray):
     """A CaseRecorder/CaseIterator containing Cases having the same set of
     input/output strings but different data.  All Cases in the set are unique.
     """
+    
     def __init__(self, obj=None, parent_uuid=None, names=None):
         """
         obj: dict, Case, or None

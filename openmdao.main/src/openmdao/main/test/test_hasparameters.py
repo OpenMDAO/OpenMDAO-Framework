@@ -2,7 +2,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Int, Event, Float, Array, Enum, Str
+from openmdao.lib.datatypes.api import Int, Event, Float, List, Enum, Str
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.test.execcomp import ExecComp
@@ -10,7 +10,7 @@ from openmdao.test.execcomp import ExecComp
 class Dummy(Component): 
     x = Float(0.0,low=-10,high=10, iotype='in')
     y = Float(0.0,low=0,high=10, iotype='in')
-    arr = Array([1,2,3,4,5], iotype='in')
+    lst = List([1,2,3,4,5], iotype='in')
     i = Int(0,low=-10,high=10, iotype='in')
     j = Int(0,low=0,high=10, iotype='in')
     enum_i = Enum(values=(1,5,8), iotype='in')
@@ -35,6 +35,40 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.add('driver', MyDriver())
         self.top.add('comp', ExecComp(exprs=['c=x+y','d=x-y']))
         self.top.driver.workflow.add('comp')
+    
+    def test_param_output(self):
+        try:
+            p = Parameter('comp.c', self.top, low=0, high=1e99, scope=self.top)
+        except Exception as err:
+            self.assertEqual(str(err), 
+                             ": Can't add parameter 'comp.c' because 'comp.c' is an output.")
+        else:
+            self.fail("Exception expected")
+        
+    def test_add_parameter_param_target(self): 
+        p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
+        p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)
+        
+        self.top.driver.add_parameter(p)
+        self.assertEqual({'comp.x':p},self.top.driver.get_parameters())
+        
+        self.top.driver.remove_parameter('comp.x')
+        
+        self.top.driver.add_parameter(p,low=10.0)
+        self.assertEqual({'comp.x':p},self.top.driver.get_parameters())
+        self.assertEqual(10.0,self.top.driver.get_parameters()['comp.x'].low)
+        self.top.driver.remove_parameter('comp.x')
+        
+        pg = ParameterGroup([p,p2])
+        self.top.driver.add_parameter(pg)
+        self.assertEqual({'comp.x':pg},dict(self.top.driver.get_parameters()))
+        
+        self.top.driver.remove_parameter('comp.x')
+        
+        pg = ParameterGroup([p,p2])
+        self.top.driver.add_parameter(pg,low=10.0)
+        self.assertEqual(10.0,self.top.driver.get_parameters()['comp.x'].low)
+        
         
     def test_single_bogus(self):
         
@@ -63,7 +97,7 @@ class HasParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter('comp.vstr', 0., 1.e99) 
         except ValueError, err:
-            self.assertEqual(str(err), "driver: The value of parameter 'comp.vstr' must be of type float or int, but its type is 'str'.")
+            self.assertEqual(str(err), "driver: The value of parameter 'comp.vstr' must be a real or integral type, but its type is 'str'.")
         else: 
             self.fail("Exception Expected")
             
@@ -213,8 +247,8 @@ class HasParametersTestCase(unittest.TestCase):
         
     def test_named_params(self):
         self.top.add('comp', Dummy())
-        self.top.driver.add_parameter('comp.arr[1]', low=0., high=1.e99, name='foo')
-        self.top.driver.add_parameter('comp.arr[3]', low=0., high=1.e99, name='bar')
+        self.top.driver.add_parameter('comp.lst[1]', low=0., high=1.e99, name='foo')
+        self.top.driver.add_parameter('comp.lst[3]', low=0., high=1.e99, name='bar')
         
         try:
             self.top.driver.add_parameter('comp.x', name='foo')
@@ -222,16 +256,16 @@ class HasParametersTestCase(unittest.TestCase):
             self.assertEqual(str(err), "driver: foo is already a Parameter")
         
         try:
-            self.top.driver.add_parameter('comp.arr[3]', name='blah')
+            self.top.driver.add_parameter('comp.lst[3]', name='blah')
         except Exception as err:
-            self.assertEqual(str(err), "driver: 'comp.arr[3]' is already a Parameter target")
+            self.assertEqual(str(err), "driver: 'comp.lst[3]' is already a Parameter target")
         
         targets = self.top.driver.list_param_targets()
-        self.assertEqual(set(targets),set(['comp.arr[1]','comp.arr[3]']))
+        self.assertEqual(set(targets),set(['comp.lst[1]','comp.lst[3]']))
 
         self.top.driver.remove_parameter('bar')
         targets = self.top.driver.list_param_targets()
-        self.assertEqual(targets,['comp.arr[1]'])
+        self.assertEqual(targets,['comp.lst[1]'])
         
     def test_metadata(self):
         
@@ -278,11 +312,24 @@ class ParametersTestCase(unittest.TestCase):
         params2['comp.a'].set(d2val)
         self.assertEqual(self.top.comp.a, 15.)
         
+    def test_group_get_referenced_vars_by_compname(self):
+        self.top.driver.add_parameter(('comp.a','comp.b'),0,1e99)
+        self.top.driver.add_parameter(('comp.c','comp.d'),0,1e99)
+        params = self.top.driver.get_parameters()
+        
+        data = params[('comp.a','comp.b')].get_referenced_vars_by_compname()
+        self.assertEqual(['comp',],data.keys())
+        self.assertEqual(set([param.target for param in data['comp']]),set(['comp.a','comp.b']))    
+        
+        data = params[('comp.c','comp.d')].get_referenced_vars_by_compname()
+        self.assertEqual(['comp',],data.keys())
+        self.assertEqual(set([param.target for param in data['comp']]),set(('comp.c','comp.d')))  
+
         # Vars with bounds, params with no bounds
         self.top.comp.add_trait('v1', Float(0.0, low=0.0, high=10.0, iotype='in'))
         self.top.comp.v1 = 5.0
         self.top.driver.add_parameter('comp.v1', scaler=0.5, adder=-2.0)
-        
+
         params = self.top.driver.get_parameters()
         self.assertEqual(params['comp.v1'].evaluate(), 12.0)
         self.assertEqual(params['comp.v1'].high, 22.0)

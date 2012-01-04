@@ -13,7 +13,7 @@ from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 from openmdao.main.driver import Driver
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
@@ -98,34 +98,41 @@ class Assembly (Component):
         be the last entry in its pathname. The trait specified by pathname
         must exist.
         """
+        parts = pathname.split('.')
         if alias:
             newname = alias
         else:
-            parts = pathname.split('.')
             newname = parts[-1]
 
         if newname in self.__dict__:
             self.raise_exception("'%s' already exists" %
                                  newname, KeyError)
-        parts = pathname.split('.', 1)
         if len(parts) < 2:
             self.raise_exception('destination of passthrough must be a dotted path',
                                  NameError)
-        comp = getattr(self, parts[0])
-        trait = comp.get_trait(parts[1])
+        comp = self
+        for part in parts[:-1]:
+            try:
+                comp = getattr(comp, part)
+            except AttributeError:
+                trait = None
+                break
+        else:
+            trait = comp.get_trait(parts[-1])
+            iotype = comp.get_iotype(parts[-1])
+            
         if trait:
-            iotype = trait.iotype
             ttype = trait.trait_type
             if ttype is None:
                 ttype = trait
-            
-            if not trait.validate:
-                trait = None  # no validate function, so just don't use trait for validation
         else:
             if not self.contains(pathname):
                 self.raise_exception("the variable named '%s' can't be found" %
                                      pathname, KeyError)
             iotype = self.get_metadata(pathname, 'iotype')
+            
+        if trait is not None and not trait.validate:
+            trait = None  # no validate function, so just don't use trait for validation
             
         metadata = self.get_metadata(pathname)
         metadata['target'] = pathname
@@ -161,6 +168,9 @@ class Assembly (Component):
         except ValueError:
             return (None, self, path)
         
+        t = self.get_trait(compname)
+        if t and t.iotype:
+            return (None, self, path)
         return (compname, getattr(self, compname), varname)
 
     @rbac(('owner', 'user'))
@@ -286,6 +296,17 @@ class Assembly (Component):
         """
         return self._depgraph.list_connections(show_passthrough)
 
+    #@rbac(('owner', 'user'))
+    #def get_configinfo(self, pathname='self'):
+        #"""Return a ConfigInfo object for this instance.  The
+        #ConfigInfo object should also contain ConfigInfo objects
+        #for children of this object.
+        #"""
+        #cfg = super(Assembly, self).get_configinfo(pathname)
+        #for src, dest in self._depgraph.list_connections():
+            #cfg.cmds.append("%s.connect('%s', '%s')" % (pathname, src, dest))
+        #return cfg
+    
     def _cvt_input_srcs(self, sources):
         link = self._depgraph.get_link('@xin', '@bin')
         if link is None:
@@ -335,8 +356,8 @@ class Assembly (Component):
                     srcval = srccomp.get_wrapped_attr(src)
                 except Exception, err:
                     self.raise_exception(
-                        "error retrieving value for %s from '%s'" %
-                        (src,srccompname), type(err))
+                        "error retrieving value for %s from '%s': %s" %
+                        (src,srccompname,str(err)), type(err))
                 try:
                     if srccomp is self:
                         srcname = src
@@ -467,14 +488,38 @@ class Assembly (Component):
         # Put the driver connection lists into our local scope by removing
         # the assembly name from the dotted path.
         for j, item in enumerate(driver_inputs):
-            names = item.split('.',1)
-            if names[0] == self.name:
-                driver_inputs[j] = names[1]
+            if isinstance(item, tuple):
+                
+                tuple_list = []
+                for tup_item in item:
+                    names = tup_item.split('.',1)
+                    if names[0] == self.name:
+                        tuple_list.append(names[1])
+                    else:
+                        tuple_list.append(tup_item)
+                        
+                driver_inputs[j] = tuple(tuple_list)
+            else:        
+                names = item.split('.',1)
+                if names[0] == self.name:
+                    driver_inputs[j] = names[1]
         
         for j, item in enumerate(driver_outputs):
-            names = item.split('.',1)
-            if names[0] == self.name:
-                driver_outputs[j] = names[1]
+            if isinstance(item, tuple):
+
+                tuple_list = []
+                for tup_item in item:
+                    names = tup_item.split('.',1)
+                    if names[0] == self.name:
+                        tuple_list.append(names[1])
+                    else:
+                        tuple_list.append(tup_item)
+                        
+                driver_inputs[j] = tuple(tuple_list)
+            else:
+                names = item.split('.',1)
+                if names[0] == self.name:
+                    driver_outputs[j] = names[1]
         
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
     

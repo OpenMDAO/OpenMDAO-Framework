@@ -2,32 +2,42 @@ import sys
 import os
 import time
 import shutil
+import logging
 import urllib2
-from optparse import OptionParser
 from subprocess import Popen, STDOUT, PIPE, check_call
 import socket
-import paramiko
 
 import tempfile
 import tarfile
 
-from fabric.api import run, local, env, put, cd, prompt, hide, show, get, settings
-from fabric.state import connections
-from fabric.network import connect
+try:
+    import paramiko
+    from fabric.api import run, local, env, put, get, cd, prompt, hide, show, settings
+    from fabric.state import connections
+    from fabric.network import connect
+except ImportError as err:
+    logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.util.fileutil import find_up, cleanup
+from openmdao.util.decorators import stub_if_missing_deps
 
 class VersionError(RuntimeError):
     pass
 
+@stub_if_missing_deps('fabric')
 def fabric_cleanup(debug=False):
     """close all active fabric connections"""
     for key in connections.keys():
-        if debug:
-            print 'closing connection %s' % key
-        connections[key].close()
-        del connections[key]
+        try:
+            if debug:
+                print 'closing connection %s' % key
+            connections[key].close()
+            del connections[key]
+        except Exception as err:
+            print str(err)
 
+
+@stub_if_missing_deps('fabric')
 def check_openmdao_version(release_dir, version):
     """Checks to see if the specified version of openmdao already exists on
     the current active host.
@@ -56,6 +66,7 @@ def get_openmdao_version(release_dir, version=None):
     return version
 
 
+@stub_if_missing_deps('fabric')
 def push_and_run(fpaths, remotedir, runner=None, args=()):
     """Puts the given files onto the current active host in the specified
     remote directory and executes the first file specified.
@@ -67,10 +78,12 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
         runner = 'python' if fpaths[0].endswith('.py') else ''
 
     print 'cd-ing to %s' % remotedir
-    cmd = "%s %s %s" % (runner, os.path.basename(fpaths[0]), 
+    cmd = '%s %s %s' % (runner, os.path.basename(fpaths[0]), 
                         ' '.join(args))
     with cd(remotedir):
+        print 'running: ',cmd
         return run(cmd)
+    return retval
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
@@ -89,6 +102,7 @@ def tar_dir(dirpath, archive_name, destdir):
         os.chdir(startdir)
     return tarpath
 
+@stub_if_missing_deps('paramiko')
 def ssh_test(host, port=22, timeout=3):
     """Returns true if we can connect to the host via ssh."""
     # Set the timeout
@@ -108,6 +122,7 @@ def ssh_test(host, port=22, timeout=3):
 # this is a modified version of fabric.network.connect that will
 # retry a number of times in the case of timeouts or 'no session'
 # errors
+@stub_if_missing_deps('paramiko')
 def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
     """
     Create and return a new SSHClient instance connected to given host.
@@ -140,18 +155,10 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
                 look_for_keys=not env.no_keys
             )
             return client
-        except paramiko.SSHException as e:
-            if 'No existing session' in str(e):
-                tries += 1
-                if debug:
-                    print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
-            else:
-                raise
-        # Handle timeouts
-        except socket.timeout as e:
+        #except (paramiko.SSHException, socket.timeout) as e:
+        except Exception as e:
             tries += 1
-            if debug:
-                print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
+            print "connection attempt %d for host %s failed: %s" % (tries, host, str(e))
 
         time.sleep(sleep)
         
@@ -159,6 +166,7 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
                        (host, tries))
 
 
+@stub_if_missing_deps('fabric')
 def remote_py_cmd(cmds, py='python', remote_dir=None):
     """Given a list of python statements, creates a self-deleting _cmd_.py
     file, pushes it to the remote host, and runs it, returning the result of
@@ -179,17 +187,20 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
     os.remove(cmdfname) # remove local version
     return run('%s %s' % (py, cmdfname))
 
+@stub_if_missing_deps('fabric')
 def remote_get_platform():
     """Returns the platform string of the current active host."""
     with settings(hide('running', 'stderr'), warn_only=True):
         return remote_py_cmd(["import sys", "print sys.platform"])
 
+@stub_if_missing_deps('fabric')
 def remote_check_setuptools(py):
     """Return True if setuptools is installed on the remote host"""
     with settings(hide('everything'), warn_only=True):
         return remote_py_cmd(["import setuptools"],
                              py).succeeded
     
+@stub_if_missing_deps('fabric')
 def remote_check_pywin32(py):
     """Return True if pywin32 is installed on the remote host"""
     with settings(hide('everything'), warn_only=True):
@@ -198,6 +209,7 @@ def remote_check_pywin32(py):
                               "import ntsecuritycon"],
                              py=py).succeeded
 
+@stub_if_missing_deps('fabric')
 def remote_untar(tarfile, remote_dir=None, delete=True):
     """Use internal python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
@@ -212,6 +224,7 @@ def remote_untar(tarfile, remote_dir=None, delete=True):
         cmds.extend(['import os', 'os.remove("%s")' % tarfile])
     return remote_py_cmd(cmds, remote_dir=remote_dir)
     
+@stub_if_missing_deps('fabric')
 def remote_tmpdir():
     """Create and return the name of a temporary directory at the remote
     location.
@@ -228,6 +241,7 @@ def remote_mkdir(path):
                           "if not os.path.exists('%s'):" % path.replace('\\','/'),
                           "    os.makedirs('%s')" % path.replace('\\','/')])
     
+@stub_if_missing_deps('fabric')
 def remote_listdir(path):
     """Return a list of files found in the given remote directory."""
     with settings(show('stdout')):
@@ -284,7 +298,26 @@ def rsync_dirs(dest, host, dirs=('downloads','dists'),
     for dname in dirs:
         doit('rsync -arvzt --delete %s:%s %s' % (host, dname, dest))
 
-        
+
+@stub_if_missing_deps('fabric')
+def retrieve_docs(remote_dir):
+    """Retrieve a tar file of the docs built on a remote machine."""
+    cmds = [ "import tarfile",
+             "import os",
+             "for fname in os.listdir('%s'):" % remote_dir,
+             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
+             "        break",
+             "else:",
+             "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
+             "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
+             "tar = tarfile.open(os.path.join('%s','html.tar.gz'), mode='w:gz')" % remote_dir,
+             "tar.add(tardir, arcname='html')",
+             "tar.close()",
+             ]
+    
+    result = remote_py_cmd(cmds)
+    get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
+    
 
 #
 # Git related utilities
@@ -328,7 +361,7 @@ def get_git_branches():
     return [b.strip(' *') for b in p.communicate()[0].split('\n')]
 
 
-def make_git_archive(tarfilename, prefix='testbranch/'):
+def make_git_archive(tarfilename, prefix=''):
     """Make a tar file of the entire current repository."""
     startdir = os.getcwd()
     os.chdir(repo_top())

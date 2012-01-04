@@ -51,8 +51,14 @@ def dumpit(obj, stream=sys.stdout, recurse=True, ignore_address=True):
 
     _dumpit(obj, stream, recurse, 0, set(), ignore_address)
 
+    
+class _objdiff(object):
+    def __init__(self, o1names, o2names, diffdict):
+        self.o1names = o1names
+        self.o2names = o2names
+        self.diffdict = diffdict
 
-def print_fuct_call(funct, *args, **kwargs):
+def print_funct_call(funct, *args, **kwargs):
     def quote_if_str(obj):
         if isinstance(obj, basestring):
             return "'%s'" % obj

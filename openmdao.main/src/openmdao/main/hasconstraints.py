@@ -55,10 +55,10 @@ class Constraint(object):
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
         
     def get_referenced_compnames(self):
-        return self.lhs.get_referenced_compnames() + self.rhs.get_referenced_compnames()
+        return self.lhs.get_referenced_compnames().union(self.rhs.get_referenced_compnames())
 
     def __str__(self):
-        return ' '.join([self.lhs, self.comparator, self.rhs])
+        return ' '.join([self.lhs.text, self.comparator, self.rhs.text])
 
 def _parse_constraint(expr_string):
     """ Parses the constraint expression string and returns the lhs string, 
@@ -110,6 +110,7 @@ class _HasConstraintsBase(object):
     def list_constraints(self):
         """Return a list of strings containing constraint expressions."""
         return self._constraints.keys()
+
     
     def _check_add(self, cnststr):
         if cnststr in self._constraints:
@@ -391,6 +392,12 @@ class HasConstraints(object):
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
         return self._ineq.get_ineq_constraints()
+    
+    def get_constraints(self): 
+        """Return a list of constraint objects""" 
+        
+        return dict(self._eq.get_eq_constraints().items()+self._ineq.get_ineq_constraints().items())
+
 
     def eval_eq_constraints(self, scope=None): 
         """Returns a list of tuples of the form (lhs, rhs, comparator,
@@ -409,6 +416,8 @@ class HasConstraints(object):
         lst = self._ineq.list_constraints()
         lst.extend(self._eq.list_constraints())
         return lst
+    
+    
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)

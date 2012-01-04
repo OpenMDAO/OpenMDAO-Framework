@@ -1,9 +1,11 @@
 
 from uuid import uuid1
 import re
+import traceback
 from StringIO import StringIO
 
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.exceptions import TracedError
 
 class _Missing(object):
     pass
@@ -123,6 +125,14 @@ class Case(object):
         else:
             return len(self._inputs) + len(self._outputs)
     
+    def get_input(self, name):
+        return self._inputs[name]
+    
+    def get_output(self, name):
+        if self._outputs:
+            return self._outputs[name]
+        raise KeyError("'%s' not found" % name)        
+    
     def items(self, iotype=None):
         """Return a list of (name,value) tuples for variables/expressions in this Case.
         
@@ -132,10 +142,10 @@ class Case(object):
             If None (the default), inputs and outputs are returned
         """
         if iotype is None:
-            lst = self._inputs.items()
             if self._outputs:
-                lst.extend(self._outputs.items())
-            return lst
+                return self._inputs.items() + self._outputs.items()
+            else:
+                return self._inputs.items()
         elif iotype == 'in':
             return self._inputs.items()
         elif iotype == 'out':
@@ -182,6 +192,7 @@ class Case(object):
         """Take the values of all of the inputs in this case and apply them
         to the specified scope.
         """
+        scope._case_id = self.uuid
         if self._exprs:
             for name,value in self._inputs.items():
                 expr = self._exprs.get(name)
@@ -197,18 +208,37 @@ class Case(object):
         """Update the value of all outputs in this Case, using the given scope.
         """
         self.msg = msg
+        last_excpt = None
         if self._outputs is not None:
             if self._exprs:
                 for name in self._outputs.keys():
                     expr = self._exprs.get(name)
-                    if expr:
-                        self._outputs[name] = expr.evaluate(scope)
-                    else:
-                        self._outputs[name] = scope.get(name)
+                    try:
+                        if expr:
+                            self._outputs[name] = expr.evaluate(scope)
+                        else:
+                            self._outputs[name] = scope.get(name)
+                    except Exception as err:
+                        last_excpt = TracedError(err, traceback.format_exc())
+                        self._outputs[name] = _Missing
+                        if self.msg is None:
+                            self.msg = str(err)
+                        else:
+                            self.msg = self.msg + " %s" % err
             else:
                 for name in self._outputs.keys():
-                    self._outputs[name] = scope.get(name)
-
+                    try:
+                        self._outputs[name] = scope.get(name)
+                    except Exception as err:
+                        last_excpt = TracedError(err, traceback.format_exc())
+                        self._outputs[name] = _Missing
+                        if self.msg is None:
+                            self.msg = str(err)
+                        else:
+                            self.msg = self.msg + " %s" % err
+        if last_excpt:
+            raise last_excpt
+            
     def add_input(self, name, value):
         """Adds an input and its value to this case.
         

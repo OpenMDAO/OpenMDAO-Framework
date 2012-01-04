@@ -47,7 +47,8 @@ class MyDriver(Driver):
         case = Case(inputs = inputs,
                     outputs = outputs)
         
-        self.recorder.record(case)
+        for recorder in self.recorders:
+            recorder.record(case)
         
 class Analysis(Assembly):
     def __init__(self,*args,**kwargs):
@@ -79,13 +80,13 @@ class Analysis(Assembly):
         self.DOE_trainer.add_event("spiral_meta_model.train_next")
         self.DOE_trainer.case_outputs = ['spiral_meta_model.f1_xy',
                                          'spiral_meta_model.f2_xy']
-        self.DOE_trainer.recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
+        self.DOE_trainer.recorders = [DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))]
         
         self.add("MOEI_opt",Genetic())
         self.MOEI_opt.opt_type = "maximize"
         self.MOEI_opt.population_size = 100
         self.MOEI_opt.generations = 10
-        self.MOEI_opt.selection_method = "tournament"
+        #self.MOEI_opt.selection_method = "tournament"
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
         self.MOEI_opt.add_objective("MOEI.PI")
@@ -93,11 +94,11 @@ class Analysis(Assembly):
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("spiral_meta_model.train_next")
-        self.retrain.recorder = DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))
+        self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
         self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
-        self.iter.iterations = 15
+        self.iter.iterations = 30
         self.iter.add_stop_condition('MOEI.EI <= .0001')
         
         self.add("EI_mux",Mux(2))

@@ -1,15 +1,15 @@
 import ordereddict
 import weakref
 
-from numpy import float32, float64, int32, int64
-
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.util.typegroups import real_types, int_types
 from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 
     
     def __init__(self, target, parent, high=None, low=None, 
-                 scaler=None, adder=None, fd_step=None, scope=None):
+                 scaler=None, adder=None, start=None, 
+                 fd_step=None, scope=None, name=None):
         self._metadata = None
         
         if scaler is None and adder is None:
@@ -35,9 +35,14 @@ class Parameter(object):
         
         self.low = low
         self.high = high
+        self.start = start
         self.scaler = scaler
         self.adder = adder
         self.fd_step = fd_step
+        if name is not None: 
+            self.name = name
+        else: 
+            self.name = target
         
         try:
             expreval = ExprEvaluator(target, scope)
@@ -58,6 +63,10 @@ class Parameter(object):
         except AttributeError:
             parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % target,
                                    AttributeError)
+            
+        if 'iotype' in metadata and metadata['iotype'] == 'out':
+            parent.raise_exception("Can't add parameter '%s' because '%s' is an output." % (target, target),
+                                   RuntimeError)
         try:
             # So, our traits might not have a vartypename?
             self.vartypename = metadata['vartypename']
@@ -75,8 +84,8 @@ class Parameter(object):
         if self.vartypename == 'Enum':
             return    # it's an Enum, so no need to set high or low
         
-        if not isinstance(val,(float,float32,float64,int,int32,int64)):
-            parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
+        if not isinstance(val, real_types) and not isinstance(val, int_types):
+            parent.raise_exception("The value of parameter '%s' must be a real or integral type, but its type is '%s'." %
                                    (target,type(val).__name__), ValueError)
         
         meta_low = metadata.get('low') # this will be None if 'low' isn't there
@@ -91,9 +100,9 @@ class Parameter(object):
         else:
             if low is None:
                 parent.raise_exception("Trying to add parameter '%s', "
-                                   "but no lower limit was found and no " 
-                                   "'low' argument was given. One or the "
-                                   "other must be specified." % target,ValueError)
+                                       "but no lower limit was found and no " 
+                                       "'low' argument was given. One or the "
+                                       "other must be specified." % target,ValueError)
 
         meta_high = metadata.get('high') # this will be None if 'low' isn't there
         if meta_high is not None:
@@ -115,13 +124,18 @@ class Parameter(object):
         if self.low > self.high:
             parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
                                    (target, self.low, self.high), ValueError)
-
+    def __eq__(self,other):
+        if not isinstance(other,Parameter): 
+            return False
+        return (self._expreval,self.scaler,self.adder,self.low,self.high,self.fd_step,self.start,self.name)== \
+               (other._expreval,other.scaler,other.adder,other.low,other.high,other.fd_step,other.start,self.name)
+            
     def __str__(self):
         return self._expreval.text
 
     def __repr__(self): 
-        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s)>' % \
-               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder)
+        return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
+               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder,self.start,self.name)
     
     def _transform(self, val):
         """ Unscales the variable (parameter space -> var space). """
@@ -190,16 +204,23 @@ class ParameterGroup(object):
         self._params = params[:]
         self.low = self._params[0].low
         self.high = self._params[0].high
+        self.start = self._params[0].start
         self.scaler = self._params[0].scaler
         self.adder = self._params[0].adder
         self.fd_step = self._params[0].fd_step
-            
+        self.name = self._params[0].name
+    
+    def __eq__(self,other): 
+        if not isinstance(other,ParameterGroup): 
+            return False
+        return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step,self.name)==\
+               (other._params,other.low,other.high,other.start,other.scaler,other.adder,other.fd_step,self.name)
     def __str__(self):
         return "%s" % self.targets
 
     def __repr__(self): 
-        return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s)>' % \
-               (self.targets, self.low, self.high, self.fd_step, self.scaler, self.adder)
+        return '<ParameterGroup(targets=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
+               (self.targets, self.low, self.high,self.fd_step, self.scaler, self.adder,self.start,self.name)
 
     @property
     def target(self): 
@@ -241,6 +262,16 @@ class ParameterGroup(object):
         for param in self._params:
             result.update(param.get_referenced_compnames())
         return result
+    
+    def get_referenced_vars_by_compname(self): 
+        result = dict()
+        for param in self._params: 
+            comp = param.get_referenced_compnames().pop()
+            try: 
+                result[comp].update([param,])
+            except KeyError: 
+                result[comp] = set([param,])
+        return result        
 
     def get_referenced_varpaths(self):
         """Return a set of Variable names referenced in our target strings."""
@@ -260,17 +291,31 @@ class HasParameters(object):
         self._parent = parent
         self._allowed_types = ['continuous']
 
+    def _override_param(self, param, low=None, high=None, 
+                        scaler=None, adder=None, start=None,
+                        fd_step=None, name=None):
+        if low is not None: param.low = low
+        if high is not None: param.high = high
+        if scaler is not None: param.scaler = scaler
+        if start is not None: param.start = start
+        if fd_step is not None: param.fd_step = fd_step
+        if name is not None: param.name = name
+        return param
+        
     def add_parameter(self, target, low=None, high=None, 
-                      scaler=None, adder=None, fd_step=None, name=None, scope=None):
+                      scaler=None, adder=None, start=None,
+                      fd_step=None, name=None, scope=None):
         """Adds a parameter or group of parameters to the driver.
         
-        target: string or iter of strings
+        target: string or iter of strings or Parameter
             What the driver should vary during execution. A *target* is an expression
             that can reside on the left-hand side of an assignment statement, so 
             typically it will be the name of a variable or possibly a subscript 
             expression indicating an entry within an array variable, e.g., x[3].
             If an iterator of targets is given, then the driver will set all targets given
             to the same value whenever it varies this parameter during execution.
+            If a Parameter instance is given, then that instance is copied into the driver
+            with any other arguments specified, overiding the values in the given parameter. 
             
         low: float (optional)
             Minimum allowed value of the parameter. If scaler and/or adder
@@ -285,6 +330,11 @@ class HasParameters(object):
             
         adder: float (optional)
             Value to add to parameter prior to possible scaling
+            
+        start: any (optional)
+            Value to set into the target or targets of a parameter before starting 
+            any executions. If not given, analysis will start with whatever values
+            are in the target or targets at that time. 
 
         fd_step: float (optional)
             Step-size to use for finite difference calculation. If no value is
@@ -304,44 +354,62 @@ class HasParameters(object):
         referenced. If they are not specified in the metadata and not provided
         as arguments, a ValueError is raised.
         """
-        if isinstance(target, basestring): 
-            names = [target]
-            key = target
-        else: 
-            names = target
-            key = tuple(target)
-
-        if name is not None:
-            key = name
+        if isinstance(target,Parameter): 
+            self._parameters[target.name] = self._override_param(target, low, high, 
+                                                                 scaler, adder, start,
+                                                                 fd_step, name)
+        elif isinstance(target,ParameterGroup): 
+            self._parameters[target.name] = self._override_param(target, low, high, 
+                                                                 scaler, adder, start,
+                                                                 fd_step, name)
+            for param in target._params: 
+                self._override_param(param, low, high, 
+                                     scaler, adder, start,
+                                     fd_step, name)
+        else:     
+            if isinstance(target, basestring): 
+                names = [target]
+                key = target
+            else: 
+                names = target
+                key = tuple(target)
+    
+            if name is not None:
+                key = name
+                
+            dups = set(self.list_param_targets()).intersection(names)
+            if len(dups) == 1:
+                self._parent.raise_exception("'%s' is already a Parameter target" % 
+                                             dups.pop(), ValueError)
+            elif len(dups) > 1:
+                self._parent.raise_exception("%s are already Parameter targets" % 
+                                             sorted(list(dups)), ValueError)
+                
+            parameters = [Parameter(name, self._parent, low=low, high=high, 
+                                    scaler=scaler, adder=adder, start=start,
+                                    fd_step=fd_step, name=key,
+                                    scope=self._get_scope(scope)) 
+                          for name in names]
+    
+            if key in self._parameters:
+                self._parent.raise_exception("%s is already a Parameter" % key,
+                                             ValueError)
+    
+            if len(parameters) == 1:
+                self._parameters[key] = parameters[0]
+            else: # defining a ParameterGroup
+                types = set([p.valtypename for p in parameters])
+                if len(types) > 1: 
+                    self._parent.raise_exception("Can't add parameter %s because "
+                        "%s are not all of the same type" %
+                        (key," and ".join(names)), ValueError)
+                pg = ParameterGroup(parameters)
+                pg.typename = parameters[0].valtypename
+                self._parameters[key] = pg
             
-        dups = set(self.list_param_targets()).intersection(names)
-        if len(dups) == 1:
-            self._parent.raise_exception("'%s' is already a Parameter target" % 
-                                         dups.pop(), ValueError)
-        elif len(dups) > 1:
-            self._parent.raise_exception("%s are already Parameter targets" % 
-                                         sorted(list(dups)), ValueError)
-            
-        parameters = [Parameter(name, self._parent, low=low, high=high, 
-                                scaler=scaler, adder=adder, fd_step=fd_step,
-                                scope=self._get_scope(scope)) 
-                      for name in names]
-
-        if key in self._parameters:
-            self._parent.raise_exception("%s is already a Parameter" % key,
-                                         ValueError)
-
-        if len(parameters) == 1:
-            self._parameters[key] = parameters[0]
-        else: # defining a ParameterGroup
-            types = set([p.valtypename for p in parameters])
-            if len(types) > 1: 
-                self._parent.raise_exception("Can't add parameter %s because "
-                    "%s are not all of the same type" %
-                    (key," and ".join(names)), ValueError)
-            pg = ParameterGroup(parameters)
-            pg.typename = parameters[0].valtypename
-            self._parameters[key] = pg
+            #if start is given, then initilze the var now
+            if start is not None: 
+                self._parameters[key].set(start,self._get_scope(scope))
         
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
@@ -368,6 +436,12 @@ class HasParameters(object):
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
         return self._parameters
+    
+    def init_parameters(self): 
+        """Sets all parameters to their start value, if a start value is given""" 
+        for key,param in self._parameters.iteritems():
+            if param.start is not None: 
+                param.set(param.start, self._get_scope())
 
     def set_parameters(self, values, case=None, scope=None): 
         """Pushes the values in the iterator 'values' into the corresponding 

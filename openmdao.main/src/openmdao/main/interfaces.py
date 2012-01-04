@@ -410,41 +410,34 @@ class ICaseRecorder(Interface):
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""
         
-#class IHasCouplingVars(Interface): 
-    #"""An interface for assemblies to support the declaration of coupling vars"""
+class IHasCouplingVars(Interface): 
+    """An interface to support the declaration of coupling variables
+    """
     
-    #def add_coupling_var(indep,constraint,tollerance=.0001,scalar=1.0,adder=0.0):
-        #"""adds a new coupling var to the assembly
+    def add_coupling_var(self,indep,dep):
+        """adds a new pair (indep/dep) of coupling variables
         
-        #indep: str
-            #name of the independent variable, or the variable that should be varied to meet the coupling 
-            #constraint
-        #constraint: str
-            #constraint equation, meeting the requirements of the IHasConstraints interface, which must be met 
-            #to enforce the coupling
-        #tolerance: float (optional)
-            #default value of .0001, specifies the tolerance to which the coupling constraint must be met to be 
-            #statisfied
-        #scalar: float (optional)
-            #default value of 1.0, specifies the scalar value that the constraint equation will be multiplied by 
-            #before being returned
-        #adder: float (optional)
-            #default value of 0.0, specifies the value which will be added to the constraint before being returned
-        #"""        
-    
-    #def remove_coupling_var(indep):
-        #"""removes the coupling var, idenfied by the indepent name, from the assembly. 
+        indep: str
+            name of the independent variable, or the variable 
+            that should be varied, to meet the coupling constraint
+        dep: str
+            name of the dependent variable, or the variable that 
+            needs to be forced to be consistent with the independent    
+        """
+
+    def remove_coupling_var(self,couple):
+        """removes the pair (indep/dep) of coupling variables. 
         
-        #indep: str 
-            #name of the independent variable from the CouplingVar   
-        #"""
+        couple: tuple of str 
+            two tuple of (<indep>,<dep>) to be removed
+        """
+
+    def list_coupling_vars(self): 
+        """returns a ordered list of names of the coupling variables"""
     
-    #def list_coupling_vars(): 
-        #"""returns a ordered list of names of the coupling vars in the assembly"""
-    
-    #def clear_coupling_vars(): 
-        #"""removes all coupling variables from the assembly"""
-    
+    def clear_coupling_vars(self): 
+        """removes all coupling variables"""
+
 #class IHasGlobalDesVars(Interface): 
     #"""Interface for managing global design variables in assemblies
         
@@ -674,6 +667,12 @@ class IHasObjective(IHasObjectives):
         """Returns the value of the evaluated objective."""
 
 
+class IVariable(Interface):
+    def validate(obj, name, value):
+        """ Validates that the specified value is valid and can be assigned
+        to the data value corresponding to this Variable.
+        """
+
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""
@@ -682,3 +681,4 @@ def obj_has_interface(obj, *ifaces):
             return True
     return False
     
+

@@ -1,10 +1,11 @@
 
 from zope.interface import implements
+from enthought.traits.api import HasTraits
 
 from openmdao.main.interfaces import IArchitecture
 from openmdao.main.hasparameters import ParameterGroup
 
-class Architecture(object):
+class Architecture(HasTraits):
     """Base class for classes that auto-configure an ArchitectureAssembly
     given a problem formulation based on parameters, constraints, objectives,
     and a model.
@@ -13,12 +14,15 @@ class Architecture(object):
     
     def __init__(self, parent=None, param_types=None,
                  constraint_types=None, num_allowed_objectives=None,
-                 has_coupling_vars=False):
+                 has_coupling_vars=False, requires_global_des_vars=True):
+        super(Architecture,self).__init__()
+        
         self.parent = parent
         self.param_types = param_types
         self.constraint_types = constraint_types
         self.num_allowed_objectives = num_allowed_objectives
         self.has_coupling_vars = has_coupling_vars
+        self.requires_global_des_vars=False
         self.configured = False
     
     @property
@@ -95,6 +99,11 @@ class Architecture(object):
         """
         if self.parent is None:
             raise RuntimeError("no parent Assembly is defined for this Architecture")
+                
+        lenglobals = len(self.parent.get_global_des_vars())
+        if (not lenglobals) and self.requires_global_des_vars: 
+            raise RuntimeError("this Architecture requires a problem formulation that contains"
+                               " global_des_vars, but none were found in the parent")
         
         try:
             lenobjs = len(self.parent.get_objectives())
@@ -137,7 +146,7 @@ class Architecture(object):
                     raise RuntimeError("this Architecture doesn't support the following "
                                        "constraint types: %s" % list(diff))
         try:
-            parent_coupling_vars = self.parent.list_coupling_vars()
+            parent_coupling_vars = self.parent.get_coupling_vars()
         except AttributeError:
             parent_coupling_vars = []
         if len(parent_coupling_vars) > 0 and not self.has_coupling_vars:

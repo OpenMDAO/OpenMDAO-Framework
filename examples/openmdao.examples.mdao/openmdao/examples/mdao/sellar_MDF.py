@@ -2,11 +2,9 @@
     Solution of the sellar analytical problem using MDF.
     Disciplines coupled using Fixed Point Iteration
 """
-
-from openmdao.examples.mdao.disciplines import SellarDiscipline1, \
-                                               SellarDiscipline2
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
+from openmdao.lib.optproblems import sellar
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
@@ -30,8 +28,8 @@ class SellarMDF(Assembly):
         self.driver.workflow.add(['solver'])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
-        self.add('dis1', SellarDiscipline1())
-        self.add('dis2', SellarDiscipline2())
+        self.add('dis1', sellar.Discipline1())
+        self.add('dis2', sellar.Discipline2())
         self.solver.workflow.add(['dis1', 'dis2'])
         
         # Add Parameters to optimizer

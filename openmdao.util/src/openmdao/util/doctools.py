@@ -9,11 +9,10 @@ from sys import maxint, float_info
 
 from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event, \
                                  Instance
-from enthought.traits.trait_base import not_none
 from enthought.traits.trait_types import _InstanceArgs
 from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
 
-from openmdao.main.slot import Slot
+from openmdao.main.datatypes.slot import Slot
 
 excludes = (Any, Python, Event, type)
 
@@ -84,7 +83,10 @@ def get_traits_info(app, what, name, obj, options, lines):
     this_class_traits = obj.class_traits()
    
     #gets a dict of all traits in this class' base class
-    base_class_traits = classes[1].class_traits()
+    base_class_traits = {}
+    for cls in classes[1:]:
+        if hasattr(cls, 'class_traits'): 
+            base_class_traits.update(cls.class_traits())
 
     #The things we want to keep will be those that are
     #unique to the current class, and those that appear in the

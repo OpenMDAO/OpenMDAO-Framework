@@ -113,7 +113,7 @@ class TestCase(unittest.TestCase):
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
-        if end_dir.lower() != self.directory.lower():
+        if os.path.realpath(end_dir).lower() != os.path.realpath(self.directory).lower():
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
     def test_sequential(self):
@@ -127,7 +127,20 @@ class TestCase(unittest.TestCase):
         self.generate_cases(force_errors=True)
         self.run_cases(sequential=True, forced_errors=True, retry=False)
         self.run_cases(sequential=True, forced_errors=True, retry=True)
-
+        
+    def test_output_errors(self):
+        inputs = [('driven.x', numpy_random.normal(size=4)),
+                  ('driven.y', numpy_random.normal(size=10)),
+                  ('driven.raise_error', False),
+                  ('driven.stop_exec', False)]
+        outputs = ['driven.rosen_suzuki','driven.foobar']
+        self.cases = [Case(inputs, outputs, label='1')]
+        self.model.driver.sequential = True
+        self.model.driver.iterator = ListCaseIterator(self.cases)
+        self.model.driver.recorders = [ListCaseRecorder()]
+        self.model.driver.error_policy = 'RETRY'
+        self.model.run()
+        
     def test_run_stop_step_resume(self):
         logging.debug('')
         logging.debug('test_run_stop_step_resume')
@@ -137,7 +150,7 @@ class TestCase(unittest.TestCase):
         stop_case['driven.stop_exec'] = True
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
         self.model.driver.sequential = True
 
         try:
@@ -198,7 +211,7 @@ class TestCase(unittest.TestCase):
             self.model.driven.sleep = 0.2
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
 
         if retry:
@@ -206,20 +219,23 @@ class TestCase(unittest.TestCase):
             self.assertEqual(len(results), len(self.cases))
             self.verify_results(forced_errors)
         else:
-            assert_raises(self, 'self.model.run()', globals(), locals(),
-                          RuntimeError,
-                          "driver: Run aborted: RuntimeError('driven: Forced error',)")
+            try:
+                self.model.run()
+            except Exception as err:
+                startmsg = 'driver: Run aborted: Traceback '
+                endmsg = 'driven: Forced error'
+                self.assertEqual(str(err)[:len(startmsg)], startmsg)
+                self.assertEqual(str(err)[-len(endmsg):], endmsg)
+            else:
+                self.fail("Exception expected")
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
-        for case in self.model.driver.recorder.cases:
+        for case in self.model.driver.recorders[0].cases:
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                if self.model.driver.sequential:
-                    self.assertEqual(case.msg, 'driven: Forced error')
-                else:
-                    self.assertEqual(case.msg, 'driven: Forced error')
+                self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
@@ -233,7 +249,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
 
         # Set local dir in case we're running in a different directory.
         py_dir = self.directory
@@ -257,7 +273,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
 
         self.model.run()
 
@@ -282,13 +298,14 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
-        self.model.driver.recorder = results
+        self.model.driver.recorders = [results]
+        self.model.driver.error_policy = 'RETRY'
 
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
         msg = "driver: Exception getting case outputs: " \
-            "driven: object has no attribute 'sum_z'"
+            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 
@@ -297,7 +314,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorder = ListCaseRecorder()
+        self.model.driver.recorders = [ListCaseRecorder()]
         try:
             self.model.run()
         except ValueError as exc:

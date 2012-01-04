@@ -1,10 +1,10 @@
-.. index:: Mult_Outputs_Meta
+.. index:: multiple outputs metamodel
 
 Modeling Multiple Outputs
 ==================================
 
 This tutorial is a short demonstration of how to construct a MetaModel of a component with
-multiple outputs. This tutorial builds off of the :ref:`single_output` tutorial, with 
+multiple outputs. This tutorial builds off of the :ref:`single-output tutorial <Using-a-MetaModel-Component>`, with 
 modifications for multiple outputs in a component.
 
 We created a new component called ``Trig()``. This component has one input and two 
@@ -35,12 +35,12 @@ outputs, both of which will be mimicked by the MetaModel.
             self.f_x_cos = .5*cos(self.x)
 
 This next section differs from the the previous example in that there are two surrogate models, 
-one specified for each of the outputs. Note that each of the outputs had been assinged 
-a specific surrogate model, a logistic regression for sin, and a kriging surrogate for cos. In this case, 
-no ``default`` was set at all. 
+one specified for each of the outputs. Note that each of the outputs had been assigned 
+a specific surrogate model, a logistic regression for sin, and a Kriging Surrogate for cos. In this case, 
+no default was set at all. 
 
-The parameter `x` still only needs to be added once in this case, since the same input 
-is being evaluated for both outputs, thus a need for only one input.
+The parameter `x` still needs to be added only once in this case, since the same input 
+is being evaluated for both outputs.
         
 
 .. testcode:: Mult_out_parts
@@ -64,7 +64,7 @@ is being evaluated for both outputs, thus a need for only one input.
             self.DOE_Trainer.add_parameter("trig_meta_model.x",low=0,high=20)
             self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
             self.DOE_Trainer.add_event("trig_meta_model.train_next")
-            self.DOE_Trainer.recorder = DBCaseRecorder()
+            self.DOE_Trainer.recorders = [DBCaseRecorder()]
             self.DOE_Trainer.force_execute = True 
             
             #MetaModel Validation
@@ -74,7 +74,7 @@ is being evaluated for both outputs, thus a need for only one input.
             self.DOE_Validate.DOEgenerator.num_samples = 20
             self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
             self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
-            self.DOE_Validate.recorder = DBCaseRecorder()
+            self.DOE_Validate.recorders = [DBCaseRecorder()]
             self.DOE_Validate.force_execute = True
             
             #Iteration Hierarchy
@@ -87,14 +87,14 @@ is being evaluated for both outputs, thus a need for only one input.
         
 The iteration hierarchy is structurally the same as it would be with one output.  Even 
 though there's multiple surrogate models for multiple outputs, they are still contained 
-within only one MetaModel component.  So once again there is the MetaModel component seperately 
+within only one MetaModel component.  So once again there is the MetaModel component separately 
 added to each workflow, and the ``trig_calc`` component being added to the validation 
-stage so that comparitive values may be generated.
+stage so that comparative values may be generated.
 
 
-In the printing of the information, we have now included all four of the outputs. 
-For the kriging surrogate model, the answer returned as a normal distribution 
-(kriging surrogate predicts both a mean and a standard deviation for a given input).
+In printing the information we have now included all four of the outputs. 
+For the Kriging Surrogate model, the answer returned as a normal distribution 
+(Kriging Surrogate predicts both a mean and a standard deviation for a given input).
 When comparing the data, we just look at the mean here.  This is why there is a ``.mu`` appended to the 
 cos case under ``predicted_cos``.  An 
 alternative would be to append ``.sigma`` which would return the standard deviation.
@@ -107,8 +107,8 @@ alternative would be to append ``.sigma`` which would return the standard deviat
         sim.run()
         
         #This is how you can access any of the data
-        train_data = sim.DOE_Trainer.recorder.get_iterator()
-        validate_data = sim.DOE_Validate.recorder.get_iterator()
+        train_data = sim.DOE_Trainer.recorders[0].get_iterator()
+        validate_data = sim.DOE_Validate.recorders[0].get_iterator()
         train_inputs = [case['trig_meta_model.x'] for case in train_data]
         train_actual_sin = [case['trig_meta_model.f_x_sin'] for case in train_data]
         train_actual_cos = [case['trig_meta_model.f_x_cos'].mu for case in train_data]

@@ -40,6 +40,6 @@ class LogisticRegressionTest(unittest.TestCase):
         self.assertTrue(residual<1e-5)
         
     def test_uncertain_value(self): 
-        lr = LogisticRegression(self.X_train, self.Y_train)
+        lr = LogisticRegression()
         
         self.assertEqual(lr.get_uncertain_value(1.0),1.0)

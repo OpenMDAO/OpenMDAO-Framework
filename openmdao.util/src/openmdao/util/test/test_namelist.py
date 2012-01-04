@@ -10,19 +10,18 @@ from numpy import float32 as numpy_float32
 from numpy import int32 as numpy_int32
 from numpy import array, zeros
 
-from openmdao.lib.datatypes.api import Float, Bool, Int, Str, Array, File, List, Enum
-
-from openmdao.main.api import Container, Component
+from openmdao.main.datatypes.api import Float, Bool, Int, Str, File, List, Enum, Slot, Array
+from openmdao.main.api import VariableTree, Component
 from openmdao.util.namelist_util import Namelist, ToBool
 
-class VarContainer(Container):
+class VarContainer(VariableTree):
     """Contains some vars"""
 
-    boolvar = Bool(True, iotype='in')
-    intvar = Int(7777, iotype='in')
-    floatvar = Float(2.14543, iotype='in')
-    textvar = Str("Hey", iotype='in')
-    listenumvar = List(Enum(1,(1,2,3)), iotype='in')
+    boolvar = Bool(True)
+    intvar = Int(7777)
+    floatvar = Float(2.14543)
+    textvar = Str("Hey")
+    listenumvar = List(Enum(1,(1,2,3)))
 
 
 class VarComponent(Component):
@@ -44,6 +43,7 @@ class VarComponent(Component):
     single = Array(iotype='in')
     singleint = Array(iotype='in', dtype=numpy_int32)
     singlebool = Array(iotype='in', dtype=bool)
+    stringarray = List([], iotype='in')
     listenumvar = List(Enum(1,(1,2,3)), iotype='in')
     listenumvar2 = List(Enum(1.5,(1.5,2.4,3.3)), iotype='in')
     listenumvar3 = List(Enum('a',('a','b','c')), iotype='in')
@@ -137,7 +137,8 @@ class TestCase(unittest.TestCase):
                     "&OPTION\n" + \
                     "  This is a comment\n" + \
                     "  INTVAR = 777, single(1) = 15.0, floatvar = -3.14\n" + \
-                    "  singleint(1) = 3,4,5\n" + \
+                    "  singleint(2) = 3,4,5\n" + \
+                    "  stringarray(3) = 'xyz'\n" + \
                     "  boolvar = T\n" + \
                     "  textvar = 'That'\n" + \
                     "  ! This is a comment too\n" + \
@@ -193,7 +194,8 @@ class TestCase(unittest.TestCase):
         self.assertEqual(my_comp.arrayshorthand[4], 3.456)
         self.assertEqual(len(my_comp.arrayshorthand), 8)
         self.assertEqual(my_comp.single[0], 15.0)
-        self.assertEqual(my_comp.singleint[2], 5)
+        self.assertEqual(my_comp.singleint[3], 5)
+        self.assertEqual(my_comp.stringarray[2], 'xyz')
         self.assertEqual(type(my_comp.singleint[2]), numpy_int32)
         
     def test_read2(self):
@@ -296,7 +298,25 @@ class TestCase(unittest.TestCase):
         
         self.assertEqual(my_comp.boolvar, True)
         self.assertEqual(my_comp.arrayvar[0], 3.5)
+
+        namelist1 = "Testing\n" + \
+                    "  \n" + \
+                    "$OPTION boolvar = T, arrayvar = 3.5, 7.76, 1.23, $END\n"
+
+        outfile = open(self.filename, 'w')
+        outfile.write(namelist1)
+        outfile.close()
         
+        my_comp = VarComponent()
+        sb = Namelist(my_comp)
+        sb.set_filename(self.filename)
+
+        sb.parse_file()
+        
+        sb.load_model()
+        
+        self.assertEqual(my_comp.boolvar, True)
+        self.assertEqual(my_comp.arrayvar[0], 3.5)
         
     def test_2Darray_read(self):
         
@@ -343,6 +363,24 @@ class TestCase(unittest.TestCase):
         self.assertEqual("intvar = 7777" in contents, True)
         self.assertEqual("listenumvar = 1, 2, 1, 3" in contents, True)
 
+        # now test skipping
+        
+        sb = Namelist(my_comp)
+        my_comp.varcontainer.boolvar=True
+        my_comp.varcontainer.textvar="Skipme"
+        
+        sb.set_filename(self.filename)
+        sb.add_group('Test')
+        sb.add_container("varcontainer", skip='textvar')
+        
+        sb.generate()
+        
+        f = open(self.filename, 'r')
+        contents = f.read()
+        
+        self.assertEqual("boolvar = T" in contents, True)
+        self.assertEqual("textvar = 'Skipme'" in contents, False)
+        
         
     def test_1Darray_write(self):
         
