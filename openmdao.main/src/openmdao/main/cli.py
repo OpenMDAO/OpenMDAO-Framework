@@ -7,30 +7,41 @@ from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser
 from subprocess import call, check_call
 
-from openmdao.main.plugin import plugin_docs, plugin_build_docs
+from openmdao.main.plugin import plugin_docs, plugin_build_docs, print_sub_help
 from openmdao.test.testing import read_config, filter_config, run_openmdao_suite
 
-def list_testhosts(options, args=None):
+def list_testhosts(parser, options, args=None):
+    if args:
+        print_sub_help(parser, 'list_testhosts')
+        return -1
     hostlist, config = read_config(options)
     for host in filter_config(hostlist, config, options):
         plat = config.get(host, 'platform')
         py = config.get(host, 'py')
         print host.ljust(30), plat.ljust(10), py
 
-def test_openmdao(options, args=None):
+def test_openmdao(parser, options, args):
+    # nosetests uses sys.argv for its usage message when the user passes a -h
+    # arg, regardless of what args we pass to it, so if we see -h in sys.args,
+    # change the first entry in sys.argv to 'openmdao test'.  Otherwise, usage message
+    # will be 'openmdao [options]' instead of 'openmdao test [options]'
+    if '-h' in sys.argv:
+        sys.argv[0] = 'openmdao test'
     run_openmdao_suite(sys.argv[1:])
-
-def openmdao_docs(options, args=None):
+    
+def openmdao_docs(parser, options, args=None):
+    if args:
+        print_sub_help(parser, 'docs')
+        return -1
     plugin_docs(options)
 
 def _get_openmdao_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
     
     top_parser = ArgumentParser()
-    subparsers = top_parser.add_subparsers(title='subcommands')
+    subparsers = top_parser.add_subparsers(title='commands')
     
-    parser = subparsers.add_parser('list_testhosts', 
-                                   description="build sphinx doc files")
+    parser = subparsers.add_parser('list_testhosts', help='list hosts in testhosts config file')
     parser.add_argument("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                         default='~/.openmdao/testhosts.cfg',
                         help="Path of config file where info for remote testing/building hosts is located")
@@ -45,8 +56,7 @@ def _get_openmdao_parser():
                         help="Use all hosts found in testhosts.cfg file")
     parser.set_defaults(func=list_testhosts)
 
-    parser = subparsers.add_parser('docs', 
-                                   description="display docs for a plugin")
+    parser = subparsers.add_parser('docs', help='view the docs')
     parser.add_argument('plugin_dist_name', nargs='?',
                         help='name of plugin distribution or class')
     parser.add_argument("-b", "--browser", action="store", type=str, 
@@ -54,7 +64,7 @@ def _get_openmdao_parser():
                         help="browser name")
     parser.set_defaults(func=openmdao_docs)
     
-    parser = subparsers.add_parser('test', 
+    parser = subparsers.add_parser('test', add_help=False,
                                    description="run the OpenMDAO test suite")
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='display test progress')
@@ -66,12 +76,12 @@ def _get_openmdao_parser():
     # openmdao.devtools is not part of a normal OpenMDAO release
     try:
         # these commands will only be available on windows machines if pywin32 is available
+        import fabric
         from openmdao.devtools.push_docs import push_docs
         from openmdao.devtools.remotetst import test_branch
         from openmdao.devtools.remote_cfg import add_config_options
 
-        parser = subparsers.add_parser('test_branch', 
-                                       description="test OpenMDAO branch remotely")
+        parser = subparsers.add_parser('test_branch', help='run tests on remote machines')
         parser.add_argument("-k","--keep", action="store_true", dest='keep',
                             help="Don't delete the temporary build directory. "
                                  "If testing on EC2 stop the instance instead of terminating it.")
@@ -88,8 +98,7 @@ def _get_openmdao_parser():
         parser = add_config_options(parser)
         parser.set_defaults(func=test_branch)
         
-        parser = subparsers.add_parser('push_docs', 
-                                       description="push OpenMDAO dev docs to a server")
+        parser = subparsers.add_parser('push_docs', help='push the dev docs up to the server')
         parser.add_argument('host', help='host to push docs to')
         parser.add_argument("-d", "--destination", action="store", type=str, 
                             dest="docdir", default='downloads',
@@ -104,15 +113,13 @@ def _get_openmdao_parser():
 
     try:
         from openmdao.devtools.build_docs import build_docs, test_docs
-        parser = subparsers.add_parser('build_docs', 
-                                       description="build OpenMDAO docs")
+        parser = subparsers.add_parser('build_docs', help='build OpenMDAO docs')
         parser.add_argument("-v", "--version", action="store", type=str, 
                             dest="version",
                             help="the OpenMDAO version")
         parser.set_defaults(func=build_docs)
         
-        parser = subparsers.add_parser('test_docs', 
-                                       description="test the OpenMDAO docs")
+        parser = subparsers.add_parser('test_docs', help='run tests on the OpenMDAO docs')
         parser.set_defaults(func=test_docs)
         
     except ImportError:
@@ -120,16 +127,11 @@ def _get_openmdao_parser():
     
     return top_parser
 
-
 def openmdao():
     parser = _get_openmdao_parser()
-    if len(sys.argv) > 1 and sys.argv[1] == 'test':
-        options, args = parser.parse_known_args()
-    else:
-        options = parser.parse_args()
-        args = []
+    options, args = parser.parse_known_args()
 
-    sys.exit(options.func(options, args))
+    sys.exit(options.func(parser, options, args))
     
 if __name__ == '__main__':
     openmdao()

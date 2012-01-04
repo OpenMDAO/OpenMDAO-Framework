@@ -67,7 +67,7 @@ Creating the Virtual Environment
 OpenMDAO operates inside of a virtual python environment. To create that environment, 
 run ``python go-openmdao-dev.py`` from the top directory of your
 repository. The script will check the version of Python you are running. **You must
-be running version 2.6.** (To find out which Python version you are
+be running version 2.6 or 2.7.** (To find out which Python version you are
 running, you can type ``python --version``.)
 
 
