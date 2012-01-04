@@ -136,11 +136,17 @@ class ChainRule(HasTraits):
                         full_name = '.'.join([node.name, input_name])
                         
                         # Only look at connected local_inputs or parameters
-                        if input_name in node.parent._depgraph._allsrcs or \
+                        if full_name in node.parent._depgraph._allsrcs or \
                            full_name in self.param_names:
                     
-                            # Only process derivatives in the chain
-                            if full_name in derivs:
+                            source = node.parent._depgraph.get_source(full_name)
+                            
+                            # Only process inputs who are connected to outputs
+                            # with derivatives in the chain
+                            if source in derivs:
+                                incoming_deriv_names[input_name] = source
+                            # or who are connected to one of the parameters
+                            elif full_name in derivs:
                                 incoming_deriv_names[input_name] = full_name
                                 
                                 
@@ -155,11 +161,15 @@ class ChainRule(HasTraits):
                     
                     full_output_name = '.'.join([node.name, output_name])
                     derivs[full_output_name] = 0.0
+                    print local_outputs
+                    print incoming_deriv_names
                     
                     for input_name, full_input_name in incoming_deriv_names.iteritems():
                         derivs[full_output_name] += \
                             local_derivs[output_name][input_name] * \
                             derivs[full_input_name]
+                    print derivs
+                    print local_derivs
                 
             # Finite difference on the objectives.
             for obj_name, expr in self._parent.get_objectives().iteritems():

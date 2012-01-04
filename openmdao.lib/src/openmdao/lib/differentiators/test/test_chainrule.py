@@ -1,5 +1,5 @@
 """
-Test of the Finite Difference differentiator.
+Test of the Chain Rule differentiator.
 """
 
 import unittest
@@ -93,13 +93,13 @@ class Assy(Assembly):
         self.driver.add_constraint('comp.x + comp.y + 2.0*comp.u < 30.0', name="Con1")
         self.driver.add_constraint('comp.x + comp.y + 3.0*comp.u = 100.0', name="ConE")
         
-class FiniteDifferenceTestCase(unittest.TestCase):
-    """ Test of Component. """
+class ChainRuleTestCase(unittest.TestCase):
+    """ Test of the Chain Rule differentiator. """
 
     def setUp(self):
         self.model = Assy()
         
-    def test_first_order(self):
+    def test_simple(self):
         
         self.model.comp.x = 1.0
         self.model.comp.u = 1.0
@@ -136,7 +136,68 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         assert_rel_error(self, grad[0], 7.0, .001)
         assert_rel_error(self, grad[1], 16.0, .001)
         
-
+    def test_large_dataflow(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y1 = 2.0*x1**2',
+                'y2 = 3.0*x1']
+        deriv1 = ['dy1_dx1 = 4.0*x1',
+                  'dy2_dx1 = 3.0']
+    
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+        
+        exp3 = ['y1 = 3.5*x1']
+        deriv3 = ['dy1_dx1 = 3.5']
+    
+        exp4 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1',
+                'y3 = x1*x2']
+        deriv4 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0',
+                  'dy2_dx2 = 0.0',
+                  'dy3_dx1 = x2',
+                  'dy3_dx2 = x1']
+        
+        exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
+        deriv5 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 3.0',
+                  'dy1_dx3 = 2.0']
+        
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+    
+        self.top.add('driver', Driv())
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+        
+        self.top.driver.differentiator = ChainRule()
+        
+        obj = 'comp2.y1'
+        con = 'comp5.y1-comp4.y1 > 0'
+        self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
+        self.top.driver.add_objective(obj)
+        self.top.driver.add_constraint(con)
+        
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp4.x1')
+        self.top.connect('comp3.y1', 'comp4.x2')
+        self.top.connect('comp4.y1', 'comp5.x1')
+        self.top.connect('comp4.y2', 'comp5.x2')
+        self.top.connect('comp4.y3', 'comp5.x3')
+    
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 313.0, .001)
+    
     def test_Hessian(self):
         
         raise SkipTest("Hessians not supported yet.")
