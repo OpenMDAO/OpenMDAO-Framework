@@ -35,6 +35,11 @@ prefixed by 'C' or 'S':
 
 where <mid> is a message sequence number. Files are created by the sender and
 removed by the receiver.
+
+The above hierarchy is valid at the client and the server.  The NAS DMZ file
+servers do not allow a user filesystem hierarchy, so all file paths have to
+be flattened.  This is done by replacing ``/`` with ``=``, and dealing with this
+special style of filename in commands such as ``ls``.
 """
 
 import cPickle
@@ -81,6 +86,21 @@ if logging.getLevelName(DEBUG3) == 'Level 7':
     logging.addLevelName(DEBUG3, 'D3')
 
 _CLIENTS = []  # Server client names.
+_SEP = '='
+
+def _map_path(path):
+    """ Map path separators to '='. """
+    path = path.replace('/', _SEP)
+    if sys.platform == 'win32':
+        path = path.replace('\\', _SEP)
+    return path
+
+def _map_dir(path):
+    """ Map path separators to '=', and append '='. """
+    path = path.replace('/', _SEP)
+    if sys.platform == 'win32':
+        path = path.replace('\\', _SEP)
+    return path+_SEP
 
 
 # These get reconfigured & restored during testing.
@@ -149,7 +169,7 @@ def _scp_send(host, directory, filename, logger):
         Displays full command being executed.
     """
     src = os.path.join(directory, filename)
-    dst = '%s:%s/%s' % (host, directory, filename)
+    dst = _map_path('%s:%s/%s' % (host, directory, filename))
     _scp(src, dst, logger)
 
 
@@ -169,7 +189,7 @@ def _scp_recv(host, directory, filename, logger):
     logger: :class:`Logger`
         Displays full command being executed.
     """
-    src = '%s:%s/%s' % (host, directory, filename)
+    src = _map_path('%s:%s/%s' % (host, directory, filename))
     dst = os.path.join(directory, filename)
     _scp(src, dst, logger)
 
@@ -234,7 +254,7 @@ def connect(dmz_host, server_host, path, logger):
         os.mkdir(root)
 
     lines = _ssh(dmz_host, ('ls', '-1'), logger)
-    if root not in lines:
+    if _map_dir(root) not in lines:
         shutil.rmtree(root)
         raise RuntimeError('Server directory %r not found' % root)
 
@@ -248,12 +268,11 @@ def connect(dmz_host, server_host, path, logger):
         os.mkdir(root)
 
     if root != path:  # Create communications directory.
-        parent, slash, child = root.rpartition('/')
-        lines = _ssh(dmz_host, ('ls', '-1', parent), logger)
-        if child in lines:  # Need a clean directory.
+        mapped_root = _map_dir(root)
+        if mapped_root in lines:  # Need a clean directory.
             shutil.rmtree(_server_root(server_host))
             raise RuntimeError('Client directory %r already exists', root)
-        _ssh(dmz_host, ('mkdir', root), logger)
+        _ssh(dmz_host, ('touch', mapped_root), logger)
 
     return Connection(dmz_host, root, False, poll_delay, logger)
 
@@ -287,9 +306,10 @@ def server_init(dmz_host, logger):  # pragma no cover
     os.mkdir(root)
 
     lines = _ssh(dmz_host, ('ls', '-1'), logger)
-    if root in lines:  # Ensure a clean remote tree.
-        _ssh(dmz_host, ('rm', '-r', root), logger)
-    _ssh(dmz_host, ('mkdir',  root), logger)
+    mapped_root = _map_dir(root)
+    if mapped_root in lines:  # Ensure a clean remote tree.
+        _ssh(dmz_host, ('rm', '-f', '%s\\*' % mapped_root), logger)
+    _ssh(dmz_host, ('touch', mapped_root), logger)
 
 
 # Server-side.
@@ -304,21 +324,24 @@ def server_accept(dmz_host, poll_delay, logger):  # pragma no cover
         Displays progress messages, passed to created :class:`Connection`.
     """
     root = _server_root()
-    lines = _ssh(dmz_host, ('ls', '-1', root), logger)
-
+    mapped_root = _map_dir(root)
+    lines = _ssh(dmz_host, ('ls', '-1'), logger)
+    lines = [line[len(mapped_root):] for line in lines
+                                              if line.startswith(mapped_root)]
     for client in _CLIENTS:
-        if client not in lines:
+        if _map_dir(client) not in lines:
             logger.info('Client %r closed', client)
             _CLIENTS.remove(client)
 
     for line in lines:
-        if line == 'heartbeat':
+        if not line or line == 'heartbeat':
             continue
-        if line not in _CLIENTS:
-            _CLIENTS.append(line)
-            logger.info('New client %r', line)
-            root = '%s/%s' % (root, line)
-            logger = logging.getLogger(line)
+        client, sep, rest = line.partition(_SEP)
+        if client not in _CLIENTS:
+            _CLIENTS.append(client)
+            logger.info('New client %r', client)
+            root = '%s/%s' % (root, client)
+            logger = logging.getLogger(client)
             return Connection(dmz_host, root, True, poll_delay, logger)
     
     return None
@@ -375,7 +398,7 @@ def check_server_heartbeat(dmz_host, server_host, logger):
     now = datetime.datetime.utcnow()
     poll_delay = int(poll_delay)
     delta = now - tstamp
-    if delta > datetime.timedelta(0, 3*poll_delay):
+    if delta > datetime.timedelta(0, 3 * poll_delay):
         if delta.days:  # pragma no cover
             plural = 's' if delta.days > 1 else ''
             msg = '%d day%s' % (delta.days, plural)
@@ -403,7 +426,8 @@ def server_cleanup(dmz_host, logger):  # pragma no cover
         Displays progress messages.
     """
     root = _server_root()
-    _ssh(dmz_host, ('rm', '-rf', root), logger)
+    mapped_root = _map_dir(root)
+    _ssh(dmz_host, ('rm', '-f', '%s\\*' % mapped_root), logger)
     if os.path.exists(root):
         shutil.rmtree(root)
 
@@ -430,6 +454,7 @@ class Connection(object):
     """
 
     def __init__(self, dmz_host, root, server, poll_delay, logger):
+        logger.info('initializing')
         self.dmz_host = dmz_host
         self.root = root
         self._poll_delay = poll_delay
@@ -442,15 +467,9 @@ class Connection(object):
         else:
             self._prefix = 'C-'
             self._remote_prefix = 'S-'
-        logger.info('initializing')
         if os.path.exists(root):
             shutil.rmtree(root)
         os.mkdir(root)
-        if server:  # pragma no cover
-            parent, slash, child = root.partition('/')
-            lines = _ssh(self.dmz_host, ('ls', '-1', parent), logger)
-            if not child in lines:
-                _ssh(self.dmz_host, ('mkdir', root), logger)
 
     @property
     def logger(self):
@@ -460,8 +479,10 @@ class Connection(object):
     def close(self):
         """ Close connection, removing all communication files. """
         self._logger.debug('close')
+        mapped_root = _map_dir(self.root)
         try:
-            _ssh(self.dmz_host, ('rm', '-rf', self.root), self._logger)
+            _ssh(self.dmz_host, ('rm', '-f', '%s\\*' % mapped_root),
+                 self._logger)
         except Exception as exc:
             self._logger.error('Error during close: %s', exc)
         try:
@@ -588,7 +609,10 @@ class Connection(object):
             Used to form receive filename.
         """
         ready = '%s-ready.%s' % (prefix, seqno)
-        lines = _ssh(self.dmz_host, ('ls', '-1', self.root), self._logger)
+        mapped_root = _map_dir(self.root)
+        lines = _ssh(self.dmz_host, ('ls', '-1'), self._logger)
+        lines = [line[len(mapped_root):] for line in lines
+                                         if line.startswith(mapped_root)]
         self._logger.log(DEBUG2, 'poll %s %s', ready, lines)
         return ready in lines
 
@@ -644,10 +668,9 @@ class Connection(object):
             data = cPickle.loads(inp.read())
             if sys.platform == 'win32':
                 inp.close()
-        self.remove_file(name)
         os.remove(fullname)
         ready = '%s-ready.%s' % (prefix, seqno)
-        self.remove_file(ready)
+        self.remove_files((name, ready))
         return data
 
     def send_file(self, name):
@@ -668,14 +691,17 @@ class Connection(object):
         """
         _scp_recv(self.dmz_host, self.root, name, self._logger)
 
-    def remove_file(self, name):
+    def remove_files(self, names):
         """
         Remove `name` from remote file server.
 
         name: string
             Name of file to remove.
         """
-        _ssh(self.dmz_host, ('rm', '%s/%s' % (self.root, name)), self._logger)
+        cmd = ['rm']
+        for name in names:
+            cmd.append(_map_path('%s/%s' % (self.root, name)))
+        _ssh(self.dmz_host, cmd, self._logger)
 
     def touch_file(self, name):
         """

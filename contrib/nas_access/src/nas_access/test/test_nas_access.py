@@ -1,4 +1,5 @@
 import ConfigParser
+import glob
 import logging
 import nose
 import os.path
@@ -203,20 +204,25 @@ class TestCase(unittest.TestCase):
         self.proc = None
         time.sleep(2)
         hostname = socket.gethostname()
-        if sys.platform == 'win32':  # Server doen't clean up.
-            shutil.rmtree(os.path.join(_DMZ_ROOT, _server_root(hostname)))
+        if sys.platform == 'win32':  # Server doesn't clean up.
+            root = os.path.join(_DMZ_ROOT, protocol._server_root(hostname))
+            mapped_root = protocol._map_dir(root)
+            for name in glob.glob('%s*' % mapped_root):
+                os.remove(name)
         code = 'NAS_Allocator(dmz_host=hostname, server_host=hostname)'
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Server directory 'RJE-%s' not found" % hostname)
 
         # Test for missing heartbeat.
         logging.debug('no heartbeat')
-        os.mkdir(os.path.join(_DMZ_ROOT, 'RJE-%s' % hostname))
+        with open(os.path.join(_DMZ_ROOT, 'RJE-%s=' % hostname), 'w') as out:
+            out.write('empty\n')
         try:
             NAS_Allocator(dmz_host=hostname, server_host=hostname)
         except RuntimeError as exc:
             msg = "IOError: [Errno 2] No such file or directory:" \
-                  " 'RJE-%s/heartbeat'\n" % hostname
+                  " 'RJE-%s=heartbeat'\n" % hostname
+            logging.debug(str(exc))
             self.assertTrue(str(exc).endswith(msg))
         else:
             self.fail('Expected RuntimeError')
@@ -260,7 +266,7 @@ def start_server(hostname):
     finally:
         os.chdir(orig_dir)
 
-    heartbeat = os.path.join(_DMZ_ROOT, root, 'heartbeat')
+    heartbeat = '%s=%s' % (os.path.join(_DMZ_ROOT, root), 'heartbeat')
     for retry in range(20):
         time.sleep(0.5)
         if os.path.exists(heartbeat):

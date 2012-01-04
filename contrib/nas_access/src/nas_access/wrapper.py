@@ -193,7 +193,7 @@ class ServerWrapper(object):
         self._conn.recv_file(filename)
         local = os.path.join(self._conn.root, filename)
         filexfer(None, local, self._server, filename)
-        self._conn.remove_file(filename)
+        self._conn.remove_files((filename,))
         os.remove(local)
 
     def putfile(self, filename):

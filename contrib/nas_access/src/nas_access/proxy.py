@@ -313,7 +313,7 @@ class NAS_Server(object):
             # Local copy will be removed when connection is closed.
             self._conn.invoke('putfile', (filename,))
             self._conn.recv_file(filename)
-            self._conn.remove_file(filename)
+            self._conn.remove_files((filename,))
             return open(os.path.join(self._conn.root, filename), mode, bufsize)
         else:
             # Write file here and upon closing transfer to remote.

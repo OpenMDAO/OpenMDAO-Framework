@@ -2,6 +2,7 @@
 Fake version of 'ssh' for testing.
 """
 
+import glob
 import os.path
 import shutil
 import subprocess
@@ -14,28 +15,34 @@ def main():
     if not os.path.exists(root):
         os.mkdir(root)
     os.chdir(root)
+
+    # Normally the sending shell would remove the escape ('\\*' => '*').
+    for i, arg in enumerate(sys.argv[4:]):
+        sys.argv[4+i] = arg.replace('\\', '')
+
     if sys.platform == 'win32':
         # Python implementation for a  limited set of commands.
         if sys.argv[3] == 'ls':
-            directory = sys.argv[5] if len(sys.argv) > 5 else '.'
-            for name in os.listdir(directory):
+            for name in os.listdir('.'):
                 print name
             retcode = 0
-        elif sys.argv[3] == 'mkdir':
-            os.mkdir(sys.argv[4])
-            retcode = 0
         elif sys.argv[3] == 'rm':
-            if sys.argv[4].startswith('-r'):  # Directory;
-                if os.path.exists(sys.argv[5]):
-                    shutil.rmtree(sys.argv[5])
-                retcode = 0
-            else:  # File.
-                os.remove(sys.argv[4])
-                retcode = 0
+            if sys.argv[4] == '-f':
+                for name in glob.glob(sys.argv[5]):
+                    os.remove(name)
+            else:
+                for name in sys.argv[4:]:
+                    os.remove(name)
+            retcode = 0
+        elif sys.argv[3] == 'touch':
+            with open(sys.argv[4], 'w') as out:
+                out.write('empty\n')
+            retcode = 0
         else:
             raise RuntimeError('Unsupported command %r' % sys.argv[3:])
     else:
-        retcode = subprocess.call(sys.argv[3:])
+        retcode = subprocess.call(' '.join(sys.argv[3:]), shell=True)
+
     sys.exit(retcode)
 
 
