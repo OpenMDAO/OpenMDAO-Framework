@@ -12,7 +12,7 @@ import tarfile
 
 try:
     import paramiko
-    from fabric.api import run, local, env, put, cd, prompt, hide, show, get, settings
+    from fabric.api import run, local, env, put, get, cd, prompt, hide, show, settings
     from fabric.state import connections
     from fabric.network import connect
 except ImportError as err:
