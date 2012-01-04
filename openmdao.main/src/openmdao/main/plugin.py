@@ -635,13 +635,17 @@ if __name__ == "__main__":
 """
 
 
-def plugin_quickstart(options):
+def plugin_quickstart(parser, options, args=None):
     """A command line script (plugin quickstart) points to this.  It generates a
     directory structure for an openmdao plugin package along with Sphinx docs.
     
     usage: plugin quickstart <dist_name> [-v <version>] [-d <dest_dir>] [-g <plugin_group>] [-c class_name]
     
     """
+    if args:
+        print_sub_help(parser, 'quickstart')
+        return -1
+    
 
     name = options.dist_name
     if options.classname:
@@ -778,7 +782,7 @@ def _get_entry_points(startdir):
     
     return entrypoints.getvalue()
 
-def plugin_makedist(options):
+def plugin_makedist(parser, options, args=None):
     """A command line script (plugin makedist) points to this.  It creates a 
     source distribution containing Sphinx documentation for the specified
     distribution directory.  If no directory is specified, the current directory
@@ -787,6 +791,10 @@ def plugin_makedist(options):
     usage: plugin makedist [dist_dir_path]
     
     """
+    if args:
+        print_sub_help(parser, 'makedist')
+        return -1
+    
     
     options.dist_dir_path = os.path.abspath(os.path.expandvars(os.path.expanduser(options.dist_dir_path)))
 
@@ -838,10 +846,14 @@ def plugin_makedist(options):
     else:
         sys.stderr.write("\nERROR: failed to make distribution %s" % disttar)
 
-def plugin_docs(options):
+def plugin_docs(parser, options, args=None):
     """A command line script (plugin docs) points to this. It brings up
     the Sphinx documentation for the named plugin in a browser.
     """
+    if args:
+        print_sub_help(parser, 'docs')
+        return -1
+    
     if options.plugin_dist_name is None:
         view_docs(options.browser)
     else:
@@ -913,11 +925,15 @@ def _plugin_docs(plugin_name, browser=None):
     wb.open(url)
 
 
-def plugin_install(options):
+def plugin_install(parser, options, args=None):
     """A command line script (plugin install) points to this. It installs
     the specified plugin distribution into the current environment.
     
     """
+    if args:
+        print_sub_help(parser, 'install')
+        return -1
+    
     # Interact with github
     if options.github:
         # Get plugin from github.
@@ -1133,7 +1149,7 @@ def _plugin_build_docs(destdir, cfg):
             sys.path.remove(srcdir)
     
     
-def plugin_build_docs(options):
+def plugin_build_docs(parser, options, args=None):
     """A command line script (plugin build_docs) points to this.  It builds the
     Sphinx documentation for the specified distribution directory.  
     If no directory is specified, the current directory is assumed.
@@ -1141,6 +1157,10 @@ def plugin_build_docs(options):
     usage: plugin build_docs [dist_dir_path]
     
     """
+    if args:
+        print_sub_help(parser, 'build_docs')
+        return -1
+    
     if options.dist_dir_path is None:
         options.dist_dir_path = os.getcwd()
 
@@ -1169,7 +1189,11 @@ def plugin_build_docs(options):
     _plugin_build_docs(destdir, cfg)
 
     
-def plugin_list(options):
+def plugin_list(parser, options, args=None):
+    if args:
+        print_sub_help(parser, 'list')
+        return -1
+    
     if options.github:
         _list_github_plugins()
         return
@@ -1223,6 +1247,16 @@ def plugin_list(options):
         
     print "\n"
 
+
+def print_sub_help(parser, subname):
+    """Prints a usage message for the given subparser name"""
+    for obj in parser._subparsers._actions:
+        if obj.dest != 'help':
+            obj.choices[subname].print_help()
+            return
+    raise NameError("unknown subparser name '%s'" % subname)
+
+
 def _list_github_plugins():
     url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
     
@@ -1241,12 +1275,9 @@ def _get_plugin_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
     
     top_parser = ArgumentParser()
-    subparsers = top_parser.add_subparsers(title='subcommands',
-                                           #description='valid subcommands',
-                                           #help='additional help'
-                                           )
+    subparsers = top_parser.add_subparsers(title='commands')
     
-    parser = subparsers.add_parser('list', description = "List installed plugins")
+    parser = subparsers.add_parser('list', help = "List installed plugins")
     parser.usage = "plugin list [options]"
     parser.add_argument("--github", 
                         help='List plugins in the official Openmdao-Plugins repository on github', 
@@ -1265,7 +1296,7 @@ def _get_plugin_parser():
     
     
     parser = subparsers.add_parser('install', 
-                                   description="install an OpenMDAO plugin into the current environment")
+                                   help="install an OpenMDAO plugin into the current environment")
     parser.usage = "plugin install [plugin_distribution] [options]"
     parser.add_argument('dist_name', help='name of plugin distribution (defaults to distrib found in current dir)', 
                         nargs='?')
@@ -1279,14 +1310,14 @@ def _get_plugin_parser():
     
     
     parser = subparsers.add_parser('build_docs', 
-                                   description="build sphinx doc files for a plugin")
+                                   help="build sphinx doc files for a plugin")
     parser.usage = "plugin build_docs <dist_dir_path>"
     parser.add_argument('dist_dir_path', help='path to distribution source directory')
     parser.set_defaults(func=plugin_build_docs)
 
     
     parser = subparsers.add_parser('docs', 
-                                   description="display docs for a plugin")
+                                   help="display docs for a plugin")
     parser.usage = "plugin docs <plugin_dist_name>"
     parser.add_argument('plugin_dist_name', help='name of plugin distribution')
     parser.add_argument("-b", "--browser", action="store", type=str, 
@@ -1296,7 +1327,7 @@ def _get_plugin_parser():
     
     
     parser = subparsers.add_parser('quickstart',
-                                   description="generate some skeleton files for a plugin")
+                                   help="generate some skeleton files for a plugin")
     parser.usage = "plugin quickstart <dist_name> [options]"
     parser.add_argument('dist_name', help='name of distribution')
     parser.add_argument("-v", "--version", action="store", type=str, dest='version', 
@@ -1314,7 +1345,7 @@ def _get_plugin_parser():
     
     
     parser = subparsers.add_parser('makedist',
-                                   description="create a source distribution for a plugin")
+                                   help="create a source distribution for a plugin")
     parser.usage = "plugin makedist [dist_dir_path]"
     parser.add_argument('dist_dir_path', nargs='?',
                         default='.',
@@ -1325,7 +1356,8 @@ def _get_plugin_parser():
 
 
 def plugin():
-    options = _get_plugin_parser().parse_args()
-    options.func(options)
+    parser = _get_plugin_parser()
+    options, args = parser.parse_known_args()
+    sys.exit(options.func(parser, options, args))
     
 
