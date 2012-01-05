@@ -80,12 +80,13 @@ class ProblemFormulationTest(unittest.TestCase):
         else: 
             self.fail("Exception expected")
         
-        try: 
-            self.asm.add_coupling_var(("D3.a","D2.a"))
-        except Exception as err:         
-            self.assertEqual(": Coupling variable with dep 'D2.a' already exists in assembly",str(err))
-        else: 
-            self.fail("Exception expected")            
+        #Dependents should be allowed to repeat    
+        #try: 
+        #    self.asm.add_coupling_var(("D3.a","D2.a"))
+        #except Exception as err:         
+        #    self.assertEqual(": Coupling variable with dep 'D2.a' already exists in assembly",str(err))
+        #else: 
+        #    self.fail("Exception expected")            
             
         try: 
             self.asm.add_coupling_var(("D1.z","D2.a"))
