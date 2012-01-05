@@ -132,24 +132,20 @@ class SellarBLISS2000(Assembly):
         
         #build workflow for bliss2000
         
-        self.add('main_driver', FixedPointIterator())
+        self.add('driver', FixedPointIterator())
         #self.add('main_driver', IterateUntil())
         #self.main_driver.max_iterations = 1
-        self.main_driver.tolerance = .0001  
-        self.main_driver.workflow = SequentialWorkflow()
-        self.main_driver.workflow.add(['local_opt_dis1','reset_train','DOE_Trainer_dis1','DOE_Trainer_dis2','sysopt'])  
-        self.main_driver.add_parameter('x1_store', low=0, high=10.0)
-        self.main_driver.add_constraint('meta_model_dis1.x1 = x1_store')
-        self.main_driver.add_parameter('z1_store', low=0, high=10.0)
-        self.main_driver.add_constraint('meta_model_dis1.z1 = z1_store')
-        self.main_driver.add_parameter('z2_store', low=0, high=10.0)
-        self.main_driver.add_constraint('meta_model_dis1.z2 = z2_store')
+        self.driver.tolerance = .0001  
+        self.driver.workflow = SequentialWorkflow()
+        self.driver.workflow.add(['local_opt_dis1','reset_train','DOE_Trainer_dis1','DOE_Trainer_dis2','sysopt'])  
+        self.driver.add_parameter('x1_store', low=0, high=10.0)
+        self.driver.add_constraint('meta_model_dis1.x1 = x1_store')
+        self.driver.add_parameter('z1_store', low=0, high=10.0)
+        self.driver.add_constraint('meta_model_dis1.z1 = z1_store')
+        self.driver.add_parameter('z2_store', low=0, high=10.0)
+        self.driver.add_constraint('meta_model_dis1.z2 = z2_store')
         #self.main_driver.add_event('meta_model_dis1.reset_training_data')
         #self.main_driver.add_event('meta_model_dis2.reset_training_data')
-        
-        # Top level is sequential work flow. runs a single mda, then begins bliss2000 
-        self.driver.workflow=SequentialWorkflow()
-        self.driver.workflow.add(['main_driver'])
         
 
         
@@ -205,15 +201,14 @@ if __name__ == "__main__":
     for k in prob.local_opt_dis1.list_constraints(): 
         print k
     print "main_driver constraints"
-    for k in prob.main_driver.list_constraints(): 
+    for k in prob.driver.list_constraints(): 
         print k
     print "main_driver params"
-    for k in prob.main_driver.get_parameters():    
+    for k in prob.driver.get_parameters():    
         print k  
     print        
     print
     print [x.name for x in prob.driver.workflow]
-    print [x.name for x in prob.main_driver.workflow]
     print [x.name for x in prob.sysopt.workflow]
     print [x.name for x in prob.local_opt_dis1.workflow]
     print "----------------------"
