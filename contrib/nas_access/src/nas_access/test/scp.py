@@ -12,12 +12,15 @@ def main():
     if not os.path.exists(root):
         os.mkdir(root)
     os.chdir(root)
+
+    extra = 2 if sys.platform == 'win32' else 0
     if sys.argv[2] == '--rje':
-        src = fixup(sys.argv[3], rje=True)
-        dst = fixup(sys.argv[4], rje=True)
+        src = fixup(sys.argv[3 + extra], rje=True)
+        dst = fixup(sys.argv[4 + extra], rje=True)
     else:
-        src = fixup(sys.argv[2], rje=False)
-        dst = fixup(sys.argv[3], rje=False)
+        src = fixup(sys.argv[2 + extra], rje=False)
+        dst = fixup(sys.argv[3 + extra], rje=False)
+
     with open(src, 'rb') as inp:
         with open(dst, 'wb') as out:
             out.write(inp.read())

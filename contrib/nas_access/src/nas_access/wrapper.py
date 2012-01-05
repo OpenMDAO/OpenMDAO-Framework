@@ -203,10 +203,10 @@ class ServerWrapper(object):
         filename: string
             Name of file to send.
         """
-        # Local copy will be removed when connection is closed.
-        filexfer(self._server, filename,
-                 None, os.path.join(self._conn.root, filename))
+        local = os.path.join(self._conn.root, filename)
+        filexfer(self._server, filename, None, local)
         self._conn.send_file(filename)
+        os.remove(local)
 
     def stat(self, path):
         """

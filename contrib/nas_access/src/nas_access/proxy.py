@@ -40,7 +40,7 @@ class NAS_Allocator(ResourceAllocator):
         [Pleiades]
         classname: nas_access.NAS_Allocator
         dmz_host: dmzfs1.nas.nasa.gov
-        server_host: pfe1.nas.nasa.gov
+        server_host: pfe1
 
     """
 
@@ -51,7 +51,10 @@ class NAS_Allocator(ResourceAllocator):
         self._server_host = server_host
         self._logger.debug('init')
         if dmz_host and server_host:
-            self._conn = connect(dmz_host, server_host, name, self._logger)
+            try:
+                self._conn = connect(dmz_host, server_host, name, self._logger)
+            except Exception as exc:
+                raise RuntimeError("%s: can't connect: %s" % (name, exc))
             self._logger.debug('connected to %r on %r', server_host, dmz_host)
 
     def configure(self, cfg):
@@ -74,8 +77,11 @@ class NAS_Allocator(ResourceAllocator):
             self._logger.debug('    server_host: %s', self._server_host)
 
         if self._dmz_host and self._server_host:
-            self._conn = connect(self._dmz_host, self._server_host, self.name,
-                                 self._logger)
+            try:
+                self._conn = connect(self._dmz_host, self._server_host,
+                                     self.name, self._logger)
+            except Exception as exc:
+                raise RuntimeError("%s: can't connect: %s" % (self.name, exc))
             self._logger.debug('connected')
 
     @rbac('*')

@@ -205,13 +205,14 @@ class TestCase(unittest.TestCase):
         time.sleep(2)
         hostname = socket.gethostname()
         if sys.platform == 'win32':  # Server doesn't clean up.
-            root = os.path.join(_DMZ_ROOT, protocol._server_root(hostname))
-            mapped_root = protocol._map_dir(root)
+            root = protocol._server_root(hostname)
+            mapped_root = os.path.join(_DMZ_ROOT, protocol._map_dir(root))
             for name in glob.glob('%s*' % mapped_root):
                 os.remove(name)
         code = 'NAS_Allocator(dmz_host=hostname, server_host=hostname)'
         assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Server directory 'RJE-%s' not found" % hostname)
+                      "NAS_Allocator: can't connect: server root 'RJE-%s='"
+                      " on '%s' not found" % (hostname, hostname))
 
         # Test for missing heartbeat.
         logging.debug('no heartbeat')
@@ -232,7 +233,8 @@ class TestCase(unittest.TestCase):
         protocol.server_heartbeat(hostname, 1, logging.getLogger())
         time.sleep(5)
         assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "Server heartbeat hasn't been updated in 0:00:0")
+                      "NAS_Allocator: can't connect: server heartbeat"
+                      " hasn't been updated in 0:00:0")
                       # Could wrap from 5 to 6 seconds based on timing.
 
 

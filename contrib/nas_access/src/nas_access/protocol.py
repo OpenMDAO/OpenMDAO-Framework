@@ -40,10 +40,18 @@ The above hierarchy is valid at the client and the server.  The NAS DMZ file
 servers do not allow a user filesystem hierarchy, so all file paths have to
 be flattened.  This is done by replacing ``/`` with ``=``, and dealing with this
 special style of filename in commands such as ``ls``.
+
+The protocol makes some assumptions regarding connectivity:
+
+- The remote login name matches the local login name.
+- 'plink' and 'pscp' are available on Windows, 'ssh' and 'scp' otherwise.
+- No user interaction is required to connect to the remote DMZ server.
+
 """
 
 import cPickle
 import datetime
+import getpass
 import logging
 import os.path
 import shutil
@@ -97,15 +105,12 @@ def _map_path(path):
 
 def _map_dir(path):
     """ Map path separators to '=', and append '='. """
-    path = path.replace('/', _SEP)
-    if sys.platform == 'win32':
-        path = path.replace('\\', _SEP)
-    return path+_SEP
+    return _map_path(path)+_SEP
 
 
 # These get reconfigured & restored during testing.
-_SSH = ['ssh']
-_SCP = ['scp']
+_SSH = ['plink', '-ssh'] if sys.platform == 'win32' else ['ssh']
+_SCP = ['pscp', '-batch', '-q'] if sys.platform == 'win32' else ['scp']
 
 def configure_ssh(cmdlist):
     """ Configure 'ssh' command', returns previous configuration. """
@@ -134,6 +139,7 @@ def _ssh(host, args, logger):
     """
     cmd = []
     cmd.extend(_SSH)
+    cmd.extend(('-l', getpass.getuser()))
     cmd.append(host)
     cmd.extend(args)
 
@@ -209,6 +215,8 @@ def _scp(src, dst, logger):
     """
     cmd = []
     cmd.extend(_SCP)
+    if sys.platform == 'win32':
+        cmd.extend(('-l', getpass.getuser()))
     cmd.extend((src, dst))
 
     logger.log(DEBUG3, '%s', cmd)
@@ -254,9 +262,11 @@ def connect(dmz_host, server_host, path, logger):
         os.mkdir(root)
 
     lines = _ssh(dmz_host, ('ls', '-1'), logger)
-    if _map_dir(root) not in lines:
+    mapped_root = _map_dir(root)
+    if mapped_root not in lines:
         shutil.rmtree(root)
-        raise RuntimeError('Server directory %r not found' % root)
+        raise RuntimeError("server root %r on %r not found"
+                           % (mapped_root, dmz_host))
 
     poll_delay = check_server_heartbeat(dmz_host, server_host, logger)
 
@@ -271,8 +281,8 @@ def connect(dmz_host, server_host, path, logger):
         mapped_root = _map_dir(root)
         if mapped_root in lines:  # Need a clean directory.
             shutil.rmtree(_server_root(server_host))
-            raise RuntimeError('Client directory %r already exists', root)
-        _ssh(dmz_host, ('touch', mapped_root), logger)
+            raise RuntimeError('client root %r already exists', mapped_root)
+        _ssh(dmz_host, ('date', '>', mapped_root), logger)
 
     return Connection(dmz_host, root, False, poll_delay, logger)
 
@@ -309,7 +319,7 @@ def server_init(dmz_host, logger):  # pragma no cover
     mapped_root = _map_dir(root)
     if mapped_root in lines:  # Ensure a clean remote tree.
         _ssh(dmz_host, ('rm', '-f', '%s\\*' % mapped_root), logger)
-    _ssh(dmz_host, ('touch', mapped_root), logger)
+    _ssh(dmz_host, ('date', '>', mapped_root), logger)
 
 
 # Server-side.
@@ -363,8 +373,6 @@ def server_heartbeat(dmz_host, poll_delay, logger):
     tstamp = datetime.datetime.utcnow()
     with open(heartbeat, 'w') as out:
         out.write('%s\n%s\n' % (tstamp, poll_delay))
-        if sys.platform == 'win32':
-            out.close()
     _scp_send(dmz_host, root, os.path.basename(heartbeat), logger)
     os.remove(heartbeat)
 
@@ -383,12 +391,13 @@ def check_server_heartbeat(dmz_host, server_host, logger):
     logger.log(DEBUG2, 'check_server_heartbeat')
     root = _server_root(server_host)
     heartbeat = os.path.join(root, 'heartbeat')
-    _scp_recv(dmz_host, root, os.path.basename(heartbeat), logger)
+    try:
+        _scp_recv(dmz_host, root, os.path.basename(heartbeat), logger)
+    except Exception as exc:
+        raise RuntimeError("can't retrieve server heartbeat: %s" % exc)
     with open(heartbeat, 'rU') as inp:
         tstamp = inp.readline().strip()
         poll_delay = inp.readline().strip()
-        if sys.platform == 'win32':
-            inp.close()
     os.remove(heartbeat)
 
     if '.' in tstamp:
@@ -409,7 +418,7 @@ def check_server_heartbeat(dmz_host, server_host, logger):
             minutes = int(seconds / 60)
             seconds -= minutes * 60
             msg = '%d:%02d:%02d' % (hours, minutes, seconds)
-        raise RuntimeError("Server heartbeat hasn't been updated in %s" % msg)
+        raise RuntimeError("server heartbeat hasn't been updated in %s" % msg)
 
     return int(poll_delay)
 
@@ -591,8 +600,6 @@ class Connection(object):
         name = os.path.join(self.root, '%s.%s' % (prefix, seqno))
         with open(name, 'wb') as out:
             out.write(cPickle.dumps(data, -1))
-            if sys.platform == 'win32':
-                out.close()
         self.send_file(os.path.basename(name))
         ready = '%s-ready.%s' % (prefix, seqno)
         self.touch_file(ready)
@@ -666,11 +673,9 @@ class Connection(object):
         self.recv_file(name)
         with open(fullname, 'rb') as inp:
             data = cPickle.loads(inp.read())
-            if sys.platform == 'win32':
-                inp.close()
-        os.remove(fullname)
         ready = '%s-ready.%s' % (prefix, seqno)
         self.remove_files((name, ready))
+        os.remove(fullname)
         return data
 
     def send_file(self, name):
@@ -710,12 +715,6 @@ class Connection(object):
         name: string
             Name of file to create.
         """
-        # Actually putting something in the file for better fault detection.
-        fullname = os.path.join(self.root, name)
-        with open(fullname, 'w') as out:
-            out.write('empty\n')
-            if sys.platform == 'win32':
-                out.close()
-        self.send_file(name)
-        os.remove(fullname)
+        fullname = '%s/%s' % (self.root, name)
+        _ssh(self.dmz_host, ('date', '>', _map_path(fullname)), self._logger)
 

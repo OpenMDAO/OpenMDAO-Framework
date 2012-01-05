@@ -30,7 +30,7 @@ def main(): # pragma no cover
         Allocator to provide remote access to. Default ``PBS``.
 
     --dmz-host: string
-        DMZ file server to use. Default ``dmzfs1.nas.nasa.gov``.
+        DMZ file server to use. Default ``dmzfs1``.
 
     --poll-delay: int
         Seconds between checks for new client activity. Default 60.
@@ -43,8 +43,7 @@ def main(): # pragma no cover
     parser = optparse.OptionParser()
     parser.add_option('--allocator', action='store', type='str', default='PBS',
                       help='Allocator to provide remote access to')
-    parser.add_option('--dmz-host', action='store', type='str',
-                      default='dmzfs1.nas.nasa.gov',
+    parser.add_option('--dmz-host', action='store', type='str', default='dmzfs1',
                       help='DMZ file server to use')
     parser.add_option('--poll-delay', action='store', type='int', default=60,
                       help='Seconds between checks for new client activity')
