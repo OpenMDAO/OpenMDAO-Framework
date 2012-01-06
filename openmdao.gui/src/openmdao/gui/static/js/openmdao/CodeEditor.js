@@ -22,24 +22,24 @@ openmdao.CodeEditor = function(id,model) {
             indentUnit: 4,
             parserConfig: {'pythonVersion': 2, 'strictErrors': true},
             saveFunction: function() { saveFile() }
-        })
+        });
     
     // make the parent element (tabbed pane) a drop target for file objects
     editorArea.parent().droppable ({
         accept: '.file .obj',
         drop: function(ev,ui) { 
             var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('CodeEditor drop',droppedObj)
+            debug.info('CodeEditor drop',droppedObj);
             if (droppedObject.hasClass('file')) {
                 editFile(droppedObject.attr("path"));
-            }
+            };
         }
     });
 
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
-        model.setFile(filepath,editor.getCode()) 
-    }
+        model.setFile(filepath,editor.getCode());
+    };
     
     /***********************************************************************
      *  privileged
@@ -47,11 +47,11 @@ openmdao.CodeEditor = function(id,model) {
     
     /** get contents of specified file from model, load into editor */
     this.editFile = function(pathname) {
+        filepath = pathname;
         model.getFile(pathname, 
             // success
             function(contents) {
-                filepath = pathname
-                editor.setCode(contents)
+                editor.setCode(contents);
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
@@ -59,8 +59,13 @@ openmdao.CodeEditor = function(id,model) {
                 debug.info(errorThrown)
                 alert("Error editing file: "+jqXHR.statusText)
             }
-        )
-    }
+        );
+    };
+    
+    /** get the pathname for the current file */
+    this.getPathname = function() {
+        return filepath;
+    };    
 }
 
 /** set prototype */

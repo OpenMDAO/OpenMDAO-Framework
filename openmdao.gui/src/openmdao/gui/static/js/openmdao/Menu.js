@@ -20,17 +20,19 @@ openmdao.Menu = function(id, json) {
 
         // add indicators and hovers to submenu parents
         elm.find("li").each(function() {
-            if (jQuery(this).find("ul").length > 0) {
-                jQuery("<span>").text("^").appendTo(jQuery(this).children(":first"));
-
+            var header = jQuery(this).children(":first"),
+                menu = jQuery(this).find("ul");
+            if (menu.length > 0) {
+                jQuery("<span>").text("^").appendTo(header)
+                
                 // show subnav on hover
                 jQuery(this).mouseenter(function() {
-                  jQuery(this).find("ul").stop(true, true).slideDown();
+                  menu.stop(true, true).slideDown();
                 });
 
                 // hide submenus on exit
                 jQuery(this).mouseleave(function() {
-                  jQuery(this).find("ul").stop(true, true).slideUp();
+                  menu.stop(true, true).slideUp();
                 });
             }
         });

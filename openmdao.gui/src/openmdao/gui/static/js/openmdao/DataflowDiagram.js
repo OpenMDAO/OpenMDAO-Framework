@@ -18,10 +18,10 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
                                openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting dataflow',600,400)
                                debug.error(jqXHR)
                            })
-    }
+    };
     
     // ask model for an update whenever something changes
-    model.addListener(update)
+    model.addListener(update);
     
     /** set the pathname for which to display the dataflow */
     this.showDataflow = function(path) {        
@@ -31,7 +31,12 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
             self.setTitle('Dataflow: '+path);
             update();
         }
-    }
+    };
+    
+    /** get the pathname for the current structure */
+    this.getPathname = function() {
+        return pane.pathname;
+    };
 }
 
 /** set prototype */

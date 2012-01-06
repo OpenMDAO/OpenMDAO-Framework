@@ -82,7 +82,7 @@ openmdao.DataflowVariableFigure.prototype.createHTMLElement=function(){
     this.textarea.style.borderTop="2px solid #666666";
     this.textarea.style.borderLeft="1px solid #666666";
     this.textarea.style.borderRight="1px solid #666666";
-    this.textarea.style.overflow="auto";
+    this.textarea.style.overflow="hidden";
     this.textarea.style.fontSize="9pt";
     this.disableTextSelection(this.textarea);
     
