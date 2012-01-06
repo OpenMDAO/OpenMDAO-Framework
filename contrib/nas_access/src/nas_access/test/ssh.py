@@ -16,10 +16,6 @@ def main():
         os.mkdir(root)
     os.chdir(root)
 
-    # Normally the sending shell would remove the escape ('\\*' => '*').
-    for i, arg in enumerate(sys.argv[6:]):
-        sys.argv[6+i] = arg.replace('\\', '')
-
     if sys.platform == 'win32':
         # Python implementation for a  limited set of commands.
         if sys.argv[5] == 'ls':

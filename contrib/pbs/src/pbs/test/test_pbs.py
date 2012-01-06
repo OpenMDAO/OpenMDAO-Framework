@@ -24,15 +24,10 @@ class TestCase(unittest.TestCase):
         PBS_Server._QSUB[:] = \
             ['python', os.path.join(TestCase.directory, 'qsub.py')]
 
-        # Force use of fake 'qhost'.
-        self.orig_qhost = list(PBS_Allocator._QHOST)
-        PBS_Allocator._QHOST[:] = \
-            ['python', os.path.join(TestCase.directory, 'qhost.py')]
-
     def tearDown(self):
         PBS_Server._QSUB[:] = self.orig_qsub
-        PBS_Allocator._QHOST[:] = self.orig_qhost
-        for name in ('echo.in', 'echo.out', 'qsub.out'):
+        for name in ('TestJob.qsub', 'echo.in', 'echo.out', 'qsub.out',
+                     'echo.qsub'):
             if os.path.exists(name):
                 os.remove(name)
         for name in glob.glob('PBS_TestServer*'):
@@ -45,7 +40,7 @@ class TestCase(unittest.TestCase):
         # Normal, successful allocation.
         allocator = PBS_Allocator()
         nhosts = allocator.max_servers({})
-        self.assertEqual(nhosts, 19*48)
+        self.assertEqual(nhosts, allocator.n_cpus)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, 0)
 
@@ -55,23 +50,13 @@ class TestCase(unittest.TestCase):
         allocator.release(server)
 
         # Too many CPUs.
-        estimate, criteria = allocator.time_estimate({'n_cpus': 1000})
+        estimate, criteria = allocator.time_estimate({'n_cpus': 1000000})
         self.assertEqual(estimate, -2)
 
         # Not remote.
         nhosts = allocator.max_servers({'localhost': True})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({'localhost': True})
-        self.assertEqual(estimate, -2)
-
-        # Configure bad pattern.
-        cfg = ConfigParser.ConfigParser()
-        cfg.add_section('PBS')
-        cfg.set('PBS', 'pattern', 'xyzzy')
-        allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
-        self.assertEqual(nhosts, 0)
-        estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, -2)
 
         # Incompatible Python version.
@@ -81,13 +66,6 @@ class TestCase(unittest.TestCase):
         # Unrecognized key.
         estimate, criteria = allocator.time_estimate({'no-such-key': 0})
         self.assertEqual(estimate, -2)
-
-        # 'qhost' failure.
-        PBS_Allocator._QHOST[:] = [os.path.join('bogus-qhost')]
-        cfg.set('PBS', 'pattern', '*')
-        allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
-        self.assertEqual(nhosts, 0)
 
     def test_server(self):
         logging.debug('')
@@ -124,27 +102,40 @@ class TestCase(unittest.TestCase):
 
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
+        if sys.platform == 'win32':
+            sh1 = ''
+            sh2 = ''
+        else:
+            sh1 = ' -S /bin/sh'
+            sh2 = '-S arg /bin/sh\n'
         self.assertEqual(''.join(lines), """\
--V -sync yes -wd . -N TestJob -pe ompi 256 -i echo.in -o echo.out -j yes -M user1@host1,user2@host2 -m n -m beas -a 01010101.00 -l h_rt=0:0:1 -l s_rt=0:0:2 -l h_cpu=0:0:3 -l s_cpu=0:0:4 echo hello world
+-V -W block=true%s .%sTestJob.qsub
 -V
--sync arg yes
--wd arg .
--N arg TestJob
--pe ompi 256
--i stdin echo.in
--o stdout echo.out
--j join yes
--M arg user1@host1,user2@host2
--m arg n
--m arg beas
--a arg 01010101.00
--l resource h_rt=0:0:1
--l resource s_rt=0:0:2
--l resource h_cpu=0:0:3
--l resource s_cpu=0:0:4
-echo hello world
-""")
+-W arg block=true
+%s.%sTestJob.qsub
+""" % (sh1, os.sep, sh2, os.sep))
 
+        with open('TestJob.qsub', 'r') as inp:
+            lines = inp.readlines()
+        self.assertTrue(''.join(lines).startswith("""\
+#!/bin/sh
+#PBS -N TestJob
+#PBS -l select=256:ncpus=1
+#PBS -M user1@host1,user2@host2
+#PBS -m n
+#PBS -m bea
+#PBS -a 01010101.00
+#PBS -l walltime=0:00:01
+#PBS -l walltime=0:00:02
+#PBS -l walltime=0:00:03
+#PBS -l walltime=0:00:04
+"""))
+
+# Skip varification of location-dependent working directory.
+
+        self.assertTrue(''.join(lines).endswith("""\
+echo hello world <echo.in >echo.out 2>&1
+"""))
         # 'qsub' failure.
         PBS_Server._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"

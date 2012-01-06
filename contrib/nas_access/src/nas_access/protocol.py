@@ -19,7 +19,7 @@ directory for the communication channel::
                 Sim-1/
 
 Each communication direction has its own set of files within this directory
-prefixed by 'C' or 'S':
+prefixed by ``C`` or ``S``:
 
     ``[CS]-request.<mid>``
         Pickled ``(method, args, kwargs)``.
@@ -33,8 +33,8 @@ prefixed by 'C' or 'S':
     ``[CS]-reply_ready.<mid>``
         Flag indicating that all of ``[CS]-reply.<mid>`` has been written.
 
-where <mid> is a message sequence number. Files are created by the sender and
-removed by the receiver.
+where ``<mid>`` is a message sequence number. Files are created by the sender
+and removed by the receiver.
 
 The above hierarchy is valid at the client and the server.  The NAS DMZ file
 servers do not allow a user filesystem hierarchy, so all file paths have to
@@ -99,7 +99,7 @@ _SEP = '='
 def _map_path(path):
     """ Map path separators to '='. """
     path = path.replace('/', _SEP)
-    if sys.platform == 'win32':
+    if sys.platform == 'win32':  # pragma no cover
         path = path.replace('\\', _SEP)
     return path
 
@@ -109,7 +109,7 @@ def _map_dir(path):
 
 
 # These get reconfigured & restored during testing.
-_SSH = ['plink', '-ssh'] if sys.platform == 'win32' else ['ssh']
+_SSH = ['plink', '-batch', '-ssh'] if sys.platform == 'win32' else ['ssh']
 _SCP = ['pscp', '-batch', '-q'] if sys.platform == 'win32' else ['scp']
 
 def configure_ssh(cmdlist):
@@ -144,8 +144,10 @@ def _ssh(host, args, logger):
     cmd.extend(args)
 
     logger.log(DEBUG3, '%s', cmd)
+    stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
+    stdin = open(stdin, 'r')
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+        proc = subprocess.Popen(cmd, stdin=stdin, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, universal_newlines=True)
     except Exception as exc:
         raise RuntimeError('%s: %s' % (cmd, exc))
@@ -155,6 +157,12 @@ def _ssh(host, args, logger):
         msg = '%s: returncode %s: stdout: %s stderr: %s' \
               % (cmd, proc.returncode, stdout, stderr)
         raise RuntimeError(msg)
+
+    if not stdout and sys.platform == 'win32':  # pragma no cover
+       # plink doesn't always set an error code.
+       if "The server's host key is not cached in the registry" in stderr:
+            raise RuntimeError(stderr)
+
     return stdout.split()
 
 
@@ -215,7 +223,7 @@ def _scp(src, dst, logger):
     """
     cmd = []
     cmd.extend(_SCP)
-    if sys.platform == 'win32':
+    if sys.platform == 'win32':  # pragma no cover
         cmd.extend(('-l', getpass.getuser()))
     cmd.extend((src, dst))
 
@@ -265,7 +273,7 @@ def connect(dmz_host, server_host, path, logger):
     mapped_root = _map_dir(root)
     if mapped_root not in lines:
         shutil.rmtree(root)
-        raise RuntimeError("server root %r on %r not found"
+        raise RuntimeError('server root %r on %r not found'
                            % (mapped_root, dmz_host))
 
     poll_delay = check_server_heartbeat(dmz_host, server_host, logger)
@@ -315,10 +323,8 @@ def server_init(dmz_host, logger):  # pragma no cover
         shutil.rmtree(root)
     os.mkdir(root)
 
-    lines = _ssh(dmz_host, ('ls', '-1'), logger)
-    mapped_root = _map_dir(root)
-    if mapped_root in lines:  # Ensure a clean remote tree.
-        _ssh(dmz_host, ('rm', '-f', '%s\\*' % mapped_root), logger)
+    mapped_root = _map_dir(root)  # Ensure a clean remote tree.
+    _ssh(dmz_host, ('rm', '-f', '%s*' % mapped_root), logger)
     _ssh(dmz_host, ('date', '>', mapped_root), logger)
 
 
@@ -420,7 +426,7 @@ def check_server_heartbeat(dmz_host, server_host, logger):
             msg = '%d:%02d:%02d' % (hours, minutes, seconds)
         raise RuntimeError("server heartbeat hasn't been updated in %s" % msg)
 
-    return int(poll_delay)
+    return poll_delay
 
 
 # Server-side.
@@ -436,7 +442,7 @@ def server_cleanup(dmz_host, logger):  # pragma no cover
     """
     root = _server_root()
     mapped_root = _map_dir(root)
-    _ssh(dmz_host, ('rm', '-f', '%s\\*' % mapped_root), logger)
+    _ssh(dmz_host, ('rm', '-f', '%s*' % mapped_root), logger)
     if os.path.exists(root):
         shutil.rmtree(root)
 
@@ -490,8 +496,7 @@ class Connection(object):
         self._logger.debug('close')
         mapped_root = _map_dir(self.root)
         try:
-            _ssh(self.dmz_host, ('rm', '-f', '%s\\*' % mapped_root),
-                 self._logger)
+            _ssh(self.dmz_host, ('rm', '-f', '%s*' % mapped_root), self._logger)
         except Exception as exc:
             self._logger.error('Error during close: %s', exc)
         try:
@@ -636,18 +641,17 @@ class Connection(object):
         timeout: int
             Seconds before giving up on reply. Zero implies no timeout.
         """
-        if timeout <= 0:
-            delay = self._poll_delay
-        else:
-            delay = max(timeout / 10., 1.)
-            delay = min(delay, self._poll_delay)
-
         start = time.time()
+        delay = 1
+        time.sleep(delay)
         while not self._poll(prefix, seqno):
+            delay = min(delay + 1, self._poll_delay)  # Back-off polling rate.
             if timeout > 0:
                 now = time.time()
                 if now - start > timeout:
                     raise RuntimeError('timeout')
+                # Set delay no longer than timeout.
+                delay = min(delay, (start + timeout) - now)
             time.sleep(delay)
 
     def _recv(self, prefix, seqno, wait=True, timeout=0):

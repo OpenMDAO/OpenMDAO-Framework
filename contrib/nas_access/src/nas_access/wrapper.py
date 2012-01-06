@@ -49,10 +49,14 @@ class AllocatorWrapper(object):
         :class:`ServerWrapper` is created for it and the reply data is
         the associated ``(connection-root, server-pid)``.
         """
+        delay = 1
         while not self.stop:
+            time.sleep(delay)
             if not self._conn.poll_request():
-                time.sleep(self._poll_delay)
+                delay = min(delay + 1, self._poll_delay)  # Back-off.
                 continue
+            delay = 1  # Reset to high rate.
+
             method, args, kwargs = self._conn.recv_request(wait=False)
             self._logger.debug('request: %r %r %r', method, args, kwargs)
             try:
@@ -115,7 +119,7 @@ class AllocatorWrapper(object):
         wrapper, handler = self._wrappers.pop(root)
         self._allocator.release(wrapper.server)
         wrapper.stop = True
-        handler.join(self._poll_delay*3)
+        handler.join(self._poll_delay * 3)
 
     def shutdown(self):
         """ Shutdown this allocator. """
@@ -159,10 +163,14 @@ class ServerWrapper(object):
 
     def process_requests(self):
         """ Wait for a request, process it, and send the reply. """
+        delay = 1
         while not self.stop:
+            time.sleep(delay)
             if not self._conn.poll_request():
-                time.sleep(self._poll_delay)
+                delay = min(delay + 1, self._poll_delay)  # Back-off.
                 continue
+            delay = 1  # Reset to high rate.
+
             method, args, kwargs = self._conn.recv_request(wait=False)
             self._logger.debug('request: %r %r %r', method, args, kwargs)
             try:

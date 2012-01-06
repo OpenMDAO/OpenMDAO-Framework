@@ -7,7 +7,6 @@ be done by :class:`ExternalCode` to execute a compute-intensive or parallel
 application.
 """
 
-import fnmatch
 import os.path
 import sys
 
@@ -17,19 +16,15 @@ from openmdao.main.rbac import rbac
 from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
 
-from openmdao.util.shellproc import ShellProc, STDOUT, PIPE
+from openmdao.util.shellproc import ShellProc, STDOUT
 
 
 class PBS_Allocator(FactoryAllocator):
     """
-    Knows about PBS cluster resources (via `qhost`).
     Uses :class:`PBS_Server` instead of :class:`ObjServer` when deploying.
 
     name: string
         Name of allocator, used in log messages, etc.
-
-    pattern: string
-        :mod:`fnmatch`-style pattern used to select hosts from `qhost` output,
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
@@ -48,20 +43,17 @@ class PBS_Allocator(FactoryAllocator):
 
         [PBS]
         classname: pbs.PBS_Allocator
-        pattern: *
         authkey: PublicKey
         allow_shell: True
 
     """
 
-    _QHOST = ['qhost']  # Replaced with path to fake for testing.
-
-    def __init__(self, name='PBS', pattern='*', authkey=None,
-                 allow_shell=True):
+    def __init__(self, name='PBS', authkey=None, allow_shell=True):
         super(PBS_Allocator, self).__init__(name, authkey, allow_shell)
         self.factory.manager_class = _ServerManager
         self.factory.server_classname = 'pbs_pbs_PBS_Server'
-        self.pattern = pattern
+#FIXME: need to somehow determine available cpus.
+        self.n_cpus = 10000
 
     def configure(self, cfg):
         """
@@ -72,11 +64,9 @@ class PBS_Allocator(FactoryAllocator):
             Configuration data is located under the section matching
             this allocator's `name`.
 
-        Allows modifying factory options and `pattern`.
+        Allows modifying factory options.
         """
         super(PBS_Allocator, self).configure(cfg)
-        if cfg.has_option(self.name, 'pattern'):
-            self.pattern = cfg.get(self.name, 'pattern')
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -92,7 +82,7 @@ class PBS_Allocator(FactoryAllocator):
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
             return 0
-        return len(self._get_hosts())
+        return self.n_cpus
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -117,18 +107,13 @@ class PBS_Allocator(FactoryAllocator):
         if retcode != 0:
             return (retcode, info)
 
-        hostnames = self._get_hosts()
-        if not hostnames:
-            return (-2, {'hostnames': 'no hosts available'})
-
         if 'n_cpus' in resource_desc:
             value = resource_desc['n_cpus']
-            if len(hostnames) < value:
-                return (-2, {'ncpus': (value, len(hostnames))})
-
+            if self.n_cpus < value:
+                return (-2, {'n_cpus': 'want %s, have %s'
+                                       % (value, self.n_cpus)})
         criteria = {
-            'hostnames'  : hostnames,
-            'total_cpus' : len(hostnames),
+            'total_cpus': self.n_cpus,
         }
         return (0, criteria)
 
@@ -153,47 +138,12 @@ class PBS_Allocator(FactoryAllocator):
             value = resource_desc[key]
             if key == 'localhost':
                 if value:
-                    return (-2, {key : value})
+                    return (-2, {key: 'requested local host'})
             elif key == 'n_cpus':
                 pass  # Handle in upper layer.
             else:
-                return (-2, {key : (value, 'unrecognized key')})
+                return (-2, {key: 'unrecognized key'})
         return (0, {})
-
-    def _get_hosts(self):
-        """ Return list of hostnames sorted by load. """
-        # Get host load information.
-        try:
-            proc = ShellProc(self._QHOST, stdout=PIPE)
-        except Exception as exc:
-            self._logger.error('%r failed: %s' % (self._QHOST, exc))
-            return []
-        lines = proc.stdout.readlines()
-
-        # Reduce to hosts we're interested in and sort by CPU-adjusted load.
-        loads = []
-        for line in lines:
-            if line.startswith(('HOSTNAME', '-')):
-                continue
-            hostname, arch, ncpu, load, \
-                memtot, memuse, swapto, swapus = line.split()
-            if self.pattern:
-                if not fnmatch.fnmatchcase(hostname, self.pattern):
-                    continue
-            try:
-                load = float(load)
-                ncpu = int(ncpu)
-            except ValueError:
-                continue
-            loads.append((hostname, load / ncpu, ncpu))
-        loads = sorted(loads, key=lambda item: item[1])
-
-        # Return list of hostnames.
-        hosts = []
-        for hostname, load, ncpu in loads:
-            for i in range(ncpu):
-                hosts.append(hostname)
-        return hosts
 
 
 class PBS_Server(ObjServer):
@@ -221,19 +171,19 @@ class PBS_Server(ObjServer):
         ========================= ===========================
         job_name                  -N `value`
         ------------------------- ---------------------------
-        working_directory         -W sandbox= `value`
+        working_directory         Handled in generated script
         ------------------------- ---------------------------
         parallel_environment      Ignored
         ------------------------- ---------------------------
         n_cpus                    -l select= `value` :ncpus=1
         ------------------------- ---------------------------
-        input_path                -i `value`
+        input_path                Handled in generated script
         ------------------------- ---------------------------
-        output_path               -o `value`
+        output_path               Handled in generated script
         ------------------------- ---------------------------
-        error_path                -e `value`
+        error_path                Handled in generated script
         ------------------------- ---------------------------
-        join_files                -j oe
+        join_files                Handled in generated script
         ------------------------- ---------------------------
         email                     -M `value`
         ------------------------- ---------------------------
@@ -258,13 +208,18 @@ class PBS_Server(ObjServer):
 
         Where `value` is the corresponding resource value.
 
-        If 'working_directory' is not specified, add ``-W sandbox=<cwd>``.
-        If 'input_path' is not specified, add ``-i /dev/null``.
-        If 'output_path' is not specified, add ``-o <remote_command>.stdout``.
-        If 'error_path' is not specified, add ``-j oe``.
+        In order to support a working directory other than HOME or a
+        PBS-generated scratch directory, a short script is written with
+        PBS directives in the header. The script will change to the working
+        directory and then run the command.
+        
+        If 'working_directory' is not specified, use current server directory.
+        If 'input_path' is not specified, use ``/dev/null``.
+        If 'output_path' is not specified, use ``<remote_command>.stdout``.
+        If 'error_path' is not specified, use stdout.
 
         If 'native_specification' is specified, it is added to the `qsub`
-        command just before 'remote_command' and 'args'.
+        command just before the name of the generated script.
 
         Output from `qsub` itself is routed to ``qsub.out``.
         """
@@ -274,99 +229,125 @@ class PBS_Server(ObjServer):
 
         cmd = list(self._QSUB)
         cmd.extend(('-V', '-W', 'block=true'))
+        if sys.platform != 'win32':
+            cmd.extend(('-S', '/bin/sh'))
         env = None
         inp, out, err = None, None, None
+        join_files = False
 
         # Set working directory now, for possible path fixing.
-# FIXME: sandbox is HOME, not set, or PRIVATE
         try:
             value = resource_desc['working_directory']
         except KeyError:
             pass
         else:
             self.work_dir = self._fix_path(value)
-            cmd.extend(('-W', 'sandbox=%s' % value))
 
-        # Process description in fixed, repeatable order.
-        keys = ('job_name',
-                'job_environment',
-                'n_cpus',
-                'input_path',
-                'output_path',
-                'error_path',
-                'join_files',
-                'email',
-                'block_email',
-                'email_events',
-                'start_time',
-                'hard_wallclock_time_limit',
-                'soft_wallclock_time_limit',
-                'hard_run_duration_limit',
-                'soft_run_duration_limit')
-
-        for key in keys:
-            try:
-                value = resource_desc[key]
-            except KeyError:
-                continue
-
-            if key == 'job_name':
-                cmd.extend(('-N', value))
-            elif key == 'job_environment':
-                env = value
-            elif key == 'n_cpus':
-                cmd.extend(('-l', 'select=%d:ncpus=1' % value))
-            elif key == 'input_path':
-                cmd.extend(('-i', self._fix_path(value)))
-                inp = value
-            elif key == 'output_path':
-                cmd.extend(('-o', self._fix_path(value)))
-                out = value
-            elif key == 'error_path':
-                cmd.extend(('-e', self._fix_path(value)))
-                err = value
-            elif key == 'join_files':
-                cmd.extend(('-j', 'yes' if value else 'no'))
-                if value:
-                    err = 'yes'
-            elif key == 'email':
-                cmd.extend(('-M', ','.join(value)))
-            elif key == 'block_email':
-                if value:
-                    cmd.extend(('-m', 'n'))
-            elif key == 'email_events':
-                cmd.extend(('-m', value.replace('s', '')))  # No suspend event
-            elif key == 'start_time':
-                cmd.extend(('-a', translate1(value)))
-            elif key == 'hard_wallclock_time_limit':
-                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
-            elif key == 'soft_wallclock_time_limit':
-                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
-            elif key == 'hard_run_duration_limit':
-                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
-            elif key == 'soft_run_duration_limit':
-                cmd.extend(('-l', 'walltime=%s' % translate2(value)))
-
-        if not self.work_dir:
-            cmd.extend(('-W', 'sandbox=%s' % os.getcwd()))
-
-        if inp is None:
-            cmd.extend(('-i', dev_null))
-        if out is None:
+        # Write script to be submitted rather than putting everything on
+        # 'qsub' command line. We have to do this since otherwise there's
+        # no way to set an execution directory.
+        if 'job_name' in resource_desc:
+            base = resource_desc['job_name']
+        else:
             base = os.path.basename(resource_desc['remote_command'])
-            cmd.extend(('-o', '%s.stdout' % base))
-        if err is None:
-            cmd.extend(('-j', 'oe'))
+        script_name = '%s.qsub' % base
 
-        if 'native_specification' in resource_desc:
-            cmd.extend(resource_desc['native_specification'])
+        with open(script_name, 'w') as script:
+            script.write('#!/bin/sh\n')
 
-        cmd.append(self._fix_path(resource_desc['remote_command']))
+            # Process description in fixed, repeatable order.
+            keys = ('job_name',
+                    'job_environment',
+                    'n_cpus',
+                    'input_path',
+                    'output_path',
+                    'error_path',
+                    'join_files',
+                    'email',
+                    'block_email',
+                    'email_events',
+                    'start_time',
+                    'hard_wallclock_time_limit',
+                    'soft_wallclock_time_limit',
+                    'hard_run_duration_limit',
+                    'soft_run_duration_limit')
 
-        if 'args' in resource_desc:
-            for arg in resource_desc['args']:
-                cmd.append(self._fix_path(arg))
+            for key in keys:
+                try:
+                    value = resource_desc[key]
+                except KeyError:
+                    continue
 
+                if key == 'job_name':
+                    script.write('#PBS -N %s\n' % value)
+                elif key == 'job_environment':
+                    env = value
+                elif key == 'n_cpus':
+                    script.write('#PBS -l select=%d:ncpus=1\n' % value)
+                elif key == 'input_path':
+                    inp = value
+                elif key == 'output_path':
+                    out = value
+                elif key == 'error_path':
+                    err = value
+                elif key == 'join_files':
+                    join_files = value
+                elif key == 'email':
+                    script.write('#PBS -M %s\n' % ','.join(value))
+                elif key == 'block_email':
+                    if value:
+                        script.write('#PBS -m n\n')
+                elif key == 'email_events':
+                    value = value.replace('s', '')  # No suspend event
+                    if value:
+                        script.write('#PBS -m %s\n' % value)
+                elif key == 'start_time':
+                    script.write('#PBS -a %s\n' % value)
+                elif key == 'hard_wallclock_time_limit':
+                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+                elif key == 'soft_wallclock_time_limit':
+                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+                elif key == 'hard_run_duration_limit':
+                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+                elif key == 'soft_run_duration_limit':
+                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+    
+            if 'native_specification' in resource_desc:
+                cmd.extend(resource_desc['native_specification'])
+
+            # Have script move to work directory relative to
+            # home directory on execution host.
+            home = os.path.abspath(os.path.expanduser('~'))
+            work = os.path.abspath(self.work_dir or os.getcwd())
+            if work.startswith(home):
+                work = work[len(home)+1:]
+                if sys.platform == 'win32':
+                    script.write('cd %%HOMEDRIVE%%HOMEPATH%%\n')
+                else:
+                    script.write('cd $HOME\n')
+            else:
+                # This can potentially cause problems...
+                self._logger.warning('work %r not a descendant of home %r'
+                                     % (work, home))
+            script.write('cd %s\n' % work)
+
+            script.write(self._fix_path(resource_desc['remote_command']))
+
+            if 'args' in resource_desc:
+                for arg in resource_desc['args']:
+                    script.write(' %s' % self._fix_path(arg))
+
+            script.write(' <%s' % (inp or dev_null))
+            script.write(' >%s' % (out or '%s.stdout' % base))
+            if join_files or err is None:
+                script.write(' 2>&1')
+            else:
+                script.write(' 2>%s' % err)
+            script.write('\n')
+            if sys.platform != 'win32':
+                os.chmod(script_name, 0700)
+
+        cmd.append(os.path.join('.', script_name))
         self._logger.info('%r', ' '.join(cmd))
         try:
             process = ShellProc(cmd, dev_null, 'qsub.out', STDOUT, env)
@@ -388,17 +369,14 @@ class PBS_Server(ObjServer):
         return path
 
     @staticmethod
-    def _make_time(seconds):
-        """ Make time string from `seconds`. """
-# FIXME: this is called for multiple different things!
-# FIXME: not handling > 99 hours correctly.
-        seconds = float(seconds)
+    def _timelimit(seconds):
+        """ Make time limit string from `seconds`. """
         hours = int(seconds / (60*60))
         seconds -= hours * 60*60
         minutes = int(seconds / 60)
         seconds -= minutes * 60
         seconds = int(seconds)
-        return '%02d%02d.%02d' % (hours, minutes, seconds)
+        return '%d:%02d:%02d' % (hours, minutes, seconds)
 
 
 class _ServerManager(OpenMDAO_Manager):

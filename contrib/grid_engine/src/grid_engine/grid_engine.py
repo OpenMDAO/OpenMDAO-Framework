@@ -126,8 +126,8 @@ class GridEngineAllocator(FactoryAllocator):
         if 'n_cpus' in resource_desc:
             value = resource_desc['n_cpus']
             if len(hostnames) < value:
-                return (-2, {'ncpus': 'want %s, have %s'
-                                      %(value, len(hostnames))})
+                return (-2, {'n_cpus': 'want %s, have %s'
+                                       % (value, len(hostnames))})
         criteria = {
             'hostnames'  : hostnames,
             'total_cpus' : len(hostnames),

@@ -33,7 +33,7 @@ def main(): # pragma no cover
         DMZ file server to use. Default ``dmzfs1``.
 
     --poll-delay: int
-        Seconds between checks for new client activity. Default 60.
+        Maximum seconds between checks for new client activity. Default 60.
 
     --resources: string
         Filename for resource configuration. If not specified then the
@@ -46,7 +46,7 @@ def main(): # pragma no cover
     parser.add_option('--dmz-host', action='store', type='str', default='dmzfs1',
                       help='DMZ file server to use')
     parser.add_option('--poll-delay', action='store', type='int', default=60,
-                      help='Seconds between checks for new client activity')
+                      help='Max seconds between checks for new client activity')
     parser.add_option('--resources', action='store', type='str', default=None,
                       help='Filename for resource configuration')
     parser.add_option('--ssh', action='store', type='str', default=None,
@@ -95,18 +95,20 @@ def main(): # pragma no cover
     # And away we go...
     signal.signal(signal.SIGTERM, _sigterm_handler)
     try:
+        delay = 1  # Start with high polling rate.
         while True:
             connection = server_accept(dmz_host, poll_delay, logger)
-            if connection is not None:
+            if connection is None:
+                server_heartbeat(dmz_host, poll_delay, logger)
+                delay = min(delay + 1, poll_delay)  # Back-off.
+                time.sleep(delay)
+            else:
                 wrapper = AllocatorWrapper(allocator, connection, poll_delay)
                 name = '%s_handler' % os.path.basename(connection.root)
                 handler = threading.Thread(name=name,
                                            target=wrapper.process_requests)
                 handler.daemon = True
                 handler.start()
-            else:
-                server_heartbeat(dmz_host, poll_delay, logger)
-                time.sleep(poll_delay)
     except KeyboardInterrupt:
         pass
     finally:
