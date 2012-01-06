@@ -12,26 +12,34 @@ import tarfile
 import sphinx
 
 from openmdao.util.dumpdistmeta import get_dist_metadata
+from openmdao.util.fileutil import get_ancestor_dir
 
 # Specify modules and packages to be included in the OpenMDAO documentation here
 srcmods = [
 ]
 
+_is_release = False
+
+def _include_pkg(name):
+    if name.startswith('openmdao.'):
+        if name.startswith('openmdao.examples'):
+            return False
+        if _is_release and name.startswith('openmdao.devtools'):
+            return False
+        return True
+    return False
+
 def get_openmdao_packages():
-    return [d.project_name for d in working_set 
-            if d.project_name.startswith('openmdao.') 
-                and not d.project_name.startswith('openmdao.examples.')]
+    return [d.project_name for d in working_set if _include_pkg(d.project_name)]
+
 
 logger = logging.getLogger()
 
 def get_rev_info():
-    try:
-        p = Popen('git describe --tags', 
-                  stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        out = p.communicate()[0].strip()
-        tag, ncommits, commit = out.rsplit('-', 2)
-    except:
-        return ('?','?','?')
+    p = Popen('git describe --tags', 
+              stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    out = p.communicate()[0].strip()
+    tag, ncommits, commit = out.rsplit('-', 2)
     return tag, ncommits, commit
 
 def _get_dirnames():
@@ -113,11 +121,10 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     print >> outfile, underline*(len('Package ')+len(pkg))
     print >> outfile, '\n\n'
     
-    # this behaves strangely, maybe because we use namespace pkgs?
-    # mod points to module 'openmdao', not 'openmdao.whatever', so we
-    # have to access 'whatever' through the 'openmdao' module
-    mod = __import__(pkg)
-    docs = getattr(mod, pkg.split('.')[1]).__doc__
+    __import__(pkg)
+    mod = sys.modules[pkg]
+    docs = mod.__doc__
+    
     if docs:
         print >> outfile, docs, '\n'
     
@@ -141,7 +148,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     #wanted to sort traits separately based only on filenames despite differing paths
     traitz = list(_get_resource_files(dist, 
                                       ['*__init__.py','*setup.py','*/test/*.py'], 
-                                      ['*datatypes*.py']))
+                                      ['*/lib/datatypes*.py']))
     sorted_traitz = sorted(traitz, cmp=_compare_traits_path)
     
     names.extend(sorted_traitz)
@@ -197,24 +204,38 @@ def _write_src_docs(branchdir, docdir):
             logger.info('creating autodoc file for %s' % src)
             _mod_sphinx_info(os.path.basename(src), f)
 
-def build_docs(argv=None):
-    """A script (openmdao_build_docs) points to this.  It generates the Sphinx
+def build_docs(parser=None, options=None, args=None):
+    """A script (openmdao build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
-    if argv is None:
-        argv = sys.argv[1:]
-    if '-v' in argv:
-        idx = argv.index('-v')
-        version = argv[idx+1]
+    global _is_release
+    if args and parser:
+        print_sub_help(parser, 'build_docs')
+        return -1
+
+    if options is not None and hasattr(options, 'version') and options.version:
+        version = options.version
         shtitle = 'OpenMDAO Documentation v%s' % version
+        _is_release = True
     else:
+        _is_release = False
         try:
             tag, ncommits, commit = get_rev_info()
             version = "%s-%s-%s" % (tag, ncommits, commit)
             shtitle = 'OpenMDAO Documentation (%s commits after version %s)' % (ncommits,tag)
         except:
-            version = "?-?-?"
-            shtitle = "OpenMDAO Documentation (unknown revision)"
+            # try to get commit id
+            try:
+                top = get_ancestor_dir(sys.executable, 3)
+                if '-OpenMDAO-Framework-' in top:
+                    commit = top.split('-')[-1]
+                    version = "dev - commit id: %s" % commit
+                    shtitle = "OpenMDAO Documentation (commit id %s)" % commit
+                else:
+                    raise RuntimeError("can't find commit id")
+            except:
+                version = "?-?-?"
+                shtitle = "OpenMDAO Documentation (unknown revision)"
     
     branchdir, docdir, bindir =_get_dirnames()
 
@@ -245,7 +266,7 @@ def build_docs(argv=None):
         os.chdir(startdir)
 
 def view_docs(browser=None):
-    """A script (openmdao_docs) points to this. It just pops up a browser to 
+    """A script (openmdao docs) points to this. It just pops up a browser to 
     view the openmdao sphinx docs. If the docs are not already built, it
     builds them before viewing, but if the docs already exist, it's not smart enough
     to rebuild them if they've changed since the last build.
@@ -265,17 +286,17 @@ def view_docs(browser=None):
     wb.open(idxpath)
 
 
-def test_docs():
+def test_docs(parser, options, args=None):
     """Tests the openmdao sphinx documentation.  
-    A console script (openmdao_testdocs) calls this.
+    A console script (openmdao test_docs) calls this.
     This forces a build of the docs before testing.
     """
     branchdir, docdir, bindir =_get_dirnames()
     # force a new build before testing
-    build_docs()
-    sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
-                      os.path.join(docdir, '_build', 'doctrees'), 
-                      docdir, os.path.join(docdir, '_build', 'html')])
+    build_docs(parser, options, args)
+    return sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
+                             os.path.join(docdir, '_build', 'doctrees'), 
+                             docdir, os.path.join(docdir, '_build', 'html')])
 
 # make nose ignore this function
 test_docs.__test__ = False
@@ -393,7 +414,4 @@ def _get_rst_path(obj):
             return relpath
 
         
-if __name__ == "__main__": #pragma: no cover
-    build_docs()
-
 

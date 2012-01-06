@@ -354,4 +354,4 @@ namespace have a similar directory layout: ``openmdao.main``,
 
 ``openmdao.<package>/src/openmdao/<package>/test``
     Contains unit tests for this package. These are executed by
-    ``openmdao_test``.
+    ``openmdao test``.

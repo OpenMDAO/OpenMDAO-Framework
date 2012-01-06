@@ -3,24 +3,28 @@
 import glob
 import os.path
 import shutil
-import subprocess
 import stat
+import subprocess
+import sys
 import time
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int, List
 
-from openmdao.main.api import ComponentWithDerivatives
+from openmdao.main.api import ComponentWithDerivatives, FileRef
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
+
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 
 
-
 class ExternalCode(ComponentWithDerivatives):
-    """ Run an external code as a component. """
+    """
+    Run an external code as a component. The component can be configured to
+    run the code on a remote server, see :meth:`execute`.
+    """
 
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
@@ -58,7 +62,7 @@ class ExternalCode(ComponentWithDerivatives):
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
-        """ Don't allow setting of 'command' by remote client. """
+        """ Don't allow setting of 'command' by a remote client. """
         if path in ('command', 'get_access_controller') and remote_access():
             self.raise_exception('%r may not be set() remotely' % path,
                                  RuntimeError)
@@ -96,6 +100,22 @@ class ExternalCode(ComponentWithDerivatives):
         ----------------------- -------------------------------------
         hard_run_duration_limit self.timeout (if non-zero)
         ======================= =====================================
+
+        .. note::
+
+            Input files to be sent to the remote server are defined by
+            :class:`FileMetadata` entries in the `external_files` list
+            with `input` True.  Similarly, output files to be retrieved
+            from the remote server are defined by entries with `output`
+            True.
+
+        .. warning::
+
+            Any file **not** labelled with `binary` True will undergo
+            newline translation if the local and remote machines have
+            different newline representations. Newline translation will
+            corrupt a file which is binary but hasn't been labelled as
+            such.
 
         """
         self.return_code = -12345678
@@ -188,23 +208,39 @@ class ExternalCode(ComponentWithDerivatives):
                 rdesc['input_path'] = self.stdin
             if self.stdout:
                 rdesc['output_path'] = self.stdout
+            else:
+                rdesc['output_path'] = '%s.stdout' % self.command[0]
             if self.stderr:
                 if self.stderr == self.STDOUT:
                     rdesc['join_files'] = True
                 else:
                     rdesc['error_path'] = self.stderr
+            else:
+                rdesc['error_path'] = '%s.stderr' % self.command[0]
             if self.timeout:
                 rdesc['hard_run_duration_limit'] = self.timeout
 
             # Send inputs.
             patterns = []
+            textfiles = []
             for metadata in self.external_files:
                 if metadata.get('input', False):
                     patterns.append(metadata.path)
+                    if not metadata.binary:
+                        textfiles.append(metadata.path)
+            for pathname, obj in self.items(iotype='in', recurse=True):
+                if isinstance(obj, FileRef):
+                    local_path = self.get_metadata(pathname, 'local_path')
+                    patterns.append(local_path)
+                    if not obj.binary:
+                        textfiles.append(local_path)
+            if self.stdin:
+                patterns.append(self.stdin)
+                textfiles.append(self.stdin)
             if patterns:
-                self._send_inputs(patterns)
+                self._send_inputs(patterns, textfiles)
             else:
-                self._logger.debug('No input metadata paths')
+                self._logger.debug('No input files')
 
             # Run command.
             self._logger.info('executing %s...', self.command)
@@ -213,17 +249,39 @@ class ExternalCode(ComponentWithDerivatives):
                 self._server.execute_command(rdesc)
             et = time.time() - start_time
             if et >= 60:  #pragma no cover
-                self._logger.info('elapsed time: %f sec.', et)
+                self._logger.info('elapsed time: %.1f sec.', et)
 
             # Retrieve results.
             patterns = []
+            textfiles = []
             for metadata in self.external_files:
                 if metadata.get('output', False):
                     patterns.append(metadata.path)
-            if patterns:
-                self._retrieve_results(patterns)
-            else:
-                self._logger.debug('No output metadata paths')
+                    if not metadata.binary:
+                        textfiles.append(metadata.path)
+            for pathname, obj in self.items(iotype='out', recurse=True):
+                if isinstance(obj, FileRef):
+                    patterns.append(obj.path)
+                    if not obj.binary:
+                        textfiles.append(obj.path)
+            patterns.append(rdesc['output_path'])
+            textfiles.append(rdesc['output_path'])
+            if self.stderr != self.STDOUT:
+                patterns.append(rdesc['error_path'])
+                textfiles.append(rdesc['error_path'])
+            self._retrieve_results(patterns, textfiles)
+
+            # Echo stdout if not redirected.
+            if not self.stdout:
+                with open(rdesc['output_path'], 'rU') as inp:
+                    sys.stdout.write(inp.read())
+                os.remove(rdesc['output_path'])
+
+            # Echo stderr if not redirected.
+            if not self.stderr:
+                with open(rdesc['error_path'], 'rU') as inp:
+                    sys.stderr.write(inp.read())
+                os.remove(rdesc['error_path'])
 
         finally:
             RAM.release(self._server)
@@ -231,7 +289,7 @@ class ExternalCode(ComponentWithDerivatives):
 
         return (return_code, error_msg)
 
-    def _send_inputs(self, patterns):
+    def _send_inputs(self, patterns, textfiles):
         """ Sends input files matching `patterns`. """
         self._logger.info('sending inputs...')
         start_time = time.time()
@@ -240,7 +298,8 @@ class ExternalCode(ComponentWithDerivatives):
         pfiles, pbytes = pack_zipfile(patterns, filename, self._logger)
         try:
             filexfer(None, filename, self._server, filename, 'b')
-            ufiles, ubytes = self._server.unpack_zipfile(filename)
+            ufiles, ubytes = self._server.unpack_zipfile(filename,
+                                                         textfiles=textfiles)
         finally:
             os.remove(filename)
 
@@ -254,19 +313,20 @@ class ExternalCode(ComponentWithDerivatives):
         if et >= 60:  #pragma no cover
             self._logger.info('elapsed time: %f sec.', et)
 
-    def _retrieve_results(self, patterns):
+    def _retrieve_results(self, patterns, textfiles):
         """ Retrieves result files matching `patterns`. """
         self._logger.info('retrieving results...')
         start_time = time.time()
 
         filename = 'outputs.zip'
-        pfiles, pbytes = self._server.pack_zipfile(tuple(patterns), filename)
+        pfiles, pbytes = self._server.pack_zipfile(patterns, filename)
         filexfer(self._server, filename, None, filename, 'b')
 
         # Valid, but empty, file causes unpack_zipfile() problems.
         try:
             if os.path.getsize(filename) > 0:
-                ufiles, ubytes = unpack_zipfile(filename, self._logger)
+                ufiles, ubytes = unpack_zipfile(filename, logger=self._logger,
+                                                textfiles=textfiles)
             else:
                 ufiles, ubytes = 0, 0
         finally:
@@ -360,6 +420,7 @@ class _AccessController(AccessController):  #pragma no cover
     """ Don't allow setting of 'command' by remote client. """
 
     def check_access(self, role, methodname, obj, attr):
+        """ Raise :class:`RoleError` if invalid access. """
         if attr in ('command', 'get_access_controller') and \
            methodname == '__setattr__':
             raise RoleError('No %s access to %r' % (methodname, attr))

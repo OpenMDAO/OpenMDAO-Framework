@@ -2,14 +2,17 @@
 
 import unittest
 import os
-from os.path import join
+import sys
+import tempfile
+import shutil
 from subprocess import Popen, PIPE, STDOUT
-
-from openmdao.devtools.build_docs import test_docs
+from argparse import Namespace
 
 class SphinxDocsTestCase(unittest.TestCase):
     def test_docs(self):
-        p = Popen('openmdao_testdocs', stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+        openmdao_cmd = os.path.join(os.path.dirname(sys.executable), 'openmdao')
+        p = Popen([openmdao_cmd, 'test_docs'], stdout=PIPE, stderr=STDOUT,
+                  env=os.environ, cwd=os.getcwd())
         output = p.communicate()[0]
         retval = p.returncode
         if not output.strip().endswith('build succeeded.'):

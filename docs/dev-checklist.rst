@@ -108,7 +108,7 @@ repository (assuming the maintainers approve the change).
 
     ::
 
-      openmdao_test
+      openmdao test
 
     Fix any errors found during testing.
 
@@ -119,27 +119,27 @@ repository (assuming the maintainers approve the change).
     
     ::
     
-      openmdao_build_docs
-      openmdao_docs
+      openmdao build_docs
+      openmdao docs
 
 
 12. Test the docs. 
-                 	 
+                
     ::
     
-      openmdao_testdocs
+      openmdao test_docs
  
-    Note: The doctests are automatically run whenever you run ``openmdao_test``. Step 11 builds and tests
+    Note: The doctests are automatically run whenever you run ``openmdao test``. Step 11 builds and tests
     `only` the docs.
 
     Fix errors if any.
 
 13. If you have not done so, visually inspect the docs using the default browser. 
                  
-		 
+            
     ::
      
-      openmdao_docs
+      openmdao docs
 
 14.  Stage the updated content for the next commit.
                  

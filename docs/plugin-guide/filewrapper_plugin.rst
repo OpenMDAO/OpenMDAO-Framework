@@ -958,6 +958,11 @@ delimiters. Now specify commas as your delimiter.
     7
 
 With the correct delimiter set, you extract the second integer as expected.
+
+While the ability to set the delimiters adds flexibility for parsing many
+different types of input files, you may find cases that are too complex to
+parse (e.g., a field with separator characters inside of quotes.) In such cases
+you may need to read and extract the data manually.
     
 *Special Case Delimiter - Columns*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -965,4 +970,107 @@ With the correct delimiter set, you extract the second integer as expected.
 One special-case value of the delimiter, ``'columns'``, is useful when the
 data fields have defined column location, as is the case in certain formatted
 output from Fortran or C. When the delimiter is set to ``'columns'``, the
-behavior of some of the methods is slightly different.
+behavior of some of the methods is slightly different. Consider the following 
+output file:
+
+::
+
+    CASE 1
+    12345678901234567890
+    TTF    3.7-9.4434967
+    
+.. testcode:: Parse_Output
+    :hide:
+    
+    parser.data = []
+    parser.data.append("CASE 1")
+    parser.data.append("12345678901234567890")
+    parser.data.append("TTF    3.7-9.4434967")
+    parser.reset_anchor() 
+
+The second line is a comment that helps the reader identify the column
+number (particularly on a printout) and does not need to be parsed.
+
+In the third line, the first three columns contain flags that are either ``'T'``
+or ``'F'``. Columns 4-10 contain a floating point number, and columns 11
+through 20 contain another floating point number. Note that there isn't
+always a space between the two numbers in this format, particularly when the
+second number has a negative sign. We can't parse this with a regular
+separator, but we can use the special separator ``'columns'``.
+
+Let's parse this file to extract the third boolean flag and the two numbers.
+
+.. testcode:: Parse_Output
+
+    parser.reset_anchor()    
+    parser.mark_anchor("CASE")
+    parser.set_delimiters("columns")
+    var1 = parser.transfer_var(2, 3, 3)
+    var2 = parser.transfer_var(2, 4, 10)
+    var3 = parser.transfer_var(2, 11, 20)
+    
+    print var1
+    print var2
+    print var3
+
+When the delimiters are in column mode, ``transfer_var`` takes the starting
+field and the ending field as its second and third arguments. Since we just
+want one column for the boolean flag, the starting field and ending field are
+the same. This gives us the output:
+
+.. testoutput:: Parse_Output
+
+    F
+    3.7
+    -9.4434967
+
+which is what we wanted to extract.
+
+The ``transfer_array`` method can also be used with columns, but it is used
+differently than ``transfer_var``. Consider this output file:
+
+::
+
+    CASE 2
+    123456789012345678901234567890
+    NODE 11 22 33 COMMENT
+    NODE 44 55 66 STUFF
+  
+.. testcode:: Parse_Output
+    :hide:
+    
+    parser.data = []
+    parser.data.append("CASE 2")
+    parser.data.append("12345678901234567890")
+    parser.data.append("NODE 11 22 33 COMMENT")
+    parser.data.append("NODE 44 55 66 STUFF")
+    parser.reset_anchor() 
+    
+In this example, we want to extract the six numerical values and place them in
+an array. When the delimiter is set to columns, we can define a rectangular
+box from which all elements are parsed into an array. Note that the numbers
+inside of the box are parsed assuming standard separator characters (" \t").
+      
+.. testcode:: Parse_Output
+
+    parser.reset_anchor()    
+    parser.mark_anchor("CASE 2")
+    parser.set_delimiters("columns")
+    var = parser.transfer_array(2, 6, 3, 13)
+    
+    print var
+    
+So here we've called ``transfer_array`` with four arguments: starting row,
+starting column, ending row, ending column. This results in the following
+value for var:
+
+.. testoutput:: Parse_Output
+
+    [ 11.  22.  33.  44.  55.  66.]
+    
+You can always exit column mode and return to normal delimiter parsing by setting the
+delimiters back to the default:
+
+.. testcode:: Parse_Output
+
+    parser.set_delimiters(" \t")

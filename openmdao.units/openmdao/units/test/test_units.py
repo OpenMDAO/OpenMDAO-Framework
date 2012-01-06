@@ -175,16 +175,26 @@ class test__PhysicalQuantity(unittest.TestCase):
 
 
     def test_currency_unit(self):
+        # probably don't need this test, since I changed $ to USD
         try:
-            x = units.PhysicalQuantity('1$')
+            x = units.PhysicalQuantity('1USD')
         except ValueError:
-            self.fail("Error: Currency Unit ($) is not working")
+            self.fail("Error: Currency Unit (USD) is not working")
         
     def test_hour_unit(self):
         # Added to test problem in Ticket 466
         x = units.PhysicalQuantity('7200s')
         x.convert_to_unit('h')
-        self.assertEqual(x,units.PhysicalQuantity('2h'))
+        self.assertEqual(x, units.PhysicalQuantity('2h'))
+        
+    def test_prefix_plus_math(self):
+        # From an issue: m**2 converts find, but cm**2 does not.
+        
+        x1 = units.convert_units(1.0, 'm**2', 'cm**2')
+        self.assertEqual(x1, 10000.0)
+        
+        # Let's make sure we can dclare some complicated units
+        x = units.PhysicalQuantity('7200nm**3/kPa*dl')
         
     def test_add_known_Values(self):
         """addition should give known result with known input. 

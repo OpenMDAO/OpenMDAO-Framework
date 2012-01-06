@@ -59,10 +59,6 @@ def stub_if_missing_deps(*deps):
     def _find_failed_imports():
         failed = []
         for dep in deps:
-            if ':' in dep:  # comma indicates a platform specific import
-                dep, plat = dep.split(':',1)
-                if plat != sys.platform:
-                    continue  # skip import, wrong platform
             parts = dep.split(':')
             modname = parts[0]
             attrname = parts[1] if len(parts)>1 else None

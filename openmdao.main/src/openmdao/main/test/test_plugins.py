@@ -18,8 +18,9 @@ class PluginsTestCase(unittest.TestCase):
 
     def test_quickstart(self):
         argv = ['quickstart', 'foobar', '-v', '1.1', '-d', self.tdir]
-        options = _get_plugin_parser().parse_args(argv)
-        plugin_quickstart(options)
+        parser = _get_plugin_parser()
+        options, args = parser.parse_known_args(argv)
+        plugin_quickstart(parser, options, args)
         fandd = find_files(self.tdir, nodirs=False)
         self.assertEqual(set([os.path.basename(f) for f in fandd]), 
                          set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
@@ -28,7 +29,7 @@ class PluginsTestCase(unittest.TestCase):
                               'README.txt',
                               'test','test_foobar.py']))
     
-    # FIXME: all of the output from this currently shows up in the openmdao_test
+    # FIXME: all of the output from this currently shows up in the openmdao test
     # output even when the test is successful, so leave it out for now...
     #def test_makedist(self):
         #argv = ['foobar', '-v', '1.1', '-d', self.tdir]

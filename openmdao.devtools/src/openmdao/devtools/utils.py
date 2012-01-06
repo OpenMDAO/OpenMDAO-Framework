@@ -4,7 +4,6 @@ import time
 import shutil
 import logging
 import urllib2
-from optparse import OptionParser
 from subprocess import Popen, STDOUT, PIPE, check_call
 import socket
 
@@ -13,10 +12,11 @@ import tarfile
 
 try:
     import paramiko
-    from fabric.api import run, local, env, put, cd, prompt, hide, show, get, settings
+    from fabric.api import run, local, env, put, get, cd, prompt, hide, show, settings
     from fabric.state import connections
     from fabric.network import connect
 except ImportError as err:
+    connections = {}
     logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.util.fileutil import find_up, cleanup
@@ -79,10 +79,12 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
         runner = 'python' if fpaths[0].endswith('.py') else ''
 
     print 'cd-ing to %s' % remotedir
-    cmd = "%s %s %s" % (runner, os.path.basename(fpaths[0]), 
+    cmd = '%s %s %s' % (runner, os.path.basename(fpaths[0]), 
                         ' '.join(args))
     with cd(remotedir):
+        print 'running: ',cmd
         return run(cmd)
+    return retval
 
 def tar_dir(dirpath, archive_name, destdir):
     """Tar up the given directory and put in in the specified destination
@@ -208,6 +210,7 @@ def remote_check_pywin32(py):
                               "import ntsecuritycon"],
                              py=py).succeeded
 
+@stub_if_missing_deps('fabric')
 def remote_untar(tarfile, remote_dir=None, delete=True):
     """Use internal python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
@@ -296,7 +299,26 @@ def rsync_dirs(dest, host, dirs=('downloads','dists'),
     for dname in dirs:
         doit('rsync -arvzt --delete %s:%s %s' % (host, dname, dest))
 
-        
+
+@stub_if_missing_deps('fabric')
+def retrieve_docs(remote_dir):
+    """Retrieve a tar file of the docs built on a remote machine."""
+    cmds = [ "import tarfile",
+             "import os",
+             "for fname in os.listdir('%s'):" % remote_dir,
+             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
+             "        break",
+             "else:",
+             "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
+             "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
+             "tar = tarfile.open(os.path.join('%s','html.tar.gz'), mode='w:gz')" % remote_dir,
+             "tar.add(tardir, arcname='html')",
+             "tar.close()",
+             ]
+    
+    result = remote_py_cmd(cmds)
+    get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
+    
 
 #
 # Git related utilities
@@ -340,7 +362,7 @@ def get_git_branches():
     return [b.strip(' *') for b in p.communicate()[0].split('\n')]
 
 
-def make_git_archive(tarfilename, prefix='testbranch/'):
+def make_git_archive(tarfilename, prefix=''):
     """Make a tar file of the entire current repository."""
     startdir = os.getcwd()
     os.chdir(repo_top())
