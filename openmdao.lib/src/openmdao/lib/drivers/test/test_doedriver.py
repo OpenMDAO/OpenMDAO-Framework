@@ -22,7 +22,7 @@ from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 
-
+    
 # Users who have ssh configured correctly for testing.
 SSH_USERS = []
 
