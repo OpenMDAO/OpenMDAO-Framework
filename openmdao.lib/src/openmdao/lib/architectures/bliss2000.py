@@ -111,15 +111,8 @@ class BLISS2000(Architecture):
 
         
         obj2= objective[1].text
-        
-        
-        
-        
         for comp in objective[1].get_referenced_compnames():
             obj2=obj2.replace(comp,"meta_model_%s"%comp)
-        
-
-        
         sysopt.add_objective(obj2)
         
         
@@ -151,9 +144,7 @@ class BLISS2000(Architecture):
             sysopt.add_constraint(c)
         sysopt.force_execute=True    
         
-        driver.workflow.add('sysopt')        
-        
-            
+        driver.workflow.add('sysopt')
         driver.tolerance = .0001
 
         #setup paramter for fixedpointiterator
