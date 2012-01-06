@@ -17,7 +17,7 @@ from openmdao.lib.datatypes.api import Float, Array, Slot
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator, IterateUntil
-from openmdao.lib.drivers.api import DOEdriver                                     
+from openmdao.lib.drivers.api import NeiborhoodDOEdriver                                     
 from openmdao.lib.doegenerators.api import FullFactorial, Uniform, CentralComposite
 from openmdao.lib.components.api import MetaModel
 from openmdao.lib.casehandlers.api import DBCaseRecorder
@@ -64,18 +64,18 @@ class SellarBLISS2000(Assembly):
         
         #training metalmodel for disc1
         
-        self.add("DOE_Trainer_dis1",DOEdriver())
+        self.add("DOE_Trainer_dis1",NeiborhoodDOEdriver())
         self.DOE_Trainer_dis1.DOEgenerator = CentralComposite()
         self.DOE_Trainer_dis1.alpha = .1
         self.DOE_Trainer_dis1.add_parameter("meta_model_dis1.z1",low=-10,high=10,start=5.0)        
         self.DOE_Trainer_dis1.add_parameter("meta_model_dis1.z2",low=0,high=10,start=2.0)   
-        self.DOE_Trainer_dis1.add_parameter("meta_model_dis1.y2",low=0,high=20)   
+        self.DOE_Trainer_dis1.add_parameter("meta_model_dis1.y2",low=-100,high=100)   
         self.DOE_Trainer_dis1.add_event("meta_model_dis1.train_next")
         self.DOE_Trainer_dis1.force_execute = True        
         
         #training metalmodel for disc1
         
-        self.add("DOE_Trainer_dis2",DOEdriver())
+        self.add("DOE_Trainer_dis2",NeiborhoodDOEdriver())
         self.DOE_Trainer_dis2.DOEgenerator = CentralComposite()
         self.DOE_Trainer_dis2.alpha = .1
         self.DOE_Trainer_dis2.add_parameter("meta_model_dis2.z1",low=-10,high=10,start=5.0)        
@@ -94,9 +94,9 @@ class SellarBLISS2000(Assembly):
         
         self.sysopt.add_parameter(['meta_model_dis1.z1','meta_model_dis2.z1'], low=-10, high=10.0,start=5.0)
         self.sysopt.add_parameter(['meta_model_dis1.z2','meta_model_dis2.z2'], low=0, high=10.0,start=2.0)        
-        self.sysopt.add_parameter('meta_model_dis1.y2', low=0, high=20.0)
+        self.sysopt.add_parameter('meta_model_dis1.y2', low=-1e99, high=1e99)
         
-        self.sysopt.add_parameter('meta_model_dis2.y1', low=0, high=20.0)
+        self.sysopt.add_parameter('meta_model_dis2.y1', low=-1e99, high=1e99)
         
         #feasibility constraints
         self.sysopt.add_constraint('meta_model_dis1.y2 <= meta_model_dis2.y2')
@@ -178,37 +178,8 @@ if __name__ == "__main__":
     
     print
     print "Minimum found at", prob.meta_model_dis1.z1,prob.z2_store,prob.meta_model_dis1.x1
+    print "Coupling Vars: %f, %f"%(prob.meta_model_dis2.y1,prob.meta_model_dis1.y2)
     print "with objective function value:",(prob.meta_model_dis1.x1)**2 + \
           prob.meta_model_dis1.z2 + prob.meta_model_dis1.y1 + math.exp(-prob.meta_model_dis2
                                                                        .y2)        
-    print "sysopt params"
-    for k in prob.sysopt.get_parameters(): 
-        print k
-    print "sysopt objectives"
-    for k in prob.sysopt.get_objectives(): 
-        print k
-    print "sysopt constraints"
-    for k in prob.sysopt.list_constraints(): 
-        print k
-
-    print "local_opt params"
-    for k in prob.local_opt_dis1.get_parameters():    
-        print k
-    print "local_opt objectives"
-    for k in prob.local_opt_dis1.get_objectives(): 
-        print k
-    print "local_opt constraints"
-    for k in prob.local_opt_dis1.list_constraints(): 
-        print k
-    print "main_driver constraints"
-    for k in prob.driver.list_constraints(): 
-        print k
-    print "main_driver params"
-    for k in prob.driver.get_parameters():    
-        print k  
-    print        
-    print
-    print [x.name for x in prob.driver.workflow]
-    print [x.name for x in prob.sysopt.workflow]
-    print [x.name for x in prob.local_opt_dis1.workflow]
-    print "----------------------"
+    

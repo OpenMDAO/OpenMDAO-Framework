@@ -89,25 +89,25 @@ def run_arch_test_suite(arch=[], optproblems=[]):
         The OptProblems to test the Architectures on. 
     """
     
-    compat_matrix = []
+    compat_data = {}
     for a in arch: 
-        arch_row = []
+        arch_data = {}
         for p in optproblems: 
-            print "Testing %s on %s"%(a,p)
+            print "Testing %s on %s"%(a.__class__,p.__class__)
             prob = p.__class__()
             prob.architecture = a.__class__()
             try:
                 prob.check_config()
-                arch_row.append(True)
+                arch_data[p] = True
             except RuntimeError as err: 
-                arch_row.append(False) #not compatible, so just move on
+                arch_data[p] = False #not compatible, so just move on
                 continue 
             prob.run()
-            print prob.check_solution()
+            #print prob.check_solution()
             
-        compat_matrix.append(arch_row)
+        compat_data[a] = arch_data
         
-    return compat_matrix
+    return compat_data
 
 if __name__ == "__main__": 
     archs = build_arch_list()

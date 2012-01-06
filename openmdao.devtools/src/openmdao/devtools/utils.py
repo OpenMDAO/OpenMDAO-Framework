@@ -16,6 +16,7 @@ try:
     from fabric.state import connections
     from fabric.network import connect
 except ImportError as err:
+    connections = {}
     logging.warn("In %s: %r" % (__file__, err))
 
 from openmdao.util.fileutil import find_up, cleanup
@@ -298,7 +299,26 @@ def rsync_dirs(dest, host, dirs=('downloads','dists'),
     for dname in dirs:
         doit('rsync -arvzt --delete %s:%s %s' % (host, dname, dest))
 
-        
+
+@stub_if_missing_deps('fabric')
+def retrieve_docs(remote_dir):
+    """Retrieve a tar file of the docs built on a remote machine."""
+    cmds = [ "import tarfile",
+             "import os",
+             "for fname in os.listdir('%s'):" % remote_dir,
+             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
+             "        break",
+             "else:",
+             "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
+             "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
+             "tar = tarfile.open(os.path.join('%s','html.tar.gz'), mode='w:gz')" % remote_dir,
+             "tar.add(tardir, arcname='html')",
+             "tar.close()",
+             ]
+    
+    result = remote_py_cmd(cmds)
+    get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
+    
 
 #
 # Git related utilities

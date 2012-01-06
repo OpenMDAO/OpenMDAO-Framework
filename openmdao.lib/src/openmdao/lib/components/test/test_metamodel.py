@@ -400,9 +400,9 @@ class MetaModelTestCase(unittest.TestCase):
         
         s.mm.x = 10
         s.mm.reset_training_data = True
-        self.assertEqual(len(s.mm._training_input_history), 1)
+        self.assertEqual(len(s.mm._training_input_history), 0)
         for name, tup in s.mm._surrogate_info.items():
-            self.assertEqual(s.mm._surrogate_info[name],[])
+            self.assertEqual(s.mm._surrogate_info[name][1],[])
 
         #all meta model inputs should remain at their current values
         self.assertEqual(s.mm.x, 10)
@@ -422,7 +422,7 @@ class MetaModelTestCase(unittest.TestCase):
         s.mm.train_next = True
         s.mm.x = 30
         s.run()
-        self.assertEqual(s.mm.x, 20)
+        self.assertEqual(s.mm.x, 30)
         
         s.run()
         

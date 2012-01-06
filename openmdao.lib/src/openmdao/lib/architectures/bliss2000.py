@@ -1,5 +1,5 @@
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil,FixedPointIterator,DOEdriver
+from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil,FixedPointIterator,NeiborhoodDOEdriver
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite
 from openmdao.lib.components.api import MetaModel
@@ -16,6 +16,8 @@ class BLISS2000(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.requires_global_des_vars = True
+
     
     def configure(self): 
         """setup and BLISS2000 architecture inside this assembly.
@@ -35,11 +37,6 @@ class BLISS2000(Architecture):
         
         driver=self.parent.add("driver",FixedPointIterator())
                
-        
-        '''
-        self.parent.driver.workflow=SequentialWorkflow()        
-        self.parent.driver.workflow.add(['driver'])        
-        '''
         driver.workflow = SequentialWorkflow()           
         
         for comp,globalt in des_vars.iteritems(): 
@@ -84,9 +81,12 @@ class BLISS2000(Architecture):
         
         
         for comp,globalt in des_vars.iteritems(): 
-            dis_doe=self.parent.add("DOE_Trainer_%s"%comp,DOEdriver())
+            dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
             for key,couple in coupling.iteritems(): 
+                
                 if comp==couple.indep.target[:-len(key)-1]:
+                    print couple.indep.target
+                    exit()
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,key),low=0,high=20)  #fix this later
             for param,group in global_dvs:
                 dis_doe.add_parameter("meta_model_%s.%s"%(comp,param),low=group.low, high=group.high,start=group.start)

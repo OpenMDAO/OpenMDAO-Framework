@@ -7,9 +7,6 @@ from openmdao.lib.optproblems.sellar import SellarProblem
 from openmdao.lib.architectures.mdf import MDF
 from openmdao.util.arch_test_suite import build_arch_list, build_optproblem_list
 
-
-
-
 class TestArchTestSuite(unittest.TestCase): 
     
     def test_build_optproblem_list(self): 

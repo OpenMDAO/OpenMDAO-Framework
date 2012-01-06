@@ -11,7 +11,8 @@ from argparse import ArgumentParser
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
-                                    ssh_test, put_dir, cleanup, remote_py_cmd, get, cd
+                                    ssh_test, put_dir, cleanup, remote_py_cmd, \
+                                    retrieve_docs
 from openmdao.devtools.remote_cfg import add_config_options, process_options, \
                                          run_host_processes, get_tmp_user_dir, \
                                          print_host_codes
@@ -82,25 +83,10 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
             print "removing remote directory: %s" % remotedir
             rm_remote_tree(remotedir)
 
-def retrieve_docs(remote_dir):
-    cmds = [ "import tarfile",
-             "import os",
-             "for fname in os.listdir('%s'):" % remote_dir,
-             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
-             "        break",
-             "else:",
-             "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
-             "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
-             "tar = tarfile.open(os.path.join('%s','html.tar.gz'), mode='w:gz')" % remote_dir,
-             "tar.add(tardir, arcname='html')",
-             "tar.close()",
-             ]
-    
-    result = remote_py_cmd(cmds)
-    get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
-    
-
-def test_branch(options, args=None):
+def test_branch(parser, options, args=None):
+    if args:
+        print_sub_help(parser, 'test_branch')
+        return -1
     atexit.register(fabric_cleanup, True)
     paramiko.util.log_to_file('paramiko.log')
     

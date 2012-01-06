@@ -92,7 +92,7 @@ class HasCouplingVars(object):
                 self._parent.raise_exception("Cant add coupling variable with dep '%s' "
                                              "because is not a valid variable"%dep,
                                              ValueError)        
-        if self._couples: 
+        if self._couples:          
             if indep in [c[0] for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
                                              "exists in assembly"%indep,ValueError)    
