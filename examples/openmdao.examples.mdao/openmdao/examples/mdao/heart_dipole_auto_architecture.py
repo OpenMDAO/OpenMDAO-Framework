@@ -2,7 +2,7 @@ from openmdao.lib.architectures.api import MDF, BLISS, CO, BLISS2000
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     
 from openmdao.lib.optproblems.api import UnitScalableProblem
-#from openmdao.lib.optproblems.api import SellarProblem as UnitScalableProblem
+from openmdao.lib.optproblems.api import SellarProblem as UnitScalableProblem
 
         
 from openmdao.main.api import SequentialWorkflow

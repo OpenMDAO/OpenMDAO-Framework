@@ -52,6 +52,7 @@ class BLISS2000(Architecture):
         #optimization of each discpline with respect to local design variables
         
         couple_deps = self.parent.get_coupling_deps_by_comp()
+        couple_indeps = self.parent.get_coupling_indeps_by_comp()
         for comp,local in local_dvs.iteritems():
             local_opt = self.parent.add("local_opt_%s"%comp,CONMINdriver()) #metamodel now replaces old component with same name  
             local_opt.force_execute=True         
@@ -73,6 +74,8 @@ class BLISS2000(Architecture):
                 obj.append('meta_model_%s'%couple.dep.target)
             
             local_opt.add_objective("+".join(obj))
+            #local_opt.fdch = .0001
+            #local_opt.fdchm = .0001
 
             driver.workflow.add(local_opt.name)            
         
@@ -87,16 +90,14 @@ class BLISS2000(Architecture):
         
         for comp,globalt in des_vars.iteritems(): 
             dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
-            deps = couple_deps[comp] 
-            for key,couple in coupling.iteritems(): 
+            
+            for couple in couple_indeps[comp] :
+                dis_doe.add_parameter("meta_model_%s"%couple.indep.target,low=-20,high=20) #change to -1e99/1e99 
                 
-                
-                if comp==couple.indep.target[:-len(key)-1]:
-                    dis_doe.add_parameter("meta_model_%s.%s"%(comp,key),low=-1e99,high=1e99)  #fix this later
             for param,group in global_dvs:
                 dis_doe.add_parameter("meta_model_%s.%s"%(comp,param),low=group.low, high=group.high,start=group.start)
             dis_doe.DOEgenerator = CentralComposite()
-            dis_doe.alpha=0.1
+            dis_doe.alpha=0.08
             dis_doe.add_event("meta_model_%s.train_next"%comp)
             dis_doe.force_execute = True
             driver.workflow.add(dis_doe.name)
@@ -111,7 +112,8 @@ class BLISS2000(Architecture):
         
         #optimization of system objective function using the discipline meta models
         sysopt=self.parent.add('sysopt', CONMINdriver())       
-
+        sysopt.fdch = .00001
+        sysopt.fdchm = .00001
         
         obj2= objective[1].text
         for comp in objective[1].get_referenced_compnames():
