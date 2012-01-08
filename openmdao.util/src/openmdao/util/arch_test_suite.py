@@ -93,16 +93,21 @@ def run_arch_test_suite(arch=[], optproblems=[]):
     for a in arch: 
         arch_data = {}
         for p in optproblems: 
-            print "Testing %s on %s"%(a.__class__,p.__class__)
+            
             prob = p.__class__()
             prob.architecture = a.__class__()
+            print "Testing %s on %s"%(a.__class__,p.__class__), "...", 
             try:
                 prob.check_config()
                 arch_data[p] = True
+                
             except RuntimeError as err: 
                 arch_data[p] = False #not compatible, so just move on
+                print "incompatible"
                 continue 
+            
             prob.run()
+            print "Success"
             #print prob.check_solution()
             
         compat_data[a] = arch_data

@@ -30,6 +30,7 @@ class EGO(Architecture):
         # the following variables determine the behavior of check_config
         self.param_types = ['continuous']
         self.num_allowed_objectives = 1
+        self.has_coupling_vars = False
             
     def configure(self):    
         self._tdir = mkdtemp()        

@@ -204,6 +204,16 @@ class ProblemFormulationTest(unittest.TestCase):
                              "in parent")
         else:
             self.fail("RuntimeError expected")
+            
+        arch.requires_global_des_vars = True  
+        arch.param_types = ['continuous','discrete']
+        try: 
+            self.asm.check_config()
+        except RuntimeError as err: 
+            self.assertEqual(str(err), "this Architecture requires global design variables in the problem " 
+            "formulation but none were found in parent")
+        else: 
+            self.fail("RuntimeError expected")
 
         
     def test_check_config_constraints(self):

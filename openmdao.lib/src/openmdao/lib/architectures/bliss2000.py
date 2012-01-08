@@ -39,9 +39,11 @@ class BLISS2000(Architecture):
                
         driver.workflow = SequentialWorkflow()           
         
+        meta_models = {}
         for comp,globalt in des_vars.iteritems(): 
             mm_name = "meta_model_%s"%comp
             meta_model = self.parent.add(mm_name,MetaModel()) #metamodel now replaces old component with same name 
+            meta_models[comp] = meta_model
             meta_model.surrogate = {'default':ResponseSurface()}
             meta_model.model = self.parent.get(comp)
             meta_model.recorder = DBCaseRecorder()
@@ -49,6 +51,7 @@ class BLISS2000(Architecture):
 
         #optimization of each discpline with respect to local design variables
         
+        couple_deps = self.parent.get_coupling_deps_by_comp()
         for comp,local in local_dvs.iteritems():
             local_opt = self.parent.add("local_opt_%s"%comp,CONMINdriver()) #metamodel now replaces old component with same name  
             local_opt.force_execute=True         
@@ -64,17 +67,19 @@ class BLISS2000(Architecture):
                 c=c.replace(comp,"meta_model_%s"%comp)
                 local_opt.add_constraint(str(c))
             
+            deps = couple_deps[comp]  
+            obj = []
+            for couple in deps: 
+                obj.append('meta_model_%s'%couple.dep.target)
             
-            for key,couple in coupling.iteritems(): 
-                if comp==couple.dep.target[:-len(key)-1]:
-                    local_opt.add_objective('meta_model_'+couple.dep.target)
-                    break
+            local_opt.add_objective("+".join(obj))
+
             driver.workflow.add(local_opt.name)            
         
         
         reset_train=self.parent.add('reset_train',Driver())
-        reset_train.add_event('meta_model_dis1.reset_training_data')
-        reset_train.add_event('meta_model_dis2.reset_training_data')        
+        for k,v in meta_models.iteritems(): 
+            reset_train.add_event('%s.reset_training_data'%v.name)
         reset_train.force_execute = True
         driver.workflow.add('reset_train')
         
@@ -85,8 +90,6 @@ class BLISS2000(Architecture):
             for key,couple in coupling.iteritems(): 
                 
                 if comp==couple.indep.target[:-len(key)-1]:
-                    print couple.indep.target
-                    exit()
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,key),low=0,high=20)  #fix this later
             for param,group in global_dvs:
                 dis_doe.add_parameter("meta_model_%s.%s"%(comp,param),low=group.low, high=group.high,start=group.start)
