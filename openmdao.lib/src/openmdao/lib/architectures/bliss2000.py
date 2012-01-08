@@ -87,10 +87,12 @@ class BLISS2000(Architecture):
         
         for comp,globalt in des_vars.iteritems(): 
             dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
+            deps = couple_deps[comp] 
             for key,couple in coupling.iteritems(): 
                 
+                
                 if comp==couple.indep.target[:-len(key)-1]:
-                    dis_doe.add_parameter("meta_model_%s.%s"%(comp,key),low=0,high=20)  #fix this later
+                    dis_doe.add_parameter("meta_model_%s.%s"%(comp,key),low=-1e99,high=1e99)  #fix this later
             for param,group in global_dvs:
                 dis_doe.add_parameter("meta_model_%s.%s"%(comp,param),low=group.low, high=group.high,start=group.start)
             dis_doe.DOEgenerator = CentralComposite()
@@ -128,7 +130,7 @@ class BLISS2000(Architecture):
         #add coupling variables (independents) as parameters
         for key,couple in coupling.iteritems():
             s=couple.indep.target
-            sysopt.add_parameter("meta_model_%s"%s, low=0, high=20) #fix later
+            sysopt.add_parameter("meta_model_%s"%s, low=-1e99, high=1e99) #fix later
         #feasibility constraints, referenced to metamodels
         
         for key,couple in coupling.iteritems():
