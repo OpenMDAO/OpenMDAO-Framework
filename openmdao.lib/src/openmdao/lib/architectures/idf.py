@@ -13,6 +13,7 @@ class IDF(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.requires_global_des_vars = False
     
     def configure(self): 
         """setup and IDF architecture inside this assembly.

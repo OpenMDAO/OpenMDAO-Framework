@@ -182,66 +182,7 @@ class BLISS(Architecture):
             self.parent.driver.workflow.add("sysopt")
             
             
-        """print self.parent.driver.name
-        print "constraints: "
-        for c in self.parent.driver.get_eq_constraints():
-            print "    ",c
-        print "\nParams: "    
-        for param in self.parent.driver.get_parameters(): 
-            print "    ",param
-            
-        print self.parent.ssa.name
-        print "constraints: "
-        for c in self.parent.ssa.get_constraints():
-            print "    ",c
-        print "objectives: " 
-        for k,v in self.parent.ssa.get_objectives().iteritems(): 
-            print "    ",v
-        print "\nParams: "    
-        for param in self.parent.ssa.get_parameters(): 
-            print "    ",param
-        
-
-        d = getattr(self.parent,"sysopt")
-        print d.name
-        print "constraints: " 
-        for c in d.get_ieq_constraints():
-            print "    ",c
-        print "objectives: " 
-        for k,v in d.get_objectives().iteritems(): 
-            print "    ",v
-        print "\nParams: "    
-        for param in d.get_parameters(): 
-            print "    ",param            
-            
-        for d in sa_s: 
-            d = getattr(self.parent,d)
-            print d.name
-            print "constraints: " 
-            for c in d.get_constraints():
-                print "    ",c
-            print "objectives: " 
-            for k,v in d.get_objectives().iteritems(): 
-                print "    ",v
-            print "\nParams: "    
-            for param in d.get_parameters(): 
-                print "    ",param
-                
-        for d in bbopts: 
-            d = getattr(self.parent,d)
-            print d.name
-            print "constraints: " 
-            for c in d.get_ineq_constraints():
-                print "    ",c
-            print "objectives: " 
-            for k,v in d.get_objectives().iteritems(): 
-                print "    ",v
-            print "\nParams: "    
-            for param in d.get_parameters(): 
-                print "    ",param        
-            
-        
-        exit()"""
+       
                 
         
     
