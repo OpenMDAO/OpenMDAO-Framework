@@ -17,7 +17,7 @@ def main():
         i += 1
         if opt in ('-V',):
             print opt
-        elif opt in ('-S', '-W'):
+        elif opt in ('-j', '-S', '-W'):
             arg = sys.argv[i]
             i += 1
             print opt, 'arg', arg

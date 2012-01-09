@@ -80,6 +80,7 @@ class TestCase(unittest.TestCase):
         server.execute_command(dict(remote_command='echo',
                                     args=['hello', 'world'],
                                     working_directory='.',
+                                    account_id='my-nas-acct',
                                     job_name='TestJob',
                                     job_environment={'ENV_VAR': 'env_value'},
                                     parallel_environment='ompi',
@@ -109,9 +110,10 @@ class TestCase(unittest.TestCase):
             sh1 = ' -S /bin/sh'
             sh2 = '-S arg /bin/sh\n'
         self.assertEqual(''.join(lines), """\
--V -W block=true%s .%sTestJob.qsub
+-V -W block=true -j oe%s .%sTestJob.qsub
 -V
 -W arg block=true
+-j arg oe
 %s.%sTestJob.qsub
 """ % (sh1, os.sep, sh2, os.sep))
 
@@ -119,6 +121,7 @@ class TestCase(unittest.TestCase):
             lines = inp.readlines()
         self.assertTrue(''.join(lines).startswith("""\
 #!/bin/sh
+#PBS -W group_list=my-nas-acct
 #PBS -N TestJob
 #PBS -l select=256:ncpus=1
 #PBS -M user1@host1,user2@host2
@@ -137,6 +140,8 @@ class TestCase(unittest.TestCase):
 echo hello world <echo.in >echo.out 2>&1
 """))
         # 'qsub' failure.
+        allocator = PBS_Allocator()
+        PBS_Server.parent_allocators[server] = allocator
         PBS_Server._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"
         assert_raises(self, code, globals(), locals(), OSError, '')

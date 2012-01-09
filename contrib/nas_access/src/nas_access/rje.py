@@ -93,22 +93,28 @@ def main(): # pragma no cover
     logger.info(msg)
 
     # And away we go...
+    wrappers = {}
     signal.signal(signal.SIGTERM, _sigterm_handler)
     try:
         delay = 1  # Start with high polling rate.
         while True:
-            connection = server_accept(dmz_host, poll_delay, logger)
-            if connection is None:
+            conn_info, removed = server_accept(dmz_host, poll_delay, logger)
+            for client in removed:
+                wrapper = wrappers.pop(client, None)
+                if wrapper is not None:
+                    wrapper.shutdown()
+            if conn_info is None:
                 server_heartbeat(dmz_host, poll_delay, logger)
                 delay = min(delay + 1, poll_delay)  # Back-off.
                 time.sleep(delay)
             else:
+                client, connection = conn_info
                 wrapper = AllocatorWrapper(allocator, connection, poll_delay)
-                name = '%s_handler' % os.path.basename(connection.root)
-                handler = threading.Thread(name=name,
+                handler = threading.Thread(name='%s_handler' % client,
                                            target=wrapper.process_requests)
                 handler.daemon = True
                 handler.start()
+                wrappers[client] = wrapper
     except KeyboardInterrupt:
         pass
     finally:

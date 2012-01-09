@@ -271,7 +271,7 @@ def start_server(hostname):
     heartbeat = '%s=%s' % (os.path.join(_DMZ_ROOT, root), 'heartbeat')
     for retry in range(20):
         time.sleep(0.5)
-        if os.path.exists(heartbeat):
+        if os.path.exists(heartbeat) and os.path.getsize(heartbeat) > 0:
             return proc
     raise RuntimeError('server startup timeout')
 

@@ -7,8 +7,8 @@ from __future__ import absolute_import
 
 import logging
 import os.path
-import shutil
 import sys
+import tempfile
 
 from openmdao.main.rbac import rbac
 from openmdao.main.resource import ResourceAllocator
@@ -184,7 +184,6 @@ class NAS_Allocator(ResourceAllocator):
             server.shutdown()
         self._conn.invoke('shutdown')
         self._conn.close()
-        shutil.rmtree(os.path.dirname(self._conn.root))
 
 
 class NAS_Server(object):
@@ -314,16 +313,7 @@ class NAS_Server(object):
             Size of buffer to use.
         """
         self._logger.debug('open %r %r %s', filename, mode, bufsize)
-        if 'r' in mode:
-            # Transfer file here and then return regular file object.
-            # Local copy will be removed when connection is closed.
-            self._conn.invoke('putfile', (filename,))
-            self._conn.recv_file(filename)
-            self._conn.remove_files((filename,))
-            return open(os.path.join(self._conn.root, filename), mode, bufsize)
-        else:
-            # Write file here and upon closing transfer to remote.
-            return _File(filename, mode, bufsize, self._conn)
+        return _File(filename, mode, bufsize, self._conn)
 
     @rbac('owner')
     def remove(self, path):
@@ -372,36 +362,78 @@ class _File(object):
 
     def __init__(self, filename, mode, bufsize, conn):
         self._filename = filename
-        self._fileobj = open(os.path.join(conn.root, filename), mode, bufsize)
+        self._mode = mode
         self._conn = conn
+        fd, path = tempfile.mkstemp()
+        try:
+            os.close(fd)
+            self._path = path
+            if 'r' in mode:
+                # Transfer remote file to local copy.
+                self._conn.invoke('putfile', (filename,))
+                self._conn.recv_file(filename, path)
+                self._conn.remove_files((filename,))
+            self._fileobj = open(path, mode, bufsize)
+        except Exception:
+            os.remove(path)
+            raise
+
+    @property
+    def closed(self):
+        """ True if file is not open. """
+        return self._fileobj.closed
+
+    def __enter__(self):
+        """ Enter context. """
+        self._fileobj.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """ Exit context. """
+        return self._fileobj.__exit__(exc_type, exc_value, traceback)
 
     def close(self):
-        """ Close the file and send to remote. """
-        self._fileobj.close()
-        self._conn.send_file(self._filename)
-        self._conn.invoke('getfile', (self._filename,))
-        os.remove(os.path.join(self._conn.root, self._filename))
+        """ Close the file. If writing, send to remote. """
+        try:
+            self._fileobj.close()
+            if not 'r' in self._mode:
+                # Transfer local file to remote copy.
+                self._conn.send_file(self._path, self._filename)
+                self._conn.invoke('getfile', (self._filename,))
+        finally:
+            os.remove(self._path)
 
     def flush(self):
-        """ Flush buffered data. """
+        """ Flush any buffered output. """
         self._fileobj.flush()
 
-    def write(self, data):
-        """
-        Write `data`.
+    def __iter__(self):
+        """ Return iterator. """
+        self._fileobj.__iter__()
+        return self
 
-        data: string
-            Bytes to be written.
-        """
+    def next(self):
+        """ Return next input line or raise StopIteration. """
+        return self._fileobj.next()
+
+    def read(self, size=-1):
+        """ Read up to `size` bytes. """
+        return self._fileobj.read(size)
+
+    def readline(self, size=-1):
+        """ Read one line. """
+        return self._fileobj.readline(size)
+
+    def readlines(self, sizehint=-1):
+        """ Read until EOF. """
+        return self._fileobj.readlines(sizehint)
+
+    def write(self, data):
+        """ Write `data`. """
         self._fileobj.write(data)
 
     def writelines(self, data):
-        """
-        Write `data`.
-
-        data: sequence
-            Lines to be written.
-        """
+        """ Write `data`. """
         self._fileobj.writelines(data)
 
 

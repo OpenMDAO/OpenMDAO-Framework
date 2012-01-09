@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import logging
 import os.path
-import shutil
+import tempfile
 import threading
 import time
 import traceback
@@ -43,12 +43,7 @@ class AllocatorWrapper(object):
         self.stop = False
 
     def process_requests(self):
-        """
-        Wait for a request, process it, and send the reply.
-        If the request result is a :class:`ObjectServer`, then a
-        :class:`ServerWrapper` is created for it and the reply data is
-        the associated ``(connection-root, server-pid)``.
-        """
+        """ Wait for a request, process it, and send the reply. """
         delay = 1
         while not self.stop:
             time.sleep(delay)
@@ -77,12 +72,11 @@ class AllocatorWrapper(object):
 
         for root in self._wrappers.keys():
             self.release(root)
-        shutil.rmtree(self._conn.root)
 
     def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
-        Returns how to connect to server thread.
+        Returns how to connect to server wrapper.
 
         name: string
             Name for server.
@@ -94,6 +88,9 @@ class AllocatorWrapper(object):
             The dictionary returned by :meth:`time_estimate`.
         """
         server = self._allocator.deploy(name, resource_desc, criteria)
+        if server is None:
+            raise RuntimeError('deploy(%r, %r, %r) failed'
+                               % (name, resource_desc, criteria))
 
         path = '%s/%s' % (self._conn.root, server.name)
         name = '%s_wrapper' % server.name
@@ -189,8 +186,6 @@ class ServerWrapper(object):
             else:
                 self._conn.send_reply(result)
 
-        shutil.rmtree(self._conn.root)
-
     def getfile(self, filename):
         """
         Copy `filename` from remote file server.
@@ -198,11 +193,14 @@ class ServerWrapper(object):
         filename: string
             Name of file to receive.
         """
-        self._conn.recv_file(filename)
-        local = os.path.join(self._conn.root, filename)
-        filexfer(None, local, self._server, filename)
-        self._conn.remove_files((filename,))
-        os.remove(local)
+        fd, path = tempfile.mkstemp()
+        try:
+            os.close(fd)
+            self._conn.recv_file(filename, path)
+            filexfer(None, path, self._server, filename)
+            self._conn.remove_files((filename,))
+        finally:
+            os.remove(path)
 
     def putfile(self, filename):
         """
@@ -211,10 +209,13 @@ class ServerWrapper(object):
         filename: string
             Name of file to send.
         """
-        local = os.path.join(self._conn.root, filename)
-        filexfer(self._server, filename, None, local)
-        self._conn.send_file(filename)
-        os.remove(local)
+        fd, path = tempfile.mkstemp()
+        try:
+            os.close(fd)
+            filexfer(self._server, filename, None, path)
+            self._conn.send_file(path, filename)
+        finally:
+            os.remove(path)
 
     def stat(self, path):
         """

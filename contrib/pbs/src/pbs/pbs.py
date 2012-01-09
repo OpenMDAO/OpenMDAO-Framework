@@ -26,6 +26,9 @@ class PBS_Allocator(FactoryAllocator):
     name: string
         Name of allocator, used in log messages, etc.
 
+    account_id: string
+        Default value for ``account_id`` resource key.
+
     authkey: string
         Authorization key for this allocator and any deployed servers.
 
@@ -43,13 +46,16 @@ class PBS_Allocator(FactoryAllocator):
 
         [PBS]
         classname: pbs.PBS_Allocator
+        account_id: no-default-set
         authkey: PublicKey
         allow_shell: True
 
     """
 
-    def __init__(self, name='PBS', authkey=None, allow_shell=True):
+    def __init__(self, name='PBS', account_id='no-default-set',
+                 authkey=None, allow_shell=True):
         super(PBS_Allocator, self).__init__(name, authkey, allow_shell)
+        self.account_id = account_id
         self.factory.manager_class = _ServerManager
         self.factory.server_classname = 'pbs_pbs_PBS_Server'
 #FIXME: need to somehow determine available cpus.
@@ -64,9 +70,12 @@ class PBS_Allocator(FactoryAllocator):
             Configuration data is located under the section matching
             this allocator's `name`.
 
-        Allows modifying factory options.
+        Allows modifying `account_id` and factory options.
         """
         super(PBS_Allocator, self).configure(cfg)
+        if cfg.has_option(self.name, 'account_id'):
+            self.account_id = cfg.get(self.name, 'account_id')
+            self._logger.debug('    account_id: %s', self.account_id)
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -145,11 +154,34 @@ class PBS_Allocator(FactoryAllocator):
                 return (-2, {key: 'unrecognized key'})
         return (0, {})
 
+    @rbac('*')
+    def deploy(self, name, resource_desc, criteria):
+        """
+        Deploy a server suitable for `resource_desc`.
+        Returns a proxy to the deployed server.
+        Overrides superclass to be able to pass `account_id`.
+
+        name: string
+            Name for server.
+
+        resource_desc: dict
+            Description of required resources.
+
+        criteria: dict
+            The dictionary returned by :meth:`time_estimate`.
+        """
+        server = \
+            super(PBS_Allocator, self).deploy(name, resource_desc, criteria)
+        if server is not None:
+            PBS_Server.parent_allocators[server] = self
+        return server
+
 
 class PBS_Server(ObjServer):
     """ Knows about executing a command via `qsub`. """
 
-    _QSUB = ['qsub']  # Replaced with path to fake for testing.
+    parent_allocators = {}  # Used to access parent allocator account_id.
+    _QSUB = ['qsub']        # Replaced with fake command for testing.
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -228,7 +260,7 @@ class PBS_Server(ObjServer):
         dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
         cmd = list(self._QSUB)
-        cmd.extend(('-V', '-W', 'block=true'))
+        cmd.extend(('-V', '-W', 'block=true', '-j', 'oe'))
         if sys.platform != 'win32':
             cmd.extend(('-S', '/bin/sh'))
         env = None
@@ -254,6 +286,12 @@ class PBS_Server(ObjServer):
 
         with open(script_name, 'w') as script:
             script.write('#!/bin/sh\n')
+
+            if 'account_id' in resource_desc:
+                account_id = resource_desc['account_id']
+            else:
+                account_id = self.parent_allocators[self].account_id
+            script.write('#PBS -W group_list=%s\n' % account_id.strip())
 
             # Process description in fixed, repeatable order.
             keys = ('job_name',
