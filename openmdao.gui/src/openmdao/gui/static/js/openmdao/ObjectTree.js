@@ -101,7 +101,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                 if (data.r.hasClass('WorkflowFigure')) {
                                     var component = openmdao.Util.getName(data.o.attr('path')),
                                         pathname  = data.r.data('pathname')
-                                        cmd = 'top.'+pathname+'.workflow.add("'+component+'")';
+                                        cmd = pathname+'.workflow.add("'+component+'")';
                                     debug.info(cmd);
                                     model.issueCommand(cmd);
                                 }
@@ -172,14 +172,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             new openmdao.PropertiesEditor(id,model).editObject(path)
                         }
         };
-        if (jQuery.inArray('IDriver',interfaces) >= 0) {
-            menu.show_workflow = {
-                "label"  : 'Show Workflow',
-                "action" :  function(node) { 
-                                workflow_fn(path);
-                            }
-            }
-        };
         if (isAssembly) {
             menu.show_dataflow = {
                 "label"  : 'Show Structure',
@@ -187,17 +179,19 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                 dataflow_fn(path);
                             }
             }
-            menu.set_top = {
-                "label"  : 'Set as Top',
+        };
+        if (isAssembly || jQuery.inArray('IDriver',interfaces) >= 0) {
+            menu.show_workflow = {
+                "label"  : 'Show Workflow',
                 "action" :  function(node) { 
-                                model.setTop(path)
+                                workflow_fn(path);
                             }
-            };
+            }
         };
         menu.run = {
             "label"  : 'Run this Component',
             "action" :  function(node) { 
-                            model.issueCommand('top.'+path+'.run()');
+                            model.issueCommand(path+'.run()');
                         }
         };
         menu.toggle = {
@@ -217,12 +211,12 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             "action" :  function(node) { 
                             var parent = openmdao.Util.getPath(path);
                             if (parent.length > 0 ) {
-                                parent = 'top.'+parent;
+                                model.issueCommand(parent+'.remove("'+openmdao.Util.getName(path)+'")');
                             }
                             else {
-                                parent = 'top';
+                                model.issueCommand('del('+openmdao.Util.getName(path)+')');
                             }
-                            model.issueCommand(parent+'.remove("'+openmdao.Util.getName(path)+'")');
+                            
                         }
         };        
         return menu;

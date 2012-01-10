@@ -41,14 +41,14 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         parms.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
             // TODO: check type and behave appropriately (quotes around strings?)
-            cmd = 'top.'+pathname+'.'+args.item.name+'='+args.item.value
+            cmd = pathname+'.'+args.item.name+'='+args.item.value
             model.issueCommand(cmd)
         });
    };
     
     /** add a new parameter */
     function addParameter(target,low,high,scaler,adder) {
-        cmd = "top."+pathname+".add_parameter('"+target+"'";
+        cmd = pathname+".add_parameter('"+target+"'";
         if (low) {
             cmd = cmd + ",low="+low;
         }            
@@ -105,7 +105,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     
     /** clear all parameters */
     function clearParameters() {
-        cmd = "top."+pathname+".clear_parameters();"
+        cmd = pathname+".clear_parameters();"
         model.issueCommand(cmd);        
     }
     
