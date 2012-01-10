@@ -356,7 +356,7 @@ class PBS_Server(ObjServer):
             if work.startswith(home):
                 work = work[len(home)+1:]
                 if sys.platform == 'win32':
-                    script.write('cd %%HOMEDRIVE%%HOMEPATH%%\n')
+                    script.write('cd %HOMEDRIVE%%HOMEPATH%\n')
                 else:
                     script.write('cd $HOME\n')
             else:

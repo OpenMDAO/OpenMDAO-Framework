@@ -26,8 +26,8 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         PBS_Server._QSUB[:] = self.orig_qsub
-        for name in ('TestJob.qsub', 'echo.in', 'echo.out', 'qsub.out',
-                     'echo.qsub'):
+        for name in ('TestJob.qsub', 'TestJob.bat', 'qsub.out',
+                     'echo.in', 'echo.out', 'echo.qsub'):
             if os.path.exists(name):
                 os.remove(name)
         for name in glob.glob('PBS_TestServer*'):
@@ -78,8 +78,9 @@ class TestCase(unittest.TestCase):
         server = PBS_Server()
 
         # Try various resources.
-        server.execute_command(dict(remote_command='echo',
-                                    args=['hello', 'world'],
+        echo = os.path.join(TestCase.directory, 'echo.py')
+        server.execute_command(dict(remote_command='python',
+                                    args=[echo, 'hello', 'world'],
                                     working_directory='.',
                                     account_id='my-nas-acct',
                                     job_name='TestJob',
@@ -100,10 +101,7 @@ class TestCase(unittest.TestCase):
 
         with open('echo.out', 'r') as inp:
             lines = inp.readlines()
-        if sys.platform == 'win32':
-            self.assertEqual(lines, ['hello world \n'])
-        else:
-            self.assertEqual(lines, ['hello world\n'])
+        self.assertEqual(lines, ['hello world\n'])
 
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
@@ -147,8 +145,9 @@ class TestCase(unittest.TestCase):
 # Skip varification of location-dependent working directory.
 
         self.assertTrue(''.join(lines).endswith("""\
-echo hello world <echo.in >echo.out 2>&1
-"""))
+python %s hello world <echo.in >echo.out 2>&1
+""" % echo))
+
         # 'qsub' failure.
         PBS_Server._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"
