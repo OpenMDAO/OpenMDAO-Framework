@@ -200,7 +200,10 @@ class ServerWrapper(object):
             filexfer(None, path, self._server, filename)
             self._conn.remove_files((filename,))
         finally:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except Exception as exc:  # pragma no cover
+                self._logger.warning("Can't remove temporary file: %s", exc)
 
     def putfile(self, filename):
         """
@@ -215,7 +218,10 @@ class ServerWrapper(object):
             filexfer(self._server, filename, None, path)
             self._conn.send_file(path, filename)
         finally:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except Exception as exc:  # pragma no cover
+                self._logger.warning("Can't remove temporary file: %s", exc)
 
     def stat(self, path):
         """

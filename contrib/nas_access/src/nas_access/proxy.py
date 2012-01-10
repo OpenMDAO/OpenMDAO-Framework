@@ -178,7 +178,11 @@ class NAS_Allocator(ResourceAllocator):
         if server in self._servers:
             self._servers.remove(server)
             timeout = 5 * 60
-            self._conn.invoke('release', (server.conn.root,), timeout=timeout)
+            try:
+                self._conn.invoke('release', (server.conn.root,),
+                                  timeout=timeout)
+            except Exception as exc:  # pragma no cover
+                self._logger.warning("Can't release remote server: %s", exc)
             server.shutdown()
         else:
             raise ValueError('No such server %r' % server)
@@ -340,7 +344,10 @@ class NAS_Server(object):
             Path to file to remove.
         """
         timeout = 5 * 60
-        return self._conn.invoke('remove', (path,), timeout=timeout)
+        try:
+            return self._conn.invoke('remove', (path,), timeout=timeout)
+        except Exception as exc:  # pragma no cover
+            self._logger.warning("Can't remove remote file: %s", exc)
 
     @rbac('owner')
     def stat(self, path):
@@ -394,7 +401,10 @@ class _File(object):
                 self._conn.remove_files((filename,))
             self._fileobj = open(path, mode, bufsize)
         except Exception:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except Exception as exc:  # pragma no cover
+                logging.warning("Can't remove temporary file: %s", exc)
             raise
 
     @property
@@ -421,7 +431,10 @@ class _File(object):
                 timeout = 5 * 60
                 self._conn.invoke('getfile', (self._filename,), timeout=timeout)
         finally:
-            os.remove(self._path)
+            try:
+                os.remove(self._path)
+            except Exception as exc:  # pragma no cover
+                logging.warning("Can't remove temporary file: %s", exc)
 
     def flush(self):
         """ Flush any buffered output. """

@@ -317,7 +317,10 @@ def server_init(dmz_host, logger):  # pragma no cover
     """
     root = _server_root()
     mapped_root = _map_dir(root)  # Ensure a clean remote tree.
-    _ssh(dmz_host, ('rm', '-f', '%s*' % mapped_root), logger)
+    try:
+        _ssh(dmz_host, ('rm', '-f', '%s*' % mapped_root), logger)
+    except Exception as exc:  # pragma no cover
+        logger.warning("Can't remove server root: %s", exc)
     _ssh(dmz_host, ('date', '>', mapped_root), logger)
 
 
@@ -384,7 +387,10 @@ def server_heartbeat(dmz_host, poll_delay, logger):
             out.write('%s\n%s\n' % (tstamp, poll_delay))
         _scp_send(path, dmz_host, root, 'heartbeat', logger)
     finally:
-        os.remove(path)
+        try:
+            os.remove(path)
+        except Exception as exc:  # pragma no cover
+            logger.warning("Can't remove temporary file: %s", exc)
 
 
 def check_server_heartbeat(dmz_host, server_host, logger):
@@ -411,7 +417,10 @@ def check_server_heartbeat(dmz_host, server_host, logger):
             tstamp = inp.readline().strip()
             poll_delay = inp.readline().strip()
     finally:
-        os.remove(path)
+        try:
+            os.remove(path)
+        except Exception as exc:  # pragma no cover
+            logger.warning("Can't remove temporary file: %s", exc)
 
     if '.' in tstamp:
         tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%d %H:%M:%S.%f')
@@ -420,7 +429,7 @@ def check_server_heartbeat(dmz_host, server_host, logger):
     now = datetime.datetime.utcnow()
     poll_delay = int(poll_delay)
     delta = now - tstamp
-    if delta > datetime.timedelta(0, 3 * poll_delay):
+    if delta > datetime.timedelta(0, 4 * poll_delay):
         if delta.days:  # pragma no cover
             plural = 's' if delta.days > 1 else ''
             msg = '%d day%s' % (delta.days, plural)
@@ -449,7 +458,10 @@ def server_cleanup(dmz_host, logger):  # pragma no cover
     """
     root = _server_root()
     mapped_root = _map_dir(root)
-    _ssh(dmz_host, ('rm', '-f', '%s*' % mapped_root), logger)
+    try:
+        _ssh(dmz_host, ('rm', '-f', '%s*' % mapped_root), logger)
+    except Exception as exc:
+        logger.warning("Can't cleanup server root: %s", exc)
 
 
 class Connection(object):
@@ -610,7 +622,10 @@ class Connection(object):
             ready = '%s-ready.%s' % (prefix, seqno)
             self.touch_file(ready)
         finally:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except Exception as exc:  # pragma no cover
+                self._logger.warning("Can't remove temporary file: %s", exc)
 
     def _poll(self, prefix, seqno):
         """
@@ -684,7 +699,10 @@ class Connection(object):
             ready = '%s-ready.%s' % (prefix, seqno)
             self.remove_files((name, ready))
         finally:
-            os.remove(path)
+            try:
+                os.remove(path)
+            except Exception as exc:  # pragma no cover
+                self._logger.warning("Can't remove temporary file: %s", exc)
         return data
 
     def send_file(self, path, name):
@@ -718,10 +736,13 @@ class Connection(object):
         names: sequence(string)
             Names of files to remove.
         """
-        cmd = ['rm']
+        cmd = ['rm', '-f']
         for name in names:
             cmd.append(_map_path('%s/%s' % (self.root, name)))
-        _ssh(self.dmz_host, cmd, self._logger)
+        try:
+            _ssh(self.dmz_host, cmd, self._logger)
+        except Exception as exc:  # pragma no cover
+            self._logger.warning("Can't remove remote file(s): %s", exc)
 
     def touch_file(self, name):
         """

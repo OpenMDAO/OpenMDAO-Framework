@@ -100,40 +100,49 @@ class TestCase(unittest.TestCase):
 
         with open('echo.out', 'r') as inp:
             lines = inp.readlines()
-        self.assertEqual(lines, ['hello world\n'])
+        if sys.platform == 'win32':
+            self.assertEqual(lines, ['hello world \n'])
+        else:
+            self.assertEqual(lines, ['hello world\n'])
 
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
         if sys.platform == 'win32':
-            sh1 = ''
-            sh2 = ''
+            sh1 = ' -C REM PBS'
+            sh2 = '-C arg REM PBS'
         else:
             sh1 = ' -S /bin/sh'
-            sh2 = '-S arg /bin/sh\n'
+            sh2 = '-S arg /bin/sh'
         self.assertEqual(''.join(lines), """\
 -V -W block=true -j oe%s .%sTestJob.qsub
 -V
 -W arg block=true
 -j arg oe
-%s.%sTestJob.qsub
+%s
+.%sTestJob.qsub
 """ % (sh1, os.sep, sh2, os.sep))
 
         with open('TestJob.qsub', 'r') as inp:
             lines = inp.readlines()
+        if sys.platform == 'win32':
+            sh1 = ''
+            prefix = 'REM PBS'
+        else:
+            sh1 = '#!/bin/sh\n'
+            prefix = '#PBS'
         self.assertTrue(''.join(lines).startswith("""\
-#!/bin/sh
-#PBS -W group_list=my-nas-acct
-#PBS -N TestJob
-#PBS -l select=256:ncpus=1
-#PBS -M user1@host1,user2@host2
-#PBS -m n
-#PBS -m bea
-#PBS -a 01010101.00
-#PBS -l walltime=0:00:01
-#PBS -l walltime=0:00:02
-#PBS -l walltime=0:00:03
-#PBS -l walltime=0:00:04
-"""))
+%(sh1)s%(prefix)s -W group_list=my-nas-acct
+%(prefix)s -N TestJob
+%(prefix)s -l select=256:ncpus=1
+%(prefix)s -M user1@host1,user2@host2
+%(prefix)s -m n
+%(prefix)s -m bea
+%(prefix)s -a 01010101.00
+%(prefix)s -l walltime=0:00:01
+%(prefix)s -l walltime=0:00:02
+%(prefix)s -l walltime=0:00:03
+%(prefix)s -l walltime=0:00:04
+""" % dict(sh1=sh1, prefix=prefix)))
 
 # Skip varification of location-dependent working directory.
 

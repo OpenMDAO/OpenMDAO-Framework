@@ -243,8 +243,14 @@ class PBS_Server(ObjServer):
 
         cmd = list(self._QSUB)
         cmd.extend(('-V', '-W', 'block=true', '-j', 'oe'))
-        if sys.platform != 'win32':
+        if sys.platform == 'win32':
+            prefix = 'REM PBS'
+            cmd.extend(('-C', prefix))
+            suffix = '.bat'
+        else:
+            prefix = '#PBS'
             cmd.extend(('-S', '/bin/sh'))
+            suffix = '.qsub'
         env = None
         inp, out, err = None, None, None
         join_files = False
@@ -264,16 +270,17 @@ class PBS_Server(ObjServer):
             base = resource_desc['job_name']
         else:
             base = os.path.basename(resource_desc['remote_command'])
-        script_name = '%s.qsub' % base
+        script_name = '%s%s' % (base, suffix)
 
         with open(script_name, 'w') as script:
-            script.write('#!/bin/sh\n')
+            if sys.platform != 'win32':
+                script.write('#!/bin/sh\n')
 
             if 'account_id' in resource_desc:
                 account_id = resource_desc['account_id']
             else:
                 account_id = os.environ.get('OPENMDAO_PBS_ACCOUNTID', None)
-            script.write('#PBS -W group_list=%s\n' % account_id.strip())
+            script.write('%s -W group_list=%s\n' % (prefix, account_id.strip()))
 
             # Process description in fixed, repeatable order.
             keys = ('queue',
@@ -300,13 +307,13 @@ class PBS_Server(ObjServer):
                     continue
 
                 if key == 'queue':
-                    script.write('#PBS -q %s\n' % value)
+                    script.write('%s -q %s\n' % (prefix, value))
                 elif key == 'job_name':
-                    script.write('#PBS -N %s\n' % value)
+                    script.write('%s -N %s\n' % (prefix, value))
                 elif key == 'job_environment':
                     env = value
                 elif key == 'n_cpus':
-                    script.write('#PBS -l select=%d:ncpus=1\n' % value)
+                    script.write('%s -l select=%d:ncpus=1\n' % (prefix, value))
                 elif key == 'input_path':
                     inp = value
                 elif key == 'output_path':
@@ -316,24 +323,28 @@ class PBS_Server(ObjServer):
                 elif key == 'join_files':
                     join_files = value
                 elif key == 'email':
-                    script.write('#PBS -M %s\n' % ','.join(value))
+                    script.write('%s -M %s\n' % (prefix, ','.join(value)))
                 elif key == 'block_email':
                     if value:
-                        script.write('#PBS -m n\n')
+                        script.write('%s -m n\n' % prefix)
                 elif key == 'email_events':
                     value = value.replace('s', '')  # No suspend event
                     if value:
-                        script.write('#PBS -m %s\n' % value)
+                        script.write('%s -m %s\n' % (prefix, value))
                 elif key == 'start_time':
-                    script.write('#PBS -a %s\n' % value)
+                    script.write('%s -a %s\n' % (prefix, value))
                 elif key == 'hard_wallclock_time_limit':
-                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+                    script.write('%s -l walltime=%s\n'
+                                 % (prefix, self._timelimit(value)))
                 elif key == 'soft_wallclock_time_limit':
-                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+                    script.write('%s -l walltime=%s\n'
+                                 % (prefix, self._timelimit(value)))
                 elif key == 'hard_run_duration_limit':
-                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+                    script.write('%s -l walltime=%s\n'
+                                 % (prefix, self._timelimit(value)))
                 elif key == 'soft_run_duration_limit':
-                    script.write('#PBS -l walltime=%s\n' % self._timelimit(value))
+                    script.write('%s -l walltime=%s\n'
+                                 % (prefix, self._timelimit(value)))
     
             if 'native_specification' in resource_desc:
                 cmd.extend(resource_desc['native_specification'])
