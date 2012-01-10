@@ -13,7 +13,7 @@ import sys, os, traceback
 import zipfile, jsonpickle
 from threading import Timer
 
-from openmdao.gui.mdao_util import *
+from openmdao.gui.util import *
 
 class HttpResponseSeeOther(HttpResponseRedirect):
     status_code = 303

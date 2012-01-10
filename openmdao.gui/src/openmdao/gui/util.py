@@ -1,4 +1,4 @@
-## utility functions used by mdao.py
+## utility functions used by openmdao gui
 
 import os, os.path
 import webbrowser
@@ -124,17 +124,6 @@ def packageXML(types):
         xml = xml + tostring(typeTree)
         xml = xml + '</response>\n'
         return xml    
-    
-# find an unused port    
-# ref: http://code.activestate.com/recipes/531822-pick-unused-port/
-# note: use the port before it's taken by some other process!
-import socket
-def PickUnusedPort():
-  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  s.bind(('localhost', 0))
-  addr, port = s.getsockname()
-  s.close()
-  return port
 
 #
 # launch web browser on specified port

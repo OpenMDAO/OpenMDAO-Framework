@@ -32,7 +32,7 @@ from zope.interface import implementedBy
 
 import networkx as nx
 
-from mdao_util import *
+from openmdao.gui.util import *
 
 class ConsoleServerFactory(Factory):
     ''' creates and keeps track of :class:`ConsoleServer`
