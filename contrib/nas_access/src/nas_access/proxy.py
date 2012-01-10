@@ -98,7 +98,8 @@ class NAS_Allocator(ResourceAllocator):
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
             return 0
-        return self._conn.invoke('max_servers', (rdesc,))
+        timeout = 5 * 60
+        return self._conn.invoke('max_servers', (rdesc,), timeout=timeout)
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -122,7 +123,8 @@ class NAS_Allocator(ResourceAllocator):
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
             return info
-        return self._conn.invoke('time_estimate', (rdesc,))
+        timeout = 5 * 60
+        return self._conn.invoke('time_estimate', (rdesc,), timeout=timeout)
 
     def _check_local(self, resource_desc):
         """ Check locally-relevant resources. """
@@ -155,8 +157,10 @@ class NAS_Allocator(ResourceAllocator):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
+        timeout = 5 * 60
         r_root, r_pid = \
-            self._conn.invoke('deploy', (name, resource_desc, criteria))
+            self._conn.invoke('deploy', (name, resource_desc, criteria),
+                              timeout=timeout)
         proxy_name = '%s/%s' % (self.name, name)
         server = NAS_Server(proxy_name, self._dmz_host, self._server_host,
                             r_pid, r_root)
@@ -173,7 +177,8 @@ class NAS_Allocator(ResourceAllocator):
         """
         if server in self._servers:
             self._servers.remove(server)
-            self._conn.invoke('release', (server.conn.root,))
+            timeout = 5 * 60
+            self._conn.invoke('release', (server.conn.root,), timeout=timeout)
             server.shutdown()
         else:
             raise ValueError('No such server %r' % server)
@@ -182,7 +187,8 @@ class NAS_Allocator(ResourceAllocator):
         """ Shut-down this allocator. """
         for server in self._servers:
             server.shutdown()
-        self._conn.invoke('shutdown')
+        timeout = 5 * 60
+        self._conn.invoke('shutdown', timeout=timeout)
         self._conn.close()
 
 
@@ -228,7 +234,8 @@ class NAS_Server(object):
         Simply return the arguments. This can be useful for latency/thruput
         masurements, connectivity testing, firewall keepalives, etc.
         """
-        return self._conn.invoke('echo', args)
+        timeout = 5 * 60
+        return self._conn.invoke('echo', args, timeout=timeout)
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -240,7 +247,9 @@ class NAS_Server(object):
 
         Forwards request via DMZ protocol and waits for reply.
         """
-        return self._conn.invoke('execute_command', (resource_desc,))
+        timeout = 0  # Could be queued 'forever'.
+        return self._conn.invoke('execute_command', (resource_desc,),
+                                 timeout=timeout)
 
     @rbac('owner')
     def pack_zipfile(self, patterns, filename):
@@ -253,7 +262,9 @@ class NAS_Server(object):
         filename: string
             Name of ZipFile to create.
         """
-        return self._conn.invoke('pack_zipfile', (patterns, filename))
+        timeout = 5 * 60
+        return self._conn.invoke('pack_zipfile', (patterns, filename),
+                                 timeout=timeout)
 
     @rbac('owner')
     def unpack_zipfile(self, filename, textfiles=None):
@@ -263,7 +274,9 @@ class NAS_Server(object):
         filename: string
             Name of ZipFile to unpack.
         """
-        return self._conn.invoke('unpack_zipfile', (filename, textfiles))
+        timeout = 5 * 60
+        return self._conn.invoke('unpack_zipfile', (filename, textfiles),
+                                 timeout=timeout)
 
     @rbac('owner')
     def chmod(self, path, mode):
@@ -276,7 +289,8 @@ class NAS_Server(object):
         mode: int
             New mode bits (permissions).
         """
-        return self._conn.invoke('chmod', (path, mode))
+        timeout = 5 * 60
+        return self._conn.invoke('chmod', (path, mode), timeout=timeout)
 
     @rbac('owner')
     def isdir(self, path):
@@ -286,7 +300,8 @@ class NAS_Server(object):
         path: string
             Path to check.
         """
-        return self._conn.invoke('isdir', (path,))
+        timeout = 5 * 60
+        return self._conn.invoke('isdir', (path,), timeout=timeout)
 
     @rbac('owner')
     def listdir(self, path):
@@ -296,7 +311,8 @@ class NAS_Server(object):
         path: string
             Path to directory to list.
         """
-        return self._conn.invoke('listdir', (path,))
+        timeout = 5 * 60
+        return self._conn.invoke('listdir', (path,), timeout=timeout)
 
     @rbac('owner')
     def open(self, filename, mode='r', bufsize=-1):
@@ -323,7 +339,8 @@ class NAS_Server(object):
         path: string
             Path to file to remove.
         """
-        return self._conn.invoke('remove', (path,))
+        timeout = 5 * 60
+        return self._conn.invoke('remove', (path,), timeout=timeout)
 
     @rbac('owner')
     def stat(self, path):
@@ -333,7 +350,8 @@ class NAS_Server(object):
         path: string
             Path to file to interrogate.
         """
-        info = self._conn.invoke('stat', (path,))
+        timeout = 5 * 60
+        info = self._conn.invoke('stat', (path,), timeout=timeout)
         if sys.platform == 'win32':  # pragma no cover
             import nt
             return nt.stat_result(info)
@@ -370,7 +388,8 @@ class _File(object):
             self._path = path
             if 'r' in mode:
                 # Transfer remote file to local copy.
-                self._conn.invoke('putfile', (filename,))
+                timeout = 5 * 60
+                self._conn.invoke('putfile', (filename,), timeout=timeout)
                 self._conn.recv_file(filename, path)
                 self._conn.remove_files((filename,))
             self._fileobj = open(path, mode, bufsize)
@@ -399,7 +418,8 @@ class _File(object):
             if not 'r' in self._mode:
                 # Transfer local file to remote copy.
                 self._conn.send_file(self._path, self._filename)
-                self._conn.invoke('getfile', (self._filename,))
+                timeout = 5 * 60
+                self._conn.invoke('getfile', (self._filename,), timeout=timeout)
         finally:
             os.remove(self._path)
 

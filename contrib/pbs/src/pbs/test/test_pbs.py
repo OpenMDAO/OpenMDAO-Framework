@@ -74,6 +74,7 @@ class TestCase(unittest.TestCase):
         with open('echo.in', 'w') as out:
             pass
 
+        os.environ['OPENMDAO_PBS_ACCOUNTID'] = 'test-account'
         server = PBS_Server()
 
         # Try various resources.
@@ -140,8 +141,6 @@ class TestCase(unittest.TestCase):
 echo hello world <echo.in >echo.out 2>&1
 """))
         # 'qsub' failure.
-        allocator = PBS_Allocator()
-        PBS_Server.parent_allocators[server] = allocator
         PBS_Server._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"
         assert_raises(self, code, globals(), locals(), OSError, '')

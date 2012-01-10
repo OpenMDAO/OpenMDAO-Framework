@@ -27,7 +27,7 @@ class PBS_Allocator(FactoryAllocator):
         Name of allocator, used in log messages, etc.
 
     account_id: string
-        Default value for ``account_id`` resource key.
+        Default value for the ``account_id`` resource key.
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
@@ -55,7 +55,7 @@ class PBS_Allocator(FactoryAllocator):
     def __init__(self, name='PBS', account_id='no-default-set',
                  authkey=None, allow_shell=True):
         super(PBS_Allocator, self).__init__(name, authkey, allow_shell)
-        self.account_id = account_id
+        os.environ['OPENMDAO_PBS_ACCOUNTID'] = account_id
         self.factory.manager_class = _ServerManager
         self.factory.server_classname = 'pbs_pbs_PBS_Server'
 #FIXME: need to somehow determine available cpus.
@@ -74,8 +74,9 @@ class PBS_Allocator(FactoryAllocator):
         """
         super(PBS_Allocator, self).configure(cfg)
         if cfg.has_option(self.name, 'account_id'):
-            self.account_id = cfg.get(self.name, 'account_id')
-            self._logger.debug('    account_id: %s', self.account_id)
+            account_id = cfg.get(self.name, 'account_id')
+            self._logger.debug('    account_id: %s', account_id)
+            os.environ['OPENMDAO_PBS_ACCOUNTID'] = account_id
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -154,34 +155,11 @@ class PBS_Allocator(FactoryAllocator):
                 return (-2, {key: 'unrecognized key'})
         return (0, {})
 
-    @rbac('*')
-    def deploy(self, name, resource_desc, criteria):
-        """
-        Deploy a server suitable for `resource_desc`.
-        Returns a proxy to the deployed server.
-        Overrides superclass to be able to pass `account_id`.
-
-        name: string
-            Name for server.
-
-        resource_desc: dict
-            Description of required resources.
-
-        criteria: dict
-            The dictionary returned by :meth:`time_estimate`.
-        """
-        server = \
-            super(PBS_Allocator, self).deploy(name, resource_desc, criteria)
-        if server is not None:
-            PBS_Server.parent_allocators[server] = self
-        return server
-
 
 class PBS_Server(ObjServer):
     """ Knows about executing a command via `qsub`. """
 
-    parent_allocators = {}  # Used to access parent allocator account_id.
-    _QSUB = ['qsub']        # Replaced with fake command for testing.
+    _QSUB = ['qsub']  # Replaced with fake command for testing.
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -201,6 +179,10 @@ class PBS_Server(ObjServer):
         ========================= ===========================
         Resource Key              Translation
         ========================= ===========================
+        account_id                -W group_list= `value`
+        ------------------------- ---------------------------
+        queue                     -q `value`
+        ------------------------- ---------------------------
         job_name                  -N `value`
         ------------------------- ---------------------------
         working_directory         Handled in generated script
@@ -277,7 +259,7 @@ class PBS_Server(ObjServer):
 
         # Write script to be submitted rather than putting everything on
         # 'qsub' command line. We have to do this since otherwise there's
-        # no way to set an execution directory.
+        # no way to set an execution directory or input path.
         if 'job_name' in resource_desc:
             base = resource_desc['job_name']
         else:
@@ -290,11 +272,12 @@ class PBS_Server(ObjServer):
             if 'account_id' in resource_desc:
                 account_id = resource_desc['account_id']
             else:
-                account_id = self.parent_allocators[self].account_id
+                account_id = os.environ.get('OPENMDAO_PBS_ACCOUNTID', None)
             script.write('#PBS -W group_list=%s\n' % account_id.strip())
 
             # Process description in fixed, repeatable order.
-            keys = ('job_name',
+            keys = ('queue',
+                    'job_name',
                     'job_environment',
                     'n_cpus',
                     'input_path',
@@ -316,7 +299,9 @@ class PBS_Server(ObjServer):
                 except KeyError:
                     continue
 
-                if key == 'job_name':
+                if key == 'queue':
+                    script.write('#PBS -q %s\n' % value)
+                elif key == 'job_name':
                     script.write('#PBS -N %s\n' % value)
                 elif key == 'job_environment':
                     env = value
@@ -355,8 +340,8 @@ class PBS_Server(ObjServer):
 
             # Have script move to work directory relative to
             # home directory on execution host.
-            home = os.path.abspath(os.path.expanduser('~'))
-            work = os.path.abspath(self.work_dir or os.getcwd())
+            home = os.path.realpath(os.path.expanduser('~'))
+            work = os.path.realpath(self.work_dir or os.getcwd())
             if work.startswith(home):
                 work = work[len(home)+1:]
                 if sys.platform == 'win32':
