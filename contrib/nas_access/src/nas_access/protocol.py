@@ -60,6 +60,8 @@ import sys
 import tempfile
 import time
 
+from openmdao.main import __version__
+
 
 class RemoteError(Exception):
     """ Contains original exception as well as a traceback. """
@@ -384,7 +386,7 @@ def server_heartbeat(dmz_host, poll_delay, logger):
     try:
         os.close(fd)
         with open(path, 'w') as out:
-            out.write('%s\n%s\n' % (tstamp, poll_delay))
+            out.write('%s\n%s\n%s\n' % (tstamp, poll_delay, __version__))
         _scp_send(path, dmz_host, root, 'heartbeat', logger)
     finally:
         try:
@@ -416,6 +418,7 @@ def check_server_heartbeat(dmz_host, server_host, logger):
         with open(path, 'rU') as inp:
             tstamp = inp.readline().strip()
             poll_delay = inp.readline().strip()
+            version = inp.readline().strip()
     finally:
         try:
             os.remove(path)
