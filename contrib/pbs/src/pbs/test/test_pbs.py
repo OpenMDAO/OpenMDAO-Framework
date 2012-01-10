@@ -11,32 +11,26 @@ import unittest
 from openmdao.main.mp_support import is_instance
 from openmdao.util.testutil import assert_raises
 
-from grid_engine import GridEngineAllocator, GridEngineServer
+from pbs import PBS_Allocator, PBS_Server
 
 
 class TestCase(unittest.TestCase):
 
-    directory = os.path.realpath(
-        pkg_resources.resource_filename('grid_engine', 'test'))
+    directory = os.path.realpath(pkg_resources.resource_filename('pbs', 'test'))
 
     def setUp(self):
         # Force use of fake 'qsub'.
-        self.orig_qsub = list(GridEngineServer._QSUB)
-        GridEngineServer._QSUB[:] = \
+        self.orig_qsub = list(PBS_Server._QSUB)
+        PBS_Server._QSUB[:] = \
             ['python', os.path.join(TestCase.directory, 'qsub.py')]
 
-        # Force use of fake 'qhost'.
-        self.orig_qhost = list(GridEngineAllocator._QHOST)
-        GridEngineAllocator._QHOST[:] = \
-            ['python', os.path.join(TestCase.directory, 'qhost.py')]
-
     def tearDown(self):
-        GridEngineServer._QSUB[:] = self.orig_qsub
-        GridEngineAllocator._QHOST[:] = self.orig_qhost
-        for name in ('echo.in', 'echo.out', 'qsub.out'):
+        PBS_Server._QSUB[:] = self.orig_qsub
+        for name in ('TestJob.qsub', 'echo.in', 'echo.out', 'qsub.out',
+                     'echo.qsub'):
             if os.path.exists(name):
                 os.remove(name)
-        for name in glob.glob('GridEngineTestServer*'):
+        for name in glob.glob('PBS_TestServer*'):
             shutil.rmtree(name)
 
     def test_allocator(self):
@@ -44,35 +38,25 @@ class TestCase(unittest.TestCase):
         logging.debug('test_allocator')
 
         # Normal, successful allocation.
-        allocator = GridEngineAllocator()
+        allocator = PBS_Allocator()
         nhosts = allocator.max_servers({})
-        self.assertEqual(nhosts, 19*48)
+        self.assertEqual(nhosts, allocator.n_cpus)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, 0)
 
         # Unused deployment.
-        server = allocator.deploy('GridEngineTestServer', {}, {})
-        self.assertTrue(is_instance(server, GridEngineServer))
+        server = allocator.deploy('PBS_TestServer', {}, {})
+        self.assertTrue(is_instance(server, PBS_Server))
         allocator.release(server)
 
         # Too many CPUs.
-        estimate, criteria = allocator.time_estimate({'n_cpus': 1000})
+        estimate, criteria = allocator.time_estimate({'n_cpus': 1000000})
         self.assertEqual(estimate, -2)
 
         # Not remote.
         nhosts = allocator.max_servers({'localhost': True})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({'localhost': True})
-        self.assertEqual(estimate, -2)
-
-        # Configure bad pattern.
-        cfg = ConfigParser.ConfigParser()
-        cfg.add_section('GridEngine')
-        cfg.set('GridEngine', 'pattern', 'xyzzy')
-        allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
-        self.assertEqual(nhosts, 0)
-        estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, -2)
 
         # Incompatible Python version.
@@ -83,13 +67,6 @@ class TestCase(unittest.TestCase):
         estimate, criteria = allocator.time_estimate({'no-such-key': 0})
         self.assertEqual(estimate, -2)
 
-        # 'qhost' failure.
-        GridEngineAllocator._QHOST[:] = [os.path.join('bogus-qhost')]
-        cfg.set('GridEngine', 'pattern', '*')
-        allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
-        self.assertEqual(nhosts, 0)
-
     def test_server(self):
         logging.debug('')
         logging.debug('test_server')
@@ -97,12 +74,14 @@ class TestCase(unittest.TestCase):
         with open('echo.in', 'w') as out:
             pass
 
-        server = GridEngineServer()
+        os.environ['OPENMDAO_PBS_ACCOUNTID'] = 'test-account'
+        server = PBS_Server()
 
         # Try various resources.
         server.execute_command(dict(remote_command='echo',
                                     args=['hello', 'world'],
                                     working_directory='.',
+                                    account_id='my-nas-acct',
                                     job_name='TestJob',
                                     job_environment={'ENV_VAR': 'env_value'},
                                     parallel_environment='ompi',
@@ -125,35 +104,50 @@ class TestCase(unittest.TestCase):
 
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
+        if sys.platform == 'win32':
+            sh1 = ''
+            sh2 = ''
+        else:
+            sh1 = ' -S /bin/sh'
+            sh2 = '-S arg /bin/sh\n'
         self.assertEqual(''.join(lines), """\
--V -sync yes -wd . -N TestJob -pe ompi 256 -i echo.in -o echo.out -j yes -M user1@host1,user2@host2 -m n -m beas -a 01010101.00 -l h_rt=0:0:1 -l s_rt=0:0:2 -l h_cpu=0:0:3 -l s_cpu=0:0:4 echo hello world
+-V -W block=true -j oe%s .%sTestJob.qsub
 -V
--sync arg yes
--wd arg .
--N arg TestJob
--pe ompi 256
--i stdin echo.in
--o stdout echo.out
--j join yes
--M arg user1@host1,user2@host2
--m arg n
--m arg beas
--a arg 01010101.00
--l resource h_rt=0:0:1
--l resource s_rt=0:0:2
--l resource h_cpu=0:0:3
--l resource s_cpu=0:0:4
-echo hello world
-""")
+-W arg block=true
+-j arg oe
+%s.%sTestJob.qsub
+""" % (sh1, os.sep, sh2, os.sep))
 
+        with open('TestJob.qsub', 'r') as inp:
+            lines = inp.readlines()
+        self.assertTrue(''.join(lines).startswith("""\
+#!/bin/sh
+#PBS -W group_list=my-nas-acct
+#PBS -N TestJob
+#PBS -l select=256:ncpus=1
+#PBS -M user1@host1,user2@host2
+#PBS -m n
+#PBS -m bea
+#PBS -a 01010101.00
+#PBS -l walltime=0:00:01
+#PBS -l walltime=0:00:02
+#PBS -l walltime=0:00:03
+#PBS -l walltime=0:00:04
+"""))
+
+# Skip varification of location-dependent working directory.
+
+        self.assertTrue(''.join(lines).endswith("""\
+echo hello world <echo.in >echo.out 2>&1
+"""))
         # 'qsub' failure.
-        GridEngineServer._QSUB[:] = [os.path.join('bogus-qsub')]
+        PBS_Server._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"
         assert_raises(self, code, globals(), locals(), OSError, '')
 
 
 if __name__ == '__main__':
-    sys.argv.append('--cover-package=grid_engine.')
+    sys.argv.append('--cover-package=pbs.')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

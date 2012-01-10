@@ -130,7 +130,7 @@ def setup_tunnel(address, port):
     user = getpass.getuser()
     if sys.platform == 'win32':  # pragma no cover
         stdin = open('nul:', 'r')
-        args = ['plink', '-ssh', '-l', user,
+        args = ['plink', '-batch', '-ssh', '-l', user,
                 '-L', '%d:localhost:%d' % (port, port), address]
     else:
         stdin = open('/dev/null', 'r')

@@ -302,6 +302,7 @@ class ExternalCode(ComponentWithDerivatives):
                                                          textfiles=textfiles)
         finally:
             os.remove(filename)
+            self._server.remove(filename)
 
         # Difficult to force file transfer error.
         if ufiles != pfiles or ubytes != pbytes:  #pragma no cover
@@ -331,6 +332,7 @@ class ExternalCode(ComponentWithDerivatives):
                 ufiles, ubytes = 0, 0
         finally:
             os.remove(filename)
+            self._server.remove(filename)
 
         # Difficult to force file transfer error.
         if ufiles != pfiles or ubytes != pbytes:  #pragma no cover
