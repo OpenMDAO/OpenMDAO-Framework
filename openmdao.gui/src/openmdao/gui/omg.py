@@ -1,6 +1,7 @@
 import os, sys
 from optparse import OptionParser
-from mdao_util import ensure_dir, PickUnusedPort, launch_browser
+from openmdao.util.network import get_unused_ip_port
+from openmdao.gui.util import ensure_dir, launch_browser
 
 def init(reset):
     # first time setup (or re-setup)
@@ -84,7 +85,7 @@ if __name__ == '__main__':
             init(reset=False)
         
     if (options.port < 1):
-        options.port = PickUnusedPort()    
+        options.port = get_unused_ip_port()    
 
     if not options.serveronly:
         # NOTE: with dev server, you are going to get two browsers
