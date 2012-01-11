@@ -108,28 +108,31 @@ class TestCase(unittest.TestCase):
         if sys.platform == 'win32':
             sh1 = ' -C REM PBS'
             sh2 = '-C arg REM PBS'
+            suffix = '.bat'
         else:
             sh1 = ' -S /bin/sh'
             sh2 = '-S arg /bin/sh'
+            suffix = '.qsub'
         self.assertEqual(''.join(lines), """\
--V -W block=true -j oe%s .%sTestJob.qsub
+-V -W block=true -j oe%(sh1)s .%(sep)sTestJob%(suffix)s
 -V
 -W arg block=true
 -j arg oe
-%s
-.%sTestJob.qsub
-""" % (sh1, os.sep, sh2, os.sep))
+%(sh2)s
+.%(sep)sTestJob%(suffix)s
+""" % dict(sh1=sh1, sh2=sh2, suffix=suffix, sep=os.sep))
 
-        with open('TestJob.qsub', 'r') as inp:
+        with open('TestJob%s' % suffix, 'r') as inp:
             lines = inp.readlines()
         if sys.platform == 'win32':
-            sh1 = ''
+            sh1 = '@echo off'
             prefix = 'REM PBS'
         else:
-            sh1 = '#!/bin/sh\n'
+            sh1 = '#!/bin/sh'
             prefix = '#PBS'
         self.assertTrue(''.join(lines).startswith("""\
-%(sh1)s%(prefix)s -W group_list=my-nas-acct
+%(sh1)s
+%(prefix)s -W group_list=my-nas-acct
 %(prefix)s -N TestJob
 %(prefix)s -l select=256:ncpus=1
 %(prefix)s -M user1@host1,user2@host2

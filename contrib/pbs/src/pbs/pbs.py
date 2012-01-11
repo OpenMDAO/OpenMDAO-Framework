@@ -273,7 +273,9 @@ class PBS_Server(ObjServer):
         script_name = '%s%s' % (base, suffix)
 
         with open(script_name, 'w') as script:
-            if sys.platform != 'win32':
+            if sys.platform == 'win32':
+                script.write('@echo off\n')
+            else:
                 script.write('#!/bin/sh\n')
 
             if 'account_id' in resource_desc:
