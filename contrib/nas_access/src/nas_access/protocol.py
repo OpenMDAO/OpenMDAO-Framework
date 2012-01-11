@@ -175,6 +175,8 @@ def _ssh(host, args, logger, retry=True):
                 logger.error('%s\nretrying...', exc)
             else:
                 raise
+        else:
+            break
 
     if not stdout and sys.platform == 'win32':  # pragma no cover
         # plink doesn't always set an error code.
@@ -275,6 +277,8 @@ def _scp(src, dst, logger):
                 logger.error('%s\nretrying...', exc)
             else:
                 raise
+        else:
+            break
 
 
 def connect(dmz_host, server_host, path, logger):
