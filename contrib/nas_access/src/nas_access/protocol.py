@@ -129,7 +129,7 @@ def configure_scp(cmdlist):
     return previous
 
 
-def _ssh(host, args, logger):
+def _ssh(host, args, logger, retry=True):
     """
     Return lines from `host` executing `args`.
 
@@ -138,6 +138,10 @@ def _ssh(host, args, logger):
 
     logger: :class:`Logger`
         Displays full command being executed.
+
+    retry: boolean
+        If True, the command will be attempted up to three times.
+        Be sure the command is idempotent!.
     """
     cmd = []
     cmd.extend(_SSH)
@@ -148,17 +152,29 @@ def _ssh(host, args, logger):
     logger.log(DEBUG3, '%s', cmd)
     stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
     stdin = open(stdin, 'r')
-    try:
-        proc = subprocess.Popen(cmd, stdin=stdin, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, universal_newlines=True)
-    except Exception as exc:
-        raise RuntimeError('%s: %s' % (cmd, exc))
 
-    stdout, stderr = proc.communicate()
-    if proc.returncode:
-        msg = '%s: returncode %s: stdout: %s stderr: %s' \
-              % (cmd, proc.returncode, stdout, stderr)
-        raise RuntimeError(msg)
+    attempts = 3 if retry else 1
+    for i in range(attempts):
+        try:
+            try:
+                proc = subprocess.Popen(cmd, stdin=stdin,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        universal_newlines=True)
+            except Exception as exc:
+                raise RuntimeError('%s: %s' % (cmd, exc))
+
+            stdout, stderr = proc.communicate()
+            if proc.returncode:
+                msg = '%s: returncode %s: stdout: %s stderr: %s' \
+                      % (cmd, proc.returncode, stdout, stderr)
+                raise RuntimeError(msg)
+
+        except Exception as exc:
+            if i+1 < attempts:
+                logger.error('%s\nretrying...', exc)
+            else:
+                raise
 
     if not stdout and sys.platform == 'win32':  # pragma no cover
         # plink doesn't always set an error code.
@@ -219,6 +235,7 @@ def _scp_recv(host, directory, name, path, logger):
 def _scp(src, dst, logger):
     """
     Use 'scp' to copy `src` to `dst`.
+    The command will be attempted up to three times.
 
     src, dst: string
         Source and destination designations.
@@ -233,17 +250,31 @@ def _scp(src, dst, logger):
     cmd.extend((src, dst))
 
     logger.log(DEBUG3, '%s', cmd)
-    try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, universal_newlines=True)
-    except Exception as exc:
-        raise RuntimeError('%s: %s' % (cmd, exc))
+    stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
+    stdin = open(stdin, 'r')
 
-    stdout, stderr = proc.communicate()
-    if proc.returncode:
-        msg = '%s: returncode %s: stdout: %s stderr: %s' \
-              % (cmd, proc.returncode, stdout, stderr)
-        raise RuntimeError(msg)
+    attempts = 3
+    for i in range(attempts):
+        try:
+            try:
+                proc = subprocess.Popen(cmd, stdin=stdin,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE,
+                                        universal_newlines=True)
+            except Exception as exc:
+                raise RuntimeError('%s: %s' % (cmd, exc))
+
+            stdout, stderr = proc.communicate()
+            if proc.returncode:
+                msg = '%s: returncode %s: stdout: %s stderr: %s' \
+                      % (cmd, proc.returncode, stdout, stderr)
+                raise RuntimeError(msg)
+
+        except Exception as exc:
+            if i+1 < attempts:
+                logger.error('%s\nretrying...', exc)
+            else:
+                raise
 
 
 def connect(dmz_host, server_host, path, logger):

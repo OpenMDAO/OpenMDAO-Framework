@@ -73,7 +73,9 @@ manager in your simulation code::
     from openmdao.main.resource import ResourceAllocationManager as RAM
     from nas_access import NAS_Allocator
 
-    allocator = NAS_Allocator(dmz_host='dmzfs1.nas.nasa.gov', server_host='pfe1')
+    allocator = NAS_Allocator(name='Pleiades',
+                              dmz_host='dmzfs1.nas.nasa.gov',
+                              server_host='pfe1')
     RAM.add_allocator(allocator)
 
 Now when you run your local simulation and it queries the resource allocation

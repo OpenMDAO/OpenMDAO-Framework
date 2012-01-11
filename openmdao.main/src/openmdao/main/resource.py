@@ -114,6 +114,8 @@ WORKING_DIRECTORY = '$drmaa_wd_ph$'
 
 # DRMAA-inspired keys.
 QUEUING_SYSTEM_KEYS = set([
+    'account_id',
+    'queue',
     'job_name',
     'remote_command',
     'args',

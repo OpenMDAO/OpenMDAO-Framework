@@ -188,8 +188,10 @@ class ExternalCode(ComponentWithDerivatives):
         Allocate a server based on required resources, send inputs,
         run command, and retrieve results.
         """
+        rdesc = self.resources.copy()
+
         # Allocate server.
-        self._server, server_info = RAM.allocate(self.resources)
+        self._server, server_info = RAM.allocate(rdesc)
         if self._server is None:
             self.raise_exception('Server allocation failed :-(', RuntimeError)
 
@@ -197,7 +199,6 @@ class ExternalCode(ComponentWithDerivatives):
         error_msg = ''
         try:
             # Create resource description for command.
-            rdesc = self.resources.copy()
             rdesc['job_name'] = self.get_pathname()
             rdesc['remote_command'] = self.command[0]
             if len(self.command) > 1:
