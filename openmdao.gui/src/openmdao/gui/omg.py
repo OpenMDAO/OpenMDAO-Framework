@@ -4,7 +4,8 @@ from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.util import ensure_dir, launch_browser
 
 def init(reset):
-    # first time setup (or re-setup)
+    ''' first time setup (or re-setup)
+    '''
     print "Initializing settings..."
     
     user_dir = os.path.expanduser("~/.openmdao/gui/")  # TODO: could put in a prefs file
@@ -35,13 +36,15 @@ def init(reset):
     execute_manager(settings,argv=[__file__,'syncdb'])
 
 def dev(port):
-    # run django development server
+    ''' run django development server
+    '''
     import settings
     from django.core.management import execute_manager
     execute_manager(settings,argv=[__file__,'runserver',str(port)])
 
 def pro(port):
-    # run cherrypy 'production' server
+    ''' run cherrypy 'production' server
+    '''
     print "Running server on port",str(port)
     print "Quit the server with CTRL-BREAK"
     
@@ -61,7 +64,9 @@ def pro(port):
     except KeyboardInterrupt:
         server.stop()
 
-if __name__ == '__main__':
+def get_parser():
+    ''' create a parser for command line arguments
+    '''
     parser = OptionParser()
     parser.add_option("-d", "--dev", action="store_true", dest="devserver",
                       help="use Django development server")
@@ -75,7 +80,12 @@ if __name__ == '__main__':
                       help="(re)initialize settings")
     parser.add_option("-r", "--reset", action="store_true", dest="reset",
                       help="reset project database (valid only with -i and without -d)")
+    return parser
 
+def main():
+    ''' process command line arguments and do as commanded
+    '''
+    parser = get_parser()
     (options, args) = parser.parse_args()
     
     if options.initialize or not os.path.exists('settings.py'):
@@ -98,3 +108,6 @@ if __name__ == '__main__':
     else:
         pro(options.port)
 
+
+if __name__ == '__main__':
+    main()
