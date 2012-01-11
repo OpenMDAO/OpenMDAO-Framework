@@ -24,6 +24,9 @@ class AllocatorWrapper(object):
     allocator: :class:`ResourceAllocator`
         The allocator to wrap.
 
+    client: string
+        Name of client.
+
     connection: :class:`Connection`
         The connection to serve.
 
@@ -34,8 +37,9 @@ class AllocatorWrapper(object):
     _legal_methods = set(('max_servers', 'time_estimate'))
     _local_methods = set(('deploy', 'release', 'shutdown'))
 
-    def __init__(self, allocator, connection, poll_delay):
+    def __init__(self, allocator, client, connection, poll_delay):
         self._allocator = allocator
+        self._client = client
         self._conn = connection
         self._poll_delay = poll_delay
         self._logger = connection.logger
@@ -87,19 +91,20 @@ class AllocatorWrapper(object):
         criteria: dict
             The dictionary returned by :meth:`time_estimate`.
         """
-        server = self._allocator.deploy(name, resource_desc, criteria)
+        fullname = '%s-%s' % (self._client, name)
+        server = self._allocator.deploy(fullname, resource_desc, criteria)
         if server is None:
             raise RuntimeError('deploy(%r, %r, %r) failed'
-                               % (name, resource_desc, criteria))
+                               % (fullname, resource_desc, criteria))
 
-        path = '%s/%s' % (self._conn.root, server.name)
-        name = '%s_wrapper' % server.name
-        logger = logging.getLogger(name)
+        path = '%s/%s' % (self._conn.root, name)
+        logger = logging.getLogger(fullname)
         connection = Connection(self._conn.dmz_host, path, True,
                                 self._poll_delay, logger)
         wrapper = ServerWrapper(server, connection, self._poll_delay)
 
-        handler = threading.Thread(name=name, target=wrapper.process_requests)
+        handler = threading.Thread(name='%s_handler' % fullname,
+                                   target=wrapper.process_requests)
         handler.daemon = True
         handler.start()
 
