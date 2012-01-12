@@ -57,7 +57,6 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
             var count = Object.keys(figures).length,
                 x = (count-1)*(fig.getWidth()+20)  + 20,
                 y = (count-1)*(fig.getHeight()+20) + 20
-            //debug.info('count=',count,'x=',x,'y=',y)
             dataflow.addFigure(fig,x,y)            
         })
         
@@ -98,9 +97,19 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
             }
         });
 
-        // unconnected components are layed out in a row
+        // unconnected components are layed out in rows
+        var row = 0,
+            row_start = 0,
+            max_width = dataflow.getWidth();
+        
         jQuery.each(unconnected,function(idx,fig) {
-            x = idx*(fig.getWidth()+20) + 20;
+            x = (idx-row_start)*(fig.getWidth()+20) + 20;
+            if ((x + fig.getWidth()) > max_width) {
+                row = row + 1;
+                row_start = idx;
+                x = (idx-row_start)*(fig.getWidth()+20) + 20;
+                y = y + row*(fig.getHeight()+20);
+            }
             fig.setPosition(x,y);
         });
 
