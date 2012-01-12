@@ -64,7 +64,12 @@ def _get_openmdao_parser():
                         help="browser name")
     parser.set_defaults(func=openmdao_docs)
     
-    parser = subparsers.add_parser('test', add_help=False)
+    parser = subparsers.add_parser('test', add_help=False,
+                                   description="run the OpenMDAO test suite")
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='display test progress')
+    parser.add_argument('packages', metavar='package', type=str, nargs='*',
+                        help='package to be tested')
     parser.set_defaults(func=test_openmdao)
         
     # the following subcommands will only be available in a dev build, because
