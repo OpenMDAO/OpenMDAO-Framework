@@ -93,7 +93,7 @@ class ObjServerFactory(Factory):
         Used by :meth:`ResourceAllocationManager.add_remotes`.
         """
         from openmdao.main.resource import ResourceAllocationManager
-        return ResourceAllocationManager.get_instance()
+        return ResourceAllocationManager._get_instance()
 
     @rbac('*')
     def echo(self, *args):
@@ -246,15 +246,14 @@ class ObjServerFactory(Factory):
             # On Windows, when running the full test suite under Nose,
             # starting the process starts a new Nose test session, which
             # will eventually get here and start a new Nose session, which...
-            if sys.platform == 'win32' and \
-               sys.modules['__main__'].__file__.endswith('openmdao-script.py'):  #pragma no cover
-                orig_main = sys.modules['__main__'].__file__
-                sys.modules['__main__'].__file__ = \
-                    pkg_resources.resource_filename('openmdao.main',
-                                                    'objserverfactory.py')
-            else:
-                orig_main = None
-
+            orig_main = None
+            if sys.platform == 'win32':  #pragma no cover
+                scripts = ('openmdao-script.py', 'openmdao_test-script.py')
+                if sys.modules['__main__'].__file__.endswith(scripts):
+                    orig_main = sys.modules['__main__'].__file__
+                    sys.modules['__main__'].__file__ = \
+                        pkg_resources.resource_filename('openmdao.main',
+                                                        'objserverfactory.py')
             owner = get_credentials()
             self._logger.debug('%s starting server %r in dir %s',
                                owner, name, root_dir)

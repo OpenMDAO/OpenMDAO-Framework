@@ -105,7 +105,7 @@ openmdao.WorkflowFigure.prototype.getContextMenu=function(){
         oThis.redraw();
     }));
     menu.appendMenuItem(new draw2d.MenuItem("Clear Workflow",null,function(){
-        var asm = 'top.'+oThis.pathname,
+        var asm = oThis.pathname,
             cmd = asm + '.workflow.clear();' + asm + '.config_changed();';
         oThis.myModel.issueCommand(cmd);
     }));

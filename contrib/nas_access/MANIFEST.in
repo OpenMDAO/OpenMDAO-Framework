@@ -1,0 +1,5 @@
+
+
+graft src/nas_access/sphinx_build/html
+recursive-include src/nas_access/test *.py
+

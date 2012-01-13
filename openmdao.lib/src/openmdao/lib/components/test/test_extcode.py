@@ -228,8 +228,6 @@ class TestCase(unittest.TestCase):
         sleeper = set_as_top(Sleeper())
         sleeper.name = 'Sleepy'
         sleeper.infile = FileRef(INP_FILE, sleeper, input=True)
-        import glob
-        logging.critical('%s', glob.glob('*'))
 
         # Exercise check_save_load().
         retcode = check_save_load(sleeper)
