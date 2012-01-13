@@ -41,3 +41,4 @@ class DOEdriver(CaseIterDriverBase):
             case.add_outputs(self.case_outputs)    
             
             yield case
+ 

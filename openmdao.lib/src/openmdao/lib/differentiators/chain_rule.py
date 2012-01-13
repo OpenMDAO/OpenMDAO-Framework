@@ -114,59 +114,11 @@ class ChainRule(HasTraits):
         
         # Determine gradient of model outputs wrt each parameter
         for wrt in self.param_names:
-            
+                    
             derivs = { wrt: 1.0 }
             
-            # Loop through each comp in the workflow
-            for node in self._parent.workflow.__iter__():
+            self._chain_workflow(derivs, self._parent)
 
-                incoming_deriv_names = {}
-                
-                # This component can determine its derivatives.
-                if hasattr(node, 'calculate_first_derivatives'):
-                    
-                    node.calc_derivatives(first=True)
-                    
-                    local_inputs = node.derivatives.in_names
-                    local_outputs = node.derivatives.out_names
-                    local_derivs = node.derivatives.first_derivatives
-                    
-                    for input_name in local_inputs:
-                        
-                        full_name = '.'.join([node.name, input_name])
-                        
-                        # Only look at connected local_inputs or parameters
-                        if full_name in node.parent._depgraph._allsrcs or \
-                           full_name in self.param_names:
-                    
-                            source = node.parent._depgraph.get_source(full_name)
-                            
-                            # Only process inputs who are connected to outputs
-                            # with derivatives in the chain
-                            if source in derivs:
-                                incoming_deriv_names[input_name] = source
-                            # or who are connected to one of the parameters
-                            elif full_name in derivs:
-                                incoming_deriv_names[input_name] = full_name
-                                
-                                
-                # This component must be finite differenced.
-                else:
-                    raise NotImplementedError('Finite Difference in CRND')
-                
-                
-                # CHAIN RULE
-                # Propagate derivatives wrt parameter through current component
-                for output_name in local_outputs:
-                    
-                    full_output_name = '.'.join([node.name, output_name])
-                    derivs[full_output_name] = 0.0
-                    
-                    for input_name, full_input_name in incoming_deriv_names.iteritems():
-                        derivs[full_output_name] += \
-                            local_derivs[output_name][input_name] * \
-                            derivs[full_input_name]
-                
             # Finite difference on the objectives.
             for obj_name, expr in self._parent.get_objectives().iteritems():
             
@@ -212,9 +164,69 @@ class ChainRule(HasTraits):
                     
                 self.gradient[wrt][con_name] = con_deriv
 
+    def _chain_workflow(self, derivs, scope):
+        """Process a workflow, calculating all intermediate derivatives
+        using the chain rule. This can be called recursively to handle
+        nested assemblies."""
+
+        # Loop through each comp in the workflow
+        for node in scope.workflow.__iter__():
+            
+            node_name = node.name
+    
+            incoming_deriv_names = {}
+            
+            # This component can determine its derivatives.
+            if hasattr(node, 'calculate_first_derivatives'):
+                
+                node.calc_derivatives(first=True)
+                
+                local_inputs = node.derivatives.in_names
+                local_outputs = node.derivatives.out_names
+                local_derivs = node.derivatives.first_derivatives
+                
+                for input_name in local_inputs:
+                    
+                    full_name = '.'.join([node_name, input_name])
+                    
+                    # Only look at connected local_inputs or parameters
+                    if full_name in node.parent._depgraph._allsrcs or \
+                       full_name in self.param_names:
+                
+                        source = node.parent._depgraph.get_source(full_name)
+                        
+                        # Only process inputs who are connected to outputs
+                        # with derivatives in the chain
+                        if source in derivs:
+                            incoming_deriv_names[input_name] = source
+                        # or who are connected to one of the parameters
+                        elif full_name in derivs:
+                            incoming_deriv_names[input_name] = full_name
+                            
+                            
+            # This component must be finite differenced.
+            else:
+                raise NotImplementedError('Finite Difference in CRND')
+            
+            
+            # CHAIN RULE
+            # Propagate derivatives wrt parameter through current component
+            for output_name in local_outputs:
+                
+                full_output_name = '.'.join([node_name, output_name])
+                derivs[full_output_name] = 0.0
+                
+                for input_name, full_input_name in incoming_deriv_names.iteritems():
+                    derivs[full_output_name] += \
+                        local_derivs[output_name][input_name] * \
+                        derivs[full_input_name]
+                        
+
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for all outputs in the Driver's
         workflow.
+        
+        This method is not implemented yet.
         
         reuse_first: bool
             Switch to reuse some data from the gradient calculation so that
@@ -224,17 +236,17 @@ class ChainRule(HasTraits):
             and calls calc_gradient before calc_hessian.
         """
         
-        self.setup()
+        #self.setup()
         
         # Create our 3D dictionary the first time we execute.
-        if not self.hessian:
-            for name1 in self.param_names:
-                self.hessian[name1] = {}
-                for name2 in self.param_names:
-                    self.hessian[name1][name2] = {}
+        #if not self.hessian:
+        #    for name1 in self.param_names:
+        #        self.hessian[name1] = {}
+        #        for name2 in self.param_names:
+        #            self.hessian[name1][name2] = {}
                 
-        self.hessian_ondiag_case = OrderedDict()
-        self.hessian_offdiag_case = OrderedDict()
+        #self.hessian_ondiag_case = OrderedDict()
+        #self.hessian_offdiag_case = OrderedDict()
 
         raise NotImplementedError('Hessian calculation')
 
