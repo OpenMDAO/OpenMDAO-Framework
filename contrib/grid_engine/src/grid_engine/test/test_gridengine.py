@@ -126,9 +126,10 @@ class TestCase(unittest.TestCase):
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
         self.assertEqual(''.join(lines), """\
--V -sync yes -wd . -N TestJob -pe ompi 256 -i echo.in -o echo.out -j yes -M user1@host1,user2@host2 -m n -m beas -a 01010101.00 -l h_rt=0:0:1 -l s_rt=0:0:2 -l h_cpu=0:0:3 -l s_cpu=0:0:4 echo hello world
+-V -sync yes -b yes -wd . -N TestJob -pe ompi 256 -i echo.in -o echo.out -j yes -M user1@host1,user2@host2 -m n -m beas -a 01010101.00 -l h_rt=0:0:1 -l s_rt=0:0:2 -l h_cpu=0:0:3 -l s_cpu=0:0:4 echo hello world
 -V
 -sync arg yes
+-b arg yes
 -wd arg .
 -N arg TestJob
 -pe ompi 256

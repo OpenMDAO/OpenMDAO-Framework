@@ -69,7 +69,7 @@ def main(): # pragma no cover
         configure_scp(options.scp.split())
 
     # Optionally configure resources.
-    if options.resources:
+    if options.resources is not None:
         RAM.configure(options.resources)
 
     # Get allocator to wrap.

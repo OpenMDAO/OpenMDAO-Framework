@@ -155,7 +155,7 @@ def setup_tunnel(address, port):
                exc.args[0] != errno.ENOENT:
                 raise
         else:
-            atexit.register(_cleanup_tunnel, tunnel_proc, logname)
+            atexit.register(_cleanup_tunnel, tunnel_proc, logname, os.getpid())
             sock.close()
             return address
 
@@ -163,15 +163,17 @@ def setup_tunnel(address, port):
     raise RuntimeError('Timeout trying to connect through tunnel to %s'
                        % address)
 
-def _cleanup_tunnel(tunnel_proc, logname):
+def _cleanup_tunnel(tunnel_proc, logname, pid):
     """ Try to terminate `tunnel_proc` if it's still running. """
+    if pid != os.getpid():
+        return  # We're a forked process.
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
     if os.path.exists(logname):
         try:
             os.remove(logname)
-        except WindowsError:
-            pass  # (Temporarily?) Ignore problem where logfile is still in use.
+        except Exceoption as exc:
+            logging.warning("Can't remove tunnel logfile: %s", exc)
 
 
 def encrypt(obj, session_key):

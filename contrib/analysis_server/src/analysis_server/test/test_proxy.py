@@ -11,6 +11,7 @@ import unittest
 from numpy.testing import assert_array_equal
 
 from openmdao.main.api import Assembly, Component, FileRef, set_as_top
+from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.datatypes.api import File, Float, Str
 from openmdao.util.testutil import assert_raises
 
@@ -79,11 +80,13 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         os.chdir(TestCase.directory)
-        self.server, port = analysis_server.start_server(port=0, debug=True)
+        self.server, port = \
+            analysis_server.start_server(port=0, resources='', debug=True)
         self.factory = analysis_server.ASFactory(port=port)
 
     def tearDown(self):
         """ Called after each test. """
+        self.factory.shutdown()
         analysis_server.stop_server(self.server)
         os.remove('hosts.allow')
         for egg in glob.glob('*.egg'):
@@ -369,5 +372,9 @@ class TestCase(unittest.TestCase):
 if __name__ == '__main__':
     sys.argv.append('--cover-package=analysis_server')
     sys.argv.append('--cover-erase')
+
+    # Avoid having any user-defined resources causing problems during testing.
+    RAM.configure('')
+
     nose.runmodule()
 

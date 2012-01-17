@@ -8,6 +8,7 @@ application.
 """
 
 import os.path
+import string
 import sys
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
@@ -17,6 +18,9 @@ from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
 
 from openmdao.util.shellproc import ShellProc, STDOUT
+
+# Translate illegal job name characters.
+_XLATE = string.maketrans(' \n\t\r/:@\\*?', '__________')
 
 
 class PBS_Allocator(FactoryAllocator):
@@ -311,7 +315,7 @@ class PBS_Server(ObjServer):
                 if key == 'queue':
                     script.write('%s -q %s\n' % (prefix, value))
                 elif key == 'job_name':
-                    script.write('%s -N %s\n' % (prefix, value))
+                    script.write('%s -N %s\n' % (prefix, self._jobname(value)))
                 elif key == 'job_environment':
                     env = value
                 elif key == 'n_cpus':
@@ -403,6 +407,15 @@ class PBS_Server(ObjServer):
         elif path.startswith(WORKING_DIRECTORY):
             path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
         return path
+
+    @staticmethod
+    def _jobname(name):
+        """ Create legal job name from `name`. """
+        name = name.strip()[:15]  # 15 characters max.
+        name = name.translate(_XLATE)
+        if not name[0].isalpha():
+            name = 'Z%s' % name[1:]
+        return name
 
     @staticmethod
     def _timelimit(seconds):

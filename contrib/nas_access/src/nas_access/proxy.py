@@ -5,6 +5,7 @@ the DMZ protocol.
 
 from __future__ import absolute_import
 
+import atexit
 import logging
 import os.path
 import sys
@@ -50,12 +51,19 @@ class NAS_Allocator(ResourceAllocator):
         self._dmz_host = dmz_host
         self._server_host = server_host
         self._logger.debug('init')
+        self._conn = None
+        self._pid = os.getpid()  # For protecting against copies due to fork.
+        atexit.register(self.shutdown)
         if dmz_host and server_host:
             try:
                 self._conn = connect(dmz_host, server_host, name, self._logger)
             except Exception as exc:
                 raise RuntimeError("%s: can't connect: %s" % (name, exc))
             self._logger.debug('connected to %r on %r', server_host, dmz_host)
+
+    def invalidate(self):
+        """ Invalidate this allocator. """
+        self._conn = None
 
     def configure(self, cfg):
         """
@@ -189,11 +197,14 @@ class NAS_Allocator(ResourceAllocator):
 
     def shutdown(self):
         """ Shut-down this allocator. """
+        if self._conn is None or self._pid != os.getpid():
+            return  # Never opened, already closed, or forked process.
         for server in self._servers:
             server.shutdown()
         timeout = 5 * 60
         self._conn.invoke('shutdown', timeout=timeout)
         self._conn.close()
+        self._conn = None
 
 
 class NAS_Server(object):

@@ -94,6 +94,7 @@ import multiprocessing
 import os.path
 import pkg_resources
 import Queue
+import re
 import socket
 import sys
 import threading
@@ -141,6 +142,9 @@ QUEUING_SYSTEM_KEYS = set([
     'email_events',
 ])
 
+# Legal allocator name pattern.
+_LEGAL_NAME = re.compile('^[a-zA-Z][_a-zA-Z0-9]*$')
+
 
 class ResourceAllocationManager(object):
     """
@@ -159,6 +163,7 @@ class ResourceAllocationManager(object):
 
     def __init__(self, config_filename=None):
         self._logger = logging.getLogger('RAM')
+        self._pid = os.getpid()  # For detecting copy from fork.
         self._allocations = 0
         self._allocators = []
         self._deployed_servers = {}
@@ -228,7 +233,13 @@ class ResourceAllocationManager(object):
     def _get_instance():
         """ Return singleton instance. """
         with ResourceAllocationManager._lock:
-            if ResourceAllocationManager._RAM is None:
+            ram = ResourceAllocationManager._RAM
+            if ram is None:
+                ResourceAllocationManager._RAM = ResourceAllocationManager()
+            elif ram._pid != os.getpid():
+                # We're a copy from a fork.
+                for allocator in ram._allocators:
+                    allocator.invalidate()
                 ResourceAllocationManager._RAM = ResourceAllocationManager()
             return ResourceAllocationManager._RAM
 
@@ -494,10 +505,10 @@ class ResourceAllocationManager(object):
         remote_ram = server.get_ram()
         total = remote_ram._get_total_allocators()
         if not prefix:
-            prefix = server.host
+            prefix, dot, rest = server.host.partition('.')
         for i in range(total):
             allocator = remote_ram._get_allocator_proxy(i)
-            proxy = RemoteAllocator('%s/%s' % (prefix, allocator.name),
+            proxy = RemoteAllocator('%s_%s' % (prefix, allocator.name),
                                     allocator)
             self._allocators.append(proxy)
 
@@ -524,9 +535,13 @@ class ResourceAllocator(object):
 
     name: string
         Name of allocator, used in log messages, etc.
+        Must be alphanumeric (underscore also allowed).
     """
 
     def __init__(self, name):
+        match = _LEGAL_NAME.match(name)
+        if match is None:
+            raise NameError('name %r is not alphanumeric' % name)
         self._name = name
         self._logger = logging.getLogger(name)
 
@@ -534,6 +549,14 @@ class ResourceAllocator(object):
     def name(self):
         """ This allocator's name. """
         return self._name
+
+    def invalidate(self):
+        """
+        Invalidate this allocator. This will be called by the manager when
+        it detects that its allocators are copies due to a process fork.
+        The default implementation does nothing.
+        """
+        return
 
     # To be implemented by real allocator.
     def configure(self, cfg):  #pragma no cover
@@ -813,7 +836,16 @@ class LocalAllocator(FactoryAllocator):
         else:
             raise ValueError('%s: max_load must be > 0, got %g' \
                              % (name, max_load))
-
+    @property
+    def host(self):
+        """ Allocator hostname. """
+        return self.factory.host
+ 
+    @property
+    def pid(self):
+        """ Allocator process ID. """
+        return self.factory.pid
+ 
     def configure(self, cfg):
         """
         Configure allocator from :class:`ConfigParser` instance.

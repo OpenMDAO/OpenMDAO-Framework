@@ -63,6 +63,8 @@ class TestCase(unittest.TestCase):
             logging.debug('shutdown')
             self.allocator.shutdown()
             self.proc.terminate()
+        else:
+            self.allocator.invalidate()
 
         # Restore 'ssh' and 'scp' configuration.
         protocol.configure_ssh(self.orig_ssh)
@@ -258,6 +260,7 @@ def start_server(hostname):
     try:
         root = protocol._server_root()
         args = ('python', '-m', 'nas_access.rje',
+                '--resources', '',
                 '--allocator', 'LocalHost',
                 '--dmz-host', hostname,
                 '--poll-delay', '1',
@@ -279,5 +282,9 @@ def start_server(hostname):
 if __name__ == '__main__':
     sys.argv.append('--cover-package=nas_access.')
     sys.argv.append('--cover-erase')
+
+    # Avoid having any user-defined resources causing problems during testing.
+    RAM.configure('')
+
     nose.runmodule()
 
