@@ -109,8 +109,7 @@ def main(): # pragma no cover
                 time.sleep(delay)
             else:
                 client, connection = conn_info
-                wrapper = AllocatorWrapper(allocator, client, connection,
-                                           poll_delay)
+                wrapper = AllocatorWrapper(allocator, client, connection)
                 handler = threading.Thread(name='%s_handler' % client,
                                            target=wrapper.process_requests)
                 handler.daemon = True

@@ -991,7 +991,7 @@ class RemoteAllocator(ResourceAllocator):
     @rbac('*')
     def max_servers(self, resource_desc):
         """ Return maximum number of servers for remote allocator. """
-        rdesc = self._check_local(resource_desc)
+        rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
             return 0
         return self._remote.max_servers(rdesc)

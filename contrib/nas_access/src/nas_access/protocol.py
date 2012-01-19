@@ -527,7 +527,7 @@ class Connection(object):
         logger.info('initializing')
         self.dmz_host = dmz_host
         self.root = root
-        self._poll_delay = poll_delay
+        self.poll_delay = poll_delay
         self._logger = logger
         self._seqno = 0         # Outgoing increments at send.
         self._remote_seqno = 1  # Incoming assumes increment.
@@ -700,7 +700,7 @@ class Connection(object):
         delay = 1
         time.sleep(delay)
         while not self._poll(prefix, seqno):
-            delay = min(delay + 1, self._poll_delay)  # Back-off polling rate.
+            delay = min(delay + 1, self.poll_delay)  # Back-off polling rate.
             if timeout > 0:
                 now = time.time()
                 if now - start > timeout:

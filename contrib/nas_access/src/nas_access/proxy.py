@@ -216,6 +216,7 @@ class NAS_Server(object):
         self._pid = pid
         self._logger = logging.getLogger(name)
         self._conn = connect(dmz_host, server_host, path, self._logger)
+        self._proxies = []
         self._close = _Finalizer()
 
     @property
@@ -240,8 +241,12 @@ class NAS_Server(object):
 
     def shutdown(self):
         """ Shut-down this server. """
-        self._logger.debug('shutdown')
-        self._conn.close()
+        if self._conn is not None:
+            self._logger.debug('shutdown')
+            for proxy in self._proxies:
+                proxy.shutdown()
+            self._conn.close()
+            self._conn = None
 
     @rbac('*')
     def echo(self, *args):
@@ -251,6 +256,12 @@ class NAS_Server(object):
         """
         timeout = 5 * 60
         return self._conn.invoke('echo', args, timeout=timeout)
+
+    @rbac('owner', proxy_types=[object])
+    def create(self, typname, version=None, server=None,
+               res_desc=None, **ctor_args):
+        """ Raises ``NotImplementedError``. """
+        raise NotImplementedError('create')
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -265,6 +276,22 @@ class NAS_Server(object):
         timeout = 0  # Could be queued 'forever'.
         return self._conn.invoke('execute_command', (resource_desc,),
                                  timeout=timeout)
+
+    @rbac('owner', proxy_types=[object])
+    def load_model(self, egg_filename):
+        """
+        Load model from egg and return top-level object if this server's
+        `allow_shell` attribute is True.
+
+        egg_filename: string
+            Filename of egg to be loaded.
+        """
+        timeout = 5 * 60
+        r_root = self._conn.invoke('load_model', (egg_filename,),
+                                   timeout=timeout)
+        proxy = NAS_Component(self._conn.dmz_host, self._host, r_root)
+        self._proxies.append(proxy)
+        return proxy
 
     @rbac('owner')
     def pack_zipfile(self, patterns, filename):
@@ -487,4 +514,35 @@ class _Finalizer(object):
     def cancel(self):
         """ Called during RAM.release(). """
         pass
+
+
+class NAS_Component(object):
+    """ Knows about some of the :class:`Component` API. """
+
+    def __init__(self, dmz_host, server_host, path):
+        self._host = server_host
+        self._logger = logging.getLogger(path)
+        self._conn = connect(dmz_host, server_host, path, self._logger)
+
+    def shutdown(self):
+        """ Shut-down this proxy. """
+        if self._conn is not None:
+            self._logger.debug('shutdown')
+            self._conn.close()
+            self._conn = None
+
+    def get(self, name, index=None):
+        """ Return value of `name`. """
+        timeout = 5 * 60
+        return self._conn.invoke('get', (name, index), timeout=timeout)
+
+    def set(self, name, value, index=None):
+        """ Set `name` to `value`. """
+        timeout = 5 * 60
+        return self._conn.invoke('set', (name, value, index), timeout=timeout)
+
+    def run(self):
+        """ Run. """
+        timeout = 0
+        return self._conn.invoke('run', timeout=timeout)
 

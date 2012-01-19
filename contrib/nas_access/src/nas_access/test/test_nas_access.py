@@ -11,7 +11,10 @@ import sys
 import time
 import unittest
 
+from openmdao.main.api import Component, set_as_top
 from openmdao.main.resource import ResourceAllocationManager as RAM
+
+from openmdao.lib.datatypes.api import Float
 
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.testutil import assert_raises
@@ -24,56 +27,85 @@ _DMZ_ROOT = 'Fake_DMZ'
 _RJE_ROOT = 'RJE'
 
 
+class Echo(Component):
+    """ Echo inputs to outputs. """
+
+    def __init__(self, n_args=1):
+        super(Echo, self).__init__()
+        if n_args <= 0:
+            raise ValueError('nargs must be > 0')
+        self.n_args = n_args
+        for i in range(n_args):
+            self.add('inp_%d' % i, Float(iotype='in'))
+            self.add('out_%d' % i, Float(iotype='out'))
+
+    def execute(self):
+        """ Copy inputs to outputs. """
+        for i in range(self.n_args):
+            setattr(self, 'out_%d' % i, getattr(self, 'inp_%d' % i))
+
+
 class TestCase(unittest.TestCase):
 
+    # Need to be in this directory or there are issues with egg loading.
+    directory = pkg_resources.resource_filename('nas_access', 'test')
+
     def setUp(self):
-        # Force use of fake 'ssh' and 'scp'.
-        ssh = ('python', os.path.join(_TST_ROOT, 'ssh.py'), _DMZ_ROOT)
-        scp = ('python', os.path.join(_TST_ROOT, 'scp.py'), _DMZ_ROOT)
+        self.orig_dir = os.getcwd()
+        os.chdir(TestCase.directory)
+        try:
+            # Force use of fake 'ssh' and 'scp'.
+            ssh = ('python', os.path.join(_TST_ROOT, 'ssh.py'), _DMZ_ROOT)
+            scp = ('python', os.path.join(_TST_ROOT, 'scp.py'), _DMZ_ROOT)
 
-        self.orig_ssh = protocol.configure_ssh(ssh)
-        self.orig_scp = protocol.configure_scp(scp)
+            self.orig_ssh = protocol.configure_ssh(ssh)
+            self.orig_scp = protocol.configure_scp(scp)
 
-        # Avoid lots of polling log entries.
-        if logging.getLogger().getEffectiveLevel() < logging.DEBUG:
-            logging.getLogger().setLevel(logging.DEBUG)
+            # Avoid lots of polling log entries.
+            if logging.getLogger().getEffectiveLevel() < logging.DEBUG:
+                logging.getLogger().setLevel(logging.DEBUG)
 
-        # Start RJE server.
-        hostname = socket.gethostname()
-        self.proc = start_server(hostname)
+            # Start RJE server.
+            hostname = socket.gethostname()
+            self.proc = start_server(hostname)
 
-        # Create NAS_Allocator referring to server.
-        logging.debug('create allocator')
-        self.allocator = NAS_Allocator()
-        parser = ConfigParser.ConfigParser()
-        section = self.allocator.name
-        parser.add_section(section)
-        parser.set(section, 'dmz_host', hostname)
-        parser.set(section, 'server_host', hostname)
-        self.allocator.configure(parser)
+            # Create NAS_Allocator referring to server.
+            logging.debug('create allocator')
+            self.allocator = NAS_Allocator()
+            parser = ConfigParser.ConfigParser()
+            section = self.allocator.name
+            parser.add_section(section)
+            parser.set(section, 'dmz_host', hostname)
+            parser.set(section, 'server_host', hostname)
+            self.allocator.configure(parser)
 
-        # Add allocator to RAM.
-        RAM.add_allocator(self.allocator)
+            # Add allocator to RAM.
+            RAM.add_allocator(self.allocator)
+        except Exception:
+            os.chdir(self.orig_dir)
 
     def tearDown(self):
-        logging.debug('remove')
-        RAM.remove_allocator(self.allocator.name)
+        try:
+            logging.debug('remove')
+            RAM.remove_allocator(self.allocator.name)
 
-        if self.proc is not None:
-            logging.debug('shutdown')
-            self.allocator.shutdown()
-            self.proc.terminate()
-        else:
-            self.allocator.invalidate()
+            if self.proc is not None:
+                logging.debug('shutdown')
+                self.allocator.shutdown()
+                self.proc.terminate()
+            else:
+                self.allocator.invalidate()
 
-        # Restore 'ssh' and 'scp' configuration.
-        protocol.configure_ssh(self.orig_ssh)
-        protocol.configure_scp(self.orig_scp)
+            # Restore 'ssh' and 'scp' configuration.
+            protocol.configure_ssh(self.orig_ssh)
+            protocol.configure_scp(self.orig_scp)
 
-        time.sleep(2)
-        for name in (_RJE_ROOT, _DMZ_ROOT):
-            if os.path.exists(name):
-                shutil.rmtree(name)
+            time.sleep(2)
+            for name in (_RJE_ROOT, _DMZ_ROOT):
+                if os.path.exists(name):
+                    shutil.rmtree(name)
+        finally:
+            os.chdir(self.orig_dir)
 
     def test_allocator(self):
         logging.debug('')
@@ -100,6 +132,37 @@ class TestCase(unittest.TestCase):
                              ['openmdao_log.txt', 'stderr', 'stdout'])
         finally:
             self.allocator.release(server)
+
+    def test_case_eval(self):
+        logging.debug('')
+        logging.debug('test_case_eval')
+
+        # Run a fake job in style of CaseIteratorDriver.
+        logging.debug('allocate server')
+        server, server_info = RAM.allocate(dict(allocator=self.allocator.name))
+        echo = set_as_top(Echo(1))
+        egg_info = echo.save_to_egg('EchoTest', '1', need_requirements=False)
+        egg_filename = egg_info[0]
+        try:
+            logging.debug('transfer egg')
+            filexfer(None, egg_filename, server, egg_filename, 'b')
+
+            logging.debug('load model')
+            tlo = server.load_model(egg_filename)
+
+            logging.debug('set input')
+            tlo.set('inp_0', 42)
+
+            logging.debug('run')
+            tlo.run()
+
+            logging.debug('get output')
+            output = tlo.get('out_0')
+            self.assertEqual(output, 42)
+        finally:
+            os.remove(egg_filename)
+            logging.debug('release')
+            RAM.release(server)
 
     def test_extcode(self):
         logging.debug('')

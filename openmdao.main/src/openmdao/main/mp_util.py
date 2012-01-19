@@ -172,7 +172,7 @@ def _cleanup_tunnel(tunnel_proc, logname, pid):
     if os.path.exists(logname):
         try:
             os.remove(logname)
-        except Exceoption as exc:
+        except Exception as exc:
             logging.warning("Can't remove tunnel logfile: %s", exc)
 
 
