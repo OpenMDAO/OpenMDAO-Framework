@@ -9,7 +9,8 @@ from openmdao.lib.architectures.api import MDF, BLISS, CO,BLISS2000
 
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     
-from openmdao.lib.optproblems.api import SellarProblem    
+from openmdao.lib.optproblems.api import UnitScalableProblem as SellarProblem    
+#from openmdao.lib.optproblems.api import  SellarProblem    
         
         
 if __name__ == "__main__": # pragma: no cover
@@ -130,7 +131,8 @@ if __name__ == "__main__": # pragma: no cover
     prob.run() 
     
     error = prob.check_solution()
-    
+    print error
+    '''
     
     print "sysopt params"
     for k in prob.sysopt.get_parameters(): 
@@ -163,6 +165,7 @@ if __name__ == "__main__": # pragma: no cover
     print "----------------------"
     
     print "\nUsing BLISS2000 Architecture"
+    '''
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
                                              prob.dis1.z2,
                                              prob.dis1.x1)
