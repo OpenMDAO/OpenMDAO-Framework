@@ -93,8 +93,9 @@ class FixedPointIterator(Driver):
             # check max iteration
             if self.current_iteration >= self.max_iteration-1:
                 self.history = history[:self.current_iteration+1, :]
-                self.raise_exception('Max iterations exceeded without ' + \
-                                     'convergence.', RuntimeError)
+                #self.raise_exception('Max iterations exceeded without ' + \
+                #                     'convergence.', RuntimeError)
+                break
                 
                 
             # Pass output to input

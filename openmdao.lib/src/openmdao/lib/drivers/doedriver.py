@@ -130,7 +130,7 @@ class NeiborhoodDOEdriver(CaseIterDriverBase):
                 
                 
 				#respect boundaries
-                print '%s: %f,%f'%(p.name,curval,newval),
+                #print '%s: %f,%f'%(p.name,curval,newval),
                 
 				#respect boundaries
                 if newval<p.low:
@@ -141,7 +141,7 @@ class NeiborhoodDOEdriver(CaseIterDriverBase):
                 vals.append(newval)
                 
             case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
-            print 
+            #print 
             # now add events
             for varname in self.get_events(): 
                 case.add_input(varname,True)

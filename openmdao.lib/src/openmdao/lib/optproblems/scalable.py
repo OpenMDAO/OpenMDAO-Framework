@@ -77,14 +77,15 @@ class UnitScalableProblem(OptProblem):
             d.c_y_out = n_disciplines #scale to the number of disciplines to keep values of y at 1
             
             #scale roughly to the magnitude 
-            self.add_trait("c%d"%i,Float(1.0,iotype="in",desc="scaler for the constraint on the %dth discipline"%i))
+            #self.add_trait("c%d"%i,Float(1.0,iotype="in",desc="scaler for the constraint on the %dth discipline"%i))
             
             #adding all local variables to the problem formulation
             for j in range(0,n_locals): 
                 self.add_parameter('%s.x%d'%(name,j),low=-10,high=10,start=0)
                 self.solution['%s.x%d'%(name,j)] = -1/float(n_locals)
         
-            self.add_constraint("1-%s.y_out/%s <= 0"%(name,"c%d"%i))
+            #self.add_constraint("1-%s.y_out/2.0 <= 0"%name) #if you wanted to scale the constraint use this line
+            self.add_constraint("1-%s.y_out <= 0"%name)
             
         
         #global variables

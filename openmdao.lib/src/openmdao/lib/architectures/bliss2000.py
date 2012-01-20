@@ -36,11 +36,10 @@ class SubSystemOpt(Assembly):
     """ assembly which takes global inputs, coupling indeps, and weight factors as inputs, 
     and runs a local optimization on the local des vars"""
     
-    def __init__(self,component,global_params,local_params,couple_deps,couple_indeps): 
+    def __init__(self,component,global_params,local_params,couple_deps,couple_indeps,constraints): 
         super(SubSystemOpt,self).__init__()
         
         dep_state_vars = set([c.dep.target for c in couple_deps])        
-        
         self.add('objective_comp',SubSystemObj(len(dep_state_vars)))
         self.add(component.name,component)
         for p in global_params:
@@ -65,6 +64,9 @@ class SubSystemOpt(Assembly):
                 
                 #have the optimizer also set the output value here, so it's correct
                 self.driver.add_parameter([target,var_name],low=p.low,high=p.high)
+            
+            for c in constraints: 
+                self.driver.add_constraint(str(c))
                 
                 
                 
@@ -118,7 +120,7 @@ class BLISS2000(Architecture):
         driver=self.parent.add("driver",FixedPointIterator())
                
         driver.workflow = SequentialWorkflow()           
-        driver.max_iteration=100
+        driver.max_iteration=10
         
         meta_models = {}
         self.sub_system_opts = {}
@@ -132,10 +134,11 @@ class BLISS2000(Architecture):
             if local_dvs_by_comp.get(comp): 
                 sso = self.parent.add('sub_system_opt_%s'%comp,
                                       SubSystemOpt(comp_obj,
-                                      global_dvs_by_comp[comp],
-                                      local_dvs_by_comp[comp],
-                                      couple_deps[comp],
-                                      couple_indeps[comp]))
+                                      global_dvs_by_comp.get(comp),
+                                      local_dvs_by_comp.get(comp),
+                                      couple_deps.get(comp),
+                                      couple_indeps.get(comp),
+                                      comp_constraints.get(comp)))
                 self.sub_system_opts[comp] = sso
                 meta_model.model = sso 
             else: #otherwise, just use the comp

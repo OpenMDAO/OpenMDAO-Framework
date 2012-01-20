@@ -9,15 +9,9 @@ from openmdao.lib.architectures.api import MDF, BLISS, CO,BLISS2000, IDF
 
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     
-<<<<<<< HEAD
-from openmdao.lib.optproblems.api import HulmeProblem as SellarProblem    
+from openmdao.lib.optproblems.api import UnitScalableProblem as SellarProblem    
 #from openmdao.lib.optproblems.api import SellarProblem    
 
-=======
-from openmdao.lib.optproblems.api import UnitScalableProblem as SellarProblem    
-#from openmdao.lib.optproblems.api import  SellarProblem    
-        
->>>>>>> 52ca7ff34755134fdb04987598371abcc76ea182
         
 if __name__ == "__main__": # pragma: no cover
 
@@ -124,7 +118,7 @@ if __name__ == "__main__": # pragma: no cover
     '''
     
     prob = SellarProblem()
-    prob.architecture = MDF()
+    prob.architecture = BLISS2000()
     
     prob.configure()   
     
@@ -134,47 +128,10 @@ if __name__ == "__main__": # pragma: no cover
     prob.run() 
     
     error = prob.check_solution()
-<<<<<<< HEAD
     
     print error
     exit()
-=======
-    print error
-    '''
-    
->>>>>>> 52ca7ff34755134fdb04987598371abcc76ea182
-    print "sysopt params"
-    for k in prob.sysopt.get_parameters(): 
-        print k
-    print "sysopt objectives"
-    for k in prob.sysopt.get_objectives(): 
-        print k
-    print "sysopt constraints"
-    for k in prob.sysopt.list_constraints(): 
-        print k    
-    print "local_opt params"
-    for k in prob.local_opt_dis1.get_parameters():    
-        print k
-    print "local_opt objectives"
-    for k in prob.local_opt_dis1.get_objectives(): 
-        print k
-    print "local_opt constraints"
-    for k in prob.local_opt_dis1.list_constraints(): 
-        print k
-    print
-    print "driver constraints:"
-    for k in prob.driver.list_constraints(): 
-        print k
-    print "driver params:"
-    for k in prob.driver.get_parameters():    
-        print k   
-    print [x.name for x in prob.driver.workflow]
-    print [x.name for x in prob.sysopt.workflow]
-    print [x.name for x in prob.local_opt_dis1.workflow]
-    print "----------------------"
-    
-    print "\nUsing BLISS2000 Architecture"
-    '''
+
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
                                              prob.dis1.z2,
                                              prob.dis1.x1)
