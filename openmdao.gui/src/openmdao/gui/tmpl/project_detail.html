@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {{ project.projectname }}
+{% end %}
+
+{% block content %}
+
+    <h1>{{ project.projectname }}</h1>
+    
+    <form action="/projects/{{ project.id }}/" method="POST">
+        <table>
+        {% raw  project_form.as_table() %} 
+        </table>
+    <br>
+    {% if project.filename %}
+    <input type="submit" value="Update Project Details" />
+    {% else %}
+    <input type="submit" value="Create Project" />
+    {% end %}
+    </form>
+    
+    <form action="/projects/delete/{{ project.id }}/" method="POST">
+        <input type="hidden" name="filename" value="{{ project.filename }}" />
+        <input type="submit" value="Delete this project" />
+    </form>
+
+    <p>
+    <b>Last Modified: </b> {{ project.modified }}
+    <p>
+    
+    {% if project.filename %}
+    <form action="/workspace/project/" method="GET">
+        <input type="hidden" name="filename" value="{{ project.filename }}" />
+        <input type="submit" value="Load this project into Workspace" />
+    </form>
+    
+    <form action="/projects/download/{{ project.id }}/" method="GET">
+        <input type="hidden" name="filename" value="{{ project.filename }}" />
+        <input type="submit" value="Save a copy of this project" />
+    </form>
+    {% end %}        
+    <br>
+{% end %}
+
+{% block footer %}
+   <a href="/projects/">Back to Projects</a>    <a href="/accounts/logout?next=/">Logout</a>
+{% end %}
