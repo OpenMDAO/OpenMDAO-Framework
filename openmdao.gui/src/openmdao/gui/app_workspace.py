@@ -30,20 +30,20 @@ class AddOnsHandler(tornado.web.RequestHandler):
             distribution = form.cleaned_data['distribution']
             cserver = server_mgr.console_server(request.session.session_key)
             cserver.install_addon(addons_url, distribution)
-            self.render('workspace/templates/closewindow.html')
+            self.render('tmpl/workspace/closewindow.html')
             
     def get(self):
         ''' show available addons, prompt for addon to be installed
         '''
         form = AddonForm()
-        self.render('workspace/templates/addons.html', 
+        self.render('tmpl/workspace/addons.html', 
                                   {'addons_url': addons_url, 'addon_form': form })
         
 class GeometryHandler(tornado.web.RequestHandler):
     def get(self):
         ''' geometry viewer
         '''
-        self.render('workspace/templates/o3dviewer.html',
+        self.render('tmpl/workspace/o3dviewer.html',
                                   {'filename': request.GET['path'] })
  
 class CloseHandler(tornado.web.RequestHandler):
@@ -319,7 +319,7 @@ class UploadHandler(tornado.web.RequestHandler):
                 self.render('templates/closewindow.html')
 
     def get(self):
-        self.render('workspace/templates/upload.html', 
+        self.render('tmpl/workspace/upload.html', 
                                   context_instance=RequestContext(request))
 
 class WorkflowHandler(tornado.web.RequestHandler):
@@ -332,13 +332,13 @@ class WorkspaceHandler(tornado.web.RequestHandler):
     ''' render the workspace
     '''
     def get(self):
-        self.render('workspace/templates/workspace.html')
+        self.render('tmpl/workspace/workspace.html')
 
 class TestHandler(tornado.web.RequestHandler):
     ''' initialize the server manager &  render the workspace
     '''
     def get(self):
-        self.render('workspace/templates/test.html')
+        self.render('tmpl/workspace/test.html')
 
                                   
 handlers = [

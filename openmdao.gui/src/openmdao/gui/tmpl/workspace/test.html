@@ -1,0 +1,79 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>{% block title %} OpenMDAO: {{ user.username }} {% endblock %}</title>
+</head>
+
+<body bgcolor="Grey">
+	<!----------------------------------------->
+	<!-- load all the scripts & style sheets -->
+	<!----------------------------------------->
+
+    <link rel="stylesheet" href="/static/css/mdao-layout.css">
+    <link rel="stylesheet" href="/static/css/mdao-styles.css">
+
+	<script src="/static/js/modernizr.js"></script>
+    
+    <!-- jQuery -->
+    <link rel="stylesheet" href="/static/css/ui-darkness/jquery-ui-1.8.7.custom.css">
+    <script src="/static/js/require-jquery.js"></script>
+    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script>
+    
+    <!--  ben alman's debug script (for development only, remove for flight)  -->
+    <script src="/static/js/ba-debug.min.js"></script>
+    
+    <!-- openmdao specific imports -->
+	<script src="/static/js/openmdao/Util.js"></script>
+	<script src="/static/js/openmdao/Model.js"></script>
+	<script src="/static/js/openmdao/Menu.js"></script>
+	<script src="/static/js/openmdao/TabbedPane.js"></script>
+   
+    <!-- openmdao specific imports -->
+	<script src="/static/js/openmdao/BaseFrame.js"></script>
+	<script src="/static/js/openmdao/TestFrame.js"></script>
+    
+    <script>
+    jQuery(document).ready(function() {
+        model = new openmdao.Model();
+        new openmdao.Menu('main-menu',[
+            { "text": "Menu", 
+              "items": [ { "text": "Test",          "onclick": "new openmdao.TestFrame('popup',model)" } ]
+            },
+        ])
+        
+        new openmdao.TabbedPane("tabbed_pane");
+        new openmdao.TestFrame("test",model);
+    })
+    </script>
+
+	<!--------------------------------------->
+	<!-- a tabbed pane to test your window -->
+	<!--------------------------------------->
+    
+    <nav id='main-menu'>
+    </nav>
+    
+    <div>
+        <div id="tabbed_pane">
+            <dl id="central_tabs">
+                <dt id="test_tab" target="test_pane">Test</dt>
+                <dd id="test_pane">
+                    <ul id="test"></ul>
+                </dd>
+                <dt id="other_tab" target="other_pane">Other</dt>
+                <dd id="other_pane">
+                    <ul id="other"></ul>
+                </dd>
+            </dl>
+        </div>
+    </div>
+    
+</body>
+
+</html>

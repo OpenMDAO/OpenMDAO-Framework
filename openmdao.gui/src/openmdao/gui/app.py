@@ -17,8 +17,8 @@ from openmdao.gui.projdb.models import Project
 from django.shortcuts import get_object_or_404
 
 
-from app_projdb import *
-from app_workspace import *
+import app_projdb
+import app_workspace
 
 #
 # override the get_current_user() method in your request handlers to determine
@@ -47,36 +47,36 @@ class LoginHandler(BaseHandler):
 handlers = [
     (r'/login',                       LoginHandler),
 	
-    (r'/',                                        IndexHandler),
-    (r'/projects/',                               IndexHandler),
-    (r'/projects/(?P<project_id>\d+)/$',          DetailHandler),
-    (r'/projects/new/$',                          NewHandler),
-    (r'/projects/add/$',                          AddHandler),
-    (r'/projects/delete/(?P<project_id>\d+)/$',   DeleteHandler),
-    (r'/projects/download/(?P<project_id>\d+)/$', DownloadHandler),
+    (r'/',                                        app_projdb.IndexHandler),
+    (r'/projects',                                app_projdb.IndexHandler),
+    (r'/projects/(?P<project_id>\d+)/$',          app_projdb.DetailHandler),
+    (r'/projects/new/$',                          app_projdb.NewHandler),
+    (r'/projects/add/$',                          app_projdb.AddHandler),
+    (r'/projects/delete/(?P<project_id>\d+)/$',   app_projdb.DeleteHandler),
+    (r'/projects/download/(?P<project_id>\d+)/$', app_projdb.DownloadHandler),
 	
-    (r'/workspace',                   WorkspaceHandler),
-    (r'/workspace/components',        ComponentsHandler),
-    (r'/workspace/component/(.*)',    ComponentHandler),
-    (r'/workspace/connections/(.*)',  ConnectionsHandler),
-    (r'/workspace/addons',            AddOnsHandler),
-    (r'/workspace/close',             CloseHandler),
-    (r'/workspace/command',           CommandHandler),
-    (r'/workspace/structure/(.*)',    StructureHandler),
-    (r'/workspace/exec',              ExecHandler),
-    (r'/workspace/exit',              ExitHandler),
-    (r'/workspace/file/(.*)',         FileHandler),
-    (r'/workspace/files',             FilesHandler),
-    (r'/workspace/geometry',          GeometryHandler),
-    (r'/workspace/logout',            LogoutHandler),
-    (r'/workspace/model',             ModelHandler),
-    (r'/workspace/output',            OutputHandler),
-    (r'/workspace/plot/(.*)',         PlotHandler),
-    (r'/workspace/project/',       ProjectHandler),
-    (r'/workspace/types',             TypesHandler),
-    (r'/workspace/upload',            UploadHandler),
-    (r'/workspace/workflow/(.*)',     WorkflowHandler),
-    (r'/workspace/test',              TestHandler),
+    (r'/workspace',                   app_workspace.WorkspaceHandler),
+    (r'/workspace/components',        app_workspace.ComponentsHandler),
+    (r'/workspace/component/(.*)',    app_workspace.ComponentHandler),
+    (r'/workspace/connections/(.*)',  app_workspace.ConnectionsHandler),
+    (r'/workspace/addons',            app_workspace.AddOnsHandler),
+    (r'/workspace/close',             app_workspace.CloseHandler),
+    (r'/workspace/command',           app_workspace.CommandHandler),
+    (r'/workspace/structure/(.*)',    app_workspace.StructureHandler),
+    (r'/workspace/exec',              app_workspace.ExecHandler),
+    (r'/workspace/exit',              app_workspace.ExitHandler),
+    (r'/workspace/file/(.*)',         app_workspace.FileHandler),
+    (r'/workspace/files',             app_workspace.FilesHandler),
+    (r'/workspace/geometry',          app_workspace.GeometryHandler),
+    (r'/workspace/logout',            app_workspace.LogoutHandler),
+    (r'/workspace/model',             app_workspace.ModelHandler),
+    (r'/workspace/output',            app_workspace.OutputHandler),
+    (r'/workspace/plot/(.*)',         app_workspace.PlotHandler),
+    (r'/workspace/project/',          app_workspace.ProjectHandler),
+    (r'/workspace/types',             app_workspace.TypesHandler),
+    (r'/workspace/upload',            app_workspace.UploadHandler),
+    (r'/workspace/workflow/(.*)',     app_workspace.WorkflowHandler),
+    (r'/workspace/test',              app_workspace.TestHandler),
 ]
     
 ##

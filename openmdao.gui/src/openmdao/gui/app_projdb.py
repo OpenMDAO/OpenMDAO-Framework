@@ -56,7 +56,7 @@ class IndexHandler(BaseHandler):
     def get(self):
         dbuser = User.objects.get(username__exact=self.current_user)
         project_list = Project.objects.filter(user=dbuser)
-        self.render('tmpl/project_list.html', 
+        self.render('tmpl/projdb/project_list.html', 
                      project_list=project_list, user=self.current_user)
 
 #
@@ -123,7 +123,7 @@ class DetailHandler(BaseHandler):
         file_form = ProjectFileForm({
             'filename':    p.filename
         })
-        self.render('tmpl/project_detail.html', project=p,project_form=proj_form,file_form=file_form)
+        self.render('tmpl/projdb/project_detail.html', project=p,project_form=proj_form,file_form=file_form)
 
 #
 # project download
@@ -163,7 +163,7 @@ class NewHandler(BaseHandler):
         file_form = ProjectFileForm({
             'filename':    p.filename
         })
-        self.render('tmpl/project_detail.html', {
+        self.render('tmpl/projdb/project_detail.html', {
                                   'project':      p, 
                                   'project_form': proj_form,
                                   'file_form':    file_form})
@@ -195,7 +195,7 @@ class AddHandler(BaseHandler):
 
     @tornado.web.authenticated
     def get(self):
-        self.render('tmpl/add_project.html')
+        self.render('tmpl/projdb/add_project.html')
 
 
 handlers = [
