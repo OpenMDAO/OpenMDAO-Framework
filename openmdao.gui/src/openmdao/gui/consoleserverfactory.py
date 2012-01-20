@@ -32,7 +32,7 @@ from zope.interface import implementedBy
 
 import networkx as nx
 
-from mdao_util import *
+from openmdao.gui.util import *
 
 class ConsoleServerFactory(Factory):
     ''' creates and keeps track of :class:`ConsoleServer`
@@ -116,7 +116,7 @@ class ConsoleServer(cmd.Cmd):
         self.prompt = 'OpenMDAO>> '
         
         self._hist    = []      ## No history yet
-        self._globals = {}
+        self.known_types = []
 
         self.host = host
         self.pid = os.getpid()
@@ -134,7 +134,6 @@ class ConsoleServer(cmd.Cmd):
         
         self.projfile = ''
         self.proj = None
-        self.top = None
         self.exc_info = None
 
     def error(self,err,exc_info):
@@ -194,39 +193,58 @@ class ConsoleServer(cmd.Cmd):
 
         if isStatement:
             try:
-                exec(line) in self._globals
+                exec(line) in self.proj.__dict__
             except Exception, err:
                 self.error(err,sys.exc_info())
         else:
             try:
-                result = eval(line, self._globals)
+                result = eval(line, self.proj.__dict__)
                 if result is not None:
                     print result
             except Exception, err:
                 self.error(err,sys.exc_info())
 
+    def set_top(self,pathname):
+        print 'setting top to:',pathname
+        cont, root = self.get_container(pathname)
+        if cont:
+            self.proj.__dict__['top'] = cont
+            set_as_top(cont)
+        else:
+            print pathname,'not found.'
+
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
-        if self.top:
+        if 'top' in self.proj.__dict__:
             print "Executing..."
             try:
-                self.top.run(*args, **kwargs)
+                top = self.proj.__dict__['top']
+                top.run(*args, **kwargs)
                 print "Execution complete."
             except Exception, err:
                 self.error(err,sys.exc_info())
         else:
-            print "Execution failed: No top level assembly was found."
+            print "Execution failed: No 'top' assembly was found."
         
-    def execfile(self, file):
+    def execfile(self, filename):
         ''' execfile in server's globals. 
         '''
-        # set name so any "if __name__ == __main__" code will be executed
-        self._globals['__name__'] = '__main__'
-        print "Executing",file,"..."
         try:
-            execfile(file, self._globals)
-            print "Execution complete."
+            # first import all definitions
+            basename = os.path.splitext(filename)[0]
+            cmd = 'from '+basename+' import *'
+            self.default(cmd)
+            # then execute anything after "if __name__ == __main__:"
+            with open(filename) as file:
+                contents = file.read()
+            main_str = 'if __name__ == "__main__":'
+            contents.replace("if __name__ == '__main__':'",main_str)
+            idx = contents.find(main_str)
+            if idx >= 0:
+                idx = idx + len(main_str)
+                contents = 'if True:\n' + contents[idx:]
+                self.default(contents)
         except Exception, err:
             self.error(err,sys.exc_info())
 
@@ -255,44 +273,64 @@ class ConsoleServer(cmd.Cmd):
     def get_JSON(self):
         ''' return current state as JSON 
         '''
-        return jsonpickle.encode(self._globals)
+        return jsonpickle.encode(self.proj.__dict__)
 
-    def _get_components(self,cont):
+    def get_container(self,pathname):
+        ''' get the container with the specified pathname
+            returns the container and the name of the root object
+        '''
+        cont = None
+        root = pathname.split('.')[0]
+        if root in self.proj.__dict__:
+            if root == pathname:
+                cont = self.proj.__dict__[root]
+            else:
+                rest = pathname[len(root)+1:]
+                try:
+                    cont = self.proj.__dict__[root].get(rest)
+                except Exception, err:
+                    self.error(err,sys.exc_info())
+        return cont, root
+        
+    def _get_components(self,cont,pathname=None):
+        ''' get a heierarchical list of all the components in the given
+            container or dictionary.  the name of the root container, if
+            specified, is prepended to all pathnames
+        '''
+        
         comps = []
-        for n,v in cont.items():
+        for k,v in cont.items():                        
             if is_instance(v,Component):
-                comp = {}            
-                comp['pathname'] = v.get_pathname()
+                comp = {}
+                if cont == self.proj.__dict__:
+                    comp['pathname'] = k
+                    children = self._get_components(v,k)
+                else:
+                    comp['pathname'] = pathname+'.'+ k if pathname else k
+                    children = self._get_components(v,comp['pathname'])
+                if len(children) > 0:
+                    comp['children'] = children
                 comp['type'] = str(v.__class__.__name__)
                 inames = []
                 for klass in list(implementedBy(v.__class__)):
                     inames.append(klass.__name__)
                 comp['interfaces'] = inames
-                children = self._get_components(v)
-                if len(children) > 0:
-                    comp['children'] = children
                 comps.append(comp)
         return comps
         
     def get_components(self):
         ''' get hierarchical dictionary of openmdao objects 
         '''
-        comps = {}
-        if self.top:
-            comps = self._get_components(self.top)
+        comps = self._get_components(self.proj.__dict__)
         return jsonpickle.encode(comps)
 
     def get_connections(self,pathname,src_name,dst_name):
         ''' get list of src outputs, dst inputs and connections between them
         '''
         conns = {}
-        if self.top:
+        asm, root = self.get_container(pathname)
+        if asm:
             try:
-                if (pathname==None or pathname==''):
-                    asm = self.top
-                else:
-                    asm = self.top.get(pathname);
-                
                 # outputs
                 outputs = []
                 src = asm.get(src_name)
@@ -341,12 +379,9 @@ class ConsoleServer(cmd.Cmd):
     def set_connections(self,pathname,src_name,dst_name,connections):
         ''' set connections between src and dst components in the given assembly
         '''
-        if self.top:
+        asm, root = self.get_container(pathname)
+        if asm:
             try:
-                if (pathname==None or pathname==''):
-                    asm = self.top
-                else:
-                    asm = self.top.get(pathname);
                 conntuples = asm.list_connections(show_passthrough=False)
                 # disconnect any connections that are not in the new set
                 for src,dst in conntuples:
@@ -363,7 +398,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self.error(err,sys.exc_info())
 
-    def _get_dataflow(self,asm):
+    def _get_structure(self,asm,pathname):
         ''' get the list of components and connections between them
             that make up the data flow for the given assembly 
         '''
@@ -377,7 +412,7 @@ class ConsoleServer(cmd.Cmd):
                     comp = asm.get(name)
                     if is_instance(comp,Component):
                         components.append({ 'name': comp.name,
-                                            'pathname': comp.get_pathname(),
+                                            'pathname': pathname + '.' + name,
                                             'type': type(comp).__name__ })
             # list of connections (convert tuples to lists)
             conntuples = asm.list_connections(show_passthrough=False)
@@ -385,53 +420,70 @@ class ConsoleServer(cmd.Cmd):
                 connections.append(list(connection))
         return { 'components': components, 'connections': connections }
 
-    def get_dataflow(self,name):
-        flow = {}
-        if self.top:
+    def get_structure(self,pathname):
+        ''' get the structure of the specified assembly, or of the global 
+            namespace if no pathname is specified, consisting of the list
+            of components and the connections between them
+        '''
+        structure = {}
+        if pathname and len(pathname) > 0:
             try:
-                if name:
-                    flow = self._get_dataflow(self.top.get(name))
-                else:
-                    flow = self._get_dataflow(self.top)
+                asm, root = self.get_container(pathname)
+                structure = self._get_structure(asm, pathname)
             except Exception, err:
                 self.error(err,sys.exc_info())
+        else:
+            components = []
+            g = self.proj.__dict__.items()
+            for k,v in g:
+                if is_instance(v,Component):
+                    components.append({ 'name': k,
+                                        'pathname': k+'.'+v.get_pathname(),
+                                        'type': type(v).__name__ })
+            structure['components'] = components
+            structure['connections'] = []
+        return jsonpickle.encode(structure)
 
-        return jsonpickle.encode(flow)
-
-    def _get_workflow(self,drvr):
+    def _get_workflow(self,drvr,pathname,root):
         ''' get the driver info and the list of components that make up the
             driver's workflow, recurse on nested drivers
         '''
         ret = {}
-        ret['pathname'] = drvr.get_pathname()
+        ret['pathname'] = pathname
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
         for comp in drvr.workflow:
+            pathname = root+'.'+comp.get_pathname() if root else comp.get_pathname()
             if is_instance(comp,Assembly) and comp.driver:
                 ret['workflow'].append({ 
-                    'pathname': comp.get_pathname(),
+                    'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
-                    'driver':   self._get_workflow(comp.driver)
+                    'driver':   self._get_workflow(comp.driver,pathname+'.driver',root)
                 })
             elif is_instance(comp,Driver):
-                ret['workflow'].append(self._get_workflow(comp))            
+                ret['workflow'].append(self._get_workflow(comp,pathname,root))            
             else:
                 ret['workflow'].append({ 
-                    'pathname': comp.get_pathname(),
+                    'pathname': pathname,
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
                 })
         return ret
 
-    def get_workflow(self,name='driver'):
+    def get_workflow(self,pathname):
         flow = {}
-        if self.top:
+        drvr, root = self.get_container(pathname)
+        # allow for request on the parent assembly
+        if is_instance(drvr,Assembly):
+            drvr = drvr.get('driver')
+            pathname = pathname + '.driver'
+        if drvr:
             try:
-                flow = self._get_workflow(self.top.get(name))
+                flow = self._get_workflow(drvr,pathname,root)
             except Exception, err:
                 self.error(err,sys.exc_info())
-            return jsonpickle.encode(flow)
+        return jsonpickle.encode(flow)
 
-    def _get_attributes(self,comp):
+    def _get_attributes(self,comp,pathname,root):
         ''' get attributes of object 
         '''
         attrs = {}
@@ -476,10 +528,10 @@ class ConsoleServer(cmd.Cmd):
             attrs['Outputs'] = outputs
 
         if is_instance(comp,Assembly):
-            attrs['Structure'] = self._get_dataflow(comp)
+            attrs['Structure'] = self._get_structure(comp,pathname)
         
         if has_interface(comp,IDriver):
-            attrs['Workflow'] = self._get_workflow(comp)
+            attrs['Workflow'] = self._get_workflow(comp,pathname,root)
         
         if has_interface(comp,IHasCouplingVars):
             couples = []
@@ -548,6 +600,10 @@ class ConsoleServer(cmd.Cmd):
                 attr = {}
                 attr['name'] = name
                 attr['klass'] = value.trait_type.klass.__name__
+                inames = []
+                for klass in list(implementedBy(attr['klass'])):
+                    inames.append(klass.__name__)
+                attr['interfaces'] = inames
                 if getattr(comp, name) is None:
                     attr['filled'] = False
                 else:
@@ -565,16 +621,16 @@ class ConsoleServer(cmd.Cmd):
 
         return attrs
         
-    def get_attributes(self,name):
-        try:
-            attr = {}
-            comp = self.top.get(name)
-            if self.top and comp:
-                attr = self._get_attributes(comp)
+    def get_attributes(self,pathname):
+        attr = {}
+        comp, root = self.get_container(pathname)
+        if comp:
+            try:
+                attr = self._get_attributes(comp,pathname,root)
                 attr['type'] = type(comp).__name__
-            return jsonpickle.encode(attr)
-        except Exception, err:
-            self.error(err,sys.exc_info())
+            except Exception, err:
+                self.error(err,sys.exc_info())
+        return jsonpickle.encode(attr)
     
     def get_available_types(self):
         return packagedict(get_available_types())
@@ -582,25 +638,25 @@ class ConsoleServer(cmd.Cmd):
     def get_workingtypes(self):
         ''' Return this server's user defined types. 
         '''
-        types = []
-        try:
-            g = self._globals.items()
-            for k,v in g:
-                if (type(v).__name__ == 'classobj') or str(v).startswith('<class'):
-                    obj = self._globals[k]()
+        g = self.proj.__dict__.items()
+        for k,v in g:
+            if not k in self.known_types and \
+               ((type(v).__name__ == 'classobj') or str(v).startswith('<class')):
+                try:
+                    obj = self.proj.__dict__[k]()
                     if is_instance(obj, HasTraits):
-                        types.append( ( k , 'n/a') )
-        except Exception, err:
-            self.error(err,sys.exc_info())
-        return packagedict(types)
+                        self.known_types.append( ( k , 'n/a') )
+                except Exception, err:
+                    # print 'Class',k,'not included in working types'
+                    # self.error(err,sys.exc_info())
+                    pass
+        return packagedict(self.known_types)
 
     def load_project(self,filename):
         print 'loading project from:',filename
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         self.proj.activate()
-        self.top = self.proj.top
-        self._globals['top'] = self.top
         
     def save_project(self):
         ''' save the cuurent project state & export it whence it came
@@ -621,28 +677,23 @@ class ConsoleServer(cmd.Cmd):
         else:
             print 'No Project to save'
 
-    def set_top(self,name):
-        print 'setting top to:',name
-        set_as_top(self.top.get(name))
-
     def add_component(self,name,classname,parentname):
         ''' add a new component of the given type to the specified parent. 
         '''
         if (parentname and len(parentname)>0):
-            parent = self.top.get(parentname)
+            parent, root = self.get_container(parentname)
+            if parent:
+                try:
+                    if classname in self.proj.__dict__:
+                        parent.add(name,self.proj.__dict__[classname]())
+                    else:
+                        parent.add(name,create(classname))
+                except Exception, err:
+                    self.error(err,sys.exc_info())
+            else:
+                print "Error adding component: parent",parentname,"not found."
         else:
-            parent = self.top
-        
-        if parent:
-            try:
-                if classname in self._globals:
-                    parent.add(name,self._globals[classname]())
-                else:
-                    parent.add(name,create(classname))
-            except Exception, err:
-                self.error(err,sys.exc_info())
-        else:
-            print "Error adding component: parent",parentname,"not found."
+            self.create(classname,name)
             
     def create(self,typname,name):
         ''' create a new object of the given type. 
@@ -651,11 +702,11 @@ class ConsoleServer(cmd.Cmd):
             if (typname.find('.') < 0):
                 self.default(name+'='+typname+'()')
             else:
-                self._globals[name]=create(typname)
+                self.proj.__dict__[name]=create(typname)
         except Exception, err:
             self.error(err,sys.exc_info())
             
-        return self._globals
+        return self.proj.__dict__
 
     def cleanup(self):
         ''' Cleanup this server's directory. 

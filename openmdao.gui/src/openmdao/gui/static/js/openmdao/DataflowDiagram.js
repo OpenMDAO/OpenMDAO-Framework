@@ -2,7 +2,7 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 openmdao.DataflowDiagram = function(id,model,pathname) {
-    openmdao.DataflowDiagram.prototype.init.call(this,id,'Dataflow: '+pathname,[]);
+    openmdao.DataflowDiagram.prototype.init.call(this,id,'Structure: '+pathname,[]);
     
     // initialize private variables
     var self = this,
@@ -10,18 +10,18 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
         
     /** update the schematic with data from the model */
     function update() {
-        model.getDataflow(pane.pathname, 
-                          pane.loadData, 
-                          function(jqXHR, textStatus, errorThrown) {
-                              pane.pathname = ''
-                              alert("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                              openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting dataflow',600,400)
-                              debug.error(jqXHR)
-                          })
-    }
+        model.getStructure(pane.pathname, 
+                           pane.loadData, 
+                           function(jqXHR, textStatus, errorThrown) {
+                               pane.pathname = ''
+                               alert("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                               openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting dataflow',600,400)
+                               debug.error(jqXHR)
+                           })
+    };
     
     // ask model for an update whenever something changes
-    model.addListener(update)
+    model.addListener(update);
     
     /** set the pathname for which to display the dataflow */
     this.showDataflow = function(path) {        
@@ -31,7 +31,12 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
             self.setTitle('Dataflow: '+path);
             update();
         }
-    }
+    };
+    
+    /** get the pathname for the current structure */
+    this.getPathname = function() {
+        return pane.pathname;
+    };
 }
 
 /** set prototype */

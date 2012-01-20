@@ -25,6 +25,11 @@ ul {
   height: 100%;
   overflow: auto;
 }
+#central_label {
+  margin: 0;
+  float: left;
+  padding: 5px 20px;
+}
 #rightcol {
   margin: 0;
   float: left;

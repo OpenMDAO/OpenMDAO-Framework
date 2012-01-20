@@ -70,7 +70,7 @@ def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
         dst_server.chmod(dst_path, mode)
 
 
-def pack_zipfile(patterns, filename, logger=NullLogger):
+def pack_zipfile(patterns, filename, logger=None):
     """
     Create 'zip' file `filename` of files in `patterns`.
     Returns ``(nfiles, nbytes)``.
@@ -84,6 +84,8 @@ def pack_zipfile(patterns, filename, logger=NullLogger):
     logger: Logger
         Used for recording progress.
     """
+    logger = logger or NullLogger()
+
     nfiles = 0
     nbytes = 0
     zipped = zipfile.ZipFile(filename, 'w')
@@ -100,7 +102,7 @@ def pack_zipfile(patterns, filename, logger=NullLogger):
     return (nfiles, nbytes)
 
 
-def unpack_zipfile(filename, logger=NullLogger, textfiles=None):
+def unpack_zipfile(filename, logger=None, textfiles=None):
     """
     Unpack 'zip' file `filename`.
     Returns ``(nfiles, nbytes)``.
@@ -117,6 +119,8 @@ def unpack_zipfile(filename, logger=NullLogger, textfiles=None):
         the first 4KB of each is scanned for a zero byte. If not found then the
         file is assumed to be a text file.
     """
+    logger = logger or NullLogger()
+
     # ZipInfo.create_system code for local system.
     local_system = 0 if sys.platform == 'win32' else 3
 
