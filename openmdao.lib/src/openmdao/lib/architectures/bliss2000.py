@@ -51,8 +51,8 @@ class SubSystemOpt(Assembly):
             self.driver.add_objective("objective_comp.f_wy")
             #this is not really necessary, but you might want to track it anyway...
             self.create_passthrough("objective_comp.f_wy") #promote the objective function    
-            self.driver.fdch = .0001
-            self.driver.fdchm = .0001
+            #self.driver.fdch = .0001
+            #self.driver.fdchm = .0001
 
             for p in local_params: 
                 target = p.target
@@ -111,7 +111,6 @@ class BLISS2000(Architecture):
         
         
         objective = self.parent.get_objectives().items()[0]
-        constraints = self.parent.list_constraints()
         comp_constraints = self.parent.get_constraints_by_comp()
         coupling = self.parent.get_coupling_vars()
         couple_deps = self.parent.get_coupling_deps_by_comp()
@@ -120,8 +119,8 @@ class BLISS2000(Architecture):
         driver=self.parent.add("driver",FixedPointIterator())
                
         driver.workflow = SequentialWorkflow()           
-        driver.max_iteration=40
-        
+        driver.max_iteration=2
+        driver.tolerance = .0001
         meta_models = {}
         self.sub_system_opts = {}
         for comp in des_vars: 
@@ -158,8 +157,8 @@ class BLISS2000(Architecture):
                 for w in meta_model.model.weights: 
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,w),low=-3,high=3)
             dis_doe.DOEgenerator = CentralComposite()
-            dis_doe.alpha= .3
-            dis_doe.beta = .01
+            dis_doe.alpha= .2
+            dis_doe.beta = .05
 
             dis_doe.add_event("meta_model_%s.train_next"%comp)
             dis_doe.force_execute = True
@@ -207,11 +206,10 @@ class BLISS2000(Architecture):
             sysopt.add_constraint('%s>=%s'%(s2,s1))
         
         #add constraints, referenced to metamodels
-        for constraint in constraints:
-            c= constraint
-            for comp,globalt in des_vars.iteritems(): 
-                c=c.replace(comp,"meta_model_%s"%comp)
-            sysopt.add_constraint(c)
+        for comp,constraints in comp_constraints.iteritems():
+            for c in constraints:  
+                c=str(c).replace(comp,"meta_model_%s"%comp)
+                sysopt.add_constraint(c)
         sysopt.force_execute=True    
         
         driver.workflow.add('sysopt')

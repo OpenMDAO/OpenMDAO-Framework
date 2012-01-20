@@ -285,7 +285,8 @@ class ArchitectureAssembly(Assembly):
                     result[comp] = [const,]
 
         return result 
-
+    
+    
     
 class OptProblem(ArchitectureAssembly): 
     """Class for specifying test problems for optimization 

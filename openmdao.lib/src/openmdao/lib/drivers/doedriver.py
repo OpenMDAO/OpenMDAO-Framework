@@ -85,54 +85,15 @@ class NeiborhoodDOEdriver(CaseIterDriverBase):
             for p,val,curval in zip(params,row,P):
                 #create multiplicative factor
                 k=min([curval-p.low,p.high-curval])
-                
-                
-                
+                                
                 newlow_a=curval-self.alpha*abs(curval-p.low)**(self.beta)
                 newhigh_a=curval+self.alpha*abs(p.high-curval)**(self.beta)
                 newval_a = newlow_a+(newhigh_a-newlow_a)*val
-                
-                
-                
-                '''
-                k_left=curval-p.low
-                k_right=p.high-curval
-                k_prime=abs(curval)*self.beta+0.1
-                if k_left==0:
-                    klist=[k_right,k_prime]
-                    k_min=min(klist)
-                    newval_b=curval+k_min*val
-                    
-                elif k_right==0:
-                    klist=[k_left,k_prime]
-                    k_min=min(klist)
-                    newval_b=curval-k_min*(1-val)
-                    
-                else:
-                    klist=[k_left,k_right,k_prime]
-                    k_min=min(klist)
-                    
-                    if val<0.5:
-                        newval_b=curval-k_min+2*val*k_min
-                    else:
-                        newval_b=curval+k_min-2*(val-0.5)*k_min
-                '''
-                
+                                
                 #print curval,newval_b,val
                 newval=newval_a
                 
-                #mult=self.alpha*f1(k)+b(k,beta=self.beta)*f2(k)
-
-                #new value
-                #newval=curval*(1+(val-0.5)*mult)
-                
-                #newval=(p.low+(p.high-p.low)*val-curval)*self.alpha+curval
-                
-                
-				#respect boundaries
-                #print '%s: %f,%f'%(p.name,curval,newval),
-                
-				#respect boundaries
+     
                 if newval<p.low:
                     newval=p.low
                 elif newval>p.high:
