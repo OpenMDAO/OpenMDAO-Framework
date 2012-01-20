@@ -105,9 +105,11 @@ def run_arch_test_suite(arch=[], optproblems=[]):
                 arch_data[p] = False #not compatible, so just move on
                 print "incompatible"
                 continue 
-            
-            prob.run()
-            print "Success"
+            try:                 
+                prob.run()
+                print "Success"
+            except: 
+                print "Incompatible"
             #print prob.check_solution()
             
         compat_data[a] = arch_data

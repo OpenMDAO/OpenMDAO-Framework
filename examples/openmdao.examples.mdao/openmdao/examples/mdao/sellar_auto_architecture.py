@@ -5,12 +5,13 @@
 """
 
 
-from openmdao.lib.architectures.api import MDF, BLISS, CO,BLISS2000
+from openmdao.lib.architectures.api import MDF, BLISS, CO,BLISS2000, IDF
 
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     
-from openmdao.lib.optproblems.api import SellarProblem    
-        
+from openmdao.lib.optproblems.api import HulmeProblem as SellarProblem    
+#from openmdao.lib.optproblems.api import SellarProblem    
+
         
 if __name__ == "__main__": # pragma: no cover
 
@@ -117,12 +118,9 @@ if __name__ == "__main__": # pragma: no cover
     '''
     
     prob = SellarProblem()
-    prob.architecture = BLISS2000()
+    prob.architecture = MDF()
     
-    prob.configure()
-    
-
-   
+    prob.configure()   
     
     prob.driver.recorders = [DBCaseRecorder()]
     
@@ -131,7 +129,8 @@ if __name__ == "__main__": # pragma: no cover
     
     error = prob.check_solution()
     
-    
+    print error
+    exit()
     print "sysopt params"
     for k in prob.sysopt.get_parameters(): 
         print k

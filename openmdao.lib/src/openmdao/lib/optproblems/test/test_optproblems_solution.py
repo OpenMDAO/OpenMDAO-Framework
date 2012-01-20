@@ -76,9 +76,15 @@ class TestOptProblems(unittest.TestCase):
             prob_package = __import__(prob_package,globals(),locals(),[prob_class,],-1)
             
             prob = getattr(prob_package,prob_class)() #create instance of the OptProblem
+            try: 
+                prob.check_solution(strict=True)
+            except ValueError as err: 
+                self.fail("There is missing piece of the solution for %s%s"%(prob.__class__,str(err)))                
+                
             prob.architecture = OptProblemSolutionCheck()
-            prob.configure()
             
+            
+            prob.configure()
             prob.run()
             
             error = prob.check_solution(strict=True)

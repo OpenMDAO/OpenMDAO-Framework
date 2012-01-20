@@ -60,9 +60,7 @@ class Discipline(Component):
         cx = sum([getattr(self,c)*getattr(self,x) for c,x in self.local_vars])
         cy = sum([-getattr(self,c)*getattr(self,y) for c,y in self.coupling_vars])
         self.y_out = -1/self.c_y_out*(cz+cx+cy)
-        
-        
-        
+                
         
 class UnitScalableProblem(OptProblem):         
     def __init__(self,n_disciplines=3,n_globals=3,n_locals=3): 
