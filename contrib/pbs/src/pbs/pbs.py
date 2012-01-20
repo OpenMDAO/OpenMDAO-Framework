@@ -95,8 +95,11 @@ class PBS_Allocator(FactoryAllocator):
         """
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
-            return 0
-        return self.n_cpus
+            return (0, info)
+        elif 'n_cpus' in resource_desc:
+            return (self.n_cpus / resource_desc['n_cpus'], {})
+        else:
+            return (self.n_cpus, {})
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -120,12 +123,6 @@ class PBS_Allocator(FactoryAllocator):
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
             return (retcode, info)
-
-        if 'n_cpus' in resource_desc:
-            value = resource_desc['n_cpus']
-            if self.n_cpus < value:
-                return (-2, {'n_cpus': 'want %s, have %s'
-                                       % (value, self.n_cpus)})
         criteria = {
             'total_cpus': self.n_cpus,
         }
@@ -154,7 +151,9 @@ class PBS_Allocator(FactoryAllocator):
                 if value:
                     return (-2, {key: 'requested local host'})
             elif key == 'n_cpus':
-                pass  # Handle in upper layer.
+                if self.n_cpus < value:
+                    return (-2, {'n_cpus': 'want %s, have %s'
+                                           % (value, self.n_cpus)})
             else:
                 return (-2, {key: 'unrecognized key'})
         return (0, {})

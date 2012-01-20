@@ -45,7 +45,7 @@ class TestCase(unittest.TestCase):
 
         # Normal, successful allocation.
         allocator = GridEngineAllocator()
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, 19*48)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, 0)
@@ -60,7 +60,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(estimate, -2)
 
         # Not remote.
-        nhosts = allocator.max_servers({'localhost': True})
+        nhosts, criteria = allocator.max_servers({'localhost': True})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({'localhost': True})
         self.assertEqual(estimate, -2)
@@ -70,7 +70,7 @@ class TestCase(unittest.TestCase):
         cfg.add_section('GridEngine')
         cfg.set('GridEngine', 'pattern', 'xyzzy')
         allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, -2)
@@ -87,7 +87,7 @@ class TestCase(unittest.TestCase):
         GridEngineAllocator._QHOST[:] = [os.path.join('bogus-qhost')]
         cfg.set('GridEngine', 'pattern', '*')
         allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, 0)
 
     def test_server(self):

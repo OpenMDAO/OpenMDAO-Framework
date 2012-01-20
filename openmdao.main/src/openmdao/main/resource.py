@@ -331,9 +331,15 @@ class ResourceAllocationManager(object):
         """ Return total of each allocator's max servers. """
         total = 0
         for allocator in self._allocators:
-            count = allocator.max_servers(resource_desc)
-            self._logger.debug('%r returned %d', allocator._name, count)
-            total += count
+            count, criteria = allocator.max_servers(resource_desc)
+            if count <= 0:
+                key = criteria.keys()[0]
+                info = criteria[key]
+                self._logger.debug('%r incompatible: key %r: %s',
+                                   allocator.name, key, info)
+            else:
+                self._logger.debug('%r returned %d', allocator._name, count)
+                total += count
         return total
 
     @staticmethod
@@ -888,8 +894,17 @@ class LocalAllocator(FactoryAllocator):
         """
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
-            return 0
-        return max(int(self.total_cpus * self.max_load), 1)
+            return (0, info)
+        avail_cpus = max(int(self.total_cpus * self.max_load), 1)
+        if 'n_cpus' in resource_desc:
+            req_cpus = resource_desc['n_cpus']
+            if req_cpus > avail_cpus:
+                return (0, {'n_cpus' : 'want %s, available %s'
+                                       % (value, avail_cpus)})
+            else:
+                return (avail_cpus / req_cpus, {})
+        else:
+            return (avail_cpus, {})
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -993,7 +1008,7 @@ class RemoteAllocator(ResourceAllocator):
         """ Return maximum number of servers for remote allocator. """
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
-            return 0
+            return (0, info[1])
         return self._remote.max_servers(rdesc)
 
     @rbac('*')
@@ -1186,7 +1201,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
 
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
-            return 0
+            return (0, info[1])
 
         with self._lock:
             # Drain _reply_q.
@@ -1227,19 +1242,28 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 count = retval
                 if count:
                     total += count
-            return total
+
+            if 'n_cpus' in resource_desc:
+                req_cpus = resource_desc['n_cpus']
+                if req_cpus > total:
+                    return (0, {'n_cpus' : 'want %s, total %s'
+                                           % (value, total)})
+                else:
+                    return (total / req_cpus, {})
+            else:
+                return (total, {})
 
     def _get_count(self, allocator, resource_desc, credentials):
         """ Get `max_servers` from an allocator. """
         set_credentials(credentials)
         count = 0
         try:
-            count = allocator.max_servers(resource_desc)
+            count, criteria = allocator.max_servers(resource_desc)
         except Exception:
             msg = traceback.format_exc()
             self._logger.error('%r max_servers() caught exception %s',
                                allocator.name, msg)
-        return count
+        return max(count, 0)
 
     def time_estimate(self, resource_desc):
         """

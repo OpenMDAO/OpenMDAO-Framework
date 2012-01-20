@@ -97,8 +97,17 @@ class GridEngineAllocator(FactoryAllocator):
         """
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
-            return 0
-        return len(self._get_hosts())
+            return (0, info)
+        avail_cpus = len(self._get_hosts())
+        if 'n_cpus' in resource_desc:
+            req_cpus = resource_desc['n_cpus']
+            if req_cpus > avail_cpus:
+                return (0, {'n_cpus': 'want %s, available %s'
+                                      % (value, avail_cpus)})
+            else:
+                return (avail_cpus / req_cpus, {})
+        else:
+            return (avail_cpus, {})
 
     @rbac('*')
     def time_estimate(self, resource_desc):

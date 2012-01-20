@@ -105,7 +105,7 @@ class NAS_Allocator(ResourceAllocator):
         """
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
-            return 0
+            return (0, info[1])
         timeout = 5 * 60
         return self._conn.invoke('max_servers', (rdesc,), timeout=timeout)
 
