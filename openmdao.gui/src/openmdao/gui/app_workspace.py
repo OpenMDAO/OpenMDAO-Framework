@@ -31,11 +31,11 @@ class AddOnsHandler(BaseHandler):
     def post(self):
         ''' easy_install the POST'd addon
         '''
-        form = AddonForm(request.POST)
+        form = AddonForm(self)
         if form.is_valid():
             distribution = form.cleaned_data['distribution']
             cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-            cserver.install_addon(addons_url, distribution)
+            cserver.install_addon(self.addons_url, distribution)
             self.render('tmpl/workspace/closewindow.html')
             
     def get(self):
@@ -43,14 +43,14 @@ class AddOnsHandler(BaseHandler):
         '''
         form = AddonForm()
         self.render('tmpl/workspace/addons.html', 
-                                  {'addons_url': addons_url, 'addon_form': form })
+                     addons_url=self.addons_url, addon_form=form)
         
 class GeometryHandler(BaseHandler):
     def get(self):
         ''' geometry viewer
         '''
-        self.render('tmpl/workspace/o3dviewer.html',
-                                  {'filename': request.GET['path'] })
+        filename = self.get_argument('path')
+        self.render('tmpl/workspace/o3dviewer.html',filename=filename)
  
 class CloseHandler(BaseHandler):
     def get(self):
@@ -61,14 +61,15 @@ class CommandHandler(BaseHandler):
     ''' get the command, send it to the cserver, return response
     '''
     def post(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         history = ''
+        command = self.get_argument('command')
         # if there is a command, execute it & get the result
-        if 'command' in request.POST:
-            history = history + '>>> '+str(request.POST['command']) + '\n'
+        if command:
+            history = history + '>>> '+str(command) + '\n'
             result = ''
             try:
-                result = cserver.onecmd(request.POST['command'])
+                cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+                result = cserver.onecmd(command)
             except Exception,e:
                 print e
                 result = sys.exc_info()
@@ -83,10 +84,12 @@ class ComponentHandler(BaseHandler):
     ''' add, remove or get a component
     '''
     def post(self,name):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        type = self.get_argument('type')
+        parent = self.get_argument('parent')
         result = ''
         try:
-            cserver.add_component(name,request.POST['type'],request.POST['parent']);
+            cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+            cserver.add_component(name,type,parent);
         except Exception,e:
             print e
             result = sys.exc_info()
@@ -96,7 +99,7 @@ class ComponentHandler(BaseHandler):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         result = ''
         try:
-            result = cserver.onecmd('del '+request.name)
+            result = cserver.onecmd('del '+name)
         except Exception,e:
             print e
             result = sys.exc_info()
@@ -127,12 +130,12 @@ class ConnectionsHandler(BaseHandler):
     ''' get/set connections between two components in an assembly
     '''
     def post(self,pathname):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         result = ''
         try:
-            src_name = request.POST['src_name'];
-            dst_name = request.POST['dst_name'];
-            connections = request.POST['connections'];
+            src_name = self.get_argument('src_name')
+            dst_name = self.get_argument('dst_name')
+            connections = self.get_argument('connections')
+            cserver = server_mgr.console_server(self.get_cookie('sessionid'))
             cserver.set_connections(pathname,src_name,dst_name,connections);
         except Exception,e:
             print e
@@ -143,8 +146,8 @@ class ConnectionsHandler(BaseHandler):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         connections = {}
         try:
-            src_name = request.GET['src_name'];
-            dst_name = request.GET['dst_name'];
+            src_name = self.get_argument('src_name')
+            dst_name = self.get_argument('dst_name')
             connections = cserver.get_connections(pathname,src_name,dst_name);
         except Exception, e:
             print e
@@ -168,13 +171,13 @@ class ExecHandler(BaseHandler):
         result = ''
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         # if there is a filename, execute it & get the result
-        if 'filename' in request.POST:
+        filename = self.get_argument('filename',default=None)
+        if filename:
             try:
-                result = cserver.execfile(request.POST['filename'])
+                result = cserver.execfile(filename)
             except Exception,e:
                 print e
-                result = result + str(sys.exc_info()) + '\n'
-                
+                result = result + str(sys.exc_info()) + '\n'                
         else:
             try:
                 cserver.run()
@@ -190,22 +193,26 @@ class ExitHandler(BaseHandler):
     def get(self):
         server_mgr.delete_server(self.get_cookie('sessionid'))
         t = Timer(5, end_process) # Quit after 5 seconds
-        self.render('templates/closewindow.html')
+        self.render('tmpl/closewindow.html')
     
 class FileHandler(BaseHandler):
     ''' get/set the specified file/folder
     '''
     def post(self,filename):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        if 'isFolder' in request.POST:
+        isFolder = self.get_argument('isFolder',default=None)
+        if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
-            self.write(cserver.write_file(filename,request.POST['contents']))
+            contents = self.get_argument('contents',default='')
+            self.write(cserver.write_file(filename,contents))
             
     def delete(self,filename):
+        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         self.write(cserver.delete_file(filename))
         
-    def get(self):
+    def get(self,filename):
+        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         self.write(cserver.get_file(filename))
 
 class FilesHandler(BaseHandler):
@@ -216,12 +223,6 @@ class FilesHandler(BaseHandler):
         filedict = cserver.get_files()
         json = jsonpickle.encode(filedict)
         self.write(json)
-
-class LogoutHandler(BaseHandler):
-    def get(self):
-        server_mgr.delete_server(self.get_cookie('sessionid'))
-        logout(request)
-        self.redirect('/')
     
 class ModelHandler(BaseHandler):
     ''' POST: get a new model (delete existing console server)
@@ -257,14 +258,15 @@ class ProjectHandler(BaseHandler):
         self.write('Saved.')
         
     def get(self):
-        filename = self.get_argument('filename')        
+        filename = self.get_argument('filename',default=None)
         if filename:
-            print "Loading project into workspace:",filename
+            self.set_secure_cookie('filename',filename)
+        else:
+            filename = self.get_secure_cookie('filename')
+        if filename:
             server_mgr.delete_server(self.get_cookie('sessionid')) # delete old server
             cserver = server_mgr.console_server(self.get_cookie('sessionid'))        
             cserver.load_project(MEDIA_ROOT+'/'+filename)
-            print 'application:',self.application
-            print 'named_handlers:',self.application.named_handlers
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -276,25 +278,6 @@ class PlotHandler(BaseHandler):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         port = cserver.get_varserver(name)
         self.write(port)
-
-class TopHandler(BaseHandler):
-    ''' GET:  hmmm...
-        POST: set top to the named assembly
-    '''
-    def post(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        if 'name' in request.POST:
-            name = request.POST['name']
-            try:
-                cserver.set_top(name)
-                print 'Top is now '+name
-                self.write('Top is now '+name)
-            except Exception,e:
-                print 'Error settign top:',e
-                self.write('Error setting top: '+e)
-                
-    def get(self):
-        self.writeSeeOther(reverse('workspace.views.Workspace'))
         
 class TypesHandler(BaseHandler):
     ''' get hierarchy of package/types to populate the Palette
@@ -313,17 +296,16 @@ class UploadHandler(BaseHandler):
     '''
     def post(self):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        if 'myfile' in request.FILES:
-            file = request.FILES['myfile']
+        file = self.get_argument('myfile',default=None)
+        if filename:
             filename = file.name
             if len(filename) > 0:
                 contents = file.read()
                 cserver.add_file(filename,contents)
-                self.render('templates/closewindow.html')
+                self.render('tmpl/closewindow.html')
 
     def get(self):
-        self.render('tmpl/workspace/upload.html', 
-                                  context_instance=RequestContext(request))
+        self.render('tmpl/workspace/upload.html')
 
 class WorkflowHandler(BaseHandler):
     def get(self,name):
@@ -358,12 +340,10 @@ handlers = [
     (r'/workspace/file/(.*)',         FileHandler),
     (r'/workspace/files',             FilesHandler),
     (r'/workspace/geometry',          GeometryHandler),
-    (r'/workspace/logout',            LogoutHandler),
     (r'/workspace/model',             ModelHandler),
     (r'/workspace/output',            OutputHandler),
     (r'/workspace/plot/(.*)',         PlotHandler),
     (r'/workspace/project',           ProjectHandler),
-    (r'/workspace/top',               TopHandler),
     (r'/workspace/types',             TypesHandler),
     (r'/workspace/upload',            UploadHandler),
     (r'/workspace/workflow/(.*)',     WorkflowHandler),

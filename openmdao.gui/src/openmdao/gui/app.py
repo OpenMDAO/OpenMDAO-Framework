@@ -26,11 +26,6 @@ import openmdao.gui.app_workspace as app_workspace
 # the current user based on the value of a cookie.
 #
 class BaseHandler(tornado.web.RequestHandler):
-    def prepare(self):
-        # get sessionid from cookie, TODO: use a real session manager
-        cooky = Cookie.SmartCookie(self.request.headers['Cookie'])
-        self.sessionid = cooky['sessionid'].value
-
     def get_current_user(self):
         return self.get_secure_cookie("user")
 
@@ -50,8 +45,21 @@ class LoginHandler(BaseHandler):
         self.redirect("/")
 
 
+#
+# lets users log out of the application simply by deleting the nickname cookie
+#
+class LogoutHandler(BaseHandler):
+    def get(self):
+        self.clear_cookie("user")
+        self.redirect("/")
+
+    def post(self):
+        self.clear_cookie("user")
+        self.redirect("/")
+
 handlers = [
     (r'/login',                                   LoginHandler),
+    (r'/logout',                                  LogoutHandler),
 	
     (r'/',                                        app_projdb.IndexHandler),
     (r'/projects/?',                              app_projdb.IndexHandler),
@@ -75,7 +83,6 @@ handlers = [
     (r'/workspace/file/(.*)',                     app_workspace.FileHandler),
     (r'/workspace/files/?',                       app_workspace.FilesHandler),
     (r'/workspace/geometry',                      app_workspace.GeometryHandler),
-    (r'/workspace/logout/?',                      app_workspace.LogoutHandler),
     (r'/workspace/model/?',                       app_workspace.ModelHandler),
     (r'/workspace/output/?',                      app_workspace.OutputHandler),
     (r'/workspace/plot/?',                        app_workspace.PlotHandler),
