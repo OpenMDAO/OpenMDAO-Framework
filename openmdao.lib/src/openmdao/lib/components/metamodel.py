@@ -199,9 +199,11 @@ class MetaModel(Component):
                 cval = self._const_inputs.get(i, _missing)
                 if cval is _missing:
                     inputs.append(val)
+                
                 elif val != cval:
                     self.raise_exception("ERROR: training input '%s' was a constant value of (%s) but the value has changed to (%s)." %
                                          (name, cval, val), ValueError)
+                                    
             for name, tup in self._surrogate_info.items():
                 surrogate = tup[0]
                 # copy output to boudary

@@ -120,7 +120,7 @@ class BLISS2000(Architecture):
         driver=self.parent.add("driver",FixedPointIterator())
                
         driver.workflow = SequentialWorkflow()           
-        driver.max_iteration=2
+        driver.max_iteration=40
         
         meta_models = {}
         self.sub_system_opts = {}
