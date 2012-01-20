@@ -16,9 +16,8 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
                           pane.loadData, 
                           function(jqXHR, textStatus, errorThrown) {
                               self.pathname = ''
-                              alert("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                              openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting workflow',600,400)
-                              debug.error(jqXHR)
+                              debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                              debug.error('jqXHR:',jqXHR)
                           })
     };
     

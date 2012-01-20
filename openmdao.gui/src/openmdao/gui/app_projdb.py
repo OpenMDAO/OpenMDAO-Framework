@@ -24,11 +24,8 @@ class ProjectForm(forms.Form):
 
 class ProjectFileForm(forms.Form):
     filename    = forms.HiddenInput()
+
     
-#
-# override the get_current_user() method in your request handlers to determine
-# the current user based on the value of a cookie.
-#
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
         return self.get_secure_cookie("user")

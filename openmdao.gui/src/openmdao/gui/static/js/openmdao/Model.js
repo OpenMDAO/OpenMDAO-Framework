@@ -322,8 +322,7 @@ openmdao.Model=function() {
                          self.issueCommand('print "'+data.replace('\n','\\n') +'"')
                      },
             error: function(jqXHR, textStatus, errorThrown) {
-                       alert("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
-                       openmdao.Util.htmlWindow(jqXHR.responseText,'Error Running Model',600,400)
+                       debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
                        debug.error(jqXHR,textStatus,errorThrown)
                    }
         })
