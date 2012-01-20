@@ -34,10 +34,7 @@ class FixedPointIterator(Driver):
     # pylint: disable-msg=E1101
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
-    
-    iteration = Int(0, iotype="out", desc='iteration counter')
-    
-    tolerance = Float(1.0e-5, iotype='in', desc='Absolute convergence '
+    tolerance = Float(1.0e-3, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
     
     norm_order = Enum('Infinity', ['Infinity', 'Euclidean'], 
@@ -93,10 +90,10 @@ class FixedPointIterator(Driver):
             # check max iteration
             if self.current_iteration >= self.max_iteration-1:
                 self.history = history[:self.current_iteration+1, :]
-                self.raise_exception('Max iterations exceeded without ' + \
-                                     'convergence.', RuntimeError)
-                #break
                 
+                self._logger.warning('Max iterations exceeded without ' + \
+                                     'convergence.')
+                return
                 
             # Pass output to input
             val0 += history[self.current_iteration, :]

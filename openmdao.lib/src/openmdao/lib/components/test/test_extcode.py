@@ -255,7 +255,7 @@ class TestCase(unittest.TestCase):
 
         # Set command to nonexistant path.
         extcode = set_as_top(ExternalCode())
-        extcode.command = ['xyzzy']
+        extcode.command = ['no-such-command']
         try:
             extcode.run()
         except OSError as exc:

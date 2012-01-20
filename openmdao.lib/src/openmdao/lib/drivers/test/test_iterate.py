@@ -116,33 +116,10 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
         self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.driver.max_iteration = 3
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), 'driver: Max iterations exceeded ' + \
-                                       'without convergence.' )
-        else:
-            self.fail('RuntimeError expected')
         
-    def test_tolerance(self):
-        self.top.add("driver", FixedPointIterator())
-        self.top.add("simple", Simple3())
-        self.top.driver.workflow.add('simple')
-        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
-        self.top.driver.max_iteration = 2
-        self.top.driver.tolerance = .001
-        try:
-            self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), 'driver: Max iterations exceeded ' + \
-                                       'without convergence.' )
-        else:
-            self.fail('RuntimeError expected')   
-            
-        self.top.driver.tolerance = 0.1
         self.top.run()
-
+        self.assertEqual(self.top.driver.current_iteration, 2)
+        
     def test_check_config(self):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Multi())
