@@ -118,6 +118,7 @@ class BLISS2000(Architecture):
         driver=self.parent.add("driver",FixedPointIterator())
                
         driver.workflow = SequentialWorkflow()           
+        driver.max_iteration=100
         
         meta_models = {}
         self.sub_system_opts = {}
@@ -145,7 +146,7 @@ class BLISS2000(Architecture):
             dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
             
             for couple in couple_indeps[comp] :
-                dis_doe.add_parameter("meta_model_%s"%couple.indep.target,low=-10,high=10) #change to -1e99/1e99 
+                dis_doe.add_parameter("meta_model_%s"%couple.indep.target,low=-1e99,high=1e99) #change to -1e99/1e99 
                 
             for param,group in global_dvs:
                 dis_doe.add_parameter("meta_model_%s.%s"%(comp,param),low=group.low, high=group.high,start=group.start)
@@ -156,6 +157,7 @@ class BLISS2000(Architecture):
             dis_doe.DOEgenerator = CentralComposite()
             dis_doe.alpha= .3
             dis_doe.beta = .01
+
             dis_doe.add_event("meta_model_%s.train_next"%comp)
             dis_doe.force_execute = True
             driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
@@ -168,8 +170,8 @@ class BLISS2000(Architecture):
         
         #optimization of system objective function using the discipline meta models
         sysopt=self.parent.add('sysopt', CONMINdriver())       
-        sysopt.fdch = .00001
-        sysopt.fdchm = .00001
+        sysopt.fdch = .0001
+        sysopt.fdchm = .0001
         
         obj2= objective[1].text
         for comp in objective[1].get_referenced_compnames():            
@@ -210,7 +212,7 @@ class BLISS2000(Architecture):
         sysopt.force_execute=True    
         
         driver.workflow.add('sysopt')
-        driver.tolerance = .0001
+        driver.tolerance = .001
 
         #setup paramter for fixedpointiterator
         
