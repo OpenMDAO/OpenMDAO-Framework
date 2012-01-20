@@ -1,3 +1,12 @@
+"""Implementation of the BLISS2000 optimziation architecture based on the work described in 
+the following journal article:
+
+J. Sobieszczanski-Sobieski, T. Altus, M. Phillips, and Sandu, Bilevel Integrated System Synthesis 
+for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 1996-2003, 2003.
+
+"""
+
+
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow, Component, Assembly
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil,FixedPointIterator,NeiborhoodDOEdriver
 from openmdao.lib.surrogatemodels.api import ResponseSurface
@@ -7,7 +16,9 @@ from openmdao.lib.datatypes.api import Float, Array, Slot
 from openmdao.lib.casehandlers.api import DBCaseRecorder
 
 class SubSystemObj(Component): 
-
+    """Component which adds the weight factors for each output state variable 
+    for a given subsystem """
+    
     f_wy = Float(0.0,iotype="out",desc="subsystem objective")
     
     def __init__(self,num_state_vars): 
@@ -32,6 +43,15 @@ class SubSystemObj(Component):
     def execute(self):         
         self.f_wy = sum([getattr(self,w)*getattr(self,v) for w,v in zip(self.weights,self.var_names)])
         
+class Broadcast(Component): 
+    """Used to create outputs in the SubSytemOpt assmebly"""
+    
+    input = Float(0.0,iotype="in")
+    output = Float(0.0,iotype="out")
+    
+    def execute(self):
+        self.output = self.input        
+        
 class SubSystemOpt(Assembly): 
     """ assembly which takes global inputs, coupling indeps, and weight factors as inputs, 
     and runs a local optimization on the local des vars"""
@@ -49,21 +69,23 @@ class SubSystemOpt(Assembly):
         if local_params: #if there are none, you don't do an optimization
             self.add('driver',CONMINdriver())
             self.driver.add_objective("objective_comp.f_wy")
+            
             #this is not really necessary, but you might want to track it anyway...
             self.create_passthrough("objective_comp.f_wy") #promote the objective function    
-            #self.driver.fdch = .0001
-            #self.driver.fdchm = .0001
 
             for p in local_params: 
                 target = p.target
                 var_name = target.split(".")[-1]
                 
                 #TODO: since the local variables are optimized, they become outputs now
-                self.add_trait(var_name,Float(0.0,iotype="in",desc="localy optimized value for %s"%target))
+                broadcast_name = 'output_%s'%var_name
+                self.add(broadcast_name,Broadcast())
+                self.add_trait(var_name,Float(0.0,iotype="out",desc="localy optimized value for %s"%target))
                 setattr(self,var_name,self.get(target))
-                
-                #have the optimizer also set the output value here, so it's correct
-                self.driver.add_parameter([target,var_name],low=p.low,high=p.high)
+
+                self.connect("%s.output"%broadcast_name,target) #connect broadcast output to input of component
+                self.connect("%s.output"%broadcast_name,var_name) #connect broadcast output to variable in assembly
+                self.driver.add_parameter("%s.input"%broadcast_name,low=p.low,high=p.high) #optimizer varries broadcast input
             
             for c in constraints: 
                 self.driver.add_constraint(str(c))

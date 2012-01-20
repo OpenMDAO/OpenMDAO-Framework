@@ -1,3 +1,5 @@
+"""Implementation of the Colaborative Optimization Optimization Architecture"""
+
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Float, Array

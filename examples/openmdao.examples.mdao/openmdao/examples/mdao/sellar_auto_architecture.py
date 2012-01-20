@@ -1,6 +1,6 @@
 """
-    Solution of the sellar analytical problem using MDF.
-    Problem forumulation is specified, and MDF is automatically
+    Solution of the sellar analytical problem using different Optimization Architectures.
+    Problem forumulation is specified, and IDF,MDF,BLISS,CO,BLISS2000 are automatically
     set up for you. 
 """
 
