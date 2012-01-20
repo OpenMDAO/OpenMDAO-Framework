@@ -55,7 +55,7 @@ class GeometryHandler(BaseHandler):
 class CloseHandler(BaseHandler):
     def get(self):
         server_mgr.delete_server(self.get_cookie('sessionid'))
-        self.writeRedirect('/')
+        self.redirect('/')
     
 class CommandHandler(BaseHandler):
     ''' get the command, send it to the cserver, return response
@@ -115,13 +115,13 @@ class ComponentHandler(BaseHandler):
             traceback.print_exception(exc_type, exc_value, exc_traceback,file=sys.stdout)
             print "*** print_tb:"
             traceback.print_tb(exc_traceback, limit=100, file=sys.stdout)        
-        self.write(attr,mimetype='application/json')
+        self.write(attr)
 
 class ComponentsHandler(BaseHandler):
     def get(self):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         json = cserver.get_components()
-        self.write(json,mimetype='application/json')
+        self.write(json)
 
 class ConnectionsHandler(BaseHandler):
     ''' get/set connections between two components in an assembly
@@ -148,7 +148,7 @@ class ConnectionsHandler(BaseHandler):
             connections = cserver.get_connections(pathname,src_name,dst_name);
         except Exception, e:
             print e
-        self.write(connections,mimetype='application/json')
+        self.write(connections)
 
 class StructureHandler(BaseHandler):
     ''' get the structure of the specified assembly, or of the global 
@@ -158,7 +158,7 @@ class StructureHandler(BaseHandler):
     def get(self,name):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         json = cserver.get_structure(name)
-        self.write(json,mimetype='application/json')
+        self.write(json)
 
 class ExecHandler(BaseHandler):
     ''' if a filename is POST'd, have the cserver execute the file
@@ -215,13 +215,13 @@ class FilesHandler(BaseHandler):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         filedict = cserver.get_files()
         json = jsonpickle.encode(filedict)
-        self.write(json,mimetype='application/json')
+        self.write(json)
 
 class LogoutHandler(BaseHandler):
     def get(self):
         server_mgr.delete_server(self.get_cookie('sessionid'))
         logout(request)
-        self.writeRedirect('/')
+        self.redirect('/')
     
 class ModelHandler(BaseHandler):
     ''' POST: get a new model (delete existing console server)
@@ -229,12 +229,12 @@ class ModelHandler(BaseHandler):
     '''
     def post(self):
         server_mgr.delete_server(session.session.session_key)
-        self.writeRedirect('/')
+        self.redirect('/')
         
     def get(self):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         json = cserver.get_JSON()
-        self.write(json,mimetype='application/json')
+        self.write(json)
 
 class OutputHandler(BaseHandler):
     ''' get any outstanding output from the model
@@ -267,7 +267,7 @@ class ProjectHandler(BaseHandler):
             print 'named_handlers:',self.application.named_handlers
             self.redirect(self.application.reverse_url('workspace'))
         else:
-            self.writeRedirect('/')
+            self.redirect('/')
 
 class PlotHandler(BaseHandler):
     ''' GET:  open a websocket server to supply updated valaues for the specified variable        
@@ -306,7 +306,7 @@ class TypesHandler(BaseHandler):
             types['working'] = cserver.get_workingtypes()
         except Exception, err:
             print "Error adding working types:", str(err)        
-        self.write(jsonpickle.encode(types),mimetype='application/json')
+        self.write(jsonpickle.encode(types))
 
 class UploadHandler(BaseHandler):
     ''' file upload utility
@@ -329,7 +329,7 @@ class WorkflowHandler(BaseHandler):
     def get(self,name):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         json = cserver.get_workflow(name)
-        self.write(json,mimetype='application/json')
+        self.write(json)
     
 class WorkspaceHandler(BaseHandler):
     ''' render the workspace
