@@ -19,7 +19,7 @@ Justin Gray."""
 import re, ConfigParser
 import os.path
 
-from math import sin, cos, tan, floor
+from math import sin, cos, tan, floor, pi
 
 # pylint: disable-msg=E0611,F0401, E1101
 try: 
@@ -615,7 +615,8 @@ def add_unit(name, unit, comment=''):
     if comment:
         _unit_lib.help.append((name, comment, unit))
     if isinstance(unit, str):
-        unit = eval(unit, {'__builtins__':None}, _unit_lib.unit_table)
+        unit = eval(unit, {'__builtins__':None, 'pi':pi},
+                           _unit_lib.unit_table)
     unit.set_name(name)
     if name in _unit_lib.unit_table:
         if (_unit_lib.unit_table[name].factor!=unit.factor or \
