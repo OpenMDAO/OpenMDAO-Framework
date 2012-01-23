@@ -192,7 +192,7 @@ class ExitHandler(BaseHandler):
     '''
     def get(self):
         server_mgr.delete_server(self.get_cookie('sessionid'))
-        t = Timer(5, end_process) # Quit after 5 seconds
+        t = Timer(5, quit) # Quit after 5 seconds
         self.render('tmpl/closewindow.html')
     
 class FileHandler(BaseHandler):
@@ -295,7 +295,7 @@ class UploadHandler(BaseHandler):
     def post(self):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         file = self.get_argument('myfile',default=None)
-        if filename:
+        if file:
             filename = file.name
             if len(filename) > 0:
                 contents = file.read()
