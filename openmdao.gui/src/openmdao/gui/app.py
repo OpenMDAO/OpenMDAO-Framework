@@ -1,28 +1,17 @@
 import os, sys
 import os.path
 from time import strftime
-import Cookie   # in py3 this becomes http.cookies
 
 # tornado
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
-# TODO: remove django stuff
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
-from django import forms
-from django.core.files.base import ContentFile
-from django.contrib.auth.models import User
-from openmdao.gui.settings import MEDIA_ROOT
-from openmdao.gui.projdb.models import Project
-from django.shortcuts import get_object_or_404
-
-
+# the project app and the workspace app handlers
 import openmdao.gui.app_projdb as app_projdb
 import openmdao.gui.app_workspace as app_workspace
 
-#
-#
+
 class BaseHandler(tornado.web.RequestHandler):
     ''' override the get_current_user() method in your request handlers to determine
         the current user based on the value of a cookie.
@@ -35,7 +24,7 @@ class LoginHandler(BaseHandler):
         which is then saved in a cookie.
     '''
     def get(self):
-        self.write('<html><body><form action="/login" method="post">'
+        self.write('<html><body bgcolor="Grey"><form action="/login" method="post">'
                    'Name: <input type="text" name="name">'
                    '<input type="submit" value="Sign in">'
                    '</form></body></html>')
@@ -63,11 +52,11 @@ def main():
         
         tornado.web.url(r'/',                                        app_projdb.IndexHandler),
         tornado.web.url(r'/projects/?',                              app_projdb.IndexHandler),
-        tornado.web.url(r'/projects/(?P<project_id>\d+)/$',          app_projdb.DetailHandler),
+        tornado.web.url(r'/projects/(?P<project_id>\d+)/?',          app_projdb.DetailHandler),
         tornado.web.url(r'/projects/new/$',                          app_projdb.NewHandler),
         tornado.web.url(r'/projects/add/$',                          app_projdb.AddHandler),
-        tornado.web.url(r'/projects/delete/(?P<project_id>\d+)/$',   app_projdb.DeleteHandler),
-        tornado.web.url(r'/projects/download/(?P<project_id>\d+)/$', app_projdb.DownloadHandler),
+        tornado.web.url(r'/projects/delete/(?P<project_id>\d+)/?',   app_projdb.DeleteHandler),
+        tornado.web.url(r'/projects/download/(?P<project_id>\d+)/?', app_projdb.DownloadHandler),
         
         tornado.web.url(r'/workspace/?',                             app_workspace.WorkspaceHandler, name='workspace'),    
         tornado.web.url(r'/workspace/components/?',                  app_workspace.ComponentsHandler),
@@ -76,7 +65,7 @@ def main():
         tornado.web.url(r'/workspace/addons/?',                      app_workspace.AddOnsHandler),
         tornado.web.url(r'/workspace/close/?',                       app_workspace.CloseHandler),
         tornado.web.url(r'/workspace/command',                       app_workspace.CommandHandler),
-        tornado.web.url(r'/workspace/structure/(.*)',                app_workspace.StructureHandler),
+        tornado.web.url(r'/workspace/structure/(.*)/?',              app_workspace.StructureHandler),
         tornado.web.url(r'/workspace/exec/?',                        app_workspace.ExecHandler),
         tornado.web.url(r'/workspace/exit/?',                        app_workspace.ExitHandler),
         tornado.web.url(r'/workspace/file/(.*)',                     app_workspace.FileHandler),
@@ -90,12 +79,16 @@ def main():
         tornado.web.url(r'/workspace/upload/?',                      app_workspace.UploadHandler),
         tornado.web.url(r'/workspace/workflow/(.*)',                 app_workspace.WorkflowHandler),
         tornado.web.url(r'/workspace/test/?',                        app_workspace.TestHandler),
+        
+        # testing
+        (r'/workspace/consoleWS', app_workspace.StartWSHandler),
     ]
     
     # settings: debug, static handler, etc
     app_settings = { 
         'debug': True,
         'static_path': os.path.join(os.path.dirname(__file__), 'static'),
+        'template_path': os.path.join(os.path.dirname(__file__), 'tmpl'),
         'login_url': '/login',
         'cookie_secret': '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=',
     }
@@ -106,6 +99,7 @@ def main():
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(9000)
     tornado.ioloop.IOLoop.instance().start()
+    print 'Application ended.'
 
 if __name__ == "__main__":
     main()

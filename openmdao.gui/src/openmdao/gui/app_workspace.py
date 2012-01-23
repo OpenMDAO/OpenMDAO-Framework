@@ -3,8 +3,10 @@ from django import forms
 import sys, os, traceback
 import zipfile, jsonpickle
 from threading import Timer
+import multiprocessing
 
 import tornado.httpserver
+import tornado.websocket
 import tornado.ioloop
 import tornado.web
 
@@ -36,13 +38,13 @@ class AddOnsHandler(BaseHandler):
             distribution = form.cleaned_data['distribution']
             cserver = server_mgr.console_server(self.get_cookie('sessionid'))
             cserver.install_addon(self.addons_url, distribution)
-            self.render('tmpl/workspace/closewindow.html')
+            self.render('closewindow.html')
             
     def get(self):
         ''' show available addons, prompt for addon to be installed
         '''
         form = AddonForm()
-        self.render('tmpl/workspace/addons.html', 
+        self.render('workspace/addons.html', 
                      addons_url=self.addons_url, addon_form=form)
         
 class GeometryHandler(BaseHandler):
@@ -50,7 +52,7 @@ class GeometryHandler(BaseHandler):
         ''' geometry viewer
         '''
         filename = self.get_argument('path')
-        self.render('tmpl/workspace/o3dviewer.html',filename=filename)
+        self.render('workspace/o3dviewer.html',filename=filename)
  
 class CloseHandler(BaseHandler):
     def get(self):
@@ -85,7 +87,10 @@ class ComponentHandler(BaseHandler):
     '''
     def post(self,name):
         type = self.get_argument('type')
-        parent = self.get_argument('parent')
+        if 'parent' in self.request.arguments.keys():
+            parent = self.get_argument('parent')
+        else:
+            parent = ''
         result = ''
         try:
             cserver = server_mgr.console_server(self.get_cookie('sessionid'))
@@ -187,13 +192,15 @@ class ExecHandler(BaseHandler):
             self.write(result)
 
 class ExitHandler(BaseHandler):
-    ''' close the browser window and shut down the server
+    ''' close the browser window and shut down the server    
         (unfortunately neither of these things actually work)
+        TODO: kill server based on PID per example at:
+        http://blog.perplexedlabs.com/2010/07/01/pythons-tornado-has-swept-me-off-my-feet/
     '''
     def get(self):
         server_mgr.delete_server(self.get_cookie('sessionid'))
         t = Timer(5, quit) # Quit after 5 seconds
-        self.render('tmpl/closewindow.html')
+        self.render('closewindow.html')
     
 class FileHandler(BaseHandler):
     ''' get/set the specified file/folder
@@ -294,16 +301,15 @@ class UploadHandler(BaseHandler):
     '''
     def post(self):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        file = self.get_argument('myfile',default=None)
+        file = self.request.files['myfile'][0]
         if file:
-            filename = file.name
+            filename = file['filename']
             if len(filename) > 0:
-                contents = file.read()
-                cserver.add_file(filename,contents)
-                self.render('tmpl/closewindow.html')
+                cserver.add_file(filename,file['body'])
+                self.render('closewindow.html')
 
     def get(self):
-        self.render('tmpl/workspace/upload.html')
+        self.render('workspace/upload.html')
 
 class WorkflowHandler(BaseHandler):
     def get(self,name):
@@ -315,10 +321,45 @@ class WorkspaceHandler(BaseHandler):
     ''' render the workspace
     '''
     def get(self):
-        self.render('tmpl/workspace/workspace.html')
+        self.render('workspace/workspace.html')
 
 class TestHandler(BaseHandler):
     ''' initialize the server manager &  render the workspace
     '''
     def get(self):
-        self.render('tmpl/workspace/test.html')
+        self.render('workspace/test.html')
+
+
+class WSHandler(tornado.websocket.WebSocketHandler):
+    def open(self):
+    	print 'new connection'
+    	self.write_message("Hello World")
+      
+    def on_message(self, message):
+    	print 'message received %s' % message
+
+    def on_close(self):
+      print 'connection closed'
+      
+def serveWS(port):
+    application = tornado.web.Application([ (r'/ws', WSHandler) ])
+    http_server = tornado.httpserver.HTTPServer(application)        
+    http_server.listen(port)
+    tornado.ioloop.IOLoop.instance().start()    
+      
+from openmdao.util.network import get_unused_ip_port
+class StartWSHandler(BaseHandler):
+    ''' initialize the web socket server & return the socket
+    '''
+    def get(self):
+        port = get_unused_ip_port()
+        print 'starting WS server on port:',port
+        srvr = multiprocessing.Process(target=serveWS, args=(port,))
+        srvr.start()
+        self.write(str(port))
+
+        
+        
+        
+
+

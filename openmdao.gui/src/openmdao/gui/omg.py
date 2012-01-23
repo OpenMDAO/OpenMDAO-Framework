@@ -95,7 +95,7 @@ def main():
             init(reset=False)
         
     if (options.port < 1):
-        options.port = get_unused_ip_port()    
+        options.port = get_unused_ip_port()
 
     if not options.serveronly:
         # NOTE: with dev server, you are going to get two browsers
