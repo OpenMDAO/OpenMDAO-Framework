@@ -728,4 +728,54 @@ class FileParser(object):
                 
         return data
         
+    def transfer_2Darray(self, rowstart, fieldstart, rowend, fieldend=None):
+        """Grabs a 2D array of variables relative to the current anchor. Each
+        line of data is placed in a separate row.
+
+        rowstart: integer
+            Row number to start, relative to the current anchor
+        
+        fieldstart: integer
+            field number to start. 
+        
+        rowend: integer
+            row number to end. If the rowend is before rowstart, then the rows
+            are read in reverse order.
+        
+        fieldend: integer (optional)
+            field number to end. If not specified, grabs all fields up to the
+            end of the line.
                 
+        If the delimiter is set to 'columns', then the values contained in
+        fieldstart and fieldend should be the column number instead of the
+        field number.
+        """
+
+        j1 = self.current_row + rowstart
+        j2 = self.current_row + rowend
+        
+        if j2<j1:
+            lines = self.data[j2:j1:-1]
+        else:
+            lines = self.data[j1:j2]
+
+        data = zeros(shape=(0, 0))
+
+        for i, line in enumerate(lines):
+            if self.delimiter == "columns":
+                line = line[(fieldstart-1):fieldend]
+                
+                # Let pyparsing figure out if this is a number, and return it
+                # as a float or int as appropriate
+                parsed = _parse_line().parseString(line)
+                
+                data = append(data, newdata)
+                
+            else:
+                parsed = _parse_line(self.delimiter).parseString(line)
+                if fieldend:
+                    data = append(data, array(parsed[(fieldstart-1):fieldend]))
+                else:
+                    data = append(data, array(parsed[(fieldstart-1):]))
+                
+        return data
