@@ -193,29 +193,3 @@ class AddHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         self.render('tmpl/projdb/add_project.html')
-
-
-handlers = [
-    (r'/projects/',                               IndexHandler),
-    (r'/projects/(?P<project_id>\d+)/$',          DetailHandler),
-    (r'/projects/new/$',                          NewHandler),
-    (r'/projects/add/$',                          AddHandler),
-    (r'/projects/delete/(?P<project_id>\d+)/$',   DeleteHandler),
-    (r'/projects/download/(?P<project_id>\d+)/$', DownloadHandler),
-]
-    
-##
-## START THE SERVER
-##                                  
-
-if __name__ == "__main__":
-    app_settings = { 
-        'debug': True,
-        'static_path': os.path.join(os.path.dirname(__file__), 'static'),
-        'login_url': '/login',
-        'cookie_secret': '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=',
-    }
-    application = tornado.web.Application(handlers, **app_settings)
-    http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(8887)
-    tornado.ioloop.IOLoop.instance().start()

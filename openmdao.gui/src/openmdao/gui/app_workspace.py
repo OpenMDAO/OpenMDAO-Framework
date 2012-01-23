@@ -8,12 +8,12 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
-import Cookie
-
 from openmdao.gui.util import *
+from openmdao.gui.settings import MEDIA_ROOT
 
 from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 server_mgr = ConsoleServerFactory()
+print 'server_mgr',server_mgr
 
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
@@ -56,7 +56,7 @@ class CloseHandler(BaseHandler):
     def get(self):
         server_mgr.delete_server(self.get_cookie('sessionid'))
         self.redirect('/')
-    
+
 class CommandHandler(BaseHandler):
     ''' get the command, send it to the cserver, return response
     '''
@@ -170,7 +170,6 @@ class ExecHandler(BaseHandler):
     def post(self):
         result = ''
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        # if there is a filename, execute it & get the result
         filename = self.get_argument('filename',default=None)
         if filename:
             try:
@@ -184,7 +183,8 @@ class ExecHandler(BaseHandler):
             except Exception,e:
                 print e
                 result = result + str(sys.exc_info()) + '\n'
-        self.write(result)
+        if result:
+            self.write(result)
 
 class ExitHandler(BaseHandler):
     ''' close the browser window and shut down the server
@@ -243,8 +243,6 @@ class OutputHandler(BaseHandler):
     def get(self):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
         self.write(cserver.get_output())
-
-from openmdao.gui.settings import MEDIA_ROOT
 
 class ProjectHandler(BaseHandler):
     ''' GET:  load model fom the given project archive,
@@ -324,43 +322,3 @@ class TestHandler(BaseHandler):
     '''
     def get(self):
         self.render('tmpl/workspace/test.html')
-
-                                  
-handlers = [
-    (r'/workspace/',                  WorkspaceHandler),
-    (r'/workspace/components',        ComponentsHandler),
-    (r'/workspace/component/(.*)',    ComponentHandler),
-    (r'/workspace/connections/(.*)',  ConnectionsHandler),
-    (r'/workspace/addons',            AddOnsHandler),
-    (r'/workspace/close',             CloseHandler),
-    (r'/workspace/command',           CommandHandler),
-    (r'/workspace/structure/(.*)',    StructureHandler),
-    (r'/workspace/exec',              ExecHandler),
-    (r'/workspace/exit',              ExitHandler),
-    (r'/workspace/file/(.*)',         FileHandler),
-    (r'/workspace/files',             FilesHandler),
-    (r'/workspace/geometry',          GeometryHandler),
-    (r'/workspace/model',             ModelHandler),
-    (r'/workspace/output',            OutputHandler),
-    (r'/workspace/plot/(.*)',         PlotHandler),
-    (r'/workspace/project',           ProjectHandler),
-    (r'/workspace/types',             TypesHandler),
-    (r'/workspace/upload',            UploadHandler),
-    (r'/workspace/workflow/(.*)',     WorkflowHandler),
-    (r'/workspace/test',              TestHandler)
-]
-
-
-##
-## START THE SERVER
-##                                  
-
-if __name__ == "__main__":
-    app_settings = { 
-        'debug': True,
-        'static_path': os.path.join(os.path.dirname(__file__), "static"),
-    }
-    application = tornado.web.Application(handlers, **app_settings)
-    http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(8888)
-    tornado.ioloop.IOLoop.instance().start()
