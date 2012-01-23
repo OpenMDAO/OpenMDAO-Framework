@@ -10,6 +10,7 @@ import logging
 import os.path
 import sys
 import tempfile
+import threading
 
 from openmdao.main.rbac import rbac
 from openmdao.main.resource import ResourceAllocator
@@ -47,6 +48,7 @@ class NAS_Allocator(ResourceAllocator):
 
     def __init__(self, name='NAS_Allocator', dmz_host=None, server_host=None):
         super(NAS_Allocator, self).__init__(name)
+        self._lock = threading.Lock()
         self._servers = []
         self._dmz_host = dmz_host
         self._server_host = server_host
@@ -186,11 +188,12 @@ class NAS_Allocator(ResourceAllocator):
         if server in self._servers:
             self._servers.remove(server)
             timeout = 5 * 60
-            try:
-                self._conn.invoke('release', (server.conn.root,),
-                                  timeout=timeout)
-            except Exception as exc:  # pragma no cover
-                self._logger.warning("Can't release remote server: %s", exc)
+            with self._lock:  # Protocol is not thread-safe.
+                try:
+                    self._conn.invoke('release', (server.conn.root,),
+                                      timeout=timeout)
+                except Exception as exc:  # pragma no cover
+                    self._logger.warning("Can't release remote server: %s", exc)
             server.shutdown()
         else:
             raise ValueError('No such server %r' % server)

@@ -153,7 +153,7 @@ def _ssh(host, args, logger, retry=True):
     stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
     stdin = open(stdin, 'r')
 
-    attempts = 3 if retry else 1
+    attempts = 5 if retry else 1
     for i in range(attempts):
         try:
             try:
@@ -173,6 +173,7 @@ def _ssh(host, args, logger, retry=True):
         except Exception as exc:
             if i+1 < attempts:
                 logger.error('%s\nretrying...', exc)
+                time.sleep(i)  # Back-off a bit.
             else:
                 raise
         else:
@@ -255,7 +256,7 @@ def _scp(src, dst, logger):
     stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
     stdin = open(stdin, 'r')
 
-    attempts = 3
+    attempts = 5
     for i in range(attempts):
         try:
             try:
@@ -275,6 +276,7 @@ def _scp(src, dst, logger):
         except Exception as exc:
             if i+1 < attempts:
                 logger.error('%s\nretrying...', exc)
+                time.sleep(i)  # Back-off a bit.
             else:
                 raise
         else:

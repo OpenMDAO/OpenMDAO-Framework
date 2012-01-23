@@ -9,7 +9,6 @@ import logging
 import os.path
 import tempfile
 import threading
-import time
 import traceback
 
 from openmdao.util.filexfer import filexfer
@@ -41,13 +40,14 @@ class BaseWrapper(object):
         self._conn = connection
         self._poll_delay = connection.poll_delay
         self._logger = connection.logger
-        self.stop = False
+        self.stop = threading.Event()
 
     def process_requests(self):
         """ Wait for a request, process it, and send the reply. """
         delay = 1
-        while not self.stop:
-            time.sleep(delay)
+        while not self.stop.is_set():
+            if self.stop.wait(delay):
+                break
             if not self._conn.poll_request():
                 delay = min(delay + 1, self._poll_delay)  # Back-off.
                 continue
@@ -149,13 +149,13 @@ class AllocatorWrapper(BaseWrapper):
             Path to communications root directory.
         """
         wrapper, handler, server = self._wrappers.pop(root)
-        wrapper.stop = True
+        wrapper.stop.set()
         handler.join(self._poll_delay * 3)
         self._delegate.release(server)
 
     def shutdown(self):
         """ Shutdown this allocator. """
-        self.stop = True
+        self.stop.set()
 
 
 class ServerWrapper(BaseWrapper):
@@ -282,7 +282,7 @@ class ServerWrapper(BaseWrapper):
             Path to communications root directory.
         """
         wrapper, handler, tlo = self._wrappers.pop(root)
-        wrapper.stop = True
+        wrapper.stop.set()
         handler.join(self._poll_delay * 3)
         tlo.pre_delete()
 

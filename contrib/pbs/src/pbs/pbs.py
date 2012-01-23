@@ -366,8 +366,8 @@ class PBS_Server(ObjServer):
                     script.write('cd $HOME\n')
             else:
                 # This can potentially cause problems...
-                self._logger.warning('work %r not a descendant of home %r'
-                                     % (work, home))
+                self._logger.warning('work %r not a descendant of home %r',
+                                     work, home)
             script.write('cd %s\n' % work)
 
             script.write(self._fix_path(resource_desc['remote_command']))

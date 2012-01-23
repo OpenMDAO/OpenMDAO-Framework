@@ -703,6 +703,11 @@ class ResourceAllocator(object):
         """
         Shut-down `server`.
 
+        .. note::
+
+            Unlike other methods which are protected from multithreaded
+            access by the manager, :meth:`release` must be multithread-safe.
+
         server: :class:`ObjServer`
             Server to be shut down.
         """
@@ -1001,6 +1006,7 @@ class RemoteAllocator(ResourceAllocator):
 
     def __init__(self, name, remote):
         super(RemoteAllocator, self).__init__(name)
+        self._lock = threading.Lock()
         self._remote = remote
 
     @rbac('*')
@@ -1043,7 +1049,8 @@ class RemoteAllocator(ResourceAllocator):
     @rbac(('owner', 'user'))
     def release(self, server):
         """ Release a remotely allocated server. """
-        self._remote.release(server)
+        with self._lock:  # Proxies are not thread-safe.
+            self._remote.release(server)
 
 
 # Cluster allocation requires ssh configuration and multiple hosts.
