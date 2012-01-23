@@ -761,15 +761,20 @@ class FileParser(object):
 
         if self.delimiter == "columns":
             
-            for i, line in enumerate(lines):
+            line = lines[0][(fieldstart-1):fieldend]
+            parsed = _parse_line().parseString(line)
+            row = array(parsed[:])
+            data = zeros(shape=(abs(j2-j1), len(row)))
+            data[0, :] = row
+            
+            for i, line in enumerate(list(lines[1:])):
                 if fieldend:
                     line = line[(fieldstart-1):fieldend]
                 else:
                     line = line[(fieldstart-1):]
                 
                 parsed = _parse_line().parseString(line)
-                
-                data = append(data, newdata)
+                data[i+1, :] = array(parsed[:])
                 
         else:
             

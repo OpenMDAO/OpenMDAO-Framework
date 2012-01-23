@@ -443,13 +443,31 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val.shape[1], 18)
           
         # whitespace delim; no end field
-        gen.set_delimiters(' \t')
         val = gen.transfer_2Darray(3, 2, 26)
         self.assertEqual(val[0, 1], 30.0)
         self.assertEqual(val[23, 17], -21.1)
         self.assertEqual(val.shape[0], 24)
         self.assertEqual(val.shape[1], 18)
         
+        # column delim; with end field
+        gen.set_delimiters('columns')
+        val = gen.transfer_2Darray(3, 19, 26, 125)
+        self.assertEqual(val[0, 1], 30.0)
+        self.assertEqual(val[0, 17], -63.7)
+        self.assertEqual(val[1, 17], -57.2)
+        self.assertEqual(val[23, 17], -21.1)
+        self.assertEqual(val.shape[0], 24)
+        self.assertEqual(val.shape[1], 18)
+          
+        # column delim; no end field
+        gen.set_delimiters('columns')
+        val = gen.transfer_2Darray(3, 19, 26)
+        self.assertEqual(val[0, 1], 30.0)
+        self.assertEqual(val[0, 17], -63.7)
+        self.assertEqual(val[1, 17], -57.2)
+        self.assertEqual(val[23, 17], -21.1)
+        self.assertEqual(val.shape[0], 24)
+        self.assertEqual(val.shape[1], 18)
         
     def test_comment_char(self):
 
