@@ -752,30 +752,38 @@ class FileParser(object):
         """
 
         j1 = self.current_row + rowstart
-        j2 = self.current_row + rowend
+        j2 = self.current_row + rowend + 1
         
         if j2<j1:
-            lines = self.data[j2:j1:-1]
+            lines = list(self.data[j2:j1:-1])
         else:
-            lines = self.data[j1:j2]
+            lines = list(self.data[j1:j2])
 
-        data = zeros(shape=(0, 0))
-
-        for i, line in enumerate(lines):
-            if self.delimiter == "columns":
-                line = line[(fieldstart-1):fieldend]
+        if self.delimiter == "columns":
+            
+            for i, line in enumerate(lines):
+                if fieldend:
+                    line = line[(fieldstart-1):fieldend]
+                else:
+                    line = line[(fieldstart-1):]
                 
-                # Let pyparsing figure out if this is a number, and return it
-                # as a float or int as appropriate
                 parsed = _parse_line().parseString(line)
                 
                 data = append(data, newdata)
                 
-            else:
+        else:
+            
+            parsed = _parse_line(self.delimiter).parseString(lines[0])
+            row = array(parsed[(fieldstart-1):])
+            data = zeros(shape=(abs(j2-j1), len(row)))
+            data[0, :] = row
+    
+            for i, line in enumerate(list(lines[1:])):
                 parsed = _parse_line(self.delimiter).parseString(line)
+                
                 if fieldend:
-                    data = append(data, array(parsed[(fieldstart-1):fieldend]))
+                    data[i+1, :] = array(parsed[(fieldstart-1):fieldend])
                 else:
-                    data = append(data, array(parsed[(fieldstart-1):]))
+                    data[i+1, :] = array(parsed[(fieldstart-1):])
                 
         return data
