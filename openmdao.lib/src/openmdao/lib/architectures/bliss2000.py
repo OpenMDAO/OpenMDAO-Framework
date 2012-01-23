@@ -69,6 +69,8 @@ class SubSystemOpt(Assembly):
         if local_params: #if there are none, you don't do an optimization
             self.add('driver',CONMINdriver())
             self.driver.add_objective("objective_comp.f_wy")
+            self.driver.fdch = .00001
+            #self.driver.fdchm = .0001
             
             #this is not really necessary, but you might want to track it anyway...
             self.create_passthrough("objective_comp.f_wy") #promote the objective function    
@@ -141,13 +143,15 @@ class BLISS2000(Architecture):
         driver=self.parent.add("driver",FixedPointIterator())
                
         driver.workflow = SequentialWorkflow()           
-        driver.max_iteration=2
+        driver.max_iteration=50
         driver.tolerance = .0001
         meta_models = {}
         self.sub_system_opts = {}
         for comp in des_vars: 
             mm_name = "meta_model_%s"%comp
             meta_model = self.parent.add(mm_name,MetaModel()) #metamodel now replaces old component with same name 
+            #driver.add_event("%s.reset_training_data"%mm_name)
+
             meta_models[comp] = meta_model
             meta_model.surrogate = {'default':ResponseSurface()}
             #if there are locals, you need to make a SubSystemOpt assembly
@@ -179,8 +183,8 @@ class BLISS2000(Architecture):
                 for w in meta_model.model.weights: 
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,w),low=-3,high=3)
             dis_doe.DOEgenerator = CentralComposite()
-            dis_doe.alpha= .2
-            dis_doe.beta = .05
+            dis_doe.alpha= .5
+            dis_doe.beta = .01
 
             dis_doe.add_event("meta_model_%s.train_next"%comp)
             dis_doe.force_execute = True
@@ -194,8 +198,8 @@ class BLISS2000(Architecture):
         
         #optimization of system objective function using the discipline meta models
         sysopt=self.parent.add('sysopt', CONMINdriver())       
-        sysopt.fdch = .0001
-        sysopt.fdchm = .0001
+        #sysopt.fdch = .0001
+        #sysopt.fdchm = .0001
         
         obj2= objective[1].text
         for comp in objective[1].get_referenced_compnames():            
@@ -209,7 +213,6 @@ class BLISS2000(Architecture):
                 mm_name = "meta_model_%s.%s"%(comp,param)
                 plist.append(mm_name)
             sysopt.add_parameter(plist, low=group.low, high=group.high,start=group.start)
-            
         
         #add the subsytem weights to the system optimization
         for comp,sso in self.sub_system_opts.iteritems(): 
@@ -223,9 +226,9 @@ class BLISS2000(Architecture):
             
             #feasibility constraints, referenced to metamodels
             s1,s2= "meta_model_"+couple.dep.target,"meta_model_"+couple.indep.target
-            
             sysopt.add_constraint('%s<=%s'%(s2,s1))
             sysopt.add_constraint('%s>=%s'%(s2,s1))
+            
         
         #add constraints, referenced to metamodels
         for comp,constraints in comp_constraints.iteritems():
@@ -235,12 +238,12 @@ class BLISS2000(Architecture):
         sysopt.force_execute=True    
         
         driver.workflow.add('sysopt')
-        driver.tolerance = .001
 
         #setup paramter for fixedpointiterator
         
         comp=des_vars.keys()[0]
         mm='meta_model_%s'%comp
+        
         
         for l in locals:
             s=l[0].replace('.','_')

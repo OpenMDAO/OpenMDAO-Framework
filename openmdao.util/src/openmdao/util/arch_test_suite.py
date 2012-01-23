@@ -103,13 +103,18 @@ def run_arch_test_suite(arch=[], optproblems=[]):
                 
             except RuntimeError as err: 
                 arch_data[p] = False #not compatible, so just move on
-                print "incompatible"
-                continue 
-            try:                 
-                prob.run()
-                print "Success"
-            except: 
                 print "Incompatible"
+                continue 
+                           
+            prob.run()
+            print "Success"
+            
+            des_vars = prob.get_des_vars_by_comp()
+            print "  Function Evaluations: "
+            for comp_name in des_vars: 
+                comp = prob.get(comp_name)
+                print "    %s: %d"%(comp_name,comp.exec_count)
+        
             #print prob.check_solution()
             
         compat_data[a] = arch_data

@@ -61,7 +61,7 @@ class Discipline(Component):
             self.coupling_vars.append(('c_y_in%d'%i,"y_in%d"%i))
     
             
-    def execute(self):     
+    def execute(self):    
         cz = sum([getattr(self,c)*getattr(self,z) for c,z in self.global_vars])
         cx = sum([getattr(self,c)*getattr(self,x) for c,x in self.local_vars])
         cy = sum([-getattr(self,c)*getattr(self,y) for c,y in self.coupling_vars])
@@ -97,7 +97,7 @@ class UnitScalableProblem(OptProblem):
         #global variables
         for i in range(0,n_globals): 
             params = tuple(["%s.z%d"%(name,i) for name in self.disciplines])
-            self.add_parameter(params,low=-10,high=10,start=0, name="z%d"%i)
+            self.add_parameter(params,low=-10,high=10,start=.001, name="z%d"%i)
             self.solution["z%d"%i] = 0
             
         #coupling vars 

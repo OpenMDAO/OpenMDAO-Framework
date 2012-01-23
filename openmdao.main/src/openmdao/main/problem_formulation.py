@@ -188,6 +188,20 @@ class ArchitectureAssembly(Assembly):
                 self.architecture.check_config()
             else:
                 self.configure()
+     
+    def get_des_vars_by_comp(self): 
+        """Return a dictionary of component names/list of parameters for 
+        all parameters."""
+        result = {}
+        for k,v in self.get_parameters().items():
+            data = v.get_referenced_vars_by_compname()
+            for name,vars in data.iteritems(): 
+                try: 
+                    result[name].extend(vars)
+                except KeyError: 
+                    result[name] = list(vars)
+        
+        return result                  
                 
     def get_local_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 

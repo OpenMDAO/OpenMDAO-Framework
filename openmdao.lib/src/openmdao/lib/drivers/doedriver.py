@@ -60,9 +60,9 @@ class NeiborhoodDOEdriver(CaseIterDriverBase):
     
     case_outputs = ListStr([], iotype='in',desc='A list of outputs to be saved with each case.')
     
-    alpha=Float(1., iotype='in',desc='Multiplicative factor for neighborhood DOE Driver')
+    alpha=Float(.3, low=.01, high =1.0, iotype='in',desc='Multiplicative factor for neighborhood DOE Driver')
     
-    beta=Float(1., iotype='in',desc='Another factor for neighborhood DOE Driver')
+    beta=Float(.1, low=.001, high=1.0,iotype='in',desc='Another factor for neighborhood DOE Driver')
 
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
@@ -82,23 +82,18 @@ class NeiborhoodDOEdriver(CaseIterDriverBase):
         
         for row in list(self.DOEgenerator)+[tuple(M)]:
             vals=[]
-            for p,val,curval in zip(params,row,P):
-                #create multiplicative factor
-                k=min([curval-p.low,p.high-curval])
-                                
-                newlow_a=curval-self.alpha*abs(curval-p.low)**(self.beta)
-                newhigh_a=curval+self.alpha*abs(p.high-curval)**(self.beta)
-                newval_a = newlow_a+(newhigh_a-newlow_a)*val
-                                
-                #print curval,newval_b,val
-                newval=newval_a
+            for p,val,curval in zip(params,row,P):                
+                delta_low = curval-p.low
+                k_low = 1.0/(1.0+(1-self.beta)*delta_low)
+                new_low= curval - self.alpha*k_low*delta_low
+
+                delta_high = p.high-curval
+                k_high = 1.0/(1.0+(1-self.beta)*delta_high)
+                new_high= curval + self.alpha*k_high*delta_high
+                                    
                 
-     
-                if newval<p.low:
-                    newval=p.low
-                elif newval>p.high:
-                    newval=p.high
-                
+                newval = new_low+(new_high-new_low)*val
+                                                
                 vals.append(newval)
                 
             case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
