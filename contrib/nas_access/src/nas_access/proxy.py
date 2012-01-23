@@ -436,8 +436,10 @@ class _File(object):
             self._path = path
             if 'r' in mode:
                 # Transfer remote file to local copy.
+                binary = 'b' in mode
                 timeout = 5 * 60
-                self._conn.invoke('putfile', (filename,), timeout=timeout)
+                self._conn.invoke('putfile', (filename, binary),
+                                  timeout=timeout)
                 self._conn.recv_file(filename, path)
                 self._conn.remove_files((filename,))
             self._fileobj = open(path, mode, bufsize)
@@ -466,11 +468,13 @@ class _File(object):
         """ Close the file. If writing, send to remote. """
         try:
             self._fileobj.close()
-            if not 'r' in self._mode:
+            if 'r' not in self._mode:
                 # Transfer local file to remote copy.
                 self._conn.send_file(self._path, self._filename)
+                binary = 'b' in self._mode
                 timeout = 5 * 60
-                self._conn.invoke('getfile', (self._filename,), timeout=timeout)
+                self._conn.invoke('getfile', (self._filename, binary),
+                                  timeout=timeout)
         finally:
             try:
                 os.remove(self._path)

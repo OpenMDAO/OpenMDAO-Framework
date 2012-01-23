@@ -189,18 +189,22 @@ class ServerWrapper(BaseWrapper):
         for root in self._wrappers.keys():
             self._release(root)
 
-    def getfile(self, filename):
+    def getfile(self, filename, binary):
         """
         Copy `filename` from remote file server.
 
         filename: string
             Name of file to receive.
+
+        binary: boolean
+            If True, file in binary.
         """
         fd, path = tempfile.mkstemp()
         try:
             os.close(fd)
             self._conn.recv_file(filename, path)
-            filexfer(None, path, self._delegate, filename)
+            mode = 'b' if binary else ''
+            filexfer(None, path, self._delegate, filename, mode)
             self._conn.remove_files((filename,))
         finally:
             try:
@@ -208,17 +212,21 @@ class ServerWrapper(BaseWrapper):
             except Exception as exc:  # pragma no cover
                 self._logger.warning("Can't remove temporary file: %s", exc)
 
-    def putfile(self, filename):
+    def putfile(self, filename, binary):
         """
         Copy `filename` to remote file server.
 
         filename: string
             Name of file to send.
+
+        binary: boolean
+            If True, file in binary.
         """
         fd, path = tempfile.mkstemp()
         try:
             os.close(fd)
-            filexfer(self._delegate, filename, None, path)
+            mode = 'b' if binary else ''
+            filexfer(self._delegate, filename, None, path, mode)
             self._conn.send_file(path, filename)
         finally:
             try:
