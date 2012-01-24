@@ -739,8 +739,7 @@ class FileParser(object):
             field number to start. 
         
         rowend: integer
-            row number to end. If the rowend is before rowstart, then the rows
-            are read in reverse order.
+            row number to end relative to current anchor. 
         
         fieldend: integer (optional)
             field number to end. If not specified, grabs all fields up to the
@@ -751,17 +750,25 @@ class FileParser(object):
         field number.
         """
 
+        if fieldend and (fieldstart > fieldend):
+            msg = "fieldend must be greater than fieldstart"
+            raise ValueError(msg)
+            
+        if rowstart > rowend:
+            msg = "rowend must be greater than rowstart"
+            raise ValueError(msg)
+            
         j1 = self.current_row + rowstart
         j2 = self.current_row + rowend + 1
+        lines = list(self.data[j1:j2])
         
-        if j2<j1:
-            lines = list(self.data[j2:j1:-1])
-        else:
-            lines = list(self.data[j1:j2])
-
         if self.delimiter == "columns":
             
-            line = lines[0][(fieldstart-1):fieldend]
+            if fieldend:
+                line = lines[0][(fieldstart-1):fieldend]
+            else:
+                line = lines[0][(fieldstart-1):]
+                
             parsed = _parse_line().parseString(line)
             row = array(parsed[:])
             data = zeros(shape=(abs(j2-j1), len(row)))
@@ -777,9 +784,12 @@ class FileParser(object):
                 data[i+1, :] = array(parsed[:])
                 
         else:
-            
             parsed = _parse_line(self.delimiter).parseString(lines[0])
-            row = array(parsed[(fieldstart-1):])
+            if fieldend:
+                row = array(parsed[(fieldstart-1):fieldend])
+            else:
+                row = array(parsed[(fieldstart-1):])
+                
             data = zeros(shape=(abs(j2-j1), len(row)))
             data[0, :] = row
     
@@ -787,8 +797,11 @@ class FileParser(object):
                 parsed = _parse_line(self.delimiter).parseString(line)
                 
                 if fieldend:
-                    data[i+1, :] = array(parsed[(fieldstart-1):fieldend])
+                    try:
+                        data[i+1, :] = array(parsed[(fieldstart-1):fieldend])
+                    except:
+                        print data
                 else:
                     data[i+1, :] = array(parsed[(fieldstart-1):])
-                
+        
         return data

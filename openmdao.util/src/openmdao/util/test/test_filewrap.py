@@ -460,7 +460,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val.shape[1], 18)
           
         # column delim; no end field
-        gen.set_delimiters('columns')
         val = gen.transfer_2Darray(3, 19, 26)
         self.assertEqual(val[0, 1], 30.0)
         self.assertEqual(val[0, 17], -63.7)
@@ -469,6 +468,33 @@ class TestCase(unittest.TestCase):
         self.assertEqual(val.shape[0], 24)
         self.assertEqual(val.shape[1], 18)
         
+        # make sure single line works
+        gen.set_delimiters(' \t')
+        val = gen.transfer_2Darray(5, 3, 5, 5)
+        self.assertEqual(val[0, 2], 49.1)
+        
+        # Small block read
+        val = gen.transfer_2Darray(7, 3, 9, 6)
+        self.assertEqual(val[0, 0], 53.6)
+        self.assertEqual(val[2, 0], 63.4)
+
+        # Error messages for bad values
+        try:
+            gen.transfer_2Darray(7, 3, 9, 1)
+        except ValueError, err:
+            msg = "fieldend must be greater than fieldstart"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')  
+            
+        try:
+            gen.transfer_2Darray(9, 2, 8, 4)
+        except ValueError, err:
+            msg = "rowend must be greater than rowstart"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('ValueError expected')  
+
     def test_comment_char(self):
 
         # Check to see if the use of the comment
