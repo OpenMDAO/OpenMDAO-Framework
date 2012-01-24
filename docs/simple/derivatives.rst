@@ -139,7 +139,7 @@ Next, we define the ``calculate_first_derivatives`` and the
             
 
 The Hessian matrix is symmetric, so ``df/dxdy`` is the same as
-``df/dydx``, and only one has to be set.
+``df/dydx``, and only one of these has to be set.
 
 Note that no changes are required to the OptimizationConstrained or
 OptimizationUnconstrained assembly at this point. If the driver uses
@@ -149,11 +149,12 @@ you provide, then it will do so.
 *Benchmarking*
 ~~~~~~~~~~~~~~
 
-Somtimes it is useful to know how many times your component executes, and how many times it
-calculates its derivatives. OpenMDAO provides such a pair of counters in every component --
-``exec_count`` is incremented whenever a component executes, and ``derivative_exec_count``
-is incremeneted whenever the derivatives are calculated. The following example shows how
-they can be accessed and used.
+Sometimes it is useful to know how many times your component executes, and
+how many times it calculates its derivatives. OpenMDAO provides this
+information for every component through a pair of counters: ``exec_count``
+is incremented whenever a component executes, and ``derivative_exec_count``
+is incremeneted whenever the derivatives are calculated. The following
+example shows how they can be accessed and used.
 
         >>> from openmdao.main.api import set_as_top
         >>>
