@@ -53,11 +53,13 @@ class ComponentWithDerivatives (Component):
         # Calculate first derivatives in user-defined function
         if first and hasattr(self, 'calculate_first_derivatives'):
             self.calculate_first_derivatives()
+            self.derivative_exec_count += 1
             savebase = True
             
         # Calculate second derivatives in user-defined function
         if second and hasattr(self, 'calculate_second_derivatives'):
             self.calculate_second_derivatives()
+            self.derivative_exec_count += 1
             savebase = True
             
         # Save baseline state
