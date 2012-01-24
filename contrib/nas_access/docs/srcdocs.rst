@@ -7,6 +7,32 @@ Source Documentation
 ====================
         
         
+.. index:: example.py
+
+.. _nas_access.example.example.py:
+
+example.py
+----------
+
+.. automodule:: nas_access.example.example
+   :members:
+   :undoc-members:
+   :show-inheritance:
+    
+        
+.. index:: script.py
+
+.. _nas_access.example.script.py:
+
+script.py
+---------
+
+.. automodule:: nas_access.example.script
+   :members:
+   :undoc-members:
+   :show-inheritance:
+    
+        
 .. index:: protocol.py
 
 .. _nas_access.protocol.py:

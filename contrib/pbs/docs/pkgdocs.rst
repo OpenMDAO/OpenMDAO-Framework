@@ -23,5 +23,7 @@ Package Metadata
 
 - **static_path:** [ '_static' ]
 
+- **summary:** OpenMDAO interface to PBS queuing system.
+
 - **version:** 0.1
 

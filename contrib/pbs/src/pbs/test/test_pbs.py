@@ -39,7 +39,7 @@ class TestCase(unittest.TestCase):
 
         # Normal, successful allocation.
         allocator = PBS_Allocator()
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, allocator.n_cpus)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, 0)
@@ -54,7 +54,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(estimate, -2)
 
         # Not remote.
-        nhosts = allocator.max_servers({'localhost': True})
+        nhosts, criteria = allocator.max_servers({'localhost': True})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({'localhost': True})
         self.assertEqual(estimate, -2)

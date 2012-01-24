@@ -153,7 +153,7 @@ def _ssh(host, args, logger, retry=True):
     stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
     stdin = open(stdin, 'r')
 
-    attempts = 3 if retry else 1
+    attempts = 5 if retry else 1
     for i in range(attempts):
         try:
             try:
@@ -173,6 +173,7 @@ def _ssh(host, args, logger, retry=True):
         except Exception as exc:
             if i+1 < attempts:
                 logger.error('%s\nretrying...', exc)
+                time.sleep(i)  # Back-off a bit.
             else:
                 raise
         else:
@@ -255,7 +256,7 @@ def _scp(src, dst, logger):
     stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
     stdin = open(stdin, 'r')
 
-    attempts = 3
+    attempts = 5
     for i in range(attempts):
         try:
             try:
@@ -275,6 +276,7 @@ def _scp(src, dst, logger):
         except Exception as exc:
             if i+1 < attempts:
                 logger.error('%s\nretrying...', exc)
+                time.sleep(i)  # Back-off a bit.
             else:
                 raise
         else:
@@ -527,7 +529,7 @@ class Connection(object):
         logger.info('initializing')
         self.dmz_host = dmz_host
         self.root = root
-        self._poll_delay = poll_delay
+        self.poll_delay = poll_delay
         self._logger = logger
         self._seqno = 0         # Outgoing increments at send.
         self._remote_seqno = 1  # Incoming assumes increment.
@@ -700,7 +702,7 @@ class Connection(object):
         delay = 1
         time.sleep(delay)
         while not self._poll(prefix, seqno):
-            delay = min(delay + 1, self._poll_delay)  # Back-off polling rate.
+            delay = min(delay + 1, self.poll_delay)  # Back-off polling rate.
             if timeout > 0:
                 now = time.time()
                 if now - start > timeout:

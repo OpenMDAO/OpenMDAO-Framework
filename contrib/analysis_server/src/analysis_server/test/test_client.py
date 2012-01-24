@@ -10,6 +10,7 @@ import time
 import unittest
 import nose
 
+from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.testutil import assert_raises
 
 import analysis_server
@@ -26,7 +27,8 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         os.chdir(TestCase.directory)
-        self.server, self.port = analysis_server.start_server(port=0)
+        self.server, self.port = \
+            analysis_server.start_server(port=0, resources='')
         self.client = analysis_server.Client(port=self.port)
 
     def tearDown(self):
@@ -384,5 +386,9 @@ if __name__ == '__main__':
 if __name__ == '__main__':
     sys.argv.append('--cover-package=analysis_server')
     sys.argv.append('--cover-erase')
+
+    # Avoid having any user-defined resources causing problems during testing.
+    RAM.configure('')
+
     nose.runmodule()
 

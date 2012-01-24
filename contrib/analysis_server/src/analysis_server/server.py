@@ -1972,7 +1972,7 @@ class _WrapperConfig(object):
 
 
 def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None,
-                 debug=False):
+                 debug=False, resources=None):
     """
     Start server process at `address` and `port`.
     Returns ``(proc, port)``.
@@ -1989,6 +1989,9 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None,
 
     debug: bool
         Set logging level to ``DEBUG``, default is ``INFO``.
+
+    resources: string
+        Filename for resources to be configured.
     """
     if allowed_hosts is None:
         allowed_hosts = ['127.0.0.1', socket.gethostname()]
@@ -2009,6 +2012,8 @@ def start_server(address='localhost', port=DEFAULT_PORT, allowed_hosts=None,
     # Start process.
     args = ['python', server_path,
             '--address', address, '--port', '%d' % port, '--up', server_up]
+    if resources is not None:
+        args.extend(('--resources', resources))
     if debug:
         args.append('--debug')
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
@@ -2048,7 +2053,7 @@ def stop_server(proc):
     proc: ShellProc
         Process of server to stop.
     """
-    proc.terminate(timeout=10)
+    return proc.terminate(timeout=10)
 
 
 def main():  # pragma no cover
@@ -2057,7 +2062,7 @@ def main():  # pragma no cover
     are described by ``name.cfg`` files in the current directory or
     subdirectories.  Subdirectory names are used for category names.
 
-    Usage: python server.py [--hosts=filename][--address=address][--port=number][--debug][--no-heartbeat][--up=filename]
+    Usage: python server.py [--hosts=filename][--address=address][--port=number][--resources=filename][--debug][--no-heartbeat][--up=filename]
 
     --hosts: string
         Filename for allowed hosts specification. Default ``hosts.allow``.
@@ -2072,6 +2077,10 @@ def main():  # pragma no cover
     --port: int
         Server port (default 1835).
         Note that ports below 1024 typically require special privileges.
+
+    --resources: string
+        Filename for resource configuration. If not specified then the
+        default of ``~/.openmdao/resources.cfg`` will be used.
 
     --debug:
         Set logging level to ``DEBUG``, default is ``INFO``.
@@ -2090,6 +2099,8 @@ def main():  # pragma no cover
                       help='network address to serve.')
     parser.add_option('--port', action='store', type='int',
                       default=DEFAULT_PORT, help='port to listen on')
+    parser.add_option('--resources', action='store', type='str', default=None,
+                      help='Filename for resource configuration')
     parser.add_option('--debug', action='store_true',
                       help='Set logging level to DEBUG')
     parser.add_option('--no-heartbeat', action='store_true',
@@ -2108,6 +2119,10 @@ def main():  # pragma no cover
 
     global _DISABLE_HEARTBEAT
     _DISABLE_HEARTBEAT = options.no_heartbeat
+
+    # Optionally configure resources.
+    if options.resources is not None:
+        RAM.configure(options.resources)
 
     # Get allowed_hosts.
     if os.path.exists(options.hosts):

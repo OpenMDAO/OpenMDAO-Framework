@@ -200,7 +200,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_unencrypted')
         name = init_cluster(encrypted=False, allow_shell=True)
-        self.model.driver.extra_reqs = {'allocator': name}
+        self.model.driver.extra_resources = {'allocator': name}
         self.run_cases(sequential=False)
 
     def run_cases(self, sequential, forced_errors=False, retry=True):
@@ -336,7 +336,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noresource')
 
         # Check response to unsupported resource.
-        self.model.driver.extra_reqs = {'no-such-resource': 0}
+        self.model.driver.extra_resources = {'no-such-resource': 0}
         self.model.driver.sequential = False
         self.model.driver.iterator = ListCaseIterator([])
         assert_raises(self, 'self.model.run()', globals(), locals(),

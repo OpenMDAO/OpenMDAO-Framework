@@ -10,6 +10,15 @@ Package Metadata
 
 - **description-file:** README.txt
 
+- **entry_points**:: 
+
+    [openmdao.container]
+    example.FakeNCC=example:FakeNCC
+    example.FakeSim=example:FakeSim
+    [openmdao.component]
+    example.FakeNCC=example:FakeNCC
+    example.FakeSim=example:FakeSim
+
 - **keywords:** openmdao
 
 - **name:** nas_access
@@ -22,6 +31,8 @@ Package Metadata
     <3.0
 
 - **static_path:** [ '_static' ]
+
+- **summary:** OpenMDAO interface to NASA HEC systems at Ames Research Center.
 
 - **version:** 0.1
 
