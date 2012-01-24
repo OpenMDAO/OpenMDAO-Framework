@@ -20,16 +20,20 @@ or they might be estimated by some other means. Additionally, these derivatives 
 be more accurate than those estimated by finite differencing the component, and
 they are not dependent on the right choice of a step-size parameter.
 
-.. index:: Fake Finite Difference
+.. index:: Finite Difference with Analytical Derivatives (FFAD)
 
-In OpenMDAO, derivatives can be specified in the component API. A component's a set of specified
-derivatives is used to replace that component's output with the first-order Taylor series expansion
-whenever the optimizer initiates a finite difference estimation of the gradient. This is called
-*Fake Finite Difference*. It provides an efficient way of calculating gradients for mixed models --
-models with components that can provide derivatives and those that cannot. Via Fake Finite
-Difference you can specify gradients (first derivatives) and Hessians (second derivatives) in mixed
-models. The CONMIN driver uses only gradients, but the NEWSUMT optimizer can use both gradients and
-Hessians. For details, see the :ref:`Derivatives` section in the *Script Interface.*
+In OpenMDAO, derivatives can be specified in the component API. A component's
+a set of specified derivatives is used to replace that component's output
+with the first-order Taylor series expansion whenever the optimizer initiates
+a finite difference estimation of the gradient. This is called *Finite
+Difference with Analytical Derivatives* (FFAD) (formerly *Fake Finite
+Difference*). It provides an efficient way of calculating gradients for mixed
+models -- models with components that can provide derivatives and those that
+cannot. Via Fake Finite Difference you can specify gradients (first
+derivatives) and Hessians (second derivatives) in mixed models. The CONMIN
+driver uses only gradients, but the NEWSUMT optimizer can use both gradients
+and Hessians. For details, see the :ref:`Derivatives` section in the *Script
+Interface.*
 
 
 Four steps are involved in specifying derivatives for a component:
@@ -51,8 +55,6 @@ upstream components and outputs that pass info to downstream components. This se
 can be reduced further when you consider that you only need the inputs and outputs
 that are active in the loop between the optimizer's parameters and its objective and
 constraints. Presently, derivatives are valid only for the `Float` variable type.
-
-.. index:: sparse matrix
 
 Derivative declaration is guided by the *sparse matrix* policy: if you don't
 declare a derivative, it is assumed to be zero. You don't have to actively
@@ -144,6 +146,43 @@ OptimizationUnconstrained assembly at this point. If the driver uses
 gradients (or Hessians) and can take advantage of the analytical ones
 you provide, then it will do so.
 
+*Benchmarking*
+~~~~~~~~~~~~~~
+
+Somtimes it is useful to know how many times your component executes, and how many times it
+calculates its derivatives. OpenMDAO provides such a pair of counters in every component --
+``exec_count`` is incremented whenever a component executes, and ``derivative_exec_count``
+is incremeneted whenever the derivatives are calculated. The following example shows how
+they can be accessed and used.
+
+        >>> from openmdao.main.api import set_as_top
+        >>>
+        >>> # Paraboloid Model
+        >>>
+        >>> from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
+        >>> model = set_as_top(OptimizationConstrained())
+        >>> model.run()
+        >>> print model.paraboloid.exec_count
+        29
+        >>> print model.paraboloid.derivative_exec_count
+        0
+        >>> # Paraboloid Model with analytical derivatives
+        >>>
+        >>> from openmdao.examples.simple.optimization_constrained_derivative import OptimizationConstrained
+        >>> model = set_as_top(OptimizationConstrained())
+        >>> model.run()
+        >>> print model.paraboloid.exec_count
+        17
+        >>> print model.paraboloid.derivative_exec_count
+        6
+
+Here, we've printed out the number of function and derivative executions for
+the paraboloid examples, both without and with analytical derivatives.
+Because this model is a simple equation, the advantage of using the
+analytical derivative aren't evident in a comparison of the clock time, but
+the number of functional executions is much lower when you have them, at a
+cost of a small number of derivative evaluations.
+        
 This concludes an introduction to OpenMDAO using a simple problem of component creation and
 execution. The next tutorial introduces a problem with more complexity and presents additional
 features of the framework.
