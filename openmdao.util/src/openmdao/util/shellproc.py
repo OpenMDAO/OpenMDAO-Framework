@@ -97,7 +97,7 @@ class ShellProc(subprocess.Popen):
         """
         super(ShellProc, self).terminate()
         if timeout is not None:
-            self.wait(timeout=timeout)
+            return self.wait(timeout=timeout)
 
     def wait(self, poll_delay=0., timeout=0.):
         """

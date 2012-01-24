@@ -9,6 +9,7 @@ application.
 
 import fnmatch
 import os.path
+import string
 import sys
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
@@ -18,6 +19,9 @@ from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
 
 from openmdao.util.shellproc import ShellProc, STDOUT, PIPE
+
+# Translate illegal job name characters.
+_XLATE = string.maketrans(' \n\t\r/:@\\*?', '__________')
 
 
 class GridEngineAllocator(FactoryAllocator):
@@ -93,8 +97,17 @@ class GridEngineAllocator(FactoryAllocator):
         """
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
-            return 0
-        return len(self._get_hosts())
+            return (0, info)
+        avail_cpus = len(self._get_hosts())
+        if 'n_cpus' in resource_desc:
+            req_cpus = resource_desc['n_cpus']
+            if req_cpus > avail_cpus:
+                return (0, {'n_cpus': 'want %s, available %s'
+                                      % (value, avail_cpus)})
+            else:
+                return (avail_cpus / req_cpus, {})
+        else:
+            return (avail_cpus, {})
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -273,7 +286,7 @@ class GridEngineServer(ObjServer):
         dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
         cmd = list(self._QSUB)
-        cmd.extend(('-V', '-sync', 'yes'))
+        cmd.extend(('-V', '-sync', 'yes', '-b', 'yes'))
         env = None
         inp, out, err = None, None, None
 
@@ -310,7 +323,7 @@ class GridEngineServer(ObjServer):
                 continue
 
             if key == 'job_name':
-                cmd.extend(('-N', value))
+                cmd.extend(('-N', self._jobname(value)))
             elif key == 'job_environment':
                 env = value
             elif key == 'parallel_environment':
@@ -386,6 +399,11 @@ class GridEngineServer(ObjServer):
         elif path.startswith(WORKING_DIRECTORY):
             path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
         return path
+
+    @staticmethod
+    def _jobname(name):
+        """ Create legal job name from `name`. """
+        return name.translate(_XLATE)
 
     @staticmethod
     def _make_time(seconds):

@@ -1191,6 +1191,8 @@ class OpenMDAO_Proxy(BaseProxy):
             try:
                 proxytype = self._manager._registry[token.typeid][-1]
             except KeyError:
+                proxytype = None
+            if proxytype is None:
                 self._manager.register(token.typeid, None, _auto_proxy)
                 proxytype = self._manager._registry[token.typeid][-1]
 

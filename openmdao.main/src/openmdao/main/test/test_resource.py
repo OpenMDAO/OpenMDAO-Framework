@@ -76,28 +76,32 @@ class TestCase(unittest.TestCase):
         self.cluster = ClusterAllocator(self.name, self.machines)
         self.assertEqual(len(self.cluster), len(self.machines))
 
-        n_servers = self.cluster.max_servers({'python_version':sys.version[:3]})
+        n_servers, criteria = \
+            self.cluster.max_servers({'python_version':sys.version[:3]})
         try:
             n_cpus = multiprocessing.cpu_count()
         except (AttributeError, NotImplementedError):  # pragma no cover
             n_cpus = 1
         self.assertEqual(n_servers, len(self.cluster)*n_cpus)
 
-        n_servers = self.cluster.max_servers({'python_version':'bad-version'})
+        n_servers, criteria = \
+            self.cluster.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
 
     def test_max_servers(self):
         logging.debug('')
         logging.debug('test_max_servers')
 
-        n_servers = self.local.max_servers({'python_version':sys.version[:3]})
+        n_servers, criteria = \
+            self.local.max_servers({'python_version':sys.version[:3]})
         try:
             n_cpus = multiprocessing.cpu_count()
         except (AttributeError, NotImplementedError):
             n_cpus = 1
         self.assertEqual(n_servers, self.local.max_load * n_cpus)
 
-        n_servers = self.local.max_servers({'python_version':'bad-version'})
+        n_servers, criteria = \
+            self.local.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
 
     def test_hostnames(self):
