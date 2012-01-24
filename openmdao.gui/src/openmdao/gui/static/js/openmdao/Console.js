@@ -131,10 +131,10 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     model.addListener(update)
     
     /** TESTING WEBSOCKET STUFF */
-    debug.info('making ajax call to get console WS...');
+    debug.info('making ajax call to get output WS...');
     jQuery.ajax({
         type: 'GET',
-        url:  'consoleWS',
+        url:  'outputWS',
         success: function(port) {
             debug.info('got port:' + port);
             var url = 'ws://localhost:'+port+'/ws';

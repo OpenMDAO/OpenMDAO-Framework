@@ -1,6 +1,5 @@
 import os, sys
 import os.path
-from time import strftime
 
 # tornado
 import tornado.httpserver
@@ -81,7 +80,7 @@ def main():
         tornado.web.url(r'/workspace/test/?',                        app_workspace.TestHandler),
         
         # testing
-        (r'/workspace/consoleWS', app_workspace.StartWSHandler),
+        (r'/workspace/outputWS', app_workspace.OutputServerHandler),
     ]
     
     # settings: debug, static handler, etc

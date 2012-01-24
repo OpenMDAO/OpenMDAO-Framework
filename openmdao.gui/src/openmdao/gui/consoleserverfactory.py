@@ -750,10 +750,14 @@ class ConsoleServer(cmd.Cmd):
     def write_file(self,filename,contents):
         ''' write contents to file in working directory
         '''
-        filepath = os.getcwd()+'/'+str(filename)
-        fout = open(filepath,'wb')
-        fout.write(contents)
-        fout.close()
+        try:
+            filepath = os.getcwd()+'/'+str(filename)
+            fout = open(filepath,'wb')
+            fout.write(contents)
+            fout.close()
+            return True
+        except Exception, err:
+            return err
 
     def add_file(self,filename,contents):
         ''' add file to working directory

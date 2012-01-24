@@ -1,8 +1,6 @@
-from django import forms
-
 import sys, os, traceback
-import zipfile, jsonpickle
-from threading import Timer
+import time
+import jsonpickle
 import multiprocessing
 
 import tornado.httpserver
@@ -10,12 +8,14 @@ import tornado.websocket
 import tornado.ioloop
 import tornado.web
 
+from django import forms
+
 from openmdao.gui.util import *
 from openmdao.gui.settings import MEDIA_ROOT
 
 from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 server_mgr = ConsoleServerFactory()
-print 'server_mgr',server_mgr
+print 'server_mgr:',server_mgr
 
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
@@ -33,7 +33,11 @@ class AddOnsHandler(BaseHandler):
     def post(self):
         ''' easy_install the POST'd addon
         '''
-        form = AddonForm(self)
+        form_data = {}
+        for field in ['distribution']:
+            if field in self.request.arguments.keys():
+                form_data[field]=self.request.arguments[field][0]
+        form = AddonForm(form_data)
         if form.is_valid():
             distribution = form.cleaned_data['distribution']
             cserver = server_mgr.console_server(self.get_cookie('sessionid'))
@@ -198,10 +202,11 @@ class ExitHandler(BaseHandler):
         http://blog.perplexedlabs.com/2010/07/01/pythons-tornado-has-swept-me-off-my-feet/
     '''
     def get(self):
-        server_mgr.delete_server(self.get_cookie('sessionid'))
-        t = Timer(5, quit) # Quit after 5 seconds
+        server_mgr.delete_server(self.get_cookie('sessionid'))        
         self.render('closewindow.html')
-    
+        time.sleep(2)
+        quit()
+
 class FileHandler(BaseHandler):
     ''' get/set the specified file/folder
     '''
@@ -212,15 +217,15 @@ class FileHandler(BaseHandler):
             self.write(cserver.ensure_dir(filename))
         else:
             contents = self.get_argument('contents',default='')
-            self.write(cserver.write_file(filename,contents))
+            self.write(str(cserver.write_file(filename,contents)))
             
     def delete(self,filename):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        self.write(cserver.delete_file(filename))
+        self.write(str(cserver.delete_file(filename)))
         
     def get(self,filename):
         cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        self.write(cserver.get_file(filename))
+        self.write(str(cserver.get_file(filename)))
 
 class FilesHandler(BaseHandler):
     ''' get a list of the users files in JSON format
@@ -330,33 +335,49 @@ class TestHandler(BaseHandler):
         self.render('workspace/test.html')
 
 
-class WSHandler(tornado.websocket.WebSocketHandler):
-    def open(self):
-    	print 'new connection'
-    	self.write_message("Hello World")
-      
-    def on_message(self, message):
-    	print 'message received %s' % message
+def serveOutput(port,cserver):
+    class OutputWSHandler(tornado.websocket.WebSocketHandler):
+            
+        def update(self):
+            #self.write_message(str(self.count))
+            self.count += 1
+            #txt = self.cserver.get_output()
+            #if len(txt) > 0:
+            #    self.write_message()
+            
+        def open(self):
+            print 'new connection'
+            self.write_message("Hello World")
+            self.count = 0
+            self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+            print 'cserver:',self.cserver
+            self.timer = tornado.ioloop.PeriodicCallback(self.update, 1000)
+            self.timer.start()
+            
+        def on_message(self, message):
+            print 'message received %s' % message
 
-    def on_close(self):
-      print 'connection closed'
+        def on_close(self):
+          print 'connection closed'
       
-def serveWS(port):
-    application = tornado.web.Application([ (r'/ws', WSHandler) ])
+    application = tornado.web.Application([ (r'/ws', OutputWSHandler) ])
     http_server = tornado.httpserver.HTTPServer(application)        
     http_server.listen(port)
-    tornado.ioloop.IOLoop.instance().start()    
-      
+    tornado.ioloop.IOLoop.instance().start()
+
 from openmdao.util.network import get_unused_ip_port
-class StartWSHandler(BaseHandler):
+class OutputServerHandler(BaseHandler):
     ''' initialize the web socket server & return the socket
     '''
     def get(self):
+        # forking this process will create another server_mgr on Windows :/
         port = get_unused_ip_port()
-        print 'starting WS server on port:',port
-        srvr = multiprocessing.Process(target=serveWS, args=(port,))
+        srvr = multiprocessing.Process(target=serveOutput, args=(port,cserver))
         srvr.start()
         self.write(str(port))
+
+
+
 
         
         
