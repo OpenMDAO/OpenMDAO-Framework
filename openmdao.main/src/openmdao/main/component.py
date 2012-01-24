@@ -150,6 +150,7 @@ class Component (Container):
         self._connected_outputs = None
         
         self.exec_count = 0
+        self.derivative_exec_count = 0
         self.create_instance_dir = False
         if directory:
             self.directory = directory
