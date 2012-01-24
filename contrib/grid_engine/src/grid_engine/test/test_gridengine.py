@@ -45,7 +45,7 @@ class TestCase(unittest.TestCase):
 
         # Normal, successful allocation.
         allocator = GridEngineAllocator()
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, 19*48)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, 0)
@@ -60,7 +60,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(estimate, -2)
 
         # Not remote.
-        nhosts = allocator.max_servers({'localhost': True})
+        nhosts, criteria = allocator.max_servers({'localhost': True})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({'localhost': True})
         self.assertEqual(estimate, -2)
@@ -70,7 +70,7 @@ class TestCase(unittest.TestCase):
         cfg.add_section('GridEngine')
         cfg.set('GridEngine', 'pattern', 'xyzzy')
         allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, -2)
@@ -87,7 +87,7 @@ class TestCase(unittest.TestCase):
         GridEngineAllocator._QHOST[:] = [os.path.join('bogus-qhost')]
         cfg.set('GridEngine', 'pattern', '*')
         allocator.configure(cfg)
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, 0)
 
     def test_server(self):
@@ -126,9 +126,10 @@ class TestCase(unittest.TestCase):
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
         self.assertEqual(''.join(lines), """\
--V -sync yes -wd . -N TestJob -pe ompi 256 -i echo.in -o echo.out -j yes -M user1@host1,user2@host2 -m n -m beas -a 01010101.00 -l h_rt=0:0:1 -l s_rt=0:0:2 -l h_cpu=0:0:3 -l s_cpu=0:0:4 echo hello world
+-V -sync yes -b yes -wd . -N TestJob -pe ompi 256 -i echo.in -o echo.out -j yes -M user1@host1,user2@host2 -m n -m beas -a 01010101.00 -l h_rt=0:0:1 -l s_rt=0:0:2 -l h_cpu=0:0:3 -l s_cpu=0:0:4 echo hello world
 -V
 -sync arg yes
+-b arg yes
 -wd arg .
 -N arg TestJob
 -pe ompi 256

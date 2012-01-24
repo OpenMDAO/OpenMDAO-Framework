@@ -5,10 +5,12 @@ the DMZ protocol.
 
 from __future__ import absolute_import
 
+import atexit
 import logging
 import os.path
 import sys
 import tempfile
+import threading
 
 from openmdao.main.rbac import rbac
 from openmdao.main.resource import ResourceAllocator
@@ -46,16 +48,24 @@ class NAS_Allocator(ResourceAllocator):
 
     def __init__(self, name='NAS_Allocator', dmz_host=None, server_host=None):
         super(NAS_Allocator, self).__init__(name)
+        self._lock = threading.Lock()
         self._servers = []
         self._dmz_host = dmz_host
         self._server_host = server_host
         self._logger.debug('init')
+        self._conn = None
+        self._pid = os.getpid()  # For protecting against copies due to fork.
+        atexit.register(self.shutdown)
         if dmz_host and server_host:
             try:
                 self._conn = connect(dmz_host, server_host, name, self._logger)
             except Exception as exc:
                 raise RuntimeError("%s: can't connect: %s" % (name, exc))
             self._logger.debug('connected to %r on %r', server_host, dmz_host)
+
+    def invalidate(self):
+        """ Invalidate this allocator. """
+        self._conn = None
 
     def configure(self, cfg):
         """
@@ -97,7 +107,7 @@ class NAS_Allocator(ResourceAllocator):
         """
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
-            return 0
+            return (0, info[1])
         timeout = 5 * 60
         return self._conn.invoke('max_servers', (rdesc,), timeout=timeout)
 
@@ -178,22 +188,26 @@ class NAS_Allocator(ResourceAllocator):
         if server in self._servers:
             self._servers.remove(server)
             timeout = 5 * 60
-            try:
-                self._conn.invoke('release', (server.conn.root,),
-                                  timeout=timeout)
-            except Exception as exc:  # pragma no cover
-                self._logger.warning("Can't release remote server: %s", exc)
+            with self._lock:  # Protocol is not thread-safe.
+                try:
+                    self._conn.invoke('release', (server.conn.root,),
+                                      timeout=timeout)
+                except Exception as exc:  # pragma no cover
+                    self._logger.warning("Can't release remote server: %s", exc)
             server.shutdown()
         else:
             raise ValueError('No such server %r' % server)
 
     def shutdown(self):
         """ Shut-down this allocator. """
+        if self._conn is None or self._pid != os.getpid():
+            return  # Never opened, already closed, or forked process.
         for server in self._servers:
             server.shutdown()
         timeout = 5 * 60
         self._conn.invoke('shutdown', timeout=timeout)
         self._conn.close()
+        self._conn = None
 
 
 class NAS_Server(object):
@@ -205,6 +219,7 @@ class NAS_Server(object):
         self._pid = pid
         self._logger = logging.getLogger(name)
         self._conn = connect(dmz_host, server_host, path, self._logger)
+        self._proxies = []
         self._close = _Finalizer()
 
     @property
@@ -229,8 +244,12 @@ class NAS_Server(object):
 
     def shutdown(self):
         """ Shut-down this server. """
-        self._logger.debug('shutdown')
-        self._conn.close()
+        if self._conn is not None:
+            self._logger.debug('shutdown')
+            for proxy in self._proxies:
+                proxy.shutdown()
+            self._conn.close()
+            self._conn = None
 
     @rbac('*')
     def echo(self, *args):
@@ -240,6 +259,12 @@ class NAS_Server(object):
         """
         timeout = 5 * 60
         return self._conn.invoke('echo', args, timeout=timeout)
+
+    @rbac('owner', proxy_types=[object])
+    def create(self, typname, version=None, server=None,
+               res_desc=None, **ctor_args):
+        """ Raises ``NotImplementedError``. """
+        raise NotImplementedError('create')
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -254,6 +279,22 @@ class NAS_Server(object):
         timeout = 0  # Could be queued 'forever'.
         return self._conn.invoke('execute_command', (resource_desc,),
                                  timeout=timeout)
+
+    @rbac('owner', proxy_types=[object])
+    def load_model(self, egg_filename):
+        """
+        Load model from egg and return top-level object if this server's
+        `allow_shell` attribute is True.
+
+        egg_filename: string
+            Filename of egg to be loaded.
+        """
+        timeout = 5 * 60
+        r_root = self._conn.invoke('load_model', (egg_filename,),
+                                   timeout=timeout)
+        proxy = NAS_Component(self._conn.dmz_host, self._host, r_root)
+        self._proxies.append(proxy)
+        return proxy
 
     @rbac('owner')
     def pack_zipfile(self, patterns, filename):
@@ -395,8 +436,10 @@ class _File(object):
             self._path = path
             if 'r' in mode:
                 # Transfer remote file to local copy.
+                binary = 'b' in mode
                 timeout = 5 * 60
-                self._conn.invoke('putfile', (filename,), timeout=timeout)
+                self._conn.invoke('putfile', (filename, binary),
+                                  timeout=timeout)
                 self._conn.recv_file(filename, path)
                 self._conn.remove_files((filename,))
             self._fileobj = open(path, mode, bufsize)
@@ -425,11 +468,13 @@ class _File(object):
         """ Close the file. If writing, send to remote. """
         try:
             self._fileobj.close()
-            if not 'r' in self._mode:
+            if 'r' not in self._mode:
                 # Transfer local file to remote copy.
                 self._conn.send_file(self._path, self._filename)
+                binary = 'b' in self._mode
                 timeout = 5 * 60
-                self._conn.invoke('getfile', (self._filename,), timeout=timeout)
+                self._conn.invoke('getfile', (self._filename, binary),
+                                  timeout=timeout)
         finally:
             try:
                 os.remove(self._path)
@@ -476,4 +521,35 @@ class _Finalizer(object):
     def cancel(self):
         """ Called during RAM.release(). """
         pass
+
+
+class NAS_Component(object):
+    """ Knows about some of the :class:`Component` API. """
+
+    def __init__(self, dmz_host, server_host, path):
+        self._host = server_host
+        self._logger = logging.getLogger(path)
+        self._conn = connect(dmz_host, server_host, path, self._logger)
+
+    def shutdown(self):
+        """ Shut-down this proxy. """
+        if self._conn is not None:
+            self._logger.debug('shutdown')
+            self._conn.close()
+            self._conn = None
+
+    def get(self, name, index=None):
+        """ Return value of `name`. """
+        timeout = 5 * 60
+        return self._conn.invoke('get', (name, index), timeout=timeout)
+
+    def set(self, name, value, index=None):
+        """ Set `name` to `value`. """
+        timeout = 5 * 60
+        return self._conn.invoke('set', (name, value, index), timeout=timeout)
+
+    def run(self):
+        """ Run. """
+        timeout = 0
+        return self._conn.invoke('run', timeout=timeout)
 

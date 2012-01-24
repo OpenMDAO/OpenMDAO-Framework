@@ -10,11 +10,6 @@ Package Metadata
 
 - **description-file:** README.txt
 
-- **entry_points**:: 
-
-    [openmdao.component]
-    inlet_post_process.PostProcess=inlet_post_process:PostProcess
-
 - **keywords:** openmdao
 
 - **name:** grid_engine
@@ -27,6 +22,8 @@ Package Metadata
     <3.0
 
 - **static_path:** [ '_static' ]
+
+- **summary:** OpenMDAO interface to GridEngine queueing system.
 
 - **version:** 0.1
 

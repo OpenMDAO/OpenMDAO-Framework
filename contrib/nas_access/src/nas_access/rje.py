@@ -69,7 +69,7 @@ def main(): # pragma no cover
         configure_scp(options.scp.split())
 
     # Optionally configure resources.
-    if options.resources:
+    if options.resources is not None:
         RAM.configure(options.resources)
 
     # Get allocator to wrap.
@@ -109,8 +109,7 @@ def main(): # pragma no cover
                 time.sleep(delay)
             else:
                 client, connection = conn_info
-                wrapper = AllocatorWrapper(allocator, client, connection,
-                                           poll_delay)
+                wrapper = AllocatorWrapper(allocator, client, connection)
                 handler = threading.Thread(name='%s_handler' % client,
                                            target=wrapper.process_requests)
                 handler.daemon = True

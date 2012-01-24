@@ -22,7 +22,7 @@ def main():
         i += 1
         if opt in ('-V', '-cwd'):
             print opt
-        elif opt in ('-sync', '-N', '-wd', '-M', '-m', '-a', '-dl'):
+        elif opt in ('-sync', '-b', '-N', '-wd', '-M', '-m', '-a', '-dl'):
             arg = sys.argv[i]
             i += 1
             print opt, 'arg', arg
