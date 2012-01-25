@@ -18,6 +18,7 @@ from openmdao.devtools.remote_cfg import add_config_options, process_options, \
                                          print_host_codes
 
 from openmdao.devtools.ec2 import run_on_ec2
+from openmdao.main.plugin import print_sub_help
 
 
 def _remote_build_and_test(fname=None, pyversion='python', keep=False, 
