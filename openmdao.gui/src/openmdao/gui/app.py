@@ -81,6 +81,7 @@ def main():
         
         # testing
         (r'/workspace/outputWS', app_workspace.OutputServerHandler),
+        (r'/workspace/plotWS', app_workspace.PlotServerHandler),
     ]
     
     # settings: debug, static handler, etc

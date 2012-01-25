@@ -13,7 +13,7 @@ openmdao.Plotter = function(id,model,port) {
     var plot = null,
         options = {
             series: { shadowSize: 0 }, // drawing is faster without shadows
-            yaxis: { min: 0, max: 100 },
+            yaxis: { min: 0, max: 5 },
             xaxis: { show: false }
         },
         data = [],
@@ -25,23 +25,35 @@ openmdao.Plotter = function(id,model,port) {
     plot = jQuery.plot(plot, [ data ], options)
 
     // if a port was specified then listen for updated values, otherwise generate random updates
-    if (port) {
-        var url = "ws://localhost:"+port,
-            sck = new WebSocket(url);
-            
-        debug.info("opened socket at",url,s)
-
-        sck.onmessage = function(e) {
-            debug.info('got ' + e.data);
-            var lines = e.data.split('\n');
-            for (line in lines) {
-                var fields = line.split(' ');
-                    newValue = parseFloat(fields[0]);
-                updateData(newValue);    
-            }        
-            sck.send('');
-            updatePlot();
-        };
+    if (true) {
+        /** TESTING WEBSOCKET STUFF */
+        debug.info('making ajax call to get plot WS...');
+        var varname = 'prob.dis1.y1'
+        jQuery.ajax({
+            type: 'GET',
+            url:  'plotWS',
+            success: function(port) {
+                debug.info('got plot port:' + port);
+                var url = 'ws://localhost:'+port+'/ws';
+                sck = new WebSocket(url);
+                debug.info("opened plot socket at",url,sck);
+                sck.onopen = function (e) {
+                    debug.info('plot socket opened',e);
+                };
+                sck.onclose = function (e) {
+                    debug.info('plot socket closed',e);
+                };
+                sck.onmessage = function(e) {
+                    debug.info('plot socket message:',e);
+                    updateData(e.data);
+                    updatePlot();                    
+                };            
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                       debug.error("Error getting console WS (status="+jqXHR.status+"): "+jqXHR.statusText)
+                       debug.error(jqXHR,textStatus,errorThrown)
+           }
+        })
     }
     else {
         setRefresh(interval);

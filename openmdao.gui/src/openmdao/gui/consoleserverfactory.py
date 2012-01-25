@@ -802,3 +802,11 @@ class ConsoleServer(cmd.Cmd):
         print "Installing",distribution,"from",url
         easy_install.main( ["-U","-f",url,distribution] )
             
+    def get_value(self,pathname):
+        ''' get the value of the object with the given pathname
+        '''
+        try:
+            val, root = self.get_container(pathname)            
+            return val
+        except Exception, err:
+            print "error getting value:",err

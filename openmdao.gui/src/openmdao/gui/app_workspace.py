@@ -10,9 +10,10 @@ import tornado.web
 
 from django import forms
 
+from openmdao.util.network import get_unused_ip_port
+
 from openmdao.gui.util import *
 from openmdao.gui.settings import MEDIA_ROOT
-
 from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 server_mgr = ConsoleServerFactory()
 print 'server_mgr:',server_mgr
@@ -373,7 +374,6 @@ class OutputServer(threading.Thread):
         http_server.listen(self.port)
         tornado.ioloop.IOLoop.instance().start()
 
-from openmdao.util.network import get_unused_ip_port
 class OutputServerHandler(BaseHandler):
     ''' initialize the web socket server & return the socket
     '''
@@ -384,6 +384,56 @@ class OutputServerHandler(BaseHandler):
         # forking this process will create another server_mgr on Windows :/
         port = get_unused_ip_port()
         srvr = OutputServer(port)
+        srvr.start()
+        self.write(str(port))
+
+class PlotServer(threading.Thread):
+    ''' a thread that serves output from the cserver to a websocket
+    '''
+    class PlotWSHandler(tornado.websocket.WebSocketHandler):
+            
+        def update(self):
+            print 'getting plot value for',self.varname,'\n'
+            self.count += 1
+            val = self.cserver.get_value(self.varname)
+            print "value of",self.varname,"=",val
+            if val is not None:
+                self.write_message(str(val))
+            
+        def open(self):
+            self.varname = 'prob.dis1.y1' # TODO: ghard coded for demo purposes
+            print 'new connection for plot var',self.varname
+            self.count = 0
+            self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+            self.timer = tornado.ioloop.PeriodicCallback(self.update, 1000)
+            self.timer.start()
+            
+        def on_message(self, message):
+            print 'message received %s' % message
+
+        def on_close(self):
+            self.timer.stop()
+            print 'connection closed'
+      
+    def __init__(self, port, varname):
+        super(PlotServer, self).__init__()
+        self.port = port
+        self.varname = varname
+    
+    def run(self):
+        application = tornado.web.Application([ (r'/ws', self.PlotWSHandler) ])
+        http_server = tornado.httpserver.HTTPServer(application)        
+        http_server.listen(self.port)
+        tornado.ioloop.IOLoop.instance().start()
+
+class PlotServerHandler(BaseHandler):
+    ''' initialize the web socket server & return the socket
+    '''
+    def get(self):
+        self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        port = get_unused_ip_port()
+        varname = 'prob.dis1.y1'
+        srvr = PlotServer(port,varname)
         srvr.start()
         self.write(str(port))
 
