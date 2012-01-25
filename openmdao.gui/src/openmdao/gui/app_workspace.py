@@ -1,7 +1,7 @@
 import sys, os, traceback
 import time
 import jsonpickle
-import multiprocessing
+import threading
 
 import tornado.httpserver
 import tornado.websocket
@@ -335,22 +335,24 @@ class TestHandler(BaseHandler):
         self.render('workspace/test.html')
 
 
-def serveOutput(port,cserver):
+class OutputServer(threading.Thread):
+    ''' a thread that serves output from the cserver to a websocket
+    '''
     class OutputWSHandler(tornado.websocket.WebSocketHandler):
             
         def update(self):
-            #self.write_message(str(self.count))
             self.count += 1
-            #txt = self.cserver.get_output()
-            #if len(txt) > 0:
-            #    self.write_message()
+            txt = self.cserver.get_output()
+            if len(txt) > 0:
+                print "output (len="+str(len(txt))+"):\n",txt
+                self.write_message(txt)
             
         def open(self):
             print 'new connection'
-            self.write_message("Hello World")
+            self.write_message("connected to output socket\n")
             self.count = 0
             self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-            print 'cserver:',self.cserver
+            print 'OutputWSHandler cserver:',self.cserver
             self.timer = tornado.ioloop.PeriodicCallback(self.update, 1000)
             self.timer.start()
             
@@ -358,21 +360,30 @@ def serveOutput(port,cserver):
             print 'message received %s' % message
 
         def on_close(self):
-          print 'connection closed'
+            self.timer.stop()
+            print 'connection closed'
       
-    application = tornado.web.Application([ (r'/ws', OutputWSHandler) ])
-    http_server = tornado.httpserver.HTTPServer(application)        
-    http_server.listen(port)
-    tornado.ioloop.IOLoop.instance().start()
+    def __init__(self, port):
+        super(OutputServer, self).__init__()
+        self.port = port
+    
+    def run(self):
+        application = tornado.web.Application([ (r'/ws', self.OutputWSHandler) ])
+        http_server = tornado.httpserver.HTTPServer(application)        
+        http_server.listen(self.port)
+        tornado.ioloop.IOLoop.instance().start()
 
 from openmdao.util.network import get_unused_ip_port
 class OutputServerHandler(BaseHandler):
     ''' initialize the web socket server & return the socket
     '''
     def get(self):
+        self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        print 'OutputServerHandler cserver:',self.cserver
+        
         # forking this process will create another server_mgr on Windows :/
         port = get_unused_ip_port()
-        srvr = multiprocessing.Process(target=serveOutput, args=(port,cserver))
+        srvr = OutputServer(port)
         srvr.start()
         self.write(str(port))
 
