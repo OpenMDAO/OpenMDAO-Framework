@@ -8,6 +8,7 @@ from optparse import OptionParser
 
 from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import tar_dir, fabric_cleanup
+from openmdao.main.plugin import print_sub_help
 
 
 def push_docs(parser, options, args=None):
