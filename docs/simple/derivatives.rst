@@ -156,6 +156,9 @@ is incremented whenever a component executes, and ``derivative_exec_count``
 is incremeneted whenever the derivatives are calculated. The following
 example shows how they can be accessed and used.
 
+.. doctest::
+    :options: +SKIP
+
         >>> from openmdao.main.api import set_as_top
         >>>
         >>> # Paraboloid Model
