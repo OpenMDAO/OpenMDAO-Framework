@@ -64,8 +64,8 @@ being modeled. This is done by placing the component in the slot called `model`.
 For this case we are looking at the Sin component created earlier, so this is what's 
 placed in the model slot. Once this has been put in, the MetaModel will now have the 
 same inputs and outputs as our ``sine`` function. In this case that means that once the 
-model slot is filled with the Sin component, MetaModel will have an input names
-`x` and an output named `f_x` (copied directly from the names in the Sin components). 
+model slot is filled with the Sin component, MetaModel will have an input named
+`x` and an output named `f_x` (copied directly from the names in the Sin component). 
 
 Once the `surrogate` and `model` slots of the MetaModel have been filled, the MetaModel
 is ready for training. 
@@ -91,7 +91,7 @@ In this case, we're going to train with a DOEdriver, called ``DOE_Trainer``.
 We specify a FullFactorial DOEgenerator, which creates a set of evenly spaced 
 points across an interval. We (somewhat arbitrarily) selected 25 points for our training
 set, specified by ``num_levels`` under the DOEgenerator. The proper training set, is of course, 
-highly problem dependent. The training interval, is based on the low and high values
+highly problem dependent. The training interval is based on the low and high values
 specified in the ``add_parameter`` call. 
 
 When the ``train_next`` event is set, MetaModel passes the inputs to the model (i.e., Sin) to 

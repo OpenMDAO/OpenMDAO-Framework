@@ -1,4 +1,6 @@
-""" Base class for an external application that needs to be executed. """
+"""
+.. _`external_code.py`:
+"""
 
 import glob
 import os.path
