@@ -160,7 +160,8 @@ class Component (Container):
         
         self.ffd_order = 0
         self._case_id = ''
-
+        
+        self._publish_vars = set()
 
     @property
     def dir_context(self):
@@ -1334,6 +1335,19 @@ class Component (Container):
         """Set logging message level."""
         self._logger.level = level
 
+    def published_vars(self, names, publish=True):
+        if isinstance(names, basestring):
+            names = [names]
+        for name in names:
+            # TODO: allow wildcard naming
+            if not hasattr(self, name):
+                self.raise_exception("this component has no attribute named '%s'" % name, 
+                                     NameError)
+            if publish:
+                self._publish_vars.add(name)
+            else:
+                self._publish_vars.remove(name)
+            
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no cover
     """prints out validity status of all input and output traits
