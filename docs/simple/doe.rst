@@ -4,7 +4,7 @@
 Building a Model - Executing a Design of Experiment (DOE)
 =========================================================
 
-Lets say you're not interesting in optimization, instead you're much more interested 
+Lets say you're not interested in optimization, instead you're much more interested 
 in design space exploration. In that case you would want to use some kind of a Design 
 Of Experiment (DOE). There are few different kinds of DOE's out there. Some of the most
 popular are: 
@@ -54,7 +54,7 @@ variable. Create a file called *doe.py* and copy the following into it:
             
 To run a DOE we use the :ref:`DOEdriver <DOEdriver.py>`, which serves as the 
 driver any time you want to run any kind of DOE. To specify the specific type of DOE you set the *DOEgenerator* 
-atrribute. In this case we used :ref:`FullFactorial <FullFactorial.py>`, but any of the DOEgenerators 
+attribute. In this case we used :ref:`FullFactorial <FullFactorial.py>`, but any of the DOEgenerators 
 would work. 
 
 You can see that this code does not look a whole lot different than the code from the previous tutorials 
@@ -67,9 +67,9 @@ generate the full set of combinations possible (100 cases in total).
 One new thing in this example is the use of a case recorder. Each case in a given DOE results in a set of inputs being
 set into your model, then the model gets run, and some outputs are calculated. Obviously you want to record the results
 of this process for each case in the DOE. You use a :ref:`CaseRecorder <openmdao.lib.casehandler.api.py>` for that. 
-The CaseRecorder's job is to store the information from each case in some fassion. In this example 
+The CaseRecorder's job is to store the information from each case in some fashion. In this example 
 we used a :ref:`ListCaseRecorder <openmdao.lib.casehandlers.listcaseiter.py>` which just stored them in memory. There are other kinds though
-which are more permenant, for example the :ref:`DBcaseRecorder <openmdao.lib.casehandlers.db.py>` which 
+which are more permanent, for example the :ref:`DBcaseRecorder <openmdao.lib.casehandlers.db.py>` which 
 saves all your cases to a SQLite database to be reviewed later. 
 
 All CaseRecorders have the same interface, and can be all be used interchangably. In fact, 
@@ -241,4 +241,11 @@ If you would like to try this yourself, you can
 download the whole file :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.    
 
 
+Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
+it's possible to run the various cases concurrently.  If evaluating a case
+takes considerable time and you have a multiprocessor machine, setting
+``analysis.driver.sequential`` False will cause the cases to be evaluated
+concurrently, based on available resources, which will usually be quicker.
+Note that concurrent evaluation means you can't rely on the recorded cases
+being in the order you might expect.
 

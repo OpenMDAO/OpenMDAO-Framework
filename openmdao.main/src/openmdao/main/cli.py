@@ -33,7 +33,7 @@ def openmdao_docs(parser, options, args=None):
     if args:
         print_sub_help(parser, 'docs')
         return -1
-    plugin_docs(options)
+    plugin_docs(parser, options)
 
 def _get_openmdao_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""

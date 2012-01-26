@@ -1,4 +1,6 @@
 """
+.. _`grid_engine.py`:
+
 GridEngine resource allocator and object server.
 
 By adding the allocator to the resource allocation manager, resource requests

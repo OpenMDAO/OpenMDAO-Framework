@@ -97,7 +97,7 @@ executing the external application. These include:
 - Capturing error codes
 - Defining environment variables
 - Handling timeout and polling
-- Running the code on a remote server if required (forthcoming)
+- Running the code on a remote server if required
 
 So we recommend that you always derive your file-wrapped component from
 the ExternalCode base class. The following example shows how to do this for a simple component.
@@ -167,6 +167,7 @@ ExternalCode component. Finally, the ``__init__`` function also contains a
 block of code where these three files are added to the component's
 FileMetadata. This assures that when the model containing this component is
 saved to an egg, these files are always packed up and included in that egg.
+This is also necessary to support running the code on a remote server.
 
 As with other components, the actual component execution occurs in the
 ``execute`` method. Notice that the ExternalCode component takes care of
@@ -178,8 +179,8 @@ found in the sections that follow.
 
 To run, this component still needs one more piece of information --
 the command string that runs the external code. The ExternalCode object has an
-attribute named `command` which takes the command string. So, if you want to
-execute a code that you normally run by typing
+attribute named `command` which takes the command as a list of strings.
+So, if you want to execute a code that you normally run by typing
 
 ::
 
