@@ -897,9 +897,64 @@ last line is hit. The following extraction illustrates this:
 With the inclusion of ``'DISPLACEMENT'``, this is returned as an array of strings,
 so you must be careful.
 
-Functions to extract multi-dimensional arrays are forthcoming. For now, please
-use ``transfer_var`` and ``transfer_array`` to read the data and load it into your
-array.
+There is also a method to extract a 2-dimensional array from tabulated data.
+Consider an output table that looks like this:
+
+.. testcode:: Parse_Output2D
+    :hide:
+    
+    from openmdao.util.filewrap import FileParser
+    parser = FileParser()
+    from openmdao.main.api import Component
+    self = Component()
+    
+    # A way to "cheat" and do this without a file.
+    parser.data = []
+    parser.data.append('FREQ  DELTA  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5')
+    parser.data.append(' Hz')
+    parser.data.append(' 50.   1.0   30.0  34.8  36.3  36.1  34.6  32.0  28.4  23.9  18.5  12.2')
+    parser.data.append(' 63.   1.0   36.5  41.3  42.8  42.6  41.1  38.5  34.9  30.4  25.0  18.7')
+    parser.data.append(' 80.   1.0   42.8  47.6  49.1  48.9  47.4  44.8  41.2  36.7  31.3  25.0')
+    parser.data.append('100.   1.0   48.4  53.1  54.7  54.5  53.0  50.4  46.8  42.3  36.9  30.6')
+
+
+::
+
+        FREQ  DELTA   A     B     C     D     E     F     G     H     I     J
+         Hz
+         50.   1.0   30.0  34.8  36.3  36.1  34.6  32.0  28.4  23.9  18.5  12.2
+         63.   1.0   36.5  41.3  42.8  42.6  41.1  38.5  34.9  30.4  25.0  18.7
+         80.   1.0   42.8  47.6  49.1  48.9  47.4  44.8  41.2  36.7  31.3  25.0
+        100.   1.0   48.4  53.1  54.7  54.5  53.0  50.4  46.8  42.3  36.9  30.6
+        
+We would like to extract the relevant numerical data from this table, which
+amounts to all values contained in columns labeled "A" through "J" and rows
+labeled "50 Hz." through "100 Hz." We would like to save these values in a
+two-dimensional numpy array. This can be accomplished using the ``transfer_2Darray``
+method.
+
+.. testcode:: Parse_Output2D
+
+    parser.reset_anchor()    
+    parser.mark_anchor("Hz")
+    var = parser.transfer_2Darray(1, 3, 4, 12)
+    
+    print var
+
+.. testoutput:: Parse_Output2D
+
+    [[ 30.   34.8  36.3  36.1  34.6  32.   28.4  23.9  18.5  12.2]
+     [ 36.5  41.3  42.8  42.6  41.1  38.5  34.9  30.4  25.   18.7]
+     [ 42.8  47.6  49.1  48.9  47.4  44.8  41.2  36.7  31.3  25. ]
+     [ 48.4  53.1  54.7  54.5  53.   50.4  46.8  42.3  36.9  30.6]]
+
+The arguments to ``transfer_2Darray`` are the starting row number, the starting field
+number, the ending row number, and the ending field number. If the end field is
+omitted, then all values to the end of the line are extracted. In that case, care
+must be taken to make sure that all lines have the same number of values.
+
+Note that if the delimiter is set to ``'columns'``, then the column number should be
+entered instead of the field number. Delimiters are discussed in the next section.
 
 .. index:: delimiters
 
@@ -909,8 +964,8 @@ array.
 When the parser counts fields in a line of output, it determines the field
 boundaries by comparing against a set of delimiters. These delimiters can be
 changed using the ``set_delimiters`` method. By default, the delimiters are the
-general white space characters space (" ") and tab ("\t"). The newline characters
-("\n" and "\r") are always removed regardless of the delimiter status.
+general white space characters space (" ") and tab ("\\t"). The newline characters
+("\\n" and "\\r") are always removed regardless of the delimiter status.
 
 One common case that will require a change in the default delimiter is the comma
 separated file (i.e, csv). Here's an example of such an output file:
