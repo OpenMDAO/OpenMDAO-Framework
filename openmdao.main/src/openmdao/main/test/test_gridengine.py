@@ -8,27 +8,26 @@ import shutil
 import sys
 import unittest
 
+from openmdao.main.grid_engine import GridEngineAllocator, GridEngineServer
 from openmdao.main.mp_support import is_instance
 from openmdao.util.testutil import assert_raises
-
-from grid_engine import GridEngineAllocator, GridEngineServer
 
 
 class TestCase(unittest.TestCase):
 
     directory = os.path.realpath(
-        pkg_resources.resource_filename('grid_engine', 'test'))
+        pkg_resources.resource_filename('openmdao.main', 'test'))
 
     def setUp(self):
         # Force use of fake 'qsub'.
         self.orig_qsub = list(GridEngineServer._QSUB)
         GridEngineServer._QSUB[:] = \
-            ['python', os.path.join(TestCase.directory, 'qsub.py')]
+            ['python', os.path.join(TestCase.directory, 'ge_qsub.py')]
 
         # Force use of fake 'qhost'.
         self.orig_qhost = list(GridEngineAllocator._QHOST)
         GridEngineAllocator._QHOST[:] = \
-            ['python', os.path.join(TestCase.directory, 'qhost.py')]
+            ['python', os.path.join(TestCase.directory, 'ge_qhost.py')]
 
     def tearDown(self):
         GridEngineServer._QSUB[:] = self.orig_qsub
