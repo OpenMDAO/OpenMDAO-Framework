@@ -63,7 +63,7 @@ Only after the surrogate slot has been filled can you specify the component that
 being modeled. This is done by placing the component in the slot called `model`. 
 For this case we are looking at the Sin component created earlier, so this is what's 
 placed in the model slot. Once this has been put in, the MetaModel will now have the 
-same inputs and outputs as our ``sine`` function. In this case that means that once the 
+same inputs and outputs as our ``sine`` function. In this case it means that once the 
 model slot is filled with the Sin component, MetaModel will have an input named
 `x` and an output named `f_x` (copied directly from the names in the Sin component). 
 
