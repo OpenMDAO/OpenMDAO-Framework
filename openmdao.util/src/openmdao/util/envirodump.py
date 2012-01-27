@@ -1,15 +1,19 @@
-﻿#envirodump.py
-#USAGE:  "python envirodump.py", text file generated in that spot
 """
-TO DO:
-*get package VERSIONS
-    attempt to use pip freeze if available
-*fix aliases problem
-*do a WHICH on compilers?
-*deal with sys.exit on bad Python version?
-Xmake docstrings consistent
-Xmake Exception handling consistent 
-http://www.opensource.apple.com/source/python/python-3/python/Tools/freeze/modulefinder.py
+
+::
+
+  envirodump.py
+  USAGE:  "python envirodump.py", text file generated in that spot
+
+  TO DO:
+    get package VERSIONS
+        attempt to use pip freeze if available
+    fix aliases problem
+    do a WHICH on compilers?
+    deal with sys.exit on bad Python version?
+  X make docstrings consistent
+  X make Exception handling consistent 
+    http://www.opensource.apple.com/source/python/python-3/python/Tools/freeze/modulefinder.py
 """
 
 def callit(f, funct):
@@ -318,5 +322,3 @@ def get_pkg_info(f):
 if __name__ == "__main__":
     envdump()
 
-
-    
