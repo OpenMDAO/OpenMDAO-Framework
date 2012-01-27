@@ -1,5 +1,7 @@
 """
-    ``doedriver.py`` -- Driver that executes a Design of Experiments.
+.. _`DOEdriver.py`:
+   
+``doedriver.py`` -- Driver that executes a Design of Experiments.
     
 """
 
