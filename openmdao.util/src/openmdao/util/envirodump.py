@@ -19,7 +19,10 @@ def callit(f, funct):
         f.write(str(err)+'\n')
 
 def envdump():
-    f = sys.stdout
+    if len(sys.argv) > 1:
+        f = open(sys.argv[1], 'wb')
+    else:
+        f = sys.stdout
     try:
         system_info_dump(f)
     finally:
