@@ -166,8 +166,7 @@ class Component (Container):
         
         self._publish_vars = {}  # dict of varname to subscriber count
         
-        self._pub_url = ''
-        self._pubstream = None
+        self._exec_state = 'INVALID' # possible values: VALID, INVALID, RUNNING
 
     @property
     def dir_context(self):
@@ -176,6 +175,12 @@ class Component (Container):
             self._dir_context = DirectoryContext(self)
         return self._dir_context
 
+    def _set_exec_state(self, state):
+        if self._exec_state != state:
+            pub = get_instance()
+            if pub:
+                pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
+            
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
         #if name.endswith('_items'):
@@ -1307,6 +1312,7 @@ class Component (Container):
         valids = self._valid_dict
         
         self._call_execute = True
+        self._exec_state = 'INVALID'
 
         # only invalidate connected inputs. inputs that are not connected
         # should never be invalidated

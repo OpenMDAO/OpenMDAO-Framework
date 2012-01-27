@@ -17,7 +17,9 @@ class ZMQ_RPC(object):
         self._cmdsock.connect(url)
         
     def __getattr__(self, name):
-        return partial(self.invoke, name)
+        f = partial(self.invoke, name)
+        setattr(self, name, f)
+        return f
     
     def invoke(self, fname, *args, **kwargs):
         self._cmdsock.send_pyobj([fname, args, kwargs])
