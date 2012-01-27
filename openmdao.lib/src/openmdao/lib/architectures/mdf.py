@@ -26,6 +26,7 @@ class MDF(Architecture):
         self.parent.driver.delfun = .0001
         self.parent.driver.dabfun = .000001
         self.parent.driver.ctlmin = 0.0001
+        self.parent.driver.recorders = self.data_recorders
         
         params = self.parent.get_parameters()
         global_dvs = []

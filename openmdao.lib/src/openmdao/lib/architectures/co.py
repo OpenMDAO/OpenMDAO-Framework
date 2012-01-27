@@ -36,6 +36,7 @@ class CO(Architecture):
         
         #Global Driver    
         global_opt = self.parent.add('driver', CONMINdriver()) 
+        global_opt.recorders = self.data_recorders
         global_opt.print_vars = ['dis1.y1', 'dis2.y2']
         global_opt.iprint = 0
         global_opt.itmax = 100

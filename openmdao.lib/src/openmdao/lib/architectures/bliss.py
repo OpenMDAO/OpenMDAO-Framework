@@ -140,6 +140,7 @@ class BLISS(Architecture):
         dg = []
         
         sysopt = self.parent.add('sysopt', CONMINdriver())
+        sysopt.recorders = self.data_recorders
         sysopt.linobj = True
         sysopt.iprint = 0
         sysopt.force_execute = True    

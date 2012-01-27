@@ -6,6 +6,7 @@ import openmdao.main
 from openmdao.main.arch import Architecture
 from openmdao.main.problem_formulation import OptProblem
 from openmdao.util.dep import PythonSourceTreeAnalyser
+from openmdao.lib.casehandlers.api import DBCaseRecorder
 
 
 def build_arch_list(include=[], exclude=[]):
@@ -90,13 +91,20 @@ def run_arch_test_suite(arch=[], optproblems=[]):
     """
     
     compat_data = {}
+    converge_file = open('converge_data.py','w')
+
     for a in arch: 
         arch_data = {}
         for p in optproblems: 
             
             prob = p.__class__()
             prob.architecture = a.__class__()
-            print "Testing %s on %s"%(a.__class__,p.__class__), "...", 
+            recorders = [DBCaseRecorder()]
+            prob.architecture.data_recorders = recorders
+            arch_name = a.__class__.__name__
+            prob_name = p.__class__.__name__
+            
+            print "Testing %s on %s"%(arch_name,prob_name), "...", 
             try:
                 prob.check_config()
                 arch_data[p] = True
@@ -114,19 +122,24 @@ def run_arch_test_suite(arch=[], optproblems=[]):
             for comp_name in des_vars: 
                 comp = prob.get(comp_name)
                 print "    %s: %d"%(comp_name,comp.exec_count)
-        
+            print "  Errors: "
+            for k,v in prob.check_solution().iteritems(): 
+                print "    ",k,": ",v
             #print prob.check_solution()
+             
+            iter_data = prob.architecture.data_recorders[0].get_iterator()
+            data = [case['objective'] for case in iter_data]
+            #converge_file.write('%s = %s'%(arch_name,str(data)))
+            print >> converge_file, '%s = %s'%(arch_name,str(data))
+            print 
             
         compat_data[a] = arch_data
         
     return compat_data
 
 if __name__ == "__main__": 
-    archs = build_arch_list()
-    probs = build_optproblem_list()
+    archs = build_arch_list(include=['IDF','MDF','BLISS2000','BLISS','CO'])
+    probs = build_optproblem_list(include=["SellarProblem"])
     
-    data = run_arch_test_suite(archs, probs)
-    
-    print data
-    
+    data = run_arch_test_suite(archs, probs)    
     

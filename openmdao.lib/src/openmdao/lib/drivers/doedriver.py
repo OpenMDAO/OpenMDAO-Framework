@@ -85,13 +85,12 @@ class NeiborhoodDOEdriver(CaseIterDriverBase):
             for p,val,curval in zip(params,row,P):                
                 delta_low = curval-p.low
                 k_low = 1.0/(1.0+(1-self.beta)*delta_low)
-                new_low= curval - self.alpha*k_low*delta_low
+                new_low= curval - self.alpha*k_low*delta_low#/(self.exec_count+1)
 
                 delta_high = p.high-curval
                 k_high = 1.0/(1.0+(1-self.beta)*delta_high)
-                new_high= curval + self.alpha*k_high*delta_high
-                                    
-                
+                new_high= curval + self.alpha*k_high*delta_high#/(self.exec_count+1)
+                    
                 newval = new_low+(new_high-new_low)*val
                                                 
                 vals.append(newval)

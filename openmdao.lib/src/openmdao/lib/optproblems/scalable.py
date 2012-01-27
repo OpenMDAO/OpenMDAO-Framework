@@ -64,9 +64,8 @@ class Discipline(Component):
     def execute(self):    
         cz = sum([getattr(self,c)*getattr(self,z) for c,z in self.global_vars])
         cx = sum([getattr(self,c)*getattr(self,x) for c,x in self.local_vars])
-        cy = sum([-getattr(self,c)*getattr(self,y) for c,y in self.coupling_vars])
-        self.y_out = -1/self.c_y_out*(cz+cx+cy)
-                
+        cy = sum([-getattr(self,c)*getattr(self,y) for c,y in self.coupling_vars])        
+        self.y_out = -1/self.c_y_out*(cz+cx+cy)                
         
 class UnitScalableProblem(OptProblem):         
     def __init__(self,n_disciplines=3,n_globals=3,n_locals=3): 
@@ -97,7 +96,7 @@ class UnitScalableProblem(OptProblem):
         #global variables
         for i in range(0,n_globals): 
             params = tuple(["%s.z%d"%(name,i) for name in self.disciplines])
-            self.add_parameter(params,low=-10,high=10,start=.001, name="z%d"%i)
+            self.add_parameter(params,low=-10,high=10,start=2.0, name="z%d"%i)
             self.solution["z%d"%i] = 0
             
         #coupling vars 
@@ -110,9 +109,9 @@ class UnitScalableProblem(OptProblem):
                     i+=1
         #objective
         parts = []
+        for i in range(0,n_globals): 
+            parts.append('d0.z%i**2'%i) #only need one target for each global
         for d in self.disciplines:
-            for i in range(0,n_globals):      
-                parts.append("%s.z%d**2"%(d,i)) 
             parts.append("%s.y_out**2"%d)
             
          

@@ -10,13 +10,12 @@ from openmdao.lib.architectures.api import MDF, BLISS, CO,BLISS2000, IDF
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     
 from openmdao.lib.optproblems.api import SellarProblem 
-#from openmdao.lib.optproblems.api import UnitScalableProblem as SellarProblem
         
 if __name__ == "__main__": # pragma: no cover
 
     import time
     from openmdao.main.api import set_as_top
-    """
+    
     prob = SellarProblem()
     prob.architecture = MDF()
     prob.configure()
@@ -112,7 +111,7 @@ if __name__ == "__main__": # pragma: no cover
     print "Minimum objective: ", prob.get_objectives()['obj1'].evaluate()
 
     print "Elapsed time: ", time.time()-tt, "seconds"
-    """
+    
     
     prob = SellarProblem()
     prob.architecture = BLISS2000()
@@ -125,7 +124,8 @@ if __name__ == "__main__": # pragma: no cover
     prob.run() 
     
     error = prob.check_solution()
-
+    print error
+    exit()
     print "\nUsing BLISS2000 Architecture"
     print "Major Iterations: ", prob.sysopt.exec_count
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,

@@ -1,9 +1,11 @@
 
 from zope.interface import implements
-from enthought.traits.api import HasTraits
+from enthought.traits.api import HasTraits, List
 
-from openmdao.main.interfaces import IArchitecture
+from openmdao.main.interfaces import IArchitecture, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
+from openmdao.main.datatypes.slot import Slot
+
 
 class Architecture(HasTraits):
     """Base class for classes that auto-configure an ArchitectureAssembly
@@ -11,6 +13,9 @@ class Architecture(HasTraits):
     and a model.
     """
     implements(IArchitecture)
+    
+    data_recorders = List(Slot(ICaseRecorder, required=False), 
+                     desc='Case recorders for iteration data.')
     
     def __init__(self, parent=None, param_types=None,
                  constraint_types=None, num_allowed_objectives=None,

@@ -10,7 +10,7 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow, Component, Assembly
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil,FixedPointIterator,NeiborhoodDOEdriver
 from openmdao.lib.surrogatemodels.api import ResponseSurface
-from openmdao.lib.doegenerators.api import CentralComposite, OptLatinHypercube
+from openmdao.lib.doegenerators.api import CentralComposite, OptLatinHypercube, LatinHypercube
 from openmdao.lib.components.api import MetaModel
 from openmdao.lib.datatypes.api import Float, Array, Slot
 from openmdao.lib.casehandlers.api import DBCaseRecorder
@@ -182,8 +182,9 @@ class BLISS2000(Architecture):
             if local_dvs_by_comp.get(comp): #add weights if they are there
                 for w in meta_model.model.weights: 
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,w),low=-3,high=3)
-            dis_doe.DOEgenerator = CentralComposite()
-            dis_doe.alpha= .5
+            num_params = len(dis_doe.get_parameters())        
+            dis_doe.DOEgenerator = LatinHypercube((num_params**2+3*num_params+2)/2)
+            dis_doe.alpha= .1
             dis_doe.beta = .01
 
             dis_doe.add_event("meta_model_%s.train_next"%comp)
@@ -197,9 +198,10 @@ class BLISS2000(Architecture):
             self.parent.add('%s_store'%l[0],Float(0.0))        
         
         #optimization of system objective function using the discipline meta models
-        sysopt=self.parent.add('sysopt', CONMINdriver())       
-        #sysopt.fdch = .0001
-        #sysopt.fdchm = .0001
+        sysopt=self.parent.add('sysopt', CONMINdriver())      
+        sysopt.recorders = self.data_recorders
+        sysopt.fdch = .0001
+        sysopt.fdchm = .0001
         
         obj2= objective[1].text
         for comp in objective[1].get_referenced_compnames():            
