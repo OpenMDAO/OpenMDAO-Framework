@@ -18,6 +18,17 @@ def callit(f, funct):
     except (SystemExit, Exception), err:
         f.write(str(err)+'\n')
 
+def envdump():
+    if len(sys.argv) > 1:
+        f = open(sys.argv[1], 'wb')
+    else:
+        f = sys.stdout
+    try:
+        system_info_dump(f)
+    finally:
+        if f is not sys.stdout:
+            f.close()
+    
 try:
     import datetime
     import os
@@ -305,14 +316,5 @@ def get_pkg_info(f):
                             p[len(entry)+1:].replace('/','.').replace('\\','.'))
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        f = open(sys.argv[1], 'wb')
-    else:
-        f = sys.stdout
-    try:
-        system_info_dump(f)
-    finally:
-        if f is not sys.stdout:
-            f.close()
-    
+    envdump()
     
