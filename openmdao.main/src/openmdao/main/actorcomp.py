@@ -1,4 +1,5 @@
-
+import sys
+import traceback
 import pickle
 
 import zmq
@@ -8,52 +9,61 @@ import time
 import threading
 
 from openmdao.test.execcomp import ExecComp
+from openmdao.main.api import Assembly, set_as_top
 
 class ActorCompWrapper(object):
-    def __init__(self, context, comp, rep_url=None, pub_url=None):
+    def __init__(self, context, comp, rep_url=None):
         self._context = context
         self._comp = comp
         
         if rep_url is None:
-            rep_url = 'inproc://%s' % comp.comp.get_pathname()
+            rep_url = 'inproc://%s_rep' % comp.comp.get_pathname()
         self._rep_url = rep_url
-        self._repsock = ctx.socket(zmq.REP)
-        self._repsock.bind(rep_url)
-        self._repstream = zmqstream.ZMQStream(self._repsock)
+        repsock = ctx.socket(zmq.REP)
+        repsock.bind(rep_url)
+        self._repstream = zmqstream.ZMQStream(repsock)
         self._repstream.on_recv(self.handle_req)
-        
-        if pub_url is None:
-            pub_url = 'inproc://%s_pub_' % comp.get_pathname()
-        self._pub_url = pub_url
-        self._pubsock = ctx.socket(zmq.PUB)
-        self._pubsock.bind(pub_url)
-        self._pubstream = zmqstream.ZMQStream(self._pubsock)
         
     def handle_req(self, msg):
         parts = pickle.loads(msg[0])
         print 'received %s' % parts
-        funct = getattr(self._comp, parts[0])
-        ret = funct(*parts[1], **parts[2])
-        if parts[0] == 'run' or parts[0] == 'execute':
-            pname = self._comp.get_pathname()
-            for var in self._comp._publish_vars:
-                print 'publishing var %s' % var
-                self._pubstream.send_multipart(['.'.join([pname,var]), 
-                                                pickle.dumps(getattr(self._comp, var), -1)])
+        for i,p in enumerate(parts):
+            if p=='None':
+                parts[i] = None
+        try:
+            funct = getattr(self._comp, parts[0])
+            ret = funct(*parts[1], **parts[2])
+        except Exception as err:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            ret = traceback.format_exc(exc_traceback)
+        print 'ran funct'
         self._repstream.send_pyobj(ret)
-    
     
 if __name__ == '__main__':
     loop = ioloop.IOLoop.instance()
     
     ctx = zmq.Context()
     
-    comp =ExecComp(exprs=['z=x+y'])
-    comp.name = 'foo'
-    comp.x = 1
-    comp.y = 2
-    ActorCompWrapper(ctx, comp, rep_url='tcp://127.0.0.1:5555', 
-                     pub_url='tcp://127.0.0.1:5556')
+    asm = set_as_top(Assembly())
+    comp1 = asm.add("comp1", ExecComp(exprs=['z=x+y']))
+    comp2 = asm.add("comp2", ExecComp(exprs=['z=x+y']))
+    comp3 = asm.add("comp3", ExecComp(exprs=['z=x+y']))
+    
+    asm.connect("comp1.z", "comp3.x")
+    asm.connect("comp2.z", "comp3.y")
+    
+    asm.driver.workflow.add(['comp1','comp2','comp3'])
+    
+    comp1.register_published_vars(["x","y","z"])
+    comp2.register_published_vars(["x","y","z"])
+    comp3.register_published_vars(["x","y","z"])
+    
+    ActorCompWrapper(ctx, asm, 
+                     rep_url='tcp://*:5555') #,pub_url='tcp://*:5556')
+    
+    # initialize the publisher
+    from openmdao.main.publisher import init
+    pub = init(ctx, 'tcp://*:5556')
     
     loop.start()
     

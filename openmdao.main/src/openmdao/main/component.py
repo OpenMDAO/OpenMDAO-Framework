@@ -13,6 +13,8 @@ import pkg_resources
 import sys
 import weakref
 
+import cPickle as pickle
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
@@ -26,6 +28,7 @@ from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.publisher import get_instance
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -161,7 +164,10 @@ class Component (Container):
         self.ffd_order = 0
         self._case_id = ''
         
-        self._publish_vars = set()
+        self._publish_vars = {}  # dict of varname to subscriber count
+        
+        self._pub_url = ''
+        self._pubstream = None
 
     @property
     def dir_context(self):
@@ -380,6 +386,8 @@ class Component (Container):
         for name in self.list_inputs(valid=False):
             valids[name] = True
         self._call_execute = False
+        
+        self.publish_vars()
         
     def _post_run (self):
         """"Runs at the end of the run function, whether execute() ran or not."""
@@ -1335,7 +1343,7 @@ class Component (Container):
         """Set logging message level."""
         self._logger.level = level
 
-    def published_vars(self, names, publish=True):
+    def register_published_vars(self, names, publish=True):
         if isinstance(names, basestring):
             names = [names]
         for name in names:
@@ -1344,11 +1352,25 @@ class Component (Container):
                 self.raise_exception("this component has no attribute named '%s'" % name, 
                                      NameError)
             if publish:
-                self._publish_vars.add(name)
+                if name in self._publish_vars:
+                    self._publish_vars += 1
+                else:
+                    self._publish_vars[name] = 1
             else:
-                self._publish_vars.remove(name)
+                if name in self._publish_vars:
+                    self._publish_vars[name] -= 1
+                    if self._publish_vars[name] < 1:
+                        del self._publish_vars[name]
             
-
+    def publish_vars(self):
+        pub = get_instance()
+        if pub:
+            pname = self.get_pathname()
+            lst = [('.'.join([pname, var]), getattr(self, var))
+                   for var in self._publish_vars.keys()]
+            pub.publish_list(lst)
+            
+    
 def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no cover
     """prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
