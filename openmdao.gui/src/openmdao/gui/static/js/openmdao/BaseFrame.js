@@ -40,11 +40,6 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         this.elm = jQuery('<div id='+this.id+'></div>');
         this.popup(this.title);
     }
-    
-    // set the title
-    if (this.title) {
-        this.elm.attr('title',this.title);
-    }
         
     // delete any existing content and prevent browser context menu
     this.elm.html("")

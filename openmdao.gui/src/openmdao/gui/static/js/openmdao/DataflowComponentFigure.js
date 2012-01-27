@@ -112,7 +112,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     this.textarea.style.borderTop="2px solid #666666";
     this.textarea.style.borderLeft="1px solid #666666";
     this.textarea.style.borderRight="1px solid #666666";
-    this.textarea.style.overflow="auto";
+    this.textarea.style.overflow="hidden";
     this.textarea.style.fontSize="9pt";
     this.disableTextSelection(this.textarea);
     
@@ -145,6 +145,10 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
     if (this.inputPort!==null) {
         this.inputPort.setPosition(this.width/2,0);
     }
+};
+
+openmdao.DataflowComponentFigure.prototype.isConnected=function(){
+    return ((this.outputPort.getConnections().size > 0) || (this.inputPort.getConnections().size > 0));
 };
 
 openmdao.DataflowComponentFigure.prototype.setTitle=function(title){
@@ -232,11 +236,11 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
-        var cmd = 'top.'+oThis.pathname + '.run();';
+        var cmd = oThis.pathname + '.run();';
         oThis.myModel.issueCommand(cmd);
     }));
     menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-        var asm = 'top.'+openmdao.Util.getPath(oThis.pathname),
+        var asm = openmdao.Util.getPath(oThis.pathname),
             cmd = asm + '.disconnect("'+oThis.name+'");'
                 + asm + '.config_changed(update_parent=True);';
         oThis.myModel.issueCommand(cmd);

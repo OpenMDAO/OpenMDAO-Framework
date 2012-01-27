@@ -97,7 +97,7 @@ executing the external application. These include:
 - Capturing error codes
 - Defining environment variables
 - Handling timeout and polling
-- Running the code on a remote server if required (forthcoming)
+- Running the code on a remote server if required
 
 So we recommend that you always derive your file-wrapped component from
 the ExternalCode base class. The following example shows how to do this for a simple component.
@@ -167,6 +167,7 @@ ExternalCode component. Finally, the ``__init__`` function also contains a
 block of code where these three files are added to the component's
 FileMetadata. This assures that when the model containing this component is
 saved to an egg, these files are always packed up and included in that egg.
+This is also necessary to support running the code on a remote server.
 
 As with other components, the actual component execution occurs in the
 ``execute`` method. Notice that the ExternalCode component takes care of
@@ -178,8 +179,8 @@ found in the sections that follow.
 
 To run, this component still needs one more piece of information --
 the command string that runs the external code. The ExternalCode object has an
-attribute named `command` which takes the command string. So, if you want to
-execute a code that you normally run by typing
+attribute named `command` which takes the command as a list of strings.
+So, if you want to execute a code that you normally run by typing
 
 ::
 
@@ -896,9 +897,64 @@ last line is hit. The following extraction illustrates this:
 With the inclusion of ``'DISPLACEMENT'``, this is returned as an array of strings,
 so you must be careful.
 
-Functions to extract multi-dimensional arrays are forthcoming. For now, please
-use ``transfer_var`` and ``transfer_array`` to read the data and load it into your
-array.
+There is also a method to extract a 2-dimensional array from tabulated data.
+Consider an output table that looks like this:
+
+.. testcode:: Parse_Output2D
+    :hide:
+    
+    from openmdao.util.filewrap import FileParser
+    parser = FileParser()
+    from openmdao.main.api import Component
+    self = Component()
+    
+    # A way to "cheat" and do this without a file.
+    parser.data = []
+    parser.data.append('FREQ  DELTA  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5  -8.5')
+    parser.data.append(' Hz')
+    parser.data.append(' 50.   1.0   30.0  34.8  36.3  36.1  34.6  32.0  28.4  23.9  18.5  12.2')
+    parser.data.append(' 63.   1.0   36.5  41.3  42.8  42.6  41.1  38.5  34.9  30.4  25.0  18.7')
+    parser.data.append(' 80.   1.0   42.8  47.6  49.1  48.9  47.4  44.8  41.2  36.7  31.3  25.0')
+    parser.data.append('100.   1.0   48.4  53.1  54.7  54.5  53.0  50.4  46.8  42.3  36.9  30.6')
+
+
+::
+
+        FREQ  DELTA   A     B     C     D     E     F     G     H     I     J
+         Hz
+         50.   1.0   30.0  34.8  36.3  36.1  34.6  32.0  28.4  23.9  18.5  12.2
+         63.   1.0   36.5  41.3  42.8  42.6  41.1  38.5  34.9  30.4  25.0  18.7
+         80.   1.0   42.8  47.6  49.1  48.9  47.4  44.8  41.2  36.7  31.3  25.0
+        100.   1.0   48.4  53.1  54.7  54.5  53.0  50.4  46.8  42.3  36.9  30.6
+        
+We would like to extract the relevant numerical data from this table, which
+amounts to all values contained in columns labeled "A" through "J" and rows
+labeled "50 Hz." through "100 Hz." We would like to save these values in a
+two-dimensional numpy array. This can be accomplished using the ``transfer_2Darray``
+method.
+
+.. testcode:: Parse_Output2D
+
+    parser.reset_anchor()    
+    parser.mark_anchor("Hz")
+    var = parser.transfer_2Darray(1, 3, 4, 12)
+    
+    print var
+
+.. testoutput:: Parse_Output2D
+
+    [[ 30.   34.8  36.3  36.1  34.6  32.   28.4  23.9  18.5  12.2]
+     [ 36.5  41.3  42.8  42.6  41.1  38.5  34.9  30.4  25.   18.7]
+     [ 42.8  47.6  49.1  48.9  47.4  44.8  41.2  36.7  31.3  25. ]
+     [ 48.4  53.1  54.7  54.5  53.   50.4  46.8  42.3  36.9  30.6]]
+
+The arguments to ``transfer_2Darray`` are the starting row number, the starting field
+number, the ending row number, and the ending field number. If the end field is
+omitted, then all values to the end of the line are extracted. In that case, care
+must be taken to make sure that all lines have the same number of values.
+
+Note that if the delimiter is set to ``'columns'``, then the column number should be
+entered instead of the field number. Delimiters are discussed in the next section.
 
 .. index:: delimiters
 
@@ -908,8 +964,8 @@ array.
 When the parser counts fields in a line of output, it determines the field
 boundaries by comparing against a set of delimiters. These delimiters can be
 changed using the ``set_delimiters`` method. By default, the delimiters are the
-general white space characters space (" ") and tab ("\t"). The newline characters
-("\n" and "\r") are always removed regardless of the delimiter status.
+general white space characters space (" ") and tab ("\\t"). The newline characters
+("\\n" and "\\r") are always removed regardless of the delimiter status.
 
 One common case that will require a change in the default delimiter is the comma
 separated file (i.e, csv). Here's an example of such an output file:
@@ -958,6 +1014,11 @@ delimiters. Now specify commas as your delimiter.
     7
 
 With the correct delimiter set, you extract the second integer as expected.
+
+While the ability to set the delimiters adds flexibility for parsing many
+different types of input files, you may find cases that are too complex to
+parse (e.g., a field with separator characters inside of quotes.) In such cases
+you may need to read and extract the data manually.
     
 *Special Case Delimiter - Columns*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -965,4 +1026,107 @@ With the correct delimiter set, you extract the second integer as expected.
 One special-case value of the delimiter, ``'columns'``, is useful when the
 data fields have defined column location, as is the case in certain formatted
 output from Fortran or C. When the delimiter is set to ``'columns'``, the
-behavior of some of the methods is slightly different.
+behavior of some of the methods is slightly different. Consider the following 
+output file:
+
+::
+
+    CASE 1
+    12345678901234567890
+    TTF    3.7-9.4434967
+    
+.. testcode:: Parse_Output
+    :hide:
+    
+    parser.data = []
+    parser.data.append("CASE 1")
+    parser.data.append("12345678901234567890")
+    parser.data.append("TTF    3.7-9.4434967")
+    parser.reset_anchor() 
+
+The second line is a comment that helps the reader identify the column
+number (particularly on a printout) and does not need to be parsed.
+
+In the third line, the first three columns contain flags that are either ``'T'``
+or ``'F'``. Columns 4-10 contain a floating point number, and columns 11
+through 20 contain another floating point number. Note that there isn't
+always a space between the two numbers in this format, particularly when the
+second number has a negative sign. We can't parse this with a regular
+separator, but we can use the special separator ``'columns'``.
+
+Let's parse this file to extract the third boolean flag and the two numbers.
+
+.. testcode:: Parse_Output
+
+    parser.reset_anchor()    
+    parser.mark_anchor("CASE")
+    parser.set_delimiters("columns")
+    var1 = parser.transfer_var(2, 3, 3)
+    var2 = parser.transfer_var(2, 4, 10)
+    var3 = parser.transfer_var(2, 11, 20)
+    
+    print var1
+    print var2
+    print var3
+
+When the delimiters are in column mode, ``transfer_var`` takes the starting
+field and the ending field as its second and third arguments. Since we just
+want one column for the boolean flag, the starting field and ending field are
+the same. This gives us the output:
+
+.. testoutput:: Parse_Output
+
+    F
+    3.7
+    -9.4434967
+
+which is what we wanted to extract.
+
+The ``transfer_array`` method can also be used with columns, but it is used
+differently than ``transfer_var``. Consider this output file:
+
+::
+
+    CASE 2
+    123456789012345678901234567890
+    NODE 11 22 33 COMMENT
+    NODE 44 55 66 STUFF
+  
+.. testcode:: Parse_Output
+    :hide:
+    
+    parser.data = []
+    parser.data.append("CASE 2")
+    parser.data.append("12345678901234567890")
+    parser.data.append("NODE 11 22 33 COMMENT")
+    parser.data.append("NODE 44 55 66 STUFF")
+    parser.reset_anchor() 
+    
+In this example, we want to extract the six numerical values and place them in
+an array. When the delimiter is set to columns, we can define a rectangular
+box from which all elements are parsed into an array. Note that the numbers
+inside of the box are parsed assuming standard separator characters (" \t").
+      
+.. testcode:: Parse_Output
+
+    parser.reset_anchor()    
+    parser.mark_anchor("CASE 2")
+    parser.set_delimiters("columns")
+    var = parser.transfer_array(2, 6, 3, 13)
+    
+    print var
+    
+So here we've called ``transfer_array`` with four arguments: starting row,
+starting column, ending row, ending column. This results in the following
+value for var:
+
+.. testoutput:: Parse_Output
+
+    [ 11.  22.  33.  44.  55.  66.]
+    
+You can always exit column mode and return to normal delimiter parsing by setting the
+delimiters back to the default:
+
+.. testcode:: Parse_Output
+
+    parser.set_delimiters(" \t")

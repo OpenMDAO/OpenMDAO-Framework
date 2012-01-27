@@ -100,7 +100,9 @@ class BroydenSolver(Driver):
             self.xin[i] = val.evaluate(self.parent)
             
         # perform an initial run for self-consistency
+        self.pre_iteration()
         self.run_iteration()
+        self.post_iteration()
 
         # get initial dependents
         dependents = self.get_eq_constraints().values()
@@ -143,7 +145,9 @@ class BroydenSolver(Driver):
             self.set_parameters(xm.flat)
 
             # run the model
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
@@ -206,7 +210,9 @@ class BroydenSolver(Driver):
             self.set_parameters(xm.flat)
 
             # run the model
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):
@@ -260,7 +266,9 @@ class BroydenSolver(Driver):
             self.set_parameters(xm.flat)
 
             # run the model
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             # get dependents
             for i, val in enumerate(self.get_eq_constraints().values()):

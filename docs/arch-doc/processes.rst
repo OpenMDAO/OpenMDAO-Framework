@@ -119,7 +119,6 @@ be possible to create an adaptor -- if available -- between incompatible Variabl
    Linking Variables
 
 .. index:: cPickle
-.. index:: libyaml
 .. index:: pair: Model; saving
 .. index:: pair: Model; loading
 .. index:: Loader object
@@ -133,7 +132,7 @@ Because components will continue to evolve over time, component version
 information needs to be saved along with any model or submodel so that the
 correct component versions can be recreated when a persistent model is loaded
 back into memory. Persisting a memory resident model into a stream will be done
-using either cPickle or libyaml, depending upon whether the user is concerned
+using cPickle or libyaml, depending upon whether the user is concerned
 more with human readability or with save/load performance.
 
 By default, cPickle and libyaml use Python's built-in import mechanism to

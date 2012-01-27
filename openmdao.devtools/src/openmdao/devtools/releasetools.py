@@ -17,7 +17,7 @@ import zipfile
 import re
 
 # get the list of openmdao subpackages from mkinstaller.py
-from openmdao.devtools.mkinstaller import openmdao_packages
+from openmdao.devtools.mkinstaller import openmdao_packages, openmdao_dev_packages
 from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import get_git_branch, get_git_branches, \
                                     get_git_log_info, repo_top
@@ -191,8 +191,9 @@ def _update_releaseinfo_files(version):
     
     releaseinfo_str = _get_releaseinfo_str(version)
     
+    pkgs = openmdao_packages + openmdao_dev_packages
     try:
-        for project_name, pdir, pkgtype in openmdao_packages:
+        for project_name, pdir, pkgtype in pkgs:
             pdir = os.path.join(topdir, pdir, project_name)
             if 'src' in os.listdir(pdir):
                 os.chdir(os.path.join(pdir, 'src'))
@@ -206,8 +207,9 @@ def _rollback_releaseinfo_files():
     startdir = os.getcwd()
     topdir = repo_top()
     
+    pkgs = openmdao_packages + openmdao_dev_packages
     try:
-        for project_name, pdir, pkgtype in openmdao_packages:
+        for project_name, pdir, pkgtype in pkgs:
             pdir = os.path.join(topdir, pdir, project_name)
             if 'src' in os.listdir(pdir):
                 os.chdir(os.path.join(pdir, 'src'))

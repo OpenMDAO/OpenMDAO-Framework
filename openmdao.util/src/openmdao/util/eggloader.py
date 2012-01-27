@@ -4,14 +4,14 @@ Egg loading utilities.
 
 import pickle
 import cPickle
-import yaml
-try:
-    from yaml import CLoader as Loader
-    _libyaml = True
-# Test machines have libyaml.
-except ImportError:  #pragma no cover
-    from yaml import Loader
-    _libyaml = False
+#import yaml
+#try:
+    #from yaml import CLoader as Loader
+    #_libyaml = True
+## Test machines have libyaml.
+#except ImportError:  #pragma no cover
+    #from yaml import Loader
+    #_libyaml = False
 
 import os.path
 import pkg_resources
@@ -20,8 +20,7 @@ import zipfile
 
 from openmdao.util.log import NullLogger
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE, SAVE_YAML, \
-                                   SAVE_LIBYAML
+from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE #, SAVE_YAML, SAVE_LIBYAML
 
 __all__ = ('load', 'load_from_eggfile', 'load_from_eggpkg',
            'check_requirements')
@@ -346,13 +345,13 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
             top = cPickle.load(instream)
         elif fmt is SAVE_PICKLE:
             top = pickle.load(instream)
-        elif fmt is SAVE_YAML:
-            top = yaml.load(instream)
-        elif fmt is SAVE_LIBYAML:
-            # Test machines have libyaml.
-            if _libyaml is False:  #pragma no cover
-                logger.warning('libyaml not available, using yaml instead')
-            top = yaml.load(instream, Loader=Loader)
+        #elif fmt is SAVE_YAML:
+            #top = yaml.load(instream)
+        #elif fmt is SAVE_LIBYAML:
+            ## Test machines have libyaml.
+            #if _libyaml is False:  #pragma no cover
+                #logger.warning('libyaml not available, using yaml instead')
+            #top = yaml.load(instream, Loader=Loader)
         else:
             raise RuntimeError("Can't load object using format '%s'" % fmt)
     finally:
