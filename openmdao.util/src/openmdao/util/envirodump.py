@@ -18,6 +18,14 @@ def callit(f, funct):
     except (SystemExit, Exception), err:
         f.write(str(err)+'\n')
 
+def envdump():
+    f = sys.stdout
+    try:
+        system_info_dump(f)
+    finally:
+        if f is not sys.stdout:
+            f.close()
+    
 try:
     import datetime
     import os
