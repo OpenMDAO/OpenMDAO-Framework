@@ -5,7 +5,7 @@
 """
 
 
-from openmdao.lib.architectures.api import MDF, BLISS, CO,BLISS2000, IDF
+from openmdao.lib.architectures.api import MDF, BLISS, CO, BLISS2000, IDF
 
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     

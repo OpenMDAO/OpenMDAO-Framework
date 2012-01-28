@@ -2,11 +2,14 @@ import os
 
 import openmdao.lib.optproblems
 import openmdao.lib.architectures
-import openmdao.main
-from openmdao.main.arch import Architecture
-from openmdao.main.problem_formulation import OptProblem
-from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.lib.casehandlers.api import DBCaseRecorder
+
+import openmdao.main
+#from openmdao.main.arch import Architecture
+#from openmdao.main.problem_formulation import OptProblem
+
+from openmdao.util.dep import PythonSourceTreeAnalyser
+
 
 
 def build_arch_list(include=[], exclude=[]):
@@ -91,17 +94,19 @@ def run_arch_test_suite(arch=[], optproblems=[]):
     """
     
     compat_data = {}
-    converge_file = open('converge_data.py','w')
+    
 
     for a in arch: 
         arch_data = {}
+        arch_name = a.__class__.__name__
+        converge_file = open('%s_convergence_data.py'%arch_name,'w')
         for p in optproblems: 
             
             prob = p.__class__()
             prob.architecture = a.__class__()
             recorders = [DBCaseRecorder()]
             prob.architecture.data_recorders = recorders
-            arch_name = a.__class__.__name__
+            
             prob_name = p.__class__.__name__
             
             print "Testing %s on %s"%(arch_name,prob_name), "...", 
