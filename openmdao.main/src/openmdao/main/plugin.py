@@ -900,7 +900,13 @@ def _plugin_docs(plugin_name, browser=None):
         except ImportError:
             pass
     else:
-        raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
+        # Possibly something in contrib that's a directory.
+        try:
+            __import__(plugin_name)
+            mod = sys.modules[plugin_name]
+            modname = plugin_name
+        except ImportError:
+            raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
     
     if modname.startswith('openmdao.'): # lookup in builtin docs
         fparts = mod.__file__.split(os.sep)

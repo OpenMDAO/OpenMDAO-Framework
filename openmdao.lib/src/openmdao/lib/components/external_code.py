@@ -1,4 +1,6 @@
-""" Base class for an external application that needs to be executed. """
+"""
+.. _`external_code.py`:
+"""
 
 import glob
 import os.path
@@ -274,16 +276,23 @@ class ExternalCode(ComponentWithDerivatives):
 
             # Echo stdout if not redirected.
             if not self.stdout:
-                with open(rdesc['output_path'], 'rU') as inp:
-                    sys.stdout.write(inp.read())
-                os.remove(rdesc['output_path'])
+                name = rdesc['output_path']
+                if os.path.exists(name):
+                    with open(name, 'rU') as inp:
+                        sys.stdout.write(inp.read())
+                    os.remove(name)
+                else:
+                    sys.stdout.write('\n[No stdout available]\n')
 
             # Echo stderr if not redirected.
             if not self.stderr:
-                with open(rdesc['error_path'], 'rU') as inp:
-                    sys.stderr.write(inp.read())
-                os.remove(rdesc['error_path'])
-
+                name = rdesc['error_path']
+                if os.path.exists(name):
+                    with open(name, 'rU') as inp:
+                        sys.stderr.write(inp.read())
+                    os.remove(name)
+                else:
+                    sys.stdout.write('\n[No stderr available]\n')
         finally:
             RAM.release(self._server)
             self._server = None

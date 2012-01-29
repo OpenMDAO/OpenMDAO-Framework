@@ -1,91 +1,8 @@
 """
+.. _`resource.py`:
+
 Support for allocation of servers from one or more resources
 (i.e., the local host, a cluster of remote hosts, etc.)
-Some types of allocated servers (i.e. :class:`GridEngineServer`) are
-capable of submitting jobs to queuing systems. A resource description is
-a dictionary that can include both allocation and queuing information.
-
-====================== ====== ==========================================
-Allocation Key         Value  Description
-====================== ====== ==========================================
-allocator              string Name of allocator to use.
----------------------- ------ ------------------------------------------
-localhost              bool   Must be/must not be on the local host.
----------------------- ------ ------------------------------------------
-exclude                list   Hostnames to exclude.
----------------------- ------ ------------------------------------------
-required_distributions list   List of :class:`pkg_resources.Distribution`
-                              or package requirement strings.
----------------------- ------ ------------------------------------------
-orphan_modules         list   List of 'orphan' module names.
----------------------- ------ ------------------------------------------
-python_version         string Python version required (i.e '2.7').
----------------------- ------ ------------------------------------------
-n_cpus                 int    Number of CPUs/cores required.
-====================== ====== ==========================================
-
-Values for `required_distributions` and `orphan_modules` are typically taken
-from the return value of :meth:`save_to_egg`. The `n_cpus` key is also used as
-a queuing key for parallel applications.
-
-Most of the queuing keys are derived from the Distributed Resource Management
-Application API (DRMAA) standard:
-
-========================= ====== ===============================================
-Queuing Key               Value  Description
-========================= ====== ===============================================
-job_name                  string Name for the submitted job.
-------------------------- ------ -----------------------------------------------
-remote_command            string Command to execute
-                                 (just the command, no arguments).
-------------------------- ------ -----------------------------------------------
-args                      list   Arguments for the command.
-------------------------- ------ -----------------------------------------------
-job_environment           dict   Any additional environment variables needed.
-------------------------- ------ -----------------------------------------------
-working_directory         string Directory to execute in (use with care).
-------------------------- ------ -----------------------------------------------
-parallel_environment      string Used by some systems for parallel applications.
-------------------------- ------ -----------------------------------------------
-input_path                string Path for stdin.
-------------------------- ------ -----------------------------------------------
-output_path               string Path for stdout.
-------------------------- ------ -----------------------------------------------
-error_path                string Path for stderr.
-------------------------- ------ -----------------------------------------------
-join_files                bool   If True, stderr is joined with stdout.
-------------------------- ------ -----------------------------------------------
-email                     list   List of email addresses to notify.
-------------------------- ------ -----------------------------------------------
-block_email               bool   If True, do not send notifications.
-------------------------- ------ -----------------------------------------------
-email_events              string When to send notifications. \
-                                 ('b'=>beginning, 'e'=>end, 'a'=>abort, \
-                                  's'=>suspension)
-------------------------- ------ -----------------------------------------------
-start_time                string Timestamp for when to start the job.
-------------------------- ------ -----------------------------------------------
-deadline_time             string Timestamp for when the job must be complete.
-------------------------- ------ -----------------------------------------------
-hard_wallclock_time_limit int    Time limit while running or suspended (sec).
-------------------------- ------ -----------------------------------------------
-soft_wallclock_time_limit int    Estimated time running or suspended (sec).
-------------------------- ------ -----------------------------------------------
-hard_run_duration_limit   int    Time limit while running (sec).
-------------------------- ------ -----------------------------------------------
-soft_run_duration_limit   int    Estimated time while running (sec).
-------------------------- ------ -----------------------------------------------
-job_category              string Used to try to portably select site-specific
-                                 queuing options.
-------------------------- ------ -----------------------------------------------
-native_specification      string Queuing system specific options.
-========================= ====== ===============================================
-
-Use of 'native_specification' is discouraged since that makes the submitting
-application less portable.
-
-``HOME_DIRECTORY`` and ``WORKING_DIRECTORY`` are constants that may be used
-as placeholders in path specifications. They are translated at the server.
 """
 
 import ConfigParser
@@ -94,6 +11,7 @@ import multiprocessing
 import os.path
 import pkg_resources
 import Queue
+import re
 import socket
 import sys
 import threading
@@ -141,6 +59,9 @@ QUEUING_SYSTEM_KEYS = set([
     'email_events',
 ])
 
+# Legal allocator name pattern.
+_LEGAL_NAME = re.compile('^[a-zA-Z][_a-zA-Z0-9]*$')
+
 
 class ResourceAllocationManager(object):
     """
@@ -159,6 +80,7 @@ class ResourceAllocationManager(object):
 
     def __init__(self, config_filename=None):
         self._logger = logging.getLogger('RAM')
+        self._pid = os.getpid()  # For detecting copy from fork.
         self._allocations = 0
         self._allocators = []
         self._deployed_servers = {}
@@ -228,7 +150,13 @@ class ResourceAllocationManager(object):
     def _get_instance():
         """ Return singleton instance. """
         with ResourceAllocationManager._lock:
-            if ResourceAllocationManager._RAM is None:
+            ram = ResourceAllocationManager._RAM
+            if ram is None:
+                ResourceAllocationManager._RAM = ResourceAllocationManager()
+            elif ram._pid != os.getpid():
+                # We're a copy from a fork.
+                for allocator in ram._allocators:
+                    allocator.invalidate()
                 ResourceAllocationManager._RAM = ResourceAllocationManager()
             return ResourceAllocationManager._RAM
 
@@ -320,9 +248,15 @@ class ResourceAllocationManager(object):
         """ Return total of each allocator's max servers. """
         total = 0
         for allocator in self._allocators:
-            count = allocator.max_servers(resource_desc)
-            self._logger.debug('%r returned %d', allocator._name, count)
-            total += count
+            count, criteria = allocator.max_servers(resource_desc)
+            if count <= 0:
+                key = criteria.keys()[0]
+                info = criteria[key]
+                self._logger.debug('%r incompatible: key %r: %s',
+                                   allocator.name, key, info)
+            else:
+                self._logger.debug('%r returned %d', allocator._name, count)
+                total += count
         return total
 
     @staticmethod
@@ -494,10 +428,10 @@ class ResourceAllocationManager(object):
         remote_ram = server.get_ram()
         total = remote_ram._get_total_allocators()
         if not prefix:
-            prefix = server.host
+            prefix, dot, rest = server.host.partition('.')
         for i in range(total):
             allocator = remote_ram._get_allocator_proxy(i)
-            proxy = RemoteAllocator('%s/%s' % (prefix, allocator.name),
+            proxy = RemoteAllocator('%s_%s' % (prefix, allocator.name),
                                     allocator)
             self._allocators.append(proxy)
 
@@ -524,9 +458,13 @@ class ResourceAllocator(object):
 
     name: string
         Name of allocator, used in log messages, etc.
+        Must be alphanumeric (underscore also allowed).
     """
 
     def __init__(self, name):
+        match = _LEGAL_NAME.match(name)
+        if match is None:
+            raise NameError('name %r is not alphanumeric' % name)
         self._name = name
         self._logger = logging.getLogger(name)
 
@@ -534,6 +472,14 @@ class ResourceAllocator(object):
     def name(self):
         """ This allocator's name. """
         return self._name
+
+    def invalidate(self):
+        """
+        Invalidate this allocator. This will be called by the manager when
+        it detects that its allocators are copies due to a process fork.
+        The default implementation does nothing.
+        """
+        return
 
     # To be implemented by real allocator.
     def configure(self, cfg):  #pragma no cover
@@ -674,6 +620,11 @@ class ResourceAllocator(object):
         """
         Shut-down `server`.
 
+        .. note::
+
+            Unlike other methods which are protected from multithreaded
+            access by the manager, :meth:`release` must be multithread-safe.
+
         server: :class:`ObjServer`
             Server to be shut down.
         """
@@ -813,7 +764,16 @@ class LocalAllocator(FactoryAllocator):
         else:
             raise ValueError('%s: max_load must be > 0, got %g' \
                              % (name, max_load))
-
+    @property
+    def host(self):
+        """ Allocator hostname. """
+        return self.factory.host
+ 
+    @property
+    def pid(self):
+        """ Allocator process ID. """
+        return self.factory.pid
+ 
     def configure(self, cfg):
         """
         Configure allocator from :class:`ConfigParser` instance.
@@ -856,8 +816,17 @@ class LocalAllocator(FactoryAllocator):
         """
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
-            return 0
-        return max(int(self.total_cpus * self.max_load), 1)
+            return (0, info)
+        avail_cpus = max(int(self.total_cpus * self.max_load), 1)
+        if 'n_cpus' in resource_desc:
+            req_cpus = resource_desc['n_cpus']
+            if req_cpus > avail_cpus:
+                return (0, {'n_cpus' : 'want %s, available %s'
+                                       % (value, avail_cpus)})
+            else:
+                return (avail_cpus / req_cpus, {})
+        else:
+            return (avail_cpus, {})
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -954,14 +923,15 @@ class RemoteAllocator(ResourceAllocator):
 
     def __init__(self, name, remote):
         super(RemoteAllocator, self).__init__(name)
+        self._lock = threading.Lock()
         self._remote = remote
 
     @rbac('*')
     def max_servers(self, resource_desc):
         """ Return maximum number of servers for remote allocator. """
-        rdesc = self._check_local(resource_desc)
+        rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
-            return 0
+            return (0, info[1])
         return self._remote.max_servers(rdesc)
 
     @rbac('*')
@@ -996,7 +966,8 @@ class RemoteAllocator(ResourceAllocator):
     @rbac(('owner', 'user'))
     def release(self, server):
         """ Release a remotely allocated server. """
-        self._remote.release(server)
+        with self._lock:  # Proxies are not thread-safe.
+            self._remote.release(server)
 
 
 # Cluster allocation requires ssh configuration and multiple hosts.
@@ -1154,7 +1125,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
 
         rdesc, info = self._check_local(resource_desc)
         if rdesc is None:
-            return 0
+            return (0, info[1])
 
         with self._lock:
             # Drain _reply_q.
@@ -1195,19 +1166,28 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 count = retval
                 if count:
                     total += count
-            return total
+
+            if 'n_cpus' in resource_desc:
+                req_cpus = resource_desc['n_cpus']
+                if req_cpus > total:
+                    return (0, {'n_cpus' : 'want %s, total %s'
+                                           % (value, total)})
+                else:
+                    return (total / req_cpus, {})
+            else:
+                return (total, {})
 
     def _get_count(self, allocator, resource_desc, credentials):
         """ Get `max_servers` from an allocator. """
         set_credentials(credentials)
         count = 0
         try:
-            count = allocator.max_servers(resource_desc)
+            count, criteria = allocator.max_servers(resource_desc)
         except Exception:
             msg = traceback.format_exc()
             self._logger.error('%r max_servers() caught exception %s',
                                allocator.name, msg)
-        return count
+        return max(count, 0)
 
     def time_estimate(self, resource_desc):
         """

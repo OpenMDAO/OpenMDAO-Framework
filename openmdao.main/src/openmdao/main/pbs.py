@@ -1,4 +1,6 @@
 """
+.. _`pbs.py`:
+
 PBS resource allocator and object server.
 
 By adding the allocator to the resource allocation manager, resource requests
@@ -8,6 +10,7 @@ application.
 """
 
 import os.path
+import string
 import sys
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
@@ -17,6 +20,9 @@ from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
 
 from openmdao.util.shellproc import ShellProc, STDOUT
+
+# Translate illegal job name characters.
+_XLATE = string.maketrans(' \n\t\r/:@\\*?', '__________')
 
 
 class PBS_Allocator(FactoryAllocator):
@@ -91,8 +97,11 @@ class PBS_Allocator(FactoryAllocator):
         """
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
-            return 0
-        return self.n_cpus
+            return (0, info)
+        elif 'n_cpus' in resource_desc:
+            return (self.n_cpus / resource_desc['n_cpus'], {})
+        else:
+            return (self.n_cpus, {})
 
     @rbac('*')
     def time_estimate(self, resource_desc):
@@ -116,12 +125,6 @@ class PBS_Allocator(FactoryAllocator):
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
             return (retcode, info)
-
-        if 'n_cpus' in resource_desc:
-            value = resource_desc['n_cpus']
-            if self.n_cpus < value:
-                return (-2, {'n_cpus': 'want %s, have %s'
-                                       % (value, self.n_cpus)})
         criteria = {
             'total_cpus': self.n_cpus,
         }
@@ -150,7 +153,9 @@ class PBS_Allocator(FactoryAllocator):
                 if value:
                     return (-2, {key: 'requested local host'})
             elif key == 'n_cpus':
-                pass  # Handle in upper layer.
+                if self.n_cpus < value:
+                    return (-2, {'n_cpus': 'want %s, have %s'
+                                           % (value, self.n_cpus)})
             else:
                 return (-2, {key: 'unrecognized key'})
         return (0, {})
@@ -311,7 +316,7 @@ class PBS_Server(ObjServer):
                 if key == 'queue':
                     script.write('%s -q %s\n' % (prefix, value))
                 elif key == 'job_name':
-                    script.write('%s -N %s\n' % (prefix, value))
+                    script.write('%s -N %s\n' % (prefix, self._jobname(value)))
                 elif key == 'job_environment':
                     env = value
                 elif key == 'n_cpus':
@@ -363,8 +368,8 @@ class PBS_Server(ObjServer):
                     script.write('cd $HOME\n')
             else:
                 # This can potentially cause problems...
-                self._logger.warning('work %r not a descendant of home %r'
-                                     % (work, home))
+                self._logger.warning('work %r not a descendant of home %r',
+                                     work, home)
             script.write('cd %s\n' % work)
 
             script.write(self._fix_path(resource_desc['remote_command']))
@@ -403,6 +408,15 @@ class PBS_Server(ObjServer):
         elif path.startswith(WORKING_DIRECTORY):
             path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
         return path
+
+    @staticmethod
+    def _jobname(name):
+        """ Create legal job name from `name`. """
+        name = name.strip()[:15]  # 15 characters max.
+        name = name.translate(_XLATE)
+        if not name[0].isalpha():
+            name = 'Z%s' % name[1:]
+        return name
 
     @staticmethod
     def _timelimit(seconds):

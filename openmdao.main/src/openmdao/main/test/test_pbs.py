@@ -8,21 +8,21 @@ import shutil
 import sys
 import unittest
 
+from openmdao.main.pbs import PBS_Allocator, PBS_Server
 from openmdao.main.mp_support import is_instance
 from openmdao.util.testutil import assert_raises
-
-from pbs import PBS_Allocator, PBS_Server
 
 
 class TestCase(unittest.TestCase):
 
-    directory = os.path.realpath(pkg_resources.resource_filename('pbs', 'test'))
+    directory = os.path.realpath(
+                    pkg_resources.resource_filename('openmdao.main', 'test'))
 
     def setUp(self):
         # Force use of fake 'qsub'.
         self.orig_qsub = list(PBS_Server._QSUB)
         PBS_Server._QSUB[:] = \
-            ['python', os.path.join(TestCase.directory, 'qsub.py')]
+            ['python', os.path.join(TestCase.directory, 'pbs_qsub.py')]
 
     def tearDown(self):
         PBS_Server._QSUB[:] = self.orig_qsub
@@ -39,7 +39,7 @@ class TestCase(unittest.TestCase):
 
         # Normal, successful allocation.
         allocator = PBS_Allocator()
-        nhosts = allocator.max_servers({})
+        nhosts, criteria = allocator.max_servers({})
         self.assertEqual(nhosts, allocator.n_cpus)
         estimate, criteria = allocator.time_estimate({})
         self.assertEqual(estimate, 0)
@@ -54,7 +54,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(estimate, -2)
 
         # Not remote.
-        nhosts = allocator.max_servers({'localhost': True})
+        nhosts, criteria = allocator.max_servers({'localhost': True})
         self.assertEqual(nhosts, 0)
         estimate, criteria = allocator.time_estimate({'localhost': True})
         self.assertEqual(estimate, -2)
@@ -78,7 +78,7 @@ class TestCase(unittest.TestCase):
         server = PBS_Server()
 
         # Try various resources.
-        echo = os.path.join(TestCase.directory, 'echo.py')
+        echo = os.path.join(TestCase.directory, 'pbs_echo.py')
         server.execute_command(dict(remote_command='python',
                                     args=[echo, 'hello', 'world'],
                                     working_directory='.',
