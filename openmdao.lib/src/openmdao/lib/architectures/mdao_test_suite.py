@@ -1,3 +1,8 @@
+"""Script to run all Architectures in openmdao.lib.architectures 
+against all OptProblems in openmdao.lib.optproblems. 
+"""
+
+
 import os
 
 import openmdao.lib.optproblems
@@ -95,19 +100,20 @@ def run_arch_test_suite(arch=[], optproblems=[]):
     
     compat_data = {}
     
-
-    for a in arch: 
+    for p in optproblems: 
         arch_data = {}
-        arch_name = a.__class__.__name__
-        converge_file = open('%s_convergence_data.py'%arch_name,'w')
-        for p in optproblems: 
-            
+        prob_name = p.__class__.__name__
+
+        converge_file = open('%s_convergence_data.py'%prob_name,'w')
+        
+        for a in arch:
             prob = p.__class__()
+            arch_name = a.__class__.__name__
+            
             prob.architecture = a.__class__()
             recorders = [DBCaseRecorder()]
             prob.architecture.data_recorders = recorders
             
-            prob_name = p.__class__.__name__
             
             print "Testing %s on %s"%(arch_name,prob_name), "...", 
             try:
@@ -142,6 +148,16 @@ def run_arch_test_suite(arch=[], optproblems=[]):
         
     return compat_data
 
+def test_mdao(parser, options, args=None): 
+    """Runs all the architectures against all the test problems. 
+    A console script runs this function
+    """ 
+    
+    archs = build_arch_list()
+    probs = build_optproblem_list()
+       
+    data = run_arch_test_suite(archs, probs)
+       
 if __name__ == "__main__": 
     archs = build_arch_list(include=['IDF','MDF','BLISS2000','BLISS','CO'])
     probs = build_optproblem_list(include=["SellarProblem"])

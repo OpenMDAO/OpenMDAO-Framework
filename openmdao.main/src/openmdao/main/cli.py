@@ -125,6 +125,14 @@ def _get_openmdao_parser():
     except ImportError:
         pass
     
+    try: 
+        from openmdao.lib.architectures.mdao_test_suite import test_mdao
+        parser = subparsers.add_parser('test_arch', help='run the MDAO architecture test suite')
+        parser.set_defaults(func=test_mdao)
+        
+    except ImportError: 
+        pass
+    
     return top_parser
 
 def openmdao():
