@@ -53,6 +53,9 @@ class DepTestCase(unittest.TestCase):
             'PassthroughProperty',
             'OptProblem',
             'TraitArray',
+            'Broadcast', # utility class for bliss2000
+            'SubSystemOpt', # utility class for bliss2000
+            'SubSystemObj' # utility class for bliss2000
             ])
         cset = cset - excludes
         

@@ -107,7 +107,7 @@ converge the two disciplines occasionally forced *y1* to go slightly negative. T
 of the absolute value solved the problem without impacting the eventual convergence of the
 solver.
 
-These two components are contained in the file `sellar.py </../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` 
+These two components are contained in the file :download:`sellar.py </../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` 
 . in the openmdao.lib.optproblems sub-package. This package contains a number of common optimization
 problems which you can use to test your own optimization problems. 
 

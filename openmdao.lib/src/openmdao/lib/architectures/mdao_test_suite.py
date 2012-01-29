@@ -148,10 +148,12 @@ def run_arch_test_suite(arch=[], optproblems=[]):
         
     return compat_data
 
-def test_mdao(parser, options, args=None): 
+def cli_arch_test_suite(parser=None, options=None, args=None): 
     """Runs all the architectures against all the test problems. 
     A console script runs this function
     """ 
+    if not parser: #then you're not getting called from cli
+        return 
     
     if options.inc_arch and options.excl_arch: 
         raise ValueError("You can either specify architectures to include or to exclude, not both.")

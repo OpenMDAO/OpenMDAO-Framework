@@ -126,9 +126,9 @@ def _get_openmdao_parser():
         pass
     
     try: 
-        from openmdao.lib.architectures.mdao_test_suite import test_mdao
+        from openmdao.lib.architectures.mdao_test_suite import cli_arch_test_suite
         parser = subparsers.add_parser('test_arch', help='run the MDAO architecture test suite')
-        parser.set_defaults(func=test_mdao)
+        parser.set_defaults(func=cli_arch_test_suite)
         parser.add_argument("-ea","--exclude_arch",action="store",type=str, nargs="+",
                            dest="excl_arch", 
                            help="Architectures class names to exclude from the test run.",
