@@ -69,7 +69,7 @@ def build_optproblem_list(include=[], exclude=[]):
     """
     
     if include and exclude: 
-        raise ValueError("Can't set both include and exlude")
+        raise ValueError("Can't set both include and exlude for OptProblems")
     
     startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),
                  os.path.dirname(openmdao.main.__file__)]
@@ -153,8 +153,15 @@ def test_mdao(parser, options, args=None):
     A console script runs this function
     """ 
     
-    archs = build_arch_list()
-    probs = build_optproblem_list()
+    if options.inc_arch and options.excl_arch: 
+        raise ValueError("You can either specify architectures to include or to exclude, not both.")
+    
+    if options.inc_prob and options.excl_prob: 
+        raise ValueError("You can either specify problems to include or to exclude, not both.")
+    
+    archs = build_arch_list(include=options.inc_arch,exclude=options.excl_arch)
+    probs = build_optproblem_list(include=options.inc_prob,exclude=options.excl_prob)
+
        
     data = run_arch_test_suite(archs, probs)
        

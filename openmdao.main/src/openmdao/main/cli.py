@@ -129,6 +129,20 @@ def _get_openmdao_parser():
         from openmdao.lib.architectures.mdao_test_suite import test_mdao
         parser = subparsers.add_parser('test_arch', help='run the MDAO architecture test suite')
         parser.set_defaults(func=test_mdao)
+        parser.add_argument("-ea","--exclude_arch",action="store",type=str, nargs="+",
+                           dest="excl_arch", 
+                           help="Architectures class names to exclude from the test run.",
+                           default=[],metavar="arch_class_name")        
+        parser.add_argument("-ia","--include_arch",action="store",type=str, nargs="+",
+                           dest="inc_arch", 
+                           help="Architectures class names to include in the test run.",
+                           default=[],metavar="arch_class_name")        
+        parser.add_argument("-ip","--include_prob",action="store",type=str, nargs="+",
+                           dest="inc_prob", help="OptProblems class names to include in the test run.",
+                           default=[],metavar="prob_class_name")
+        parser.add_argument("-ep","--exclude_prob",action="store",type=str, nargs="+",
+                           dest="excl_prob", help="OptProblems class names to exclude from the test run.",
+                           default=[],metavar="prob_class_name")
         
     except ImportError: 
         pass
