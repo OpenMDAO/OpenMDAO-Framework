@@ -5,7 +5,7 @@ from openmdao.main.arch import Architecture
 
 from openmdao.lib.optproblems.sellar import SellarProblem
 from openmdao.lib.architectures.mdf import MDF
-from openmdao.util.arch_test_suite import build_arch_list, build_optproblem_list
+from openmdao.lib.architectures.mdao_test_suite import build_arch_list, build_optproblem_list
 
 class TestArchTestSuite(unittest.TestCase): 
     
@@ -18,7 +18,7 @@ class TestArchTestSuite(unittest.TestCase):
         try: 
             build_optproblem_list(include=['SellarProblem'],exclude=["BraninProblem"])
         except ValueError as err: 
-            self.assertEqual(str(err), "Can't set both include and exlude")
+            self.assertEqual(str(err), "Can't set both include and exlude for OptProblems")
         else: 
             self.fail("ValueError Expected") 
             
