@@ -248,8 +248,8 @@ class ArchitectureAssembly(Assembly):
     
     
     def get_des_vars_by_comp(self): 
-        """Return a dictionary of component names/ list of parameters fo all 
-        parameters (global and local)""" 
+        """Return a dictionary of component names/list of parameters 
+        (global and local)""" 
         
         result = self.get_local_des_vars_by_comp()
         for k,v in self.get_global_des_vars_by_comp().iteritems(): 
@@ -261,8 +261,8 @@ class ArchitectureAssembly(Assembly):
         return result
     
     def get_coupling_indeps_by_comp(self): 
-        """Returns a dictionary of coupling var independents 
-        keyed to the component they are part of""" 
+        """Returns a dictionary of coupling var independent  
+        parameter objects, keyed to the component they are part of""" 
         
         result = {}
         for indep_dep,couple in self.get_coupling_vars().iteritems(): 
@@ -275,7 +275,7 @@ class ArchitectureAssembly(Assembly):
         return result        
                 
     def get_coupling_deps_by_comp(self): 
-        """Returns a dictionary of coupling var independents 
+        """Returns a dictionary of coupling var dependent 
         keyed to the component they are part of""" 
         
         result = {}
