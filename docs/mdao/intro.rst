@@ -5,23 +5,33 @@
 Introduction
 =============
 
-This tutorial shows how to create a model to solve a simple problem consisting of
-two coupled disciplines using several MDAO strategies, including:
+We will cover some of the more advanced capabilities of OpenMDAO. You should read and
+understand :ref:`A-Simple-Tutorial-Problem` and :ref:`MetaModel` before starting this one. An
+understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
+recommended.
+
+This tutorial illustrates the features of OpenMDAO that support the usage of decomposition 
+based MDAO architectures, such as:
 
 #. Multidisciplinary Design Feasible (MDF)
 #. Independent Design Feasible (IDF)
 #. Collaborative Optimization (CO)
 
-The tutorial will introduce you to using the iteration hierarchy to construct these three 
-common MDAO architectures from scratch. If you are thinking about creating a new architecture, 
-or just implementing one you have seen, but is not currently available within OpenMDAO, then this 
-tutorial will show you how. 
+First we will walk through the manual implementation of these four architectures on a simple 
+example problem. This will will introduce you to using iteration hierarchy, metamodeling, 
+and Design of Experiments (DOE) to construct different kinds of optimization processes. 
+Understanding this section if important if you want to implement a new MDAO architecture 
+or one you have seen, but is not currently available within OpenMDAO.
 
-We will cover some of the more advanced capabilities of OpenMDAO. You should read and
-understand :ref:`A-Simple-Tutorial-Problem` before starting this one. An
-understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
-recommended.
+Once you have a good understanding of how to construct an MDAO architecture by hand, you 
+might realize that it can take a good amount of work to set one up. So we will show you 
+how to set up your problem so you can automatically apply the MDAO architectures. Using 
+the automatic implementation of an architecture will dramatically simplify your input files. 
 
+We'll show you how to write your own automatic architecure implementation. There 
+are a number of different architectures available in the standard library, but if you're 
+not happy with those or if you want to do research into other ones, then this last part 
+will help you.
 
 .. index:: Sellar
 
@@ -107,8 +117,9 @@ converge the two disciplines occasionally forced *y1* to go slightly negative. T
 of the absolute value solved the problem without impacting the eventual convergence of the
 solver.
 
-These two components are contained in the file `sellar.py </../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` 
-. in the openmdao.lib.optproblems sub-package. This package contains a number of common optimization
+These two components are contained in the file :download:`sellar.py 
+</../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` in the 
+openmdao.lib.optproblems sub-package. This package contains a number of common optimization
 problems which you can use to test your own optimization problems. 
 
 **Reference:**
