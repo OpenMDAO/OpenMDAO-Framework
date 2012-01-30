@@ -49,12 +49,12 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
     y1 = Float(iotype='out', desc='Output of this Discipline')        
    
     def __init__(self): 
-        super(SellarDiscipline1_WithDerivatives,self).__init__()
+        super(Discipline1_WithDerivatives,self).__init__()
         
-        self.derivatives.declare_first_derivative(self, 'y1', 'z1')
-        self.derivatives.declare_first_derivative(self, 'y1', 'z2')
-        self.derivatives.declare_first_derivative(self, 'y1', 'x1')
-        self.derivatives.declare_first_derivative(self, 'y1', 'y2')
+        self.derivatives.declare_first_derivative('y1', 'z1')
+        self.derivatives.declare_first_derivative('y1', 'z2')
+        self.derivatives.declare_first_derivative('y1', 'x1')
+        self.derivatives.declare_first_derivative('y1', 'y2')
         
     def calculate_first_derivatives(self):
         """Analytical first derivatives"""
@@ -116,18 +116,19 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
     y2 = Float(iotype='out', desc='Output of this Discipline') 
     
     def __init__(self): 
-        super(SellarDiscipline2_WithDerivatives,self).__init__()
+        super(Discipline2_WithDerivatives,self).__init__()
         
-        self.derivatives.declare_first_derivative(self, 'y2', 'z1')
-        self.derivatives.declare_first_derivative(self, 'y2', 'z2')
-        self.derivatives.declare_first_derivative(self, 'y2', 'y1')
+        self.derivatives.declare_first_derivative('y2', 'z1')
+        self.derivatives.declare_first_derivative('y2', 'z2')
+        self.derivatives.declare_first_derivative('y2', 'y1')
         
     def calculate_first_derivatives(self):
         """Analytical first derivatives"""
     
         self.derivatives.set_first_derivative('y2', 'z1', 1.0)
         self.derivatives.set_first_derivative('y2', 'z2', 1.0)
-        self.derivatives.set_first_derivative('y2', 'y1', .5*self.y1**-0.5)
+        #need to add tiny positive offset to number to avoid numerical issues around 0
+        self.derivatives.set_first_derivative('y2', 'y1', .5*abs(self.y1+1e99)**-0.5) 
        
     
     def execute(self):
@@ -142,7 +143,9 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         # throw it out
         y1 = abs(self.y1)
         
-        self.y2 = y1**(.5) + z1 + z2        
+        self.y2 = y1**(.5) + z1 + z2 
+        
+        
            
 class SellarProblem(OptProblem):
     """ Sellar test problem definition."""
@@ -188,6 +191,25 @@ class SellarProblem(OptProblem):
         }
         
         #END OF MDAO Problem Definition
+        
+        
+class SellarProblemWithDeriv(SellarProblem):
+    """ Sellar test problem definition, using components analytical derivatives"""
+    
+    def __init__(self):
+        """ Creates a new Assembly with this problem
+        
+        Optimal Design at (1.9776, 0, 0)
+        
+        Optimal Objective = 3.18339"""
+        
+        super(SellarProblemWithDeriv, self).__init__()
+        
+        #add the discipline components to the assembly
+        self.add('dis1', Discipline1_WithDerivatives())
+        self.add('dis2', Discipline2_WithDerivatives())
+        
+       #Uses identical problem definition as parent class      
               
 
         
