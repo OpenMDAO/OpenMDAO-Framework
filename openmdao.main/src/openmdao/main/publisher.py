@@ -13,7 +13,11 @@ try:
 except ImportError:
     zmq = None
     
+
 class Publisher(object):
+
+    __publisher = None
+
     def __init__(self, context, url, use_stream=True):
         # Socket to talk to pub socket
         sock = context.socket(zmq.PUB)
@@ -33,16 +37,16 @@ class Publisher(object):
             for topic, value in items:
                 print 'publishing %s' % topic
                 self._sender.send_multipart([topic, pickle.dumps(value, -1)])
+                
+    @staticmethod
+    def get_instance():
+        return Publisher.__publisher
     
-_publisher = None
+    @staticmethod
+    def init(context, url, use_stream=True):
+        if Publisher.__publisher is not None:
+            raise RuntimeError("publisher already exists")
+        Publisher.__publisher = Publisher(context, url, use_stream)
+        return Publisher.__publisher
 
-def init(context, url, use_stream=True):
-    global _publisher
-    if _publisher is not None:
-        raise RuntimeError("publisher already exists")
-    _publisher = Publisher(context, url, use_stream)
-    return _publisher
-    
-def get_instance():
-    return _publisher
     

@@ -44,8 +44,8 @@ class ActorCompWrapper(object):
         actor = ActorCompWrapper(context, top, rep_url)
         
         # initialize the publisher
-        from openmdao.main.publisher import init
-        pub = init(context, pub_url)
+        from openmdao.main.publisher import Publisher
+        pub = Publisher.init(context, pub_url)
         
         loop.start()
     

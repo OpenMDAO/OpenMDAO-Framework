@@ -28,7 +28,7 @@ from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.datatypes.slot import Slot
-from openmdao.main.publisher import get_instance
+from openmdao.main.publisher import Publisher
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -177,7 +177,7 @@ class Component (Container):
 
     def _set_exec_state(self, state):
         if self._exec_state != state:
-            pub = get_instance()
+            pub = Publisher.get_instance()
             if pub:
                 pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
             
@@ -1369,7 +1369,7 @@ class Component (Container):
                         del self._publish_vars[name]
             
     def publish_vars(self):
-        pub = get_instance()
+        pub = Publisher.get_instance()
         if pub:
             pname = self.get_pathname()
             lst = [('.'.join([pname, var]), getattr(self, var))
