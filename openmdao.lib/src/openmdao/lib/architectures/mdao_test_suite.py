@@ -1,11 +1,20 @@
+"""Script to run all Architectures in openmdao.lib.architectures 
+against all OptProblems in openmdao.lib.optproblems. 
+"""
+
+
 import os
 
 import openmdao.lib.optproblems
 import openmdao.lib.architectures
+from openmdao.lib.casehandlers.api import DBCaseRecorder
+
 import openmdao.main
-from openmdao.main.arch import Architecture
-from openmdao.main.problem_formulation import OptProblem
+#from openmdao.main.arch import Architecture
+#from openmdao.main.problem_formulation import OptProblem
+
 from openmdao.util.dep import PythonSourceTreeAnalyser
+
 
 
 def build_arch_list(include=[], exclude=[]):
@@ -60,7 +69,7 @@ def build_optproblem_list(include=[], exclude=[]):
     """
     
     if include and exclude: 
-        raise ValueError("Can't set both include and exlude")
+        raise ValueError("Can't set both include and exlude for OptProblems")
     
     startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),
                  os.path.dirname(openmdao.main.__file__)]
@@ -89,32 +98,78 @@ def run_arch_test_suite(arch=[], optproblems=[]):
         The OptProblems to test the Architectures on. 
     """
     
-    compat_matrix = []
-    for a in arch: 
-        arch_row = []
-        for p in optproblems: 
-            print "Testing %s on %s"%(a,p)
+    compat_data = {}
+    
+    for p in optproblems: 
+        arch_data = {}
+        prob_name = p.__class__.__name__
+
+        converge_file = open('%s_convergence_data.py'%prob_name,'w')
+        
+        for a in arch:
             prob = p.__class__()
+            arch_name = a.__class__.__name__
+            
             prob.architecture = a.__class__()
+            recorders = [DBCaseRecorder()]
+            prob.architecture.data_recorders = recorders
+            
+            
+            print "Testing %s on %s"%(arch_name,prob_name), "...", 
             try:
                 prob.check_config()
-                arch_row.append(True)
+                arch_data[p] = True
+                
             except RuntimeError as err: 
-                arch_row.append(False) #not compatible, so just move on
+                arch_data[p] = False #not compatible, so just move on
+                print "Incompatible"
                 continue 
+                           
             prob.run()
-            print prob.check_solution()
+            print "Success"
             
-        compat_matrix.append(arch_row)
+            des_vars = prob.get_des_vars_by_comp()
+            print "  Function Evaluations: "
+            for comp_name in des_vars: 
+                comp = prob.get(comp_name)
+                print "    %s: %d"%(comp_name,comp.exec_count)
+            print "  Errors: "
+            for k,v in prob.check_solution().iteritems(): 
+                print "    ",k,": ",v
+            #print prob.check_solution()
+             
+            iter_data = prob.architecture.data_recorders[0].get_iterator()
+            data = [case['objective'] for case in iter_data]
+            #converge_file.write('%s = %s'%(arch_name,str(data)))
+            print >> converge_file, '%s = %s'%(arch_name,str(data))
+            print 
+            
+        compat_data[a] = arch_data
         
-    return compat_matrix
+    return compat_data
 
-if __name__ == "__main__": 
-    archs = build_arch_list()
-    probs = build_optproblem_list()
+def cli_arch_test_suite(parser=None, options=None, args=None): 
+    """Runs all the architectures against all the test problems. 
+    A console script runs this function
+    """ 
+    if not parser: #then you're not getting called from cli
+        return 
     
+    if options.inc_arch and options.excl_arch: 
+        raise ValueError("You can either specify architectures to include or to exclude, not both.")
+    
+    if options.inc_prob and options.excl_prob: 
+        raise ValueError("You can either specify problems to include or to exclude, not both.")
+    
+    archs = build_arch_list(include=options.inc_arch,exclude=options.excl_arch)
+    probs = build_optproblem_list(include=options.inc_prob,exclude=options.excl_prob)
+
+       
     data = run_arch_test_suite(archs, probs)
+       
+if __name__ == "__main__": 
+    archs = build_arch_list(include=['IDF','MDF','BLISS2000','BLISS','CO'])
+    probs = build_optproblem_list(include=["SellarProblem"])
     
-    print data
-    
+    data = run_arch_test_suite(archs, probs)    
     

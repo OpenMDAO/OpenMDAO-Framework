@@ -1,9 +1,11 @@
 
 from zope.interface import implements
-from enthought.traits.api import HasTraits
+from enthought.traits.api import HasTraits, List
 
-from openmdao.main.interfaces import IArchitecture
+from openmdao.main.interfaces import IArchitecture, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
+from openmdao.main.datatypes.slot import Slot
+
 
 class Architecture(HasTraits):
     """Base class for classes that auto-configure an ArchitectureAssembly
@@ -12,9 +14,12 @@ class Architecture(HasTraits):
     """
     implements(IArchitecture)
     
+    data_recorders = List(Slot(ICaseRecorder, required=False), 
+                     desc='Case recorders for iteration data.')
+    
     def __init__(self, parent=None, param_types=None,
                  constraint_types=None, num_allowed_objectives=None,
-                 has_coupling_vars=False, requires_global_des_vars=True):
+                 has_coupling_vars=False, requires_global_des_vars=False):
         super(Architecture,self).__init__()
         
         self.parent = parent
@@ -22,7 +27,7 @@ class Architecture(HasTraits):
         self.constraint_types = constraint_types
         self.num_allowed_objectives = num_allowed_objectives
         self.has_coupling_vars = has_coupling_vars
-        self.requires_global_des_vars=False
+        self.requires_global_des_vars = requires_global_des_vars
         self.configured = False
     
     @property
@@ -99,11 +104,7 @@ class Architecture(HasTraits):
         """
         if self.parent is None:
             raise RuntimeError("no parent Assembly is defined for this Architecture")
-                
-        lenglobals = len(self.parent.get_global_des_vars())
-        if (not lenglobals) and self.requires_global_des_vars: 
-            raise RuntimeError("this Architecture requires a problem formulation that contains"
-                               " global_des_vars, but none were found in the parent")
+    
         
         try:
             lenobjs = len(self.parent.get_objectives())
@@ -151,5 +152,13 @@ class Architecture(HasTraits):
             parent_coupling_vars = []
         if len(parent_coupling_vars) > 0 and not self.has_coupling_vars:
             raise RuntimeError("this Architecture doesn't support coupling variables")
+        
+        try: 
+            parent_global_vars = self.parent.get_global_des_vars()
+        except AttributeError: 
+            parent_global_vars = []
+        if (not parent_global_vars) and self.requires_global_des_vars: 
+            raise RuntimeError("this Architecture requires global design variables in the problem " 
+            "formulation but none were found in parent")
         
     
