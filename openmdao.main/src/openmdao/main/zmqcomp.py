@@ -1,6 +1,6 @@
 import sys
 import traceback
-import pickle
+import cPickle as pickle
 
 import zmq
 from zmq.eventloop import ioloop, zmqstream
@@ -10,11 +10,42 @@ import threading
 
 from openmdao.test.execcomp import ExecComp
 from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.container import deep_getattr
 
-class ActorCompWrapper(object):
-    def __init__(self, context, comp, rep_url=None):
+def msg_split(frames):
+    """Take a list of message frames and split it into routing frames and payload
+    frames.  
+    
+    The format of the frames passed in is assumed to be: [rframe1, ..., '', plframe1, ... ]
+    It is assumed that there will be zero or more routing frames, and empty frame, and
+    one or more payload frames.
+    
+    Returns a tuple of (routing_frames, payload_frames)
+    """
+    try:
+        idx = frames.index('')
+    except ValueError:
+        return ([], frames)
+    return (frames[:idx], frames[idx+1:])
+
+def encode(msg):
+    return pickle.dumps(msg, -1)
+
+def decode(msg):
+    return pickle.loads(msg)
+
+class ZmqCompWrapper(object):
+    def __init__(self, context, comp, rep_url=None, decoder=None, encoder=None):
         self._context = context
         self._comp = comp
+        
+        if decoder is None:
+            decoder = decode
+        self._decoder = decoder
+        
+        if encoder is None:
+            encoder = encode
+        self._encoder = encoder
         
         if rep_url is None:
             rep_url = 'inproc://%s_rep' % comp.comp.get_pathname()
@@ -25,23 +56,23 @@ class ActorCompWrapper(object):
         self._repstream.on_recv(self.handle_req)
         
     def handle_req(self, msg):
-        parts = pickle.loads(msg[0])
+        parts = self._decoder(msg[0])
         print 'received %s' % parts
         try:
-            funct = getattr(self._comp, parts[0])
+            funct = deep_getattr(self._comp, parts[0])
             ret = funct(*parts[1], **parts[2])
         except Exception as err:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             ret = traceback.format_exc(exc_traceback)
-        print 'ran funct'
-        self._repstream.send_pyobj(ret)
+        print 'returning %s' % ret
+        self._repstream.send_multipart([self._encoder(ret)])
         
     @staticmethod
     def serve(top, context=None, rep_url='tcp://*:5555', pub_url='tcp://*:5556'):
         loop = ioloop.IOLoop.instance()
         if context is None:
             context = zmq.Context()
-        actor = ActorCompWrapper(context, top, rep_url)
+        actor = ZmqCompWrapper(context, top, rep_url)
         
         # initialize the publisher
         from openmdao.main.publisher import Publisher
@@ -65,5 +96,5 @@ if __name__ == '__main__':
     comp2.register_published_vars(["x","y","z"])
     comp3.register_published_vars(["x","y","z"])
     
-    ActorCompWrapper.serve(asm)
+    ZmqCompWrapper.serve(asm)
     

@@ -1393,7 +1393,7 @@ def get_default_name(obj, scope):
         
 
 def deep_hasattr(obj, pathname):
-    """Returns True if the attrbute indicated by the give pathname
+    """Returns True if the attrbute indicated by the given pathname
     exists, False otherwise.
     """
     try:
@@ -1403,6 +1403,14 @@ def deep_hasattr(obj, pathname):
     except Exception:
         return False
     return hasattr(obj, parts[-1])
+
+def deep_getattr(obj, pathname):
+    """Returns the attrbute indicated by the given pathname or raises
+    and exception if it doesn't exist.
+    """
+    for name in pathname.split('.'):
+        obj = getattr(obj, name)
+    return obj
 
 
 def find_trait_and_value(obj, pathname):

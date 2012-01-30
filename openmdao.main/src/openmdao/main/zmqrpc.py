@@ -7,6 +7,8 @@ from functools import partial
 
 import zmq
 
+from zmqcomp import encode, decode
+
 class ZMQ_RPC(object):
     def __init__(self, url, context=None):
         if context is None:
@@ -22,8 +24,8 @@ class ZMQ_RPC(object):
         return f
     
     def invoke(self, fname, *args, **kwargs):
-        self._cmdsock.send_pyobj([fname, args, kwargs])
-        return self._cmdsock.recv_pyobj()
+        self._cmdsock.send(encode([fname, args, kwargs]))
+        return decode(self._cmdsock.recv_multipart()[0])
     
     def close(self):
         self._cmdsock.close()
