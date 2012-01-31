@@ -21,6 +21,7 @@ from multiprocessing import current_process, connection
 from multiprocessing.managers import BaseProxy
 
 from openmdao.main.rbac import rbac_methods
+from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.publickey import decode_public_key, is_private, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
@@ -75,6 +76,7 @@ def write_server_config(server, filename, real_ip=None):  #pragma no cover
     parser.set(section, 'key', server.public_key_text)
     logfile = os.path.join(os.getcwd(), 'openmdao_log.txt')
     parser.set(section, 'logfile', '%s:%s' % (socket.gethostname(), logfile))
+    parser.set(section, 'version', __version__)
 
     with open(filename, 'w') as cfg:
         parser.write(cfg)
@@ -103,6 +105,7 @@ def read_server_config(filename):
         key = decode_public_key(key)
     cfg['key'] = key
     cfg['logfile'] = parser.get(section, 'logfile')
+    cfg['version'] = parser.get(section, 'version')
     return cfg
 
 
