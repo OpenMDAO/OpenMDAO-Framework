@@ -40,10 +40,10 @@ def main(args):
     proxy = ZMQ_RPC(options.url, zmq.Context())
     
     # now do some remote commands
-    proxy.set('comp1.x', 3.0)
-    proxy.set('comp2.x', 7.0)
-    proxy.set('comp1.x', 9.0)
-    proxy.set('comp2.x', 3.0)
+    #proxy.set('comp1.x', 3.0)
+    #proxy.set('comp2.x', 7.0)
+    #proxy.set('comp1.x', 9.0)
+    #proxy.set('comp2.x', 3.0)
     proxy.run()
     
     proxy.close()

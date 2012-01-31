@@ -1353,20 +1353,25 @@ class Component (Container):
         if isinstance(names, basestring):
             names = [names]
         for name in names:
-            # TODO: allow wildcard naming
-            if not hasattr(self, name):
-                self.raise_exception("this component has no attribute named '%s'" % name, 
-                                     NameError)
-            if publish:
-                if name in self._publish_vars:
-                    self._publish_vars += 1
+            # TODO: allow wildcard naming at lowest level
+            parts = name.split('.')
+            if len(parts) == 1:
+                if not hasattr(self, name):
+                    self.raise_exception("this component has no attribute named '%s'" % name, 
+                                         NameError)
+                if publish:
+                    if name in self._publish_vars:
+                        self._publish_vars += 1
+                    else:
+                        self._publish_vars[name] = 1
                 else:
-                    self._publish_vars[name] = 1
+                    if name in self._publish_vars:
+                        self._publish_vars[name] -= 1
+                        if self._publish_vars[name] < 1:
+                            del self._publish_vars[name]
             else:
-                if name in self._publish_vars:
-                    self._publish_vars[name] -= 1
-                    if self._publish_vars[name] < 1:
-                        del self._publish_vars[name]
+                obj = getattr(self, nm)
+                obj.register_published_vars('.'.join(parts[1:]), publish)
             
     def publish_vars(self):
         pub = Publisher.get_instance()

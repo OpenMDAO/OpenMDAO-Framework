@@ -14,14 +14,21 @@ function sendCmd()
 {
    var command = document.getElementById("cmd").value
    alert("sending "+command)
-   ws.send(command)
+   ws.send(['\x01', command])
 }
+
+function close_it()
+{
+   ws.close()
+}
+
 </script>
 </head>
 <body>
 Command: <input type="text" id="cmd" value="" /><br />
 <button onclick="sendCmd()">Execute Command</button>
-
+<br /><br .>
+<button onclick="close_it()">Close</button>
 </body>
 </html>
 
