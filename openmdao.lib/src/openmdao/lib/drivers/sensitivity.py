@@ -66,6 +66,7 @@ class SensitivityDriver(DriverUsesDerivatives):
         
         self._check()
         
+        
         # Calculate gradient of the workflow
         self.calc_derivatives(first=True)
         self.ffd_order = 1
@@ -105,7 +106,7 @@ class SensitivityDriver(DriverUsesDerivatives):
         # Sensitivity is sometimes run sequentially using different submodels,
         # so we need to return the state to the baseline value.
         self.differentiator.reset_state()
-                
+                                
         
     def _check(self):
         """Make sure we aren't missing inputs or outputs"""

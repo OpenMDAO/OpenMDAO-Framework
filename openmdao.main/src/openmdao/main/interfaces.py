@@ -13,12 +13,18 @@ from openmdao.main.constants import SAVE_CPICKLE
 class IArchitecture(Interface):
     
     parent = Attribute("parent Assembly")
+    data_recorders = Attribute("List of CaseRecorder instances where data from "
+                               "the optimization should be stored.")
     param_types = Attribute("list of types of allowed parameters.  "
                             "Valid values are: ['continuous','discrete','enum']")
     constraint_types = Attribute("list of types of allowed constraints. "
                                  " Valid values are: ['eq', 'ineq']")
     num_allowed_objectives = Attribute("number of objectives supported.")
     has_coupling_vars = Attribute("True if coupling variables are required.")
+    requires_global_des_vars = Attribute("True if the architecture requires a problem " 
+                                         "formulation with global design variables in it")
+    
+    
     
     def configure(): 
         """sets up drivers,workflows, and data connections in 
