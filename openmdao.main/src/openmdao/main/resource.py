@@ -13,6 +13,7 @@ import pkg_resources
 import Queue
 import re
 import socket
+import string
 import sys
 import threading
 import time
@@ -61,6 +62,9 @@ QUEUING_SYSTEM_KEYS = set((
 
 # Legal allocator name pattern.
 _LEGAL_NAME = re.compile('^[a-zA-Z][_a-zA-Z0-9]*$')
+
+# Used for making a legal allocator name from a hostname.
+_XLATE = string.maketrans('-', '_')
 
 
 class ResourceAllocationManager(object):
@@ -429,6 +433,7 @@ class ResourceAllocationManager(object):
         total = remote_ram.get_total_allocators()
         if not prefix:
             prefix, dot, rest = server.host.partition('.')
+            prefix = prefix.translate(_XLATE)
         for i in range(total):
             allocator = remote_ram.get_allocator_proxy(i)
             proxy = RemoteAllocator('%s_%s' % (prefix, allocator.name),
