@@ -31,7 +31,7 @@ HOME_DIRECTORY = '$drmaa_hd_ph$'
 WORKING_DIRECTORY = '$drmaa_wd_ph$'
 
 # DRMAA-inspired keys.
-QUEUING_SYSTEM_KEYS = set([
+QUEUING_SYSTEM_KEYS = set((
     'account_id',
     'queue',
     'job_name',
@@ -57,7 +57,7 @@ QUEUING_SYSTEM_KEYS = set([
     # Others found to be useful (reduces 'native_specification' usage).
     'parallel_environment',
     'email_events',
-])
+))
 
 # Legal allocator name pattern.
 _LEGAL_NAME = re.compile('^[a-zA-Z][_a-zA-Z0-9]*$')
@@ -153,7 +153,7 @@ class ResourceAllocationManager(object):
             ram = ResourceAllocationManager._RAM
             if ram is None:
                 ResourceAllocationManager._RAM = ResourceAllocationManager()
-            elif ram._pid != os.getpid():
+            elif ram._pid != os.getpid():  # pragma no cover
                 # We're a copy from a fork.
                 for allocator in ram._allocators:
                     allocator.invalidate()
@@ -426,22 +426,22 @@ class ResourceAllocationManager(object):
     def _add_remotes(self, server, prefix):
         """ Add allocators from a remote server. """
         remote_ram = server.get_ram()
-        total = remote_ram._get_total_allocators()
+        total = remote_ram.get_total_allocators()
         if not prefix:
             prefix, dot, rest = server.host.partition('.')
         for i in range(total):
-            allocator = remote_ram._get_allocator_proxy(i)
+            allocator = remote_ram.get_allocator_proxy(i)
             proxy = RemoteAllocator('%s_%s' % (prefix, allocator.name),
                                     allocator)
             self._allocators.append(proxy)
 
     @rbac('*')
-    def _get_total_allocators(self):
+    def get_total_allocators(self):
         """ Return number of allocators for remote use. """
         return len(self._allocators)
 
     @rbac('*', proxy_types=[object])
-    def _get_allocator_proxy(self, index):
+    def get_allocator_proxy(self, index):
         """
         Return allocator for remote use.
 
