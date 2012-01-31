@@ -22,11 +22,13 @@ def msg_split(frames):
     
     Returns a tuple of (routing_frames, payload_frames)
     """
-    try:
-        idx = frames.index('')
-    except ValueError:
-        return ([], frames)
-    return (frames[:idx], frames[idx+1:])
+    rframes = []
+    for i,f in enumerate(frames):
+        if f:
+            rframes.append(f)
+        else:
+            break
+    return (rframes, frames[i+1:])
 
 def encode(msg):
     return pickle.dumps(msg, -1)
@@ -34,11 +36,19 @@ def encode(msg):
 def decode(msg):
     return pickle.loads(msg)
 
+
+
 class ZmqCompWrapper(object):
     def __init__(self, context, comp, rep_url=None, decoder=None, encoder=None):
         self._context = context
         self._comp = comp
         
+        #self._worker_cmds = { '\x01': self.on_ready,
+                      #'\x03': self.on_reply,
+                      #'\x04': self.on_heartbeat,
+                      #'\x05': self.on_disconnect,
+                      #}
+
         if decoder is None:
             decoder = decode
         self._decoder = decoder
