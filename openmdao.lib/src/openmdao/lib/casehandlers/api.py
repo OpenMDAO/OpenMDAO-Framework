@@ -1,4 +1,8 @@
-"""A central place to access all of the OpenMDAO case recorders and case
+"""
+
+.. _`openmdao.lib.casehandler.api.py`:
+
+A central place to access all of the OpenMDAO case recorders and case
 iterators in the standard library.
 """
 

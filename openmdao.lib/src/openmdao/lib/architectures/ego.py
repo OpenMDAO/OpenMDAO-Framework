@@ -30,6 +30,7 @@ class EGO(Architecture):
         # the following variables determine the behavior of check_config
         self.param_types = ['continuous']
         self.num_allowed_objectives = 1
+        self.has_coupling_vars = False
             
     def configure(self):    
         self._tdir = mkdtemp()        
@@ -94,6 +95,8 @@ class EGO(Architecture):
         EI_opt.force_execute = True
         
         retrain = self.parent.add("retrain",Driver())
+        retrain.recorders = self.data_recorders
+        
         retrain.add_event("%s.train_next"%self.comp_name)
         retrain.force_execute = True
         

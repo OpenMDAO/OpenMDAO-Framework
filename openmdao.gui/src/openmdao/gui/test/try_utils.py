@@ -3,7 +3,7 @@ import os, os.path
 from xml.dom.minidom import Document
 import json, jsonpickle
 
-from openmdao.gui.mdao_util import *
+from openmdao.gui.util import *
 
 #
 # try the 2 methods of representing a file tree (XML & JSON).
@@ -42,11 +42,6 @@ def test_types():
 
     g = [ 'openmdao.driver' ]
     print 'Drivers:'
-    t =get_available_types(groups=g)
-    print_list(t)
-
-    g = [ 'openmdao.workflow' ]
-    print 'Workflows:'
     t =get_available_types(groups=g)
     print_list(t)
 

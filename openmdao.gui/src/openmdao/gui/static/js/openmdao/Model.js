@@ -46,7 +46,7 @@ openmdao.Model=function() {
     }
 
     /** get a new (empty) model */
-    this.newModel = function(typepath,name,x,y) {
+    this.newModel = function() {
         jQuery.ajax({
             type: 'POST',
             url:  'model',
@@ -62,61 +62,12 @@ openmdao.Model=function() {
             success: self.updateListeners   // not really necessary?
         })
     }
-    
-    /** set top assembly */
-    this.setTop = function(name, errorHandler) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'top',
-            data: { 'name': name },            
-            success: self.updateListeners,
-            error: errorHandler
-        })
-    }
-    
-    /** get a JSON representation of the model */
-    this.getJSON = function(callback, errorHandler) {
-        if (typeof callback != 'function')
-            return
-            
-        jQuery.ajax({
-            type: 'GET',
-            url:  'model',
-            dataType: 'json',
-            success: callback,
-            error: errorHandler
-        })
-    }
-
-    /** get a JSON representation the specified object in the model */
-    this.getObject = function(pathname, callback, errorHandler) {
-        if (typeof callback != 'function')
-            return
-
-        var obj = self.getJSON()
-
-        if (pathname.length >0) {
-            var tokens = pathname.split('.'),
-                len=tokens.length
-            for (i=0;i<len;i++) {
-                if (typeof obj[tokens[i]] !== "undefined")
-                    obj = obj[tokens[i]]
-                else    // may be under py/state
-                    obj = obj["py/state"][tokens[i]]
-            }
-        }
-        
-        callback(obj)
-    }
-    
+   
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
             return
         else {
-            if (!pathname) {
-                pathname = 'driver';
-            };
             jQuery.ajax({
                 type: 'GET',
                 url:  'workflow/'+pathname,
@@ -127,8 +78,8 @@ openmdao.Model=function() {
         }
     }
     
-    /** get the dataflow for an assembly */
-    this.getDataflow = function(pathname,callback,errorHandler) {
+    /** get the data structure for an assembly */
+    this.getStructure = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
             return
         else {
@@ -137,7 +88,7 @@ openmdao.Model=function() {
             };
             jQuery.ajax({
                 type: 'GET',
-                url:  'dataflow/'+pathname,
+                url:  'structure/'+pathname,
                 dataType: 'json',
                 success: callback,
                 error: errorHandler
@@ -255,25 +206,6 @@ openmdao.Model=function() {
         })
     }
 
-    /** set the working directory of the model */
-    this.setWD = function(folder) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'cwd',
-            data: { 'folder': folder },
-            success: self.updateListeners
-        })
-    }
-
-    /** get the working directory of the model */
-    this.getWD = function() {
-        jQuery.ajax({
-            type: 'GET',
-            url:  'cwd',
-            success: function(folder) { return folder }
-        })
-    }
-
     /** get a recursize file listing of the model working directory (as JSON) */
     this.getFiles = function(callback, errorHandler) {
         if (typeof callback != 'function')
@@ -363,6 +295,7 @@ openmdao.Model=function() {
             data: { 'file': filepath },
             success: self.updateListeners,
             error: function(jqXHR, textStatus, errorThrown) {
+                        // not sure why this always returns a false error
                        debug.warn("model.removeFile",jqXHR,textStatus,errorThrown);
                        self.updateListeners();
                    }
@@ -370,13 +303,12 @@ openmdao.Model=function() {
     }
     
     /** import the contents of the specified file into the model */
-    this.importFile = function(filepath) {
+    this.importFile = function(filepath, callback, errorHandler) {
         // change path to package notation and import
-        var path = filepath.replace(/^./,'').
-                            replace(/.py/g,'').
+        var path = filepath.replace(/\.py$/g,'').
                             replace(/\\/g,'.').
                             replace(/\//g,'.');
-        self.issueCommand("from "+path+" import *");
+        self.issueCommand("from "+path+" import *", callback, errorHandler);
     }
 
     /** execute the model */

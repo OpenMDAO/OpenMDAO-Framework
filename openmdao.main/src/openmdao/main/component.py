@@ -150,6 +150,7 @@ class Component (Container):
         self._connected_outputs = None
         
         self.exec_count = 0
+        self.derivative_exec_count = 0
         self.create_instance_dir = False
         if directory:
             self.directory = directory
@@ -370,8 +371,6 @@ class Component (Container):
         Overrides of this function must call this version.  This is only 
         called if execute() actually ran.
         """
-        self.exec_count += 1
-        
         # make our output Variables valid again
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
@@ -431,6 +430,7 @@ class Component (Container):
                 else:
                     # Component executes as normal
                     self.execute()
+                    self.exec_count += 1
                     
                 self._post_execute()
             #else:

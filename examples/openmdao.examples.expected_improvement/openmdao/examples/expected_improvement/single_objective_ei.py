@@ -185,6 +185,18 @@ if __name__ == "__main__": #pragma: no cover
 
     color_map = get_cmap('spring')
     
+    print "# adaptive samples:", len(data_EI['branin_meta_model.x'])
+    
+    points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
+    distance = [10000.,10000.,10000.]
+    closest_points = [(),(),()]
+    for x,y,z in zip(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],data_EI['branin_meta_model.f_xy']): 
+        for i,p in enumerate(points): 
+            d = ((p[0]-x)**2 + (p[1]-y)**2)**.5
+            if d < distance[i]:
+                distance[i] = d
+                closest_points[i] = (x,y,z.mu)
+    print "closes solutions: ", closest_points    
     
     plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
                 s=30,
@@ -221,7 +233,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.title("Branin Meta Model Contours")
     plt.text(10.9,11,"Meta Model\nFunction\nValue")
     
-    plt.show()
+    #plt.show()
 
     analysis.cleanup()
     

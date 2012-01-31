@@ -1,5 +1,0 @@
-
-
-graft src/pbs/sphinx_build/html
-recursive-include src/pbs/test *.py
-

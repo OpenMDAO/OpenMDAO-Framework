@@ -3,7 +3,7 @@ import unittest, time, re, os, inspect
 from selenium import selenium
 
 from multiprocessing        import Process
-from openmdao.gui.mdao_util import PickUnusedPort
+from openmdao.util.network  import get_unused_ip_port
 from openmdao.gui.mdao      import run_server
 
 class test_basicgui(unittest.TestCase):
@@ -13,7 +13,7 @@ class test_basicgui(unittest.TestCase):
         gui_path = os.path.dirname(inspect.getfile(run_server))
         os.chdir(gui_path)  # so server can find it's static files
 
-        self.port = PickUnusedPort()
+        self.port = get_unused_ip_port()
         self.server = Process(target=run_server,args=(self.port,))
         self.server.start()
         self.url = "http://localhost:"+str(self.port)

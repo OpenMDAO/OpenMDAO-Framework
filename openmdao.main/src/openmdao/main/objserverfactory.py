@@ -27,6 +27,7 @@ from openmdao.main.mp_util import keytype, read_allowed_hosts, setup_tunnel, \
                                   read_server_config, write_server_config
 from openmdao.main.rbac import get_credentials, set_credentials, \
                                rbac, RoleError
+from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.publickey import make_private, read_authorized_keys, \
@@ -83,6 +84,7 @@ class ObjServerFactory(Factory):
                           keytype(self._authkey), allow_shell)
         self.host = platform.node()
         self.pid = os.getpid()
+        self.version = __version__
         self.manager_class = _ServerManager
         self.server_classname = 'openmdao_main_objserverfactory_ObjServer'
 
@@ -318,6 +320,7 @@ class ObjServer(object):
         self.host = platform.node()
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
+        self.version = __version__
 
         self._root_dir = os.getcwd()
         self._logger = logging.getLogger(self.name)
@@ -694,6 +697,7 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
             raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
                                " to be offline. Please check the server log%s."
                                % (address, port, via, log))
+
         mgr = _FactoryManager(location, authkey, pubkey=pubkey)
         try:
             mgr.connect()
@@ -701,7 +705,11 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
             raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
                                " to be rejecting the connection. Please check"
                                " the server log%s." % (address, port, via, log))
+
         proxy = mgr.openmdao_main_objserverfactory_ObjServerFactory()
+        if proxy.version != __version__:
+            logging.warning('Server version %r different than local version %r',
+                            proxy.version, __version__)
         _PROXIES[key] = proxy
         return proxy
 

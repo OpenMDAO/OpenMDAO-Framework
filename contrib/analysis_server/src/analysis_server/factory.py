@@ -22,6 +22,12 @@ class ASFactory(Factory):
         self._port = port
         self._client = client.Client(host, port)
 
+    def shutdown(self):
+        """ Shutdown factory. """
+        if self._client is not None:
+            self._client.quit()
+            self._client = None
+
     def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """

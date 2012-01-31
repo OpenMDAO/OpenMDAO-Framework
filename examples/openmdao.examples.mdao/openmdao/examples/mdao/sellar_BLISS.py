@@ -143,4 +143,3 @@ if __name__ == "__main__": # pragma: no cover
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", (prob.dis1.x1)**2 + prob.dis1.z2 + prob.dis1.y1 + math.exp(-prob.dis2.y2)
     print "Elapsed time: ", time.time()-tt, "seconds"
-

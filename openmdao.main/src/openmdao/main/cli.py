@@ -33,7 +33,7 @@ def openmdao_docs(parser, options, args=None):
     if args:
         print_sub_help(parser, 'docs')
         return -1
-    plugin_docs(options)
+    plugin_docs(parser, options, args)
 
 def _get_openmdao_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
@@ -123,6 +123,28 @@ def _get_openmdao_parser():
         parser.set_defaults(func=test_docs)
         
     except ImportError:
+        pass
+    
+    try: 
+        from openmdao.lib.architectures.mdao_test_suite import cli_arch_test_suite
+        parser = subparsers.add_parser('test_arch', help='run the MDAO architecture test suite')
+        parser.set_defaults(func=cli_arch_test_suite)
+        parser.add_argument("-ea","--exclude_arch",action="store",type=str, nargs="+",
+                           dest="excl_arch", 
+                           help="Architectures class names to exclude from the test run.",
+                           default=[],metavar="arch_class_name")        
+        parser.add_argument("-ia","--include_arch",action="store",type=str, nargs="+",
+                           dest="inc_arch", 
+                           help="Architectures class names to include in the test run.",
+                           default=[],metavar="arch_class_name")        
+        parser.add_argument("-ip","--include_prob",action="store",type=str, nargs="+",
+                           dest="inc_prob", help="OptProblems class names to include in the test run.",
+                           default=[],metavar="prob_class_name")
+        parser.add_argument("-ep","--exclude_prob",action="store",type=str, nargs="+",
+                           dest="excl_prob", help="OptProblems class names to exclude from the test run.",
+                           default=[],metavar="prob_class_name")
+        
+    except ImportError: 
         pass
     
     return top_parser

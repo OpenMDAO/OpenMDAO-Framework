@@ -10,9 +10,11 @@ import cPickle as pickle
 
 from pkg_resources import get_distribution, DistributionNotFound
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Container, Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.util.fileutil import get_module_path, expand_path
+
+from openmdao.main.mp_support import is_instance
 
 # extension for project files
 PROJ_FILE_EXT = '.proj'
@@ -58,11 +60,12 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
 
     os.mkdir(projpath)
     startdir = os.getcwd()
-    tf = tarfile.open(archive_name)
-    try:
-        tf.extractall(projpath)
-    finally:
-        tf.close()
+    if os.path.getsize(archive_name) > 0:
+        tf = tarfile.open(archive_name)
+        try:
+            tf.extractall(projpath)
+        finally:
+            tf.close()
     proj = Project(projpath)
     return proj
 
@@ -132,8 +135,10 @@ class Project(object):
             	except Exception, e:
                     print 'Unable to restore project state:',e
                     self.top = Assembly()
+                    set_as_top(self.top)
             else:
                 self.top = Assembly()
+                set_as_top(self.top)
 
             
             self.path = expand_path(projpath) # set again in case loading project state changed it
@@ -141,8 +146,8 @@ class Project(object):
             os.makedirs(projpath)
             os.mkdir(modeldir)
             self.top = Assembly()
-
-        set_as_top(self.top)
+            set_as_top(self.top)
+            
         self.save()
 
         SimulationRoot.chroot(self.path)
@@ -164,10 +169,18 @@ class Project(object):
             pass
 
     def save(self):
-        """Saves the state of the project to its project directory."""
+        """ Save the state of the project to its project directory.
+            entries in the project dictionary that start with double 
+            underscores (e.g. __builtins__) are excluded
+        """
         fname = os.path.join(self.path, '_project_state')
+        # copy all openmdao containers to a new dict for saving
+        save_state = {}
+        for k in self.__dict__:
+            if is_instance(self.__dict__[k],Container):
+                save_state[k] = self.__dict__[k]
         with open(fname, 'w') as f:
-            pickle.dump(self.__dict__, f)
+            pickle.dump(save_state, f)
         
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export. 
@@ -203,4 +216,3 @@ class Project(object):
                 tf.close()
         finally:
             os.chdir(startdir)
-            

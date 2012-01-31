@@ -24,39 +24,57 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_keyfile')
 
-        # Force a key generation.
-        key_file = os.path.expanduser(os.path.join('~', '.openmdao', 'keys'))
+        # Force a key generation, but save exiting data.
+        prefix = os.path.expanduser(os.path.join('~', '.openmdao'))
+        key_file = os.path.join(prefix, 'keys')
         if os.path.exists(key_file):
-            os.remove(key_file)
-        user = '%s@%s' % (getpass.getuser(), socket.gethostname())
-        if user in _KEY_CACHE:
-            del _KEY_CACHE[user]
-        key_pair = get_key_pair(user, logging.getLogger(), ignore_ssh=True)
+            os.rename(key_file, key_file+'.saved')
+        id_file = os.path.join(prefix, 'id_rsa.pub')
+        if os.path.exists(id_file):
+            os.rename(id_file, id_file+'.saved')
 
-        # Again, this time with insecure key file.
-        if sys.platform != 'win32':
-            os.chmod(key_file, 0644)
-            del _KEY_CACHE[user]
+        try:
+            user = '%s@%s' % (getpass.getuser(), socket.gethostname())
+            if user in _KEY_CACHE:
+                del _KEY_CACHE[user]
             key_pair = get_key_pair(user, logging.getLogger(), ignore_ssh=True)
 
-        # Revert to normal (try ssh) scheme for any other tests.
-        del _KEY_CACHE[user]
+            # Again, this time with insecure key file.
+            if sys.platform != 'win32':
+                os.chmod(key_file, 0644)
+                del _KEY_CACHE[user]
+                key_pair = get_key_pair(user, logging.getLogger(), ignore_ssh=True)
 
-        # Check privacy.
-        if sys.platform != 'win32' or HAVE_PYWIN32:
-            self.assertTrue(is_private(key_file))
-            if sys.platform == 'win32':
-                public_file = os.environ['COMSPEC']
-            else:
-                public_file = '/bin/sh'
-            self.assertFalse(is_private(public_file))
+            # Revert to normal (try ssh) scheme for any other tests.
+            del _KEY_CACHE[user]
 
-        # We've clobbered the existing credentials key data, so be
-        # sure no stale credentials are in use.
-        try:
-            del threading.current_thread().credentials
-        except AttributeError:
-            pass
+            # Check privacy.
+            if sys.platform != 'win32' or HAVE_PYWIN32:
+                self.assertTrue(is_private(key_file))
+                if sys.platform == 'win32':
+                    public_file = os.environ['COMSPEC']
+                else:
+                    public_file = '/bin/sh'
+                self.assertFalse(is_private(public_file))
+
+            # We've clobbered the existing credentials key data, so be
+            # sure no stale credentials are in use.
+            try:
+                del threading.current_thread().credentials
+            except AttributeError:
+                pass
+
+        finally:
+            # Restore key data.
+            if os.path.exists(key_file+'.saved'):
+                if os.path.exists(key_file):
+                    os.remove(key_file)
+                os.rename(key_file+'.saved', key_file)
+
+            if os.path.exists(id_file+'.saved'):
+                if os.path.exists(id_file):
+                    os.remove(id_file)
+                os.rename(id_file+'.saved', id_file)
 
     def test_authorized_keys(self):
         logging.debug('')
