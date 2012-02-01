@@ -2,7 +2,7 @@
     doe.py - Top level assembly for the problem.
 """
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial
 from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -38,7 +38,6 @@ if __name__ == "__main__": # pragma: no cover
     import time
     
     analysis = Analysis()
-    set_as_top(analysis)
 
     tt = time.time()
     analysis.run() 

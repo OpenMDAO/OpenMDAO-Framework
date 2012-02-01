@@ -32,7 +32,7 @@ are instantiated and the workflow is defined.
    
 .. testcode:: IDF_parts
 
-        from openmdao.main.api import Assembly, set_as_top
+        from openmdao.main.api import Assembly
         from openmdao.lib.drivers.api import CONMINdriver
         
         from openmdao.lib.optproblems import sellar
@@ -121,7 +121,7 @@ optimization.
 
 .. testcode:: IDF_full
 
-        from openmdao.main.api import Assembly, set_as_top
+        from openmdao.main.api import Assembly
         from openmdao.lib.drivers.api import CONMINdriver
         
         from openmdao.lib.optproblems import sellar
@@ -181,7 +181,6 @@ optimization.
             import time
             
             prob = SellarIDF()
-            set_as_top(prob)
             
             # pylint: disable-msg=E1101
                 

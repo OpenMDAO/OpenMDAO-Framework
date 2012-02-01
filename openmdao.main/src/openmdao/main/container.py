@@ -57,13 +57,6 @@ _copydict = {
 _iodict = { 'out': 'output', 'in': 'input' }
 
 
-def set_as_top(cont):
-    """Specifies that the given Container is the top of a 
-    Container hierarchy.
-    """
-    cont.tree_rooted()
-    return cont
-
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
     of the object indicated by pathname.
@@ -147,6 +140,8 @@ class Container(HasTraits):
     def __init__(self, doc=None):
         super(Container, self).__init__()
         
+        self._call_tree_rooted = True
+        
         self._managers = {}  # Object manager for remote access by authkey.
         self._depgraph = _ContainerDepends()
                           
@@ -157,8 +152,6 @@ class Container(HasTraits):
         self._name = None
         self._cached_traits_ = None
 
-        self._call_tree_rooted = True
-        
         if doc is not None:
             self.__doc__ = doc
 

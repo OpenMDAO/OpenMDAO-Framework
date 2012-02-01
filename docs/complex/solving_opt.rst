@@ -9,9 +9,7 @@ EngineOptimization class, setting it as the top assembly.
 .. doctest:: optimization_fun
 
     >>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-    >>> from openmdao.main.api import set_as_top
     >>> prob = EngineOptimization()
-    >>> set_as_top(prob)
     <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
 The problem is set up like above. We could run it now, but first let's find out how
@@ -92,9 +90,7 @@ Try solving the same optimization problem using this objective.
 ::
 
         >>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-        >>> from openmdao.main.api import set_as_top
         >>> prob = EngineOptimization()
-        >>> set_as_top(prob)
         <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
         >>> prob.driver.clear_objectives()
         >>> prob.driver.add_objective('-(.93*sim_EPA_city.fuel_economy + 1.07*sim_EPA_highway.fuel_economy)')
@@ -233,10 +229,8 @@ The code for this looks like this:
     
 
             import time
-            from openmdao.main.api import set_as_top
                 
             opt_problem = EngineOptimization()
-            set_as_top(opt_problem)
                 
             opt_problem.sim_acc.run()
             opt_problem.sim_EPA_city.run()

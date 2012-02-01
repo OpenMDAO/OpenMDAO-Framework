@@ -10,7 +10,7 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 
-from openmdao.main.container import Container, set_as_top, get_default_name, \
+from openmdao.main.container import Container, get_default_name, \
                                     create_io_traits
 from openmdao.main.vartree import VariableTree
 from openmdao.main.component import Component, SimulationRoot

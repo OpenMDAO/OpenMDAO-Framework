@@ -119,9 +119,7 @@ class Analysis(Assembly):
         shutil.rmtree(self._tdir, ignore_errors=True)
 
 if __name__ == "__main__": #pragma: no cover
-    from openmdao.main.api import set_as_top
     analysis = Analysis()
-    set_as_top(analysis)
     analysis.run()
     analysis.cleanup()
     

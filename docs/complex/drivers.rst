@@ -97,10 +97,7 @@ top level assembly would look like this:
                 
         if __name__ == "__main__": 
         
-            from openmdao.main.api import set_as_top
             my_sim = VehicleSim()
-            set_as_top(my_sim)
-    
             my_sim.run()
             
             print "Time (0-60): ", my_sim.driver.accel_time
@@ -236,10 +233,7 @@ Now, let's build a new assembly that includes all three simulations run sequenti
                         
         if __name__ == "__main__": 
         
-            from openmdao.main.api import set_as_top
             my_sim = VehicleSim2()
-            set_as_top(my_sim)
-    
             my_sim.run()
             
             print "Time (0-60): ", my_sim.sim_acc.accel_time
