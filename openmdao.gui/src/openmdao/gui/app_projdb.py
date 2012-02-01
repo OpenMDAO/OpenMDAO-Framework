@@ -139,11 +139,17 @@ class DownloadHandler(BaseHandler):
             if os.path.exists(filename):
                 proj_file = file(filename,'rb')
                 from django.core.servers.basehttp import FileWrapper
-                response = HttpResponse(FileWrapper(proj_file), content_type='application/octet-stream')
-                response['Content-Length'] = os.path.getsize(filename)
-                response['Content-Disposition'] = 'attachment; filename='+p.projectname+strftime(' %Y-%m-%d %H%M%S')+'.proj'
-                return response
-        self.write('Sorry, file is not available.')
+                self.set_header('content_type','application/octet-stream')
+                self.set_header('Content-Length',str(os.path.getsize(filename)))
+                self.set_header('Content-Disposition','attachment; filename='+p.projectname+strftime(' %Y-%m-%d %H%M%S')+'.proj')
+                try:
+                    self.write(proj_file.read())
+                finally:
+                    proj_file.close()
+            else:
+                raise HTTPError(403, "%s is not a file", filename)
+        else:
+            raise HTTPError(403, "no file found for %s", p.projectname)
 
 class NewHandler(BaseHandler):
     ''' create a new (empty) project

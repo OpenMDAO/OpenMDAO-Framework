@@ -8,6 +8,8 @@ import tornado.websocket
 import tornado.ioloop
 import tornado.web
 
+# from tornadio2 import SocketConnection, TornadioRouter, SocketServer
+
 from django import forms
 
 from openmdao.util.network import get_unused_ip_port
@@ -439,9 +441,37 @@ class PlotServerHandler(BaseHandler):
 
 
 
+# class OutputConnection(SocketConnection):
+    # ''' a socket connection that serves output from the cserver
+    # '''
+    # def update(self):
+            # self.count += 1
+            # txt = self.cserver.get_output()
+            # if len(txt) > 0:
+                # print "output (len="+str(len(txt))+"):\n",txt
+                # self.write_message(txt)
 
+    # def on_open(self):
+        # print 'new connection'
+        # self.write_message("connected to output socket\n")
+        # self.count = 0
+        # self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        # print 'OutputWSHandler cserver:',self.cserver
+        # self.timer = tornado.ioloop.PeriodicCallback(self.update, 1000)
+        # self.timer.start()
         
-        
-        
+    # def on_message(self, message):
+        # print 'message received %s' % message
 
-
+    # def on_close(self):
+        # self.timer.stop()
+        # print 'connection closed'
+            
+            
+# class RouterConnection(SocketConnection):
+    # ''' route socket connections
+    # '''
+    # __endpoints__ = { '/stdout': OutputConnection,
+                    # }
+    # def on_open(self, info):
+        # print 'Router', repr(info)

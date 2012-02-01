@@ -1,10 +1,17 @@
 import os, sys
 import os.path
 
+import zmq
+from zmq.eventloop import ioloop, zmqstream
+ioloop.install()
+
 # tornado
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
+
+# tornadio
+# from tornadio2 import SocketConnection, TornadioRouter, SocketServer
 
 # the project app and the workspace app handlers
 import openmdao.gui.app_projdb as app_projdb
@@ -44,6 +51,21 @@ class LogoutHandler(BaseHandler):
         self.redirect("/")
 
 def main():
+    
+    # settings: debug, static handler, etc
+    app_settings = { 
+        'debug': True,
+        'static_path': os.path.join(os.path.dirname(__file__), 'static'),
+        'template_path': os.path.join(os.path.dirname(__file__), 'tmpl'),
+        'login_url': '/login',
+        'cookie_secret': '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=',
+        'enabled_protocols': ['websocket', 'xhr-multipart', 'xhr-polling'],
+        'socket_io_port': 9001
+    }
+    
+    # create router for stdout
+    # OutputRouter = tornadio.get_router(app_workspace.OutputConnection)
+
     # map URLs to handlers
     handlers = [
         tornado.web.url(r'/login',                                   LoginHandler),
@@ -82,19 +104,27 @@ def main():
         # testing
         (r'/workspace/outputWS', app_workspace.OutputServerHandler),
         (r'/workspace/plotWS', app_workspace.PlotServerHandler),
+        
+        # OutputRouter.route()
     ]
     
-    # settings: debug, static handler, etc
-    app_settings = { 
-        'debug': True,
-        'static_path': os.path.join(os.path.dirname(__file__), 'static'),
-        'template_path': os.path.join(os.path.dirname(__file__), 'tmpl'),
-        'login_url': '/login',
-        'cookie_secret': '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=',
-    }
+    # create the app
+    application = tornado.web.Application(handlers, **app_settings)
+    
+    # context = zmq.Context()
+    # socket = context.socket(zmq.SUB)
+    # socket.bind('tcp://127.0.0.1:5000')
+    # socket.setsockopt(zmq.SUBSCRIBE, '')
+    # stream = zmqstream.ZMQStream(socket, tornado.ioloop.IOLoop.instance())
+    # stream.on_recv(app_workspace.OutputConnection.dispatch_message)
 
-    # create and start the app
-    application = tornado.web.Application(handlers, **app_settings)    
+    # tornadio.server.SocketServer(application)
+
+    # create the app with tornadio router
+    # router = TornadioRouter(app_workspace.RouterConnection)    
+    # application = tornado.web.Application(router.apply_routes(handlers), **app_settings)    
+    
+    # start the app
     print 'Starting app:',application 
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(9000)

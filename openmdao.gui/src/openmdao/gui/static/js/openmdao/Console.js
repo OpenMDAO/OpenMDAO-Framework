@@ -156,9 +156,14 @@ openmdao.Console = function(formID,commandID,historyID,model) {
                    debug.error(jqXHR,textStatus,errorThrown)
        }                        
     })    
+    /*****************************/
 
-        
-    
-    
+    /** TESTING socket.io STUFF ** /
+    var sck = new io.connect('http://' + window.location.host+'/stdout');        
+    sck.on('message',function(data) {
+        debug.info('console socket message:',data);
+        updateHistory(data);
+    });
+    /*****************************/
  
 }
