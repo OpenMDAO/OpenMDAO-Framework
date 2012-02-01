@@ -32,6 +32,7 @@ def msg_split(frames):
             break
     return (rframes, frames[i+1:])
 
+
 def encode(msg):
     return pickle.dumps(msg, -1)
 
@@ -80,51 +81,25 @@ class ZmqCompWrapper(object):
         
     @staticmethod
     def serve(top, context=None, wsroute=None, port=8888,
-              rep_url='tcp://*:5555', pub_url='inproc:_pub_'):
+              rep_url='tcp://*:5555', pub_url='inproc://_pub_'):
 
-        if wsroute:
-            import tornado
-            from tornado import web, websocket
-            
-            class CompWebSocket(websocket.WebSocketHandler):
-                def initialize(self, context=None, rep_url=None, pub_url=None):
-                    repsock = context.socket(zmq.REP)
-                    repsock.connect(rep_url)
-                    self._repstream = zmqstream.ZMQStream(repsock)
-                    subsock = context.socket(zmq.SUB)
-                    subsock.connect(url)
-                    substream = zmqstream.ZMQStream(subsock)
-                    substream.setsockopt(zmq.SUBSCRIBE, '')
-                    substream.on_recv(self.on_sub)
-                    
-                def open(self):
-                    print "WebSocket opened"
-            
-                def on_message(self, message):
-                    # received an REQ message
-                    self._repstream.send(message)
-            
-                def on_close(self):
-                    print "WebSocket closed"
-                    
-                def on_sub(self, msg):
-                    print "on_sub: %s" % msg
-                    self.write_message(msg)
-                
-            application = web.Application([(wsroute, CompWebSocket, {'context':context,
-                                                                     'rep_url':rep_url,
-                                                                     'pub_url':pub_url})])
-            application.listen(port)
-
-        loop = ioloop.IOLoop.instance()
         if context is None:
             context = zmq.Context()
+
+        loop = ioloop.IOLoop.instance()
         actor = ZmqCompWrapper(context, top, rep_url)
         
         # initialize the publisher
         from openmdao.main.publisher import Publisher
         pub = Publisher.init(context, pub_url)
-        
+            
+        if wsroute:
+            from openmdao.main.zmqws import CompWebSocketHandler
+            application = web.Application([(wsroute, CompWebSocketHandler, {'context':context,
+                                                                            'rep_url':rep_url,
+                                                                            'pub_url':pub_url})])
+            application.listen(port)
+
         try:
             loop.start()
         except KeyboardInterrupt:
@@ -135,10 +110,12 @@ def main(args=None):
         args = sys.argv[1:]
 
     parser = optparse.OptionParser()
-    parser.add_option("-u", "--url", action="store", type="string", dest='url', 
-                      help="url of command socket", default='tcp://*:5555')
+    parser.add_option("--repurl", action="store", type="string", dest='repurl', 
+                      help="url of REP socket", default='tcp://*:5555')
+    parser.add_option("--puburl", action="store", type="string", dest='puburl', 
+                      help="url of PUB socket", default='tcp://*:5556')
     parser.add_option("-c", "--class", action="store", type="string", dest='classpath', 
-                      help="module path to component class")
+                      help="module path to class of top level component")
     parser.add_option("-p", "--publish", action="append", type="string", dest='published', 
                       help="specify a variable to publish", default=[])
     parser.add_option("-w", "--websocket", action="store", type="string", dest='wsroute', 

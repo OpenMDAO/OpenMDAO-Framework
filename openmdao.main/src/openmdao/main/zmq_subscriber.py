@@ -30,7 +30,16 @@ def main(args):
     
     # Socket to talk to pub socket
     subsock = context.socket(zmq.SUB)
-    subsock.connect(url)
+    
+    if url.startswith('ws:'):
+        from openmdao.main.zmqws import PubWebSocketHandler
+        application = web.Application([(wsroute, CompWebSocketHandler, {'context':context,
+                                                                        'rep_url':rep_url,
+                                                                        'pub_url':pub_url})])
+        application.listen(port)
+    else:  # regular zmq socket
+        subsock.connect(url)
+        
     if options.topics:
         for t in options.topics:
             subsock.setsockopt(zmq.SUBSCRIBE, t)
