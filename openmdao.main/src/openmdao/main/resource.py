@@ -13,7 +13,6 @@ import pkg_resources
 import Queue
 import re
 import socket
-import string
 import sys
 import threading
 import time
@@ -61,10 +60,10 @@ QUEUING_SYSTEM_KEYS = set((
 ))
 
 # Legal allocator name pattern.
-_LEGAL_NAME = re.compile('^[a-zA-Z][_a-zA-Z0-9]*$')
+_LEGAL_NAME = re.compile(r'^[a-zA-Z][_a-zA-Z0-9]*$')
 
-# Used for making a legal allocator name from a hostname.
-_XLATE = string.maketrans('-', '_')
+# Checks for IPv4 address.
+_IPV4_HOST = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
 
 
 class ResourceAllocationManager(object):
@@ -423,22 +422,29 @@ class ResourceAllocationManager(object):
             Prefix for the local names of the remote allocators.
             The default is the remote hostname.
         """
-        ram = ResourceAllocationManager._get_instance()
-        with ResourceAllocationManager._lock:
-            ram._add_remotes(server, prefix)
-
-    def _add_remotes(self, server, prefix):
-        """ Add allocators from a remote server. """
         remote_ram = server.get_ram()
         total = remote_ram.get_total_allocators()
         if not prefix:
-            prefix, dot, rest = server.host.partition('.')
-            prefix = prefix.translate(_XLATE)
+            prefix = ResourceAllocationManager._make_prefix(server.host)
+        proxies = []
         for i in range(total):
             allocator = remote_ram.get_allocator_proxy(i)
             proxy = RemoteAllocator('%s_%s' % (prefix, allocator.name),
                                     allocator)
-            self._allocators.append(proxy)
+            proxies.append(proxy)
+        ram = ResourceAllocationManager._get_instance()
+        with ResourceAllocationManager._lock:
+            ram._allocators.extend(proxies)
+
+    @staticmethod
+    def _make_prefix(hostid):
+        """ Return legal prefix based on `hostid`. """
+        if _IPV4_HOST.match(hostid):  # Use all digits to be unique.
+            prefix = hostid.replace('.', '')
+        else:  # IP hostname (letters, digits, and hyphen are legal).
+            prefix, dot, rest = hostid.partition('.')
+            prefix = prefix.replace('-', '')
+        return prefix
 
     @rbac('*')
     def get_total_allocators(self):

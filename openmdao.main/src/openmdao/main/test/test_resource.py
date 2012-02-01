@@ -30,6 +30,11 @@ class TestCase(unittest.TestCase):
     """ Test resource allocation. """
 
     def setUp(self):
+        # Save existing RAM instance and force a rebuild.
+        self.orig_ram = RAM._RAM
+        RAM._RAM = None
+        RAM.configure('')
+
         self.user = getpass.getuser()
         self.node = platform.node()
         self.name = self.node.replace('.', '_')
@@ -58,6 +63,9 @@ class TestCase(unittest.TestCase):
 # shutdown() currently causes problems (except at exit).
 #        if self.cluster is not None:
 #            self.cluster.shutdown()
+
+        # Restore RAM.
+        RAM._RAM = self.orig_ram
 
         if self.skip_ssh:
             return
@@ -183,7 +191,7 @@ class TestCase(unittest.TestCase):
             try:
                 factory = connect(cfg['address'], cfg['port'],
                                   pubkey=cfg['key'])
-                prefix, dot, rest = factory.host.partition('.')
+                prefix = RAM._make_prefix(factory.host)
                 remote = '%s_LocalHost' % prefix
 
                 # Show no remotes currently in RAM.
@@ -407,8 +415,6 @@ max_load: 100
 
 
 if __name__ == '__main__':
-    # Avoid any user-defined resources from causing issues.
-    RAM.configure('')
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
