@@ -21,6 +21,7 @@ from multiprocessing import current_process, connection
 from multiprocessing.managers import BaseProxy
 
 from openmdao.main.rbac import rbac_methods
+from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.publickey import decode_public_key, is_private, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
@@ -75,6 +76,7 @@ def write_server_config(server, filename, real_ip=None):  #pragma no cover
     parser.set(section, 'key', server.public_key_text)
     logfile = os.path.join(os.getcwd(), 'openmdao_log.txt')
     parser.set(section, 'logfile', '%s:%s' % (socket.gethostname(), logfile))
+    parser.set(section, 'version', __version__)
 
     with open(filename, 'w') as cfg:
         parser.write(cfg)
@@ -103,6 +105,7 @@ def read_server_config(filename):
         key = decode_public_key(key)
     cfg['key'] = key
     cfg['logfile'] = parser.get(section, 'logfile')
+    cfg['version'] = parser.get(section, 'version')
     return cfg
 
 
@@ -130,7 +133,7 @@ def setup_tunnel(address, port):
     user = getpass.getuser()
     if sys.platform == 'win32':  # pragma no cover
         stdin = open('nul:', 'r')
-        args = ['plink', '-ssh', '-l', user,
+        args = ['plink', '-batch', '-ssh', '-l', user,
                 '-L', '%d:localhost:%d' % (port, port), address]
     else:
         stdin = open('/dev/null', 'r')
@@ -155,7 +158,7 @@ def setup_tunnel(address, port):
                exc.args[0] != errno.ENOENT:
                 raise
         else:
-            atexit.register(_cleanup_tunnel, tunnel_proc, logname)
+            atexit.register(_cleanup_tunnel, tunnel_proc, logname, os.getpid())
             sock.close()
             return address
 
@@ -163,15 +166,17 @@ def setup_tunnel(address, port):
     raise RuntimeError('Timeout trying to connect through tunnel to %s'
                        % address)
 
-def _cleanup_tunnel(tunnel_proc, logname):
+def _cleanup_tunnel(tunnel_proc, logname, pid):
     """ Try to terminate `tunnel_proc` if it's still running. """
+    if pid != os.getpid():
+        return  # We're a forked process.
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
     if os.path.exists(logname):
         try:
             os.remove(logname)
-        except WindowsError:
-            pass  # (Temporarily?) Ignore problem where logfile is still in use.
+        except Exception as exc:
+            logging.warning("Can't remove tunnel logfile: %s", exc)
 
 
 def encrypt(obj, session_key):

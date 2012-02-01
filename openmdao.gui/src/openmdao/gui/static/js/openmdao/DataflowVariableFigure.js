@@ -82,7 +82,7 @@ openmdao.DataflowVariableFigure.prototype.createHTMLElement=function(){
     this.textarea.style.borderTop="2px solid #666666";
     this.textarea.style.borderLeft="1px solid #666666";
     this.textarea.style.borderRight="1px solid #666666";
-    this.textarea.style.overflow="auto";
+    this.textarea.style.overflow="hidden";
     this.textarea.style.fontSize="9pt";
     this.disableTextSelection(this.textarea);
     
@@ -169,10 +169,10 @@ openmdao.DataflowVariableFigure.prototype.setWorkflow=function(wkflw){
                             src = parentName + "." + oThis.name,
                             dst = dstParent + "." + dstName;
                         if (parentAssm.length > 0) {
-                            oThis.myModel.issueCommand("top."+parentAssm+".connect('"+src+"','"+dst+"')");
+                            oThis.myModel.issueCommand(parentAssm+".connect('"+src+"','"+dst+"')");
                         }
                         else {
-                            oThis.myModel.issueCommand("top.connect('"+src+"','"+dst+"')");
+                            oThis.myModel.issueCommand("connect('"+src+"','"+dst+"')");
                         }
                     };                
                     return null;
@@ -190,7 +190,7 @@ openmdao.DataflowVariableFigure.prototype.getContextMenu=function(){
             var parent     = openmdao.Util.getPath(oThis.pathname),
                 parentName = openmdao.Util.getName(parent),
                 parentAssm = openmdao.Util.getPath(parent),
-                cmd = "top."+parentAssm+".create_passthrough('"+parentName+"."+oThis.name+"')";
+                cmd = parentAssm+".create_passthrough('"+parentName+"."+oThis.name+"')";
             oThis.myModel.issueCommand(cmd);
         }));
     }

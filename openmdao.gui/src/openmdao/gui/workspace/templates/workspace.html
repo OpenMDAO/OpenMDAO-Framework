@@ -11,98 +11,94 @@
 </head>
 
 <body bgcolor="Grey">
-    <!----------------------------------------->
+    <!-- =================================== -->
     <!-- load all the scripts & style sheets -->
-    <!----------------------------------------->
+    <!-- =================================== -->
 
     <link rel="stylesheet" href="/static/css/mdao-layout.css">
     <link rel="stylesheet" href="/static/css/mdao-styles.css">
 
     <!-- modernizr -->
-    <script src="/static/js/modernizr.js"></script>
+    <script src="/static/js/modernizr.js"                   type="text/javascript"></script>
 
     <!-- jQuery -->
     <link rel="stylesheet" href="/static/css/ui-darkness/jquery-ui-1.8.7.custom.css">
-    <script src="/static/js/require-jquery.js"></script>
-    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script>
-    <script src="/static/js/jquery.cookie.js"></script>
-    <script src="/static/js/jquery.hotkeys.js"></script>
-    <script src="/static/js/jquery.layout-1.3.0.rc29.14.js"></script>
-    <script src="/static/js/jquery.event.drag-2.0.min.js"></script>
+    <script src="/static/js/require-jquery.js"              type="text/javascript"></script>
+    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"  type="text/javascript"></script>
+    <script src="/static/js/jquery.cookie.js"               type="text/javascript"></script>
+    <script src="/static/js/jquery.hotkeys.js"              type="text/javascript"></script>
+    <script src="/static/js/jquery.layout-1.3.0.rc29.14.js" type="text/javascript"></script>
+    <script src="/static/js/jquery.event.drag-2.0.min.js"   type="text/javascript"></script>
+    <script src="/static/js/jquery.hoverIntent.js"          type="text/javascript"></script>
     
     <!--  ben alman's debug script (for development only, remove for flight)  -->
-    <script src="/static/js/ba-debug.min.js"></script>
-    
-    <!--  dat-gui  -- >
-    <script src="/static/js/dat.gui.min.js"></script>
+    <script src="/static/js/ba-debug.min.js"                type="text/javascript"></script>
     
     <!--  use codemirror for the text editor  -->
-    <script src="/static/codemirror/js/codemirror.js"></script>
+    <script src="/static/codemirror/js/codemirror.js"       type="text/javascript"></script>
     
-    <!--  draw2d stuff for workflow/dataflow  -->
-    <script src='/static/js/wz_jsgraphics.js'></script>
-    <script src='/static/js/mootools.js'></script>
-    <script src='/static/js/moocanvas.js'></script>
-    <script src='/static/js/draw2d.js'></script>
+    <!--  draw2d stuff for workflow/structure  -->
+    <script src="/static/js/wz_jsgraphics.js"              type="text/javascript"></script>
+    <script src="/static/js/mootools.js"                   type="text/javascript"></script>
+    <script src="/static/js/moocanvas.js"                  type="text/javascript"></script>
+    <script src="/static/js/draw2d.js"                     type="text/javascript"></script>
 
     <!-- SlickGrid -->
     <link rel="stylesheet" href="/static/js/slickgrid/slick.grid.css" type="text/css" media="screen" charset="utf-8" />
-    <script src="/static/js/slickgrid/slick.core.js"></script>
-    <script src="/static/js/slickgrid/slick.grid.js"></script>
-    <script src="/static/js/slickgrid/slick.editors.js"></script>
+    <script src="/static/js/slickgrid/slick.core.js"       type="text/javascript"></script>
+    <script src="/static/js/slickgrid/slick.grid.js"       type="text/javascript"></script>
+    <script src="/static/js/slickgrid/slick.editors.js"    type="text/javascript"></script>
     
     <!-- jstree pre 1.0 fixed -->
-    <script src="/static/js/jquery.jstree.js"></script>
+    <script src="/static/js/jquery.jstree.js"              type="text/javascript"></script>
     <script>jQuery.jstree.THEMES_DIR = "/static/js/themes/";</script>
     
     <!-- flot -->
-    <script src="/static/js/jquery.flot.js"></script>
+    <script src="/static/js/jquery.flot.js"                type="text/javascript"></script>
     
     <!-- context menus -->
-    <script src="/static/js/ContextMenu.js"></script>
+    <script src="/static/js/ContextMenu.js"                type="text/javascript"></script>
 
     <!-- openmdao specific imports -->
-    <script src="/static/js/openmdao/Util.js"></script>
-    <script src="/static/js/openmdao/Model.js"></script>
-    <script src="/static/js/openmdao/BaseFrame.js"></script>
-    <script src="/static/js/openmdao/ObjectTree.js"></script>
-    <script src="/static/js/openmdao/FileTree.js"></script>
-    <script src="/static/js/openmdao/Palette.js"></script>
-    <script src="/static/js/openmdao/Console.js"></script>
-    <script src="/static/js/openmdao/Menu.js"></script>
-    <script src="/static/js/openmdao/TabbedPane.js"></script>
-    <script src="/static/js/openmdao/CodeEditor.js"></script>
-    <script src="/static/js/openmdao/PropertiesEditor.js"></script>
-    <script src="/static/js/openmdao/PropertiesPane.js"></script>
-    <script src="/static/js/openmdao/ParametersPane.js"></script>
-    <script src="/static/js/openmdao/ConstraintsPane.js"></script>
-    <script src="/static/js/openmdao/ObjectivesPane.js"></script>
-    <script src="/static/js/openmdao/CouplingVarsPane.js"></script>
-    <script src="/static/js/openmdao/WorkflowPane.js"></script>
-    <script src="/static/js/openmdao/DataflowPane.js"></script>
-    <script src="/static/js/openmdao/SlotsPane.js"></script>
-    <script src="/static/js/openmdao/ComponentEditor.js"></script>
-    <script src="/static/js/openmdao/Plotter.js"></script>
+    <script src="/static/js/openmdao/Util.js"              type="text/javascript"></script>
+    <script src="/static/js/openmdao/Model.js"             type="text/javascript"></script>
+    <script src="/static/js/openmdao/BaseFrame.js"         type="text/javascript"></script>
+    <script src="/static/js/openmdao/ObjectTree.js"        type="text/javascript"></script>
+    <script src="/static/js/openmdao/FileTree.js"          type="text/javascript"></script>
+    <script src="/static/js/openmdao/Palette.js"           type="text/javascript"></script>
+    <script src="/static/js/openmdao/Console.js"           type="text/javascript"></script>
+    <script src="/static/js/openmdao/Menu.js"              type="text/javascript"></script>
+    <script src="/static/js/openmdao/TabbedPane.js"        type="text/javascript"></script>
+    <script src="/static/js/openmdao/CodeEditor.js"        type="text/javascript"></script>
+    <script src="/static/js/openmdao/PropertiesEditor.js"  type="text/javascript"></script>
+    <script src="/static/js/openmdao/PropertiesPane.js"    type="text/javascript"></script>
+    <script src="/static/js/openmdao/ParametersPane.js"    type="text/javascript"></script>
+    <script src="/static/js/openmdao/ConstraintsPane.js"   type="text/javascript"></script>
+    <script src="/static/js/openmdao/ObjectivesPane.js"    type="text/javascript"></script>
+    <script src="/static/js/openmdao/CouplingVarsPane.js"  type="text/javascript"></script>
+    <script src="/static/js/openmdao/WorkflowPane.js"      type="text/javascript"></script>
+    <script src="/static/js/openmdao/DataflowPane.js"      type="text/javascript"></script>
+    <script src="/static/js/openmdao/SlotsPane.js"         type="text/javascript"></script>
+    <script src="/static/js/openmdao/ComponentEditor.js"   type="text/javascript"></script>
+    <script src="/static/js/openmdao/Plotter.js"           type="text/javascript"></script>
     <!-- schematic stuff -->
-    <script src="/static/js/openmdao/WorkflowDiagram.js"></script>
-    <script src="/static/js/openmdao/WorkflowFigure.js"></script>    
-    <script src="/static/js/openmdao/WorkflowComponentFigure.js"></script>    
-    <script src="/static/js/openmdao/DataflowDiagram.js"></script>
-    <script src="/static/js/openmdao/DataflowComponentFigure.js"></script>    
-    <script src="/static/js/openmdao/DataflowVariableFigure.js"></script>    
-    <script src="/static/js/openmdao/SlotFigure.js"></script>    
-    <script src="/static/js/openmdao/DataConnectionEditor.js"></script>    
-    <script src="/static/js/openmdao/ContextMenuConnection.js"></script>
-    <!-- script src="/static/js/openmdao/Toolbar.js"></script -->
-    <!-- script src="/static/js/openmdao/ToolShowGrid.js"></script -->
-    <script src="/static/js/openmdao/initWorkspace.js"></script>
+    <script src="/static/js/openmdao/WorkflowDiagram.js"         type="text/javascript"></script>
+    <script src="/static/js/openmdao/WorkflowFigure.js"          type="text/javascript"></script>    
+    <script src="/static/js/openmdao/WorkflowComponentFigure.js" type="text/javascript"></script>    
+    <script src="/static/js/openmdao/DataflowDiagram.js"         type="text/javascript"></script>
+    <script src="/static/js/openmdao/DataflowComponentFigure.js" type="text/javascript"></script>    
+    <script src="/static/js/openmdao/DataflowVariableFigure.js"  type="text/javascript"></script>    
+    <script src="/static/js/openmdao/SlotFigure.js"              type="text/javascript"></script>    
+    <script src="/static/js/openmdao/DataConnectionEditor.js"    type="text/javascript"></script>    
+    <script src="/static/js/openmdao/ContextMenuConnection.js"   type="text/javascript"></script>
+    <script src="/static/js/openmdao/initWorkspace.js"           type="text/javascript"></script>
    
-    <!--------------------------------------->
+    <!-- ================================= -->
     <!-- basic components of the workspace -->
-    <!--------------------------------------->
+    <!-- ================================= -->
 
     <nav id="menu" class="ui-layout-north" 
-         onmouseover="layout.allowOverflow('north')" onmouseout="layout.resetOverflow(this)">
+         onmouseover="layout.allowOverflow('north')" >
     </nav>
     
     <div id="leftcol" class="ui-layout-west">
@@ -120,9 +116,9 @@
     
     <div id="central" class="ui-layout-center">
         <dl id="central_tabs">
-            <dt id="dataflow_tab" target="dataflow_pane">Structure</dt>
-            <dd id="dataflow_pane">
-                <div id="dataflow"></div>
+            <dt id="structure_tab" target="structure_pane">Structure</dt>
+            <dd id="structure_pane">
+                <div id="structure"></div>
             </dd>
             <dt id="workflow_tab" target="workflow_pane">Workflow</dt>
             <dd id="workflow_pane">
@@ -133,6 +129,7 @@
                 <div id="code"></textarea>
             </dd>
         </dl>
+        <div id="central_label"></div>
     </div>
 
     <div id="rightcol" class="ui-layout-east">

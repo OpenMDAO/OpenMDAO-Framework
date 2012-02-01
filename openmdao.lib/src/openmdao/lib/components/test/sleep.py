@@ -12,6 +12,9 @@ def main():
             data = os.environ.get('SLEEP_DATA', 'no-data-available')
             out.write('%s\n' % data)
             out.close()
+        inp = open('input', 'rU')
+        out = open('output', 'w')
+        out.write(inp.read())
         sys.exit(0)
     else:
         print "usage: python sleep.py nseconds [dummyfile]"

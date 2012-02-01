@@ -72,7 +72,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                         var menu=new draw2d.Menu();
                         var oThis=this;
                         menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-                                var asm = 'top.'+self.pathname,
+                                var asm = self.pathname,
                                     cmd = asm + '.disconnect("'+src_name+"','"+dst_name+'");'
                                         + asm + '.config_changed(update_parent=True);';
                                 model.issueCommand(cmd);

@@ -30,14 +30,25 @@ jQuery(function() {
     (function() {
         var model = openmdao.model;
         
-        var data = new openmdao.DataflowDiagram("dataflow",model,''),
-            work = new openmdao.WorkflowDiagram("workflow",model,'driver'),
+        var data = new openmdao.DataflowDiagram("structure",model,''),
+            work = new openmdao.WorkflowDiagram("workflow",model,''),
             code = new openmdao.CodeEditor("code",model),
             prop = new openmdao.PropertiesEditor("propertieseditor",model);
             
-        function data_fn(path) { data.showDataflow(path); jQuery('#dataflow_tab').click(); }
-        function work_fn(path) { work.showWorkflow(path); jQuery('#workflow_tab').click(); }
-        function code_fn(path) { code.editFile(path);     jQuery('#code_tab').click(); }
+        // create functions to load content into the different panes
+        // intercept tab clicks to set the adjacent label
+        var central_label = jQuery('#central_label'),
+            structure_tab = jQuery('#structure_tab'),
+            workflow_tab  = jQuery('#workflow_tab'),
+            code_tab      = jQuery('#code_tab');
+            
+        structure_tab.click(function(e) { central_label.text(data.getPathname()); })
+        workflow_tab.click(function(e)  { central_label.text(work.getPathname()); })
+        code_tab.click(function(e)      { central_label.text(code.getPathname()); })
+            
+        function data_fn(path) { data.showDataflow(path); structure_tab.click(); }
+        function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
+        function code_fn(path) { code.editFile(path);     code_tab.click(); }
         function prop_fn(path) { prop.editObject(path);   }
         
         function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
@@ -55,6 +66,6 @@ jQuery(function() {
     
     // start with objects, workflow & properties visible
     jQuery('#otree_tab').click();
-    jQuery('#dataflow_tab').click();
+    jQuery('#structure_tab').click();
     jQuery('#properties_tab').click();
 });

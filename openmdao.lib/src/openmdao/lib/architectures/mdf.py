@@ -11,6 +11,7 @@ class MDF(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.requires_global_des_vars = False
     
     def configure(self): 
         """setup and MDF architecture inside this assembly.
@@ -25,33 +26,20 @@ class MDF(Architecture):
         self.parent.driver.delfun = .0001
         self.parent.driver.dabfun = .000001
         self.parent.driver.ctlmin = 0.0001
+        self.parent.driver.recorders = self.data_recorders
         
         params = self.parent.get_parameters()
         global_dvs = []
         local_dvs = []
         
-        #For MDF all disciplines get solved in the MDA, but other
-        #architectures might need to identify disciplines on a more granular
-        #level. This is all done via the parameter
-        #disciplines = set()
 
         for k,v in self.parent.get_global_des_vars(): 
             global_dvs.append(v)
-            #disciplines.update(v.get_referenced_compnames())
+            # and add the broadcast parameters to the driver            
+            self.parent.driver.add_parameter(v,name=k)   
         
         for k,v in self.parent.get_local_des_vars(): 
             local_dvs.append(v)
-            #disciplines.update(v.get_referenced_compnames())
-        
-        # and add the broadcast parameters to the driver
-        for k,v in self.parent.get_global_des_vars():  
-            self.parent.driver.add_parameter(v,name=k)   
-            
-
-        #add the local design variables to the driver
-        for k,v in self.parent.get_local_des_vars(): 
-            print type(v) 
-            
             self.parent.driver.add_parameter(v,name=k)
          
         #TODO: possibly add method for passing constraint directly?
