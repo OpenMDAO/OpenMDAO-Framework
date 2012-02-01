@@ -31,7 +31,7 @@ proj.directory-list = [{'dirloc': loc('../..'),
                                      u'config',
                                      u'plugins',
                                      u'testplugins'],
-                        'filter': '*.py;*.rst;*.ini;*.cfg',
+                        'filter': '*.py;*.rst;*.ini;*.cfg;*.js;*.html;*.css',
                         'include_hidden': False,
                         'recursive': True,
                         'watch_for_changes': True}]

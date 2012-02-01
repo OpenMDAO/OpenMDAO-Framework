@@ -1,6 +1,10 @@
-#!/bin/sh
-# Just output some representative data.
-cat <<EOF
+"""
+Fake 'qhost' for testing.
+"""
+
+
+def main():
+    print """\
 HOSTNAME                ARCH         NCPU  LOAD  MEMTOT  MEMUSE  SWAPTO  SWAPUS
 -------------------------------------------------------------------------------
 global                  -               -     -       -       -       -       -
@@ -30,5 +34,9 @@ hxv142a                 -               -     -       -       -       -       -
 hxv142b                 -               -     -       -       -       -       -
 hxv142c                 -               -     -       -       -       -       -
 hxv5                    -               -     -       -       -       -       -
-hxv54                   -               -     -       -       -       -       -
-EOF
+hxv54                   -               -     -       -       -       -       - """
+
+
+if __name__ == '__main__':
+    main()
+

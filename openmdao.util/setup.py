@@ -22,7 +22,7 @@ setup(name='openmdao.util',
       keywords='',
       author='',
       author_email='',
-      url='http://openmdao.org/docs/srcdocs/packages/openmdao.util.html',
+      url='http://openmdao.org',
       license='Apache License, Version 2.0',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
@@ -45,5 +45,6 @@ setup(name='openmdao.util',
       xyplot=openmdao.util.casedb:cmdlineXYplot
       add_reqs=openmdao.util.addreqs:add_reqs
       mkpseudo=openmdao.util.mkpseudo:mkpseudo
+      envdump=openmdao.util.envirodump:envdump
       """
     )

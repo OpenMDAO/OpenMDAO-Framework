@@ -30,7 +30,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       keywords='optimization multidisciplinary multi-disciplinary analysis',
       author='',
       author_email='',
-      url='http://openmdao.org/docs/srcdocs/packages/openmdao.lib.html',
+      url='http://openmdao.org',
       license='Apache License, Version 2.0',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
@@ -58,6 +58,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
+      openmdao.lib.drivers.doedriver.NeiborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeiborhoodDOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil

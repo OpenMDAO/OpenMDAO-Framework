@@ -5,7 +5,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
     // initialize private variables
     var self = this,
         figures = {},
-        dataflowID = "#"+pathname.replace(/\./g,'-')+"-dataflow",
+        dataflowID = pathname.replace(/\./g,'-')+"-dataflow",
         dataflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">').appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID);
@@ -26,8 +26,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top);
             var elem = dataflowDiv[0];
-            var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
-            debug.info(droppedName,'dropped on dataflow:',self.pathname,'z-index',dataflowDiv.css('z-index'),'zIndex',dataflowDiv.css('zIndex'));
+            var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");            
+            debug.info(droppedName,'(path=',droppedPath,') dropped on dataflow:',self.pathname,'z-index',dataflowDiv.css('z-index'),'zIndex',dataflowDiv.css('zIndex'));
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname)
@@ -68,7 +68,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                     dst_name = conn[1].split('.')[0],
                     src_fig = figures[src_name],
                     dst_fig = figures[dst_name];
-                    c = new openmdao.ContextMenuConnection()
+                    c = new openmdao.ContextMenuConnection();
                 // TODO: only create new connection if one doesn't already exist
                 c.setSource(src_fig.getPort("output"));
                 c.setTarget(dst_fig.getPort("input"));
@@ -79,8 +79,41 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 dataflow.addFigure(c);
             }
         })
+        
+        layout();
     }
-            
+
+    /** layout component figures */
+    function layout() {
+        var connected = [],
+            unconnected = [],
+            i=0, x=20, y=20;
+
+        jQuery.each(figures, function(idx,fig) {
+            if (fig.isConnected()) {
+                connected.push(fig);
+            }
+            else {
+                unconnected.push(fig);
+            }
+        });
+
+        // unconnected components are layed out in a row
+        jQuery.each(unconnected,function(idx,fig) {
+            x = idx*(fig.getWidth()+20) + 20;
+            fig.setPosition(x,y);
+        });
+
+        // connected components are layed out diagonally 
+        // (top left to bottom right)
+        x = 0;
+        jQuery.each(connected,function(idx,fig) {
+            x = idx*(fig.getWidth()+20) + 20;
+            y = y + (fig.getHeight()+20) + 20;
+            fig.setPosition(x,y);
+        });
+    };
+
     /** update dataflow diagram */
     this.loadData = function(json) {
         dataflow.clear()

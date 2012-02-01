@@ -181,6 +181,14 @@ class test__PhysicalQuantity(unittest.TestCase):
         except ValueError:
             self.fail("Error: Currency Unit (USD) is not working")
         
+    def test_pi(self):
+        # Fixes issue 786
+        x = units.PhysicalQuantity('1rpm')
+        x.convert_to_unit('rad/min')
+        self.assertAlmostEqual(x.value,
+                               units.PhysicalQuantity('6.283185rad/min').value,
+                               places=3)
+        
     def test_hour_unit(self):
         # Added to test problem in Ticket 466
         x = units.PhysicalQuantity('7200s')

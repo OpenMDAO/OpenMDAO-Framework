@@ -14,15 +14,12 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
     
     // get name for this figure and set title appropriately
     this.name = openmdao.Util.getName(pathname);
-    if (this.name === 'driver') {
+    if (this.name == 'driver') {
         var parent = openmdao.Util.getPath(pathname),
             parentName = openmdao.Util.getName(parent);
         this.name = parentName + '.driver';
-        this.setTitle(parentName);
     }
-    else {
-        this.setTitle(this.name);
-    }
+    this.setTitle(this.name);
     
     // set the content text to be the type name (in italics)
     var tok = type.split('.');
@@ -119,7 +116,7 @@ openmdao.WorkflowComponentFigure.prototype.createHTMLElement=function(){
     this.textarea.style.borderTop="2px solid #666666";
     this.textarea.style.borderLeft="1px solid #666666";
     this.textarea.style.borderRight="1px solid #666666";
-    this.textarea.style.overflow="auto";
+    this.textarea.style.overflow="hidden";
     this.textarea.style.fontSize="9pt";
     this.disableTextSelection(this.textarea);
     
@@ -225,13 +222,13 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
-        var cmd = 'top.'+oThis.pathname + '.run();';
+        var cmd = oThis.pathname + '.run();';
         oThis.myModel.issueCommand(cmd);
     }));
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
         var parent = oThis.getParent();
         if (parent) {
-            var cmd = "top."+parent.pathname+".workflow.remove('";
+            var cmd = parent.pathname+".workflow.remove('";
             if (/.driver$/.test(oThis.name)) {
                 cmd = cmd + oThis.name.replace(/.driver/g,'') + "')";
             }

@@ -1,14 +1,15 @@
 """
-    Solution of the sellar analytical problem using MDF.
-    Problem forumulation is specified, and MDF is automatically
+    Solution of the sellar analytical problem using different Optimization Architectures.
+    Problem forumulation is specified, and IDF,MDF,BLISS,CO,BLISS2000 are automatically
     set up for you. 
 """
 
-from openmdao.lib.architectures.api import MDF, BLISS, CO
+
+from openmdao.lib.architectures.api import MDF, BLISS, CO, BLISS2000, IDF
+
 from openmdao.lib.casehandlers.api import DBCaseRecorder
     
-from openmdao.lib.optproblems.api import SellarProblem    
-        
+from openmdao.lib.optproblems.api import SellarProblem 
         
 if __name__ == "__main__": # pragma: no cover
 
@@ -35,7 +36,32 @@ if __name__ == "__main__": # pragma: no cover
                                                              error["z2"],
                                                              error['dis1.x1'])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", prob.solution['obj1']
+    print "Minimum objective: ", prob.get_objectives()['obj1'].evaluate()
+    print "Elapsed time: ", time.time()-tt, "seconds"
+    print "\n"
+    
+    prob = SellarProblem()
+    prob.architecture = IDF() 
+    prob.configure()
+    
+    prob.driver.recorders = [DBCaseRecorder()]
+    
+    tt = time.time()
+    prob.run()
+    
+    error = prob.check_solution()
+    
+    print "\nUsing IDF Architecture"
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
+                                             prob.dis1.z2,
+                                             prob.dis1.x1)
+
+    print "Minimum differs from expected by (%f, %f, %f)" % (error["z1"],
+                                                             error["z2"],
+                                                             error['dis1.x1'])
+    print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
+    print "Minimum objective: ", prob.get_objectives()['obj1'].evaluate()
+
     print "Elapsed time: ", time.time()-tt, "seconds"
     print "\n"
         
@@ -60,7 +86,7 @@ if __name__ == "__main__": # pragma: no cover
                                                              error["z2"],
                                                              error['dis1.x1'])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Minimum objective: ", prob.solution['obj1']
+    print "Minimum objective: ", prob.get_objectives()['obj1'].evaluate()
 
     print "Elapsed time: ", time.time()-tt, "seconds"
     print "\n"
@@ -82,9 +108,42 @@ if __name__ == "__main__": # pragma: no cover
                                                              error["z2"],
                                                              error['dis1.x1'])
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
+    print "Minimum objective: ", prob.get_objectives()['obj1'].evaluate()
+
+    print "Elapsed time: ", time.time()-tt, "seconds"
+    
+    
+    prob = SellarProblem()
+    prob.architecture = BLISS2000()
+    
+    prob.configure()   
+    
+    prob.driver.recorders = [DBCaseRecorder()]
+    
+    tt = time.time()
+    prob.run() 
+    
+    error = prob.check_solution()
+    print error
+    exit()
+    print "\nUsing BLISS2000 Architecture"
+    print "Major Iterations: ", prob.sysopt.exec_count
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
+                                             prob.dis1.z2,
+                                             prob.dis1.x1)
+    
+    print "Minimum differs from expected by (%f, %f, %f)" % (error["z1"],
+                                                             error["z2"],
+                                                             error['dis1.x1'])
+    print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.solution['obj1']
 
     print "Elapsed time: ", time.time()-tt, "seconds"
+    print "\n"
+    
+
+  
+
     
     
     

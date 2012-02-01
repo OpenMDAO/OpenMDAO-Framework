@@ -5,6 +5,7 @@ try:
     from numpy import exp, abs, pi
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
+_check = ['numpy']
 try:
     from math import erf   # py27 and later has erf in the math module
 except ImportError as err:
@@ -13,6 +14,7 @@ except ImportError as err:
         from scipy.special import erf
     except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
+        _check.append('scipy')
 
 from openmdao.main.datatypes.api import Slot, Str, Float
 from openmdao.lib.casehandlers.api import CaseSet
@@ -22,7 +24,7 @@ from openmdao.util.decorators import stub_if_missing_deps
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-@stub_if_missing_deps('numpy', 'scipy.special:erf', 'math:erf')
+@stub_if_missing_deps(*_check)
 class ExpectedImprovement(Component):
     best_case = Slot(CaseSet, iotype="in",
                        desc="CaseSet which contains a single case, "

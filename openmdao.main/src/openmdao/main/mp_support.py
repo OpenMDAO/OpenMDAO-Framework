@@ -174,6 +174,7 @@ class OpenMDAO_Server(Server):
         else:
             self._allowed_hosts = allowed_hosts or []
 
+        self._allow_tunneling = allow_tunneling
         if allow_tunneling and '127.0.0.1' not in self._allowed_hosts:
             self._allowed_hosts.append('127.0.0.1')
 
@@ -1190,6 +1191,8 @@ class OpenMDAO_Proxy(BaseProxy):
             try:
                 proxytype = self._manager._registry[token.typeid][-1]
             except KeyError:
+                proxytype = None
+            if proxytype is None:
                 self._manager.register(token.typeid, None, _auto_proxy)
                 proxytype = self._manager._registry[token.typeid][-1]
 

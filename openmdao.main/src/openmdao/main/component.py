@@ -42,13 +42,13 @@ class SimulationRoot (object):
             Path to move to.
         """
         os.chdir(path)
-        SimulationRoot.__root = os.getcwd()
+        SimulationRoot.__root = os.path.realpath(os.getcwd())
 
     @staticmethod
     def get_root ():
         """Return this simulation's root directory path."""
         if SimulationRoot.__root is None:
-            SimulationRoot.__root = os.getcwd()
+            SimulationRoot.__root = os.path.realpath(os.getcwd())
         return SimulationRoot.__root
 
     @staticmethod
@@ -59,8 +59,8 @@ class SimulationRoot (object):
             Path to check.
         """
         if SimulationRoot.__root is None:
-            SimulationRoot.__root = os.getcwd()
-        return path.startswith(SimulationRoot.__root)
+            SimulationRoot.__root = os.path.realpath(os.getcwd())
+        return os.path.realpath(path).startswith(SimulationRoot.__root)
     
 
 class DirectoryContext(object):
@@ -150,6 +150,7 @@ class Component (Container):
         self._connected_outputs = None
         
         self.exec_count = 0
+        self.derivative_exec_count = 0
         self.create_instance_dir = False
         if directory:
             self.directory = directory
@@ -370,8 +371,6 @@ class Component (Container):
         Overrides of this function must call this version.  This is only 
         called if execute() actually ran.
         """
-        self.exec_count += 1
-        
         # make our output Variables valid again
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
@@ -431,6 +430,7 @@ class Component (Container):
                 else:
                     # Component executes as normal
                     self.execute()
+                    self.exec_count += 1
                     
                 self._post_execute()
             #else:
@@ -959,7 +959,10 @@ class Component (Container):
         for fvarname, fvar, ftrait in comp.get_file_vars():
             if fvar.owner is not comp:
                 continue
-            path = fvar.path
+            if hasattr(ftrait, 'local_path') and ftrait.local_path:
+                path = ftrait.local_path
+            else:
+                path = fvar.path
             if not path:
                 continue
             if not isabs(path):

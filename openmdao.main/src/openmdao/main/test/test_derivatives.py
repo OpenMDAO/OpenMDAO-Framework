@@ -513,7 +513,14 @@ class DerivativesTestCase(unittest.TestCase):
         self.assertEqual(comp.A3.ran_real, True)
         self.assertEqual(comp.A4.ran_real, False)
         self.assertEqual(comp.A5.ran_real, True)
-
+        self.assertEqual(comp.A1.exec_count, 5)
+        self.assertEqual(comp.A2.exec_count, 1)
+        self.assertEqual(comp.A4.exec_count, 1)
+        self.assertEqual(comp.A5.exec_count, 5)
+        self.assertEqual(comp.A1.derivative_exec_count, 0)
+        self.assertEqual(comp.A2.derivative_exec_count, 1)
+        self.assertEqual(comp.A4.derivative_exec_count, 1)
+        self.assertEqual(comp.A5.derivative_exec_count, 0)
         
 # Next up: test to make sure that we can pass tuples of parameters through assembly
 # without tripping up its check_derivatives 

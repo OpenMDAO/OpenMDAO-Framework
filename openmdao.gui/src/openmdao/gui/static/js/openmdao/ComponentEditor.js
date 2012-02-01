@@ -17,6 +17,11 @@ openmdao.ComponentEditor = function(model,pathname) {
           
     /** load the table with the given properties */
     function loadTabs(properties) {
+        if (!properties || properties.length === 0) {
+            alert('No properties found for ',pathname);
+            return;
+        };
+        
         var style = 'style="padding:5px;"',
             dl = jQuery('<dl id="'+self.id+'_tabs"></dl>');
             
