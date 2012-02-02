@@ -22,23 +22,21 @@ from openmdao.main.mp_support import is_instance
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
-import threading
-import weakref
 
-__top__ = None
+__has_top__ = False
 __toplock__ = threading.RLock()
 
 def set_as_top(cont, first_only=False):
-    """Specifies that the given Container is the top of a 
-    Container hierarchy.  If first_only is True, then only set this container
-    as a top if a global top doesn't already exist.
+    """Specifies that the given Container is the top of a Container hierarchy.
+    If first_only is True, then only set it as a top if a global
+    top doesn't already exist.
     """
     global __toplock__
-    global __top__
+    global __has_top__
     doit = False
     with __toplock__:
-        if __top__ is None:
-            __top__ = weakref.ref(cont)
+        if __has_top__ is False:
+            __has_top__ = True
             doit = True
         elif not first_only:
             doit = True
