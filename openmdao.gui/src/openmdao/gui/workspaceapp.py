@@ -91,6 +91,8 @@ class WebApp(web.Application):
             web.url(r'/workspace/upload/?',         wksp.UploadHandler),
             web.url(r'/workspace/workflow/(.*)',    wksp.WorkflowHandler),
             web.url(r'/workspace/test/?',           wksp.TestHandler),
+            
+            web.url(r'/workspace/outputWS/?',       wksp.OutStreamHandler),
         ]
         
         settings = { 

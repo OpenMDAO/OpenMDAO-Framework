@@ -4,6 +4,7 @@ import jsonpickle
 import threading
 
 from tornado import web
+from tornado import websocket
 
 from django import forms
 
@@ -16,6 +17,9 @@ from openmdao.gui.settings import MEDIA_ROOT
 class BaseHandler(web.RequestHandler):
     def get_current_user(self):
         return self.get_secure_cookie("user")
+        
+    def get_server(self):
+        return self.application.server_mgr.console_server(self.get_cookie('sessionid'))
 
 class AddonForm(forms.Form):
     distribution = forms.CharField(label='Distribution')
@@ -36,7 +40,7 @@ class AddOnsHandler(BaseHandler):
         form = AddonForm(form_data)
         if form.is_valid():
             distribution = form.cleaned_data['distribution']
-            cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+            cserver = self.get_server()
             cserver.install_addon(self.addons_url, distribution)
             self.render('closewindow.html')
             
@@ -70,7 +74,7 @@ class CommandHandler(BaseHandler):
             history = history + '>>> '+str(command) + '\n'
             result = ''
             try:
-                cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+                cserver = self.get_server()
                 result = cserver.onecmd(command)
             except Exception,e:
                 print e
@@ -93,7 +97,7 @@ class ComponentHandler(BaseHandler):
             parent = ''
         result = ''
         try:
-            cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+            cserver = self.get_server()
             cserver.add_component(name,type,parent);
         except Exception,e:
             print e
@@ -101,7 +105,7 @@ class ComponentHandler(BaseHandler):
         self.write(result)
         
     def delete(self,name):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         result = ''
         try:
             result = cserver.onecmd('del '+name)
@@ -111,7 +115,7 @@ class ComponentHandler(BaseHandler):
         self.write(result)
         
     def get(self,name):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         attr = {}
         try:
             attr = cserver.get_attributes(name)
@@ -127,7 +131,7 @@ class ComponentHandler(BaseHandler):
 
 class ComponentsHandler(BaseHandler):
     def get(self):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_components()
         self.write(json)
 
@@ -140,7 +144,7 @@ class ConnectionsHandler(BaseHandler):
             src_name = self.get_argument('src_name')
             dst_name = self.get_argument('dst_name')
             connections = self.get_argument('connections')
-            cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+            cserver = self.get_server()
             cserver.set_connections(pathname,src_name,dst_name,connections);
         except Exception,e:
             print e
@@ -148,7 +152,7 @@ class ConnectionsHandler(BaseHandler):
         self.write(result)
         
     def get(self,pathname):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         connections = {}
         try:
             src_name = self.get_argument('src_name')
@@ -164,7 +168,7 @@ class StructureHandler(BaseHandler):
         of components and the connections between them
     '''
     def get(self,name):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_structure(name)
         self.write(json)
 
@@ -174,7 +178,7 @@ class ExecHandler(BaseHandler):
     '''
     def post(self):
         result = ''
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         filename = self.get_argument('filename',default=None)
         if filename:
             try:
@@ -207,7 +211,7 @@ class FileHandler(BaseHandler):
     ''' get/set the specified file/folder
     '''
     def post(self,filename):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         isFolder = self.get_argument('isFolder',default=None)
         if isFolder:
             self.write(cserver.ensure_dir(filename))
@@ -216,18 +220,18 @@ class FileHandler(BaseHandler):
             self.write(str(cserver.write_file(filename,contents)))
             
     def delete(self,filename):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         self.write(str(cserver.delete_file(filename)))
         
     def get(self,filename):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         self.write(str(cserver.get_file(filename)))
 
 class FilesHandler(BaseHandler):
     ''' get a list of the users files in JSON format
     '''
     def get(self):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         filedict = cserver.get_files()
         json = jsonpickle.encode(filedict)
         self.write(json)
@@ -241,7 +245,7 @@ class ModelHandler(BaseHandler):
         self.redirect('/')
         
     def get(self):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_JSON()
         self.write(json)
 
@@ -249,7 +253,7 @@ class OutputHandler(BaseHandler):
     ''' get any outstanding output from the model
     '''
     def get(self):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         self.write(cserver.get_output())
 
 class ProjectHandler(BaseHandler):
@@ -259,7 +263,7 @@ class ProjectHandler(BaseHandler):
         POST: save project archive of the current project
     '''
     def post(self):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         cserver.save_project()
         self.write('Saved.')
         
@@ -271,7 +275,7 @@ class ProjectHandler(BaseHandler):
             filename = self.get_secure_cookie('filename')
         if filename:
             self.application.server_mgr.delete_server(self.get_cookie('sessionid')) # delete old server
-            cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))        
+            cserver = self.get_server()        
             cserver.load_project(MEDIA_ROOT+'/'+filename)
             self.redirect(self.application.reverse_url('workspace'))
         else:
@@ -281,7 +285,7 @@ class PlotHandler(BaseHandler):
     ''' GET:  open a websocket server to supply updated valaues for the specified variable        
     '''
     def get(self,name):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         port = cserver.get_varserver(name)
         self.write(port)
         
@@ -289,7 +293,7 @@ class TypesHandler(BaseHandler):
     ''' get hierarchy of package/types to populate the Palette
     '''
     def get(self):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         types = cserver.get_available_types()
         try:
             types['working'] = cserver.get_workingtypes()
@@ -301,7 +305,7 @@ class UploadHandler(BaseHandler):
     ''' file upload utility
     '''
     def post(self):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         file = self.request.files['myfile'][0]
         if file:
             filename = file['filename']
@@ -314,7 +318,7 @@ class UploadHandler(BaseHandler):
 
 class WorkflowHandler(BaseHandler):
     def get(self,name):
-        cserver = self.application.server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_workflow(name)
         self.write(json)
     
@@ -329,3 +333,32 @@ class TestHandler(BaseHandler):
     '''
     def get(self):
         self.render('workspace/test.html')
+
+class OutStreamHandler(websocket.WebSocketHandler):
+    def open(self):
+        print ' outstream open'
+        cserver = self.get_server()
+        print 'cserver:',cserver
+        print 'opening outstream websocket'
+        try:
+            self.stream = cserver.get_output_stream()
+            print 'got outstream:',self.stream
+        except web.HTTPError,err:
+            print 'error getting outstream:',err
+            if not self.stream.closed():
+                self.stream.close()
+            self.close()
+        else:
+            print 'setting callback on outstream:',self.stream
+            self.stream.on_recv(self._write_message)
+
+    def _write_message(self, message):
+        print 'writing outstream message: %S' % message
+        self.write_message(message)
+        
+    def on_message(self, message):
+        print 'outstream message received: %s' % message
+
+    def on_close(self):
+        self.timer.stop()
+        print 'outstream connection closed'

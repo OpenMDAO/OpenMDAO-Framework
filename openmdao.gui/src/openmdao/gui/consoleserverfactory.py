@@ -34,6 +34,11 @@ import networkx as nx
 
 from openmdao.gui.util import *
 
+import zmq
+from zmq.eventloop.zmqstream import ZMQStream
+
+import random
+
 class ConsoleServerFactory(Factory):
     ''' creates and keeps track of :class:`ConsoleServer`
     '''
@@ -111,7 +116,7 @@ class ConsoleServer(cmd.Cmd):
         self.cout = StringIO()
         sys.stdout = self.cout
         sys.stderr = self.cout
-
+        
         self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
         self.prompt = 'OpenMDAO>> '
         
@@ -254,6 +259,26 @@ class ConsoleServer(cmd.Cmd):
         output = self.cout.getvalue()     
         self.cout.truncate(0)
         return output
+
+    def get_output_stream(self):
+        print "getting context"
+        context = zmq.Context()
+        print "got context:",context
+        cout_socket = context.socket(zmq.PUB)
+        print "got socket:",cout_socket
+        addr = "tcp://%s:%i" % (ip, port)
+        print "Starting output stream on: %s" % addr
+        cout_socket.connect(addr)
+        cout_socket.setsockopt(zmq.SUBSCRIBE, '')
+        def publish_cout():
+            txt = self.cserver.get_output()
+            if len(txt) > 0:
+                print "output (len="+str(len(txt))+"):\n",txt
+                self.write_message(txt)
+        loop  = ioloop.IOLoop()
+        timer = ioloop.PeriodicCallback(publish_cout, 1000, loop)
+        timer.start()
+        return ZMQStream(cout_socket)
         
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 

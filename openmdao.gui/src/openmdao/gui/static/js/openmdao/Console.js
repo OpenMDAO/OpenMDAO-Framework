@@ -126,11 +126,25 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     function update() {
         model.getOutput(updateHistory)
     }
-    
+
     // ask model for an update whenever something changes
-    model.addListener(update)
+    //model.addListener(update)
     
-    /** TESTING WEBSOCKET STUFF * /
+    /** connect to a websocket */
+    var sck = new WebSocket('ws://localhost:9000/workspace/outputWS');
+    sck.onopen = function (e) {
+        debug.info('console socket opened',e);
+    };
+    sck.onclose = function (e) {
+        debug.info('console socket closed',e);
+    };
+    sck.onmessage = function(e) {
+        debug.info('console socket message:',e);
+        updateHistory(e.data);
+    };            
+    /** **/
+    
+    /** TESTING WEBSOCKET STUFF *
     debug.info('making ajax call to get output WS...');
     jQuery.ajax({
         type: 'GET',
