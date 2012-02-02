@@ -84,7 +84,8 @@ from distutils.version import LooseVersion
 from xml.sax.saxutils import escape
 
 from openmdao.main.api import Component, Container, SimulationRoot, \
-                              VariableTree, set_as_top
+                              VariableTree
+from openmdao.main.assembly import set_as_top
 from openmdao.main.mp_util import read_allowed_hosts
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -340,7 +341,9 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                         raise RuntimeError("Can't get class %r in %r: %r"
                                            % (classname, modname, exc))
                     try:
-                        obj = set_as_top(cls())
+                        obj = cls()
+                        if obj._call_tree_rooted == True:
+                            set_as_top(obj)
                     except Exception as exc:
                         logger.error(traceback.format_exc())
                         raise RuntimeError("Can't instantiate %s.%s: %r"

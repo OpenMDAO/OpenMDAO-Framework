@@ -31,7 +31,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
 
 .. testcode:: Genetic
 
-    from openmdao.main.api import Assembly,Component, set_as_top
+    from openmdao.main.api import Assembly,Component
     from openmdao.lib.drivers.api import Genetic
     from openmdao.lib.datatypes.api import Float,Int,Enum
     
@@ -66,7 +66,6 @@ You add design variables to Genetic using the ``add_parameter`` method.
             self.driver.add_parameter('comp.z')
     
     top = Simulation()
-    set_as_top(top)
         
 In the above example, three parameters were added to the optimizer. The optimizer 
 figures out for itself what type of variable it is and behaves appropriately. In all three

@@ -6,7 +6,7 @@ and use it to set component inputs and get component outputs.
 The component in question just evaluates a simple expression.
 """
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 
 import m4.doe
 import m4.dummy_components
@@ -44,7 +44,7 @@ class MyModel(Assembly):
 
 
 if __name__ == '__main__': # pragma no cover
-    top = set_as_top(MyModel())
+    top = MyModel()
 #    top.run()
     top.check_save_load()  # Note: requires correct pythonV.R
 

@@ -117,10 +117,8 @@ class SellarCO(Assembly):
 if __name__ == "__main__":        
 
     import time
-    from openmdao.main.api import set_as_top
     
     prob = SellarCO()
-    set_as_top(prob)
             
     prob.dis1.z1 = 5.0
     prob.dis2.z1 = 5.0

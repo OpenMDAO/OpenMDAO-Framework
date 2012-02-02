@@ -52,11 +52,9 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     import math
-    from openmdao.main.api import set_as_top
     
     prob = SellarBLISS()
     prob.name = "top"
-    set_as_top(prob)
             
     tt = time.time()
     prob.run()

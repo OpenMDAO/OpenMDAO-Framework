@@ -68,11 +68,9 @@ class SellarMDF(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     import time
-    from openmdao.main.api import set_as_top
     
     prob = SellarMDF()
     prob.name = "top"
-    set_as_top(prob)
             
     prob.dis1.z1 = prob.dis2.z1 = 5.0
     prob.dis1.z2 = prob.dis2.z2 = 2.0

@@ -126,10 +126,8 @@ socket in DrivingSim:
                 print '\n'
     
             import time
-            from openmdao.main.api import set_as_top
     
             opt_problem = EngineOptimization()
-            set_as_top(opt_problem)
     
             opt_problem.sim_acc.run()
             opt_problem.sim_EPA_city.run()

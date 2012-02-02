@@ -7,7 +7,7 @@ on the first execution, then on subsequent executions the corrected result
 is directly calculated.
 """
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.datatypes.api import Float
 
 from m4.doe import DOE
@@ -82,7 +82,7 @@ class VarFi(MidFidelity):
 
 
 if __name__ == '__main__': # pragma no cover
-    top = set_as_top(MyModel())
+    top = MyModel()
     top.run()
 #    top.check_save_load()  # Note: requires correct pythonV.R
 

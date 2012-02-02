@@ -25,7 +25,7 @@ from numpy import float32, zeros
 import axod as axod
 #from  readclas  import readfile
 
-from openmdao.main.api import Component, set_as_top, Container
+from openmdao.main.api import Component, Container
 from openmdao.lib.datatypes.api import Float, Array, Str, Int
 from datain import Datain
 
@@ -185,8 +185,8 @@ class AxodCompn(Component):
             inp.close()
 
 if  __name__ == '__main__':
-    #one = set_as_top(AxodCompn(input_filename='one_stage.inp'))
-    one = set_as_top(AxodCompn(input_filename='eee_hpt.inp'))
+    #one = AxodCompn(input_filename='one_stage.inp')
+    one = AxodCompn(input_filename='eee_hpt.inp')
     one.Case1.Stage1.ptin = 51.00
     one.Case1.Stage1.ttin = 1284.0
     one.Case1.Stage1.vctd = 1.0

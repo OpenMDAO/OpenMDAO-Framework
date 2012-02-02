@@ -59,10 +59,8 @@ class SellarIDF(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     import time
-    from openmdao.main.api import set_as_top
     
     prob = SellarIDF()
-    set_as_top(prob)
     
     # pylint: disable-msg=E1101
         

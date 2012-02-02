@@ -5,6 +5,7 @@
 __all__ = ['Assembly']
 
 import cStringIO
+import threading
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
@@ -21,6 +22,25 @@ from openmdao.main.mp_support import is_instance
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
+import threading
+__has_top__ = False
+__toplock__ = threading.RLock()
+
+def set_as_top(cont, first_only=False):
+    """Specifies that the given Container is the top of a 
+    Container hierarchy.
+    """
+    global __toplock__
+    global __has_top__
+    with __toplock__:
+        if not __has_top__:
+            __has_top__ = True
+            cont.tree_rooted()
+            return cont
+        elif not first_only:
+            cont.tree_rooted()
+            return cont
+    return None
 
 class PassthroughTrait(Variable):
     """A trait that can use another trait for validation, but otherwise is
@@ -65,6 +85,8 @@ class Assembly (Component):
     
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
+        
+        set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
         
         # default Driver executes its workflow once
         self.add('driver', Driver())

@@ -22,7 +22,7 @@ variable. Create a file called ``doe.py`` and copy the following into it:
 
 .. testcode:: simple_model_doe
 
-    from openmdao.main.api import Assembly, set_as_top
+    from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.doegenerators.api import FullFactorial
     from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -79,7 +79,7 @@ if you notice, we specified a ListCasRecorder as part of a list.
 
 .. testsetup:: simple_model_doe_pieces
     
-    from openmdao.main.api import Assembly, set_as_top
+    from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.doegenerators.api import FullFactorial
     from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -130,7 +130,7 @@ To run this analysis, you would do the following:
 
 .. testsetup:: simple_model_doe_run
 
-    from openmdao.main.api import Assembly, set_as_top
+    from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.doegenerators.api import FullFactorial
     from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -167,7 +167,6 @@ To run this analysis, you would do the following:
         import time
         
         analysis = Analysis()
-        set_as_top(analysis)
     
         tt = time.time()
         analysis.run() 
@@ -198,7 +197,6 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
         from numpy import array  
         
         analysis = Analysis()
-        set_as_top(analysis)
     
         tt = time.time()
         analysis.run() 

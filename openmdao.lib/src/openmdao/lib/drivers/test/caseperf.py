@@ -22,7 +22,7 @@ import time
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('mp_distributing').setLevel(logging.DEBUG)
 
-from openmdao.main.api import Assembly, Case, Component, set_as_top
+from openmdao.main.api import Assembly, Case, Component
 from openmdao.main.interfaces import implements, ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
@@ -148,7 +148,7 @@ def run_suite(resource_desc=None, name=None):
     max_servers = ResourceAllocationManager.max_servers(resource_desc)
     print 'max servers', max_servers
 
-    model = set_as_top(CID())
+    model = CID()
     model.driver.reload_model = False
     model.driver.sequential = False
 
