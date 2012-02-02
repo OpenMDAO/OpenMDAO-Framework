@@ -136,7 +136,7 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.architecture = DummyArchitecture()
         # no exception expected since arch isn'g configured yet
         self.asm.architecture = DummyArchitecture()
-        self.asm.configure()
+        self.asm.check_config()
         arch = self.asm.architecture
         try:
             self.asm.architecture = DummyArchitecture()

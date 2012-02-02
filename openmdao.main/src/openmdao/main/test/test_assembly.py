@@ -93,9 +93,8 @@ class Wrapper(Assembly):
         self.add('comp', Comp())
         self.driver.workflow.add('comp')
 
-    def tree_rooted(self):
-        """ Defines passthrough conections once NPSS has loaded. """
-        super(Wrapper, self).tree_rooted()
+    def configure(self):
+        """ Defines passthrough conections"""
         for path in ('x', 'y', 'z'):
             val = self.get('comp.'+path)
             self.create_passthrough('comp.'+path)

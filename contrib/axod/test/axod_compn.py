@@ -155,8 +155,7 @@ class AxodCompn(Component):
         outp.close()
         #print 'After  Case write .........'
                 
-    def tree_rooted(self):
-        super(AxodCompn, self).tree_rooted()
+    def configure(self):
         with self.dir_context:
             self.read_input(self.input_filename)
 

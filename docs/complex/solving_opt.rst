@@ -10,6 +10,7 @@ EngineOptimization class, setting it as the top assembly.
 
     >>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
     >>> prob = EngineOptimization()
+    >>> prob
     <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
 The problem is set up like above. We could run it now, but first let's find out how

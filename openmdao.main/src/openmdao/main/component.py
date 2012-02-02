@@ -268,6 +268,11 @@ class Component (Container):
                         % (path, exc.strerror), OSError)
             else:
                 self.check_path(path, check_dir=True)
+                
+        if self._call_configure:
+            self.configure()
+            self._call_configure = False
+
 
     def _pre_execute (self, force=False):
         """Prepares for execution by calling *tree_rooted()* and *check_config()* if

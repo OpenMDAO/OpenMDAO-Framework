@@ -2,7 +2,7 @@
 
 
 #public symbols
-__all__ = ['Assembly']
+__all__ = ['Assembly', 'set_as_top']
 
 import cStringIO
 import threading
@@ -23,24 +23,28 @@ from openmdao.main.mp_support import is_instance
 _iodict = { 'out': 'output', 'in': 'input' }
 
 import threading
-__has_top__ = False
+import weakref
+
+__top__ = None
 __toplock__ = threading.RLock()
 
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a 
-    Container hierarchy.
+    Container hierarchy.  If first_only is True, then only set this container
+    as a top if a global top doesn't already exist.
     """
     global __toplock__
-    global __has_top__
+    global __top__
+    doit = False
     with __toplock__:
-        if not __has_top__:
-            __has_top__ = True
-            cont.tree_rooted()
-            return cont
+        if __top__ is None:
+            __top__ = weakref.ref(cont)
+            doit = True
         elif not first_only:
-            cont.tree_rooted()
-            return cont
-    return None
+            doit = True
+    if doit and cont._call_tree_rooted:
+        cont.tree_rooted()
+    return cont
 
 class PassthroughTrait(Variable):
     """A trait that can use another trait for validation, but otherwise is
@@ -86,10 +90,10 @@ class Assembly (Component):
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
-        set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
-        
         # default Driver executes its workflow once
         self.add('driver', Driver())
+        
+        set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
         
     def add(self, name, obj):
         """Call the base class *add*.  Then,

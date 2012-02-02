@@ -141,6 +141,7 @@ class Container(HasTraits):
         super(Container, self).__init__()
         
         self._call_tree_rooted = True
+        self._call_configure = True
         
         self._managers = {}  # Object manager for remote access by authkey.
         self._depgraph = _ContainerDepends()
@@ -568,6 +569,10 @@ class Container(HasTraits):
             self.raise_exception("cannot remove '%s': not found"%
                                  name, AttributeError)
 
+    @rbac(('owner', 'user'))
+    def configure(self):
+        pass
+    
     @rbac(('owner', 'user'))
     def tree_rooted(self):
         """Called after the hierarchy containing this Container has been
