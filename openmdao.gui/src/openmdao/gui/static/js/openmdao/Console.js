@@ -128,9 +128,9 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     }
     
     // ask model for an update whenever something changes
-    //model.addListener(update)
+    model.addListener(update)
     
-    /** TESTING WEBSOCKET STUFF */
+    /** TESTING WEBSOCKET STUFF * /
     debug.info('making ajax call to get output WS...');
     jQuery.ajax({
         type: 'GET',
