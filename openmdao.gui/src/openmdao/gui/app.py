@@ -5,7 +5,7 @@ from optparse import OptionParser
 
 # zmq
 import zmq
-from zmq.eventloop import ioloop, zmqstream
+from zmq.eventloop import ioloop
 ioloop.install()
 
 # tornado
@@ -30,7 +30,7 @@ class WebApp(web.Application):
         handlers = [
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
-            web.url(r'/',       proj.IndexHandler),            
+            web.url(r'/',       web.RedirectHandler, {"url":"/projects", "permanent":False}),           
         ]        
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)

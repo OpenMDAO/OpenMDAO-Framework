@@ -31,7 +31,6 @@ class IndexHandler(BaseHandler):
     '''
     @web.authenticated
     def get(self):
-        print 'projdb index handler'
         dbuser = User.objects.get(username__exact=self.current_user)
         project_list = Project.objects.filter(user=dbuser)
         self.render('projdb/project_list.html', 

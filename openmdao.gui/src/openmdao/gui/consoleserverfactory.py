@@ -32,10 +32,13 @@ from zope.interface import implementedBy
 
 import networkx as nx
 
+from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.util import *
 
 import zmq
+from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
+ioloop.install()
 
 import random
 
@@ -140,6 +143,11 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = ''
         self.proj = None
         self.exc_info = None
+        
+        self.cout_socket = None
+        self.cout_timer = None
+        
+        #ioloop.IOLoop.instance().start()
 
     def error(self,err,exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -256,29 +264,37 @@ class ConsoleServer(cmd.Cmd):
     def get_output(self):
         ''' get any pending output and clear the outputput buffer
         '''
-        output = self.cout.getvalue()     
+        output = self.cout.getvalue()
         self.cout.truncate(0)
         return output
 
-    def get_output_stream(self):
-        print "getting context"
-        context = zmq.Context()
-        print "got context:",context
-        cout_socket = context.socket(zmq.PUB)
-        print "got socket:",cout_socket
-        addr = "tcp://%s:%i" % (ip, port)
-        print "Starting output stream on: %s" % addr
-        cout_socket.connect(addr)
-        cout_socket.setsockopt(zmq.SUBSCRIBE, '')
-        def publish_cout():
-            txt = self.cserver.get_output()
-            if len(txt) > 0:
-                print "output (len="+str(len(txt))+"):\n",txt
-                self.write_message(txt)
-        loop  = ioloop.IOLoop()
-        timer = ioloop.PeriodicCallback(publish_cout, 1000, loop)
-        timer.start()
-        return ZMQStream(cout_socket)
+    def publish_output(self):
+        ''' publish any pending output and clear the outputput buffer
+        '''
+        try:
+            output = self.cout.getvalue()            
+            self.cout_socket.send(output)
+            self.cout.truncate(0)
+        except Exception, err:
+            self.error(err,sys.exc_info())
+
+    def get_output_address(self):
+        ''' open a ZMQ socket and start publishing cout
+            return the port it's running on
+        '''
+        try:
+            context = zmq.Context()
+            self.cout_socket = context.socket(zmq.PUB)            
+            port = get_unused_ip_port()
+            addr = "tcp://127.0.0.1:%i" % port
+            print "binding cout publisher on %s" % addr
+            self.cout_socket.bind(addr)
+            
+            self.cout_timer = ioloop.PeriodicCallback(self.publish_output, 1000)
+            self.cout_timer.start()
+            return addr
+        except Exception, err:
+            self.error(err,sys.exc_info())
         
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 

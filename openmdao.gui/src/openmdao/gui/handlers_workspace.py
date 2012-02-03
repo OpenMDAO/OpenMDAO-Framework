@@ -3,6 +3,9 @@ import time
 import jsonpickle
 import threading
 
+import zmq
+from zmq.eventloop.zmqstream import ZMQStream
+
 from tornado import web
 from tornado import websocket
 
@@ -24,6 +27,7 @@ class AddOnsHandler(BaseHandler):
     addons_url = 'http://openmdao.org/dists'
     addons_url = 'http://torpedo.grc.nasa.gov:31005/'
     
+    @web.authenticated
     def post(self):
         ''' easy_install the POST'd addon
         '''
@@ -38,6 +42,7 @@ class AddOnsHandler(BaseHandler):
             cserver.install_addon(self.addons_url, distribution)
             self.render('closewindow.html')
             
+    @web.authenticated
     def get(self):
         ''' show available addons, prompt for addon to be installed
         '''
@@ -46,6 +51,7 @@ class AddOnsHandler(BaseHandler):
                      addons_url=self.addons_url, addon_form=form)
         
 class GeometryHandler(BaseHandler):
+    @web.authenticated
     def get(self):
         ''' geometry viewer
         '''
@@ -53,13 +59,15 @@ class GeometryHandler(BaseHandler):
         self.render('workspace/o3dviewer.html',filename=filename)
  
 class CloseHandler(BaseHandler):
+    @web.authenticated
     def get(self):
-        self.application.server_mgr.delete_server(self.get_sessionid())
+        self.delete_server()
         self.redirect('/')
 
 class CommandHandler(BaseHandler):
     ''' get the command, send it to the cserver, return response
     '''
+    @web.authenticated
     def post(self):
         history = ''
         command = self.get_argument('command')
@@ -77,12 +85,14 @@ class CommandHandler(BaseHandler):
                 history = history + str(result) + '\n'
         self.write(history)
         
+    @web.authenticated
     def get(self):
         self.write('') # not used for now, could render a form
 
 class ComponentHandler(BaseHandler):
     ''' add, remove or get a component
     '''
+    @web.authenticated
     def post(self,name):
         type = self.get_argument('type')
         if 'parent' in self.request.arguments.keys():
@@ -98,6 +108,7 @@ class ComponentHandler(BaseHandler):
             result = sys.exc_info()
         self.write(result)
         
+    @web.authenticated
     def delete(self,name):
         cserver = self.get_server()
         result = ''
@@ -108,6 +119,7 @@ class ComponentHandler(BaseHandler):
             result = sys.exc_info()
         self.write(result)
         
+    @web.authenticated
     def get(self,name):
         cserver = self.get_server()
         attr = {}
@@ -124,6 +136,7 @@ class ComponentHandler(BaseHandler):
         self.write(attr)
 
 class ComponentsHandler(BaseHandler):
+    @web.authenticated
     def get(self):
         cserver = self.get_server()
         json = cserver.get_components()
@@ -132,6 +145,7 @@ class ComponentsHandler(BaseHandler):
 class ConnectionsHandler(BaseHandler):
     ''' get/set connections between two components in an assembly
     '''
+    @web.authenticated
     def post(self,pathname):
         result = ''
         try:
@@ -145,6 +159,7 @@ class ConnectionsHandler(BaseHandler):
             result = sys.exc_info()
         self.write(result)
         
+    @web.authenticated
     def get(self,pathname):
         cserver = self.get_server()
         connections = {}
@@ -161,6 +176,7 @@ class StructureHandler(BaseHandler):
         namespace if no pathname is specified, consisting of the list
         of components and the connections between them
     '''
+    @web.authenticated
     def get(self,name):
         cserver = self.get_server()
         json = cserver.get_structure(name)
@@ -170,6 +186,7 @@ class ExecHandler(BaseHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
     '''
+    @web.authenticated
     def post(self):
         result = ''
         cserver = self.get_server()
@@ -195,8 +212,9 @@ class ExitHandler(BaseHandler):
         TODO: kill server based on PID per example at:
         http://blog.perplexedlabs.com/2010/07/01/pythons-tornado-has-swept-me-off-my-feet/
     '''
+    @web.authenticated
     def get(self):
-        self.application.server_mgr.delete_server(self.get_sessionid())        
+        self.delete_server()        
         self.render('closewindow.html')
         time.sleep(2)
         quit()
@@ -204,6 +222,7 @@ class ExitHandler(BaseHandler):
 class FileHandler(BaseHandler):
     ''' get/set the specified file/folder
     '''
+    @web.authenticated
     def post(self,filename):
         cserver = self.get_server()
         isFolder = self.get_argument('isFolder',default=None)
@@ -213,10 +232,12 @@ class FileHandler(BaseHandler):
             contents = self.get_argument('contents',default='')
             self.write(str(cserver.write_file(filename,contents)))
             
+    @web.authenticated
     def delete(self,filename):
         cserver = self.get_server()
         self.write(str(cserver.delete_file(filename)))
         
+    @web.authenticated
     def get(self,filename):
         cserver = self.get_server()
         self.write(str(cserver.get_file(filename)))
@@ -224,6 +245,7 @@ class FileHandler(BaseHandler):
 class FilesHandler(BaseHandler):
     ''' get a list of the users files in JSON format
     '''
+    @web.authenticated
     def get(self):
         cserver = self.get_server()
         filedict = cserver.get_files()
@@ -234,10 +256,12 @@ class ModelHandler(BaseHandler):
     ''' POST: get a new model (delete existing console server)
         GET:  get JSON representation of the model
     '''
+    @web.authenticated
     def post(self):
-        self.application.server_mgr.delete_server(self.get_sessionid())
+        self.delete_server()
         self.redirect('/')
         
+    @web.authenticated
     def get(self):
         cserver = self.get_server()
         json = cserver.get_JSON()
@@ -246,6 +270,7 @@ class ModelHandler(BaseHandler):
 class OutputHandler(BaseHandler):
     ''' get any outstanding output from the model
     '''
+    @web.authenticated
     def get(self):
         cserver = self.get_server()
         self.write(cserver.get_output())
@@ -256,11 +281,13 @@ class ProjectHandler(BaseHandler):
               
         POST: save project archive of the current project
     '''
+    @web.authenticated
     def post(self):
         cserver = self.get_server()
         cserver.save_project()
         self.write('Saved.')
         
+    @web.authenticated
     def get(self):
         filename = self.get_argument('filename',default=None)
         if filename:
@@ -268,8 +295,8 @@ class ProjectHandler(BaseHandler):
         else:
             filename = self.get_secure_cookie('filename')
         if filename:
-            self.application.server_mgr.delete_server(self.get_sessionid()) # delete old server
-            cserver = self.get_server()        
+            self.delete_server()
+            cserver = self.get_server()
             cserver.load_project(MEDIA_ROOT+'/'+filename)
             self.redirect(self.application.reverse_url('workspace'))
         else:
@@ -278,6 +305,7 @@ class ProjectHandler(BaseHandler):
 class PlotHandler(BaseHandler):
     ''' GET:  open a websocket server to supply updated valaues for the specified variable        
     '''
+    @web.authenticated
     def get(self,name):
         cserver = self.get_server()
         port = cserver.get_varserver(name)
@@ -286,6 +314,7 @@ class PlotHandler(BaseHandler):
 class TypesHandler(BaseHandler):
     ''' get hierarchy of package/types to populate the Palette
     '''
+    @web.authenticated
     def get(self):
         cserver = self.get_server()
         types = cserver.get_available_types()
@@ -298,6 +327,7 @@ class TypesHandler(BaseHandler):
 class UploadHandler(BaseHandler):
     ''' file upload utility
     '''
+    @web.authenticated
     def post(self):
         cserver = self.get_server()
         file = self.request.files['myfile'][0]
@@ -307,10 +337,12 @@ class UploadHandler(BaseHandler):
                 cserver.add_file(filename,file['body'])
                 self.render('closewindow.html')
 
+    @web.authenticated
     def get(self):
         self.render('workspace/upload.html')
 
 class WorkflowHandler(BaseHandler):
+    @web.authenticated
     def get(self,name):
         cserver = self.get_server()
         json = cserver.get_workflow(name)
@@ -319,37 +351,45 @@ class WorkflowHandler(BaseHandler):
 class WorkspaceHandler(BaseHandler):
     ''' render the workspace
     '''
+    @web.authenticated
     def get(self):
         self.render('workspace/workspace.html')
 
 class TestHandler(BaseHandler):
     ''' initialize the server manager &  render the workspace
     '''
+    @web.authenticated
     def get(self):
         self.render('workspace/test.html')
 
 class OutStreamHandler(websocket.WebSocketHandler):
     def open(self):
-        print ' outstream open'
         sessionid = self.get_cookie("sessionid")
         cserver = self.application.server_mgr.console_server(sessionid)
-        print 'sessionid:',sessionid,',cserver:',cserver
-        print 'opening outstream websocket'
         try:
-            self.stream = cserver.get_output_stream()
-            print 'got outstream:',self.stream
-        except web.HTTPError,err:
-            print 'error getting outstream:',err
-            if not self.stream.closed():
+            context = zmq.Context()
+            socket = context.socket(zmq.SUB)
+            addr = cserver.get_output_address()
+            socket.connect(addr)
+            socket.setsockopt(zmq.SUBSCRIBE, "")
+            print 'OutStreamHandler.open() creating stream on',addr
+            self.stream = ZMQStream(socket)
+        except Exception, err:
+            print '    error getting outstream:',err
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            traceback.print_tb(exc_traceback, limit=30)   
+            if self.stream and not self.stream.closed():
                 self.stream.close()
             self.close()
         else:
-            print 'setting callback on outstream:',self.stream
             self.stream.on_recv(self._write_message)
+            cserver.publish_output()
 
     def _write_message(self, message):
-        print 'writing outstream message: %S' % message
-        self.write_message(message)
+        print 'OutStreamHandler._write_message()', message
+        for part in message:
+            self.write_message(part)
         
     def on_message(self, message):
         print 'outstream message received: %s' % message
