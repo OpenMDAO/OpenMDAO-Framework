@@ -25,15 +25,13 @@ class SellarBLISS(Assembly):
     z_store = Array([0,0],dtype=Float)
     x1_store = Float(0.0)
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
                 
-        super(SellarBLISS, self).__init__()        
-
         # Disciplines
         self.add('dis1', sellar.Discipline1())
         self.add('dis2', sellar.Discipline2())

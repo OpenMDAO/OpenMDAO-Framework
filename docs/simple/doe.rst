@@ -31,8 +31,7 @@ variable. Create a file called ``doe.py`` and copy the following into it:
     
     class Analysis(Assembly): 
     
-        def __init__(self): 
-            super(Analysis,self).__init__()
+        def configure(self):
             
             self.add('paraboloid',Paraboloid())
             
@@ -88,8 +87,7 @@ if you notice, we specified a ListCasRecorder as part of a list.
     
     class Analysis(Assembly): 
     
-        def __init__(self): 
-            super(Analysis,self).__init__()
+        def configure(self):
             
             self.add('paraboloid',Paraboloid())
             
@@ -140,8 +138,7 @@ To run this analysis, you would do the following:
     
     class Analysis(Assembly): 
         
-        def __init__(self): 
-            super(Analysis,self).__init__()
+        def configure(self):
             
             self.add('paraboloid',Paraboloid())
             

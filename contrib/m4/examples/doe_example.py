@@ -15,8 +15,7 @@ class MyModel(Assembly):
     """ Simple M4 DOE example.  """
 
     #name='M4_DOE_example'
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
 
         # Specify DOE driver.
         doe = self.add('M4_DOE', m4.doe.DOE())

@@ -15,10 +15,7 @@ from openmdao.examples.enginedesign.vehicle import Vehicle
 class EngineOptimization(Assembly):
     """Optimization of a Vehicle."""
     
-    def __init__(self):
-        """ Creates a new Assembly for vehicle performance optimization."""
-        
-        super(EngineOptimization, self).__init__()
+    def configure(self):
 
         # pylint: disable-msg=E1101
         

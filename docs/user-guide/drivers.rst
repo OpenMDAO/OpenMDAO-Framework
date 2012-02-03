@@ -29,16 +29,13 @@ the CONMINdriver optimizer.
 .. testcode:: Parameter_API
 
     from openmdao.examples.enginedesign.vehicle import Vehicle
-    from openmdao.main.api import Assembly
+    from openmdao.main.api import Assembly, set_as_top
     from openmdao.lib.drivers.api import CONMINdriver
 
     class EngineOpt(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
-        def __init__(self):
-            """ Creates a new Assembly containing a Vehicle and an optimizer"""
-        
-            super(EngineOptimization, self).__init__()
+        def configure(self):
 
             # Create Vehicle component instances
             self.add('vehicle', Vehicle())
@@ -55,7 +52,8 @@ function.
 .. testsetup:: Parameter_API
     
     from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-    self = EngineOptimization()
+    from openmdao.main.api import set_as_top
+    self = set_as_top(EngineOptimization())
     self.driver.clear_parameters()
 
 .. testcode:: Parameter_API
@@ -90,7 +88,8 @@ single parameter, and clear all parameters.
 .. doctest:: more_parameter_interface
 
     >>> from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
-    >>> top = OptimizationConstrained()
+    >>> from openmdao.main.api import set_as_top
+    >>> top = set_as_top(OptimizationConstrained())
     >>> top.driver.list_param_targets()
     ['paraboloid.x', 'paraboloid.y']
     >>> top.driver.remove_parameter('paraboloid.x')
@@ -144,10 +143,10 @@ syntax includes an equal sign in the expression.
 .. testsetup:: Parameter_API2
 
     from openmdao.lib.drivers.api import BroydenSolver
-    from openmdao.main.api import Assembly
+    from openmdao.main.api import Assembly, set_as_top
     from openmdao.lib.optproblems import sellar
     
-    self = Assembly()
+    self = set_as_top(Assembly())
     self.add('dis1', sellar.Discipline1())
     self.add('driver', BroydenSolver())
 
@@ -224,7 +223,8 @@ dict and to query for the objective values.
 .. doctest:: more_objective_interface
 
     >>> from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
-    >>> model = OptimizationUnconstrained()
+    >>> from openmdao.main.api import set_as_top
+    >>> model = set_as_top(OptimizationUnconstrained())
     >>> model.driver.get_objectives().keys()
     ['paraboloid.f_xy']
     >>> model.driver.eval_objectives()

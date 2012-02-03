@@ -75,8 +75,7 @@ class Model(Assembly):
     infile = File(iotype='in', local_path='input')
     outfile = File(iotype='out', path='output')
 
-    def __init__(self):
-        super(Model, self).__init__()
+    def configure(self):
         self.add('a', Unique())
         self.add('b', Unique())
         self.driver.workflow.add(['a', 'b'])
@@ -94,6 +93,7 @@ class TestCase(unittest.TestCase):
             out.write(INP_DATA)
         if os.path.exists(ENV_FILE):
             os.remove(ENV_FILE)
+        dum = Assembly() # create this here to prevent any Assemblies in tests to be 'first'
         
     def tearDown(self):
         for directory in ('a', 'b'):
@@ -291,10 +291,13 @@ class TestCase(unittest.TestCase):
         logging.debug('test_unique')
 
         model = Model()
-        for comp in (model.a, model.b):
-            self.assertEqual(comp.create_instance_dir, True)
-        self.assertNotEqual(model.a.directory, 'a')
-        self.assertNotEqual(model.b.directory, 'b')
+        ## This part isn't valid any more because Assemblies now do not configure
+        ## themselves unless they're part of a rooted hierarchy. That means in this
+        ## case that model.a and model.b won't exist until set_as_top is called on model
+        #for comp in (model.a, model.b):
+            #self.assertEqual(comp.create_instance_dir, True)
+        #self.assertNotEqual(model.a.directory, 'a')
+        #self.assertNotEqual(model.b.directory, 'b')
 
         set_as_top(model)
         for comp in (model.a, model.b):

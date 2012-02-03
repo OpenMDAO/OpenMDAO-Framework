@@ -18,8 +18,7 @@ from m4.dummy_components import Model_A2d, Model_B2d
 class MyModel(Assembly):
     """ Simple M4 variable fidelity example.  """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
 
         # Specify DOE.
         doe = self.add('M4_DOE', DOE())

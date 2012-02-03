@@ -42,11 +42,9 @@ socket in DrivingSim:
         class EngineOptimization(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly for vehicle performance optimization."""
                 
-                super(EngineOptimization, self).__init__()
-        
                 # pylint: disable-msg=E1101
                 
                 # Create CONMIN Optimizer instance

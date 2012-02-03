@@ -32,7 +32,7 @@ are instantiated and the workflow is defined.
    
 .. testcode:: IDF_parts
 
-        from openmdao.main.api import Assembly
+        from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
         
         from openmdao.lib.optproblems import sellar
@@ -40,15 +40,13 @@ are instantiated and the workflow is defined.
         class SellarIDF(Assembly): #TEST
             """ Optimization of the Sellar problem using IDF"""
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly with this problem
                 
                 Optimal Design at (1.9776, 0, 0)
                 
                 Optimal Objective = 3.18339"""
                         
-                super(SellarIDF, self).__init__()
-        
                 # create Optimizer instance
                 self.add('driver', CONMINdriver())
         
@@ -70,7 +68,7 @@ constraint because outputs are usually nonlinear functions of the design variabl
 .. testcode:: IDF_parts
     :hide:
     
-    self = SellarIDF()
+    self = set_as_top(SellarIDF())
 
 .. testcode:: IDF_parts
 
@@ -130,15 +128,13 @@ optimization.
         class SellarIDF(Assembly):
             """ Optimization of the Sellar problem using IDF"""
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly with this problem
                 
                 Optimal Design at (1.9776, 0, 0)
                 
                 Optimal Objective = 3.18339"""
                         
-                super(SellarIDF, self).__init__()
-        
                 # create Optimizer instance
                 self.add('driver', CONMINdriver())
         

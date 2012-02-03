@@ -22,8 +22,7 @@ surrogate modelers in ``openmdao.lib.surrogatemodels``.
    from openmdao.lib.surrogatemodels.api import KrigingSurrogate,LogisticRegression
 
    class Simulation(Assembly):
-       def __init__(self): 
-           super(Simulation,self).__init__(self)
+       def configure(self):
 
            self.add('meta_model',MetaModel())
            #using KriginSurrogate for all outputs                
@@ -47,8 +46,7 @@ outputs as whatever component is put into the model slot.
     from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly):
-        def __init__(self): 
-            super(Simulation,self).__init__(self)
+        def configure(self):
 
             self.add('meta_model',MetaModel())
             self.meta_model.surrogate = {'default':KrigingSurrogate()}
@@ -81,8 +79,7 @@ in the list will be mirrored by MetaModel.
     from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly):
-        def __init__(self):
-            super(Simulation,self).__init__(self)
+        def configure(self):
 
             self.add('meta_model',MetaModel())
             self.meta_model.surrogate = {'default':KrigingSurrogate()}
@@ -105,8 +102,7 @@ or
 
     class Simulation(Assembly):
 
-        def __init__(self): 
-            super(Simulation,self).__init__(self)
+        def configure(self):
 
             self.add('meta_model',MetaModel())
             self.meta_model.surrogate = {'default': KrigingSurrogate()}
@@ -152,8 +148,7 @@ it will trigger its behavior regardless of the value you set it to.
     from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly):
-        def __init__(self): 
-            super(Simulation,self).__init__()
+        def configure(self):
 
             self.add('meta_model',MetaModel())
             self.meta_model.surrogate = {'default':KrigingSurrogate()}
@@ -185,8 +180,7 @@ more detailed example can be found in the ``single_objective_ei`` example under 
     from openmdao.lib.optproblems.branin import BraninComponent
 
     class Simulation(Assembly): 
-        def __init__(self,doc=None): 
-            super(Simulation,self).__init__()
+        def configure(self):
 
             self.add('meta_model',MetaModel())
             self.meta_model.surrogate = {'default':KrigingSurrogate()}

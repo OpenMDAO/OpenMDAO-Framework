@@ -37,8 +37,7 @@ class MyDriver(Driver):
 
         
 class Analysis(Assembly): 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
+    def configure(self):
         
         self._tdir = mkdtemp()
         

@@ -74,10 +74,7 @@ top level assembly would look like this:
         class VehicleSim(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
-                """ Creates a new Assembly for vehicle performance optimization."""
-                
-                super(VehicleSim, self).__init__()
+            def configure(self):
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())
@@ -181,10 +178,7 @@ Now, let's build a new assembly that includes all three simulations run sequenti
         class VehicleSim2(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
-                """ Creates a new Assembly for vehicle performance optimization."""
-                
-                super(VehicleSim2, self).__init__()
+            def configure(self):
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())

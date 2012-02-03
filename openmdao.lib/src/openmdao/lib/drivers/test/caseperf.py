@@ -105,9 +105,12 @@ class CID(Assembly):
     def __init__(self, extra_reqs=None):
         """ Create assembly with Sleeper as sole component. """
         super(CID, self).__init__()
+        self._extra_reqs = extra_reqs
+        
+    def configure(self):
         self.add('sleeper', Sleeper())
         self.add('driver', CaseIteratorDriver())
-        self.driver.extra_reqs = extra_reqs
+        self.driver.extra_reqs = self._extra_reqs
         self.driver.workflow.add('sleeper')
         self.driver.log_level = logging.DEBUG
 

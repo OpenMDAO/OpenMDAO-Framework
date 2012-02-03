@@ -35,7 +35,7 @@ def set_as_top(cont, first_only=False):
     global __has_top__
     doit = False
     with __toplock__:
-        if __has_top__ is False:
+        if __has_top__ is False and isinstance(cont, Assembly):
             __has_top__ = True
             doit = True
         elif not first_only:

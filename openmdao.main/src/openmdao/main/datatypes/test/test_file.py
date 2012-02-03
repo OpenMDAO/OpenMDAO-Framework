@@ -58,8 +58,7 @@ class Passthrough(Component):
 class Middle(Assembly):
     """ Intermediary which passes-on files. """
 
-    def __init__(self, *args, **kwargs):
-        super(Middle, self).__init__(*args, **kwargs)
+    def configure(self):
 
         self.add('passthrough', Passthrough(directory='Passthrough'))
         self.driver.workflow.add('passthrough')

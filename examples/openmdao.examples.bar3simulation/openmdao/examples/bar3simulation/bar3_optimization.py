@@ -35,10 +35,7 @@ class Bar3Optimization(Assembly):
     frequency_allowable = Float(14.1421, iotype='in', units='Hz',
                         desc='Frequency limitation in Hertz')
     
-    def __init__(self):
-        """ Creates a new Assembly containing a Bar3_Truss and an optimizer"""
-        
-        super(Bar3Optimization, self).__init__()
+    def configure(self):
 
         # Create CONMIN Optimizer instance
         self.add('driver', CONMINdriver())

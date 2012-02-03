@@ -13,12 +13,10 @@ from openmdao.examples.simple.paraboloid import Paraboloid
 class OptimizationConstrained(Assembly):
     """Constrained optimization of the Paraboloid with CONMIN."""
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
         # pylint: disable-msg=E1101
-        
-        super(OptimizationConstrained, self).__init__()
 
         # Create Paraboloid component instances
         self.add('paraboloid', Paraboloid())

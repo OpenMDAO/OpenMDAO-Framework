@@ -9,15 +9,13 @@ from openmdao.lib.optproblems import sellar
 class SellarIDF(Assembly):
     """ Optimization of the Sellar problem using IDF"""
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
                 
-        super(SellarIDF, self).__init__()
-
         # create Optimizer instance
         self.add('driver', CONMINdriver())
 
