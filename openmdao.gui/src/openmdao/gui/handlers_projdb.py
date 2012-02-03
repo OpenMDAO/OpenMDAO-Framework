@@ -3,9 +3,7 @@ import os.path
 from time import strftime
 
 # tornado
-import tornado.httpserver
-import tornado.ioloop
-import tornado.web
+from tornado import web
 
 # using django ORM, etc
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
@@ -15,6 +13,8 @@ from django.contrib.auth.models import User
 from openmdao.gui.settings import MEDIA_ROOT
 from openmdao.gui.projdb.models import Project
 from django.shortcuts import get_object_or_404
+
+from openmdao.gui.handlers import BaseHandler
 
 class ProjectForm(forms.Form):
     projectname = forms.CharField(label='Project Name')
@@ -26,29 +26,12 @@ class ProjectFileForm(forms.Form):
     filename    = forms.HiddenInput()
 
     
-class BaseHandler(tornado.web.RequestHandler):
-    def get_current_user(self):
-        return self.get_secure_cookie("user")
-
-class LoginHandler(BaseHandler):
-    ''' lets users log into the application simply by specifying a nickname,
-        which is then saved in a cookie:
-    '''
-    def get(self):
-        self.write('<html><body><form action="/login" method="post">'
-                   'Name: <input type="text" name="name">'
-                   '<input type="submit" value="Sign in">'
-                   '</form></body></html>')
-
-    def post(self):
-        self.set_secure_cookie("user", self.get_argument("name"))
-        self.redirect("/")
-
 class IndexHandler(BaseHandler):
     ''' get project list
     '''
-    @tornado.web.authenticated
+    @web.authenticated
     def get(self):
+        print 'projdb index handler'
         dbuser = User.objects.get(username__exact=self.current_user)
         project_list = Project.objects.filter(user=dbuser)
         self.render('projdb/project_list.html', 
@@ -57,7 +40,7 @@ class IndexHandler(BaseHandler):
 class DeleteHandler(BaseHandler):
     ''' delete a project
     '''
-    @tornado.web.authenticated
+    @web.authenticated
     def post(self, project_id):
         p = get_object_or_404(Project, pk=project_id)
         if p.filename:
@@ -68,14 +51,14 @@ class DeleteHandler(BaseHandler):
         p.delete()
         self.redirect('/')
 
-    @tornado.web.authenticated
+    @web.authenticated
     def get(self, project_id):
         self.redirect('/')
 
 class DetailHandler(BaseHandler):
     ''' get/set project details
     '''
-    @tornado.web.authenticated
+    @web.authenticated
     def post(self, project_id):
         form_data = {}
         for field in ['projectname', 'description', 'version', 'shared']:
@@ -110,7 +93,7 @@ class DetailHandler(BaseHandler):
             print 'FORM NOT VALID'  # TODO: better error handling
             self.redirect(self.request.uri)
 
-    @tornado.web.authenticated
+    @web.authenticated
     def get(self, project_id):
         p = get_object_or_404(Project, pk=project_id)
         # not a POST or validation failed
@@ -126,11 +109,11 @@ class DetailHandler(BaseHandler):
         self.render('projdb/project_detail.html',
                     project=p, project_form=proj_form, file_form=file_form)
 
-# FIXME
+# FIXME: returns an error even though it works
 class DownloadHandler(BaseHandler):
     ''' download a copy of the project
     '''
-    @tornado.web.authenticated
+    @web.authenticated
     def get(self, project_id):
         p = get_object_or_404(Project, pk=project_id)
         if p.filename:
@@ -154,7 +137,7 @@ class DownloadHandler(BaseHandler):
 class NewHandler(BaseHandler):
     ''' create a new (empty) project
     '''
-    @tornado.web.authenticated
+    @web.authenticated
     def get(self):
         dbuser = User.objects.get(username__exact=self.current_user)
         p = Project(user=dbuser)
@@ -175,7 +158,7 @@ class NewHandler(BaseHandler):
 class AddHandler(BaseHandler):
     ''' upload a file and add it to the project database
     '''
-    @tornado.web.authenticated
+    @web.authenticated
     def post(self):
         file = self.request.files['myfile'][0]
         if file:
@@ -195,6 +178,15 @@ class AddHandler(BaseHandler):
                 self.redirect('/projects/'+str(p.id))
         self.redirect('')
 
-    @tornado.web.authenticated
+    @web.authenticated
     def get(self):
         self.render('projdb/add_project.html')
+
+handlers = [            
+    web.url(r'/projects/?',                              IndexHandler),
+    web.url(r'/projects/(?P<project_id>\d+)/?',          DetailHandler),
+    web.url(r'/projects/new/$',                          NewHandler),
+    web.url(r'/projects/add/$',                          AddHandler),
+    web.url(r'/projects/delete/(?P<project_id>\d+)/?',   DeleteHandler),
+    web.url(r'/projects/download/(?P<project_id>\d+)/?', DownloadHandler),
+]

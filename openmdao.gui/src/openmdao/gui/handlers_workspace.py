@@ -3,12 +3,8 @@ import time
 import jsonpickle
 import threading
 
-import tornado.httpserver
-import tornado.websocket
-import tornado.ioloop
-import tornado.web
-
-# from tornadio2 import SocketConnection, TornadioRouter, SocketServer
+from tornado import web
+from tornado import websocket
 
 from django import forms
 
@@ -16,13 +12,8 @@ from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import *
 from openmdao.gui.settings import MEDIA_ROOT
-from openmdao.gui.consoleserverfactory import ConsoleServerFactory
-server_mgr = ConsoleServerFactory()
-print 'server_mgr:',server_mgr
+from openmdao.gui.handlers import BaseHandler
 
-class BaseHandler(tornado.web.RequestHandler):
-    def get_current_user(self):
-        return self.get_secure_cookie("user")
 
 class AddonForm(forms.Form):
     distribution = forms.CharField(label='Distribution')
@@ -43,7 +34,7 @@ class AddOnsHandler(BaseHandler):
         form = AddonForm(form_data)
         if form.is_valid():
             distribution = form.cleaned_data['distribution']
-            cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+            cserver = self.get_server()
             cserver.install_addon(self.addons_url, distribution)
             self.render('closewindow.html')
             
@@ -63,7 +54,7 @@ class GeometryHandler(BaseHandler):
  
 class CloseHandler(BaseHandler):
     def get(self):
-        server_mgr.delete_server(self.get_cookie('sessionid'))
+        self.application.server_mgr.delete_server(self.get_sessionid())
         self.redirect('/')
 
 class CommandHandler(BaseHandler):
@@ -77,7 +68,7 @@ class CommandHandler(BaseHandler):
             history = history + '>>> '+str(command) + '\n'
             result = ''
             try:
-                cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+                cserver = self.get_server()
                 result = cserver.onecmd(command)
             except Exception,e:
                 print e
@@ -100,7 +91,7 @@ class ComponentHandler(BaseHandler):
             parent = ''
         result = ''
         try:
-            cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+            cserver = self.get_server()
             cserver.add_component(name,type,parent);
         except Exception,e:
             print e
@@ -108,7 +99,7 @@ class ComponentHandler(BaseHandler):
         self.write(result)
         
     def delete(self,name):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         result = ''
         try:
             result = cserver.onecmd('del '+name)
@@ -118,7 +109,7 @@ class ComponentHandler(BaseHandler):
         self.write(result)
         
     def get(self,name):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         attr = {}
         try:
             attr = cserver.get_attributes(name)
@@ -134,7 +125,7 @@ class ComponentHandler(BaseHandler):
 
 class ComponentsHandler(BaseHandler):
     def get(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_components()
         self.write(json)
 
@@ -147,7 +138,7 @@ class ConnectionsHandler(BaseHandler):
             src_name = self.get_argument('src_name')
             dst_name = self.get_argument('dst_name')
             connections = self.get_argument('connections')
-            cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+            cserver = self.get_server()
             cserver.set_connections(pathname,src_name,dst_name,connections);
         except Exception,e:
             print e
@@ -155,7 +146,7 @@ class ConnectionsHandler(BaseHandler):
         self.write(result)
         
     def get(self,pathname):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         connections = {}
         try:
             src_name = self.get_argument('src_name')
@@ -171,7 +162,7 @@ class StructureHandler(BaseHandler):
         of components and the connections between them
     '''
     def get(self,name):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_structure(name)
         self.write(json)
 
@@ -181,7 +172,7 @@ class ExecHandler(BaseHandler):
     '''
     def post(self):
         result = ''
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         filename = self.get_argument('filename',default=None)
         if filename:
             try:
@@ -205,7 +196,7 @@ class ExitHandler(BaseHandler):
         http://blog.perplexedlabs.com/2010/07/01/pythons-tornado-has-swept-me-off-my-feet/
     '''
     def get(self):
-        server_mgr.delete_server(self.get_cookie('sessionid'))        
+        self.application.server_mgr.delete_server(self.get_sessionid())        
         self.render('closewindow.html')
         time.sleep(2)
         quit()
@@ -214,7 +205,7 @@ class FileHandler(BaseHandler):
     ''' get/set the specified file/folder
     '''
     def post(self,filename):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         isFolder = self.get_argument('isFolder',default=None)
         if isFolder:
             self.write(cserver.ensure_dir(filename))
@@ -223,18 +214,18 @@ class FileHandler(BaseHandler):
             self.write(str(cserver.write_file(filename,contents)))
             
     def delete(self,filename):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         self.write(str(cserver.delete_file(filename)))
         
     def get(self,filename):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         self.write(str(cserver.get_file(filename)))
 
 class FilesHandler(BaseHandler):
     ''' get a list of the users files in JSON format
     '''
     def get(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         filedict = cserver.get_files()
         json = jsonpickle.encode(filedict)
         self.write(json)
@@ -244,11 +235,11 @@ class ModelHandler(BaseHandler):
         GET:  get JSON representation of the model
     '''
     def post(self):
-        server_mgr.delete_server(session.session.session_key)
+        self.application.server_mgr.delete_server(self.get_sessionid())
         self.redirect('/')
         
     def get(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_JSON()
         self.write(json)
 
@@ -256,7 +247,7 @@ class OutputHandler(BaseHandler):
     ''' get any outstanding output from the model
     '''
     def get(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         self.write(cserver.get_output())
 
 class ProjectHandler(BaseHandler):
@@ -266,7 +257,7 @@ class ProjectHandler(BaseHandler):
         POST: save project archive of the current project
     '''
     def post(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         cserver.save_project()
         self.write('Saved.')
         
@@ -277,8 +268,8 @@ class ProjectHandler(BaseHandler):
         else:
             filename = self.get_secure_cookie('filename')
         if filename:
-            server_mgr.delete_server(self.get_cookie('sessionid')) # delete old server
-            cserver = server_mgr.console_server(self.get_cookie('sessionid'))        
+            self.application.server_mgr.delete_server(self.get_sessionid()) # delete old server
+            cserver = self.get_server()        
             cserver.load_project(MEDIA_ROOT+'/'+filename)
             self.redirect(self.application.reverse_url('workspace'))
         else:
@@ -288,7 +279,7 @@ class PlotHandler(BaseHandler):
     ''' GET:  open a websocket server to supply updated valaues for the specified variable        
     '''
     def get(self,name):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         port = cserver.get_varserver(name)
         self.write(port)
         
@@ -296,7 +287,7 @@ class TypesHandler(BaseHandler):
     ''' get hierarchy of package/types to populate the Palette
     '''
     def get(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         types = cserver.get_available_types()
         try:
             types['working'] = cserver.get_workingtypes()
@@ -308,7 +299,7 @@ class UploadHandler(BaseHandler):
     ''' file upload utility
     '''
     def post(self):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         file = self.request.files['myfile'][0]
         if file:
             filename = file['filename']
@@ -321,7 +312,7 @@ class UploadHandler(BaseHandler):
 
 class WorkflowHandler(BaseHandler):
     def get(self,name):
-        cserver = server_mgr.console_server(self.get_cookie('sessionid'))
+        cserver = self.get_server()
         json = cserver.get_workflow(name)
         self.write(json)
     
@@ -337,141 +328,58 @@ class TestHandler(BaseHandler):
     def get(self):
         self.render('workspace/test.html')
 
+class OutStreamHandler(websocket.WebSocketHandler):
+    def open(self):
+        print ' outstream open'
+        sessionid = self.get_cookie("sessionid")
+        cserver = self.application.server_mgr.console_server(sessionid)
+        print 'sessionid:',sessionid,',cserver:',cserver
+        print 'opening outstream websocket'
+        try:
+            self.stream = cserver.get_output_stream()
+            print 'got outstream:',self.stream
+        except web.HTTPError,err:
+            print 'error getting outstream:',err
+            if not self.stream.closed():
+                self.stream.close()
+            self.close()
+        else:
+            print 'setting callback on outstream:',self.stream
+            self.stream.on_recv(self._write_message)
 
-class OutputServer(threading.Thread):
-    ''' a thread that serves output from the cserver to a websocket
-    '''
-    class OutputWSHandler(tornado.websocket.WebSocketHandler):
-            
-        def update(self):
-            self.count += 1
-            txt = self.cserver.get_output()
-            if len(txt) > 0:
-                print "output (len="+str(len(txt))+"):\n",txt
-                self.write_message(txt)
-            
-        def open(self):
-            print 'new connection'
-            self.write_message("connected to output socket\n")
-            self.count = 0
-            self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-            print 'OutputWSHandler cserver:',self.cserver
-            self.timer = tornado.ioloop.PeriodicCallback(self.update, 1000)
-            self.timer.start()
-            
-        def on_message(self, message):
-            print 'message received %s' % message
-
-        def on_close(self):
-            self.timer.stop()
-            print 'connection closed'
-      
-    def __init__(self, port):
-        super(OutputServer, self).__init__()
-        self.port = port
-    
-    def run(self):
-        application = tornado.web.Application([ (r'/ws', self.OutputWSHandler) ])
-        http_server = tornado.httpserver.HTTPServer(application)        
-        http_server.listen(self.port)
-        tornado.ioloop.IOLoop.instance().start()
-
-class OutputServerHandler(BaseHandler):
-    ''' initialize the web socket server & return the socket
-    '''
-    def get(self):
-        self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        print 'OutputServerHandler cserver:',self.cserver
+    def _write_message(self, message):
+        print 'writing outstream message: %S' % message
+        self.write_message(message)
         
-        # forking this process will create another server_mgr on Windows :/
-        port = get_unused_ip_port()
-        srvr = OutputServer(port)
-        srvr.start()
-        self.write(str(port))
+    def on_message(self, message):
+        print 'outstream message received: %s' % message
 
-class PlotServer(threading.Thread):
-    ''' a thread that serves output from the cserver to a websocket
-    '''
-    class PlotWSHandler(tornado.websocket.WebSocketHandler):
-            
-        def update(self):
-            print 'getting plot value for',self.varname,'\n'
-            self.count += 1
-            val = self.cserver.get_value(self.varname)
-            print "value of",self.varname,"=",val
-            if val is not None:
-                self.write_message(str(val))
-            
-        def open(self):
-            self.varname = 'prob.dis1.y1' # TODO: ghard coded for demo purposes
-            print 'new connection for plot var',self.varname
-            self.count = 0
-            self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-            self.timer = tornado.ioloop.PeriodicCallback(self.update, 1000)
-            self.timer.start()
-            
-        def on_message(self, message):
-            print 'message received %s' % message
+    def on_close(self):
+        self.timer.stop()
+        print 'outstream connection closed'
 
-        def on_close(self):
-            self.timer.stop()
-            print 'connection closed'
-      
-    def __init__(self, port, varname):
-        super(PlotServer, self).__init__()
-        self.port = port
-        self.varname = varname
+handlers = [
+    web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
+    web.url(r'/workspace/components/?',     ComponentsHandler),
+    web.url(r'/workspace/component/(.*)',   ComponentHandler),
+    web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
+    web.url(r'/workspace/addons/?',         AddOnsHandler),
+    web.url(r'/workspace/close/?',          CloseHandler),
+    web.url(r'/workspace/command',          CommandHandler),
+    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
+    web.url(r'/workspace/exec/?',           ExecHandler),
+    web.url(r'/workspace/exit/?',           ExitHandler),
+    web.url(r'/workspace/file/(.*)',        FileHandler),
+    web.url(r'/workspace/files/?',          FilesHandler),
+    web.url(r'/workspace/geometry',         GeometryHandler),
+    web.url(r'/workspace/model/?',          ModelHandler),
+    web.url(r'/workspace/output/?',         OutputHandler),
+    web.url(r'/workspace/plot/?',           PlotHandler),
+    web.url(r'/workspace/project/?',        ProjectHandler),
+    web.url(r'/workspace/types/?',          TypesHandler),
+    web.url(r'/workspace/upload/?',         UploadHandler),
+    web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
+    web.url(r'/workspace/test/?',           TestHandler),
     
-    def run(self):
-        application = tornado.web.Application([ (r'/ws', self.PlotWSHandler) ])
-        http_server = tornado.httpserver.HTTPServer(application)        
-        http_server.listen(self.port)
-        tornado.ioloop.IOLoop.instance().start()
-
-class PlotServerHandler(BaseHandler):
-    ''' initialize the web socket server & return the socket
-    '''
-    def get(self):
-        self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        port = get_unused_ip_port()
-        varname = 'prob.dis1.y1'
-        srvr = PlotServer(port,varname)
-        srvr.start()
-        self.write(str(port))
-
-
-
-# class OutputConnection(SocketConnection):
-    # ''' a socket connection that serves output from the cserver
-    # '''
-    # def update(self):
-            # self.count += 1
-            # txt = self.cserver.get_output()
-            # if len(txt) > 0:
-                # print "output (len="+str(len(txt))+"):\n",txt
-                # self.write_message(txt)
-
-    # def on_open(self):
-        # print 'new connection'
-        # self.write_message("connected to output socket\n")
-        # self.count = 0
-        # self.cserver = server_mgr.console_server(self.get_cookie('sessionid'))
-        # print 'OutputWSHandler cserver:',self.cserver
-        # self.timer = tornado.ioloop.PeriodicCallback(self.update, 1000)
-        # self.timer.start()
-        
-    # def on_message(self, message):
-        # print 'message received %s' % message
-
-    # def on_close(self):
-        # self.timer.stop()
-        # print 'connection closed'
-            
-            
-# class RouterConnection(SocketConnection):
-    # ''' route socket connections
-    # '''
-    # __endpoints__ = { '/stdout': OutputConnection,
-                    # }
-    # def on_open(self, info):
-        # print 'Router', repr(info)
+    web.url(r'/workspace/outputWS/?',       OutStreamHandler),
+]

@@ -1,135 +1,137 @@
 import os, sys
 import os.path
 
+from optparse import OptionParser
+
+# zmq
 import zmq
 from zmq.eventloop import ioloop, zmqstream
 ioloop.install()
 
 # tornado
-import tornado.httpserver
-import tornado.ioloop
-import tornado.web
+from tornado import httpserver, ioloop, web
 
-# tornadio
-# from tornadio2 import SocketConnection, TornadioRouter, SocketServer
+# openmdao
+from openmdao.util.network import get_unused_ip_port
 
-# the project app and the workspace app handlers
-import openmdao.gui.app_projdb as app_projdb
-import openmdao.gui.app_workspace as app_workspace
+from openmdao.gui.util import ensure_dir, launch_browser
+from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 
+from openmdao.gui.handlers import LoginHandler, LogoutHandler
+import openmdao.gui.handlers_projdb    as proj
+import openmdao.gui.handlers_workspace as wksp
 
-class BaseHandler(tornado.web.RequestHandler):
-    ''' override the get_current_user() method in your request handlers to determine
-        the current user based on the value of a cookie.
+class WebApp(web.Application):
+    ''' openmdao web application server
+        extends tornado web app with URL mappings, settings and server manager
     '''
-    def get_current_user(self):
-        return self.get_secure_cookie("user")
 
-class LoginHandler(BaseHandler):
-    ''' lets users log into the application simply by specifying a nickname,
-        which is then saved in a cookie.
+    def __init__(self, server_mgr):
+        handlers = [
+            web.url(r'/login',  LoginHandler),
+            web.url(r'/logout', LogoutHandler),
+            web.url(r'/',       proj.IndexHandler),            
+        ]        
+        handlers.extend(proj.handlers)
+        handlers.extend(wksp.handlers)
+        
+        settings = { 
+            'login_url':         '/login',
+            'static_path':       os.path.join(os.path.dirname(__file__), 'static'),
+            'template_path':     os.path.join(os.path.dirname(__file__), 'tmpl'),
+            'cookie_secret':     os.urandom(1024),
+            'debug':             True,
+        }
+        
+        self.server_mgr = server_mgr
+        
+        super(WebApp, self).__init__(handlers, **settings)
+        
+
+class WrappedApp(object):
+    ''' openmdao application
+        wraps tornado web app, runs http server and opens browser
     '''
-    def get(self):
-        self.write('<html><body bgcolor="Grey"><form action="/login" method="post">'
-                   'Name: <input type="text" name="name">'
-                   '<input type="submit" value="Sign in">'
-                   '</form></body></html>')
 
-    def post(self):
-        self.set_secure_cookie("user", self.get_argument("name"))
-        self.redirect("/")
+    def __init__(self,options):
+        self.options = options
+        
+        if options.initialize or not os.path.exists('settings.py'):
+            if options.reset:
+                initialize_settings(reset=True)
+            else:
+                initialize_settings(reset=False)
 
-class LogoutHandler(BaseHandler):
-    ''' lets users log out of the application simply by deleting the nickname cookie
-    '''
-    def get(self):
-        self.clear_cookie("user")
-        self.redirect("/")
+        if (options.port < 1):
+            options.port = get_unused_ip_port()
 
-    def post(self):
-        self.clear_cookie("user")
-        self.redirect("/")
+        self.server_mgr = ConsoleServerFactory()
+        self.web_app = WebApp(self.server_mgr)
+        self.http_server = httpserver.HTTPServer(self.web_app)
+        self.http_server.listen(options.port)
+        
+        if not options.serveronly:
+            launch_browser(options.port, options.browser)
+
+        ioloop.IOLoop.instance().start()
+
+    @staticmethod
+    def get_options_parser():
+        ''' create a parser for command line arguments
+        '''
+        parser = OptionParser()
+        parser.add_option("-p", "--port", type="int", dest="port", default=0,
+                          help="port to run server on (defaults to any available port)")
+        parser.add_option("-b", "--browser", dest="browser", default="chrome",
+                          help="preferred browser")
+        parser.add_option("-s", "--server", action="store_true", dest="serveronly",
+                          help="don't launch browser, just run server")
+        parser.add_option("-i", "--init", action="store_true", dest="initialize",
+                          help="(re)initialize settings")
+        parser.add_option("-r", "--reset", action="store_true", dest="reset",
+                          help="reset project database (valid only with -i and without -d)")
+        return parser
+
+    def initialize_settings(reset):
+        ''' first time setup (or re-setup)
+        '''
+        print "Initializing settings..."
+        
+        user_dir = os.path.expanduser("~/.openmdao/gui/")  # TODO: could put in a prefs file
+        ensure_dir(user_dir)
+        
+        settings_file = "settings.py"
+        database_file = user_dir+"mdaoproj.db"
+        media_storage = user_dir+"media"
+        
+        if os.path.exists(settings_file):
+            os.remove(settings_file)
+        o = open(settings_file,"a") #open for append
+        for line in open("settings.tmp"):
+           line = line.replace("'NAME': 'mdaoproj.db'","'NAME': '"+database_file+"'")
+           line = line.replace("MEDIA_ROOT = ''","MEDIA_ROOT = '"+media_storage+"'")
+           o.write(line) 
+        o.close()
+        
+        import settings
+        print "MEDIA_ROOT=",settings.MEDIA_ROOT
+        print "DATABASE=",settings.DATABASES['default']['NAME']
+        
+        print "Resetting project database..."
+        if reset and os.path.exists(database_file):
+            print "Deleting existing project database..."
+            os.remove(database_file)
+        from django.core.management import execute_manager
+        execute_manager(settings,argv=[__file__,'syncdb'])
+
 
 def main():
+    ''' process command line arguments and do as commanded
+    '''
+    parser = WrappedApp.get_options_parser()
+    (options, args) = parser.parse_args()
+    app = WrappedApp(options)
     
-    # settings: debug, static handler, etc
-    app_settings = { 
-        'debug': True,
-        'static_path': os.path.join(os.path.dirname(__file__), 'static'),
-        'template_path': os.path.join(os.path.dirname(__file__), 'tmpl'),
-        'login_url': '/login',
-        'cookie_secret': '61oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=',
-        'enabled_protocols': ['websocket', 'xhr-multipart', 'xhr-polling'],
-        'socket_io_port': 9001
-    }
-    
-    # create router for stdout
-    # OutputRouter = tornadio.get_router(app_workspace.OutputConnection)
-
-    # map URLs to handlers
-    handlers = [
-        tornado.web.url(r'/login',                                   LoginHandler),
-        tornado.web.url(r'/logout',                                  LogoutHandler),
-        
-        tornado.web.url(r'/',                                        app_projdb.IndexHandler),
-        tornado.web.url(r'/projects/?',                              app_projdb.IndexHandler),
-        tornado.web.url(r'/projects/(?P<project_id>\d+)/?',          app_projdb.DetailHandler),
-        tornado.web.url(r'/projects/new/$',                          app_projdb.NewHandler),
-        tornado.web.url(r'/projects/add/$',                          app_projdb.AddHandler),
-        tornado.web.url(r'/projects/delete/(?P<project_id>\d+)/?',   app_projdb.DeleteHandler),
-        tornado.web.url(r'/projects/download/(?P<project_id>\d+)/?', app_projdb.DownloadHandler),
-        
-        tornado.web.url(r'/workspace/?',                             app_workspace.WorkspaceHandler, name='workspace'),    
-        tornado.web.url(r'/workspace/components/?',                  app_workspace.ComponentsHandler),
-        tornado.web.url(r'/workspace/component/(.*)',                app_workspace.ComponentHandler),
-        tornado.web.url(r'/workspace/connections/(.*)',              app_workspace.ConnectionsHandler),
-        tornado.web.url(r'/workspace/addons/?',                      app_workspace.AddOnsHandler),
-        tornado.web.url(r'/workspace/close/?',                       app_workspace.CloseHandler),
-        tornado.web.url(r'/workspace/command',                       app_workspace.CommandHandler),
-        tornado.web.url(r'/workspace/structure/(.*)/?',              app_workspace.StructureHandler),
-        tornado.web.url(r'/workspace/exec/?',                        app_workspace.ExecHandler),
-        tornado.web.url(r'/workspace/exit/?',                        app_workspace.ExitHandler),
-        tornado.web.url(r'/workspace/file/(.*)',                     app_workspace.FileHandler),
-        tornado.web.url(r'/workspace/files/?',                       app_workspace.FilesHandler),
-        tornado.web.url(r'/workspace/geometry',                      app_workspace.GeometryHandler),
-        tornado.web.url(r'/workspace/model/?',                       app_workspace.ModelHandler),
-        tornado.web.url(r'/workspace/output/?',                      app_workspace.OutputHandler),
-        tornado.web.url(r'/workspace/plot/?',                        app_workspace.PlotHandler),
-        tornado.web.url(r'/workspace/project/?',                     app_workspace.ProjectHandler),
-        tornado.web.url(r'/workspace/types/?',                       app_workspace.TypesHandler),
-        tornado.web.url(r'/workspace/upload/?',                      app_workspace.UploadHandler),
-        tornado.web.url(r'/workspace/workflow/(.*)',                 app_workspace.WorkflowHandler),
-        tornado.web.url(r'/workspace/test/?',                        app_workspace.TestHandler),
-        
-        # testing
-        (r'/workspace/outputWS', app_workspace.OutputServerHandler),
-        (r'/workspace/plotWS', app_workspace.PlotServerHandler),
-        
-        # OutputRouter.route()
-    ]
-    
-    # create the app
-    application = tornado.web.Application(handlers, **app_settings)
-    
-    # context = zmq.Context()
-    # socket = context.socket(zmq.SUB)
-    # socket.bind('tcp://127.0.0.1:5000')
-    # socket.setsockopt(zmq.SUBSCRIBE, '')
-    # stream = zmqstream.ZMQStream(socket, tornado.ioloop.IOLoop.instance())
-    # stream.on_recv(app_workspace.OutputConnection.dispatch_message)
-
-    # tornadio.server.SocketServer(application)
-
-    # create the app with tornadio router
-    # router = TornadioRouter(app_workspace.RouterConnection)    
-    # application = tornado.web.Application(router.apply_routes(handlers), **app_settings)    
-    
-    # start the app
-    print 'Starting app:',application 
-    http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(9000)
-    tornado.ioloop.IOLoop.instance().start()
-    print 'Application ended.'
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
+
