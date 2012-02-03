@@ -45,12 +45,6 @@ class ZmqCompWrapper(object):
         self._context = context
         self._comp = comp
         
-        #self._worker_cmds = { '\x01': self.on_ready,
-                      #'\x03': self.on_reply,
-                      #'\x04': self.on_heartbeat,
-                      #'\x05': self.on_disconnect,
-                      #}
-
         if decoder is None:
             decoder = decode
         self._decoder = decoder
