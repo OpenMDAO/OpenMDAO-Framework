@@ -33,14 +33,12 @@ def set_as_top(cont, first_only=False):
     """
     global __toplock__
     global __has_top__
-    doit = False
     with __toplock__:
         if __has_top__ is False and isinstance(cont, Assembly):
             __has_top__ = True
-            doit = True
-        elif not first_only:
-            doit = True
-    if doit and cont._call_tree_rooted:
+        elif first_only:
+            return cont
+    if cont._call_tree_rooted:
         cont.tree_rooted()
     return cont
 
