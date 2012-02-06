@@ -278,7 +278,16 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(param[0].high, 100.0)
         self.assertEqual(param[0].fd_step, 0.001)
         self.assertEqual(param[1].fd_step, None)
+    
+    def test_get_metadata(self): 
+        p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
         
+        p.get_metadata()
+        self.assertEqual(p.get_metadata(),[('comp.x',{'high': None, 'iotype': 'in', 'type': 'trait', 'low': None, 'vartypename': 'Float'})])
+        
+        p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)
+        pg = ParameterGroup([p,p2])        
+        self.assertEqual(pg.get_metadata(),[('comp.x',{'high': None, 'iotype': 'in', 'type': 'trait', 'low': None, 'vartypename': 'Float'})])    
 
 
 class ParametersTestCase(unittest.TestCase):
