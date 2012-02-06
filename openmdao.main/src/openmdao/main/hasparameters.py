@@ -249,9 +249,10 @@ class ParameterGroup(object):
         for that variable if it is not.
         """
         dct = {}
-        for param in self._params:
-            tup = param.get_metadata(metaname)
-            dct.setdefault(tup[0], tup[1])
+        #for param in self._params:
+        param = self._params[0]
+        tup = param.get_metadata(metaname)
+        dct.setdefault(tup[0][0], tup[0][1])
         return dct.items()
 
     def get_referenced_compnames(self):
