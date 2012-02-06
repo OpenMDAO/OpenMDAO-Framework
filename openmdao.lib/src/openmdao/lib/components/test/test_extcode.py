@@ -99,7 +99,8 @@ class TestCase(unittest.TestCase):
         for directory in ('a', 'b'):
             if os.path.exists(directory):
                 shutil.rmtree(directory)
-        for name in (ENV_FILE, INP_FILE, 'input', 'output'):
+        for name in (ENV_FILE, INP_FILE, 'input', 'output',
+                     'sleep.in', 'sleep.out', 'sleep.err'):
             if os.path.exists(name):
                 os.remove(name)
         if os.path.exists("error.out"):
@@ -138,12 +139,51 @@ class TestCase(unittest.TestCase):
             result = inp.read()
         self.assertEqual(result, INP_DATA)
 
-        # Now show that existing outputs are removed before execution.
-        sleeper.env_filename = ''
+        # Redirect stdout & stderr.
+        sleeper.env_vars = {'SLEEP_ECHO': '1'}
+        sleeper.stdin  = 'sleep.in'
+        sleeper.stdout = 'sleep.out'
+        sleeper.stderr = 'sleep.err'
+        with open('sleep.in', 'w') as out:
+            out.write('Hello World!\n')
         sleeper.run()
-        msg = "[Errno 2] No such file or directory: '%s'" % ENV_FILE
-        assert_raises(self, "open('%s', 'rU')" % ENV_FILE,
-                      globals(), locals(), IOError, msg)
+        with open('sleep.out', 'r') as inp:
+            self.assertEqual(inp.read(), 'stdin echo to stdout\n'
+                                         'Hello World!\n')
+        with open('sleep.err', 'r') as inp:
+            self.assertEqual(inp.read(), 'stdin echo to stderr\n'
+                                         'Hello World!\n')
+
+        # Exercise check_files() errors.
+        os.remove('sleep.in')
+        assert_raises(self, 'sleeper.check_files(inputs=True)',
+                      globals(), locals(), RuntimeError,
+                      ": missing stdin file 'sleep.in'")
+        os.remove('sleep.err')
+        assert_raises(self, 'sleeper.check_files(inputs=False)',
+                      globals(), locals(), RuntimeError,
+                      ": missing stderr file 'sleep.err'")
+        os.remove('sleep.out')
+        assert_raises(self, 'sleeper.check_files(inputs=False)',
+                      globals(), locals(), RuntimeError,
+                      ": missing stdout file 'sleep.out'")
+
+        # Now show that existing outputs are removed before execution.
+        sleeper.stdin  = None
+        sleeper.stdout = None
+        sleeper.stderr = None
+        sleeper.env_vars = {}
+        sleeper.env_filename = ''
+        assert_raises(self, 'sleeper.run()',
+                      globals(), locals(), RuntimeError,
+                      ": missing output file 'env-data'")
+
+        # Show that non-existent expected files are detected.
+        sleeper.external_files.append(
+            FileMetadata(path='missing-input', input=True))
+        assert_raises(self, 'sleeper.run()',
+                      globals(), locals(), RuntimeError,
+                      ": missing input file 'missing-input'")
 
     def test_remote(self):
         logging.debug('')
