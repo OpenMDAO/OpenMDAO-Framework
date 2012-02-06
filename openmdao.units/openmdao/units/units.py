@@ -556,25 +556,28 @@ def _find_unit(unit):
                 
                 # First character of a unit is always alphabet or $.
                 # Remaining characters may include numbers.
-                regex = re.compile('[A-Z,a-z].[A-Z,a-z,0-9]*')
+                regex = re.compile('[A-Z,a-z]{1}[A-Z,a-z,0-9]*')
                 
                 for item in regex.findall(name):
-                    
-                    #check for single letter prefix before unit
-                    if(item[0] in _unit_lib.prefixes and \
-                       item[1:] in _unit_lib.unit_table):
-                        add_unit(item, _unit_lib.prefixes[item[0]]* \
-                                 _unit_lib.unit_table[item[1:]])
-                    
-                    #check for double letter prefix before unit
-                    elif(item[0:2] in _unit_lib.prefixes and \
-                         item[2:] in _unit_lib.unit_table):
-                        add_unit(item, _unit_lib.prefixes[item[0:2]]* \
-                                  _unit_lib.unit_table[item[2:]])
-                    
-                    #no prefixes found, unknown unit
-                    else:
-                        raise ValueError, "no unit named '%s' is defined" % item
+                    #check if this was a compount unit, so each substring might be a unit
+                    try: 
+                        subunit = eval(item, {'__builtins__':None}, _unit_lib.unit_table)
+                    except: #maybe is a prefixed unit then
+                        #check for single letter prefix before unit
+                        if(item[0] in _unit_lib.prefixes and \
+                           item[1:] in _unit_lib.unit_table):
+                            add_unit(item, _unit_lib.prefixes[item[0]]* \
+                                     _unit_lib.unit_table[item[1:]])
+                        
+                        #check for double letter prefix before unit
+                        elif(item[0:2] in _unit_lib.prefixes and \
+                             item[2:] in _unit_lib.unit_table):
+                            add_unit(item, _unit_lib.prefixes[item[0:2]]* \
+                                      _unit_lib.unit_table[item[2:]])
+                        
+                        #no prefixes found, unknown unit
+                        else:
+                            raise ValueError, "no unit named '%s' is defined" % item
             
                 unit = eval(name, {'__builtins__':None}, _unit_lib.unit_table)
         
