@@ -6,6 +6,7 @@ import cmd
 import jsonpickle
 import tempfile
 import zipfile
+import threading, time
 
 from setuptools.command import easy_install
 
@@ -16,10 +17,9 @@ from openmdao.main.variable import Variable
 
 from multiprocessing.managers import BaseManager
 from openmdao.main.factory import Factory
-from openmdao.main.factorymanager import create
+from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
 from openmdao.main.driver import Driver
-from openmdao.main.factorymanager import get_available_types
 from openmdao.main.datatypes.slot import Slot
 
 from openmdao.lib.releaseinfo import __version__, __date__
@@ -42,6 +42,21 @@ ioloop.install()
 
 import random
 
+class RecurringTimer(threading.Thread):
+    def __init__(self,function,interval):
+        threading.Thread.__init__(self)
+        self.function = function
+        self.interval = interval
+        self.canceled = threading.Event()
+        
+    def run(self):
+        while not self.canceled.is_set():
+            self.canceled.wait(self.interval)
+            self.function()
+    
+    def cancel(self):
+        self.canceled.set()
+    
 class ConsoleServerFactory(Factory):
     ''' creates and keeps track of :class:`ConsoleServer`
     '''
@@ -147,8 +162,6 @@ class ConsoleServer(cmd.Cmd):
         self.cout_socket = None
         self.cout_timer = None
         
-        #ioloop.IOLoop.instance().start()
-
     def error(self,err,exc_info):
         ''' print error message and save stack trace in case it's requested
         '''
@@ -272,9 +285,10 @@ class ConsoleServer(cmd.Cmd):
         ''' publish any pending output and clear the outputput buffer
         '''
         try:
-            output = self.cout.getvalue()            
-            self.cout_socket.send(output)
-            self.cout.truncate(0)
+            output = self.cout.getvalue()
+            if len(output) > 0:
+                self.cout_socket.send(output)
+                self.cout.truncate(0)
         except Exception, err:
             self.error(err,sys.exc_info())
 
@@ -290,8 +304,9 @@ class ConsoleServer(cmd.Cmd):
             print "binding cout publisher on %s" % addr
             self.cout_socket.bind(addr)
             
-            self.cout_timer = ioloop.PeriodicCallback(self.publish_output, 1000)
+            self.cout_timer = RecurringTimer(self.publish_output,2)
             self.cout_timer.start()
+            
             return addr
         except Exception, err:
             self.error(err,sys.exc_info())
