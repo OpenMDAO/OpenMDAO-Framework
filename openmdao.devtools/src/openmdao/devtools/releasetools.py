@@ -1,4 +1,3 @@
-
 #
 # Build OpenMDAO package distributions.
 #
@@ -374,7 +373,7 @@ def build_release(parser, options):
         idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
         
         if not os.path.isfile(idxpath) or not options.nodocbuild:
-            build_docs(options)
+            build_docs(parser, options)
         shutil.copytree(os.path.join(topdir,'docs','_build', 'html'), 
                     os.path.join(destdir,'docs'))
 
