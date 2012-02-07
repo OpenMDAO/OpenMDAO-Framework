@@ -4,6 +4,8 @@ import traceback
 import optparse
 import pprint
 from functools import partial
+import websocket
+
 
 import zmq
 
@@ -40,7 +42,7 @@ def main(args):
     proxy = ZMQ_RPC(options.url, zmq.Context())
     
     # now do some remote commands
-    #proxy.set('comp1.x', 3.0)
+    proxy.register_published_vars(['paraboloid.x', 'paraboloid.y', 'paraboloid.f_xy'])
     #proxy.set('comp2.x', 7.0)
     #proxy.set('comp1.x', 9.0)
     #proxy.set('comp2.x', 3.0)

@@ -177,6 +177,7 @@ class Component (Container):
 
     def _set_exec_state(self, state):
         if self._exec_state != state:
+            self._exec_state = state
             pub = Publisher.get_instance()
             if pub:
                 pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
@@ -391,7 +392,7 @@ class Component (Container):
         for name in self.list_inputs(valid=False):
             valids[name] = True
         self._call_execute = False
-        
+        self._set_exec_state('VALID')
         self.publish_vars()
         
     def _post_run (self):
@@ -426,6 +427,8 @@ class Component (Container):
         self._case_id = case_id
         try:
             self._pre_execute(force)
+            self._set_exec_state('RUNNING')
+
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
                 
@@ -450,6 +453,9 @@ class Component (Container):
             #else:
                 #print 'skipping: %s' % self.get_pathname()
             self._post_run()
+        except:
+            self._set_exec_state('INVALID')
+            raise
         finally:
             if self.directory:
                 self.pop_dir()
@@ -1312,7 +1318,7 @@ class Component (Container):
         valids = self._valid_dict
         
         self._call_execute = True
-        self._exec_state = 'INVALID'
+        self._set_exec_state('INVALID')
 
         # only invalidate connected inputs. inputs that are not connected
         # should never be invalidated
@@ -1370,7 +1376,7 @@ class Component (Container):
                         if self._publish_vars[name] < 1:
                             del self._publish_vars[name]
             else:
-                obj = getattr(self, nm)
+                obj = getattr(self, parts[0])
                 obj.register_published_vars('.'.join(parts[1:]), publish)
             
     def publish_vars(self):

@@ -89,6 +89,7 @@ class ZmqCompWrapper(object):
             
         if wsroute:
             from openmdao.main.zmqws import CompWebSocketHandler
+            from tornado import web
             application = web.Application([(wsroute, CompWebSocketHandler, {'context':context,
                                                                             'rep_url':rep_url,
                                                                             'pub_url':pub_url})])
@@ -139,7 +140,8 @@ def main(args=None):
     top = set_as_top(ctor())
     top.register_published_vars(options.published)
     
-    ZmqCompWrapper.serve(top, rep_url=options.url, wsroute=options.wsroute)
+    ZmqCompWrapper.serve(top, rep_url=options.repurl, pub_url=options.puburl,
+                         wsroute=options.wsroute)
     
 
 if __name__ == '__main__':
