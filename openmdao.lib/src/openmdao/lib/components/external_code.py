@@ -187,6 +187,7 @@ class ExternalCode(ComponentWithDerivatives):
         inputs: bool
             If True, check inputs, otherwise outputs.
         """
+        # External files.
         for metadata in self.external_files:
             path = metadata.path
             for ch in ('*?['):
@@ -203,21 +204,36 @@ class ExternalCode(ComponentWithDerivatives):
                     iotype = 'input' if inputs else 'output'
                     self.raise_exception('missing %s file %r' % (iotype, path),
                                          RuntimeError)
-
-        if inputs and self.stdin:
+        # Stdin, stdout, stderr.
+        if inputs and self.stdin and self.stdin != self.DEV_NULL:
             if not os.path.exists(self.stdin):
                 self.raise_exception('missing stdin file %r' % self.stdin,
                                      RuntimeError)
 
-        if not inputs and self.stdout:
+        if not inputs and self.stdout and self.stdout != self.DEV_NULL:
             if not os.path.exists(self.stdout):
                 self.raise_exception('missing stdout file %r' % self.stdout,
                                      RuntimeError)
 
-        if not inputs and self.stderr and self.stderr != self.STDOUT:
+        if not inputs and self.stderr and self.stderr != self.DEV_NULL \
+                                      and self.stderr != self.STDOUT:
             if not os.path.exists(self.stderr):
                 self.raise_exception('missing stderr file %r' % self.stderr,
                                      RuntimeError)
+        # File variables.
+        if inputs:
+            for pathname, obj in self.items(iotype='in', recurse=True):
+                if isinstance(obj, FileRef):
+                    path = self.get_metadata(pathname, 'local_path')
+                    if path and not os.path.exists(path):
+                        self.raise_exception("missing 'in' file %r" % path,
+                                             RuntimeError)
+        else:
+            for pathname, obj in self.items(iotype='out', recurse=True):
+                if isinstance(obj, FileRef):
+                    if not os.path.exists(obj.path):
+                        self.raise_exception("missing 'out' file %r" % obj.path,
+                                             RuntimeError)
 
     def _execute_local(self):
         """ Run command. """
@@ -295,9 +311,10 @@ class ExternalCode(ComponentWithDerivatives):
             for pathname, obj in self.items(iotype='in', recurse=True):
                 if isinstance(obj, FileRef):
                     local_path = self.get_metadata(pathname, 'local_path')
-                    patterns.append(local_path)
-                    if not obj.binary:
-                        textfiles.append(local_path)
+                    if local_path:
+                        patterns.append(local_path)
+                        if not obj.binary:
+                            textfiles.append(local_path)
             if self.stdin and self.stdin != self.DEV_NULL:
                 patterns.append(self.stdin)
                 textfiles.append(self.stdin)

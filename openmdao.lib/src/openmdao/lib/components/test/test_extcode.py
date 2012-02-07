@@ -155,6 +155,14 @@ class TestCase(unittest.TestCase):
                                          'Hello World!\n')
 
         # Exercise check_files() errors.
+        os.remove('input')
+        assert_raises(self, 'sleeper.check_files(inputs=True)',
+                      globals(), locals(), RuntimeError,
+                      ": missing 'in' file 'input'")
+        os.remove('output')
+        assert_raises(self, 'sleeper.check_files(inputs=False)',
+                      globals(), locals(), RuntimeError,
+                      ": missing 'out' file 'output'")
         os.remove('sleep.in')
         assert_raises(self, 'sleeper.check_files(inputs=True)',
                       globals(), locals(), RuntimeError,
@@ -169,6 +177,8 @@ class TestCase(unittest.TestCase):
                       ": missing stdout file 'sleep.out'")
 
         # Now show that existing outputs are removed before execution.
+        with open('input', 'w') as out:
+            out.write(INP_DATA)
         sleeper.stdin  = None
         sleeper.stdout = None
         sleeper.stderr = None
