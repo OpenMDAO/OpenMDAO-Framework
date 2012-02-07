@@ -21,7 +21,7 @@ class IArchitecture(Interface):
                                  " Valid values are: ['eq', 'ineq']")
     num_allowed_objectives = Attribute("number of objectives supported.")
     has_coupling_vars = Attribute("True if coupling variables are required.")
-    requires_global_des_vars = Attribute("True if the architecture requires a problem " 
+    has_global_des_vars = Attribute("True if the architecture requires a problem " 
                                          "formulation with global design variables in it")
     
     
