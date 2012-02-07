@@ -66,7 +66,7 @@ def publish_class(path, version, comment, filename, classname,
     except Exception as exc:
         raise RuntimeError("Can't instantiate %s.%s: %r" 
                            % (modname, classname, exc))
-    if obj._call_tree_rooted == True:
+    if obj._call_cpath_updated == True:
         set_as_top(obj)
     publish_object(path, version, comment, obj, host, port)
 

@@ -81,7 +81,7 @@ class TestCase(unittest.TestCase):
         try:
             # Set an illegal execution directory, verify error.
             comp = Component(directory='/illegal')
-            comp.tree_rooted()
+            comp.cpath_updated()
         except ValueError, exc:
             msg = ": Illegal path '/illegal', not a descendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -105,7 +105,7 @@ class TestCase(unittest.TestCase):
         try:
             # Attempt auto-creation of execution directory in protected area.
             comp = Component(directory=exe_dir)
-            comp.tree_rooted()
+            comp.cpath_updated()
         except OSError, exc:
             msg = ": Can't create execution directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -129,7 +129,7 @@ class TestCase(unittest.TestCase):
         try:
             # Set execution directory to plain file.
             comp = Component(directory=directory)
-            comp.tree_rooted()
+            comp.cpath_updated()
         except ValueError, exc:
             path = os.path.join(os.getcwd(), directory)
             self.assertEqual(str(exc),

@@ -38,8 +38,8 @@ def set_as_top(cont, first_only=False):
             __has_top__ = True
         elif first_only:
             return cont
-    if cont._call_tree_rooted:
-        cont.tree_rooted()
+    if cont._call_cpath_updated:
+        cont.cpath_updated()
     return cont
 
 class PassthroughTrait(Variable):

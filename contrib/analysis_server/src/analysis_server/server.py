@@ -342,7 +342,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                                            % (classname, modname, exc))
                     try:
                         obj = cls()
-                        if obj._call_tree_rooted == True:
+                        if obj._call_cpath_updated == True:
                             set_as_top(obj)
                     except Exception as exc:
                         logger.error(traceback.format_exc())
