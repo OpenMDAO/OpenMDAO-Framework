@@ -25,9 +25,9 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     contextMenu.append(jQuery('<li>Update</li>').click(function(ev) {
         update();
     }));
-    contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
-        promptForRefresh();
-    }));
+    // contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
+        // promptForRefresh();
+    // }));
     historyBox.append(contextMenu)
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
@@ -142,42 +142,5 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         debug.info('console socket message:',e);
         updateHistory(e.data);
     };            
-    /** **/
     
-    /** TESTING WEBSOCKET STUFF *
-    debug.info('making ajax call to get output WS...');
-    jQuery.ajax({
-        type: 'GET',
-        url:  'outputWS',
-        success: function(port) {
-            debug.info('got port:' + port);
-            var url = 'ws://localhost:'+port+'/ws';
-            sck = new WebSocket(url);
-            debug.info("opened socket at",url,sck);
-            sck.onopen = function (e) {
-                debug.info('console socket opened',e);
-            };
-            sck.onclose = function (e) {
-                debug.info('console socket closed',e);
-            };
-            sck.onmessage = function(e) {
-                debug.info('console socket message:',e);
-                updateHistory(e.data);
-            };            
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-                   debug.error("Error getting console WS (status="+jqXHR.status+"): "+jqXHR.statusText)
-                   debug.error(jqXHR,textStatus,errorThrown)
-       }                        
-    })    
-    /*****************************/
-
-    /** TESTING socket.io STUFF ** /
-    var sck = new io.connect('http://' + window.location.host+'/stdout');        
-    sck.on('message',function(data) {
-        debug.info('console socket message:',data);
-        updateHistory(data);
-    });
-    /*****************************/
- 
 }

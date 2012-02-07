@@ -26,20 +26,23 @@ class WebApp(web.Application):
         extends tornado web app with URL mappings, settings and server manager
     '''
 
-    def __init__(self, server_mgr):
+    def __init__(self, server_mgr, cookie_secret=None):
         handlers = [
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
-            web.url(r'/',       web.RedirectHandler, {"url":"/projects", "permanent":False}),           
+            web.url(r'/',       web.RedirectHandler, {'url':'/projects', 'permanent':False}),           
         ]        
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)
         
+        if cookie_secret is None:
+            cookie_secret = os.urandom(1024)
+            
         settings = { 
             'login_url':         '/login',
             'static_path':       os.path.join(os.path.dirname(__file__), 'static'),
             'template_path':     os.path.join(os.path.dirname(__file__), 'tmpl'),
-            'cookie_secret':     os.urandom(1024),
+            'cookie_secret':     cookie_secret,
             'debug':             True,
         }
         
@@ -64,9 +67,22 @@ class WrappedApp(object):
 
         if (options.port < 1):
             options.port = get_unused_ip_port()
-
+            
         self.server_mgr = ConsoleServerFactory()
-        self.web_app = WebApp(self.server_mgr)
+        
+        # dev options
+        if options.development:
+            # save cookie secret between restarts
+            cookie_secret_file = os.path.expanduser("~/.openmdao/gui/cookie_secret")
+            if os.path.exists(cookie_secret_file):
+                cookie_secret = open(cookie_secret_file,'rb').read()
+            else:
+                cookie_secret = os.urandom(1024)
+                open(cookie_secret_file,'wb').write(cookie_secret)        
+            self.web_app = WebApp(self.server_mgr,cookie_secret)
+        else:
+            self.web_app = WebApp(self.server_mgr)
+            
         self.http_server = httpserver.HTTPServer(self.web_app)
         self.http_server.listen(options.port)
         
@@ -90,6 +106,9 @@ class WrappedApp(object):
                           help="(re)initialize settings")
         parser.add_option("-r", "--reset", action="store_true", dest="reset",
                           help="reset project database (valid only with -i and without -d)")
+        parser.add_option("-d", "--dev", action="store_true", dest="development",
+                          help="enable development options")
+                          
         return parser
 
     def initialize_settings(reset):

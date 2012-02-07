@@ -16,48 +16,36 @@ openmdao.Plotter = function(id,model,port) {
             yaxis: { min: 0, max: 5 },
             xaxis: { show: false }
         },
-        data = [],
+        data = {},
         interval = 30,
-        timer = null
+        timer = null,
+        maxPoints = 300;
+
     
     // create plot in a div inside the element
     plot = jQuery('<div style="height:350px;width:600px;padding:5px;">').appendTo(this.elm)
     plot = jQuery.plot(plot, [ data ], options)
 
-    // if a port was specified then listen for updated values, otherwise generate random updates
+    // connect to websocket for data (or set a timer to poll for data)
     if (true) {
-        /** TESTING WEBSOCKET STUFF */
-        debug.info('making ajax call to get plot WS...');
-        var varname = 'prob.dis1.y1'
-        jQuery.ajax({
-            type: 'GET',
-            url:  'plotWS',
-            success: function(port) {
-                debug.info('got plot port:' + port);
-                var url = 'ws://localhost:'+port+'/ws';
-                sck = new WebSocket(url);
-                debug.info("opened plot socket at",url,sck);
-                sck.onopen = function (e) {
-                    debug.info('plot socket opened',e);
-                };
-                sck.onclose = function (e) {
-                    debug.info('plot socket closed',e);
-                };
-                sck.onmessage = function(e) {
-                    debug.info('plot socket message:',e);
-                    updateData(e.data);
-                    updatePlot();                    
-                };            
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                       debug.error("Error getting console WS (status="+jqXHR.status+"): "+jqXHR.statusText)
-                       debug.error(jqXHR,textStatus,errorThrown)
-           }
-        })
+        /** connect to a websocket */
+        debug.info('connecting to plotWS')
+        var sck = new WebSocket('ws://localhost:9000/workspace/plotWS');
+        sck.onopen = function (e) {
+            debug.info('plotWS socket opened',e);
+        };
+        sck.onclose = function (e) {
+            debug.info('plotWS socket closed',e);
+        };
+        sck.onmessage = function(e) {
+            debug.info('plotWS socket message:',e);
+            updateData(e.data);
+            updatePlot();                    
+        };  
     }
     else {
         setRefresh(interval);
-    }
+    };
 
     /** set the plot to continuously update after specified ms */
     function setRefresh(interval) {
@@ -78,24 +66,32 @@ openmdao.Plotter = function(id,model,port) {
         return y;
     }
     
-    /** add a value to the data set, capping the number of points */
-    function updateData(newValue) {
-        // don't exceed max number of points
-        var maxPoints = 300;        
-        if (data.length > maxPoints)
-            data = data.slice(1);
-
-        // add the new value
-        data.push(newValue);
-    }
+    /** add new values to the data set, capping the number of points */
+    function updateData(newValues) {
+        newValues = jQuery.parseJSON(newValues);
+        jQuery.each(newValues,function (name,val) {
+            if (! data[name]) {
+                data[name] = []
+            }
+            // don't exceed max number of points
+            if (data[name].length > maxPoints)
+                data[name] = data[name].slice(1);
+            data[name].push(val);
+        });
+    };
     
-    /** update the plot with random data */
+    /** update the plot with current data */
     function updatePlot() {
-        // zip the generated y values with the x values
-        var xydata = [];
-        for (var i = 0; i < data.length; ++i)
-            xydata.push([i, data[i]]);
-        plot.setData([ xydata ]);
+        var plotdata = []
+        jQuery.each(data,function (name,vals) {
+            // generate index values for x-axis, zip with y values
+            var xydata = [];
+            for (var x = 0; x < vals.length; ++x) {
+                xydata.push([x, vals[x]]);
+            };
+            plotdata.push({ 'data':xydata, 'label':name });
+        });
+        plot.setData(plotdata);
         plot.resize();          // in case the popup was resized
         plot.setupGrid();
         plot.draw();

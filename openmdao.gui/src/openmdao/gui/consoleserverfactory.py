@@ -42,21 +42,6 @@ ioloop.install()
 
 import random
 
-class RecurringTimer(threading.Thread):
-    def __init__(self,function,interval):
-        threading.Thread.__init__(self)
-        self.function = function
-        self.interval = interval
-        self.canceled = threading.Event()
-        
-    def run(self):
-        while not self.canceled.is_set():
-            self.canceled.wait(self.interval)
-            self.function()
-    
-    def cancel(self):
-        self.canceled.set()
-    
 class ConsoleServerFactory(Factory):
     ''' creates and keeps track of :class:`ConsoleServer`
     '''
@@ -292,9 +277,9 @@ class ConsoleServer(cmd.Cmd):
         except Exception, err:
             self.error(err,sys.exc_info())
 
-    def get_output_address(self):
+    def get_output_port(self):
         ''' open a ZMQ socket and start publishing cout
-            return the port it's running on
+            return the address of the port it's running on
         '''
         try:
             context = zmq.Context()
@@ -304,13 +289,48 @@ class ConsoleServer(cmd.Cmd):
             print "binding cout publisher on %s" % addr
             self.cout_socket.bind(addr)
             
-            self.cout_timer = RecurringTimer(self.publish_output,2)
+            self.cout_timer = RepeatTimer(2,self.publish_output)
             self.cout_timer.start()
             
             return addr
         except Exception, err:
             self.error(err,sys.exc_info())
-        
+
+    def publish_variables(self,socket,var_names):
+        ''' publish current values of specified variables
+        '''
+        try:
+            values = {}
+            for var in var_names:
+                val = self.get_value(var)
+                if val is not None:
+                    values[var] = val                
+            if len(values) > 0:
+                socket.send(jsonpickle.encode(values))
+        except Exception, err:
+            self.error(err,sys.exc_info())
+
+    def get_variables_port(self,var_names):
+        ''' open a ZMQ socket and start publishing the value of the variables
+            return the address of the port it's running on
+        '''
+        try:
+            context = zmq.Context()
+            socket = context.socket(zmq.PUB)            
+            port = get_unused_ip_port()
+            addr = "tcp://127.0.0.1:%i" % port
+            print "binding variables publisher on %s" % addr
+            socket.bind(addr)
+            
+            print 'starting variables publisher for',var_names
+            timer = RepeatTimer(1,self.publish_variables,args=(socket,var_names))
+            timer.start()
+            
+            return addr
+        except Exception, err:
+            self.error(err,sys.exc_info())
+
+
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 
         '''

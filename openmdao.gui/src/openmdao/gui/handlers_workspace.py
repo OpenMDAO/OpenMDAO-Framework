@@ -369,7 +369,7 @@ class OutStreamHandler(websocket.WebSocketHandler):
         try:
             context = zmq.Context()
             socket = context.socket(zmq.SUB)
-            addr = cserver.get_output_address()
+            addr = cserver.get_output_port()
             socket.connect(addr)
             socket.setsockopt(zmq.SUBSCRIBE, "")
             print 'OutStreamHandler.open() creating stream on',addr
@@ -398,6 +398,44 @@ class OutStreamHandler(websocket.WebSocketHandler):
         self.timer.stop()
         print 'outstream connection closed'
 
+class PlotStreamHandler(websocket.WebSocketHandler):
+    def open(self):
+        # FIXME: variables are hard coded for demo purposes
+        var_names = [ 'prob.z1_t', 'prob.z2_t', 'prob.dis1.x1' ]
+        
+        sessionid = self.get_cookie("sessionid")
+        cserver = self.application.server_mgr.console_server(sessionid)
+        try:
+            context = zmq.Context()
+            socket = context.socket(zmq.SUB)
+            addr = cserver.get_variables_port(var_names)
+            socket.connect(addr)
+            socket.setsockopt(zmq.SUBSCRIBE, "")
+            print 'PlotStreamHandler.open() creating stream on',addr
+            self.stream = ZMQStream(socket)
+        except Exception, err:
+            print '    error getting plot stream:',err
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            traceback.print_tb(exc_traceback, limit=30)   
+            if self.stream and not self.stream.closed():
+                self.stream.close()
+            self.close()
+        else:
+            self.stream.on_recv(self._write_message)
+
+    def _write_message(self, message):
+        print 'PlotStreamHandler._write_message()', message
+        for part in message:
+            self.write_message(part)
+        
+    def on_message(self, message):
+        print 'PlotStreamHandler message received: %s' % message
+
+    def on_close(self):
+        self.timer.stop()
+        print 'PlotStreamHandler connection closed'
+
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
     web.url(r'/workspace/components/?',     ComponentsHandler),
@@ -422,4 +460,5 @@ handlers = [
     web.url(r'/workspace/test/?',           TestHandler),
     
     web.url(r'/workspace/outputWS/?',       OutStreamHandler),
+    web.url(r'/workspace/plotWS/?',         PlotStreamHandler),
 ]

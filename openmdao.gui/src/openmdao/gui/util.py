@@ -125,12 +125,10 @@ def packageXML(types):
         xml = xml + '</response>\n'
         return xml    
 
-#
-# launch web browser on specified port
-# (chrome will launch in "app mode" on Windows 7)
-#
 def launch_browser(port,preferred_browser=None):
-    ''' try to use preferred browser if specified, fall back to default 
+    ''' launch web browser on specified port
+        try to use preferred browser if specified, fall back to default 
+        (chrome will launch in "app mode" on Windows 7)
     '''
     url = 'http://localhost:'+str(port)    
     print 'Opening URL in browser: '+url+' (pid='+str(os.getpid())+')'
@@ -160,14 +158,50 @@ def launch_browser(port,preferred_browser=None):
     else:
         print "Couldn't launch browser: "+str(browser)
 
-# 
-# end current process (TODO: make this work?)
+# ref: http://g-off.net/software/a-python-repeatable-threadingtimer-class
 #
-def end_process():
-    if (os.name == 'nt'):
-        import win32api, win32con
-        handle = win32api.OpenProcess( win32con.PROCESS_TERMINATE, 0, pid )
-        win32api.TerminateProcess( handle, 0 )
-        win32api.CloseHandle( handle )
-    else:
-        os.kill(os.getpid(), 9)
+# Copyright (c) 2009 Geoffrey Foster
+# 
+# Permission is hereby granted, free of charge, to any person
+# obtaining a copy of this software and associated documentation
+# files (the "Software"), to deal in the Software without
+# restriction, including without limitation the rights to use,
+# copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following
+# conditions:
+# 
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+ 
+from threading import Event, Thread
+ 
+class RepeatTimer(Thread):
+    def __init__(self, interval, function, iterations=0, args=[], kwargs={}):
+        Thread.__init__(self)
+        self.interval = interval
+        self.function = function
+        self.iterations = iterations
+        self.args = args
+        self.kwargs = kwargs
+        self.finished = Event()
+ 
+    def run(self):
+        count = 0
+        while not self.finished.is_set() and (self.iterations <= 0 or count < self.iterations):
+            self.finished.wait(self.interval)
+            if not self.finished.is_set():
+                self.function(*self.args, **self.kwargs)
+                count += 1
+ 
+    def cancel(self):
+        self.finished.set()
