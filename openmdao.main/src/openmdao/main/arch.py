@@ -19,7 +19,7 @@ class Architecture(HasTraits):
     
     def __init__(self, parent=None, param_types=None,
                  constraint_types=None, num_allowed_objectives=None,
-                 has_coupling_vars=False, requires_global_des_vars=False):
+                 has_coupling_vars=False, has_global_des_vars=False):
         super(Architecture,self).__init__()
         
         self.parent = parent
@@ -27,7 +27,7 @@ class Architecture(HasTraits):
         self.constraint_types = constraint_types
         self.num_allowed_objectives = num_allowed_objectives
         self.has_coupling_vars = has_coupling_vars
-        self.requires_global_des_vars = requires_global_des_vars
+        self.has_global_des_vars = has_global_des_vars
         self.configured = False
     
     @property
@@ -157,7 +157,7 @@ class Architecture(HasTraits):
             parent_global_vars = self.parent.get_global_des_vars()
         except AttributeError: 
             parent_global_vars = []
-        if (not parent_global_vars) and self.requires_global_des_vars: 
+        if (not parent_global_vars) and self.has_global_des_vars: 
             raise RuntimeError("this Architecture requires global design variables in the problem " 
             "formulation but none were found in parent")
         
