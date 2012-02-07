@@ -56,10 +56,9 @@ class Parameter(object):
         self._expreval = expreval
         
         try:
-            # metadata is in the form [(varname, metadata)], so use [0][1] to get
-            # the actual metadata dict (since we're a Parameter we'll only be
-            # referencing one variable.
-            metadata = self.get_metadata()[0][1]
+            # metadata is in the form (varname, metadata), so use [1] to get
+            # the actual metadata dict 
+            metadata = self.get_metadata()[1]
         except AttributeError:
             parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % target,
                                    AttributeError)
@@ -176,7 +175,7 @@ class Parameter(object):
         if self._metadata is None:
             self._metadata = self._expreval.get_metadata()
         if metaname is None:
-            return self._metadata
+            return self._metadata[0]
         else:
             return [(name,self._metadata.get(metaname)) for name,val in self._metadata]
 
@@ -201,9 +200,11 @@ class ParameterGroup(object):
             # prevent multiply nested ParameterGroups
             if not isinstance(param, Parameter):
                 raise ValueError("tried to add a non-Parameter object to a ParameterGroup")
+            
+            
         self._params = params[:]
-        self.low = self._params[0].low
-        self.high = self._params[0].high
+        self.low = max([x.low for x in self._params])
+        self.high = min([x.high for x in self._params])
         self.start = self._params[0].start
         self.scaler = self._params[0].scaler
         self.adder = self._params[0].adder
@@ -248,12 +249,15 @@ class ParameterGroup(object):
         of metadata if metaname is provided, or the whole metadata dictionary
         for that variable if it is not.
         """
-        dct = {}
-        #for param in self._params:
-        param = self._params[0]
-        tup = param.get_metadata(metaname)
-        dct.setdefault(tup[0][0], tup[0][1])
-        return dct.items()
+        dct = {'low':self.low,
+               'high':self.high,
+               'start':self.start,
+               'scaler':self.scaler,
+               'adder':self.adder,
+               'fd_step':self.fd_step,
+               'name':self.name}
+        targets = [p.target for p in self._params]
+        return (targets,dct)
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the 
