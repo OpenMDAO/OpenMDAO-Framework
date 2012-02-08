@@ -119,6 +119,8 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        self._exec_state = 'INVALID' # possible values: VALID, INVALID, RUNNING
+
         # register callbacks for all of our 'in' traits
         for name,trait in self.class_traits().items():
             if trait.iotype == 'in':
@@ -166,7 +168,6 @@ class Component (Container):
         
         self._publish_vars = {}  # dict of varname to subscriber count
         
-        self._exec_state = 'INVALID' # possible values: VALID, INVALID, RUNNING
 
     @property
     def dir_context(self):
