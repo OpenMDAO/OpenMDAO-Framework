@@ -83,6 +83,11 @@ def pack_zipfile(patterns, filename, logger=None):
 
     logger: Logger
         Used for recording progress.
+
+    .. note::
+        The code uses :meth:`glob.glob` to process `patterns`.
+        It does not check for the existence of any matches.
+
     """
     logger = logger or NullLogger()
 

@@ -1,91 +1,8 @@
 """
+.. _`resource.py`:
+
 Support for allocation of servers from one or more resources
 (i.e., the local host, a cluster of remote hosts, etc.)
-Some types of allocated servers (i.e. :class:`GridEngineServer`) are
-capable of submitting jobs to queuing systems. A resource description is
-a dictionary that can include both allocation and queuing information.
-
-====================== ====== ==========================================
-Allocation Key         Value  Description
-====================== ====== ==========================================
-allocator              string Name of allocator to use.
----------------------- ------ ------------------------------------------
-localhost              bool   Must be/must not be on the local host.
----------------------- ------ ------------------------------------------
-exclude                list   Hostnames to exclude.
----------------------- ------ ------------------------------------------
-required_distributions list   List of :class:`pkg_resources.Distribution`
-                              or package requirement strings.
----------------------- ------ ------------------------------------------
-orphan_modules         list   List of 'orphan' module names.
----------------------- ------ ------------------------------------------
-python_version         string Python version required (i.e '2.7').
----------------------- ------ ------------------------------------------
-n_cpus                 int    Number of CPUs/cores required.
-====================== ====== ==========================================
-
-Values for `required_distributions` and `orphan_modules` are typically taken
-from the return value of :meth:`save_to_egg`. The `n_cpus` key is also used as
-a queuing key for parallel applications.
-
-Most of the queuing keys are derived from the Distributed Resource Management
-Application API (DRMAA) standard:
-
-========================= ====== ===============================================
-Queuing Key               Value  Description
-========================= ====== ===============================================
-job_name                  string Name for the submitted job.
-------------------------- ------ -----------------------------------------------
-remote_command            string Command to execute
-                                 (just the command, no arguments).
-------------------------- ------ -----------------------------------------------
-args                      list   Arguments for the command.
-------------------------- ------ -----------------------------------------------
-job_environment           dict   Any additional environment variables needed.
-------------------------- ------ -----------------------------------------------
-working_directory         string Directory to execute in (use with care).
-------------------------- ------ -----------------------------------------------
-parallel_environment      string Used by some systems for parallel applications.
-------------------------- ------ -----------------------------------------------
-input_path                string Path for stdin.
-------------------------- ------ -----------------------------------------------
-output_path               string Path for stdout.
-------------------------- ------ -----------------------------------------------
-error_path                string Path for stderr.
-------------------------- ------ -----------------------------------------------
-join_files                bool   If True, stderr is joined with stdout.
-------------------------- ------ -----------------------------------------------
-email                     list   List of email addresses to notify.
-------------------------- ------ -----------------------------------------------
-block_email               bool   If True, do not send notifications.
-------------------------- ------ -----------------------------------------------
-email_events              string When to send notifications. \
-                                 ('b'=>beginning, 'e'=>end, 'a'=>abort, \
-                                  's'=>suspension)
-------------------------- ------ -----------------------------------------------
-start_time                string Timestamp for when to start the job.
-------------------------- ------ -----------------------------------------------
-deadline_time             string Timestamp for when the job must be complete.
-------------------------- ------ -----------------------------------------------
-hard_wallclock_time_limit int    Time limit while running or suspended (sec).
-------------------------- ------ -----------------------------------------------
-soft_wallclock_time_limit int    Estimated time running or suspended (sec).
-------------------------- ------ -----------------------------------------------
-hard_run_duration_limit   int    Time limit while running (sec).
-------------------------- ------ -----------------------------------------------
-soft_run_duration_limit   int    Estimated time while running (sec).
-------------------------- ------ -----------------------------------------------
-job_category              string Used to try to portably select site-specific
-                                 queuing options.
-------------------------- ------ -----------------------------------------------
-native_specification      string Queuing system specific options.
-========================= ====== ===============================================
-
-Use of 'native_specification' is discouraged since that makes the submitting
-application less portable.
-
-``HOME_DIRECTORY`` and ``WORKING_DIRECTORY`` are constants that may be used
-as placeholders in path specifications. They are translated at the server.
 """
 
 import ConfigParser
@@ -114,7 +31,7 @@ HOME_DIRECTORY = '$drmaa_hd_ph$'
 WORKING_DIRECTORY = '$drmaa_wd_ph$'
 
 # DRMAA-inspired keys.
-QUEUING_SYSTEM_KEYS = set([
+QUEUING_SYSTEM_KEYS = set((
     'account_id',
     'queue',
     'job_name',
@@ -140,10 +57,13 @@ QUEUING_SYSTEM_KEYS = set([
     # Others found to be useful (reduces 'native_specification' usage).
     'parallel_environment',
     'email_events',
-])
+))
 
 # Legal allocator name pattern.
-_LEGAL_NAME = re.compile('^[a-zA-Z][_a-zA-Z0-9]*$')
+_LEGAL_NAME = re.compile(r'^[a-zA-Z][_a-zA-Z0-9]*$')
+
+# Checks for IPv4 address.
+_IPV4_HOST = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')
 
 
 class ResourceAllocationManager(object):
@@ -236,7 +156,7 @@ class ResourceAllocationManager(object):
             ram = ResourceAllocationManager._RAM
             if ram is None:
                 ResourceAllocationManager._RAM = ResourceAllocationManager()
-            elif ram._pid != os.getpid():
+            elif ram._pid != os.getpid():  # pragma no cover
                 # We're a copy from a fork.
                 for allocator in ram._allocators:
                     allocator.invalidate()
@@ -502,29 +422,37 @@ class ResourceAllocationManager(object):
             Prefix for the local names of the remote allocators.
             The default is the remote hostname.
         """
-        ram = ResourceAllocationManager._get_instance()
-        with ResourceAllocationManager._lock:
-            ram._add_remotes(server, prefix)
-
-    def _add_remotes(self, server, prefix):
-        """ Add allocators from a remote server. """
         remote_ram = server.get_ram()
-        total = remote_ram._get_total_allocators()
+        total = remote_ram.get_total_allocators()
         if not prefix:
-            prefix, dot, rest = server.host.partition('.')
+            prefix = ResourceAllocationManager._make_prefix(server.host)
+        proxies = []
         for i in range(total):
-            allocator = remote_ram._get_allocator_proxy(i)
+            allocator = remote_ram.get_allocator_proxy(i)
             proxy = RemoteAllocator('%s_%s' % (prefix, allocator.name),
                                     allocator)
-            self._allocators.append(proxy)
+            proxies.append(proxy)
+        ram = ResourceAllocationManager._get_instance()
+        with ResourceAllocationManager._lock:
+            ram._allocators.extend(proxies)
+
+    @staticmethod
+    def _make_prefix(hostid):
+        """ Return legal prefix based on `hostid`. """
+        if _IPV4_HOST.match(hostid):  # Use all digits to be unique.
+            prefix = hostid.replace('.', '')
+        else:  # IP hostname (letters, digits, and hyphen are legal).
+            prefix, dot, rest = hostid.partition('.')
+            prefix = prefix.replace('-', '')
+        return prefix
 
     @rbac('*')
-    def _get_total_allocators(self):
+    def get_total_allocators(self):
         """ Return number of allocators for remote use. """
         return len(self._allocators)
 
     @rbac('*', proxy_types=[object])
-    def _get_allocator_proxy(self, index):
+    def get_allocator_proxy(self, index):
         """
         Return allocator for remote use.
 

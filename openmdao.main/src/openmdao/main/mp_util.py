@@ -21,6 +21,7 @@ from multiprocessing import current_process, connection
 from multiprocessing.managers import BaseProxy
 
 from openmdao.main.rbac import rbac_methods
+from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.publickey import decode_public_key, is_private, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT
@@ -75,6 +76,7 @@ def write_server_config(server, filename, real_ip=None):  #pragma no cover
     parser.set(section, 'key', server.public_key_text)
     logfile = os.path.join(os.getcwd(), 'openmdao_log.txt')
     parser.set(section, 'logfile', '%s:%s' % (socket.gethostname(), logfile))
+    parser.set(section, 'version', __version__)
 
     with open(filename, 'w') as cfg:
         parser.write(cfg)
@@ -103,6 +105,7 @@ def read_server_config(filename):
         key = decode_public_key(key)
     cfg['key'] = key
     cfg['logfile'] = parser.get(section, 'logfile')
+    cfg['version'] = parser.get(section, 'version')
     return cfg
 
 
@@ -137,39 +140,59 @@ def setup_tunnel(address, port):
         args = ['ssh', '-l', user,
                 '-L', '%d:localhost:%d' % (port, port), address]
 
-    tunnel_proc = ShellProc(args, stdin=stdin, stdout=stdout, stderr=STDOUT)
-    sock = socket.socket(socket.AF_INET)
-    address = ('127.0.0.1', port)
-    for retry in range(20):
-        time.sleep(.5)
-        exitcode = tunnel_proc.poll()
-        if exitcode is not None:
-            msg = 'ssh tunnel process exited with exitcode %d,' \
-                  ' output in %s' % (exitcode, logname)
-            logging.error(msg)
-            raise RuntimeError(msg)
+    tunnel_proc = None
+    connected = False
+    try:
         try:
-            sock.connect(address)
-        except socket.error as exc:
-            if exc.args[0] != errno.ECONNREFUSED and \
-               exc.args[0] != errno.ENOENT:
-                raise
-        else:
-            atexit.register(_cleanup_tunnel, tunnel_proc, logname, os.getpid())
-            sock.close()
-            return address
+            tunnel_proc = ShellProc(args, stdin=stdin,
+                                    stdout=stdout, stderr=STDOUT)
+        except Exception as exc:
+            msg = "Can't create ssh tunnel process from %s: %s" % (args, exc)
+            raise RuntimeError(msg)
 
-    _cleanup_tunnel(tunnel_proc, logname)
-    raise RuntimeError('Timeout trying to connect through tunnel to %s'
-                       % address)
+        sock = socket.socket(socket.AF_INET)
+        address = ('127.0.0.1', port)
+        for retry in range(20):
+            time.sleep(.5)
+            exitcode = tunnel_proc.poll()
+            if exitcode is not None:
+                msg = 'ssh tunnel process exited with exitcode %d,' \
+                      ' output in %s' % (exitcode, logname)
+                raise RuntimeError(msg)
+            try:
+                sock.connect(address)
+            except socket.error as exc:
+                if exc.args[0] != errno.ECONNREFUSED and \
+                   exc.args[0] != errno.ENOENT:
+                    msg = "Can't connect to ssh tunnel: %s, output in %s" \
+                          % (exc, logname)
+                    raise RuntimeError(msg)
+            else:
+                atexit.register(_cleanup_tunnel, tunnel_proc, stdin, stdout,
+                                logname, os.getpid())
+                sock.close()
+                connected = True
+                return address
+    finally:
+        if not connected:
+            if tunnel_proc is not None:  # Cleanup but keep logfile.
+                _cleanup_tunnel(tunnel_proc, stdin, stdout, None, os.getpid())
+                msg = 'Timeout trying to connect through tunnel to %s,' \
+                      ' output in %s' % (address, logname)
+                raise RuntimeError(msg)
+            else:
+                stdin.close()
+                stdout.close()
 
-def _cleanup_tunnel(tunnel_proc, logname, pid):
+def _cleanup_tunnel(tunnel_proc, stdin, stdout, logname, pid):
     """ Try to terminate `tunnel_proc` if it's still running. """
     if pid != os.getpid():
         return  # We're a forked process.
     if tunnel_proc.poll() is None:
         tunnel_proc.terminate(timeout=10)
-    if os.path.exists(logname):
+    stdin.close()
+    stdout.close()
+    if logname is not None and os.path.exists(logname):
         try:
             os.remove(logname)
         except Exception as exc:

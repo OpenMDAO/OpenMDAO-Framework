@@ -21,11 +21,8 @@ the Python file ``optimization_unconstrained.py``:
     class OptimizationUnconstrained(Assembly):
         """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-        def __init__(self):
-            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+        def configure(self):
         
-            super(OptimizationUnconstrained, self).__init__()
-
             # Create CONMIN Optimizer instance
             self.add('driver', CONMINdriver())
         
@@ -77,28 +74,16 @@ The OptimizationUnconstrained class is derived from Assembly instead of Componen
 
     class OptimizationUnconstrained(Assembly):
         """Unconstrained optimization of the Paraboloid with CONMIN."""
-    
+        
+        def configure(self): 
+            """function that sets up the architecture"""
+        
 In the Paraboloid component, you created an ``execute`` function to tell it what to do when the
 component is run. The ``OptimizationUnconstrained`` assembly does not need an ``execute`` function because
-the Assembly class already has one that is sufficient for most cases. However, this assembly does
-need an ``initialize`` function to set parameters for the optimization. This is what the ``__init__``
-function does:
+the Assembly class already has one that is sufficient for most cases. However the assembly does need a
+``configure`` function defined which manages the creation of all the components, drivers, and data connections. 
 
-.. testcode:: simple_model_Unconstrained_pieces
-
-        def __init__(self):
-            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
-        
-            super(OptimizationUnconstrained, self).__init__()
-
-The ``__init__`` function is called by the class constructor on a new
-uninitialized instance of the class, so it's a good spot to set up any
-parameters that CONMIN needs. The *super* command calls the
-``__init__`` function of the parent (Assembly). This is required, and forgetting it
-can lead to unexpected behavior.
-
-Next, the Paraboloid and the CONMIN driver have to be instantiated and added
-to ``OptimizationUnconstrained``. The function ``add`` is used to add them
+In ``confiugure`` the function ``add`` is used to add things
 to the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces

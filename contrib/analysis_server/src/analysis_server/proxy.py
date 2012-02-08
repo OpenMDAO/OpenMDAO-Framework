@@ -662,7 +662,7 @@ class FileProxy(ProxyMixin, File):
         name: string
             Name in `obj`, ignored.
         """
-        if self._component._call_tree_rooted:
+        if self._component._call_cpath_updated:
             return None  # Not initialized.
 
         if self._client is None:  # Happens during component.__setstate__

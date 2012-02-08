@@ -1,10 +1,11 @@
-""" Base class for an external application that needs to be executed. """
+"""
+.. _`external_code.py`:
+"""
 
 import glob
 import os.path
 import shutil
 import stat
-import subprocess
 import sys
 import time
 
@@ -17,17 +18,21 @@ from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
 
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
-from openmdao.util.shellproc import ShellProc
+from openmdao.util import shellproc
 
 
 class ExternalCode(ComponentWithDerivatives):
     """
     Run an external code as a component. The component can be configured to
     run the code on a remote server, see :meth:`execute`.
+
+    Default stdin is the 'null' device, default stdout is the console, and
+    default stderr is ``error.out``.
     """
 
-    PIPE   = subprocess.PIPE
-    STDOUT = subprocess.STDOUT
+    PIPE     = shellproc.PIPE
+    STDOUT   = shellproc.STDOUT
+    DEV_NULL = shellproc.DEV_NULL
 
     # pylint: disable-msg=E1101
     command = List(Str, desc='The command to be executed.')
@@ -47,8 +52,9 @@ class ExternalCode(ComponentWithDerivatives):
 
     def __init__(self, *args, **kwargs):
         super(ExternalCode, self).__init__(*args, **kwargs)
+        self.check_external_outputs=True
 
-        self.stdin  = None
+        self.stdin  = self.DEV_NULL
         self.stdout = None
         self.stderr = "error.out"
 
@@ -72,8 +78,16 @@ class ExternalCode(ComponentWithDerivatives):
         """
         Runs the specified command.
 
-        First removes existing output (but not in/out) files.
-        Then if `resources` have been specified, an appropriate server
+            1. Existing output (but not in/out) files are removed.
+            2. Checks that all external input files exist.
+            3. Runs the command.
+            4. Checks that all external output files exist.
+
+        If a subclass generates outputs (such as postprocessing results),
+        then it should set attribute `check_external_outputs` False and call
+        :meth:`check_files` itself.
+
+        If `resources` have been specified, an appropriate server
         is allocated and the command is run on that server.
         Otherwise the command is run locally.
 
@@ -131,6 +145,8 @@ class ExternalCode(ComponentWithDerivatives):
         if not self.command:
             self.raise_exception('Null command line', ValueError)
 
+        self.check_files(inputs=True)
+
         return_code = None
         error_msg = ''
         try:
@@ -157,8 +173,67 @@ class ExternalCode(ComponentWithDerivatives):
                     
                 self.raise_exception('return_code = %d%s' \
                     % (return_code, err_fragment), RuntimeError)
+
+            if self.check_external_outputs:
+                self.check_files(inputs=False)
         finally:
             self.return_code = -999999 if return_code is None else return_code
+
+    def check_files(self, inputs):
+        """
+        Check that all 'specific' input or output external files exist.
+        If an external file path specifies a pattern it is *not* checked.
+
+        inputs: bool
+            If True, check inputs, otherwise outputs.
+        """
+        # External files.
+        for metadata in self.external_files:
+            path = metadata.path
+            for ch in ('*?['):
+                if ch in path:
+                    break
+            else:
+                if inputs:
+                    if not metadata.get('input', False):
+                        continue
+                else:
+                    if not metadata.get('output', False):
+                        continue
+                if not os.path.exists(path):
+                    iotype = 'input' if inputs else 'output'
+                    self.raise_exception('missing %s file %r' % (iotype, path),
+                                         RuntimeError)
+        # Stdin, stdout, stderr.
+        if inputs and self.stdin and self.stdin != self.DEV_NULL:
+            if not os.path.exists(self.stdin):
+                self.raise_exception('missing stdin file %r' % self.stdin,
+                                     RuntimeError)
+
+        if not inputs and self.stdout and self.stdout != self.DEV_NULL:
+            if not os.path.exists(self.stdout):
+                self.raise_exception('missing stdout file %r' % self.stdout,
+                                     RuntimeError)
+
+        if not inputs and self.stderr and self.stderr != self.DEV_NULL \
+                                      and self.stderr != self.STDOUT:
+            if not os.path.exists(self.stderr):
+                self.raise_exception('missing stderr file %r' % self.stderr,
+                                     RuntimeError)
+        # File variables.
+        if inputs:
+            for pathname, obj in self.items(iotype='in', recurse=True):
+                if isinstance(obj, FileRef):
+                    path = self.get_metadata(pathname, 'local_path')
+                    if path and not os.path.exists(path):
+                        self.raise_exception("missing 'in' file %r" % path,
+                                             RuntimeError)
+        else:
+            for pathname, obj in self.items(iotype='out', recurse=True):
+                if isinstance(obj, FileRef):
+                    if not os.path.exists(obj.path):
+                        self.raise_exception("missing 'out' file %r" % obj.path,
+                                             RuntimeError)
 
     def _execute_local(self):
         """ Run command. """
@@ -166,8 +241,8 @@ class ExternalCode(ComponentWithDerivatives):
         start_time = time.time()
 
         self._process = \
-            ShellProc(self.command, self.stdin, self.stdout, self.stderr,
-                      self.env_vars)
+            shellproc.ShellProc(self.command, self.stdin,
+                                self.stdout, self.stderr, self.env_vars)
         self._logger.debug('PID = %d', self._process.pid)
 
         try:
@@ -205,7 +280,11 @@ class ExternalCode(ComponentWithDerivatives):
                 rdesc['args'] = self.command[1:]
             if self.env_vars:
                 rdesc['job_environment'] = self.env_vars
-            if self.stdin:
+            if not self.stdin:
+                self.raise_exception('Remote execution requires stdin of'
+                                     ' DEV_NULL or filename, got %r'
+                                     % self.stdin, ValueError)
+            if self.stdin != self.DEV_NULL:
                 rdesc['input_path'] = self.stdin
             if self.stdout:
                 rdesc['output_path'] = self.stdout
@@ -232,10 +311,11 @@ class ExternalCode(ComponentWithDerivatives):
             for pathname, obj in self.items(iotype='in', recurse=True):
                 if isinstance(obj, FileRef):
                     local_path = self.get_metadata(pathname, 'local_path')
-                    patterns.append(local_path)
-                    if not obj.binary:
-                        textfiles.append(local_path)
-            if self.stdin:
+                    if local_path:
+                        patterns.append(local_path)
+                        if not obj.binary:
+                            textfiles.append(local_path)
+            if self.stdin and self.stdin != self.DEV_NULL:
                 patterns.append(self.stdin)
                 textfiles.append(self.stdin)
             if patterns:

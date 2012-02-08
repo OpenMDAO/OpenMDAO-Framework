@@ -47,6 +47,8 @@ class OptProblemSolutionCheck(Architecture):
 #opt_problems = [item for item in dir(openmdao.lib.optproblems.api) if isinstance(item,OptProblem)]
 
 class TestOptProblems(unittest.TestCase): 
+    """Test set to check the validity of all optproblems in the standard library""" 
+    
     def assertAccuracy(self,prob_name,error_dict,tol): 
         for k,v in error_dict.iteritems(): 
             if isinstance(v,tuple): 
@@ -59,6 +61,8 @@ class TestOptProblems(unittest.TestCase):
         
     
     def test_optproblems_solution(self): 
+        """test to make sure that at the specified solution point, the objective 
+        values match what is given in the solution""" 
         
         #find all the optproblems in lib
         startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),]
@@ -72,9 +76,15 @@ class TestOptProblems(unittest.TestCase):
             prob_package = __import__(prob_package,globals(),locals(),[prob_class,],-1)
             
             prob = getattr(prob_package,prob_class)() #create instance of the OptProblem
+            try: 
+                prob.check_solution(strict=True)
+            except ValueError as err: 
+                self.fail("There is missing piece of the solution for %s%s"%(prob.__class__,str(err)))                
+                
             prob.architecture = OptProblemSolutionCheck()
-            prob.configure()
             
+            
+            prob.configure()
             prob.run()
             
             error = prob.check_solution(strict=True)

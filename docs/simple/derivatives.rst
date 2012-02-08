@@ -159,12 +159,10 @@ example shows how they can be accessed and used.
 .. doctest::
     :options: +SKIP
 
-        >>> from openmdao.main.api import set_as_top
-        >>>
         >>> # Paraboloid Model
         >>>
         >>> from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
-        >>> model = set_as_top(OptimizationConstrained())
+        >>> model = OptimizationConstrained()
         >>> model.run()
         >>> print model.paraboloid.exec_count
         29
@@ -173,7 +171,7 @@ example shows how they can be accessed and used.
         >>> # Paraboloid Model with analytical derivatives
         >>>
         >>> from openmdao.examples.simple.optimization_constrained_derivative import OptimizationConstrained
-        >>> model = set_as_top(OptimizationConstrained())
+        >>> model = OptimizationConstrained()
         >>> model.run()
         >>> print model.paraboloid.exec_count
         17

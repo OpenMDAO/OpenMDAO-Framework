@@ -1,3 +1,5 @@
+"""Implementation of the Colaborative Optimization Optimization Architecture"""
+
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Float, Array
@@ -13,7 +15,7 @@ class CO(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
-        
+        self.has_global_des_vars = True
     def configure(self): 
          
          
@@ -34,6 +36,7 @@ class CO(Architecture):
         
         #Global Driver    
         global_opt = self.parent.add('driver', CONMINdriver()) 
+        global_opt.recorders = self.data_recorders
         global_opt.print_vars = ['dis1.y1', 'dis2.y2']
         global_opt.iprint = 0
         global_opt.itmax = 100
