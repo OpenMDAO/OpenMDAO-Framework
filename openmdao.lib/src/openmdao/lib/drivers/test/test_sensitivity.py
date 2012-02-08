@@ -8,7 +8,7 @@ import unittest
 from openmdao.main.datatypes.api import Float
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
-from openmdao.main.api import Component, Assembly
+from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.util.testutil import assert_rel_error
 
 class Comp(Component):
@@ -30,11 +30,7 @@ class Comp(Component):
 class Assy(Assembly):
     """ Assembly with driver and comp"""
     
-    def __init__(self):
-        """ Initialize it"""
-        
-        # pylint: disable-msg=E1101
-        super(Assy, self).__init__()
+    def configure(self):
 
         self.add('comp', Comp())
         self.add('driver', SensitivityDriver())
@@ -55,7 +51,7 @@ class SensitivityDriverTestCase(unittest.TestCase):
     """test SensitivityDriver component"""
 
     def setUp(self):
-        self.model = Assy()
+        self.model = set_as_top(Assy())
         
     def tearDown(self):
         self.model = None

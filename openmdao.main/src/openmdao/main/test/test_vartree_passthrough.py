@@ -21,8 +21,7 @@ class TstComponent(Component):
 
 class TstAssembly(Assembly):
 
-    def __init__(self):
-        super(TstAssembly,self).__init__()
+    def configure(self):
         self.add('comp',TstComponent())
         self.create_passthrough('comp.dummy_data.dummy1')
         self.create_passthrough('comp.dummy_data_out.dummy1', 'dummy1_out')

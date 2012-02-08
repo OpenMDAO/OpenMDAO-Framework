@@ -47,12 +47,10 @@ like this.
     class SolutionAssembly(Assembly):
         """ Solves for the root of MIMOSystem. """
     
-        def __init__(self):
+        def configure(self):
             """ Creates a new Assembly with this problem
             the answer should be 1.4142.....
             """
-            
-            super(SolutionAssembly, self).__init__()    
             
             self.add('driver', FixedPointIterator())
             self.add('problem', Babylonian())

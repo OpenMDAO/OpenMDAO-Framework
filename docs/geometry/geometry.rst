@@ -45,7 +45,7 @@ can be directly set:
 
 .. testsetup:: parameter_interface
 
-    from openmdao.main.api import Component, Assembly
+    from openmdao.main.api import Component, Assembly, set_as_top
     from openmdao.lib.datatypes.api import Float, Bool
     from openmdao.lib.drivers.api import CONMINdriver
     
@@ -65,9 +65,7 @@ can be directly set:
     
     class TLA(Assembly):
     
-        def __init__(self):
-        
-            super(TLA, self).__init__()
+        def configure(self):
 
             # Create GeoMan component instances
             self.add('geo_manipulator', GeoMan())
@@ -78,7 +76,7 @@ can be directly set:
             # add geo_manipulator to workflow
             self.driver.workflow.add('geo_manipulator')
 
-    self = TLA()
+    self = set_as_top(TLA())
     geo_manipulator = GeoMan()
 
 .. testcode:: parameter_interface

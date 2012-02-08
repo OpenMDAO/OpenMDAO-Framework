@@ -25,8 +25,7 @@ operate.
         from openmdao.lib.optproblems.branin import BraninComponent
         
         class Analysis(Assembly): 
-            def __init__(self,doc=None): 
-                super(Analysis,self).__init__()
+            def configure(self):
                 
                 self.add('branin', BraninComponent())
                 self.add('driver', DOEdriver())
