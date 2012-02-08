@@ -96,7 +96,6 @@ class BLISS(Architecture):
         for comp,local_params in local_dvs.iteritems(): 
             bbopt = self.parent.add('bbopt_%s'%comp,CONMINdriver())
             bbopt.linobj = True
-            bbopt.iprint = 0
             bbopt.force_execute = True
             bbopts.append('bbopt_%s'%comp)
             
@@ -142,7 +141,6 @@ class BLISS(Architecture):
         sysopt = self.parent.add('sysopt', CONMINdriver())
         sysopt.recorders = self.data_recorders
         sysopt.linobj = True
-        sysopt.iprint = 0
         sysopt.force_execute = True    
         for i,(comps,param) in enumerate(global_dvs): 
             z_store = "global_des_vars[%d]"%i

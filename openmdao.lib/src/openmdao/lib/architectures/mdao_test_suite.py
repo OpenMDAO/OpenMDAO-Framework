@@ -137,7 +137,7 @@ def run_arch_test_suite(arch=[], optproblems=[]):
             for k,v in prob.check_solution().iteritems(): 
                 print "    ",k,": ",v
             #print prob.check_solution()
-             
+
             iter_data = prob.architecture.data_recorders[0].get_iterator()
             data = [case['objective'] for case in iter_data]
             #converge_file.write('%s = %s'%(arch_name,str(data)))

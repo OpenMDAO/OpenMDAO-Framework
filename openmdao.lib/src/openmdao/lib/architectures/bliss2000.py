@@ -68,8 +68,9 @@ class SubSystemOpt(Assembly):
     
         if local_params: #if there are none, you don't do an optimization
             self.add('driver',CONMINdriver())
+            self.driver.print_results = False
             self.driver.add_objective("objective_comp.f_wy")
-            self.driver.fdch = .00001
+            #self.driver.fdch = .00001
             #self.driver.fdchm = .0001
             
             #this is not really necessary, but you might want to track it anyway...
@@ -198,10 +199,11 @@ class BLISS2000(Architecture):
             self.parent.add('%s_store'%l[0],Float(0.0))        
         
         #optimization of system objective function using the discipline meta models
-        sysopt=self.parent.add('sysopt', CONMINdriver())      
+        sysopt=self.parent.add('sysopt', CONMINdriver())   
+        sysopt.print_results = False
         sysopt.recorders = self.data_recorders
-        sysopt.fdch = .0001
-        sysopt.fdchm = .0001
+        #sysopt.fdch = .0001
+        #sysopt.fdchm = .0001
         
         obj2= objective[1].text
         for comp in objective[1].get_referenced_compnames():            
