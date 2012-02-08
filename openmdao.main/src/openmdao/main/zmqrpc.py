@@ -5,6 +5,8 @@ import optparse
 import pprint
 from functools import partial
 
+from zmqcomp import encode, decode
+
 class ZMQ_RPC(object):
     def __init__(self, url, context=None):
         if url.startswith('ws'):
@@ -12,7 +14,6 @@ class ZMQ_RPC(object):
             # use websockets
         else:
             import zmq
-            from zmqcomp import encode, decode
             
             if context is None:
                 context = zmq.Context()
@@ -36,18 +37,18 @@ class ZMQ_RPC(object):
 def main(args):
     parser = optparse.OptionParser()
     parser.add_option("-u", "--url", action="store", type="string", dest='url', 
-                      help="url of command socket", default='tcp://*:5555')
+                      help="url of command socket", default='tcp://localhost:5555')
 
     (options, args) = parser.parse_args(args)
     
-    proxy = ZMQ_RPC(options.url, zmq.Context())
+    proxy = ZMQ_RPC(options.url)
     
     # now do some remote commands
     proxy.register_published_vars(['paraboloid.x', 'paraboloid.y', 'paraboloid.f_xy'])
-    #proxy.set('comp2.x', 7.0)
-    #proxy.set('comp1.x', 9.0)
-    #proxy.set('comp2.x', 3.0)
     proxy.run()
+    print proxy.get('paraboloid.x')
+    print proxy.get('paraboloid.y')
+    print proxy.get('paraboloid.f_xy')
     
     proxy.close()
 

@@ -9,7 +9,7 @@ from zmq.eventloop import ioloop
 ioloop.install()
 
 # tornado
-from tornado import httpserver, ioloop, web
+from tornado import httpserver, web
 
 # openmdao
 from openmdao.util.network import get_unused_ip_port
@@ -17,22 +17,23 @@ from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 
-from openmdao.gui.handlers import LoginHandler, LogoutHandler
-import openmdao.gui.handlers_projdb    as proj
-import openmdao.gui.handlers_workspace as wksp
-
 class WebApp(web.Application):
     ''' openmdao web application server
         extends tornado web app with URL mappings, settings and server manager
     '''
 
     def __init__(self, server_mgr, cookie_secret=None):
+        from openmdao.gui.handlers import LoginHandler, LogoutHandler
         handlers = [
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
             web.url(r'/',       web.RedirectHandler, {'url':'/projects', 'permanent':False}),           
         ]        
+        
+        import openmdao.gui.handlers_projectdb as proj
         handlers.extend(proj.handlers)
+        
+        import openmdao.gui.handlers_workspace as wksp
         handlers.extend(wksp.handlers)
         
         if cookie_secret is None:

@@ -30,6 +30,9 @@ from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
 from zope.interface import implementedBy
 
+from openmdao.main.zmqcomp import *
+from openmdao.main.zmqrpc import *
+
 import networkx as nx
 
 from openmdao.util.network import get_unused_ip_port
@@ -49,6 +52,7 @@ class ConsoleServerFactory(Factory):
     def __init__(self):
         super(ConsoleServerFactory, self).__init__()
         self.cserver_dict = {}
+        self.ports_dict = {}
         self.temp_files = {}
 
     def __del__(self):
@@ -69,7 +73,31 @@ class ConsoleServerFactory(Factory):
         '''
         if not self.cserver_dict.has_key(server_id):
             cserver = self.create('mdao-'+server_id)
-            self.cserver_dict[server_id] = cserver;
+            self.cserver_dict[server_id] = cserver
+        else:
+            cserver = self.cserver_dict[server_id]
+        return cserver
+        
+    def zmq_create(self, name, rep_url, pub_url):
+        ''' Create a :class:`ZMQConsoleServer` and return a proxy for it. 
+        '''
+        manager = BaseManager()
+        manager.register('ZMQConsoleServer', ZMQConsoleServer)
+        manager.start()
+        return manager.ZMQConsoleServer(name, rep_url, pub_url)
+        
+    def zmq_console_server(self,server_id):
+        ''' create a new :class:`ConsoleServer` associated with an id
+        '''
+        if not self.cserver_dict.has_key(server_id):
+            name = 'zmq-mdao-'+server_id
+            rep_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
+            print "%s serving requests on %s" % (name, rep_url)
+            pub_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
+            print "%s publishing on %s" % (name, pub_url)
+            cserver = self.zmq_create(name,rep_url,pub_url)
+            self.cserver_dict[server_id] = ZMQ_RPC(rep_url)
+            self.ports_dict[server_id] = (rep_url, pub_url)
         else:
             cserver = self.cserver_dict[server_id]
         return cserver
@@ -101,7 +129,12 @@ class ConsoleServerFactory(Factory):
             f = self.temp_files[name]
             if os.path.exists(f):
                 rmtree(f)
-                
+
+class ZMQConsoleServer(object):
+    def __init__(self,server_id,rep_url,pub_url):
+        cserver = ConsoleServer('zmq-mdao-'+server_id)
+        ZmqCompWrapper.serve(cserver, rep_url=rep_url, pub_url=pub_url)
+
 class ConsoleServer(cmd.Cmd):
     ''' Object which knows how to load a model.
     Executes in a subdirectory of the startup directory.
