@@ -1,7 +1,7 @@
 
-import weakref
+import copy
 
-from enthought.traits.api import Python, Str
+from enthought.traits.api import Str
 from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.variable import Variable
@@ -48,6 +48,10 @@ class VariableTree(Container):
         else:
             return super(VariableTree, self).get_metadata(traitpath, metaname)
 
+    def copy(self):
+        """Returns a deep copy of this VariableTree"""
+        return copy.deepcopy(self)
+    
     def add(self, name, obj):
         if isinstance(obj, VariableTree):
             if self.trait(name) is None:

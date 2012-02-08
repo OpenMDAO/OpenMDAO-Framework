@@ -205,7 +205,7 @@ class ProblemFormulationTest(unittest.TestCase):
         else:
             self.fail("RuntimeError expected")
             
-        arch.requires_global_des_vars = True  
+        arch.has_global_des_vars = True  
         arch.param_types = ['continuous','discrete']
         try: 
             self.asm.check_config()
