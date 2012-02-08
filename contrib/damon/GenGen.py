@@ -13,7 +13,7 @@ from openmdao.lib.doegenerators.uniform import Uniform
 from openmdao.lib.datatypes.api import Float, Int, Slot, Str, Array, List
 
 from openmdao.lib.components.api import MetaModel,MultiObjExpectedImprovement,\
-     ProbIntersect,ParetoFilter, Mux
+     ParetoFilter, Mux
 from openmdao.lib.drivers.api import DOEdriver,Genetic,CaseIteratorDriver,FixedPointIterator
 from openmdao.lib.casehandlers.api import DBCaseRecorder,DumpCaseRecorder
 from openmdao.lib.casehandlers.api import DBCaseIterator
@@ -75,9 +75,7 @@ class Res(Component):
         
 class Analysis(Assembly):
 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
-        
+    def configure(self):
         self._tdir = mkdtemp()
         
         #Components
@@ -119,9 +117,7 @@ class Analysis(Assembly):
         shutil.rmtree(self._tdir, ignore_errors=True)
 
 if __name__ == "__main__": #pragma: no cover
-    from openmdao.main.api import set_as_top
     analysis = Analysis()
-    set_as_top(analysis)
     analysis.run()
     analysis.cleanup()
     

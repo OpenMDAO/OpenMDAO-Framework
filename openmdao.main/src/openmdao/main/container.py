@@ -57,13 +57,6 @@ _copydict = {
 _iodict = { 'out': 'output', 'in': 'input' }
 
 
-def set_as_top(cont):
-    """Specifies that the given Container is the top of a 
-    Container hierarchy.
-    """
-    cont.tree_rooted()
-    return cont
-
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
     of the object indicated by pathname.
@@ -147,6 +140,9 @@ class Container(HasTraits):
     def __init__(self, doc=None):
         super(Container, self).__init__()
         
+        self._call_cpath_updated = True
+        self._call_configure = True
+        
         self._managers = {}  # Object manager for remote access by authkey.
         self._depgraph = _ContainerDepends()
                           
@@ -157,8 +153,6 @@ class Container(HasTraits):
         self._name = None
         self._cached_traits_ = None
 
-        self._call_tree_rooted = True
-        
         if doc is not None:
             self.__doc__ = doc
 
@@ -188,7 +182,7 @@ class Container(HasTraits):
             self._branch_moved()
         
     def _branch_moved(self):
-        self._call_tree_rooted = True
+        self._call_cpath_updated = True
         for n,cont in self.items():
             if is_instance(cont, Container):
                 cont._branch_moved()
@@ -199,7 +193,7 @@ class Container(HasTraits):
         if self._name is None:
             if self.parent:
                 self._name = find_name(self.parent, self)
-            elif self._call_tree_rooted is False:
+            elif self._call_cpath_updated is False:
                 self._name = ''
             else:
                 return ''
@@ -507,8 +501,8 @@ class Container(HasTraits):
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
-            if self._call_tree_rooted is False:
-                obj.tree_rooted()
+            if self._call_cpath_updated is False:
+                obj.cpath_updated()
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
@@ -576,19 +570,23 @@ class Container(HasTraits):
                                  name, AttributeError)
 
     @rbac(('owner', 'user'))
-    def tree_rooted(self):
+    def configure(self):
+        pass
+    
+    @rbac(('owner', 'user'))
+    def cpath_updated(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
         Containers have been defined. It also does not guarantee that this
         component is fully configured to execute. Classes that override this
         function must call their base class version.
         
-        This version calls tree_rooted() on all of its child Containers.
+        This version calls cpath_updated() on all of its child Containers.
         """
         self._logger.rename(self.get_pathname().replace('.', ','))
-        self._call_tree_rooted = False
+        self._call_cpath_updated = False
         for cont in self.list_containers():
-            getattr(self, cont).tree_rooted()
+            getattr(self, cont).cpath_updated()
             
     def revert_to_defaults(self, recurse=True):
         """Sets the values of all of the inputs to their default values."""

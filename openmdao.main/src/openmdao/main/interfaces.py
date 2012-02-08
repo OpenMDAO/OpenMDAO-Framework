@@ -21,7 +21,7 @@ class IArchitecture(Interface):
                                  " Valid values are: ['eq', 'ineq']")
     num_allowed_objectives = Attribute("number of objectives supported.")
     has_coupling_vars = Attribute("True if coupling variables are required.")
-    requires_global_des_vars = Attribute("True if the architecture requires a problem " 
+    has_global_des_vars = Attribute("True if the architecture requires a problem " 
                                          "formulation with global design variables in it")
     
     
@@ -178,13 +178,12 @@ class IContainer(Interface):
         are placed in sublists to avoid ambiguity with string container indices.
         """ 
 
-    def tree_rooted():
-        """Called after the hierarchy containing this Container has been
-        defined back to the root. This does not guarantee that all sibling
-        Containers have been defined. It also does not guarantee that this
-        component is fully configured to execute.
-        """
-            
+    def cpath_updated():
+        """Called whenever this Container's position in the Container hierarchy changes."""
+        
+    def configure():
+        """Called once, after this Container has been placed in a rooted Container hierarchy."""
+        
     
 class IComponent(IContainer):
     """Interface for an IContainer object that can be executed to update the values of

@@ -20,7 +20,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.model = EngineOptimization()
-        self.model.tree_rooted()
+        self.model.cpath_updated()
 
     def tearDown(self):
         if self.model is not None:
