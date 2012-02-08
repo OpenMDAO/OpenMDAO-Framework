@@ -59,15 +59,20 @@ class SubSystemOpt(Assembly):
     
     def __init__(self,component,global_params,local_params,couple_deps,couple_indeps,constraints): 
         super(SubSystemOpt,self).__init__()
+        self.global_params = global_params 
+        self.local_params = local_params 
+        self.couple_deps = couple_deps
+        self.couple_indeps = couple_indeps
+        self.constraints = constraints 
         
-        dep_state_vars = set([c.dep.target for c in couple_deps])
+    def configure(self):     
+        dep_state_vars = set([c.dep.target for c in self.couple_deps])
         self.add('objective_comp',SubSystemObj(len(dep_state_vars)))
         self.add(component.name,component)
-        for p in global_params:
-            
+        for p in self.global_params:
             self.create_passthrough(p.target) #promote the global des vars
     
-        if local_params: #if there are none, you don't do an optimization
+        if self.local_params: #if there are none, you don't do an optimization
             self.add('driver',CONMINdriver())
             self.driver.add_objective("objective_comp.f_wy")
             self.driver.fdch = .00001
@@ -76,7 +81,7 @@ class SubSystemOpt(Assembly):
             #this is not really necessary, but you might want to track it anyway...
             self.create_passthrough("objective_comp.f_wy") #promote the objective function    
 
-            for p in local_params: 
+            for p in self.local_params: 
                 target = p.target
                 var_name = target.split(".")[-1]
                 
@@ -90,10 +95,10 @@ class SubSystemOpt(Assembly):
                 self.connect("%s.output"%broadcast_name,var_name) #connect broadcast output to variable in assembly
                 self.driver.add_parameter("%s.input"%broadcast_name,low=p.low,high=p.high) #optimizer varries broadcast input
             
-            for c in constraints: 
+            for c in self.constraints: 
                 self.driver.add_constraint(str(c))
                         
-        for c in couple_indeps: 
+        for c in self.couple_indeps: 
             self.create_passthrough(c.indep.target) #promote the couple inputs to the component
         
         self.weights = self.objective_comp.weights
