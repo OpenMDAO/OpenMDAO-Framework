@@ -17,7 +17,7 @@ class TstComponent(Component):
         self.add('dummy_data_out',TstContainer())
         
     def execute(self):
-        self.dummy_data_out.dummy1 = self.dummy_data.dummy1
+        self.dummy_data_out = self.dummy_data.copy()
 
 class TstAssembly(Assembly):
 
