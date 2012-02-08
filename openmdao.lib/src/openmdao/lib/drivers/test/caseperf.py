@@ -22,7 +22,7 @@ import time
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('mp_distributing').setLevel(logging.DEBUG)
 
-from openmdao.main.api import Assembly, Case, Component, set_as_top
+from openmdao.main.api import Assembly, Case, Component
 from openmdao.main.interfaces import implements, ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
@@ -105,9 +105,12 @@ class CID(Assembly):
     def __init__(self, extra_reqs=None):
         """ Create assembly with Sleeper as sole component. """
         super(CID, self).__init__()
+        self._extra_reqs = extra_reqs
+        
+    def configure(self):
         self.add('sleeper', Sleeper())
         self.add('driver', CaseIteratorDriver())
-        self.driver.extra_reqs = extra_reqs
+        self.driver.extra_reqs = self._extra_reqs
         self.driver.workflow.add('sleeper')
         self.driver.log_level = logging.DEBUG
 
@@ -148,7 +151,7 @@ def run_suite(resource_desc=None, name=None):
     max_servers = ResourceAllocationManager.max_servers(resource_desc)
     print 'max servers', max_servers
 
-    model = set_as_top(CID())
+    model = CID()
     model.driver.reload_model = False
     model.driver.sequential = False
 

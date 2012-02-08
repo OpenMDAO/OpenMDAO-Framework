@@ -74,8 +74,7 @@ def _get_driver():
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', _get_driver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')

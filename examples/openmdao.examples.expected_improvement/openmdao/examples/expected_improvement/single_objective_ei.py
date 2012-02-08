@@ -37,8 +37,7 @@ class MyDriver(Driver):
 
         
 class Analysis(Assembly): 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
+    def configure(self):
         
         self._tdir = mkdtemp()
         
@@ -110,7 +109,6 @@ class Analysis(Assembly):
 
 if __name__ == "__main__": #pragma: no cover
     import sys
-    from openmdao.main.api import set_as_top
     from openmdao.lib.casehandlers.db import case_db_to_dict
     
     seed = None
@@ -135,9 +133,6 @@ if __name__ == "__main__": #pragma: no cover
     from numpy import meshgrid,array, pi,arange,cos
     
     analysis = Analysis()
-       
-    set_as_top(analysis)
-    
     analysis.run()
         
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]

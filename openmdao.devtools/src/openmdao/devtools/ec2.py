@@ -46,7 +46,8 @@ def get_username():
         import pwd
         return pwd.getpwuid(os.getuid()).pw_name
 
-def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
+def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
+                              stream=sys.stdout):
     """Starts up an EC2 instance having the specified 'short' name and
     returns the instance.
     """
@@ -89,14 +90,16 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50):
         if ssh_test(inst.public_dns_name):
             break
     else:
-        raise RuntimeError("instance of '%s' ran but ssh connection attempts failed (%d attempts)" % (name,max_tries))
+        stream.write("\nssh connection to %s failed after %d attempts.  terminating...\n" % (name, max_tries))
+        terminate_instance(inst, name, stream, debug)
+        raise RuntimeError("couldn't connect to %s via ssh" % name)
 
     time.sleep(20)
     
     try:
         conn.create_tags([inst.id], {'Name': "%s_%s" % (get_username(),name)} )
     except Exception as err:
-        print str(err)
+        stream.write(str(err))
     return inst
 
 def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
@@ -198,7 +201,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
         terminate = False
     else: # stand up an instance of the specified image
         outf.write("starting instance %s from image\n" % host)
-        inst = start_instance_from_image(conn, config, host)
+        inst = start_instance_from_image(conn, config, host, stream=outf)
         terminate = True
     
     settings_kwargs['host_string'] = inst.public_dns_name

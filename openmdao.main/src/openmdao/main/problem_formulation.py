@@ -167,27 +167,23 @@ class ArchitectureAssembly(Assembly):
             self.raise_exception("This Assembly was already configured with another "
                                  "architecture.", RuntimeError)
     
-    def configure(self): 
-        """checks the configuration of the assmebly to make sure it's compatible 
-        with the architecture. Then initializes all the values in the 
-        parameters and coupling vars and configures the architecture"""
-        
-        self.architecture.check_config()
-        self.architecture.configure()
-        self.architecture.configured = True
-        
     def initialize(self): 
         """Sets all des_vars and coupling_vars to the start values, if specified""" 
         self.init_parameters()
         self.init_coupling_vars()
     
     def check_config(self):
+        """checks the configuration of the assembly to make sure it's compatible 
+        with the architecture. Then initializes all the values in the 
+        parameters and coupling vars and configures the architecture if it hasn't
+        been done already.
+        """
         super(ArchitectureAssembly, self).check_config()
         if self.architecture is not None:
-            if self.architecture.configured:
-                self.architecture.check_config()
-            else:
-                self.configure()
+            self.architecture.check_config()
+            if not self.architecture.configured:
+                self.architecture.configure()
+                self.architecture.configured = True
      
     def get_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 

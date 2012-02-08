@@ -60,10 +60,7 @@ called *differentiator*, into which a FiniteDifference instance can be placed:
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
-        def __init__(self):
-            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
-        
-            super(EngineOptimization, self).__init__()
+        def configure(self):
 
             # Create NEWSUMT Optimizer instance
             self.add('driver', NEWSUMTdriver())

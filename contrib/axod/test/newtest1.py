@@ -11,12 +11,12 @@ if '.' not in sys.path:
 
 
 from axod_compn import AxodCompn
-from openmdao.main.api import Component, set_as_top, Container
+from openmdao.main.api import Component, Container
 
 #    changing data in input file ............................
 #    executing using axod component 'AxodCompn'
 
-one = set_as_top(AxodCompn(input_filename='eee_hpt.inp'))
+one = AxodCompn(input_filename='eee_hpt.inp')
 one.Case1.Stage1.ptin = 51.00
 one.Case1.Stage1.ttin = 1284.0
 #one.Case1.Stage1.vctd = 1.0

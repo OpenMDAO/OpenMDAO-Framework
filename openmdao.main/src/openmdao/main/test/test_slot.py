@@ -28,18 +28,13 @@ class SlotComp(Assembly):
 
 class SlotComp2(SlotComp):
     somesocket = Slot(Assembly)
-    def __init__(self):
-        super(SlotComp2, self).__init__()
         
 class SlotComp3(SlotComp2):
     iterator = Slot(Assembly, desc='another dumb socket')
     
-    def __init__(self):
-        super(SlotComp3, self).__init__()
         
 class SlotComp4(SlotComp3):
-    def __init__(self):
-        super(SlotComp4, self).__init__()
+    pass
         
 class SlotTestCase(unittest.TestCase):
 
