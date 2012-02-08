@@ -74,7 +74,7 @@ class ZmqCompWrapper(object):
         self._repstream.send_multipart([self._encoder(ret)])
         
     @staticmethod
-    def serve(top, context=None, wsroute=None, port=8888,
+    def serve(top, context=None, wspub=None, wscmd=None, port=8888,
               rep_url='tcp://*:5555', pub_url='inproc://_pub_'):
 
         if context is None:
@@ -87,12 +87,17 @@ class ZmqCompWrapper(object):
         from openmdao.main.publisher import Publisher
         pub = Publisher.init(context, pub_url)
             
-        if wsroute:
-            from openmdao.main.zmqws import CompWebSocketHandler
+        if wspub or wscmd:
+            from openmdao.main.zmqws import CmdWebSocketHandler, PubWebSocketHandler
             from tornado import web
-            application = web.Application([(wsroute, CompWebSocketHandler, {'context':context,
-                                                                            'rep_url':rep_url,
-                                                                            'pub_url':pub_url})])
+            handlers = []
+            if wspub:
+                handlers.append((wspub, PubWebSocketHandler, {'context':context,
+                                                              'pub_url':pub_url}))
+            if wscmd:
+                handlers.append((wscmd, CmdWebSocketHandler, {'context':context,
+                                                              'rep_url':rep_url}))
+            application = web.Application(handlers)
             application.listen(port)
 
         try:
@@ -113,8 +118,10 @@ def main(args=None):
                       help="module path to class of top level component")
     parser.add_option("-p", "--publish", action="append", type="string", dest='published', 
                       help="specify a variable to publish", default=[])
-    parser.add_option("-w", "--websocket", action="store", type="string", dest='wsroute', 
-                      help="route to websocket")
+    parser.add_option("--wspub", action="store", type="string", dest='wspub', 
+                      help="route to pub websocket")
+    parser.add_option("--wscmd", action="store", type="string", dest='wscmd', 
+                      help="route to cmd websocket")
 
     (options, args) = parser.parse_args(args)
     
@@ -123,7 +130,7 @@ def main(args=None):
         parser.print_help()
         sys.exit(-1)
         
-    if options.wsroute:
+    if options.wspub or options.wscmd:
         ioloop.install() # must call this before importing any tornado stuff
 
     parts = options.classpath.split('.')
@@ -141,7 +148,7 @@ def main(args=None):
     top.register_published_vars(options.published)
     
     ZmqCompWrapper.serve(top, rep_url=options.repurl, pub_url=options.puburl,
-                         wsroute=options.wsroute)
+                         wspub=options.wspub, wscmd=options.wscmd)
     
 
 if __name__ == '__main__':

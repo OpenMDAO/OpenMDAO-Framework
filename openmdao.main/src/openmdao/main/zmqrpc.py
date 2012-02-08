@@ -4,21 +4,22 @@ import traceback
 import optparse
 import pprint
 from functools import partial
-import websocket
-
-
-import zmq
-
-from zmqcomp import encode, decode
 
 class ZMQ_RPC(object):
     def __init__(self, url, context=None):
-        if context is None:
-            context = zmq.Context()
+        if url.startswith('ws'):
+            import websocket
+            # use websockets
+        else:
+            import zmq
+            from zmqcomp import encode, decode
             
-        # Socket to talk to command sockets
-        self._cmdsock = context.socket(zmq.REQ)
-        self._cmdsock.connect(url)
+            if context is None:
+                context = zmq.Context()
+                
+            # Socket to talk to command sockets
+            self._cmdsock = context.socket(zmq.REQ)
+            self._cmdsock.connect(url)
         
     def __getattr__(self, name):
         f = partial(self.invoke, name)
