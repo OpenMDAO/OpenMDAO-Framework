@@ -1,7 +1,7 @@
 import sys
 
 from openmdao.main.api import Assembly, Component, Container, FileRef, \
-                              VariableTree, set_as_top
+                              VariableTree
 from openmdao.main.rbac import rbac
 
 from openmdao.main.datatypes.api import Array, Bool, Enum, File, Float, \
@@ -187,7 +187,7 @@ class Bogus(object):
 
 
 if __name__ == '__main__':
-    top = set_as_top(Assembly())
+    top = Assembly()
     comp = top.add('comp', TestComponent())
     comp.in_file = FileRef(path='ASTestComp-0.1.cfg', owner=top)
     comp.run()

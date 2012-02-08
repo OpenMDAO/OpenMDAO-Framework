@@ -5,7 +5,7 @@
 # Optimize the bar3 design using the CONMIN optimizer.
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Float
 
@@ -35,10 +35,7 @@ class Bar3Optimization(Assembly):
     frequency_allowable = Float(14.1421, iotype='in', units='Hz',
                         desc='Frequency limitation in Hertz')
     
-    def __init__(self):
-        """ Creates a new Assembly containing a Bar3_Truss and an optimizer"""
-        
-        super(Bar3Optimization, self).__init__()
+    def configure(self):
 
         # Create CONMIN Optimizer instance
         self.add('driver', CONMINdriver())
@@ -85,7 +82,6 @@ if __name__ == "__main__": # pragma: no cover
     # pylint: disable-msg=E1101
 
     opt_bar3 = Bar3Optimization()
-    set_as_top(opt_bar3)
 
     def prz(title):
         """ Print before and after"""

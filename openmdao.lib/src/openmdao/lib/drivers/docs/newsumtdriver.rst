@@ -49,18 +49,16 @@ follows:
 
 .. testcode:: NEWSUMT_load
 
-    from openmdao.main.api import Assembly
+    from openmdao.main.api import Assembly, set_as_top
     from openmdao.examples.enginedesign.vehicle import Vehicle
     from openmdao.lib.drivers.api import CONMINdriver
 
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
-        def __init__(self):
+        def configure(self):
             """ Creates a new Assembly for vehicle performance optimization."""
             
-            super(EngineOptimization, self).__init__()
-
             # Create CONMIN Optimizer instance
             self.add('driver', NEWSUMTdriver())
         
@@ -110,7 +108,8 @@ parameter.
     :hide:
     
     from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-    self = EngineOptimization()
+    from openmdao.main.api import set_as_top
+    self = set_as_top(EngineOptimization())
     
 .. testcode:: NEWSUMT_fd
 
@@ -178,7 +177,8 @@ The default value is 10.
 .. testsetup:: NEWSUMT_show
     
     from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-    self = EngineOptimization()
+    from openmdao.main.api import set_as_top
+    self = set_as_top(EngineOptimization())
 
 .. testcode:: NEWSUMT_show
 

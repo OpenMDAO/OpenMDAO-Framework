@@ -17,7 +17,7 @@ through the MetaModel.
 
 .. testcode:: MetaModel_parts
 
-    from openmdao.main.api import Assembly, Component, SequentialWorkflow
+    from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
     from math import sin
 
     from openmdao.lib.datatypes.api import Float
@@ -45,8 +45,7 @@ the MetaModel was instantiated as ``sin_meta_model``, making it easy to identify
 .. testcode:: MetaModel_parts
 
     class Simulation(Assembly):        
-        def __init__(self):
-            super(Simulation,self).__init__()
+        def configure(self):
 
             #Components
             self.add("sin_meta_model",MetaModel())      
@@ -73,7 +72,7 @@ is ready for training.
  .. testcode:: MetaModel_parts
     :hide:
     
-    self=Simulation()
+    self=set_as_top(Simulation())
 
 .. testcode:: MetaModel_parts
 
@@ -167,7 +166,7 @@ by the implementation of ``DBCaseRecorder()``, we can access and print the run d
 
     if __name__ == "__main__":
         
-        sim = Simulation()
+        sim = set_as_top(Simulation())
         sim.run()
                    
         #This is how you can access any of the data

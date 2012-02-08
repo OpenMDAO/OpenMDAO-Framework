@@ -97,15 +97,12 @@ class SellarCO_Multi(Assembly):
     y1 = Float()
     y2 = Float()
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
-        
-        # pylint: disable-msg=E1101
-        super(SellarCO_Multi, self).__init__()
         
         # Global Optimization
         self.add('driver', CONMINdriver())

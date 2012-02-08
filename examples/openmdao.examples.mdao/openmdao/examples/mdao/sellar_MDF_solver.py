@@ -12,7 +12,7 @@ class SellarMDF(Assembly):
     Disciplines coupled with BroydenSolver.
     """
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
@@ -20,8 +20,6 @@ class SellarMDF(Assembly):
         Optimal Objective = 3.18339"""
         
         # pylint: disable-msg=E1101
-        super(SellarMDF, self).__init__()
-
         # create Optimizer instance
         self.add('driver', CONMINdriver())
         
@@ -70,10 +68,8 @@ class SellarMDF(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     import time
-    from openmdao.main.api import set_as_top
     
     prob = SellarMDF()
-    set_as_top(prob)
     
     # pylint: disable-msg=E1101
         

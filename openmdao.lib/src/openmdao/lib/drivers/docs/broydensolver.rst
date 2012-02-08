@@ -63,12 +63,7 @@ equations defined in MIMOSystem.
     class SolutionAssembly(Assembly):
         """ Solves for the root of MIMOSystem. """
     
-        def __init__(self):
-            """ Creates a new Assembly with this problem
-            root at (0,1)
-            """
-            
-            super(SolutionAssembly, self).__init__()    
+        def configure(self):
             
             self.add('driver', BroydenSolver())
             self.add('problem', MIMOSystem())

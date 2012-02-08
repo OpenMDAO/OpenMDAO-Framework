@@ -70,15 +70,13 @@ assembly, so we can actually run it.
             Disciplines coupled with FixedPointIterator.
             """
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly with this problem
         
                 Optimal Design at (1.9776, 0, 0)
                 
                 Optimal Objective = 3.18339"""
                 
-                super(SellarMDF, self).__init__()
-        
                 # create Optimizer instance
                 self.add('driver', CONMINdriver())
                 
@@ -96,7 +94,7 @@ and ``SellarDiscipline2`` to the assembly. Then add those instances to the workf
 .. testcode:: MDF_parts
     :hide:
     
-    self = SellarMDF()
+    self = set_as_top(SellarMDF())
 
 .. testcode:: MDF_parts
 
@@ -218,15 +216,13 @@ Finally, putting it all together gives:
             Disciplines coupled with FixedPointIterator.
             """
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly with this problem
                 
                 Optimal Design at (1.9776, 0, 0)
                 
                 Optimal Objective = 3.18339"""
                 
-                super(SellarMDF, self).__init__()
-        
                 # create Optimizer instance
                 self.add('driver', CONMINdriver())
                 
@@ -276,9 +272,8 @@ Finally, putting it all together gives:
         
             import time
             
-            prob = SellarMDF()
+            prob = set_as_top(SellarMDF())
             prob.name = "top"
-            set_as_top(prob)
                     
             prob.dis1.z1 = prob.dis2.z1 = 5.0
             prob.dis1.z2 = prob.dis2.z2 = 2.0
