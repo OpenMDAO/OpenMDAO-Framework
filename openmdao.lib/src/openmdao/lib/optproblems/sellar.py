@@ -49,12 +49,12 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
     y1 = Float(iotype='out', desc='Output of this Discipline')        
    
     def __init__(self): 
-        super(SellarDiscipline1_WithDerivatives,self).__init__()
+        super(Discipline1_WithDerivatives,self).__init__()
         
-        self.derivatives.declare_first_derivative(self, 'y1', 'z1')
-        self.derivatives.declare_first_derivative(self, 'y1', 'z2')
-        self.derivatives.declare_first_derivative(self, 'y1', 'x1')
-        self.derivatives.declare_first_derivative(self, 'y1', 'y2')
+        self.derivatives.declare_first_derivative('y1', 'z1')
+        self.derivatives.declare_first_derivative('y1', 'z2')
+        self.derivatives.declare_first_derivative('y1', 'x1')
+        self.derivatives.declare_first_derivative('y1', 'y2')
         
     def calculate_first_derivatives(self):
         """Analytical first derivatives"""
@@ -116,18 +116,19 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
     y2 = Float(iotype='out', desc='Output of this Discipline') 
     
     def __init__(self): 
-        super(SellarDiscipline2_WithDerivatives,self).__init__()
+        super(Discipline2_WithDerivatives,self).__init__()
         
-        self.derivatives.declare_first_derivative(self, 'y2', 'z1')
-        self.derivatives.declare_first_derivative(self, 'y2', 'z2')
-        self.derivatives.declare_first_derivative(self, 'y2', 'y1')
+        self.derivatives.declare_first_derivative('y2', 'z1')
+        self.derivatives.declare_first_derivative('y2', 'z2')
+        self.derivatives.declare_first_derivative('y2', 'y1')
         
     def calculate_first_derivatives(self):
         """Analytical first derivatives"""
     
         self.derivatives.set_first_derivative('y2', 'z1', 1.0)
         self.derivatives.set_first_derivative('y2', 'z2', 1.0)
-        self.derivatives.set_first_derivative('y2', 'y1', .5*self.y1**-0.5)
+        #need to add tiny positive offset to number to avoid numerical issues around 0
+        self.derivatives.set_first_derivative('y2', 'y1', .5*(abs(self.y1)+1e-99)**-0.5) 
        
     
     def execute(self):
@@ -142,7 +143,8 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         # throw it out
         y1 = abs(self.y1)
         
-        self.y2 = y1**(.5) + z1 + z2        
+        self.y2 = y1**(.5) + z1 + z2         
+        
            
 class SellarProblem(OptProblem):
     """ Sellar test problem definition."""
@@ -171,7 +173,6 @@ class SellarProblem(OptProblem):
         #Coupling Vars
         self.add_coupling_var(("dis2.y1","dis1.y1"),name="y1",start=0.0)
         self.add_coupling_var(("dis1.y2","dis2.y2"),name="y2",start=0.0)
-        #self.add_coupling_var(("dis1.y2","dis2.y2"),start=0.0)
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)',name="obj1")
         self.add_constraint('3.16 < dis1.y1')
@@ -188,6 +189,50 @@ class SellarProblem(OptProblem):
         }
         
         #END OF MDAO Problem Definition
-              
+        
+        
+class SellarProblemWithDeriv(OptProblem):
+    """ Sellar test problem definition, using components analytical derivatives"""
+    
+    def __init__(self):
+        """ Creates a new Assembly with this problem
+        
+        Optimal Design at (1.9776, 0, 0)
+        
+        Optimal Objective = 3.18339"""
+        
+        super(SellarProblemWithDeriv, self).__init__()
+        
+        #add the discipline components to the assembly
+        self.add('dis1', Discipline1_WithDerivatives())
+        self.add('dis2', Discipline2_WithDerivatives())
+        
+        #START OF MDAO Problem Definition
+        #Global Des Vars
+        self.add_parameter(("dis1.z1","dis2.z1"),name="z1",low=-10,high=10,start=5.0)
+        self.add_parameter(("dis1.z2","dis2.z2"),name="z2",low=0,high=10,start=2.0)
+        
+        #Local Des Vars 
+        self.add_parameter("dis1.x1",low=0,high=10,start=1.0)
+        
+        #Coupling Vars
+        self.add_coupling_var(("dis2.y1","dis1.y1"),name="y1",start=0.0)
+        self.add_coupling_var(("dis1.y2","dis2.y2"),name="y2",start=0.0)
+                           
+        self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)',name="obj1")
+        self.add_constraint('3.16 < dis1.y1')
+        self.add_constraint('dis2.y2 < 24.0')
+        
+        #solution to the opt problem
+        self.solution = {
+            "z1":1.9776,
+            "z2":0.0,
+            "dis1.x1":0.0,
+            "y1":3.16,
+            "y2": 3.756,
+            'obj1':3.1834
+        }
+        
+        #END OF MDAO Problem Definition              
 
         

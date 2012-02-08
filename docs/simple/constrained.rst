@@ -24,12 +24,12 @@ model by adding one line to the ``initialize`` function:
 
 .. testsetup:: simple_model_Unconstrained_pieces
 
-    from openmdao.main.api import Assembly
+    from openmdao.main.api import Assembly, set_as_top
     from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
     from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     
-    self = OptimizationUnconstrained()
+    self = set_as_top(OptimizationUnconstrained())
     
 .. testcode:: simple_model_Unconstrained_pieces
 

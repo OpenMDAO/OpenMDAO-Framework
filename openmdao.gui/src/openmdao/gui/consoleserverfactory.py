@@ -215,14 +215,14 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self.error(err,sys.exc_info())
 
-    def set_top(self,pathname):
-        print 'setting top to:',pathname
-        cont, root = self.get_container(pathname)
-        if cont:
-            self.proj.__dict__['top'] = cont
-            set_as_top(cont)
-        else:
-            print pathname,'not found.'
+    #def set_top(self,pathname):
+        #print 'setting top to:',pathname
+        #cont, root = self.get_container(pathname)
+        #if cont:
+            #self.proj.__dict__['top'] = cont
+            #set_as_top(cont)
+        #else:
+            #print pathname,'not found.'
 
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)

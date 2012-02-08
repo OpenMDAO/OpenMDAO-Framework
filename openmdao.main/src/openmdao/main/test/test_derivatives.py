@@ -5,7 +5,8 @@ Test of the derivatives capability.
 import unittest
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component, Assembly, ComponentWithDerivatives, SequentialWorkflow, DriverUsesDerivatives
+from openmdao.main.api import Component, Assembly, ComponentWithDerivatives, \
+                              SequentialWorkflow, DriverUsesDerivatives, set_as_top
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.util.testutil import assert_rel_error
 from openmdao.main.hasparameters import HasParameters
@@ -73,23 +74,14 @@ class Paraboloid_Derivative(ComponentWithDerivatives):
 class SimpleAssembly(Assembly):
     """ Simple assembly"""
     
-    def __init__(self):
-        """ Initialize it"""
-        
-        # pylint: disable-msg=E1101
-        super(SimpleAssembly, self).__init__()
-
+    def configure(self):
         self.add('comp1', Paraboloid_Derivative())
         self.driver.workflow.add(['comp1'])
         
 class BottomAssembly(Assembly):
     """ Simple assembly"""
     
-    def __init__(self):
-        """ Initialize it"""
-        
-        # pylint: disable-msg=E1101
-        super(BottomAssembly, self).__init__()
+    def configure(self):
 
         self.add('comp1', Paraboloid_Derivative())
         self.driver.workflow.add(['comp1'])
@@ -101,12 +93,7 @@ class BottomAssembly(Assembly):
 class TopAssembly(Assembly):
     """ Simple assembly"""
     
-    def __init__(self):
-        """ Initialize it"""
-        
-        # pylint: disable-msg=E1101
-        super(TopAssembly, self).__init__()
-
+    def configure(self):
         self.add('assy1', BottomAssembly())
         self.driver.workflow.add(['assy1'])
         
@@ -187,11 +174,7 @@ class A_D(A):
 class MultiAssy(Assembly):
     """ A reasonably complicated assembly with multiple connections"""
     
-    def __init__(self):
-        """ Initialize it"""
-        
-        # pylint: disable-msg=E1101
-        super(MultiAssy, self).__init__()
+    def configure(self):
 
         self.add('A1', A())
         self.add('A2', A_D())
@@ -411,7 +394,7 @@ class DerivativesTestCase(unittest.TestCase):
         
     def test_in_assembly(self):
         
-        simple = SimpleAssembly()
+        simple = set_as_top(SimpleAssembly())
         simple.comp1.x = 3.0
         simple.comp1.y = 5.0
         simple.run()
@@ -443,7 +426,7 @@ class DerivativesTestCase(unittest.TestCase):
 
     def test_in_nested_assembly(self):
         
-        simple = TopAssembly()
+        simple = set_as_top(TopAssembly())
         simple.assy1.x = 3.0
         simple.assy1.y = 5.0
         simple.run()
@@ -475,7 +458,7 @@ class DerivativesTestCase(unittest.TestCase):
 
     def test_multiblock(self):
         
-        comp = MultiAssy()
+        comp = set_as_top(MultiAssy())
         comp.A1.x1 = base1 = 1.0
         comp.A1.x2 = base2 = 2.0
         comp.run()
@@ -513,7 +496,14 @@ class DerivativesTestCase(unittest.TestCase):
         self.assertEqual(comp.A3.ran_real, True)
         self.assertEqual(comp.A4.ran_real, False)
         self.assertEqual(comp.A5.ran_real, True)
-
+        self.assertEqual(comp.A1.exec_count, 5)
+        self.assertEqual(comp.A2.exec_count, 1)
+        self.assertEqual(comp.A4.exec_count, 1)
+        self.assertEqual(comp.A5.exec_count, 5)
+        self.assertEqual(comp.A1.derivative_exec_count, 0)
+        self.assertEqual(comp.A2.derivative_exec_count, 1)
+        self.assertEqual(comp.A4.derivative_exec_count, 1)
+        self.assertEqual(comp.A5.derivative_exec_count, 0)
         
 # Next up: test to make sure that we can pass tuples of parameters through assembly
 # without tripping up its check_derivatives 
@@ -542,8 +532,7 @@ class Smarty(DriverUsesDerivatives):
         super(Smarty,self).__init__()
 
 class TestAssembly(Assembly):
-    def __init__(self):
-        super(TestAssembly,self).__init__()
+    def configure(self):
         self.add('driver',Smarty())
         self.add('dumcomp',Dummy())
         self.add('dum2',DummyAssembly())

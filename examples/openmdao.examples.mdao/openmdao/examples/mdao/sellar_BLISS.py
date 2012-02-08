@@ -25,15 +25,13 @@ class SellarBLISS(Assembly):
     z_store = Array([0,0],dtype=Float)
     x1_store = Float(0.0)
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
                 
-        super(SellarBLISS, self).__init__()        
-
         # Disciplines
         self.add('dis1', sellar.Discipline1())
         self.add('dis2', sellar.Discipline2())
@@ -128,11 +126,9 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     import math
-    from openmdao.main.api import set_as_top
     
     prob = SellarBLISS()
     prob.name = "top"
-    set_as_top(prob)
             
     tt = time.time()
     prob.run()
@@ -143,4 +139,3 @@ if __name__ == "__main__": # pragma: no cover
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", (prob.dis1.x1)**2 + prob.dis1.z2 + prob.dis1.y1 + math.exp(-prob.dis2.y2)
     print "Elapsed time: ", time.time()-tt, "seconds"
-

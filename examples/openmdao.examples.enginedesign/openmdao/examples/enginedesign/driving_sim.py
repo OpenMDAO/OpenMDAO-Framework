@@ -451,10 +451,10 @@ if __name__ == "__main__": # pragma: no cover
     import time
     ttime = time.time()
     
-    from openmdao.main.api import set_as_top, Assembly
+    from openmdao.main.api import Assembly
     from openmdao.examples.enginedesign.vehicle import Vehicle
     
-    top = set_as_top(Assembly())
+    top = Assembly()
     top.add('sim_acc', SimAcceleration())
     top.add('sim_EPA_city', SimEconomy())
     top.add('sim_EPA_highway', SimEconomy())

@@ -17,7 +17,7 @@ through the MetaModel.
 
 .. testcode:: MetaModel_parts
 
-    from openmdao.main.api import Assembly, Component, SequentialWorkflow
+    from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
     from math import sin
 
     from openmdao.lib.datatypes.api import Float
@@ -45,8 +45,7 @@ the MetaModel was instantiated as ``sin_meta_model``, making it easy to identify
 .. testcode:: MetaModel_parts
 
     class Simulation(Assembly):        
-        def __init__(self):
-            super(Simulation,self).__init__()
+        def configure(self):
 
             #Components
             self.add("sin_meta_model",MetaModel())      
@@ -63,9 +62,9 @@ Only after the surrogate slot has been filled can you specify the component that
 being modeled. This is done by placing the component in the slot called `model`. 
 For this case we are looking at the Sin component created earlier, so this is what's 
 placed in the model slot. Once this has been put in, the MetaModel will now have the 
-same inputs and outputs as our ``sine`` function. In this case that means that once the 
-model slot is filled with the Sin component, MetaModel will have an input names
-`x` and an output named `f_x` (copied directly from the names in the Sin components). 
+same inputs and outputs as our ``sine`` function. In this case it means that once the 
+model slot is filled with the Sin component, MetaModel will have an input named
+`x` and an output named `f_x` (copied directly from the names in the Sin component). 
 
 Once the `surrogate` and `model` slots of the MetaModel have been filled, the MetaModel
 is ready for training. 
@@ -73,7 +72,7 @@ is ready for training.
  .. testcode:: MetaModel_parts
     :hide:
     
-    self=Simulation()
+    self=set_as_top(Simulation())
 
 .. testcode:: MetaModel_parts
 
@@ -91,7 +90,7 @@ In this case, we're going to train with a DOEdriver, called ``DOE_Trainer``.
 We specify a FullFactorial DOEgenerator, which creates a set of evenly spaced 
 points across an interval. We (somewhat arbitrarily) selected 25 points for our training
 set, specified by ``num_levels`` under the DOEgenerator. The proper training set, is of course, 
-highly problem dependent. The training interval, is based on the low and high values
+highly problem dependent. The training interval is based on the low and high values
 specified in the ``add_parameter`` call. 
 
 When the ``train_next`` event is set, MetaModel passes the inputs to the model (i.e., Sin) to 
@@ -167,7 +166,7 @@ by the implementation of ``DBCaseRecorder()``, we can access and print the run d
 
     if __name__ == "__main__":
         
-        sim = Simulation()
+        sim = set_as_top(Simulation())
         sim.run()
                    
         #This is how you can access any of the data

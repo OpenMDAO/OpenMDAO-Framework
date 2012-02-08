@@ -339,8 +339,7 @@ class TestComponent(Component):
         self.x = (self.dummy_data.dummy1-3)**2 - self.dummy_data.dummy2
 
 class TestAssembly(Assembly):
-    def __init__(self):
-        super(TestAssembly,self).__init__()
+    def configure(self):
         self.add('dummy_top',TestContainer())
         self.add('comp',TestComponent())
         self.add('driver', CONMINdriver())

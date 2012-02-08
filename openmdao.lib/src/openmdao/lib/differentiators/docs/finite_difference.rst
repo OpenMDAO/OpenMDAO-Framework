@@ -31,10 +31,7 @@ optimizer by plugging it into the differentiator socket.
     class OptimizationConstrained(Assembly):
         """Constrained optimization of the Paraboloid."""
             
-        def __init__(self):
-            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
-                
-            super(OptimizationConstrained, self).__init__()
+        def configure(self):
         
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid_Derivative())

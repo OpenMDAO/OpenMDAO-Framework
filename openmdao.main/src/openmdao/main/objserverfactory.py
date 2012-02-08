@@ -27,6 +27,7 @@ from openmdao.main.mp_util import keytype, read_allowed_hosts, setup_tunnel, \
                                   read_server_config, write_server_config
 from openmdao.main.rbac import get_credentials, set_credentials, \
                                rbac, RoleError
+from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.publickey import make_private, read_authorized_keys, \
@@ -83,6 +84,7 @@ class ObjServerFactory(Factory):
                           keytype(self._authkey), allow_shell)
         self.host = platform.node()
         self.pid = os.getpid()
+        self.version = __version__
         self.manager_class = _ServerManager
         self.server_classname = 'openmdao_main_objserverfactory_ObjServer'
 
@@ -93,7 +95,7 @@ class ObjServerFactory(Factory):
         Used by :meth:`ResourceAllocationManager.add_remotes`.
         """
         from openmdao.main.resource import ResourceAllocationManager
-        return ResourceAllocationManager.get_instance()
+        return ResourceAllocationManager._get_instance()
 
     @rbac('*')
     def echo(self, *args):
@@ -246,15 +248,14 @@ class ObjServerFactory(Factory):
             # On Windows, when running the full test suite under Nose,
             # starting the process starts a new Nose test session, which
             # will eventually get here and start a new Nose session, which...
-            if sys.platform == 'win32' and \
-               sys.modules['__main__'].__file__.endswith('openmdao-script.py'):  #pragma no cover
-                orig_main = sys.modules['__main__'].__file__
-                sys.modules['__main__'].__file__ = \
-                    pkg_resources.resource_filename('openmdao.main',
-                                                    'objserverfactory.py')
-            else:
-                orig_main = None
-
+            orig_main = None
+            if sys.platform == 'win32':  #pragma no cover
+                scripts = ('openmdao-script.py', 'openmdao_test-script.py')
+                if sys.modules['__main__'].__file__.endswith(scripts):
+                    orig_main = sys.modules['__main__'].__file__
+                    sys.modules['__main__'].__file__ = \
+                        pkg_resources.resource_filename('openmdao.main',
+                                                        'objserverfactory.py')
             owner = get_credentials()
             self._logger.debug('%s starting server %r in dir %s',
                                owner, name, root_dir)
@@ -319,6 +320,7 @@ class ObjServer(object):
         self.host = platform.node()
         self.pid = os.getpid()
         self.name = name or ('sim-%d' % self.pid)
+        self.version = __version__
 
         self._root_dir = os.getcwd()
         self._logger = logging.getLogger(self.name)
@@ -695,6 +697,7 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
             raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
                                " to be offline. Please check the server log%s."
                                % (address, port, via, log))
+
         mgr = _FactoryManager(location, authkey, pubkey=pubkey)
         try:
             mgr.connect()
@@ -702,7 +705,11 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
             raise RuntimeError("Can't connect to server at %s:%s%s. It appears"
                                " to be rejecting the connection. Please check"
                                " the server log%s." % (address, port, via, log))
+
         proxy = mgr.openmdao_main_objserverfactory_ObjServerFactory()
+        if proxy.version != __version__:
+            logging.warning('Server version %r different than local version %r',
+                            proxy.version, __version__)
         _PROXIES[key] = proxy
         return proxy
 

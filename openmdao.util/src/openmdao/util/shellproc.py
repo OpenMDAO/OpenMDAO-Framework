@@ -6,6 +6,7 @@ import time
 
 PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
+DEV_NULL = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
 
 class CalledProcessError(subprocess.CalledProcessError):
@@ -97,7 +98,7 @@ class ShellProc(subprocess.Popen):
         """
         super(ShellProc, self).terminate()
         if timeout is not None:
-            self.wait(timeout=timeout)
+            return self.wait(timeout=timeout)
 
     def wait(self, poll_delay=0., timeout=0.):
         """

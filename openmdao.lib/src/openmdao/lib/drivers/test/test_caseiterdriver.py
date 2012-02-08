@@ -74,8 +74,7 @@ def _get_driver():
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', _get_driver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
@@ -200,7 +199,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_unencrypted')
         name = init_cluster(encrypted=False, allow_shell=True)
-        self.model.driver.extra_reqs = {'allocator': name}
+        self.model.driver.extra_resources = {'allocator': name}
         self.run_cases(sequential=False)
 
     def run_cases(self, sequential, forced_errors=False, retry=True):
@@ -336,7 +335,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noresource')
 
         # Check response to unsupported resource.
-        self.model.driver.extra_reqs = {'no-such-resource': 0}
+        self.model.driver.extra_resources = {'no-such-resource': 0}
         self.model.driver.sequential = False
         self.model.driver.iterator = ListCaseIterator([])
         assert_raises(self, 'self.model.run()', globals(), locals(),

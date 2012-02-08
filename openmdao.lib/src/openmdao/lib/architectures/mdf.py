@@ -11,6 +11,7 @@ class MDF(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.has_global_des_vars = False
     
     def configure(self): 
         """setup and MDF architecture inside this assembly.
@@ -25,6 +26,7 @@ class MDF(Architecture):
         self.parent.driver.delfun = .0001
         self.parent.driver.dabfun = .000001
         self.parent.driver.ctlmin = 0.0001
+        self.parent.driver.recorders = self.data_recorders
         
         params = self.parent.get_parameters()
         global_dvs = []
@@ -38,7 +40,6 @@ class MDF(Architecture):
         
         for k,v in self.parent.get_local_des_vars(): 
             local_dvs.append(v)
-            #add the local design variables to the driver
             self.parent.driver.add_parameter(v,name=k)
          
         #TODO: possibly add method for passing constraint directly?

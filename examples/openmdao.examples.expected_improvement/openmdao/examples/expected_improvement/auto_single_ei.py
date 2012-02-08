@@ -30,7 +30,6 @@ class Analysis(ArchitectureAssembly):
         
 if __name__ == "__main__":
     import sys
-    from openmdao.main.api import set_as_top
     from openmdao.lib.casehandlers.api import case_db_to_dict
     
     seed = None
@@ -54,7 +53,7 @@ if __name__ == "__main__":
     from matplotlib.pylab import get_cmap
     from numpy import meshgrid,array, pi,arange,cos
     
-    analysis = set_as_top(Analysis())
+    analysis = Analysis()
     analysis.architecture = EGO()
     analysis.architecture.initial_DOE_size = 20
     analysis.architecture.sample_iterations = 20
