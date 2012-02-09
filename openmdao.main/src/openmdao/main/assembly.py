@@ -87,6 +87,8 @@ class Assembly (Component):
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
+        self._expr_map = {} # map of (dest_expr, src_expr)
+        
         # default Driver executes its workflow once
         self.add('driver', Driver())
         

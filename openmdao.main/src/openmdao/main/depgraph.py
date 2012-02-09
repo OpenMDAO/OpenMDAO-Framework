@@ -39,7 +39,7 @@ def _cvt_names_to_graph(srcpath, destpath):
         
     return (srccompname, srcvarname, destcompname, destvarname)
 
-#fake nodes for boundary  and passthrough connections
+#fake nodes for boundary and passthrough connections
 _fakes = ['@xin', '@xout', '@bin', '@bout']
 
 class DependencyGraph(object):
@@ -265,10 +265,6 @@ class DependencyGraph(object):
             if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
                 raise AlreadyConnectedError("%s is already connected to source %s" %
                                             (dst, src))
-        #oldsrc = self.get_source('.'.join([destcompname,destvarname]))
-        #if oldsrc:
-            #raise AlreadyConnectedError("%s is already connected to source %s" %
-                                        #(destpath, oldsrc))
                 
         if srccompname == '@xin' and destcompname != '@bin':
             # this is an auto-passthrough input so we need 2 links
@@ -401,7 +397,6 @@ class DependencyGraph(object):
                 link.disconnect(srcvarname, destvarname)
                 if len(link) == 0:
                     self._graph.remove_edge(srccompname, destcompname)
-        
         try:
             del self._allsrcs[destpath]
         except KeyError:
