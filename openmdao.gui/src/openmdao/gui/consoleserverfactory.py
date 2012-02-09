@@ -147,11 +147,11 @@ class ConsoleServer(cmd.Cmd):
         print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
         
         #intercept stdout & stderr
-        self.sysout = sys.stdout
-        self.syserr = sys.stderr
-        self.cout = StringIO()
-        sys.stdout = self.cout
-        sys.stderr = self.cout
+        # self.sysout = sys.stdout
+        # self.syserr = sys.stderr
+        # self.cout = StringIO()
+        # sys.stdout = self.cout
+        # sys.stderr = self.cout
         
         self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
         self.prompt = 'OpenMDAO>> '

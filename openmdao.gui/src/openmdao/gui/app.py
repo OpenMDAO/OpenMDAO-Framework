@@ -15,7 +15,10 @@ from tornado import httpserver, web
 from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import ensure_dir, launch_browser
-from openmdao.gui.consoleserverfactory import ConsoleServerFactory
+#from openmdao.gui.consoleserverfactory import ConsoleServerFactory
+from openmdao.gui.try_zmq import ConsoleServerFactory
+
+print '<<<'+str(os.getpid())+'>>> WebApp ..............'
 
 class WebApp(web.Application):
     ''' openmdao web application server
@@ -39,10 +42,12 @@ class WebApp(web.Application):
         if cookie_secret is None:
             cookie_secret = os.urandom(1024)
             
+        app_path = os.path.dirname(os.path.abspath(__file__))
+            
         settings = { 
             'login_url':         '/login',
-            'static_path':       os.path.join(os.path.dirname(__file__), 'static'),
-            'template_path':     os.path.join(os.path.dirname(__file__), 'tmpl'),
+            'static_path':       os.path.join(app_path, 'static'),
+            'template_path':     os.path.join(app_path, 'tmpl'),
             'cookie_secret':     cookie_secret,
             'debug':             True,
         }
@@ -153,5 +158,7 @@ def main():
     app = WrappedApp(options)
     
 if __name__ == '__main__':
-    main()
+    # dont run main() if this is a forked windows process
+    if sys.modules['__main__'].__file__ == __file__:
+        main()
 
