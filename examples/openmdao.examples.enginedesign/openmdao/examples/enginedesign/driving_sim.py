@@ -408,7 +408,7 @@ class SimEconomy(Driver):
             
         # Convert liter to gallon and sec/hr to hr/hr
         distance = convert_units(distance, 'mi*s/h', 'mi')
-        fuelburn = convert_units(fuelburn, 'l', 'galUS')
+        fuelburn = convert_units(fuelburn, 'L', 'galUS')
         self.fuel_economy = distance/fuelburn
         
        
