@@ -367,25 +367,6 @@ class ExprEvalTestCase(unittest.TestCase):
         ]
         self._do_tests(tests, self.top)
         
-    #def test_mixed_scope(self):
-        #tests = [
-            #('comp.x < a1d', "scope.parent.get('comp.x')<scope.a1d"),
-            #('math.sin(f)+math.cos(f+math.pi)', 'math.sin(scope.f)+math.cos(scope.f+math.pi)'),
-            #('comp.x[0]', "scope.parent.get('comp.x',[(0,0)])"),
-            #('comp.x[0] = 10*(3.2+ a1d[3]* 1.1*a1d[2 ])', 
-             #"scope.parent.set('comp.x',10*(3.2+scope.a1d[3]*1.1*scope.a1d[2]),[(0,0)])"),
-            #('comp.x[0] = some_funct(1,foo.bar)', 
-             #"scope.parent.set('comp.x',scope.some_funct(1,scope.parent.get('foo.bar')),[(0,0)])"),
-            #('a.b[2] = -comp.x',
-             #"scope.parent.set('a.b',-scope.parent.get('comp.x'),[(0,2)])"),
-            #('a1d[foo]', "scope.a1d[scope.parent.get('foo')]"),
-            #('a1d[1].value', "scope.a1d[1].value"),
-            #('a1d(2).value', "scope.a1d(2).value"),
-            #('a.a1d(2).value', "scope.parent.get('a.a1d',[(2,[2]),(1,'value')])"),
-        #]
-
-        #self._do_tests(tests, self.top.a)
-
     def test_calls(self):
         tests = [
         ('a.b()', "scope.get('a.b',[(2,)])"),
@@ -542,13 +523,34 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.check_resolve(), False)
         
     def test_get_referenced_varpaths(self):
-        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ])', self.top.a)
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top.a)
         self.assertEqual(ex.get_referenced_varpaths(), set(['comp.x','a.a1d']))
         ex.text = 'comp.contlist[1].a2d[2][1]'
         self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
         ex.scope = self.top.comp
         ex.text = 'comp.contlist[1]'
         self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
+        ex.text = 'comp.contlist[1].foo'
+        self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
+        ex.text = 'contlist[1].foo'
+        self.assertEqual(ex.get_referenced_varpaths(), set(['contlist']))
+        ex.text = 'asm2.comp3.contlist[1].foo'
+        self.assertEqual(ex.get_referenced_varpaths(), set(['asm2.comp3.contlist']))
+        
+    def test_get_referenced_compnames(self):
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top.a)
+        self.assertEqual(ex.get_referenced_compnames(), set(['comp','a']))
+        ex.text = 'comp.contlist[1].a2d[2][1]'
+        self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
+        ex.scope = self.top.comp
+        ex.text = 'comp.contlist[1]'
+        self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
+        ex.text = 'comp.contlist[1].foo'
+        self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
+        ex.text = 'contlist[1].foo'
+        self.assertEqual(ex.get_referenced_compnames(), set())
+        ex.text = 'asm2.comp3.contlist[1].foo'
+        self.assertEqual(ex.get_referenced_compnames(), set(['asm2']))
         
     def test_slice(self):
         ex = ExprEvaluator('a1d[1::2]', self.top.a)

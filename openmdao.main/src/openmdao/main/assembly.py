@@ -19,6 +19,7 @@ from openmdao.main.driver import Driver
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
+from openmdao.main.expreval import ExprEvaluator
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -209,6 +210,12 @@ class Assembly (Component):
         destpath: str
             Pathname of destination variable.
         """
+        srcexpr = ExprEvaluator(srcpath, self)
+        destexpr = ExprEvaluator(destpath, self)
+        
+        # create ExprEval(dest), ExprEval(src)
+        # check that each only references one valid component
+        
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
