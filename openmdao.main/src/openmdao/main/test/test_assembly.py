@@ -88,14 +88,11 @@ class Wrapper(Assembly):
     what variables are visible via passthrough traits.
     """
 
-    def __init__(self):
-        super(Wrapper, self).__init__()
+    def configure(self):
         self.add('comp', Comp())
         self.driver.workflow.add('comp')
 
-    def tree_rooted(self):
-        """ Defines passthrough conections once NPSS has loaded. """
-        super(Wrapper, self).tree_rooted()
+        # define passthrough conections
         for path in ('x', 'y', 'z'):
             val = self.get('comp.'+path)
             self.create_passthrough('comp.'+path)
@@ -503,8 +500,7 @@ class AssemblyTestCase(unittest.TestCase):
         class MyAsm(Assembly):    
             ModulesInstallPath  = Str('C:/work/IMOO2/imoo/modules', desc='', iotype='in')
         
-            def __init__(self):
-                super(MyAsm, self).__init__()
+            def configure(self):
                 self.add('propulsion', MyComp())
                 self.driver.workflow.add('propulsion')
                 self.connect('ModulesInstallPath','propulsion.ModulesInstallPath')

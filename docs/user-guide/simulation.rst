@@ -17,11 +17,9 @@ Consider the top level assembly that was created for the
     class OptimizationUnconstrained(Assembly):
         """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-        def __init__(self):
+        def configure(self):
             """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-            super(OptimizationUnconstrained, self).__init__()
-
             # Create CONMIN Optimizer instance
             self.add('driver', CONMINdriver())
         
@@ -73,7 +71,7 @@ instances of the ``Paraboloid`` function and connect them together in series.
     class ConnectingComponents(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
-        def __init__(self):
+        def configure(self):
             """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
             self.add("par1",Paraboloid())
@@ -106,17 +104,15 @@ linked at that level.
 
 .. testcode:: passthroughs
 
-    from openmdao.main.api import Assembly
+    from openmdao.main.api import Assembly, set_as_top
     from openmdao.examples.simple.paraboloid import Paraboloid
 
     class ConnectingComponents(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
-        def __init__(self):
+        def configure(self):
             """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-            super(ConnectingComponents, self).__init__()
-
             self.add("par1",Paraboloid())
             self.add("par2",Paraboloid())
         
@@ -140,7 +136,8 @@ function can be called to break the connection between an input and an output
 or to break all connections to an input or output.
 
     >>> from openmdao.examples.enginedesign.vehicle import Vehicle
-    >>> my_car = Vehicle()
+    >>> from openmdao.main.api import set_as_top
+    >>> my_car = set_as_top(Vehicle())
     >>>
     >>> # Disconnect all connections to tire_circumference (total:2)
     >>> my_car.disconnect('tire_circumference')
@@ -182,11 +179,9 @@ a new working directory for the Paraboloid component when it is instantiated.
     class OptimizationUnconstrained(Assembly):
         """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-        def __init__(self):
+        def configure(self):
             """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-            super(OptimizationUnconstrained, self).__init__()
-
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid(directory='folder/subfolder'))
 

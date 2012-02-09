@@ -57,8 +57,7 @@ class Passthrough(Component):
 class Middle(Assembly):
     """ Intermediary which passes-on files. """
 
-    def __init__(self, *args, **kwargs):
-        super(Middle, self).__init__(*args, **kwargs)
+    def configure(self):
 
         self.add('passthrough', Passthrough(directory='Passthrough'))
         self.driver.workflow.add('passthrough')
@@ -97,8 +96,7 @@ class Sink(Component):
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
-    def __init__(self, *args, **kwargs):
-        super(Model, self).__init__(*args, **kwargs)
+    def configure(self):
 
         self.add('source', Source(directory='Source'))
         self.add('middle', Middle(directory='Middle'))
@@ -114,10 +112,7 @@ class Model(Assembly):
         self.source.text_data = 'Hello World!'
         self.source.binary_data = [3.14159, 2.781828, 42]
 
-    def tree_rooted(self):
-        """ Sets passthrough paths to absolute to exercise code. """
-        super(Model, self).tree_rooted()
-
+        # set passthrough paths to absolute to exercise code
         self.middle.passthrough.get_trait('text_in').trait_type._metadata['local_path'] = \
             os.path.join(self.middle.passthrough.get_abs_directory(),
                          self.middle.passthrough.get_trait('text_in').local_path)

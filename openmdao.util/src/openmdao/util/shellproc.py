@@ -6,6 +6,7 @@ import time
 
 PIPE = subprocess.PIPE
 STDOUT = subprocess.STDOUT
+DEV_NULL = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
 
 class CalledProcessError(subprocess.CalledProcessError):

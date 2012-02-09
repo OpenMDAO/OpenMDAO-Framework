@@ -1,4 +1,4 @@
-from openmdao.main.api import Assembly, Component, SequentialWorkflow
+from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
 from math import sin, cos
 
 from openmdao.lib.datatypes.api import Float
@@ -23,8 +23,7 @@ class Trig(Component):
 class Simulation(Assembly):
 
         
-    def __init__(self):
-        super(Simulation,self).__init__()
+    def configure(self):
     
         #Components
         self.add("trig_meta_model",MetaModel())
@@ -64,7 +63,7 @@ class Simulation(Assembly):
 if __name__ == "__main__":
     
     
-    sim = Simulation()
+    sim = set_as_top(Simulation())
     sim.run()
         
     #This is how you can access any of the data

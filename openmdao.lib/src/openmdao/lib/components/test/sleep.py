@@ -15,6 +15,14 @@ def main():
         inp = open('input', 'rU')
         out = open('output', 'w')
         out.write(inp.read())
+
+        if os.environ.get('SLEEP_ECHO'):
+            data = sys.stdin.read()
+            sys.stdout.write('stdin echo to stdout\n')
+            sys.stdout.write(data)
+            sys.stderr.write('stdin echo to stderr\n')
+            sys.stderr.write(data)
+
         sys.exit(0)
     else:
         print "usage: python sleep.py nseconds [dummyfile]"

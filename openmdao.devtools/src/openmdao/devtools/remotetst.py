@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     push_and_run, rm_remote_tree, make_git_archive,\
                                     fabric_cleanup, remote_listdir, remote_mkdir,\
-                                    ssh_test, put_dir, cleanup, remote_py_cmd, \
+                                    put_dir, cleanup, remote_py_cmd, \
                                     retrieve_docs
 from openmdao.devtools.remote_cfg import add_config_options, process_options, \
                                          run_host_processes, get_tmp_user_dir, \
@@ -36,7 +36,7 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
     
     build_type = 'release' if fname.endswith('.py') else 'dev'
         
-    if cfg and cfg.has_option(hostname, 'pull_docs'):
+    if cfg and cfg.has_option(hostname, 'pull_docs')and build_type == 'dev':
         pull_docs = cfg.getboolean(hostname, 'pull_docs')
     else:
         pull_docs = False

@@ -12,7 +12,7 @@ outputs, both of which will be mimicked by the MetaModel.
 
 .. testcode:: Mult_out_parts
 
-    from openmdao.main.api import Assembly, Component, SequentialWorkflow
+    from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
     from math import sin, cos
     
     from openmdao.lib.datatypes.api import Float
@@ -47,8 +47,7 @@ is being evaluated for both outputs.
 
     class Simulation(Assembly):
         
-        def __init__(self):
-            super(Simulation,self).__init__()
+        def configure(self):
         
             #Components
             self.add("trig_meta_model",MetaModel())
@@ -103,7 +102,7 @@ alternative would be to append ``.sigma`` which would return the standard deviat
 
     if __name__ == "__main__":
         
-        sim = Simulation()
+        sim = set_as_top(Simulation())
         sim.run()
         
         #This is how you can access any of the data

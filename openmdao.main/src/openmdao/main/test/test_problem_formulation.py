@@ -136,7 +136,7 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.architecture = DummyArchitecture()
         # no exception expected since arch isn'g configured yet
         self.asm.architecture = DummyArchitecture()
-        self.asm.configure()
+        self.asm.check_config()
         arch = self.asm.architecture
         try:
             self.asm.architecture = DummyArchitecture()
@@ -205,7 +205,7 @@ class ProblemFormulationTest(unittest.TestCase):
         else:
             self.fail("RuntimeError expected")
             
-        arch.requires_global_des_vars = True  
+        arch.has_global_des_vars = True  
         arch.param_types = ['continuous','discrete']
         try: 
             self.asm.check_config()

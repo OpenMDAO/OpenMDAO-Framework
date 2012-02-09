@@ -42,11 +42,9 @@ socket in DrivingSim:
         class EngineOptimization(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly for vehicle performance optimization."""
                 
-                super(EngineOptimization, self).__init__()
-        
                 # pylint: disable-msg=E1101
                 
                 # Create CONMIN Optimizer instance
@@ -126,10 +124,8 @@ socket in DrivingSim:
                 print '\n'
     
             import time
-            from openmdao.main.api import set_as_top
     
             opt_problem = EngineOptimization()
-            set_as_top(opt_problem)
     
             opt_problem.sim_acc.run()
             opt_problem.sim_EPA_city.run()

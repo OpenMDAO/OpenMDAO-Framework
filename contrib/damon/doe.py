@@ -36,8 +36,7 @@ class ConceptA(Component):
 
 class Analysis(Assembly):
 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
+    def configure(self):
         
         self._tdir = mkdtemp()
         
@@ -63,13 +62,9 @@ class Analysis(Assembly):
 
 if __name__ == "__main__": #pragma: no cover
     import sys
-    from openmdao.main.api import set_as_top
     from openmdao.lib.casehandlers.db import case_db_to_dict
 
     analysis = Analysis()
-    
-    set_as_top(analysis)
-
     analysis.run()
     
     DOE1 = case_db_to_dict(os.path.join(analysis._tdir,'A.db'),['A.x','A.y','A.z','A.f1','A.f2'])

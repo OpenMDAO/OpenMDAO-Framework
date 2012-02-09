@@ -7,25 +7,16 @@ Running OpenMDAO
 Setting the Top Level Assembly
 ------------------------------
 
-When a Component or Assembly is instantiated as a standalone object, it is not
-aware of the directory where it resides. Any component added to such an assembly
-also does not know its path. The function ``set_as_top`` is available to denote an
-assembly as the top level assembly in the framework. Once an assembly is set
-as the top level assembly, it gains an absolute path which can be accessed
+The first assembly that is instantiated in a given process is designated as a
+top level assembly, and its directory will be set to the directory passed into
+its __init__ function or to the current working directory if no directory is specified.
+If an assembly is not the first one created in a process then the ``set_as_top`` function
+must be called on it explicitly in order to specify that it is a top assembly.
+Once an assembly is set as a top level assembly, its absolute path can be accessed
 through the function ``get_abs_directory``.
 
-The path that is set by ``set_as_top`` is always the current working directory 
-in the Python environment.
-
-    >>> from openmdao.main.api import Assembly, set_as_top   
-    >>> z1 = Assembly()
-    >>> z1.get_abs_directory()
-    Traceback (most recent call last):
-    ...
-    RuntimeError: can't call get_abs_directory before hierarchy is defined
-    >>>
-    >>> set_as_top(z1)
-    <openmdao.main.assembly.Assembly object at ...>
+    >>> from openmdao.main.api import Assembly, set_as_top 
+    >>> z1 = set_as_top(Assembly())
     >>> z1.get_abs_directory()
     '...'
 

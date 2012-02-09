@@ -20,9 +20,7 @@ the final lines in this file are:
 
     if __name__ == "__main__": 
 
-        from openmdao.main.api import set_as_top
         opt_problem = OptimizationUnconstrained()
-        set_as_top(opt_problem)
 
         import time
         tt = time.time()
