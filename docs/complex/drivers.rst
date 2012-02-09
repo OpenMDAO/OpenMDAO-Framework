@@ -74,10 +74,7 @@ top level assembly would look like this:
         class VehicleSim(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
-                """ Creates a new Assembly for vehicle performance optimization."""
-                
-                super(VehicleSim, self).__init__()
+            def configure(self):
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())
@@ -97,10 +94,7 @@ top level assembly would look like this:
                 
         if __name__ == "__main__": 
         
-            from openmdao.main.api import set_as_top
             my_sim = VehicleSim()
-            set_as_top(my_sim)
-    
             my_sim.run()
             
             print "Time (0-60): ", my_sim.driver.accel_time
@@ -184,10 +178,7 @@ Now, let's build a new assembly that includes all three simulations run sequenti
         class VehicleSim2(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
-                """ Creates a new Assembly for vehicle performance optimization."""
-                
-                super(VehicleSim2, self).__init__()
+            def configure(self):
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())
@@ -236,10 +227,7 @@ Now, let's build a new assembly that includes all three simulations run sequenti
                         
         if __name__ == "__main__": 
         
-            from openmdao.main.api import set_as_top
             my_sim = VehicleSim2()
-            set_as_top(my_sim)
-    
             my_sim.run()
             
             print "Time (0-60): ", my_sim.sim_acc.accel_time

@@ -67,8 +67,7 @@ class DrivenComponent(Component):
 class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', DOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
@@ -201,8 +200,7 @@ class TestCaseDOE(unittest.TestCase):
                 
         class Analysis(Assembly): 
             
-            def __init__(self): 
-                super(Analysis,self).__init__(self)
+            def configure(self):
                 
                 self.add('d',Dummy())
                 
@@ -262,8 +260,7 @@ class TestCaseDOE(unittest.TestCase):
 class MyModel2(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel2, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', NeiborhoodDOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
@@ -395,8 +392,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
                 
         class Analysis(Assembly): 
             
-            def __init__(self): 
-                super(Analysis,self).__init__(self)
+            def configure(self):
                 
                 self.add('d',Dummy())
                 

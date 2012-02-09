@@ -27,7 +27,7 @@ class VariableTree(Container):
         return self._iotype
 
     @rbac(('owner', 'user'))
-    def tree_rooted(self):
+    def cpath_updated(self):
         if self.parent:
             if isinstance(self.parent, VariableTree):
                 self._iotype = self.parent._iotype
@@ -35,7 +35,7 @@ class VariableTree(Container):
                 t = self.parent.trait(self.name)
                 if t and t.iotype:
                     self._iotype = t.iotype
-        super(VariableTree, self).tree_rooted()
+        super(VariableTree, self).cpath_updated()
     
     @rbac(('owner', 'user'))
     def get_metadata(self, traitpath, metaname=None):

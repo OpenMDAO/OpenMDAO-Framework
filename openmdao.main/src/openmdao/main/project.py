@@ -10,7 +10,8 @@ import cPickle as pickle
 
 from pkg_resources import get_distribution, DistributionNotFound
 
-from openmdao.main.api import Container, Assembly, set_as_top
+from openmdao.main.api import Container
+from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.util.fileutil import get_module_path, expand_path
 
@@ -132,21 +133,17 @@ class Project(object):
                 try:
                     with open(statefile, 'r') as f:
                         self.__dict__ = pickle.load(f)
-            	except Exception, e:
+                except Exception, e:
                     print 'Unable to restore project state:',e
                     self.top = Assembly()
-                    set_as_top(self.top)
             else:
-                self.top = Assembly()
-                set_as_top(self.top)
-
+                self.top = set_as_top(Assembly())
             
             self.path = expand_path(projpath) # set again in case loading project state changed it
         else:  # new project
             os.makedirs(projpath)
             os.mkdir(modeldir)
-            self.top = Assembly()
-            set_as_top(self.top)
+            self.top = set_as_top(Assembly())
             
         self.save()
 

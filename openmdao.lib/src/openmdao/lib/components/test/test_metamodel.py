@@ -78,8 +78,7 @@ class Dummy(Component):
         self.y = 2*self.x
 
 class Sim(Assembly):
-    def __init__(self): 
-        super(Sim,self).__init__()
+    def configure(self):
 
         self.add('mm',MetaModel())
         self.mm.surrogate = {'default':KrigingSurrogate()}
@@ -369,7 +368,7 @@ class MetaModelTestCase(unittest.TestCase):
         
         
     def test_reset_nochange_inputs(self):
-        s = Sim()
+        s = set_as_top(Sim())
         
         s.mm.train_next = True
         s.mm.x = 1

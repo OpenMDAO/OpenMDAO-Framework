@@ -80,7 +80,7 @@ class Engine(Component):
                        desc='Power at engine output')
     torque = Float(0.0, iotype='out', units='N*m', 
                         desc='Torque at engine output')
-    fuel_burn = Float(0.0, iotype='out', units='l/s', 
+    fuel_burn = Float(0.0, iotype='out', units='L/s', 
                            desc='Fuel Burn Rate')
     engine_weight = Float(0.0, iotype='out', units='kg', 
                                desc='Engine weight estimation')
