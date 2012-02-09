@@ -213,8 +213,10 @@ class Assembly (Component):
         srcexpr = ExprEvaluator(srcpath, self)
         destexpr = ExprEvaluator(destpath, self)
         
-        # create ExprEval(dest), ExprEval(src)
-        # check that each only references one valid component
+        destvars = destexpr.get_referenced_varpaths()
+        if len(destvars) != 1:
+            self.raise_exception("destination of a connection must be a single variable",
+                                 RuntimeError)
         
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
