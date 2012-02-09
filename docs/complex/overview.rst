@@ -223,7 +223,7 @@ Variable           Description                                  Units
 -----------------  -------------------------------------------  ------
 ``torque``         Torque produced by engine                    N*m
 -----------------  -------------------------------------------  ------
-``fuel_burn``      Fuel burn rate                               l/sec
+``fuel_burn``      Fuel burn rate                               L/sec
 -----------------  -------------------------------------------  ------
 ``engine_weight``  Engine weight estimate                       kg
 -----------------  -------------------------------------------  ------
