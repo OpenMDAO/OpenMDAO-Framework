@@ -1,4 +1,5 @@
 import os, sys, traceback, json
+from cStringIO import StringIO
 
 from multiprocessing import Process
 
@@ -7,7 +8,7 @@ from openmdao.main.zmqrpc import *
 
 from openmdao.util.network import get_unused_ip_port
 
-from openmdao.gui.util import print_dict, print_list
+from openmdao.gui.util import print_dict, print_list, RepeatTimer
 
 import zmq
 from zmq.eventloop import ioloop
@@ -27,16 +28,18 @@ class ZMQServerManager(object):
         '''
         try:
             if server_id in self.server_dict:
-                (server, rep_url, pub_url) = self.server_dict[server_id]
+                (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
                 return ZMQ_RPC(rep_url)
             else:
                 rep_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
                 print "%s serving requests on %s" % (server_id, rep_url)
                 pub_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
                 print "%s publishing on %s" % (server_id, pub_url)
-                server = ZMQServer(self.classpath,rep_url,pub_url)
+                out_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
+                print "%s outputting on %s" % (server_id, out_url)
+                server = ZMQServer(self.classpath,rep_url,pub_url,out_url)
                 server.start()
-                self.server_dict[server_id] = (server, rep_url, pub_url)
+                self.server_dict[server_id] = (server, rep_url, pub_url, out_url)
                 return ZMQ_RPC(rep_url)
         except Exception, err:
             print 'Error getting server',server_id
@@ -50,7 +53,7 @@ class ZMQServerManager(object):
         ''' delete the server associated with an id
         '''
         if server_id in self.server_dict:
-            (server, rep_url, pub_url) = self.server_dict[server_id]
+            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
             del self.server_dict[server_id]
             try:
                 server.cleanup()
@@ -60,7 +63,7 @@ class ZMQServerManager(object):
             del server
 
 class ZMQServer(Process):
-    def __init__(self,classpath,rep_url,pub_url):
+    def __init__(self,classpath,rep_url,pub_url,out_url):
         parts = classpath.split('.')
         modpath = '.'.join(parts[:-1])
         __import__(modpath)
@@ -75,10 +78,45 @@ class ZMQServer(Process):
 
         self.rep_url = rep_url
         self.pub_url = pub_url
+        self.out_url = out_url
         
         super(ZMQServer, self).__init__()
     
+    def get_output(self):
+        ''' get any pending output and clear the outputput buffer
+        '''
+        output = self.cout.getvalue()
+        self.cout.truncate(0)
+        return output
+
+    def publish_output(self):
+        ''' publish any pending output and clear the outputput buffer
+        '''
+        try:
+            output = self.cout.getvalue()
+            if len(output) > 0:
+                self.cout_socket.send(output)
+                self.cout.truncate(0)
+        except Exception, err:
+            print err,sys.exc_info()
+
     def run(self):
+        # open a ZMQ socket on out_url and start publishing cout
+        # self.sysout = sys.stdout
+        # self.syserr = sys.stderr
+        # self.cout = StringIO()
+        # sys.stdout = self.cout
+        # sys.stderr = self.cout
+        # try:
+        # context = zmq.Context()
+        # self.cout_socket = context.socket(zmq.PUB)            
+        # print "binding output to %s" % self.out_url
+        # self.cout_socket.bind(self.out_url)
+        # self.cout_timer = RepeatTimer(2,self.publish_output)
+        # self.cout_timer.start()
+        # except Exception, err:
+        # print err,sys.exc_info()
+
         print 'Starting ZMQServer:',self
         ZmqCompWrapper.serve(self.obj, rep_url=self.rep_url, pub_url=self.pub_url)
                          
