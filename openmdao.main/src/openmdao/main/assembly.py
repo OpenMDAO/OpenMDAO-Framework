@@ -9,6 +9,7 @@ import threading
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
+import networkx as nx
 
 from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
@@ -74,6 +75,32 @@ class PassthroughProperty(Variable):
         self._vals[obj][name] = self._trait.validate(obj, name, value)
 
 
+class ExprMapper(object):
+    """A mapping between source expressions and destination expressions"""
+    def __init__(self):
+        self._map = {}
+        self._compgraph = nx.DiGraph()  # component dependency graph
+        
+    def connect(self, src, dest, scope):
+        if dest in self._map:
+            raise RuntimeError("%s is already connected to a source" % dest)
+        destexpr = ExprEvaluator(dest, scope)
+        srcexpr = ExprEvaluator(src, scope)
+        
+        srccomps = srcexpr.get_referenced_compnames()
+        destvars = destexpr.get_referenced_varpaths()
+        
+        if len(destvars) != 1:
+            raise RuntimeError("destination expr '%s' does not refer to a single variable." % dest)
+        
+        for destcomp in destexpr.get_referenced_compnames(): # there will be 0 or 1 destcomps here
+            if destcomp in srccomps:
+                raise RuntimeError("source expression '%s' and destination expresstion '%s' both refer to component %s" % (src,dest,destcomp))
+            self._compgraph.add_edges_from([(s, destcomp) for s in srccomps])
+        
+        self._map[dest] = (destexpr, srcexpr)
+
+
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the top level
@@ -87,7 +114,7 @@ class Assembly (Component):
     def __init__(self, doc=None, directory=''):
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
-        self._expr_map = {} # map of (dest_expr, src_expr)
+        self._expr_mapper = ExprMapper()
         
         # default Driver executes its workflow once
         self.add('driver', Driver())
@@ -212,13 +239,7 @@ class Assembly (Component):
         destpath: str
             Pathname of destination variable.
         """
-        srcexpr = ExprEvaluator(srcpath, self)
-        destexpr = ExprEvaluator(destpath, self)
-        
-        destvars = destexpr.get_referenced_varpaths()
-        if len(destvars) != 1:
-            self.raise_exception("destination of a connection must be a single variable",
-                                 RuntimeError)
+        self._expr_mapper.connect(srcpath, destpath, self)
         
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
@@ -230,11 +251,6 @@ class Assembly (Component):
             srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
             
-            if srccompname == destcompname:
-                self.raise_exception(
-                    'Cannot connect %s to %s. Both are on same component.' %
-                                     (srcpath, destpath), RuntimeError)
-    
             # test type compatability
             ttype = desttrait.trait_type
             if not ttype:

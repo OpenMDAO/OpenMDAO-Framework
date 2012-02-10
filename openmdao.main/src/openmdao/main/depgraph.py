@@ -12,7 +12,7 @@ class AlreadyConnectedError(RuntimeError):
     pass
 
 def _cvt_names_to_graph(srcpath, destpath):
-    """Translates model pathnames into pathnames in term of
+    """Translates model pathnames into pathnames in terms of
     our 'fake' graph nodes @xin, @bin, @bout, and @xout.
     """
     srccompname, _, srcvarname = srcpath.partition('.')
