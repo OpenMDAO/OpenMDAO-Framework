@@ -19,6 +19,7 @@ from multiprocessing.managers import BaseManager
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
+from openmdao.main.assembly import Assembly
 from openmdao.main.driver import Driver
 from openmdao.main.datatypes.slot import Slot
 

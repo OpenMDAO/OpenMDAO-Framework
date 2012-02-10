@@ -5,8 +5,6 @@ from optparse import OptionParser
 
 # zmq
 import zmq
-from zmq.eventloop import ioloop
-ioloop.install()
 
 # tornado
 from tornado import httpserver, web
@@ -76,6 +74,9 @@ class WrappedApp(object):
             
         self.server_mgr = ConsoleServerFactory()
         
+        from zmq.eventloop import ioloop
+        ioloop.install()
+
         # dev options
         if options.development:
             # save cookie secret between restarts
@@ -161,4 +162,3 @@ if __name__ == '__main__':
     # dont run main() if this is a forked windows process
     if sys.modules['__main__'].__file__ == __file__:
         main()
-

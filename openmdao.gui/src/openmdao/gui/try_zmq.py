@@ -1,4 +1,4 @@
-import os, sys, traceback
+import os, sys, traceback, json
 
 from multiprocessing import Process
 
@@ -6,6 +6,8 @@ from openmdao.main.zmqcomp import *
 from openmdao.main.zmqrpc import *
 
 from openmdao.util.network import get_unused_ip_port
+
+from openmdao.gui.util import print_dict, print_list
 
 import zmq
 from zmq.eventloop import ioloop
@@ -89,54 +91,93 @@ class ConsoleServerFactory(ZMQServerManager):
 
     def console_server(self,server_id):
         return self.server(server_id)
-        
-def main():
-    ''' create server, run it and get results
-    '''
+
+def print_json(data):
+    print json.dumps(json.loads(str(data)),indent=2)
     
+def run_simple():
     # create the OptimizationUnconstrained server
     classpath = 'openmdao.examples.simple.optimization_unconstrained.OptimizationUnconstrained'
     mgr = ZMQServerManager(classpath)
     srv = mgr.server('OptimizationUnconstrained')
     if srv is not None:
+        print dir(srv)
+        print srv.dir()
         #srv.register_published_vars(['paraboloid.x', 'paraboloid.y', 'paraboloid.f_xy'])
         srv.run()
         print srv.get('paraboloid.x')
         print srv.get('paraboloid.y')
         print srv.get('paraboloid.f_xy')
         mgr.delete_server('OptimizationUnconstrained')
-        
-    
+
+def run_cserver():
     mgr = ConsoleServerFactory()
     cserver = mgr.server('cserver')
-    if srv is not None:
-        print 'started cserver:',cserver
-        print 'cwd:'
+    if cserver is not None:
+        print '=============================================================='
+        print '================= started cserver ============================'
         print cserver.getcwd()
         #print 'types:'
         #print cserver.get_available_types()
         
+        print '=============================================================='
+        print '================ load project ================================'
         from openmdao.gui.settings import MEDIA_ROOT
         proj_file = MEDIA_ROOT+'/projects/swryan/sellar auto.proj'
-        print 'loading project:',proj_file
         print cserver.load_project(proj_file)
+        print_dict(cserver.get_files())
         
-        print cserver.execfile('sellar_CO.py')
-        print cserver.onecmd('print dir()')
-        print 'working_types:',cserver.get_workingtypes()
-        print cserver.get_structure('')
-        print cserver.get_workflow('prob')
+        print '=============================================================='
+        print '================ import from  file ==========================='
+        print cserver.onecmd('from sellar_CO import SellarCO')
+        print_dict(cserver.get_workingtypes())
+        print cserver.onecmd('trace')
+        
+        print '=============================================================='
+        print '=============== execute script to set up the problem ========='
+        script = """
+prob = SellarCO()
+
+prob.dis1.z1 = 5.0
+prob.dis2.z1 = 5.0
+
+prob.dis1.z2 = 2.0
+prob.dis2.z2 = 2.0
+
+prob.dis1.x1 = 1.0
+
+prob.dis1.y2 = 0.0
+prob.dis2.y1 = 3.16
+"""
+        cserver.onecmd(script)
+        print cserver.onecmd('trace')
+        
+        print cserver.onecmd('print dir(prob)')
+        print_json(cserver.get_structure(''))
+        print_json(cserver.get_workflow('prob'))
         print cserver.get_value('prob.dis1.z1')
         print cserver.get_value('prob.dis1.z2')
         print cserver.get_value('prob.dis1.x1')
-        cserver.onecmd("prob.register_published_vars(['prob.dis1.z1', 'prob.dis1.z2', 'prob.dis1.x1'])")
-        cserver.onecmd('prob.dis1.z1 = 0')
+        
+        print '=============================================================='
+        print '================= register published vars and run ============'
+        #cserver.onecmd("prob.register_published_vars(['dis1.z1', 'dis1.z2', 'dis1.x1'])")
         cserver.run()
-        print cserver.get_value('trace')
+        
+        print '=============================================================='
+        print '================ get results ================================='
+        print cserver.onecmd('trace')
         print cserver.get_value('prob.dis1.z1')
+        print cserver.get_value('prob.dis1.z2')
+        print cserver.get_value('prob.dis1.x1')
         
+        print '=============================================================='
+        print '================ delete server ==============================='
         mgr.delete_server('cserver')
-        
+    
+def main():
+    #run_simple()
+    run_cserver()
 
 if __name__ == '__main__':
     main()

@@ -1,6 +1,6 @@
 
 # tornado
-from tornado import httpserver, ioloop, web
+from tornado import web
 
 class BaseHandler(web.RequestHandler):
     ''' override the get_current_user() method in your request handlers to determine
