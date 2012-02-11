@@ -67,7 +67,6 @@ class MetaModel(Component):
         self._const_inputs = {} # dict of constant training inputs indices and their values
         self._train = False
         self._new_train_data = False
-        self._failed_training_msgs = []
      
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
@@ -83,7 +82,6 @@ class MetaModel(Component):
     def _reset_training_data_fired(self):
         self._training_input_history = []
         self._const_inputs = {}
-        self._failed_training_msgs = []
         
         # remove output history from surrogate_info
         for name, tup in self._surrogate_info.items():
@@ -133,28 +131,24 @@ class MetaModel(Component):
             if self.model is None:
                 self.raise_exception("MetaModel object must have a model!",
                                      RuntimeError)
-            try:
-                inputs = self.update_model_inputs()
-                
-                #print '%s training with inputs: %s' % (self.get_pathname(), inputs)
-                self.model.run(force=True)
+            inputs = self.update_model_inputs()
+            
+            #print '%s training with inputs: %s' % (self.get_pathname(), inputs)
+            self.model.run(force=True)
 
-            except Exception as err:
-                self._failed_training_msgs.append(str(err))
-            else: #if no exceptions are generated, save the data
-                self._training_input_history.append(inputs)
-                self.update_outputs_from_model()
-                case_outputs = []
-                
-                for name, tup in self._surrogate_info.items():
-                    surrogate, output_history = tup
-                    case_outputs.append(('.'.join([self.name,name]), 
-                                         output_history[-1]))
-                # save the case, making sure to add out name to the local input name since
-                # this Case is scoped to our parent Assembly
-                case_inputs = [('.'.join([self.name,name]),val) for name,val in zip(self._surrogate_input_names, inputs)]
-                if self.recorder: 
-                    self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
+            self._training_input_history.append(inputs)
+            self.update_outputs_from_model()
+            case_outputs = []
+            
+            for name, tup in self._surrogate_info.items():
+                surrogate, output_history = tup
+                case_outputs.append(('.'.join([self.name,name]), 
+                                     output_history[-1]))
+            # save the case, making sure to add out name to the local input name since
+            # this Case is scoped to our parent Assembly
+            case_inputs = [('.'.join([self.name,name]),val) for name,val in zip(self._surrogate_input_names, inputs)]
+            if self.recorder: 
+                self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
                     
             self._train = False
         else:
@@ -244,7 +238,6 @@ class MetaModel(Component):
         self._surrogate_input_names = []
         self._training_input_history = []
         self._surrogate_info = {}
-        self._failed_training_msgs = []
         
         # remove traits promoted from the old model
         for name in self._current_model_traitnames:
