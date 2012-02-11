@@ -107,7 +107,7 @@ def run_arch_test_suite(arch=[], optproblems=[]):
         converge_file = open('%s_convergence_data.py'%prob_name,'w')
         
         for a in arch:
-            prob = p.__class__()
+            prob = openmdao.main.api.set_as_top(p.__class__())
             arch_name = a.__class__.__name__
             
             prob.architecture = a.__class__()
@@ -123,6 +123,7 @@ def run_arch_test_suite(arch=[], optproblems=[]):
             except RuntimeError as err: 
                 arch_data[p] = False #not compatible, so just move on
                 print "Incompatible"
+                raise err
                 continue 
                            
             prob.run()

@@ -61,8 +61,6 @@ class Discipline(Component):
         
         self.y_out = array(-1/self.c_y_out*(Cz*z+Cx*x-Cy*y)) 
         
-
-        
 class UnitScalableProblem(OptProblem):         
     def __init__(self,n_disciplines=3,prob_size=3): 
         super(UnitScalableProblem,self).__init__()
