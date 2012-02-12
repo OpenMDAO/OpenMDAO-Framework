@@ -11,36 +11,37 @@ Contents:
    
    getting-started/index
    simple/index
-   complex/index
    surrogate/index
    mdao/index
-   user-guide/index
+   complex/index   
    srcdocs/index
    plugin-guide/index
    dev-guide/index
-   dev-checklist
+   code-contribution-example
    licenses/index
    documenting/index
    
    
 .. toctree::
    :hidden:
-        
+   
    units
-   arch-doc/index
    geometry/index
    glossary
+   user-guide/index
+   getting-started/overview
+   dev-guide/todo
+   arch-doc/index
+   
 
-Appendixes, Glossary, and Indexes
+
+Appendicies
 ==================================
 
 * :ref:`units`
-* :ref:`appendix`
-* :ref:`geometry`
 * :ref:`glossary`
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+
    
   
 

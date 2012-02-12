@@ -2,7 +2,7 @@
 .. _`A-Simple-Tutorial-Problem`:
 
 ===========================
- A Simple Tutorial Problem
+Tutorial: The Basics
 ===========================
 
 .. toctree::
@@ -11,8 +11,9 @@
    overview
    building
    unconstrained
-   executing
    constrained
    derivatives
    doe
+   variables
+
    

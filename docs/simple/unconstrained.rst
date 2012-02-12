@@ -7,10 +7,10 @@ Building a Model - Unconstrained Optimization using CONMIN
 ===========================================================
 
 Your next task is to build a model that finds the minimum value for the Paraboloid component
-described above. This model contains the Paraboloid as well as a public domain gradient optimizer
-called :term:`CONMIN`, for which a Python-wrapped driver has been included in OpenMDAO. As the name
-implies, CONMIN finds the minimum of a function. The model can be found in
-the Python file ``optimization_unconstrained.py``:
+described above. This model contains the Paraboloid as well as a gradient optimizer
+called :term:`CONMIN`, from the OpenMDAO standard library. 
+Create a file called ``optimization_unconstrained.py`` and copy this
+block of code into it.
 
 .. testcode:: simple_model_Unconstrained
 
@@ -46,20 +46,14 @@ the Python file ``optimization_unconstrained.py``:
             self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
 
 
-Please create a file called ``optimization_unconstrained.py`` and copy this
-block of code into it. We will discuss this code next.
-
 .. index:: top level Assembly
 
 An :term:`Assembly` is a container that can hold any number of components, drivers, and other
 assemblies. An Assembly also manages the connections between the components that it
-contains. In OpenMDAO the top assembly
-in a model is called the *top level assembly.* In this problem, the top level assembly includes a
-Paraboloid component and a CONMINdriver called *driver*. The name *driver* is special. When an 
-assembly is executed, it looks for a Driver named *driver* and executes it. That Driver is the root
-of what is called an :term:`iteration hierarchy`.
-
-The OptimizationUnconstrained class is derived from Assembly instead of Component.
+contains. In this problem the assembly includes a single
+Paraboloid component and a CONMINdriver named *driver*. The name *driver* is special. When an 
+assembly is executed, it looks for a Driver named *driver* and executes it. The 
+OptimizationUnconstrained class is derived from Assembly. 
 
 .. testsetup:: simple_model_Unconstrained_pieces
 
@@ -79,12 +73,11 @@ The OptimizationUnconstrained class is derived from Assembly instead of Componen
             """function that sets up the architecture"""
         
 In the Paraboloid component, you created an ``execute`` function to tell it what to do when the
-component is run. The ``OptimizationUnconstrained`` assembly does not need an ``execute`` function because
-the Assembly class already has one that is sufficient for most cases. However the assembly does need a
-``configure`` function defined which manages the creation of all the components, drivers, and data connections. 
+component is run. Assemblies don't need an execute function, since they don't really do any 
+caluclations of their own. Instead the assembly uses a ``configure`` function defined 
+which manages the creation of all the components, drivers, and data connections. 
 
-In ``confiugure`` the function ``add`` is used to add things
-to the assembly:
+When configuring you use the ``add`` function put things into the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -93,13 +86,13 @@ to the assembly:
 
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
+            
 
 Here you will make an instance of the *Paraboloid* component that you created above and
 give it the name *paraboloid.* Similarly you will create an instance of CONMINdriver and 
-give it the name *driver.* It will be the root of the iteration hierarchy for our class. 
-As with other class members,
-these are now accessible in the ``OptimizationUnconstrained`` assembly via ``self.paraboloid``
-and ``self.driver``.
+give it the name *driver*. These are now accessible in the ``OptimizationUnconstrained`` assembly 
+via ``self.paraboloid`` and ``self.driver``. Remember, assemblies always look for the Driver called ``driver`` to run the
+model. 
 
 Next, the CONMINdriver needs to be told what to run. Every driver has a :term:`Workflow`
 that contains a list of the components that the driver tells to run. We can add the
@@ -118,17 +111,19 @@ calling the driver's ``add_objective`` function.
 
             # CONMIN Objective 
             self.driver.add_objective('paraboloid.f_xy')
+            
 
+            
 Every variable has a unique name in the OpenMDAO data hierarchy. This
 name combines the variable name with its parents' names. You can think
 of it as something similar to the path name in a file system, but it uses a "."
 as a separator. This allows two components to have the same variable name
 while assuring that you can still refer to each of them uniquely. Here, the
 ``f_xy`` output of the Paraboloid component is selected as the objective for
-minimization.
+minimization by specifying its full name, ``paraboloid.f_xy``.
 
-While CONMIN operates only on a single objective,
-it allows multiple design variables. The design variables can be declared
+To find the minimum value of the objective function, we want to optimizer to 
+vary the ``x`` and ``y`` variables. The design variables are declared
 individually using the ``add_parameter`` method:
         
 .. testcode:: simple_model_Unconstrained_pieces
@@ -137,11 +132,11 @@ individually using the ``add_parameter`` method:
             self.driver.add_parameter('paraboloid.x', -50, 50)
             self.driver.add_parameter('paraboloid.y', -50, 50)
 
-Here, both `x` and `y` from the *Paraboloid* component are chosen as the design
-variables. The ``add_parameter`` method also allows you to add a range of
+Once again, you specify the parameters with the full name of each variable: ``parabolid.x``
+and ``paraboloid.y``. The ``add_parameter`` method also allows you to add a range of
 validity for these variables, so that the unconstrained optimization can be
 performed on a bounded region. For this problem, you are constraining `x` and `y`
-to lie on ``[-50, 50]``.
+to lie between ``[-50, 50]``.
         
 The problem is now essentially ready to execute. CONMIN contains quite a few
 additional control parameters, though the default values for many of them are
@@ -162,4 +157,75 @@ problem (*fdch* and *fdchm*). If the default values are used, only two places of
 accuracy can be obtained in the calculated minimum because CONMIN's default step
 size is too large for this problem.
 
-This model is now finished and ready to run. The next section will show how this is done.
+Congradulations! You just built your first model in OpenMDAO. Now let's run it. 
+
+
+Executing the Simple Optimization Problem
+==========================================
+
+To run your model, you need to create an instance of ``OptimizationUnconstrained`` and tell it to run.
+
+To do this, we're going to add some code to the end of the
+``optimization_unconstrained.py`` so that it can be executed in Python. 
+Using the conditional ``if __name__ == "__main__":`` you can include some Python code at the bottom 
+of ``optimization_unconstrained.py``. This makes it so you can run the file, but so that you could 
+also import your assembly into another model without running it. So the final lines in this file are:
+
+.. testsetup:: simple_model_Unconstrained_run
+
+    from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
+    __name__ = "__main__"
+
+.. testcode:: simple_model_Unconstrained_run
+
+    if __name__ == "__main__": 
+
+        opt_problem = OptimizationUnconstrained()
+
+        import time
+        tt = time.time()
+        
+        opt_problem.run()
+
+        print "\n"
+        print "CONMIN Iterations: ", opt_problem.driver.iter_count
+        print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.x, \
+                                         opt_problem.paraboloid.y)
+        print "Elapsed time: ", time.time()-tt, "seconds"
+
+.. testoutput:: simple_model_Unconstrained_run
+    :hide:
+
+    ...
+    CONMIN Iterations:  5
+    Minimum found at (6.666309, -7.333026)
+    Elapsed time:  ... seconds
+        
+ 
+In this block of code you are doing four things: 
+
+   1. In the first statement, you create an instance of the class ``OptimizationUnconstrained`` with
+      the name ``opt_problem``. 
+   2. In the second statement, you set ``opt_problem`` as the top Assembly in the model hierarchy. (This will be explained in a later tutorial.)    
+   3. In the fifth statement, you tell ``opt_problem`` to run. (The model will execute until the optimizer's
+      termination criteria are reached.) 
+   4. In the remaining statements, you define the results to print, including the elapsed time.
+
+Add the above code into your ``optimization_unconstrained.py`` file and save it. 
+Then type the following at the command prompt:
+
+::
+
+        python optimization_unconstrained.py
+
+This should produce the output:
+
+:: 
+
+    [ CONMIN output not shown ]
+    CONMIN Iterations:  5
+    Minimum found at (6.666309, -7.333026)
+    Elapsed time:  0.0558300018311 seconds
+
+Now you are ready to solve a more advanced optimization problem with constraints.
+
