@@ -12,8 +12,8 @@ Tutorial: The Basics
    building
    unconstrained
    constrained
-   derivatives
    doe
+   derivatives
    variables
 
    

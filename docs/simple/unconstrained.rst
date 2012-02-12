@@ -161,7 +161,7 @@ Congradulations! You just built your first model in OpenMDAO. Now let's run it.
 
 
 Executing the Simple Optimization Problem
-==========================================
+-----------------------------------------
 
 To run your model, you need to create an instance of ``OptimizationUnconstrained`` and tell it to run.
 
