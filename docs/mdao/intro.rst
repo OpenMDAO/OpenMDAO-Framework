@@ -2,13 +2,15 @@
 .. index:: MDAO tutorial problem
 
 
-Introduction
-=============
+The Sellar Problem
+==================
 
 We will cover some of the more advanced capabilities of OpenMDAO. You should read and
-understand :ref:`A-Simple-Tutorial-Problem` and :ref:`MetaModel` before starting this one. An
-understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
-recommended.
+understand :ref:`A-Simple-Tutorial-Problem` and :ref:`Tutorial:-MetaModel` before starting this one. 
+
+.. 
+  An understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
+  recommended.
 
 This tutorial illustrates the features of OpenMDAO that support the usage of decomposition 
 based MDAO architectures, such as:
@@ -26,9 +28,9 @@ or one you have seen, but is not currently available within OpenMDAO.
 Once you have a good understanding of how to construct an MDAO architecture by hand, you 
 might realize that it can take a good amount of work to set one up. So we will show you 
 how to set up your problem so you can automatically apply the MDAO architectures. Using 
-the automatic implementation of an architecture will dramatically simplify your input files. 
+the automatic implementation of an architecture will dramatically simplify your input files.
 
-We'll show you how to write your own automatic architecure implementation. There 
+Lastly, we'll show you how to write your own automatic architecure implementation. There 
 are a number of different architectures available in the standard library, but if you're 
 not happy with those or if you want to do research into other ones, then this last part 
 will help you.
@@ -111,11 +113,9 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
             
 ``Discipline2`` contains a square root of variable *y1* in its calculation. For negative values
 of *y1,* the result would be imaginary, so the absolute value is taken before the square root
-is applied. This component is clearly not valid for ``y1 < 0``, and our first thought was to add
-a *low* attribute to the variable definition for *y1.* However, the solver that was used to
-converge the two disciplines occasionally forced *y1* to go slightly negative. The inclusion
-of the absolute value solved the problem without impacting the eventual convergence of the
-solver.
+is applied. This component is clearly not valid for ``y1 < 0``, but some solvers could 
+occasionally force *y1* to go slightly negative while trying to converge the two disciplines . The inclusion
+of the absolute value solves the problem without impacting the final converged solution.
 
 These two components are contained in the file :download:`sellar.py 
 </../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` in the 
