@@ -2,61 +2,6 @@
 Running OpenMDAO
 ==================
 
-.. _Setting-the-Top-Level-Assembly:
-
-Setting the Top Level Assembly
-------------------------------
-
-The first assembly that is instantiated in a given process is designated as a
-top level assembly, and its directory will be set to the directory passed into
-its __init__ function or to the current working directory if no directory is specified.
-If an assembly is not the first one created in a process then the ``set_as_top`` function
-must be called on it explicitly in order to specify that it is a top assembly.
-Once an assembly is set as a top level assembly, its absolute path can be accessed
-through the function ``get_abs_directory``.
-
-    >>> from openmdao.main.api import Assembly, set_as_top 
-    >>> z1 = set_as_top(Assembly())
-    >>> z1.get_abs_directory()
-    '...'
-
-The output in this example depends on your local directory structure.
-All components added into this assembly will have this same absolute path. If a 
-component or assembly does not have a valid absolute directory, then File 
-variables will not be able to read, write, or even open their target files.
-
-Executing Models
-------------------
-
-.. todo::
-
-    Show how to run a model.
-
-.. todo::
-
-    Discuss Reset to Defaults.
-
-Error Logging & Debugging
----------------------------
-
-.. todo::
-
-    Explain the error logging capability.
-
-Saving & Loading
------------------
-
-.. todo::
-
-    Show how to save and load.
-
-Sharing Models
-----------------
-
-.. todo::
-
-    Discuss sharing models.
-
 .. _Specifying-Computational-Resources:
 
 Specifying Computational Resources
