@@ -8,6 +8,7 @@ Current version: |version|
    :maxdepth: 2
    
    getting-started/index
+   getting-started/overview
    simple/index
    surrogate/index
    mdao/index
@@ -27,7 +28,7 @@ Current version: |version|
    geometry/index
    glossary
    user-guide/index
-   getting-started/overview
+   
    dev-guide/todo
    arch-doc/index
    
