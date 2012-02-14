@@ -12,32 +12,31 @@ understand :ref:`A-Simple-Tutorial-Problem` and :ref:`Tutorial:-MetaModel` befor
   An understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
   recommended.
 
-This tutorial illustrates the features of OpenMDAO that support the usage of decomposition 
-based MDAO architectures, such as:
+This tutorial illustrates the features of OpenMDAO that support the use of decomposition-based MDAO
+architectures, such as:
 
 #. Multidisciplinary Design Feasible (MDF)
 #. Independent Design Feasible (IDF)
 #. Collaborative Optimization (CO)
 
-First we will walk through the manual implementation of these four architectures on a simple 
-example problem. This will will introduce you to using iteration hierarchy, metamodeling, 
+First we'll walk through the manual implementation of these architectures on a simple 
+example problem. This will introduce you to using iteration hierarchy, metamodeling, 
 and Design of Experiments (DOE) to construct different kinds of optimization processes. 
-Understanding this section if important if you want to implement a new MDAO architecture 
-or one you have seen, but is not currently available within OpenMDAO.
+Understanding this section is important if you want to implement a new MDAO architecture 
+or an existing one that is not currently available within OpenMDAO.
 
-Once you have a good understanding of how to construct an MDAO architecture by hand, you 
-might realize that it can take a good amount of work to set one up. So we will show you 
-how to set up your problem so you can automatically apply the MDAO architectures. Using 
-the automatic implementation of an architecture will dramatically simplify your input files.
+Once you understand how to construct an MDAO architecture by hand, you may realize that it can
+take a good amount of work to set one up. So we'll show you how to set up your problem so you can
+automatically apply the MDAO architectures. Using the automatic implementation of an architecture
+will dramatically simplify your input files.
 
-Lastly, we'll show you how to write your own automatic architecure implementation. There 
-are a number of different architectures available in the standard library, but if you're 
-not happy with those or if you want to do research into other ones, then this last part 
-will help you.
+Lastly, we'll show you how to write your own automatic architecture implementation. A number of
+different architectures are available in the standard library, but if you're not happy with those or
+if you want to do research into other ones, then this last part  will help you.
 
 .. index:: Sellar
 
-All of these tutorials use the Sellar problem which consists of two disciplines as follows:
+All of these tutorials use the Sellar Problem, which consists of two disciplines as follows:
 
 
 .. figure:: SellarResized.png

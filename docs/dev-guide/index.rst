@@ -2,7 +2,7 @@
 .. _Developer-Guide:
 
 =================
-Developer Guide
+Code Development
 =================
 
 .. toctree::
