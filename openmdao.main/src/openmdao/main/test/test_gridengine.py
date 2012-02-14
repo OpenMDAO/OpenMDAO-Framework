@@ -1,4 +1,5 @@
 import ConfigParser
+import datetime
 import glob
 import logging
 import nose
@@ -8,6 +9,7 @@ import shutil
 import sys
 import unittest
 
+from openmdao.main.resource import HOME_DIRECTORY, WORKING_DIRECTORY
 from openmdao.main.grid_engine import GridEngineAllocator, GridEngineServer
 from openmdao.main.mp_support import is_instance
 from openmdao.util.testutil import assert_raises
@@ -32,7 +34,7 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         GridEngineServer._QSUB[:] = self.orig_qsub
         GridEngineAllocator._QHOST[:] = self.orig_qhost
-        for name in ('echo.in', 'echo.out', 'qsub.out'):
+        for name in ('echo.in', 'echo.out', 'echo.err', 'qsub.out'):
             if os.path.exists(name):
                 os.remove(name)
         for name in glob.glob('GridEngineTestServer*'):
@@ -42,11 +44,22 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_allocator')
 
-        # Normal, successful allocation.
         allocator = GridEngineAllocator()
+        cfg = ConfigParser.ConfigParser()
+        cfg.add_section('GridEngine')
+        cfg.set('GridEngine', 'MPICH2', 'mpich')
+        cfg.set('GridEngine', 'OpenMPI', 'ompi')
+        allocator.configure(cfg)
+
+        # Normal, successful allocation.
         nhosts, criteria = allocator.max_servers({})
-        self.assertEqual(nhosts, 19*48)
+        self.assertEqual(nhosts, 19*48)  # From canned qhost output.
         estimate, criteria = allocator.time_estimate({})
+        self.assertEqual(estimate, 0)
+
+        nhosts, criteria = allocator.max_servers({'min_cpus': 2})
+        self.assertEqual(nhosts, 19*48/2)  # From canned qhost output.
+        estimate, criteria = allocator.time_estimate({'min_cpus': 2})
         self.assertEqual(estimate, 0)
 
         # Unused deployment.
@@ -55,7 +68,9 @@ class TestCase(unittest.TestCase):
         allocator.release(server)
 
         # Too many CPUs.
-        estimate, criteria = allocator.time_estimate({'n_cpus': 1000})
+        nhosts, criteria = allocator.max_servers({'min_cpus': 1000})
+        self.assertEqual(nhosts, 0)
+        estimate, criteria = allocator.time_estimate({'min_cpus': 1000})
         self.assertEqual(estimate, -2)
 
         # Not remote.
@@ -97,26 +112,34 @@ class TestCase(unittest.TestCase):
             pass
 
         server = GridEngineServer()
+        server.configure(dict(MPI='ompi'))
 
         # Try various resources.
+        start_time = datetime.datetime(2012, 2, 8, 16, 42)
+        resource_limits = dict(cpu_time=1, wallclock_time=2)
         server.execute_command(dict(remote_command='echo',
                                     args=['hello', 'world'],
-                                    working_directory='.',
-                                    job_name='TestJob',
+                                    submit_as_hold=True,
+                                    rerunnable=True,
                                     job_environment={'ENV_VAR': 'env_value'},
-                                    parallel_environment='ompi',
-                                    n_cpus=256,
+                                    working_directory='.',
+                                    job_category='MPI',
+                                    min_cpus=256,
+                                    max_cpus=512,
+                                    email=['user1@host1', 'user2@host2'],
+                                    email_on_started=True,
+                                    email_on_terminated=True,
+                                    job_name='TestJob',
                                     input_path='echo.in',
                                     output_path='echo.out',
                                     join_files=True,
-                                    email=['user1@host1', 'user2@host2'],
-                                    block_email=True,
-                                    email_events='beas',
-                                    start_time='01010101.00',
-                                    hard_wallclock_time_limit=1,
-                                    soft_wallclock_time_limit=2,
-                                    hard_run_duration_limit=3,
-                                    soft_run_duration_limit=4))
+                                    reservation_id='res-1234',
+                                    queue_name='debug_q',
+                                    priority=42,
+                                    start_time=start_time,
+                                    resource_limits=resource_limits,
+                                    accounting_id='CFD-R-US',
+                                    native_specification=('-ac', 'name=value')))
 
         with open('echo.out', 'r') as inp:
             lines = inp.readlines()
@@ -124,34 +147,70 @@ class TestCase(unittest.TestCase):
 
         with open('qsub.out', 'r') as inp:
             lines = inp.readlines()
-        self.assertEqual(''.join(lines), """\
--V -sync yes -b yes -wd . -N TestJob -pe ompi 256 -i echo.in -o echo.out -j yes -M user1@host1,user2@host2 -m n -m beas -a 01010101.00 -l h_rt=0:0:1 -l s_rt=0:0:2 -l h_cpu=0:0:3 -l s_cpu=0:0:4 echo hello world
+        actual = ''.join(lines)
+        expected = """\
+-V -sync yes -b yes -wd . -h -r yes -M user1@host1,user2@host2 -m b -m e -N TestJob -i echo.in -o echo.out -j yes -ar res-1234 -q debug_q -p 42 -a 201202081642.00 -A CFD-R-US -pe ompi 256-512 -l h_cpu=0:0:1 -l h_rt=0:0:2 -ac name=value echo hello world
 -V
 -sync arg yes
 -b arg yes
 -wd arg .
+-h
+-r arg yes
+-M arg user1@host1,user2@host2
+-m arg b
+-m arg e
 -N arg TestJob
--pe ompi 256
 -i stdin echo.in
 -o stdout echo.out
 -j join yes
--M arg user1@host1,user2@host2
--m arg n
--m arg beas
--a arg 01010101.00
--l resource h_rt=0:0:1
--l resource s_rt=0:0:2
--l resource h_cpu=0:0:3
--l resource s_cpu=0:0:4
+-ar arg res-1234
+-q arg debug_q
+-p arg 42
+-a arg 201202081642.00
+-A arg CFD-R-US
+-pe ompi 256-512
+-l resource h_cpu=0:0:1
+-l resource h_rt=0:0:2
+-ac arg name=value
 echo hello world
-""")
+"""
+        logging.debug('Actual output:')
+        logging.debug(actual)
+        logging.debug('Expected output:')
+        logging.debug(expected)
+        self.assertEqual(actual, expected)
+
+        # error_path.
+        server.execute_command(dict(remote_command='echo',
+                                    args=['hello', 'world'],
+                                    output_path='echo.out',
+                                    error_path='echo.err'))
+
+        # HOME_DIRECTORY, WORKING_DIRECTORY.
+        home_dir = os.path.expanduser('~')
+        work_dir = os.getcwd()
+        server.execute_command(dict(remote_command='echo',
+                                    args=[HOME_DIRECTORY+'hello',
+                                          WORKING_DIRECTORY+'world'],
+                                    working_directory=work_dir,
+                                    output_path='echo.out'))
+        with open('echo.out', 'r') as inp:
+            lines = inp.readlines()
+        self.assertEqual(lines,
+                         ['%s %s\n' % (os.path.join(home_dir, 'hello'),
+                                       os.path.join(work_dir, 'world'))])
+        # Bad category.
+        code = "server.execute_command(dict(remote_command='echo'," \
+                                      "job_category='no-such-category'))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "No mapping for job_category 'no-such-category'")
 
         # 'qsub' failure.
         GridEngineServer._QSUB[:] = [os.path.join('bogus-qsub')]
         code = "server.execute_command(dict(remote_command='echo'))"
         assert_raises(self, code, globals(), locals(), OSError, '')
 
-
+        
 if __name__ == '__main__':
     sys.argv.append('--cover-package=grid_engine.')
     sys.argv.append('--cover-erase')
