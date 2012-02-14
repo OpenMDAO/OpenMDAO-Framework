@@ -9,7 +9,7 @@ import ast
 import copy
 import __builtin__
 
-from openmdao.main.interfaces import IDriver
+from openmdao.main.printexpr import _get_attr_node, _get_long_name
 
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
@@ -39,13 +39,6 @@ CALL = 2
 SLICE = 3
 
 
-def _get_attr_node(names):
-    """Builds an Attribute node, or a Name node if names has just one entry."""
-    node = ast.Name(id=names[0], ctx=ast.Load())
-    for name in names[1:]:
-        node = ast.Attribute(value=node, attr=name, ctx=ast.Load())
-    return node
-
 class ExprTransformer(ast.NodeTransformer):
     """Transforms dotted name references, e.g., abc.d.g in an expression AST
     into scope.get('abc.d.g') and turns assignments into the appropriate
@@ -70,28 +63,6 @@ class ExprTransformer(ast.NodeTransformer):
         else:
             return visitor(node, subs)
 
-    def _get_long_name(self, node):
-        # If this node is an Attribute or Name node that is composed
-        # only of other Attribute or Name nodes, then return the full
-        # dotted name for this node. Otherwise, i.e., if this node
-        # contains Subscripts or Calls, return None.
-        if isinstance(node, ast.Name):
-            return node.id
-        elif not isinstance(node, ast.Attribute):
-            return None
-        val = node.value
-        parts = [node.attr]
-        while True:
-            if isinstance(val, ast.Attribute):
-                parts.append(val.attr)
-                val = val.value
-            elif isinstance(val, ast.Name):
-                parts.append(val.id)
-                break
-            else:  # it's more than just a simple dotted name
-                return None
-        return '.'.join(parts[::-1])
-    
     def _name_to_node(self, node, name, subs=None):
         """Given a dotted name, return the proper node depending on whether
         the name is resolvable in 'local' scope or not.
@@ -135,7 +106,7 @@ class ExprTransformer(ast.NodeTransformer):
         return self._name_to_node(node, node.id, subs)
     
     def visit_Attribute(self, node, subs=None):
-        long_name = self._get_long_name(node)
+        long_name = _get_long_name(node)
         if long_name is None: # this Attribute contains more than just names/attrs
             if subs is None:
                 subs = []
@@ -178,7 +149,7 @@ class ExprTransformer(ast.NodeTransformer):
         return newnode
     
     def visit_Call(self, node, subs=None):
-        name = self._get_long_name(node.func)
+        name = _get_long_name(node.func)
         if name is not None:
             if self.expreval._is_local(name) or '.' not in name:
                 return self.generic_visit(node)
