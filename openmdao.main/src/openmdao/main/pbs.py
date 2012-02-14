@@ -306,8 +306,8 @@ class PBS_Server(ObjServer):
         cmd.extend(('-V', '-W', 'block=true', '-j', 'oe'))
         if sys.platform == 'win32':  # pragma no cover
             prefix = 'REM PBS'
-            cmd.extend(('-C', prefix))
-            suffix = '.bat'
+            cmd.extend(('-C', '"%s"' % prefix))
+            suffix = '-qsub.bat'
         else:
             prefix = '#PBS'
             cmd.extend(('-S', '/bin/sh'))

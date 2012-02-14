@@ -997,7 +997,7 @@ class LocalAllocator(FactoryAllocator):
             req_cpus = resource_desc['min_cpus']
             if req_cpus > avail_cpus:
                 return (0, {'min_cpus': 'want %s, available %s'
-                                        % (value, avail_cpus)})
+                                        % (req_cpus, avail_cpus)})
             else:
                 return (avail_cpus / req_cpus, {})
         else:
@@ -1344,7 +1344,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 req_cpus = resource_desc['min_cpus']
                 if req_cpus > total:
                     return (0, {'min_cpus': 'want %s, total %s'
-                                            % (value, total)})
+                                            % (req_cpus, total)})
                 else:
                     return (total / req_cpus, {})
             else:

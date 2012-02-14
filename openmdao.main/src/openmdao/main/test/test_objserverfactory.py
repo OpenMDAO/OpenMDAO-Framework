@@ -208,9 +208,12 @@ class TestCase(unittest.TestCase):
             # listdir().
             self.assertEqual(sorted(server.listdir('.')),
                              [egg_info[0], 'fred', 'xyzzy', 'zipped'])
+            if sys.platform == 'win32':
+                msg = "[Error 3] The system cannot find the path specified: '42/*.*'"
+            else:
+                msg = "[Errno 2] No such file or directory: '42'"
             assert_raises(self, "server.listdir('42')",
-                          globals(), locals(), OSError,
-                          "[Errno 2] No such file or directory: '42'")
+                          globals(), locals(), OSError, msg)
         finally:
             SimulationRoot.chroot('..')
             shutil.rmtree(testdir)
@@ -230,8 +233,14 @@ class TestCase(unittest.TestCase):
             server = ObjServer(allow_shell=True)
 
             # Execute a command.
-            cmd = 'dir' if sys.platform == 'win32' else 'ls'
+            if sys.platform == 'win32':
+                cmd = 'cmd'
+                args = ['/c', 'dir']
+            else:
+                cmd = 'ls'
+                args = []
             rdesc = {'remote_command': cmd,
+                     'args': args,
                      'output_path': 'cmd.out'}
             return_code, error_msg = server.execute_command(rdesc)
             self.assertEqual(return_code, 0)
@@ -244,9 +253,12 @@ class TestCase(unittest.TestCase):
                      'input_path': 'stdin1',
                      'error_path': 'stderr1',
                      'wallclock_time': 10}
+            if sys.platform == 'win32':
+                msg = '[Error 2] The system cannot find the file specified'
+            else:
+                msg = '[Errno 2] No such file or directory'
             assert_raises(self, 'server.execute_command(rdesc)',
-                          globals(), locals(), OSError,
-                          '[Errno 2] No such file or directory')
+                          globals(), locals(), OSError, msg)
 
             # Load a model.
             exec_comp = server.create('openmdao.test.execcomp.ExecComp')

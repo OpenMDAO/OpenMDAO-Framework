@@ -126,9 +126,9 @@ class TestCase(unittest.TestCase):
         with open('qsub.out', 'r') as inp:
             output = ''.join(inp.readlines())
         if sys.platform == 'win32':
-            sh1 = ' -C REM PBS'
-            sh2 = '-C arg REM PBS'
-            suffix = '.bat'
+            sh1 = ' -C "REM PBS"'
+            sh2 = '-C arg "REM PBS"'
+            suffix = '-qsub.bat'
         else:
             sh1 = ' -S /bin/sh'
             sh2 = '-S arg /bin/sh'

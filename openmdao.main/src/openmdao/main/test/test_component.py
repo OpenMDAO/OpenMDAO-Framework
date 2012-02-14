@@ -132,6 +132,8 @@ class TestCase(unittest.TestCase):
             comp.cpath_updated()
         except ValueError, exc:
             path = os.path.join(os.getcwd(), directory)
+            if sys.platform == 'win32':
+                path = path.lower()
             self.assertEqual(str(exc),
                 ": Execution directory path '%s' is not a directory."
                 % path)
