@@ -7,6 +7,7 @@
 OpenMDAO drivers in the standard library."""
 
 # Drivers
+from openmdao.lib.drivers.cobyladriver import COBYLA_driver
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.newsumtdriver import NEWSUMTdriver
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
