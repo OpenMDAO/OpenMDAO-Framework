@@ -71,6 +71,8 @@ class Source(Assembly):
         global SOURCE_INIT
         SOURCE_INIT = True
 
+    def configure(self):
+        """ Called once we have a valid hierarchy above us. """
         self.add('sub', Subcontainer())
         self.create_passthrough('sub.binary_file')
 
@@ -80,10 +82,6 @@ class Source(Assembly):
         # External file that doesn't exist at time of save.
         self.external_files.append(FileMetadata(path='does-not-exist'))
 
-    def tree_rooted(self):
-        """ Called once we have a valid hierarchy above us. """
-        super(Source, self).tree_rooted()
-        
         self.directory = self.get_abs_directory()  # Force absolute.
         # Absolute external file that exists at time of save.
         path = os.path.join(self.directory, EXTERNAL_FILES[0])
@@ -189,8 +187,7 @@ class Oddball(Assembly):
     #                         desc='Just something to call.', required=False)
     executions = Int(0, iotype='out', desc='Counts instance_method() calls.')
 
-    def __init__(self, *args, **kwargs):
-        super(Oddball, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('oddcomp', OddballComponent())
         self.add('oddcont', OddballContainer())
         self.driver.workflow.add('oddcomp')
@@ -263,9 +260,7 @@ def observer(state, string, file_fraction, byte_fraction):
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
-    def __init__(self, *args, **kwargs):
-        super(Model, self).__init__(*args, **kwargs)
-
+    def configure(self):
         self.add('Source', Source(directory='Source'))
         self.add('Oddball', Oddball(directory='Oddball'))
         self.add('Sink', Sink(directory='Sink'))

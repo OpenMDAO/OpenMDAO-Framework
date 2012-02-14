@@ -1,8 +1,8 @@
-Developer Checklist
-===================
+Code Contribution Tutorial
+==========================
 
-Below is a checklist, or end-to-end example, for you to follow as you change code
-that will be contributed to the OpenMDAO-Framework repository. 
+Below is a step-by-step tutorial for you to follow if you want to contribute new code to the 
+framework effort. 
 
 * The steps below assume you have made a personal fork of the official OpenMDAO-Framework
   repository. If you have not yet done this, go to 

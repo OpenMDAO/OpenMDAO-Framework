@@ -11,11 +11,9 @@ from openmdao.examples.enginedesign.vehicle import Vehicle
 class VehicleSim2(Assembly):
     """Optimization of a Vehicle."""
     
-    def __init__(self):
-        """ Creates a new Assembly for vehicle performance optimization."""
+    def configure(self):
+        """ Configures a new Assembly for vehicle performance optimization."""
         
-        super(VehicleSim2, self).__init__()
-
         # Create Vehicle instance
         self.add('vehicle', Vehicle())
         

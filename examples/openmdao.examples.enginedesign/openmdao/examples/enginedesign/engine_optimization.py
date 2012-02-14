@@ -15,11 +15,7 @@ from openmdao.examples.enginedesign.vehicle import Vehicle
 class EngineOptimization(Assembly):
     """Optimization of a Vehicle."""
     
-    def __init__(self):
-        """ Creates a new Assembly for vehicle performance optimization."""
-        
-        super(EngineOptimization, self).__init__()
-
+    def configure(self):
         # pylint: disable-msg=E1101
         
         # Create CONMIN Optimizer instance
@@ -101,10 +97,8 @@ if __name__ == "__main__": # pragma: no cover
     
 
     import time
-    from openmdao.main.api import set_as_top
     
     opt_problem = EngineOptimization()
-    set_as_top(opt_problem)
     
     opt_problem.sim_acc.run()
     opt_problem.sim_EPA_city.run()

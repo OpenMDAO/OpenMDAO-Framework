@@ -7,7 +7,7 @@ on the first execution, then on subsequent executions the corrected result
 is directly calculated.
 """
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.datatypes.api import Float
 
 from m4.doe import DOE
@@ -18,8 +18,7 @@ from m4.dummy_components import Model_A2d, Model_B2d
 class MyModel(Assembly):
     """ Simple M4 variable fidelity example.  """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
 
         # Specify DOE.
         doe = self.add('M4_DOE', DOE())
@@ -82,7 +81,7 @@ class VarFi(MidFidelity):
 
 
 if __name__ == '__main__': # pragma no cover
-    top = set_as_top(MyModel())
+    top = MyModel()
     top.run()
 #    top.check_save_load()  # Note: requires correct pythonV.R
 

@@ -17,12 +17,11 @@ class TstComponent(Component):
         self.add('dummy_data_out',TstContainer())
         
     def execute(self):
-        self.dummy_data_out.dummy1 = self.dummy_data.dummy1
+        self.dummy_data_out = self.dummy_data.copy()
 
 class TstAssembly(Assembly):
 
-    def __init__(self):
-        super(TstAssembly,self).__init__()
+    def configure(self):
         self.add('comp',TstComponent())
         self.create_passthrough('comp.dummy_data.dummy1')
         self.create_passthrough('comp.dummy_data_out.dummy1', 'dummy1_out')

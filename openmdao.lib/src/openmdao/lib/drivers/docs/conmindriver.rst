@@ -57,10 +57,7 @@ follows:
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
-        def __init__(self):
-            """ Creates a new Assembly for vehicle performance optimization."""
-            
-            super(EngineOptimization, self).__init__()
+        def configure(self):
 
             # Create CONMIN Optimizer instance
             self.add('driver', CONMINdriver())
@@ -104,7 +101,8 @@ The default value is 10.
 .. testsetup:: CONMIN_show
     
     from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-    self = EngineOptimization()
+    from openmdao.main.api import set_as_top
+    self = set_as_top(EngineOptimization())
 
 .. testcode:: CONMIN_show
 
