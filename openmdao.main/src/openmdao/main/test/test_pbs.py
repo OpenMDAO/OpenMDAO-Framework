@@ -29,10 +29,11 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         PBS_Server._QSUB[:] = self.orig_qsub
-        for name in ('TestJob.qsub', 'TestJob.bat', 'qsub.out',
-                     'Zbogus-job-(_&^.qsub', 'Zbogus-job-(_&^.bat',
-                     'python.qsub', 'python.bat',
-                     'echo.in', 'echo.out', 'echo.err', 'echo.qsub'):
+        for name in ('TestJob.qsub', 'TestJob-qsub.bat', 'qsub.out',
+                     'Zbogus-job-(_&^.qsub', 'Zbogus-job-(_&^-qsub.bat',
+                     'python.qsub', 'python-qsub.bat',
+                     'echo.qsub', 'echo-qsub.bat',
+                     'echo.in', 'echo.out', 'echo.err'):
             if os.path.exists(name):
                 os.remove(name)
         for name in glob.glob('PBS_TestServer*'):
