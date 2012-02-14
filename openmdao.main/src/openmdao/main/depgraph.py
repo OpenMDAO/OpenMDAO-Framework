@@ -7,6 +7,7 @@ import networkx as nx
 from networkx.algorithms.dag import topological_sort_recursive,is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
+from openmdao.main.expreval import ExprEvaluator
 
 class AlreadyConnectedError(RuntimeError):
     pass
@@ -252,69 +253,72 @@ class DependencyGraph(object):
         except KeyError:
             return []
     
-    def connect(self, srcpath, destpath):
+    def connect(self, srcpath, destpath, scope):
         """Add an edge to our Component graph from 
         *srccompname* to *destcompname*.
         """
         graph = self._graph
-        srccompname, srcvarname, destcompname, destvarname = \
-                           _cvt_names_to_graph(srcpath, destpath)
         
         dpdot = destpath+'.'
-        for dst,src in self._allsrcs.items():
+        for dst,srctup in self._allsrcs.items():
             if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
                 raise AlreadyConnectedError("%s is already connected to source %s" %
-                                            (dst, src))
-                
-        if srccompname == '@xin' and destcompname != '@bin':
-            # this is an auto-passthrough input so we need 2 links
-            if '@bin' not in graph['@xin']:
-                link = _Link('@xin', '@bin')
-                graph.add_edge('@xin', '@bin', link=link)
-            else:
-                link = graph['@xin']['@bin']['link']
-            link.connect(srcvarname, '.'.join([destcompname,destvarname]))
-            if destcompname not in graph['@bin']:
-                link = _Link('@bin', destcompname)
-                graph.add_edge('@bin', destcompname, link=link)
-            else:
-                link = graph['@bin'][destcompname]['link']
-            link.connect('.'.join([destcompname,destvarname]), destvarname)
-        elif destcompname == '@xout' and srccompname != '@bout':
-            # this is an auto-passthrough output so we need 2 links
-            if '@xout' not in graph['@bout']:
-                link = _Link('@bout', '@xout')
-                graph.add_edge('@bout', '@xout', link=link)
-            else:
-                link = graph['@bout']['@xout']['link']
-            link.connect('.'.join([srccompname,srcvarname]), destvarname)
-            if srccompname not in graph or '@bout' not in graph[srccompname]:
-                link = _Link(srccompname, '@bout')
-                graph.add_edge(srccompname, '@bout', link=link)
-            else:
-                link = graph[srccompname]['@bout']['link']
-            link.connect(srcvarname,'.'.join([srccompname,srcvarname]))
-        else:
-            try:
-                link = graph[srccompname][destcompname]['link']
-            except KeyError:
-                link=_Link(srccompname, destcompname)
-                graph.add_edge(srccompname, destcompname, link=link)
+                                            (dst, self._allsrcs[dst]))
+
+        src_varpaths = ExprEvaluator(srcpath, scope=scope).get_referenced_varpaths()
+        
+        for src in src_varpaths:
+            srccompname, srcvarname, destcompname, destvarname = \
+                               _cvt_names_to_graph(src, destpath)
             
-            if is_directed_acyclic_graph(graph):
-                link.connect(srcvarname, destvarname)
-            else:   # cycle found
-                # do a little extra work here to give more info to the user in the error message
-                strongly_connected = strongly_connected_components(graph)
-                if len(link) == 0:
-                    graph.remove_edge(srccompname, destcompname)
-                for strcon in strongly_connected:
-                    if len(strcon) > 1:
-                        raise RuntimeError(
-                            'circular dependency (%s) would be created by connecting %s to %s' %
-                                     (str(strcon), 
-                                      '.'.join([srccompname,srcvarname]), 
-                                      '.'.join([destcompname,destvarname])))
+            if srccompname == '@xin' and destcompname != '@bin':
+                # this is an auto-passthrough input so we need 2 links
+                if '@bin' not in graph['@xin']:
+                    link = _Link('@xin', '@bin')
+                    graph.add_edge('@xin', '@bin', link=link)
+                else:
+                    link = graph['@xin']['@bin']['link']
+                link.connect(srcvarname, '.'.join([destcompname,destvarname]))
+                if destcompname not in graph['@bin']:
+                    link = _Link('@bin', destcompname)
+                    graph.add_edge('@bin', destcompname, link=link)
+                else:
+                    link = graph['@bin'][destcompname]['link']
+                link.connect('.'.join([destcompname,destvarname]), destvarname)
+            elif destcompname == '@xout' and srccompname != '@bout':
+                # this is an auto-passthrough output so we need 2 links
+                if '@xout' not in graph['@bout']:
+                    link = _Link('@bout', '@xout')
+                    graph.add_edge('@bout', '@xout', link=link)
+                else:
+                    link = graph['@bout']['@xout']['link']
+                link.connect('.'.join([srccompname,srcvarname]), destvarname)
+                if srccompname not in graph or '@bout' not in graph[srccompname]:
+                    link = _Link(srccompname, '@bout')
+                    graph.add_edge(srccompname, '@bout', link=link)
+                else:
+                    link = graph[srccompname]['@bout']['link']
+                link.connect(srcvarname,'.'.join([srccompname,srcvarname]))
+            else:
+                try:
+                    link = graph[srccompname][destcompname]['link']
+                except KeyError:
+                    link=_Link(srccompname, destcompname)
+                    graph.add_edge(srccompname, destcompname, link=link)
+                
+                if is_directed_acyclic_graph(graph):
+                    link.connect(srcvarname, destvarname)
+                else:   # cycle found
+                    # do a little extra work here to give more info to the user in the error message
+                    strongly_connected = strongly_connected_components(graph)
+                    if len(link) == 0:
+                        graph.remove_edge(srccompname, destcompname)
+                    for strcon in strongly_connected:
+                        if len(strcon) > 1:
+                            raise RuntimeError(
+                                'circular dependency (%s) would be created by connecting %s to %s' %
+                                         (str(strcon), srcpath, destpath))
+                    
         self._allsrcs[destpath] = srcpath
         
     def _comp_connections(self, cname):

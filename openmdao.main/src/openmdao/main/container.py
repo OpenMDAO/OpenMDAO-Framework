@@ -266,7 +266,7 @@ class Container(HasTraits):
                 if is_instance(child, Container):
                     child.connect(restofpath, 'parent.'+destpath)
                 
-        self._depgraph.connect(srcpath, destpath)
+        self._depgraph.connect(srcpath, destpath, self)
 
 
     @rbac(('owner', 'user'))

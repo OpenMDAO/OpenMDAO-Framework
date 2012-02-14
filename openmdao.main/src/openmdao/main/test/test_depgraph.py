@@ -3,6 +3,10 @@ import StringIO
 
 from openmdao.main.depgraph import DependencyGraph
 
+class DumbClass(object):
+    def contains(self, name):
+        return hasattr(self, name)
+
 _fakes = ['@xin', '@bin', '@bout', '@xout']
 nodes = ['A', 'B', 'C', 'D']
 
@@ -10,21 +14,23 @@ nodes = ['A', 'B', 'C', 'D']
 class DepGraphTestCase(unittest.TestCase):
 
     def setUp(self):
+        scope = self.scope = DumbClass()
         self.dep = dep = DependencyGraph()
         for name in nodes:
             dep.add(name)
 
         # an internal connection
-        dep.connect('A.c', 'B.a')
+        dep.connect('A.c', 'B.a', scope)
+        dep.connect('A.c+B.d', 'D.a', scope)
         
         # boundary connections
-        dep.connect('parent.X.c', 'bound_a')
-        dep.connect('B.c', 'bound_c')
-        dep.connect('bound_c', 'parent.Y.a')
+        dep.connect('parent.X.c', 'bound_a', scope)
+        dep.connect('B.c', 'bound_c', scope)
+        dep.connect('bound_c', 'parent.Y.a', scope)
         
         # auto-passthroughs
-        dep.connect('parent.X.d', 'B.b')
-        dep.connect('B.d', 'parent.Y.b')
+        dep.connect('parent.X.d', 'B.b', scope)
+        dep.connect('B.d', 'parent.Y.b', scope)
 
     def test_get_source(self):
         self.assertEqual(self.dep.get_source('B.a'), 'A.c')
@@ -44,12 +50,12 @@ class DepGraphTestCase(unittest.TestCase):
         
     def test_list_connections(self):
         self.assertEqual(set(self.dep.list_connections()), 
-                         set([('A.c','B.a'), ('B.c','bound_c')]))
+                         set([('A.c','B.a'), ('B.c','bound_c'), ('A.c','D.a'), ('B.d','D.a')]))
         self.assertEqual(set(self.dep.list_connections(show_passthrough=False)), 
-                         set([('A.c','B.a')]))
+                         set([('A.c','B.a'), ('A.c','D.a'), ('B.d','D.a')]))
     
     def test_get_link(self):
-        link = self.dep.get_link('A', 'D')
+        link = self.dep.get_link('C', 'D')
         self.assertEqual(link, None)
         link = self.dep.get_link('A', 'B')
         self.assertEqual(link._srcs.keys(), ['c'])
@@ -63,7 +69,7 @@ class DepGraphTestCase(unittest.TestCase):
     def test_already_connected(self):
         # internal connection
         try:
-            self.dep.connect('A.d', 'B.a')
+            self.dep.connect('A.d', 'B.a', self.scope)
         except Exception as err:
             self.assertEqual(str(err), 'B.a is already connected to source A.c')
         else:
@@ -71,7 +77,7 @@ class DepGraphTestCase(unittest.TestCase):
             
         # input boundary connection
         try:
-            self.dep.connect('parent.foo.bar', 'bound_a')
+            self.dep.connect('parent.foo.bar', 'bound_a', self.scope)
         except Exception as err:
             self.assertEqual(str(err), 'bound_a is already connected to source parent.X.c')
         else:
@@ -79,14 +85,14 @@ class DepGraphTestCase(unittest.TestCase):
 
         # internal to boundary output connection
         try:
-            self.dep.connect('B.d', 'bound_c')
+            self.dep.connect('B.d', 'bound_c', self.scope)
         except Exception as err:
             self.assertEqual(str(err), 'bound_c is already connected to source B.c')
         else:
             self.fail('Exception expected')
 
     def test_connections_to(self):
-        self.dep.connect('bound_a', 'A.a')
+        self.dep.connect('bound_a', 'A.a', self.scope)
 
         self.assertEqual(set(self.dep.connections_to('bound_c')),
                          set([('@bout.bound_c','@xout.parent.Y.a'),
@@ -95,9 +101,9 @@ class DepGraphTestCase(unittest.TestCase):
                          set([('@xin.parent.X.c','@bin.bound_a'),
                               ('@bin.bound_a','A.a')]))
         
-        self.dep.connect('A.c', 'C.b')
+        self.dep.connect('A.c', 'C.b', self.scope)
         self.assertEqual(set(self.dep.connections_to('A.c')),
-                         set([('A.c','C.b'),('A.c','B.a')]))
+                         set([('A.c','C.b'),('A.c','B.a'),('A.c','D.a')]))
         
         # unconnected var should return an empty list
         self.assertEqual(self.dep.connections_to('D.b'),[])
@@ -106,6 +112,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(self.dep.connections_to('B')),
                          set([('@bin.B.b','B.b'),
                               ('A.c','B.a'),
+                              ('B.d','D.a'),
                               ('B.c','@bout.bound_c'),
                               ('B.d','@bout.B.d')]))
 
@@ -113,14 +120,14 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(self.dep.var_edges()),
                          set([('@bout.B.d','@xout.parent.Y.b'),
                               ('@bout.bound_c','@xout.parent.Y.a'),
-                              ('A.c','B.a'),
+                              ('A.c','B.a'), ('A.c','D.a'), ('B.d','D.a'),
                               ('B.c','@bout.bound_c'),
                               ('B.d','@bout.B.d'),
                               ('@xin.parent.X.d','@bin.B.b'),
                               ('@xin.parent.X.c','@bin.bound_a'),
                               ('@bin.B.b','B.b')]))
         self.assertEqual(set(self.dep.var_edges('B')),
-                         set([('B.c','@bout.bound_c'),
+                         set([('B.c','@bout.bound_c'), ('B.d','D.a'),
                               ('B.d','@bout.B.d')]))
         self.assertEqual(set(self.dep.var_edges('@xin')),
                          set([('@xin.parent.X.c','@bin.bound_a'),
@@ -132,7 +139,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(self.dep.var_in_edges()),
                          set([('@bout.B.d','@xout.parent.Y.b'),
                               ('@bout.bound_c','@xout.parent.Y.a'),
-                              ('A.c','B.a'),
+                              ('A.c','B.a'), ('A.c','D.a'), ('B.d','D.a'),
                               ('B.c','@bout.bound_c'),
                               ('B.d','@bout.B.d'),
                               ('@xin.parent.X.d','@bin.B.b'),
@@ -147,7 +154,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.var_in_edges('blah'),[])
 
     def test_disconnect(self):
-        self.dep.connect('bound_a', 'A.a')
+        self.dep.connect('bound_a', 'A.a', self.scope)
         self.dep.disconnect('bound_a') # this should disconnect extern to bound_a and 
                                        # bound_a to A.a, completely removing the
                                        # link between @bin and A.
@@ -177,8 +184,8 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(link, None)
         
     def test_link(self):
-        self.dep.connect('B.d', 'C.b')
-        self.dep.connect('B.c', 'C.a')
+        self.dep.connect('B.d', 'C.b', self.scope)
+        self.dep.connect('B.c', 'C.a', self.scope)
         link = self.dep.get_link('B', 'C')
         self.assertEqual(set(link.get_srcs()), set(['c','d']))
         self.assertEqual(set(link.get_srcs('b')), set(['d']))
@@ -193,14 +200,14 @@ class DepGraphTestCase(unittest.TestCase):
         for node in ['A','B','C','D','E','F']:
             dep.add(node)
         self.assertEqual(dep.find_all_connecting('A','F'), set())
-        dep.connect('A.c', 'B.a')
-        dep.connect('B.c', 'C.a')
-        dep.connect('C.d', 'D.a')
-        dep.connect('A.d', 'D.b')
-        dep.connect('A.d', 'F.b')
+        dep.connect('A.c', 'B.a', self.scope)
+        dep.connect('B.c', 'C.a', self.scope)
+        dep.connect('C.d', 'D.a', self.scope)
+        dep.connect('A.d', 'D.b', self.scope)
+        dep.connect('A.d', 'F.b', self.scope)
         self.assertEqual(dep.find_all_connecting('A','F'), set(['A','F']))
         self.assertEqual(dep.find_all_connecting('A','D'), set(['A','B','C','D']))
-        dep.connect('C.d', 'F.a')
+        dep.connect('C.d', 'F.a', self.scope)
         self.assertEqual(dep.find_all_connecting('A','F'), set(['A','B','C','F']))
         
     def test_dump(self):
@@ -209,9 +216,13 @@ class DepGraphTestCase(unittest.TestCase):
         lines = s.getvalue().split('\n')
         expected = ["A -> B",
                     "   c : ['a']",
+                    "A -> D",
+                    "   c : ['a']",
                     "B -> @bout",
                     "   c : ['bound_c']",
                     "   d : ['B.d']",
+                    "B -> D",
+                    "   d : ['a']",
                     "@bin -> B",
                     "   B.b : ['b']",
                     "@xin -> @bin",
