@@ -1,5 +1,5 @@
-Code Contribution Tutorial
-==========================
+Code Contribution Tutorial & Checklist
+======================================
 
 Below is a step-by-step tutorial for you to follow if you want to contribute new code to the 
 framework effort. 
@@ -34,7 +34,7 @@ framework effort.
    
     git remote add myfork git@github.com:hschilling/OpenMDAO-Framework.git 
     
-You can now follow the checklist for changing code that will get merged into the official OpenMDAO
+You can now follow this checklist for changing code that will get merged into the official OpenMDAO
 repository (assuming the maintainers approve the change).  
   
 1.  Create an issue on GitHub. 
@@ -161,7 +161,7 @@ repository (assuming the maintainers approve the change).
     
       git push myfork 529-fix_bug
 
-17. Ask the OpenMDAO maintainers to merge your changes (you issue a pull request).
+17. Issue a pull request, i.e., ask the OpenMDAO maintainers to merge your changes:
  
 *  Go to your personal OpenMDAO-Framework fork on GitHub, for example:
 
@@ -170,9 +170,12 @@ repository (assuming the maintainers approve the change).
 *  On the right side of the page, you'll see the **Current branch**. Click on the down arrow next to the
    branch name to display the list of branches, and then switch to the ``529-fix_bug`` branch. 
 
-*  Click the **Pull Request** button in the upper right corner. 
- 
-*  Fill out the form that appears and click the **Send pull request** button.
+*  Fill out the form that appears and click the **Send pull request** button. 
 
-*  When your pull request gets merged into the main repository, then issue 529 will get closed automatically.
+   .. note:: Whenever you close an issue in your commit message, that information -- specifically the issue
+	     number to be closed -- should appear in your pull request title. This is necessary for the
+	     issue to get closed automatically after the branch is merged. 
+
+*  When one of the OpenMDAO maintainers merges branch ``529-fix_bug`` into the main repository, then issue
+   #529 will get closed.
 

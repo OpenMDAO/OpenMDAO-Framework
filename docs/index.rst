@@ -12,7 +12,6 @@ Current version: |version|
    simple/index
    surrogate/index
    mdao/index
-   
 
 .. toctree:: 
    :maxdepth: 1
@@ -31,15 +30,7 @@ Current version: |version|
    
    dev-guide/todo
    arch-doc/index
-   
-
-
-Appendicies
-==================================
-
-* :ref:`units`
-* :ref:`glossary`
-* :ref:`genindex`
+  
 
 =========================
 OpenMDAO Developer Guide
@@ -52,7 +43,13 @@ OpenMDAO Developer Guide
    plugin-guide/index
    dev-guide/index
    code-contribution-example
-
+   
+==============================
+Appendix, Glossary. and Index
+==============================
+* :ref:`units`
+* :ref:`glossary`
+* :ref:`genindex`
 
 
 
