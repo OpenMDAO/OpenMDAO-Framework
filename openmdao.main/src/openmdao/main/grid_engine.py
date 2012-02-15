@@ -53,7 +53,7 @@ class GridEngineAllocator(FactoryAllocator):
     Resource configuration file entry equivalent to defaults::
 
         [GridEngine]
-        classname: grid_engine.GridEngineAllocator
+        classname: openmdao.main.grid_engine.GridEngineAllocator
         pattern: *
         authkey: PublicKey
         allow_shell: True

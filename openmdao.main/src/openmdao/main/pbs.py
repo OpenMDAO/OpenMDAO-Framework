@@ -52,7 +52,7 @@ class PBS_Allocator(FactoryAllocator):
     Resource configuration file entry equivalent to defaults::
 
         [PBS]
-        classname: pbs.PBS_Allocator
+        classname: openmdao.main.pbs.PBS_Allocator
         accounting_id: no-default-set
         authkey: PublicKey
         allow_shell: True
