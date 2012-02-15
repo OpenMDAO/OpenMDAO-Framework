@@ -53,8 +53,8 @@ class SLSQP_driver(DriverUsesDerivatives):
     maxiter = Int(50, iotype='in', 
                    desc = 'Maximum number of iterations')
 
-    iprint = Enum(1, [0, 1, 2, 3], iotype='in',
-                  desc = 'controls the frequency of output: 0 (no output),1,2,3')
+    iprint = Enum(0, [-1, 0, 1, 2], iotype='in',
+                  desc = 'controls the frequency of output: -1 (no output),0,1,2')
     
     iout = Int(6, iotype='in',
                   desc = 'FORTRAN output unit. Leave this at 6 for STDOUT')

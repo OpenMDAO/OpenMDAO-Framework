@@ -61,15 +61,15 @@ class OptRosenSuzukiComponent(Component):
         self.obj_string = "Bad"
 
 
-class CONMINdriverTestCase(unittest.TestCase):
-    """test CONMIN optimizer component"""
+class SLSPQdriverTestCase(unittest.TestCase):
+    """test SLSQP optimizer component"""
 
     def setUp(self):
         self.top = set_as_top(Assembly())
         self.top.add('driver', SLSQP_driver())
         self.top.add('comp', OptRosenSuzukiComponent())
         self.top.driver.workflow.add('comp')
-        self.top.driver.iprint = 0
+        self.top.driver.iprint = -1
         self.top.driver.differentiator = FiniteDifference()
         
     def tearDown(self):

@@ -60,8 +60,8 @@ class OptRosenSuzukiComponent(Component):
         self.obj_string = "Bad"
 
 
-class CONMINdriverTestCase(unittest.TestCase):
-    """test CONMIN optimizer component"""
+class COBYLAdriverTestCase(unittest.TestCase):
+    """test COBYLA optimizer component"""
 
     def setUp(self):
         self.top = set_as_top(Assembly())
