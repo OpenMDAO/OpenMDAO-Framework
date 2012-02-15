@@ -335,7 +335,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noresource')
 
         # Check response to unsupported resource.
-        self.model.driver.extra_resources = {'no-such-resource': 0}
+        self.model.driver.extra_resources = {'allocator': 'LocalHost',
+                                             'localhost': False}
         self.model.driver.sequential = False
         self.model.driver.iterator = ListCaseIterator([])
         assert_raises(self, 'self.model.run()', globals(), locals(),
