@@ -13,30 +13,47 @@ nodes = ['A', 'B', 'C', 'D']
 
 class DepGraphTestCase(unittest.TestCase):
 
-    def setUp(self):
-        scope = self.scope = DumbClass()
-        self.dep = dep = DependencyGraph()
+    def make_graph(self, nodes=(), connections=()):
+        scope = DumbClass()
+        dep = DependencyGraph()
         for name in nodes:
             dep.add(name)
+        for src,dest in connections:
+            dep.connect(src, dest, scope)
+        return dep, scope
 
-        # an internal connection
-        dep.connect('A.c', 'B.a', scope)
-        dep.connect('A.c+B.d', 'D.a', scope)
-        
-        # boundary connections
-        dep.connect('parent.X.c', 'bound_a', scope)
-        dep.connect('B.c', 'bound_c', scope)
-        dep.connect('bound_c', 'parent.Y.a', scope)
-        
-        # auto-passthroughs
-        dep.connect('parent.X.d', 'B.b', scope)
-        dep.connect('B.d', 'parent.Y.b', scope)
+    def setUp(self):
+        self.internal_conns = [
+            ('A.c', 'B.b'),
+            ('B.c', 'D.a'),
+            ('C.c', 'D.b'),
+            ]
+        self.boundary_conns = [
+            ('parent.X.c', 'a'),
+            ('a', 'B.a'),
+            ('D.c', 'c'),
+            ('c', 'parent.Y.a'),
+            ]
+        self.cross_conns = [
+            ('parent.X.d', 'A.b'),
+            ('C.d', 'parent.Y.b'),
+            ]
+        self.dep, self.scope = self.make_graph(nodes, 
+                                               self.internal_conns+
+                                               self.boundary_conns+
+                                               self.cross_conns)
+
 
     def test_get_source(self):
-        self.assertEqual(self.dep.get_source('B.a'), 'A.c')
-        self.assertEqual(self.dep.get_source('A.b'), None)
-        self.assertEqual(self.dep.get_source('bound_a'), 'parent.X.c')
-        self.assertEqual(self.dep.get_source('bound_c'), 'B.c')
+        dep, scope = self.make_graph(nodes, 
+                                     self.internal_conns+
+                                     self.boundary_conns+
+                                     self.cross_conns)
+        
+        self.assertEqual(dep.get_source('B.a'), 'a')
+        self.assertEqual(dep.get_source('A.a'), None)
+        self.assertEqual(dep.get_source('a'), 'parent.X.c')
+        self.assertEqual(dep.get_source('c'), 'D.c')
 
     def test_add(self):
         for name in nodes:
@@ -71,7 +88,7 @@ class DepGraphTestCase(unittest.TestCase):
         try:
             self.dep.connect('A.d', 'B.a', self.scope)
         except Exception as err:
-            self.assertEqual(str(err), 'B.a is already connected to source A.c')
+            self.assertEqual(str(err), 'B.a is already connected to source a')
         else:
             self.fail('Exception expected')
             
@@ -92,17 +109,26 @@ class DepGraphTestCase(unittest.TestCase):
             self.fail('Exception expected')
 
     def test_connections_to(self):
-        self.dep.connect('bound_a', 'A.a', self.scope)
+        connections = [
+            ('B.c', 'bound_c'),
+            ('bound_c', 'parent.Y.a'),
+            ('B.d', 'parent.Y.b'),
+            ('parent.X.c', 'bound_a'),
+            ('bound_a', 'A.a'),
+            ]
+        dep, scope = self.make_graph(nodes, connections)
 
-        self.assertEqual(set(self.dep.connections_to('bound_c')),
+        self.assertEqual(set(dep.connections_to('bound_c')),
                          set([('@bout.bound_c','@xout.parent.Y.a'),
                               ('B.c', '@bout.bound_c')]))
-        self.assertEqual(set(self.dep.connections_to('bound_a')),
+        self.assertEqual(set(dep.connections_to('bound_a')),
                          set([('@xin.parent.X.c','@bin.bound_a'),
                               ('@bin.bound_a','A.a')]))
         
-        self.dep.connect('A.c', 'C.b', self.scope)
-        self.assertEqual(set(self.dep.connections_to('A.c')),
+        dep.connect('A.c', 'C.b', scope)
+        dep.connect('A.c', 'B.a', scope)
+        dep.connect('A.c', 'D.a', scope)
+        self.assertEqual(set(dep.connections_to('A.c')),
                          set([('A.c','C.b'),('A.c','B.a'),('A.c','D.a')]))
         
         # unconnected var should return an empty list
