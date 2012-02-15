@@ -84,9 +84,7 @@ hierarchy must follow the same naming syntax as attributes in the Python
 language. To summarize, they can include only alphanumeric
 characters and the underscore, and the lead character cannot be a number.
 Any attempt to create a component or a variable that does not conform
-to Python's syntax should result in an exception. This restriction was required
-because these entities essentially exist as Python variables. One unfortunate
-side effect is that names with spaces are not allowed. OpenMDAO checks for
+to Python's syntax will result in an exception.  OpenMDAO checks for
 compliance when a variable or Component instance is created:
 
     >>> from openmdao.main.api import Assembly

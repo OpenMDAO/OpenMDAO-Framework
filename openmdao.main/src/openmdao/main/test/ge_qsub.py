@@ -20,18 +20,19 @@ def main():
     while i < len(sys.argv):
         opt = sys.argv[i]
         i += 1
-        if opt in ('-V', '-cwd'):
+        if opt in ('-V', '-cwd', '-h'):
             print opt
-        elif opt in ('-sync', '-b', '-N', '-wd', '-M', '-m', '-a', '-dl'):
+        elif opt in ('-sync', '-b', '-N', '-wd', '-M', '-m', '-a', '-dl',
+                     '-r', '-ar', '-q', '-p', '-A', '-ac'):
             arg = sys.argv[i]
             i += 1
             print opt, 'arg', arg
         elif opt == '-pe':
             arg = sys.argv[i]
             i += 1
-            ncpus = sys.argv[i]
+            min_max = sys.argv[i]
             i += 1
-            print opt, arg, ncpus
+            print opt, arg, min_max
         elif opt == '-i':
             stdin = sys.argv[i]
             i += 1

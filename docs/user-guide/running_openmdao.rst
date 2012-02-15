@@ -2,61 +2,6 @@
 Running OpenMDAO
 ==================
 
-.. _Setting-the-Top-Level-Assembly:
-
-Setting the Top Level Assembly
-------------------------------
-
-The first assembly that is instantiated in a given process is designated as a
-top level assembly, and its directory will be set to the directory passed into
-its __init__ function or to the current working directory if no directory is specified.
-If an assembly is not the first one created in a process then the ``set_as_top`` function
-must be called on it explicitly in order to specify that it is a top assembly.
-Once an assembly is set as a top level assembly, its absolute path can be accessed
-through the function ``get_abs_directory``.
-
-    >>> from openmdao.main.api import Assembly, set_as_top 
-    >>> z1 = set_as_top(Assembly())
-    >>> z1.get_abs_directory()
-    '...'
-
-The output in this example depends on your local directory structure.
-All components added into this assembly will have this same absolute path. If a 
-component or assembly does not have a valid absolute directory, then File 
-variables will not be able to read, write, or even open their target files.
-
-Executing Models
-------------------
-
-.. todo::
-
-    Show how to run a model.
-
-.. todo::
-
-    Discuss Reset to Defaults.
-
-Error Logging & Debugging
----------------------------
-
-.. todo::
-
-    Explain the error logging capability.
-
-Saving & Loading
------------------
-
-.. todo::
-
-    Show how to save and load.
-
-Sharing Models
-----------------
-
-.. todo::
-
-    Discuss sharing models.
-
 .. _Specifying-Computational-Resources:
 
 Specifying Computational Resources
@@ -121,83 +66,155 @@ systems, a resource description is a dictionary that can include both
 allocation and queuing information.  Allocation keys are used to find suitable
 servers while queuing keys are used to describe the job to be submitted.
 
-========================== ======  ===========================================
+========================== ======  ===============================================
 Allocation Key             Value   Description
-========================== ======  ===========================================
+========================== ======  ===============================================
 ``allocator``              string  Name of allocator to use
--------------------------- ------  -------------------------------------------
+-------------------------- ------  -----------------------------------------------
 ``localhost``              bool    Must be/must not be on the local host
--------------------------- ------  -------------------------------------------
+-------------------------- ------  -----------------------------------------------
 ``exclude``                list    Hostnames to exclude
--------------------------- ------  -------------------------------------------
+-------------------------- ------  -----------------------------------------------
 ``required_distributions`` list    List of :class:`pkg_resources.Distribution`
                                    or package requirement strings
--------------------------- ------  -------------------------------------------
+-------------------------- ------  -----------------------------------------------
 ``orphan_modules``         list    List of "orphan" module names
--------------------------- ------  -------------------------------------------
+-------------------------- ------  -----------------------------------------------
 ``python_version``         string  Python version required (e.g., "2.7")
--------------------------- ------  -------------------------------------------
-``n_cpus``                 int     Number of CPUs/cores required
-========================== ======  ===========================================
+-------------------------- ------  -----------------------------------------------
+``python_platform``        string  Python platform required (e.g., "linux-x86_64")
+-------------------------- ------  -----------------------------------------------
+``min_cpus``               int     Minimum number of CPUs/cores required
+-------------------------- ------  -----------------------------------------------
+``max_cpus``               int     Maximum number of CPUs/cores that can be used
+-------------------------- ------  -----------------------------------------------
+``min_phys_memory``        int     Minimum amount of memory required (KB)
+========================== ======  ===============================================
 
 Values for ``required_distributions`` and ``orphan_modules`` are typically taken
-from the return value of :meth:`component.save_to_egg`. The ``n_cpus`` key is
-also used as a queuing key for parallel applications.
+from the return value of :meth:`component.save_to_egg`.
+The value for ``python_platform`` is typically taken from the return value of
+:meth:`distutils.util.get_platform`.
+The ``min_phys_memory`` key is also used as a queuing key.
+The ``min_cpus`` and ``max_cpus`` keys are also used as queuing keys for parallel
+applications. They are analogous to the DRMAA ``minSlots`` and ``maxSlots``
+attributes, with the intent that a 'cpu' can execute an MPI process
+(A DRMAA 'slot' is opaque and can have different interpretations).
 
 Most of the queuing keys are derived from the Distributed Resource Management
-Application API (DRMAA) standard:
+Application API (DRMAA) standard ``JobTemplate``:
 
-=============================  ======  ===============================================
-Queuing Key                    Value   Description
-=============================  ======  ===============================================
-``job_name``                   string  Name for the submitted job
------------------------------  ------  -----------------------------------------------
-``remote_command``             string  Command to execute
-                                       (just the command, no arguments)
------------------------------  ------  -----------------------------------------------
-``args``                       list    Arguments for the command
------------------------------  ------  -----------------------------------------------
-``job_environment``            dict    Any additional environment variables needed
------------------------------  ------  -----------------------------------------------
-``working_directory``          string  Directory to execute in (use with care)
------------------------------  ------  -----------------------------------------------
-``parallel_environment``       string  Used by some systems for parallel applications
------------------------------  ------  -----------------------------------------------
-``input_path``                 string  Path for stdin
------------------------------  ------  -----------------------------------------------
-``output_path``                string  Path for stdout
------------------------------  ------  -----------------------------------------------
-``error_path``                 string  Path for stderr
------------------------------  ------  -----------------------------------------------
-``join_files``                 bool    If True, stderr is joined with stdout
------------------------------  ------  -----------------------------------------------
-``email``                      list    List of email addresses to notify
------------------------------  ------  -----------------------------------------------
-``block_email``                bool    If True, do not send notifications.
------------------------------  ------  -----------------------------------------------
-``email_events``               string  When to send notifications. \
-                                       ("b"=>beginning, "e"=>end, "a"=>abort, \
-                                       "s"=>suspension)
------------------------------  ------  -----------------------------------------------
-``start_time``                 string  Timestamp for when to start the job
------------------------------  ------  -----------------------------------------------
-``deadline_time``              string  Timestamp for when the job must be complete
------------------------------  ------  -----------------------------------------------
-``hard_wallclock_time_limit``  int     Time limit while running or suspended (sec)
------------------------------  ------  -----------------------------------------------
-``soft_wallclock_time_limit``  int     Estimated time running or suspended (sec)
------------------------------  ------  -----------------------------------------------
-``hard_run_duration_limit``    int     Time limit while running (sec)
------------------------------  ------  -----------------------------------------------
-``soft_run_duration_limit``    int     Estimated time while running (sec)
------------------------------  ------  -----------------------------------------------
-``native_specification``       string  Queuing system specific options
-=============================  ======  ===============================================
+=============================  ========  ==============================================
+Queuing Key                    Value     Description
+=============================  ========  ==============================================
+``remote_command``             string    Command to execute
+                                         (just the command, no arguments)
+-----------------------------  --------  ----------------------------------------------
+``args``                       list      Arguments for the command
+-----------------------------  --------  ----------------------------------------------
+``submit_as_hold``             bool      Submit job to start in ``HOLD`` state
+-----------------------------  --------  ----------------------------------------------
+``rerunnable``                 bool      Job is rerunnable (default False)
+-----------------------------  --------  ----------------------------------------------
+``job_environment``            dict      Any additional environment variables needed
+-----------------------------  --------  ----------------------------------------------
+``working_directory``          string    Directory to execute in (use with care)
+-----------------------------  --------  ----------------------------------------------
+``job_category``               string    Type of job, useful for parallel codes
+-----------------------------  --------  ----------------------------------------------
+``email``                      list      List of email addresses to notify
+-----------------------------  --------  ----------------------------------------------
+``email_on_started``           bool      Notify when jobs starts
+-----------------------------  --------  ----------------------------------------------
+``email_on_terminated``        bool      Notify when job terminates
+-----------------------------  --------  ----------------------------------------------
+``job_name``                   string    Name for the submitted job
+-----------------------------  --------  ----------------------------------------------
+``input_path``                 string    Path for stdin
+-----------------------------  --------  ----------------------------------------------
+``output_path``                string    Path for stdout
+-----------------------------  --------  ----------------------------------------------
+``error_path``                 string    Path for stderr
+-----------------------------  --------  ----------------------------------------------
+``join_files``                 bool      If True, stderr is joined with stdout
+-----------------------------  --------  ----------------------------------------------
+``reservation_id``             string    ID of reservation (obtained externally)
+-----------------------------  --------  ----------------------------------------------
+``queue_name``                 string    Name of queue to use
+-----------------------------  --------  ----------------------------------------------
+``priority``                   int       Queuing priority
+-----------------------------  --------  ----------------------------------------------
+``start_time``                 datetime  Timestamp for when to start the job
+-----------------------------  --------  ----------------------------------------------
+``deadline_time``              datetime  Timestamp for when the job must be complete
+-----------------------------  --------  ----------------------------------------------
+``resource_limits``            dict      Job resource limits
+-----------------------------  --------  ----------------------------------------------
+``accounting_id``              string    ID used for job accounting
+-----------------------------  --------  ----------------------------------------------
+``native_specification``       list      Queuing system specific options
+=============================  ========  ==============================================
 
-Use of ``native_specification`` is discouraged since that makes the submitting application
-less portable.
+Use of ``native_specification`` is discouraged since that makes the submitting
+application less portable. At times its use is necessary in order to access specific
+features of a queueing system.
+
+DRMAA derived job categories:
+
+============  =============================
+Category      Environment
+============  =============================
+``MPI``       Any MPI environment
+------------  -----------------------------
+``GridMPI``   A GridMPI environment
+------------  -----------------------------
+``LAM-MPI``   A LAM/MPI environment
+------------  -----------------------------
+``MPICH1``    A MPICH version 1 environment
+------------  -----------------------------
+``MPICH2``    A MPICH version 2 environment
+------------  -----------------------------
+``OpenMPI``   A OpenMPI environment
+------------  -----------------------------
+``PVM``       A PVM environment
+------------  -----------------------------
+``OpenMP``    A OpenMP environment
+------------  -----------------------------
+``OpenCL``    A OpenCL environment
+------------  -----------------------------
+``Java``      A Java environment
+============  =============================
+
+DRMAA derived resource limits:
+
+==================  =====
+Name                Type
+==================  =====
+``core_file_size``  Soft
+------------------  -----
+``data_seg_size``   Soft
+------------------  -----
+``file_size``       Soft
+------------------  -----
+``open_files``      Soft
+------------------  -----
+``stack_size``      Soft
+------------------  -----
+``virtual_memory``  Soft
+------------------  -----
+``cpu_time``        Hard
+------------------  -----
+``wallclock_time``  Hard
+==================  =====
+
+Soft limits do not affect scheduling decisions.
+Hard limits may be used for scheduling.
 
 The ``HOME_DIRECTORY`` and ``WORKING_DIRECTORY`` constants in
 :mod:`openmdao.main.resource` may be used as placeholders in path
 specifications. They are translated at the server.
+
+Not all resource allocators support all the features listed above.
+Consult the allocator documentation for what is supported and how those
+features are translated to the system the allocator interfaces with.
 

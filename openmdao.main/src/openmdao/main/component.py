@@ -42,13 +42,16 @@ class SimulationRoot (object):
             Path to move to.
         """
         os.chdir(path)
-        SimulationRoot.__root = os.path.realpath(os.getcwd())
+        SimulationRoot.__root = None
+        SimulationRoot.get_root()
 
     @staticmethod
     def get_root ():
         """Return this simulation's root directory path."""
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.path.realpath(os.getcwd())
+            if sys.platform == 'win32':  # pragma no cover
+                SimulationRoot.__root = SimulationRoot.__root.lower()
         return SimulationRoot.__root
 
     @staticmethod
@@ -58,9 +61,11 @@ class SimulationRoot (object):
         path: string
             Path to check.
         """
-        if SimulationRoot.__root is None:
-            SimulationRoot.__root = os.path.realpath(os.getcwd())
-        return os.path.realpath(path).startswith(SimulationRoot.__root)
+        root = SimulationRoot.get_root()
+        if sys.platform == 'win32':  # pragma no cover
+            return os.path.realpath(path).lower().startswith(root)
+        else:
+            return os.path.realpath(path).startswith(root)
     
 
 class DirectoryContext(object):

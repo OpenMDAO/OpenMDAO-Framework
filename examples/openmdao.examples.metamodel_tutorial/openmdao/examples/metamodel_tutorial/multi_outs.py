@@ -40,7 +40,6 @@ class Simulation(Assembly):
         self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Trainer.add_event("trig_meta_model.train_next")
         self.DOE_Trainer.recorders = [DBCaseRecorder()]
-        self.DOE_Trainer.force_execute = True
         
         #MetaModel Validation
         self.add("trig_calc",Trig())
@@ -50,7 +49,6 @@ class Simulation(Assembly):
         self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
         self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Validate.recorders = [DBCaseRecorder()]
-        self.DOE_Validate.force_execute = True
         
         #Iteration Hierarchy
         self.driver.workflow = SequentialWorkflow()

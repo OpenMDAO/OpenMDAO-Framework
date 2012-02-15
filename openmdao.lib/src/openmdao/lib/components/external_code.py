@@ -68,8 +68,11 @@ class ExternalCode(ComponentWithDerivatives):
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
-        """ Don't allow setting of 'command' by a remote client. """
-        if path in ('command', 'get_access_controller') and remote_access():
+        """
+        Don't allow setting of 'command' or 'resources' by a remote client.
+        """
+        if path in ('command', 'resources', 'get_access_controller') \
+           and remote_access():
             self.raise_exception('%r may not be set() remotely' % path,
                                  RuntimeError)
         return super(ExternalCode, self).set(path, value, index, src, force)
@@ -93,27 +96,27 @@ class ExternalCode(ComponentWithDerivatives):
 
         When running remotely, the following resources are set:
 
-        ======================= =====================================
-        Key                     Value
-        ======================= =====================================
-        job_name                self.get_pathname()
-        ----------------------- -------------------------------------
-        remote_command          self.command (first item)
-        ----------------------- -------------------------------------
-        args                    self.command (2nd through last items)
-        ----------------------- -------------------------------------
-        job_environment         self.env_vars
-        ----------------------- -------------------------------------
-        input_path              self.stdin
-        ----------------------- -------------------------------------
-        output_path             self.stdout
-        ----------------------- -------------------------------------
-        error_path              self.stderr (if != STDOUT)
-        ----------------------- -------------------------------------
-        join_files              If self.stderr == STDOUT
-        ----------------------- -------------------------------------
-        hard_run_duration_limit self.timeout (if non-zero)
-        ======================= =====================================
+        ================ =====================================
+        Key              Value
+        ================ =====================================
+        job_name         self.get_pathname()
+        ---------------- -------------------------------------
+        remote_command   self.command (first item)
+        ---------------- -------------------------------------
+        args             self.command (2nd through last items)
+        ---------------- -------------------------------------
+        job_environment  self.env_vars
+        ---------------- -------------------------------------
+        input_path       self.stdin
+        ---------------- -------------------------------------
+        output_path      self.stdout
+        ---------------- -------------------------------------
+        error_path       self.stderr (if != STDOUT)
+        ---------------- -------------------------------------
+        join_files       If self.stderr == STDOUT
+        ---------------- -------------------------------------
+        wallclock_time   self.timeout (if non-zero)
+        ================ =====================================
 
         .. note::
 
@@ -135,15 +138,20 @@ class ExternalCode(ComponentWithDerivatives):
         self.return_code = -12345678
         self.timed_out = False
 
+        # Remove existing output (but not in/out) files.
         for metadata in self.external_files:
             if metadata.get('output', False) and \
                not metadata.get('input', False):
                 for path in glob.glob(metadata.path):
                     if os.path.exists(path):
                         os.remove(path)
+        for pathname, obj in self.items(iotype='out', recurse=True):
+            if isinstance(obj, FileRef):
+                if os.path.exists(obj.path):
+                    os.remove(obj.path)
 
         if not self.command:
-            self.raise_exception('Null command line', ValueError)
+            self.raise_exception('Empty command list', ValueError)
 
         self.check_files(inputs=True)
 
@@ -298,7 +306,12 @@ class ExternalCode(ComponentWithDerivatives):
             else:
                 rdesc['error_path'] = '%s.stderr' % self.command[0]
             if self.timeout:
-                rdesc['hard_run_duration_limit'] = self.timeout
+                if 'resource_limits' in rdesc:
+                    limits = rdesc['resource_limits'].copy()
+                else:
+                    limits = {}
+                limits['wallclock_time'] = self.timeout
+                rdesc['resource_limits'] = limits
 
             # Send inputs.
             patterns = []

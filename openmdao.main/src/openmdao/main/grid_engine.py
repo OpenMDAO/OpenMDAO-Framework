@@ -17,10 +17,10 @@ import sys
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.objserverfactory import ObjServer
 from openmdao.main.rbac import rbac
-from openmdao.main.resource import FactoryAllocator, \
+from openmdao.main.resource import FactoryAllocator, JOB_CATEGORIES, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
 
-from openmdao.util.shellproc import ShellProc, STDOUT, PIPE
+from openmdao.util.shellproc import ShellProc, STDOUT, PIPE, DEV_NULL
 
 # Translate illegal job name characters.
 _XLATE = string.maketrans(' \n\t\r/:@\\*?', '__________')
@@ -53,11 +53,16 @@ class GridEngineAllocator(FactoryAllocator):
     Resource configuration file entry equivalent to defaults::
 
         [GridEngine]
-        classname: grid_engine.GridEngineAllocator
+        classname: openmdao.main.grid_engine.GridEngineAllocator
         pattern: *
         authkey: PublicKey
         allow_shell: True
+        MPICH2: mpich
+        OpenMPI: ompi
 
+    The last two entries provide a mapping between DRMAA job category names
+    and the configured GridEngine parallel environment names.  Additional
+    categories may be configured, and the above configuration is site-specific.
     """
 
     _QHOST = ['qhost']  # Replaced with path to fake for testing.
@@ -69,6 +74,7 @@ class GridEngineAllocator(FactoryAllocator):
         self.factory.server_classname = \
             'grid_engine_grid_engine_GridEngineServer'
         self.pattern = pattern
+        self.category_map = {}
 
     def configure(self, cfg):
         """
@@ -79,12 +85,18 @@ class GridEngineAllocator(FactoryAllocator):
             Configuration data is located under the section matching
             this allocator's `name`.
 
-        Allows modifying factory options and `pattern`.
+        Allows modifying factory options, `pattern` and the job
+        category map.
         """
         super(GridEngineAllocator, self).configure(cfg)
         if cfg.has_option(self.name, 'pattern'):
             self.pattern = cfg.get(self.name, 'pattern')
             self._logger.debug('    pattern: %s', self.pattern)
+        for category in JOB_CATEGORIES:
+            if cfg.has_option(self.name, category):
+                parallel_environment = cfg.get(self.name, category)
+                self.category_map[category] = parallel_environment
+                self._logger.debug('    %s: %s', category, parallel_environment)
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -101,11 +113,11 @@ class GridEngineAllocator(FactoryAllocator):
         if retcode != 0:
             return (0, info)
         avail_cpus = len(self._get_hosts())
-        if 'n_cpus' in resource_desc:
-            req_cpus = resource_desc['n_cpus']
+        if 'min_cpus' in resource_desc:
+            req_cpus = resource_desc['min_cpus']
             if req_cpus > avail_cpus:
-                return (0, {'n_cpus': 'want %s, available %s'
-                                      % (value, avail_cpus)})
+                return (0, {'min_cpus': 'want %s, available %s'
+                                        % (req_cpus, avail_cpus)})
             else:
                 return (avail_cpus / req_cpus, {})
         else:
@@ -138,11 +150,11 @@ class GridEngineAllocator(FactoryAllocator):
         if not hostnames:
             return (-2, {'hostnames': 'no hosts available'})
 
-        if 'n_cpus' in resource_desc:
-            value = resource_desc['n_cpus']
+        if 'min_cpus' in resource_desc:
+            value = resource_desc['min_cpus']
             if len(hostnames) < value:
-                return (-2, {'n_cpus': 'want %s, have %s'
-                                       % (value, len(hostnames))})
+                return (-2, {'min_cpus': 'want %s, have %s'
+                                          % (value, len(hostnames))})
         criteria = {
             'hostnames'  : hostnames,
             'total_cpus' : len(hostnames),
@@ -171,7 +183,7 @@ class GridEngineAllocator(FactoryAllocator):
             if key == 'localhost':
                 if value:
                     return (-2, {key: 'requested local host'})
-            elif key == 'n_cpus':
+            elif key == 'min_cpus' or key == 'max_cpus':
                 pass  # Handle in upper layer.
             else:
                 return (-2, {key: 'unrecognized key'})
@@ -212,11 +224,42 @@ class GridEngineAllocator(FactoryAllocator):
                 hosts.append(hostname)
         return hosts
 
+    @rbac('*')
+    def deploy(self, name, resource_desc, criteria):
+        """
+        Deploy a server suitable for `resource_desc`.
+        Returns a proxy to the deployed server.
+        Overrides superclass to pass `category_map` to server.
+
+        name: string
+            Name for server.
+
+        resource_desc: dict
+            Description of required resources.
+
+        criteria: dict
+            The dictionary returned by :meth:`time_estimate`.
+        """
+        server = super(GridEngineAllocator, self).deploy(name, resource_desc,
+                                                         criteria)
+        server.configure(self.category_map)
+        return server
+
 
 class GridEngineServer(ObjServer):
     """ Knows about executing a command via `qsub`. """
 
     _QSUB = ['qsub']  # Replaced with path to fake for testing.
+
+    @rbac('owner')
+    def configure(self, category_map):
+        """
+        Configure parallel environment category map.
+
+        category_map: dict
+            Maps from 'job_category' to parallel environment name.
+        """
+        self.category_map = category_map
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -232,46 +275,53 @@ class GridEngineServer(ObjServer):
 
         Other job resource keys are processed as follows:
 
-        ========================= ====================
+        ========================= =========================
         Resource Key              Translation
-        ========================= ====================
-        job_name                  -N `value`
-        ------------------------- --------------------
+        ========================= =========================
+        submit_as_hold            -h
+        ------------------------- -------------------------
+        rerunnable                -r yes|no
+        ------------------------- -------------------------
         working_directory         -wd `value`
-        ------------------------- --------------------
-        parallel_environment      -pe `value` `n_cpus`
-        ------------------------- --------------------
-        input_path                -i `value`
-        ------------------------- --------------------
-        output_path               -o `value`
-        ------------------------- --------------------
-        error_path                -e `value`
-        ------------------------- --------------------
-        join_files                -j yes|no
-        ------------------------- --------------------
+        ------------------------- -------------------------
+        job_category              Sets parallel environment
+        ------------------------- -------------------------
+        min_cpus                  Sets parallel environment
+        ------------------------- -------------------------
+        max_cpus                  Sets parallel environment
+        ------------------------- -------------------------
+        min_phys_memory           Ignored
+        ------------------------- -------------------------
         email                     -M `value`
-        ------------------------- --------------------
-        block_email               -m n
-        ------------------------- --------------------
-        email_events              -m `value`
-        ------------------------- --------------------
+        ------------------------- -------------------------
+        email_on_started          -m b
+        ------------------------- -------------------------
+        email_on_terminated       -m e
+        ------------------------- -------------------------
+        job_name                  -N `value`
+        ------------------------- -------------------------
+        input_path                -i `value`
+        ------------------------- -------------------------
+        output_path               -o `value`
+        ------------------------- -------------------------
+        error_path                -e `value`
+        ------------------------- -------------------------
+        join_files                -j yes|no
+        ------------------------- -------------------------
+        reservation_id            -ar `value`
+        ------------------------- -------------------------
+        queue_name                -q `value`
+        ------------------------- -------------------------
+        priority                  -p `value`
+        ------------------------- -------------------------
         start_time                -a `value`
-        ------------------------- --------------------
+        ------------------------- -------------------------
         deadline_time             Ignored
-        ------------------------- --------------------
-        hard_wallclock_time_limit -l h_rt= `value`
-        ------------------------- --------------------
-        soft_wallclock_time_limit -l s_rt= `value`
-        ------------------------- --------------------
-        hard_run_duration_limit   -l h_cpu= `value`
-        ------------------------- --------------------
-        soft_run_duration_limit   -l s_cpu= `value`
-        ------------------------- --------------------
-        job_category              Ignored
-        ========================= ====================
+        ------------------------- -------------------------
+        accounting_id             -A `value`
+        ========================= =========================
 
-        Where `value` is the corresponding resource value and
-        `n_cpus` is the value of the 'n_cpus' resource, or 1.
+        Where `value` is the corresponding resource value.
 
         If 'working_directory' is not specified, add ``-cwd``.
         If 'input_path' is not specified, add ``-i /dev/null``.
@@ -281,11 +331,37 @@ class GridEngineServer(ObjServer):
         If 'native_specification' is specified, it is added to the `qsub`
         command just before 'remote_command' and 'args'.
 
+        If specified, 'job_category' is used to index into the category
+        map set up during allocator configuration.  The mapped category
+        name as well as the 'min_cpus' and 'max_cpus' values are used
+        with the ``-pe`` qsub option.
+
+        Some resource limits are also handled:
+
+        ==================== =========================
+        Resource Key         Translation
+        ==================== =========================
+        core_file_size       Ignored
+        -------------------- -------------------------
+        data_seg_size        Ignored
+        -------------------- -------------------------
+        file_size            Ignored
+        -------------------- -------------------------
+        open_files           Ignored
+        -------------------- -------------------------
+        stack_size           Ignored
+        -------------------- -------------------------
+        virtual_memory       Ignored
+        -------------------- -------------------------
+        cpu_time             -l h_cpu= `value`
+        -------------------- -------------------------
+        wallclock_time       -l h_rt= `value`
+        ==================== =========================
+
         Output from `qsub` itself is routed to ``qsub.out``.
         """
         self.home_dir = os.path.expanduser('~')
         self.work_dir = ''
-        dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
         cmd = list(self._QSUB)
         cmd.extend(('-V', '-sync', 'yes', '-b', 'yes'))
@@ -302,21 +378,22 @@ class GridEngineServer(ObjServer):
             cmd.extend(('-wd', value))
 
         # Process description in fixed, repeatable order.
-        keys = ('job_name',
+        keys = ('submit_as_hold',
+                'rerunnable',
                 'job_environment',
-                'parallel_environment',
+                'email',
+                'email_on_started',
+                'email_on_terminated',
+                'job_name',
                 'input_path',
                 'output_path',
                 'error_path',
                 'join_files',
-                'email',
-                'block_email',
-                'email_events',
+                'reservation_id',
+                'queue_name',
+                'priority',
                 'start_time',
-                'hard_wallclock_time_limit',
-                'soft_wallclock_time_limit',
-                'hard_run_duration_limit',
-                'soft_run_duration_limit')
+                'accounting_id')
 
         for key in keys:
             try:
@@ -324,13 +401,21 @@ class GridEngineServer(ObjServer):
             except KeyError:
                 continue
 
-            if key == 'job_name':
-                cmd.extend(('-N', self._jobname(value)))
+            if key == 'submit_as_hold':
+                if value:
+                    cmd.append('-h')
+            elif key == 'rerunnable':
+                cmd.extend(('-r', 'yes' if value else 'no'))
             elif key == 'job_environment':
                 env = value
-            elif key == 'parallel_environment':
-                n_cpus = resource_desc.get('n_cpus', 1)
-                cmd.extend(('-pe', value, str(n_cpus)))
+            elif key == 'email':
+                cmd.extend(('-M', ','.join(value)))
+            elif key == 'email_on_started':
+                cmd.extend(('-m', 'b'))
+            elif key == 'email_on_terminated':
+                cmd.extend(('-m', 'e'))
+            elif key == 'job_name':
+                cmd.extend(('-N', self._jobname(value)))
             elif key == 'input_path':
                 cmd.extend(('-i', self._fix_path(value)))
                 inp = value
@@ -344,35 +429,53 @@ class GridEngineServer(ObjServer):
                 cmd.extend(('-j', 'yes' if value else 'no'))
                 if value:
                     err = 'yes'
-            elif key == 'email':
-                cmd.extend(('-M', ','.join(value)))
-            elif key == 'block_email':
-                if value:
-                    cmd.extend(('-m', 'n'))
-            elif key == 'email_events':
-                cmd.extend(('-m', value))
+            elif key == 'reservation_id':
+                cmd.extend(('-ar', value))
+            elif key == 'queue_name':
+                cmd.extend(('-q', value))
+            elif key == 'priority':
+                cmd.extend(('-p', str(value)))
             elif key == 'start_time':
-                cmd.extend(('-a', value))  # May need to translate
-            elif key == 'hard_wallclock_time_limit':
-                cmd.extend(('-l', 'h_rt=%s' % self._make_time(value)))
-            elif key == 'soft_wallclock_time_limit':
-                cmd.extend(('-l', 's_rt=%s' % self._make_time(value)))
-            elif key == 'hard_run_duration_limit':
-                cmd.extend(('-l', 'h_cpu=%s' % self._make_time(value)))
-            elif key == 'soft_run_duration_limit':
-                cmd.extend(('-l', 's_cpu=%s' % self._make_time(value)))
+                cmd.extend(('-a', value.strftime('%Y%m%d%H%M.%S')))
+            elif key == 'accounting_id':
+                cmd.extend(('-A', value))
 
+        # Setup parallel environment.
+        if 'job_category' in resource_desc:
+            job_category = resource_desc['job_category']
+            try:
+                parallel_environment = self.category_map[job_category]
+            except KeyError:
+                msg = 'No mapping for job_category %r' % job_category
+                self._logger.error(msg)
+                raise ValueError(msg)
+            min_cpus = resource_desc.get('min_cpus', 1)
+            max_cpus = resource_desc.get('max_cpus', min_cpus)
+            cmd.extend(('-pe', parallel_environment,
+                        '%d-%d' % (min_cpus, max_cpus)))
+
+        # Set resource limits.
+        if 'resource_limits' in resource_desc:
+            limits = resource_desc['resource_limits']
+            if 'cpu_time' in limits:
+                cpu_time = limits['cpu_time']
+                cmd.extend(('-l', 'h_cpu=%s' % self._timelimit(cpu_time)))
+            if 'wallclock_time' in limits:
+                wall_time = limits['wallclock_time']
+                cmd.extend(('-l', 'h_rt=%s' % self._timelimit(wall_time)))
+
+        # Set default command configuration.
         if not self.work_dir:
             cmd.append('-cwd')
-
         if inp is None:
-            cmd.extend(('-i', dev_null))
+            cmd.extend(('-i', DEV_NULL))
         if out is None:
             base = os.path.basename(resource_desc['remote_command'])
             cmd.extend(('-o', '%s.stdout' % base))
         if err is None:
             cmd.extend(('-j', 'yes'))
 
+        # Add 'escape' clause.
         if 'native_specification' in resource_desc:
             cmd.extend(resource_desc['native_specification'])
 
@@ -384,7 +487,7 @@ class GridEngineServer(ObjServer):
 
         self._logger.info('%r', ' '.join(cmd))
         try:
-            process = ShellProc(cmd, dev_null, 'qsub.out', STDOUT, env)
+            process = ShellProc(cmd, DEV_NULL, 'qsub.out', STDOUT, env)
         except Exception as exc:
             self._logger.error('exception creating process: %s', exc)
             raise
@@ -408,7 +511,7 @@ class GridEngineServer(ObjServer):
         return name.translate(_XLATE)
 
     @staticmethod
-    def _make_time(seconds):
+    def _timelimit(seconds):
         """ Make time string from `seconds`. """
         seconds = float(seconds)
         hours = int(seconds / (60*60))
