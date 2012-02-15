@@ -450,7 +450,8 @@ class CONMINdriver(DriverUsesDerivatives):
                 
                 case_input = []
                 for var, val in zip(self.get_parameters().keys(), dvals):
-                    case_input.append([var[0], val])
+                    case_name = var[0] if isinstance(var, tuple) else var
+                    case_input.append([case_name, val])
                 if self.printvars:
                     case_output = [(name,
                                     ExprEvaluator(name, scope=self.parent).evaluate())

@@ -8,7 +8,6 @@ import numpy
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str, Slot
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.cobyladriver import COBYLA_driver
 from openmdao.util.testutil import assert_rel_error
 
@@ -70,7 +69,6 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.add('comp', OptRosenSuzukiComponent())
         self.top.driver.workflow.add('comp')
         self.top.driver.iprint = 0
-        self.top.driver.itmax = 30
         
     def tearDown(self):
         self.top = None
