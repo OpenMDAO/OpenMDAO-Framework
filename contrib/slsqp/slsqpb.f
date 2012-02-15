@@ -1,5 +1,8 @@
       SUBROUTINE SLSQPB (M, MEQ, LA, N, X, XL, XU, F, C, G, A, ACC,
-     *                   ITER, MODE, R, L, X0, MU, S, U, V, W, IW)
+     *                   ITER, MODE, R, L, X0, MU, S, U, V, W, IW,
+     *                   ALPHA, F0, GS, H1, H2, H3, H4, T, T0, TOL,
+     *                   IEXACT, INCONS, IRESET, ITERMX, LINE, N1, 
+     *                   N2, N3)
 
 C   NONLINEAR PROGRAMMING BY SOLVING SEQUENTIALLY QUADRATIC PROGRAMS
 
@@ -22,8 +25,11 @@ c                     +(N1-MEQ+1)*(MINEQ+2) + 2*MINEQ
 c                     +(N1+MINEQ)*(N1-MEQ) + 2*MEQ + N1       for LSEI
 c                      with MINEQ = M - MEQ + 2*N1  &  N1 = N+1
 
-      SAVE             ALPHA, F0, GS, H1, H2, H3, H4, T, T0, TOL,
-     *                 IEXACT, INCONS, IRESET, ITERMX, LINE, N1, N2, N3
+c Edit by Kenneth Moore, 15 Feb 2012
+c SAVE made this non-threadsafe, and hence non-nestable.
+c Modified to pass all these vars into this subroutine.
+c      SAVE             ALPHA, F0, GS, H1, H2, H3, H4, T, T0, TOL,
+c     *                 IEXACT, INCONS, IRESET, ITERMX, LINE, N1, N2, N3
 
       DATA             ZERO /0.0D0/, ONE /1.0D0/, ALFMIN /1.0D-1/,
      *                 HUN /1.0D+2/, TEN /1.0D+1/, TWO /2.0D0/

@@ -177,11 +177,13 @@ C*                                                                     *
 C***********************************************************************
 
       INTEGER IL, IM, IR, IS, ITER, IU, IV, IW, IX, L_W, L_JW,
-     1        JW(L_JW), LA, M, MEQ, MINEQ, MODE, N, N1, IPRINT, IOUT
-     2        NFUNC,NGRAD
+     1        JW(L_JW), LA, M, MEQ, MINEQ, MODE, N, N1, IPRINT, IOUT,
+     2        NFUNC, NGRAD, IEXACT, INCONS, IRESET, ITERMX, LINE,
+     3        N2, N3
 
       DOUBLE PRECISION ACC, A(LA,N+1), C(LA), F, G(N+1),
-     *     X(N), XL(N), XU(N), W(L_W)
+     *     X(N), XL(N), XU(N), W(L_W), ALPHA, F0, GS,
+     *     H1, H2, H3, H4, T, T0, TOL
 
       EXTERNAL SLFUNC,SLGRAD
 
@@ -217,8 +219,10 @@ C
           WRITE(*,1100) ACC,ITER,IPRINT,IOUT
       ENDIF
       IF(IPRINT.GT.0) THEN
+		  IF(IOUT .NE. 6) THEN
 		  OPEN(UNIT=IOUT,FILE=IFILE(1:LEN_TRIM(IFILE)),
      *      STATUS='UNKNOWN')
+		  ENDIF
 		  WRITE(IOUT,1000)
 		  WRITE(IOUT,1100) ACC,ITER,IPRINT,IOUT
 	  ENDIF
@@ -272,7 +276,9 @@ C
       IW = IV + N1
 C
       CALL SLSQPB (M,MEQ,LA,N,X,XL,XU,F,C,G,A,ACC,ITER,MODE,
-     * W(IR),W(IL),W(IX),W(IM),W(IS),W(IU),W(IV),W(IW),JW)
+     *W(IR),W(IL),W(IX),W(IM),W(IS),W(IU),W(IV),W(IW),JW,
+     *ALPHA, F0, GS, H1, H2, H3, H4, T, T0, TOL,
+     *IEXACT, INCONS, IRESET, ITERMX, LINE, N1, N2, N3)
 C
       IF (ABS(MODE).EQ.1) GOTO 4
 C      

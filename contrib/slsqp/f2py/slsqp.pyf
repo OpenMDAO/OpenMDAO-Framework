@@ -45,13 +45,13 @@ python module slsqp ! in
             integer intent(in) :: iprint
             integer intent(in) :: iout
             character*(*) intent(in) :: ifile
-            integer intent(inout) :: mode
+            integer intent(in,out) :: mode
             double precision dimension(l_w),intent(inout),depend(l_w) :: w
             integer intent(in) :: l_w
             integer dimension(l_jw),intent(inout),depend(l_jw) :: jw
             integer intent(in) :: l_jw
-            integer intent(inout) :: nfunc
-            integer intent(inout) :: ngrad
+            integer intent(in,out) :: nfunc
+            integer intent(in,out) :: ngrad
             external slfunc
             external slgrad
         end subroutine slsqp

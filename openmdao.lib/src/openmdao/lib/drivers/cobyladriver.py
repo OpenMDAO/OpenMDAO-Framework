@@ -1,12 +1,11 @@
 """
-cobyla_driver.py - Contains a driver that wraps the cobyla
+cobyladriver.py - Contains a driver that wraps the cobyla
 optimizer as used in pyOpt:
 
 Minimize a function using the Constrained Optimization BY Linear
 Approximation (COBYLA) method
 
-COBYLA is gradient-free and can handle inequality constraints. The
-scipy package must be installed to import and use this driver.
+COBYLA is gradient-free and can handle inequality constraints.
 """
 
 import logging
@@ -20,7 +19,7 @@ except ImportError as err:
     
 from cobyla.cobyla import cobyla, closeunit
 
-from openmdao.main.datatypes.api import Enum, Float, Int
+from openmdao.main.datatypes.api import Enum, Float, Int, Str
 from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
@@ -36,8 +35,7 @@ class COBYLA_driver(Driver):
     """Minimize a function using the Constrained Optimization BY Linear
     Approximation (COBYLA) method
 
-    COBYLA is gradient-free and can handle inequality constraints. The
-    scipy package must be installed to import and use this driver.
+    COBYLA is gradient-free and can handle inequality constraints.
     
     Note: constraints should be added using the OpenMDAO convention
     (positive = violated)
@@ -61,6 +59,9 @@ class COBYLA_driver(Driver):
     iout = Int(6, iotype='in',
                   desc = 'FORTRAN output unit. Leave this at 6 for STDOUT')
     
+    output_filename = Str('cobyla.out', iotype='in',
+                          desc = 'Name of output file (if iout not 6)')
+    
     error_code = Int(0, iotype='out',
                   desc = 'Error code returned from COBYLA')
     
@@ -69,13 +70,12 @@ class COBYLA_driver(Driver):
         super(COBYLA_driver, self).__init__(*args, **kwargs)
         
         self.x = zeros(0,'d')
-        self.g = zeros(0,'d')
         self.work_vector = zeros(0,'d')
         self.gg = zeros(0,'d')
         self.iact = zeros(0,'d')
         
-        self.nfvals = 0
         self.ff = 0
+        self.nfvals = 0
         
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
@@ -108,7 +108,7 @@ class COBYLA_driver(Driver):
               cobyla(self._func, self.nparam, self.ncon, self.x, \
                    self.rhobeg, self.rhoend, self.iprint, self.maxfun, \
                    self.work_vector, self.iact, self.error_code, self.nfvals, \
-                   self.iout, 'cobyla.out', self.ff, self.gg)
+                   self.iout, self.output_filename, self.ff, self.gg)
             
         except Exception, err:
             self._logger.error(str(err))
