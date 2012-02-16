@@ -260,7 +260,7 @@ class DependencyGraph(object):
         graph = self._graph
         
         dpdot = destpath+'.'
-        for dst,srctup in self._allsrcs.items():
+        for dst,src in self._allsrcs.items():
             if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
                 raise AlreadyConnectedError("%s is already connected to source %s" %
                                             (dst, self._allsrcs[dst]))
