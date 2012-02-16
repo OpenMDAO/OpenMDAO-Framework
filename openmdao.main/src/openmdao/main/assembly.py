@@ -10,6 +10,7 @@ import threading
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
 import networkx as nx
+from networkx.algorithms.dag import is_directed_acyclic_graph
 
 from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
@@ -21,6 +22,7 @@ from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.printexpr import eliminate_expr_ws
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -78,12 +80,38 @@ class PassthroughProperty(Variable):
 class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
     def __init__(self):
-        self._map = {}
-        self._compgraph = nx.DiGraph()  # component dependency graph
+        self._compgraph = None  # component dependency graph
+        self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
+    
+    def get_compgraph(self):
+        if self._compgraph is None:
+            self._compgraph = self._create_compgraph()
+        return self._compgraph
+    
+    def _create_compgraph(self):
+        graph = nx.DiGraph()
+        for src,dest,data in self._exprgraph.edges(data=True):
+            destcomps = data['dest_expr'].get_referenced_compnames()
+            if len(destcomps) == 0:
+                continue  # boundary output
+            for srccomp in data['src_expr'].get_referenced_compnames():
+                graph.add_edge(srccomp, destcomps[0])
+        return graph
         
+    def add(self, name):
+        compgraph = self.get_compgraph()
+        compgraph.add_node(name)
+
     def connect(self, src, dest, scope):
-        if dest in self._map:
+        
+        # make sure we don't have any whitespace buried within the expression that would cause
+        # two versions of the same expression (one with ws and one without) to appear different
+        src = eliminate_expr_ws(src)
+        dest = eliminate_expr_ws(dest)
+        
+        if dest in self._exprgraph:
             raise RuntimeError("%s is already connected to a source" % dest)
+        
         destexpr = ExprEvaluator(dest, scope)
         srcexpr = ExprEvaluator(src, scope)
         
@@ -93,12 +121,77 @@ class ExprMapper(object):
         if len(destvars) != 1:
             raise RuntimeError("destination expr '%s' does not refer to a single variable." % dest)
         
+        compgraph = self.get_compgraph()
+        
         for destcomp in destexpr.get_referenced_compnames(): # there will be 0 or 1 destcomps here
             if destcomp in srccomps:
-                raise RuntimeError("source expression '%s' and destination expresstion '%s' both refer to component %s" % (src,dest,destcomp))
-            self._compgraph.add_edges_from([(s, destcomp) for s in srccomps])
+                raise RuntimeError("source expression '%s' and destination expression '%s' both refer to component %s" % (src,dest,destcomp))
+            
+            for srccomp in srccomps:
+                try:
+                    count = compgraph[srccomp][destcomp]['count']
+                except KeyError:
+                    compgraph.add_edge(srccomp, destcomp, count=1)
+                else:
+                    compgraph.add_edge(srccomp, destcomp, count=count+1)
+                
+            if is_directed_acyclic_graph(compgraph):
+                self._exprgraph.add_edge(src, dest, src_expr=srcexpr, dest_expr=destexpr)
+            else:   # cycle found
+                strongly_connected = strongly_connected_components(graph)
+                # undo our recent additions to the component graph
+                for srccomp in srccomps:
+                    count = compgraph[srccomp][destcomp]['count']
+                    if count == 1:
+                        compgraph.remove_edge(srccomp, destcomp)
+                    else:
+                        compgraph[srccomp][destcomp]['count'] = count-1
+                # do a little extra work here to give more info to the user in the error message
+                for strcon in strongly_connected:
+                    if len(strcon) > 1:
+                        raise RuntimeError(
+                            'circular dependency (%s) would be created by connecting %s to %s' %
+                                     (str(strcon), src, dest))
+        else: # boundary connection
+            pass  # TODO: do something here!
+
+    def invalidate_deps(self, scope, cnames, varsets, force=False):
+        """Walk through all dependent nodes in the graph, invalidating all
+        variables that depend on output sets for the given component names.
         
-        self._map[dest] = (destexpr, srcexpr)
+        scope: Component
+            Scoping object containing this dependency graph.
+            
+        cnames: list of str
+            Names of starting nodes.
+            
+        varsets: list of sets of str
+            Sets of names of outputs from each starting node.
+            
+        force: bool (optional)
+            If True, force invalidation to continue even if a component in
+            the dependency chain was already invalid.
+        """
+        graph = self._graph
+        stack = zip(cnames, varsets)
+        outset = set()  # set of changed boundary outputs
+        while(stack):
+            src, varset = stack.pop()
+            for dest,link in self.out_links(src):
+                if varset is None:
+                    srcvars = set(link._srcs.keys())
+                else:
+                    srcvars = varset
+                if dest == '@bout':
+                    outset.update(link.get_dests(varset))
+                else:
+                    dests = link.get_dests(varset)
+                    if dests:
+                        comp = getattr(scope, dest)
+                        outs = comp.invalidate_deps(varnames=dests, force=force)
+                        if (outs is None) or outs:
+                            stack.append((dest, outs))
+        return outset
 
 
 class Assembly (Component):
@@ -129,14 +222,14 @@ class Assembly (Component):
         """
         obj = super(Assembly, self).add(name, obj)
         if is_instance(obj, Component):
-            self._depgraph.add(obj.name)
+            self._expr_mapper.add(obj.name)
         return obj
         
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        self._depgraph.remove(name)
+        self._expr_mapper.remove(name)
         for obj in self.__dict__.values():
             if obj is not cont and is_instance(obj, Driver):
                 obj.workflow.remove(name)
@@ -291,7 +384,7 @@ class Assembly (Component):
         and outputs. 
         """
         if varpath2 is None:
-            for src,sink in self._depgraph.connections_to(varpath):
+            for src,sink in self._expr_mapper.connections_to(varpath):
                 if src.startswith('@'):
                     src = src.split('.',1)[1]
                 if sink.startswith('@'):
@@ -317,7 +410,7 @@ class Assembly (Component):
         
         # now update boundary outputs
         valids = self._valid_dict
-        for srccompname,link in self._depgraph.in_links('@bout'):
+        for srccompname,link in self._expr_mapper.in_links('@bout'):
             srccomp = getattr(self, srccompname)
             for dest,src in link._dests.items():
                 if valids[dest] is False:
@@ -343,21 +436,10 @@ class Assembly (Component):
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        return self._depgraph.list_connections(show_passthrough)
+        return self._expr_mapper.list_connections(show_passthrough)
 
-    #@rbac(('owner', 'user'))
-    #def get_configinfo(self, pathname='self'):
-        #"""Return a ConfigInfo object for this instance.  The
-        #ConfigInfo object should also contain ConfigInfo objects
-        #for children of this object.
-        #"""
-        #cfg = super(Assembly, self).get_configinfo(pathname)
-        #for src, dest in self._depgraph.list_connections():
-            #cfg.cmds.append("%s.connect('%s', '%s')" % (pathname, src, dest))
-        #return cfg
-    
     def _cvt_input_srcs(self, sources):
-        link = self._depgraph.get_link('@xin', '@bin')
+        link = self._expr_mapper.get_link('@xin', '@bin')
         if link is None:
             return sources
         else:
@@ -382,7 +464,7 @@ class Assembly (Component):
             destcomp = self
         else:
             destcomp = getattr(self, compname)
-        for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
+        for srccompname,srcs,dests in self._expr_mapper.in_map(compname, vset):
             if srccompname == '@bin':   # boundary inputs
                 invalid_srcs = [s for s in srcs if not self._valid_dict[s]]
                 if len(invalid_srcs) > 0:
@@ -470,7 +552,7 @@ class Assembly (Component):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
         """
-        bouts = self._depgraph.invalidate_deps(self, [childname], [outs], force)
+        bouts = self._expr_mapper.invalidate_deps(self, [childname], [outs], force)
         if bouts and self.parent:
             self.parent.child_invalidated(self.name, bouts, force)
         return bouts
@@ -513,7 +595,7 @@ class Assembly (Component):
               # are always valid
             self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
 
-        outs = self._depgraph.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
+        outs = self._expr_mapper.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
 
         if outs:
             self.set_valid(outs, False)

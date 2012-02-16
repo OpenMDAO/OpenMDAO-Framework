@@ -293,6 +293,12 @@ def transform_expression(expr, mapping):
     return ep.get_text()
 
 
+def eliminate_expr_ws(expr):
+    """Return the expression string with whitespace removed, except for 
+    whitespace within string literals passed as function args.
+    """
+    return transform_expression(expr, {})
+
 if __name__ == '__main__':
     import sys
     mapping = { 'foo.bar': 'a.b.c.def', 'blah': 'hohum' }
