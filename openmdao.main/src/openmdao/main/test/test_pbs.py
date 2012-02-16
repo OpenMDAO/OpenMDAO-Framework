@@ -164,12 +164,11 @@ class TestCase(unittest.TestCase):
 %(prefix)s -r y
 %(prefix)s -l select=256:ncpus=1
 %(prefix)s -M user1@host1,user2@host2
-%(prefix)s -m b
-%(prefix)s -m e
 %(prefix)s -N TestJob
 %(prefix)s -q debug_q
 %(prefix)s -p 42
 %(prefix)s -a 201202081642.00
+%(prefix)s -m be
 %(prefix)s -l walltime=0:00:02
 """ % dict(sh1=sh1, prefix=prefix))
         logging.debug('generated script:')
