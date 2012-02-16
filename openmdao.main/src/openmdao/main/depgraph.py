@@ -410,10 +410,18 @@ class DependencyGraph(object):
             del self._allsrcs[d]
 
     def dump(self, stream=sys.stdout):
-        """Prints out a simple text representation of the graph."""
+        """Prints out a simple sorted text representation of the graph."""
+        tupdict = {}
+        tuplst = []
         for u,v,data in self._graph.edges(data=True):
-            stream.write('%s -> %s\n' % (u,v))
-            for src,dests in data['link']._srcs.items():
+            tupdict[(u,v)] = data['link']
+            tuplst.append((u,v))
+            
+        tuplst.sort()
+        for tup in tuplst:
+            link = tupdict[tup]
+            stream.write('%s -> %s\n' % tup)
+            for src, dests in link._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
 
     def find_all_connecting(self, start, end):
