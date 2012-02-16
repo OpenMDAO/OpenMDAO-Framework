@@ -391,7 +391,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         cont = None
         root = pathname.split('.')[0]
-        if root in self.proj.__dict__:
+        if self.proj and root in self.proj.__dict__:
             if root == pathname:
                 cont = self.proj.__dict__[root]
             else:

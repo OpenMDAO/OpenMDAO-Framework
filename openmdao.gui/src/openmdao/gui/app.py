@@ -13,6 +13,7 @@ from tornado import httpserver, web
 from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import ensure_dir, launch_browser
+from openmdao.gui.session import TornadoSessionManager 
 #from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 from openmdao.gui.try_zmq import ConsoleServerFactory
 
@@ -23,7 +24,7 @@ class WebApp(web.Application):
         extends tornado web app with URL mappings, settings and server manager
     '''
 
-    def __init__(self, server_mgr, cookie_secret=None):
+    def __init__(self, secret=None):
         from openmdao.gui.handlers import LoginHandler, LogoutHandler
         handlers = [
             web.url(r'/login',  LoginHandler),
@@ -37,20 +38,24 @@ class WebApp(web.Application):
         import openmdao.gui.handlers_workspace as wksp
         handlers.extend(wksp.handlers)
         
-        if cookie_secret is None:
-            cookie_secret = os.urandom(1024)
+        if secret is None:
+            secret = os.urandom(1024)
             
-        app_path = os.path.dirname(os.path.abspath(__file__))
+        app_path      = os.path.dirname(os.path.abspath(__file__))
+        static_path   = os.path.join(app_path, 'static')
+        template_path = os.path.join(app_path, 'tmpl')
+        session_path  = os.path.join(app_path, 'sessions')
             
         settings = { 
             'login_url':         '/login',
             'static_path':       os.path.join(app_path, 'static'),
             'template_path':     os.path.join(app_path, 'tmpl'),
-            'cookie_secret':     cookie_secret,
+            'cookie_secret':     secret,
             'debug':             True,
         }
         
-        self.server_mgr = server_mgr
+        self.session_manager = TornadoSessionManager(secret,session_path)
+        self.server_manager  = ConsoleServerFactory()
         
         super(WebApp, self).__init__(handlers, **settings)
         
@@ -72,23 +77,21 @@ class WrappedApp(object):
         if (options.port < 1):
             options.port = get_unused_ip_port()
             
-        self.server_mgr = ConsoleServerFactory()
-        
         from zmq.eventloop import ioloop
         ioloop.install()
 
         # dev options
         if options.development:
-            # save cookie secret between restarts
-            cookie_secret_file = os.path.expanduser("~/.openmdao/gui/cookie_secret")
-            if os.path.exists(cookie_secret_file):
-                cookie_secret = open(cookie_secret_file,'rb').read()
+            # save secret between restarts
+            secret_file = os.path.expanduser("~/.openmdao/gui/secret")
+            if os.path.exists(secret_file):
+                secret = open(secret_file,'rb').read()
             else:
-                cookie_secret = os.urandom(1024)
-                open(cookie_secret_file,'wb').write(cookie_secret)        
-            self.web_app = WebApp(self.server_mgr,cookie_secret)
+                secret = os.urandom(1024)
+                open(secret_file,'wb').write(secret)
+            self.web_app = WebApp(secret)
         else:
-            self.web_app = WebApp(self.server_mgr)
+            self.web_app = WebApp()
             
         self.http_server = httpserver.HTTPServer(self.web_app)
         self.http_server.listen(options.port)

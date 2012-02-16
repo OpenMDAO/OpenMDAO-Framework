@@ -171,17 +171,6 @@ class ConnectionsHandler(BaseHandler):
             print e
         self.write(connections)
 
-class StructureHandler(BaseHandler):
-    ''' get the structure of the specified assembly, or of the global 
-        namespace if no pathname is specified, consisting of the list
-        of components and the connections between them
-    '''
-    @web.authenticated
-    def get(self,name):
-        cserver = self.get_server()
-        json = cserver.get_structure(name)
-        self.write(json)
-
 class ExecHandler(BaseHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
@@ -297,7 +286,10 @@ class ProjectHandler(BaseHandler):
         if filename:
             self.delete_server()
             cserver = self.get_server()
+            print 'cserver:',cserver
             cserver.load_project(MEDIA_ROOT+'/'+filename)
+            print 'cwd:',cserver.getcwd()
+            print cserver.onecmd('print dir()')
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -311,6 +303,17 @@ class PlotHandler(BaseHandler):
         port = cserver.get_varserver(name)
         self.write(port)
         
+class StructureHandler(BaseHandler):
+    ''' get the structure of the specified assembly, or of the global 
+        namespace if no pathname is specified, consisting of the list
+        of components and the connections between them
+    '''
+    @web.authenticated
+    def get(self,name):
+        cserver = self.get_server()
+        json = cserver.get_structure(name)
+        self.write(json)
+
 class TypesHandler(BaseHandler):
     ''' get hierarchy of package/types to populate the Palette
     '''
@@ -318,10 +321,10 @@ class TypesHandler(BaseHandler):
     def get(self):
         cserver = self.get_server()
         types = cserver.get_available_types()
-        try:
-            types['working'] = cserver.get_workingtypes()
-        except Exception, err:
-            print "Error adding working types:", str(err)        
+        #try:
+        #    types['working'] = cserver.get_workingtypes()
+        #except Exception, err:
+        #    print "Error adding working types:", str(err)        
         self.write(jsonpickle.encode(types))
 
 class UploadHandler(BaseHandler):
@@ -362,80 +365,6 @@ class TestHandler(BaseHandler):
     def get(self):
         self.render('workspace/test.html')
 
-class OutStreamHandler(websocket.WebSocketHandler):
-    def open(self):
-        sessionid = self.get_cookie("sessionid")
-        cserver = self.application.server_mgr.console_server(sessionid)
-        try:
-            context = zmq.Context()
-            socket = context.socket(zmq.SUB)
-            addr = cserver.get_output_port()
-            socket.connect(addr)
-            socket.setsockopt(zmq.SUBSCRIBE, "")
-            print 'OutStreamHandler.open() creating stream on',addr
-            self.stream = ZMQStream(socket)
-        except Exception, err:
-            print '    error getting outstream:',err
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_exception(exc_type, exc_value, exc_traceback)
-            traceback.print_tb(exc_traceback, limit=30)   
-            if self.stream and not self.stream.closed():
-                self.stream.close()
-            self.close()
-        else:
-            self.stream.on_recv(self._write_message)
-            cserver.publish_output()
-
-    def _write_message(self, message):
-        print 'OutStreamHandler._write_message()', message
-        for part in message:
-            self.write_message(part)
-        
-    def on_message(self, message):
-        print 'outstream message received: %s' % message
-
-    def on_close(self):
-        self.timer.stop()
-        print 'outstream connection closed'
-
-class PlotStreamHandler(websocket.WebSocketHandler):
-    def open(self):
-        # FIXME: variables are hard coded for demo purposes
-        var_names = [ 'prob.z1_t', 'prob.z2_t', 'prob.dis1.x1' ]
-        
-        sessionid = self.get_cookie("sessionid")
-        cserver = self.application.server_mgr.console_server(sessionid)
-        try:
-            context = zmq.Context()
-            socket = context.socket(zmq.SUB)
-            addr = cserver.get_variables_port(var_names)
-            socket.connect(addr)
-            socket.setsockopt(zmq.SUBSCRIBE, "")
-            print 'PlotStreamHandler.open() creating stream on',addr
-            self.stream = ZMQStream(socket)
-        except Exception, err:
-            print '    error getting plot stream:',err
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            traceback.print_exception(exc_type, exc_value, exc_traceback)
-            traceback.print_tb(exc_traceback, limit=30)   
-            if self.stream and not self.stream.closed():
-                self.stream.close()
-            self.close()
-        else:
-            self.stream.on_recv(self._write_message)
-
-    def _write_message(self, message):
-        print 'PlotStreamHandler._write_message()', message
-        for part in message:
-            self.write_message(part)
-        
-    def on_message(self, message):
-        print 'PlotStreamHandler message received: %s' % message
-
-    def on_close(self):
-        self.timer.stop()
-        print 'PlotStreamHandler connection closed'
-
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
     web.url(r'/workspace/components/?',     ComponentsHandler),
@@ -458,7 +387,5 @@ handlers = [
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
-    
-    web.url(r'/workspace/outputWS/?',       OutStreamHandler),
-    web.url(r'/workspace/plotWS/?',         PlotStreamHandler),
 ]
+

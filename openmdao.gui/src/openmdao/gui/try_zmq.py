@@ -15,6 +15,7 @@ from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 ioloop.install()
 
+from outstream import OutStream
 
 class ZMQServerManager(object):
     ''' creates and keeps track of ZMQ servers
@@ -31,11 +32,12 @@ class ZMQServerManager(object):
                 (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
                 return ZMQ_RPC(rep_url)
             else:
-                rep_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
-                print "%s serving requests on %s" % (server_id, rep_url)
-                pub_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
+                url_fmt = "tcp://127.0.0.1:%i"
+                rep_url = url_fmt % get_unused_ip_port()
+                pub_url = url_fmt % get_unused_ip_port()
+                out_url = url_fmt % get_unused_ip_port()
+                print "%s access RPC on %s" % (server_id, rep_url)
                 print "%s publishing on %s" % (server_id, pub_url)
-                out_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
                 print "%s outputting on %s" % (server_id, out_url)
                 server = ZMQServer(self.classpath,rep_url,pub_url,out_url)
                 server.start()
@@ -62,6 +64,28 @@ class ZMQServerManager(object):
             server.terminate()
             del server
 
+    def get_rep_url(self,server_id):
+        if server_id in self.server_dict:
+            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
+            return rep_url
+        else:
+            return None
+        
+    def get_pub_url(self,server_id):
+        if server_id in self.server_dict:
+            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
+            return pub_url
+        else:
+            return None
+        
+    def get_out_url(self,server_id):
+        if server_id in self.server_dict:
+            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
+            return out_url            
+        else:
+            return None
+
+
 class ZMQServer(Process):
     def __init__(self,classpath,rep_url,pub_url,out_url):
         parts = classpath.split('.')
@@ -81,41 +105,23 @@ class ZMQServer(Process):
         self.out_url = out_url
         
         super(ZMQServer, self).__init__()
-    
-    def get_output(self):
-        ''' get any pending output and clear the outputput buffer
-        '''
-        output = self.cout.getvalue()
-        self.cout.truncate(0)
-        return output
-
-    def publish_output(self):
-        ''' publish any pending output and clear the outputput buffer
-        '''
+        
+    def run(self):
+        import zmq
+        from zmq.eventloop import ioloop
+        from zmq.eventloop.zmqstream import ZMQStream
+        ioloop.install()
+        
+        # redirect stdout/stderr to a ZMQ socket
         try:
-            output = self.cout.getvalue()
-            if len(output) > 0:
-                self.cout_socket.send(output)
-                self.cout.truncate(0)
+            context = zmq.Context()
+            socket = context.socket(zmq.PUB)            
+            print "pid %d binding output to %s" % (os.getpid(), self.out_url)
+            socket.bind(self.out_url)
+            sys.stdout = OutStream(socket,'stdout')
+            sys.stderr = sys.stdout
         except Exception, err:
             print err,sys.exc_info()
-
-    def run(self):
-        # open a ZMQ socket on out_url and start publishing cout
-        # self.sysout = sys.stdout
-        # self.syserr = sys.stderr
-        # self.cout = StringIO()
-        # sys.stdout = self.cout
-        # sys.stderr = self.cout
-        # try:
-        # context = zmq.Context()
-        # self.cout_socket = context.socket(zmq.PUB)            
-        # print "binding output to %s" % self.out_url
-        # self.cout_socket.bind(self.out_url)
-        # self.cout_timer = RepeatTimer(2,self.publish_output)
-        # self.cout_timer.start()
-        # except Exception, err:
-        # print err,sys.exc_info()
 
         print 'Starting ZMQServer:',self
         ZmqCompWrapper.serve(self.obj, rep_url=self.rep_url, pub_url=self.pub_url)
@@ -130,36 +136,85 @@ class ConsoleServerFactory(ZMQServerManager):
     def console_server(self,server_id):
         return self.server(server_id)
 
+
+
 def print_json(data):
+    ''' pretty print json data
+    '''
     print json.dumps(json.loads(str(data)),indent=2)
     
+def add_listener(addr):
+    ''' listen for output on the given port and dump it to stderr
+    '''
+    def _write_message(msg):
+        print  >> sys.stderr, 'output>>',msg
+        
+    stream = None
+    try:
+        context = zmq.Context()
+        socket = context.socket(zmq.SUB)
+        print 'listening for output on',addr
+        socket.connect(addr)
+        socket.setsockopt(zmq.SUBSCRIBE, '')
+        stream = ZMQStream(socket)
+    except Exception, err:
+        print '    error getting outstream:',err
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_exception(exc_type, exc_value, exc_traceback)
+        traceback.print_tb(exc_traceback, limit=30)   
+        if stream and not stream.closed():
+            stream.close()
+    else:
+        stream.on_recv(_write_message)
+
+def start_loop():
+    loop = ioloop.IOLoop.instance()
+    loop.start()
+        
 def run_simple():
-    # create the OptimizationUnconstrained server
+    ''' create a ZMQServer for simple model, run & query it
+    '''
+    server_id = 'OptimizationUnconstrained'
     classpath = 'openmdao.examples.simple.optimization_unconstrained.OptimizationUnconstrained'
+    print '%d starting %s server...' % (os.getpid(), server_id)
     mgr = ZMQServerManager(classpath)
-    srv = mgr.server('OptimizationUnconstrained')
+    srv = mgr.server(server_id)
     if srv is not None:
-        print dir(srv)
-        print srv.dir()
-        #srv.register_published_vars(['paraboloid.x', 'paraboloid.y', 'paraboloid.f_xy'])
+        out_url = mgr.get_out_url(server_id)
+        add_listener(out_url)
+            
+        #print dir(srv)
+        #print srv.dir()
+        srv.register_published_vars(['paraboloid.x', 'paraboloid.y', 'paraboloid.f_xy'])
         srv.run()
+        
         print srv.get('paraboloid.x')
         print srv.get('paraboloid.y')
         print srv.get('paraboloid.f_xy')
         mgr.delete_server('OptimizationUnconstrained')
 
 def run_cserver():
+    ''' create a ZMQ-based console server & exercise it
+    '''
+    server_id = 'sellar'
     mgr = ConsoleServerFactory()
-    cserver = mgr.server('cserver')
+    cserver = mgr.server(server_id)
     if cserver is not None:
+        out_url = mgr.get_out_url(server_id)
+        add_listener(out_url)
+
+        
         print '=============================================================='
         print '================= started cserver ============================'
+        print '=============================================================='
+        #print cserver.onecmd("!!!!!!!!!!!!!!!!!!!  I'm Alive   !!!!!!!!!!!!!")
         print cserver.getcwd()
         #print 'types:'
         #print cserver.get_available_types()
         
         print '=============================================================='
         print '================ load project ================================'
+        print '=============================================================='
         from openmdao.gui.settings import MEDIA_ROOT
         proj_file = MEDIA_ROOT+'/projects/swryan/sellar auto.proj'
         print cserver.load_project(proj_file)
@@ -167,12 +222,14 @@ def run_cserver():
         
         print '=============================================================='
         print '================ import from  file ==========================='
+        print '=============================================================='
         print cserver.onecmd('from sellar_CO import SellarCO')
         print_dict(cserver.get_workingtypes())
         print cserver.onecmd('trace')
         
         print '=============================================================='
         print '=============== execute script to set up the problem ========='
+        print '=============================================================='
         script = """
 prob = SellarCO()
 
@@ -199,11 +256,13 @@ prob.dis2.y1 = 3.16
         
         print '=============================================================='
         print '================= register published vars and run ============'
+        print '=============================================================='
         #cserver.onecmd("prob.register_published_vars(['dis1.z1', 'dis1.z2', 'dis1.x1'])")
         cserver.run()
         
         print '=============================================================='
         print '================ get results ================================='
+        print '=============================================================='
         print cserver.onecmd('trace')
         print cserver.get_value('prob.dis1.z1')
         print cserver.get_value('prob.dis1.z2')
@@ -211,13 +270,17 @@ prob.dis2.y1 = 3.16
         
         print '=============================================================='
         print '================ delete server ==============================='
+        print '=============================================================='
         mgr.delete_server('cserver')
     
 def main():
+    import threading
+    loop_thread = threading.Thread(target=start_loop)
+    loop_thread.start()
+
     #run_simple()
     run_cserver()
+    loop_thread.join()
 
 if __name__ == '__main__':
     main()
-    
-    
