@@ -364,6 +364,7 @@ class PBS_Server(ObjServer):
                     'priority',
                     'start_time')
 
+            email_events = ''
             for key in keys:
                 try:
                     value = resource_desc[key]
@@ -382,9 +383,9 @@ class PBS_Server(ObjServer):
                 elif key == 'email':
                     script.write('%s -M %s\n' % (prefix, ','.join(value)))
                 elif key == 'email_on_started':
-                    script.write('%s -m b\n' % prefix)
+                    email_events += 'b'
                 elif key == 'email_on_terminated':
-                    script.write('%s -m e\n' % prefix)
+                    email_events += 'e'
                 elif key == 'job_name':
                     script.write('%s -N %s\n' % (prefix, self._jobname(value)))
                 elif key == 'input_path':
@@ -402,6 +403,9 @@ class PBS_Server(ObjServer):
                 elif key == 'start_time':
                     script.write('%s -a %s\n'
                                  % (prefix, value.strftime('%Y%m%d%H%M.%S')))
+
+            if email_events:
+                script.write('%s -m %s\n' % (prefix, email_events))
 
             # Set resource limits.
             if 'resource_limits' in resource_desc:

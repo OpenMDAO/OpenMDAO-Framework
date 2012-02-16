@@ -391,16 +391,16 @@ def read_authorized_keys(filename=None, logger=None):
             if not line:
                 continue
 
-            fields = line.split()
-            if len(fields) != 3:
-                logger.error('bad line (require exactly 3 fields):')
-                logger.error(line)
+            key_type, blank, rest = line.partition(' ')
+            if key_type != 'ssh-rsa':
+                logger.error('unsupported key type: %r', key_type)
                 errors += 1
                 continue
 
-            key_type, key_data, user_host = fields
-            if key_type != 'ssh-rsa':
-                logger.error('unsupported key type: %r', key_type)
+            key_data, blank, user_host = rest.partition(' ')
+            if not key_data:
+                logger.error('bad line (missing key data):')
+                logger.error(line)
                 errors += 1
                 continue
 

@@ -395,6 +395,7 @@ class GridEngineServer(ObjServer):
                 'start_time',
                 'accounting_id')
 
+        email_events = ''
         for key in keys:
             try:
                 value = resource_desc[key]
@@ -411,9 +412,9 @@ class GridEngineServer(ObjServer):
             elif key == 'email':
                 cmd.extend(('-M', ','.join(value)))
             elif key == 'email_on_started':
-                cmd.extend(('-m', 'b'))
+                email_events += 'b'
             elif key == 'email_on_terminated':
-                cmd.extend(('-m', 'e'))
+                email_events += 'e'
             elif key == 'job_name':
                 cmd.extend(('-N', self._jobname(value)))
             elif key == 'input_path':
@@ -439,6 +440,9 @@ class GridEngineServer(ObjServer):
                 cmd.extend(('-a', value.strftime('%Y%m%d%H%M.%S')))
             elif key == 'accounting_id':
                 cmd.extend(('-A', value))
+
+        if email_events:
+            cmd.extend(('-m', email_events))
 
         # Setup parallel environment.
         if 'job_category' in resource_desc:
