@@ -7,7 +7,7 @@ Testing
 =======
 
 By default, your top level ``devenv/bin`` directory will contain a script
-called ``openmdao`` that has a subcommand called 'test' that uses a Python 
+called ``openmdao`` that has a subcommand called "test" that uses a Python 
 package called `nose
 <http://readthedocs.org/docs/nose/en/latest/>`_ to run all of the unit
 tests for any package that you specify. For example, to run the full set
@@ -44,6 +44,8 @@ available when using ``openmdao test``.
 
 .. index: test coverage
 
+Note that when you run the ``openmdao test`` script, some tests might fail if you do not have Internet
+access.
 
 Test Coverage
 -------------
@@ -405,7 +407,7 @@ see output similar to the following:
 If any tests fail, they will be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
-.. note:: If you make changes to the docs, rebuild the documentation by running ``openmdao_build_docs``
-      and display them by typing ``openmdao_docs``.
+.. note:: If you change the docs, rebuild the documentation by running  ``openmdao build_docs`` and
+          display them by typing ``openmdao docs``.
 
 
