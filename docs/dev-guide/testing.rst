@@ -407,7 +407,7 @@ see output similar to the following:
 If any tests fail, they will be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
-.. note:: If you change the docs, rebuild the documentation by running  ``openmdao_build_docs`` and
+.. note:: If you change the docs, rebuild the documentation by running  ``openmdao build_docs`` and
           display them by typing ``openmdao docs``.
 
 
