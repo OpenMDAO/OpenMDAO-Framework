@@ -1,11 +1,20 @@
-import sys
+import sys, os, traceback
 import time
 from io import StringIO
+from multiprocessing import Process
 
-# largely borrowed from IPython
+import zmq
+from zmq.eventloop import ioloop
+from zmq.eventloop.zmqstream import ZMQStream
+
+from openmdao.util.network import get_unused_ip_port
+
+from random import randrange
 
 class OutStream(object):
-    """A file like object that publishes the stream to a 0MQ PUB socket."""
+    """ A file like object that publishes the stream to a 0MQ PUB socket.
+        (Borrowed from IPython, but stripped down a bit...)
+    """
 
     # The time interval between automatic flushes, in seconds.
     flush_interval = 0.05
@@ -72,16 +81,63 @@ class OutStream(object):
         self._buffer = StringIO()
         self._start = -1
 
-        
+class OutStreamRedirector(Process):
+    ''' listen for output on the given port and dump it to a file
+    '''
+    def __init__(self,name,addr,filename='sys.stdout'):
+        super(OutStreamRedirector, self).__init__()
+        print '<<<'+str(os.getpid())+'>>>',name,'..............'
+        print addr,'-->',filename
+        self.name = name
+        self.addr = addr
+        self.filename = filename
 
-def try_it():
-    import zmq
-    from zmq.eventloop import ioloop
-    from zmq.eventloop.zmqstream import ZMQStream
-    ioloop.install()
+    def run(self):
+        if self.filename == 'sys.stdout':
+            self.file = sys.stdout
+        elif self.filename == 'sys.stderr':
+            self.file = sys.stderr
+        else:
+            self.file = open(self.filename,'a+b')
+            print 'set file to',self.file
+            
+        ioloop.install()
+        loop = ioloop.IOLoop.instance()
+        
+        stream = None
+        try:
+            context = zmq.Context()
+            socket = context.socket(zmq.SUB)
+            print self.name,'listening for output on',self.addr
+            socket.connect(self.addr)
+            socket.setsockopt(zmq.SUBSCRIBE, '')
+            stream = ZMQStream(socket)
+        except Exception, err:
+            print self.name,'error getting outstream:',err
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            traceback.print_tb(exc_traceback, limit=30)   
+            if stream and not stream.closed():
+                stream.close()
+        else:
+            stream.on_recv(self._write_message)
+            loop.start()
     
-    context = zmq.Context()
+    def _write_message(self,msg):
+        try:
+            print >> self.file, self.name,'>>',msg
+        except Exception, err:
+            print 'Error writing to file:',err
+
+    def terminate(self):
+        print '<<<'+str(os.getpid())+'>>>',self.name,'shutting down .........'
+        super(OutStreamRedirector, self).terminate()
+
+
+def try_outstream():
+    ioloop.install()    
     loop = ioloop.IOLoop.instance()
+    context = zmq.Context()
 
     out_url = "tcp://127.0.0.1:5656"
     
@@ -122,6 +178,54 @@ def try_it():
         loop.start()
     except KeyboardInterrupt:
         print ' Interrupted'       
-        
+
+def try_outstream_redirector():
+    print '<<<'+str(os.getpid())+'>>> try_outstream_redirector ..............'
+    ioloop.install()
+    loop = ioloop.IOLoop.instance()
+    context = zmq.Context()
+
+    out_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
+    
+    # set up subscriber
+    sub = OutStreamRedirector('TestRedirector',out_url,'testfil.out')
+    print 'TestRedirector has been created...'
+    sub.start()
+    print 'TestRedirector has been started...'
+    
+    # set up publisher
+    sysout = sys.stdout
+    try:
+        cout_socket = context.socket(zmq.PUB)
+        print "binding output to %s" % out_url
+        cout_socket.bind(out_url)
+        sys.stdout = OutStream(cout_socket,'cout')
+    except Exception, err:
+        print err
+    
+    # create timer to feed the publisher
+    names =  ['billy', 'tommy', 'johnny', 'susie', 'mary', 'bobby']
+    def say_hello():
+        print 'hello',names[randrange(len(names))]
+    hello_timer = ioloop.PeriodicCallback(say_hello, 1000)
+    hello_timer.start()
+
+    # create timer to shut down after 10 seconds
+    def all_done():
+        sys.stdout = sysout
+        loop.stop()
+        sub.terminate()
+        print '\nThanks for playing!'
+    done_timer = ioloop.DelayedCallback(all_done, 10000)
+    done_timer.start()
+
+    # kick it off
+    try:
+        loop.start()
+    except KeyboardInterrupt:
+        print ' Interrupted'
+    
+
 if __name__ == '__main__':
-    try_it()
+    #try_outstream()
+    try_outstream_redirector()

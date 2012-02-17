@@ -15,7 +15,7 @@ from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 ioloop.install()
 
-from outstream import OutStream
+from outstream import OutStream, OutStreamRedirector
 
 class ZMQServerManager(object):
     ''' creates and keeps track of ZMQ servers
@@ -29,8 +29,8 @@ class ZMQServerManager(object):
         '''
         try:
             if server_id in self.server_dict:
-                (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
-                return ZMQ_RPC(rep_url)
+                (server, proxy, rep_url, pub_url, out_url) = self.server_dict[server_id]
+                return proxy
             else:
                 url_fmt = "tcp://127.0.0.1:%i"
                 rep_url = url_fmt % get_unused_ip_port()
@@ -41,8 +41,9 @@ class ZMQServerManager(object):
                 print "%s outputting on %s" % (server_id, out_url)
                 server = ZMQServer(self.classpath,rep_url,pub_url,out_url)
                 server.start()
-                self.server_dict[server_id] = (server, rep_url, pub_url, out_url)
-                return ZMQ_RPC(rep_url)
+                proxy = ZMQ_RPC(rep_url)
+                self.server_dict[server_id] = (server, proxy, rep_url, pub_url, out_url)
+                return proxy
         except Exception, err:
             print 'Error getting server',server_id
             print str(err.__class__.__name__), ":", err
@@ -55,7 +56,7 @@ class ZMQServerManager(object):
         ''' delete the server associated with an id
         '''
         if server_id in self.server_dict:
-            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
+            (server, proxy, rep_url, pub_url, out_url) = self.server_dict[server_id]
             del self.server_dict[server_id]
             try:
                 server.cleanup()
@@ -64,30 +65,23 @@ class ZMQServerManager(object):
             server.terminate()
             del server
 
-    def get_rep_url(self,server_id):
-        if server_id in self.server_dict:
-            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
-            return rep_url
-        else:
-            return None
-        
     def get_pub_url(self,server_id):
         if server_id in self.server_dict:
-            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
+            (server, proxy, rep_url, pub_url, out_url) = self.server_dict[server_id]
             return pub_url
         else:
             return None
         
     def get_out_url(self,server_id):
         if server_id in self.server_dict:
-            (server, rep_url, pub_url, out_url) = self.server_dict[server_id]
+            (server, proxy, rep_url, pub_url, out_url) = self.server_dict[server_id]
             return out_url            
         else:
             return None
 
-
 class ZMQServer(Process):
     def __init__(self,classpath,rep_url,pub_url,out_url):
+        print '<<<'+str(os.getpid())+'>>> ZMQServer:',classpath
         parts = classpath.split('.')
         modpath = '.'.join(parts[:-1])
         __import__(modpath)
@@ -118,6 +112,8 @@ class ZMQServer(Process):
             socket = context.socket(zmq.PUB)            
             print "pid %d binding output to %s" % (os.getpid(), self.out_url)
             socket.bind(self.out_url)
+            self.sysout = sys.stdout
+            self.syserr = sys.stderr
             sys.stdout = OutStream(socket,'stdout')
             sys.stderr = sys.stdout
         except Exception, err:
@@ -125,8 +121,13 @@ class ZMQServer(Process):
 
         print 'Starting ZMQServer:',self
         ZmqCompWrapper.serve(self.obj, rep_url=self.rep_url, pub_url=self.pub_url)
-                         
 
+    def terminate(self):
+        sys.stdout = self.sysout
+        sys.stderr = self.syserr
+        print '<<<'+str(os.getpid())+'>>> ZMQServer:',classpath,'shutting down .........'
+        super(ZMQServer, self).terminate()
+        
 class ConsoleServerFactory(ZMQServerManager):
     ''' creates and keeps track of console servers
     '''
@@ -136,41 +137,11 @@ class ConsoleServerFactory(ZMQServerManager):
     def console_server(self,server_id):
         return self.server(server_id)
 
-
-
 def print_json(data):
     ''' pretty print json data
     '''
     print json.dumps(json.loads(str(data)),indent=2)
-    
-def add_listener(addr):
-    ''' listen for output on the given port and dump it to stderr
-    '''
-    def _write_message(msg):
-        print  >> sys.stderr, 'output>>',msg
-        
-    stream = None
-    try:
-        context = zmq.Context()
-        socket = context.socket(zmq.SUB)
-        print 'listening for output on',addr
-        socket.connect(addr)
-        socket.setsockopt(zmq.SUBSCRIBE, '')
-        stream = ZMQStream(socket)
-    except Exception, err:
-        print '    error getting outstream:',err
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        traceback.print_exception(exc_type, exc_value, exc_traceback)
-        traceback.print_tb(exc_traceback, limit=30)   
-        if stream and not stream.closed():
-            stream.close()
-    else:
-        stream.on_recv(_write_message)
 
-def start_loop():
-    loop = ioloop.IOLoop.instance()
-    loop.start()
-        
 def run_simple():
     ''' create a ZMQServer for simple model, run & query it
     '''
@@ -200,10 +171,6 @@ def run_cserver():
     mgr = ConsoleServerFactory()
     cserver = mgr.server(server_id)
     if cserver is not None:
-        out_url = mgr.get_out_url(server_id)
-        add_listener(out_url)
-
-        
         print '=============================================================='
         print '================= started cserver ============================'
         print '=============================================================='
@@ -211,6 +178,15 @@ def run_cserver():
         print cserver.getcwd()
         #print 'types:'
         #print cserver.get_available_types()
+        
+        print '=============================================================='
+        print '================= redirecting stdout ========================='
+        print '=============================================================='
+        # subscriber to the cserver output & print to stdout
+        out_url = mgr.get_out_url(server_id)
+        sub = OutStreamRedirector('CSERVER OUT',out_url)
+        sub.start()
+        time.sleep(5)   # give it time to start up
         
         print '=============================================================='
         print '================ load project ================================'
@@ -271,16 +247,16 @@ prob.dis2.y1 = 3.16
         print '=============================================================='
         print '================ delete server ==============================='
         print '=============================================================='
+        time.sleep(5)   # give it time to start up
+        
+        time.sleep(5)   # give it time to start up
+        sub.terminate()
         mgr.delete_server('cserver')
     
 def main():
-    import threading
-    loop_thread = threading.Thread(target=start_loop)
-    loop_thread.start()
-
     #run_simple()
     run_cserver()
-    loop_thread.join()
+    
 
 if __name__ == '__main__':
     main()
