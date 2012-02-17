@@ -93,8 +93,6 @@ class ZMQServer(Process):
         except KeyError, AttributeError:
             print "ZMQServer can't locate %s" % classpath
             sys.exit(-1)
-        self.obj = self.ctor()
-        print 'ZMQServer obj:',self.obj
 
         self.rep_url = rep_url
         self.pub_url = pub_url
@@ -112,7 +110,7 @@ class ZMQServer(Process):
         try:
             context = zmq.Context()
             socket = context.socket(zmq.PUB)            
-            print "pid %d binding output to %s" % (os.getpid(), self.out_url)
+            print '<<<'+str(os.getpid())+'>>> ZMQServer: binding output to '+self.out_url
             socket.bind(self.out_url)
             self.sysout = sys.stdout
             self.syserr = sys.stderr
@@ -121,11 +119,12 @@ class ZMQServer(Process):
         except Exception, err:
             print err,sys.exc_info()
 
-        print 'Starting ZMQServer:',self
+        self.obj = self.ctor()
+        print 'ZMQServer obj:',self.obj
         ZmqCompWrapper.serve(self.obj, rep_url=self.rep_url, pub_url=self.pub_url)
 
     def terminate(self):
-        print '<<<'+str(os.getpid())+'>>> ZMQServer:',classpath,'shutting down .........'
+        print '<<<'+str(os.getpid())+'>>> ZMQServer: shutting down .........'
         super(ZMQServer, self).terminate()
         
 class ConsoleServerFactory(ZMQServerManager):

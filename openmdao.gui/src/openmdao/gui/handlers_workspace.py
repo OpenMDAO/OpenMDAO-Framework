@@ -383,6 +383,7 @@ class TestHandler(BaseHandler):
 
 
 def serveOutput(out_url,ws_url,ws_port):
+    print '<<<'+str(os.getpid())+'>>> serveOutput'
     from zmq.eventloop import ioloop
     ioloop.install()
 
