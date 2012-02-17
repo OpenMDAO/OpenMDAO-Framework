@@ -72,7 +72,6 @@ class CommandHandler(BaseHandler):
         command = self.get_argument('command')
         # if there is a command, execute it & get the result
         if command:
-            history = history + '>>> '+str(command) + '\n'
             result = ''
             try:
                 cserver = self.get_server()
@@ -301,8 +300,6 @@ class ProjectHandler(BaseHandler):
             cserver = self.get_server()
             print 'cserver:',cserver
             cserver.load_project(MEDIA_ROOT+'/'+filename)
-            print 'cwd:',cserver.getcwd()
-            print cserver.onecmd('print dir()')
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -396,12 +393,11 @@ def serveOutput(out_url,ws_url,ws_port):
             try:
                 context = zmq.Context()
                 socket = context.socket(zmq.SUB)
-                print self.name,'listening for output on',self.addr
                 socket.connect(self.addr)
                 socket.setsockopt(zmq.SUBSCRIBE, '')
                 stream = ZMQStream(socket)
             except Exception, err:
-                print self.name,'error getting outstream:',err
+                print 'error getting outstream:',err
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 traceback.print_tb(exc_traceback, limit=30)   
@@ -409,17 +405,19 @@ def serveOutput(out_url,ws_url,ws_port):
                     stream.close()
             else:
                 stream.on_recv(self._write_message)
-                loop.start()
 
         def _write_message(self, message):
-            print 'writing outstream message: %S' % message
-            self.write_message(message)
+            # Make sure that we're handling unicode
+            for part in message:
+                if not isinstance(part, unicode):
+                    enc = sys.getdefaultencoding()
+                    part = part.decode(enc, 'replace')
+                self.write_message(part)
             
         def on_message(self, message):
-            print 'outstream message received: %s' % message
+            print 'outstream message received:', message
 
         def on_close(self):
-            self.timer.stop()
             print 'outstream connection closed'
         
     application = web.Application([

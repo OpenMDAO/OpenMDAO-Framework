@@ -63,14 +63,14 @@ class ZmqCompWrapper(object):
         
     def handle_req(self, msg):
         parts = self._decoder(msg[0])
-        print 'received %s' % parts
+        #print 'received %s' % parts
         try:
             funct = deep_getattr(self._comp, parts[0])
             ret = funct(*parts[1], **parts[2])
         except Exception as err:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             ret = traceback.format_exc(exc_traceback)
-        print 'returning %s' % ret
+        #print 'returning %s' % ret
         self._repstream.send_multipart([self._encoder(ret)])
         
     @staticmethod

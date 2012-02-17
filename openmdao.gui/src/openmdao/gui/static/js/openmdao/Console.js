@@ -34,19 +34,21 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     // submit a command
     jQuery('#'+formID).submit(function() {
         var cmd = command.val();
-        model.issueCommand(command.val(),
+        command.val("");
+        updateHistory('\n>>> '+cmd);
+        model.issueCommand(cmd,
             // success, record any response in the history & clear the command
             function(responseText) {
+                debug.info('cmd response:',responseText)
                 if (responseText.length > 0) {
                     updateHistory(responseText);
                 }
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
-                alert("Error issuing command: "+jqXHR.statusText)
+                alert('Error issuing command: '+jqXHR.statusText)
             }
         );
-        command.val("");
         return false;
     })
     
@@ -147,7 +149,7 @@ openmdao.Console = function(formID,commandID,historyID,model) {
             };
             sck.onmessage = function(e) {
                 debug.info('output socket message:',e);
-                updateData(e.data);
+                updateHistory(e.data);
                 updateoutput();                    
             };            
         },
