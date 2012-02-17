@@ -1,13 +1,12 @@
 import sys, os, traceback
 import time
 import jsonpickle
-import threading
+import multiprocessing
 
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
 
-from tornado import web
-from tornado import websocket
+from tornado import httpserver, web, websocket
 
 from django import forms
 
@@ -83,10 +82,12 @@ class CommandHandler(BaseHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
+        self.content_type = 'text/html'
         self.write(history)
         
     @web.authenticated
     def get(self):
+        self.content_type = 'text/html'
         self.write('') # not used for now, could render a form
 
 class ComponentHandler(BaseHandler):
@@ -106,6 +107,7 @@ class ComponentHandler(BaseHandler):
         except Exception,e:
             print e
             result = sys.exc_info()
+        self.content_type = 'text/html'
         self.write(result)
         
     @web.authenticated
@@ -117,6 +119,7 @@ class ComponentHandler(BaseHandler):
         except Exception,e:
             print e
             result = sys.exc_info()
+        self.content_type = 'text/html'
         self.write(result)
         
     @web.authenticated
@@ -133,6 +136,7 @@ class ComponentHandler(BaseHandler):
             traceback.print_exception(exc_type, exc_value, exc_traceback,file=sys.stdout)
             print "*** print_tb:"
             traceback.print_tb(exc_traceback, limit=100, file=sys.stdout)        
+        self.content_type = 'application/javascript'
         self.write(attr)
 
 class ComponentsHandler(BaseHandler):
@@ -140,6 +144,7 @@ class ComponentsHandler(BaseHandler):
     def get(self):
         cserver = self.get_server()
         json = cserver.get_components()
+        self.content_type = 'application/javascript'
         self.write(json)
 
 class ConnectionsHandler(BaseHandler):
@@ -157,6 +162,7 @@ class ConnectionsHandler(BaseHandler):
         except Exception,e:
             print e
             result = sys.exc_info()
+        self.content_type = 'text/html'
         self.write(result)
         
     @web.authenticated
@@ -169,6 +175,7 @@ class ConnectionsHandler(BaseHandler):
             connections = cserver.get_connections(pathname,src_name,dst_name);
         except Exception, e:
             print e
+        self.content_type = 'application/javascript'
         self.write(connections)
 
 class ExecHandler(BaseHandler):
@@ -193,6 +200,7 @@ class ExecHandler(BaseHandler):
                 print e
                 result = result + str(sys.exc_info()) + '\n'
         if result:
+            self.content_type = 'text/html'
             self.write(result)
 
 class ExitHandler(BaseHandler):
@@ -224,11 +232,13 @@ class FileHandler(BaseHandler):
     @web.authenticated
     def delete(self,filename):
         cserver = self.get_server()
+        self.content_type = 'text/html'
         self.write(str(cserver.delete_file(filename)))
         
     @web.authenticated
     def get(self,filename):
         cserver = self.get_server()
+        self.content_type = 'text/html'
         self.write(str(cserver.get_file(filename)))
 
 class FilesHandler(BaseHandler):
@@ -239,6 +249,7 @@ class FilesHandler(BaseHandler):
         cserver = self.get_server()
         filedict = cserver.get_files()
         json = jsonpickle.encode(filedict)
+        self.content_type = 'application/javascript'
         self.write(json)
     
 class ModelHandler(BaseHandler):
@@ -254,6 +265,7 @@ class ModelHandler(BaseHandler):
     def get(self):
         cserver = self.get_server()
         json = cserver.get_JSON()
+        self.content_type = 'application/javascript'
         self.write(json)
 
 class OutputHandler(BaseHandler):
@@ -262,6 +274,7 @@ class OutputHandler(BaseHandler):
     @web.authenticated
     def get(self):
         cserver = self.get_server()
+        self.content_type = 'text/html'
         self.write(cserver.get_output())
 
 class ProjectHandler(BaseHandler):
@@ -312,6 +325,7 @@ class StructureHandler(BaseHandler):
     def get(self,name):
         cserver = self.get_server()
         json = cserver.get_structure(name)
+        self.content_type = 'application/javascript'
         self.write(json)
 
 class TypesHandler(BaseHandler):
@@ -321,10 +335,11 @@ class TypesHandler(BaseHandler):
     def get(self):
         cserver = self.get_server()
         types = cserver.get_available_types()
-        #try:
-        #    types['working'] = cserver.get_workingtypes()
-        #except Exception, err:
-        #    print "Error adding working types:", str(err)        
+        try:
+            types['working'] = cserver.get_workingtypes()
+        except Exception, err:
+            print "Error adding working types:", str(err)
+        self.content_type = 'application/javascript'        
         self.write(jsonpickle.encode(types))
 
 class UploadHandler(BaseHandler):
@@ -349,6 +364,7 @@ class WorkflowHandler(BaseHandler):
     def get(self,name):
         cserver = self.get_server()
         json = cserver.get_workflow(name)
+        self.content_type = 'application/javascript'
         self.write(json)
     
 class WorkspaceHandler(BaseHandler):
@@ -364,6 +380,68 @@ class TestHandler(BaseHandler):
     @web.authenticated
     def get(self):
         self.render('workspace/test.html')
+
+
+def serveOutput(out_url,ws_url,ws_port):
+    from zmq.eventloop import ioloop
+    ioloop.install()
+
+    class OutputWSHandler(websocket.WebSocketHandler):
+        def initialize(self,addr):
+            self.addr = addr
+            
+        def open(self):
+            stream = None
+            try:
+                context = zmq.Context()
+                socket = context.socket(zmq.SUB)
+                print self.name,'listening for output on',self.addr
+                socket.connect(self.addr)
+                socket.setsockopt(zmq.SUBSCRIBE, '')
+                stream = ZMQStream(socket)
+            except Exception, err:
+                print self.name,'error getting outstream:',err
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                traceback.print_tb(exc_traceback, limit=30)   
+                if stream and not stream.closed():
+                    stream.close()
+            else:
+                stream.on_recv(self._write_message)
+                loop.start()
+
+        def _write_message(self, message):
+            print 'writing outstream message: %S' % message
+            self.write_message(message)
+            
+        def on_message(self, message):
+            print 'outstream message received: %s' % message
+
+        def on_close(self):
+            self.timer.stop()
+            print 'outstream connection closed'
+        
+    application = web.Application([
+        (ws_url, OutputWSHandler, dict(addr=out_url))
+    ])
+    http_server = httpserver.HTTPServer(application)
+    http_server.listen(ws_port)
+    ioloop.IOLoop.instance().start()
+
+class OutputServerHandler(BaseHandler):
+    ''' initialize the web socket server & return the socket
+    '''
+    @web.authenticated
+    def get(self):
+        out_url = self.application.server_manager.get_out_url(self.get_sessionid())
+        ws_url  = '/workspace/output_ws'
+        ws_port = get_unused_ip_port()
+        srvr = multiprocessing.Process(target=serveOutput, args=(out_url,ws_url,ws_port))
+        srvr.start()
+        ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
+        self.content_type = 'text/html'
+        self.write(ws_addr)
+        
 
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
@@ -387,5 +465,8 @@ handlers = [
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
+    
+    web.url(r'/workspace/outport/?',        OutputServerHandler),
+
 ]
 

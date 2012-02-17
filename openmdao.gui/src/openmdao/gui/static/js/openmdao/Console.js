@@ -131,18 +131,30 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     //model.addListener(update)
 
 
-    /** connect to a websocket * /
-    // TODO: get the output address via an ajax call
-    var sck = new WebSocket('ws://localhost:9000/workspace/outputWS');
-    sck.onopen = function (e) {
-        debug.info('console socket opened',e);
-    };
-    sck.onclose = function (e) {
-        debug.info('console socket closed',e);
-    };
-    sck.onmessage = function(e) {
-        debug.info('console socket message:',e);
-        updateHistory(e.data);
-    };            
+    debug.info('making ajax call to get output WS...');
+    jQuery.ajax({
+        type: 'GET',
+        url:  'outport',
+        success: function(addr) {
+            debug.info('got output websocket address:' + addr);
+            sck = new WebSocket(addr);
+            debug.info("opening output socket at",addr,sck);
+            sck.onopen = function (e) {
+                debug.info('output socket opened',e);
+            };
+            sck.onclose = function (e) {
+                debug.info('output socket closed',e);
+            };
+            sck.onmessage = function(e) {
+                debug.info('output socket message:',e);
+                updateData(e.data);
+                updateoutput();                    
+            };            
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+                   debug.error("Error getting console WS (status="+jqXHR.status+"): "+jqXHR.statusText)
+                   debug.error(jqXHR,textStatus,errorThrown)
+       }
+    })           
         
 }

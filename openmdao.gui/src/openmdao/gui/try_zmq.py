@@ -80,6 +80,8 @@ class ZMQServerManager(object):
             return None
 
 class ZMQServer(Process):
+    ''' a process that serves a ZMQCompWrapper and redirects it's stdout to a ZMQStream
+    '''
     def __init__(self,classpath,rep_url,pub_url,out_url):
         print '<<<'+str(os.getpid())+'>>> ZMQServer:',classpath
         parts = classpath.split('.')
@@ -123,8 +125,6 @@ class ZMQServer(Process):
         ZmqCompWrapper.serve(self.obj, rep_url=self.rep_url, pub_url=self.pub_url)
 
     def terminate(self):
-        sys.stdout = self.sysout
-        sys.stderr = self.syserr
         print '<<<'+str(os.getpid())+'>>> ZMQServer:',classpath,'shutting down .........'
         super(ZMQServer, self).terminate()
         
