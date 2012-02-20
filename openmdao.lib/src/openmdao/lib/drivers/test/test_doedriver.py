@@ -162,7 +162,7 @@ class TestCaseDOE(unittest.TestCase):
         
         self.model.run()
 
-        self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
+        self.assertEqual(len(results), self.model.driver.DOEgenerator.num_samples)
         msg = "driver: Exception getting case outputs: " \
             "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
@@ -356,7 +356,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         
         self.model.run()
 
-        self.assertEqual(len(results), 1+self.model.driver.DOEgenerator.num_sample_points)
+        self.assertEqual(len(results), 1+self.model.driver.DOEgenerator.num_samples)
         msg = "driver: Exception getting case outputs: " \
             "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
