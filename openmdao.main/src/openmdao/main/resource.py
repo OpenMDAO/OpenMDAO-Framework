@@ -396,7 +396,8 @@ class ResourceAllocationManager(object):
                (best_estimate == 0  and estimate >  0) or \
                (best_estimate >  0  and estimate < best_estimate):
                 # All current allocators support 'hostnames'.
-                if need_hostnames and not 'hostnames' in criteria:  #pragma no cover
+                if estimate >= 0 and need_hostnames \
+                   and not 'hostnames' in criteria:  #pragma no cover
                     self._logger.debug("%r is missing 'hostnames'",
                                        allocator.name)
                 else:
@@ -1036,8 +1037,9 @@ class LocalAllocator(FactoryAllocator):
             }
             return (0, criteria)
 
-        self._logger.debug('loadavgs %.2f, %.2f, %.2f, max_load %d',
-                           loadavgs[0], loadavgs[1], loadavgs[2], self.max_load)
+        self._logger.debug('loadavgs %.2f, %.2f, %.2f, max_load %.2f',
+                           loadavgs[0], loadavgs[1], loadavgs[2],
+                           self.max_load * self.total_cpus)
         criteria = {
             'hostnames'  : [socket.gethostname()],
             'loadavgs'   : loadavgs,
@@ -1191,8 +1193,14 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
 
     def _initialize(self, machines):
         """ Setup allocators on the given machines. """
+        hostnames = set()
         hosts = []
         for machine in machines:
+            hostname = machine['hostname']
+            if hostname in hostnames:
+                self._logger.warning('Ignoring duplicate hostname %r', hostname)
+                continue
+            hostnames.add(hostname)
             host = mp_distributing.Host(machine['hostname'],
                                         python=machine['python'])
             host.register(LocalAllocator)
@@ -1215,6 +1223,9 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 dash = la_name.index('-')
                 colon = la_name.index(':')
                 host_ip = la_name[dash+1:colon]
+                la_name = la_name.replace('-', '_')
+                la_name = la_name.replace('.', '')
+                la_name = la_name.replace(':', '_')
 
             if host_ip not in self._allocators:
                 allocator = \
@@ -1394,9 +1405,10 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             # Spread across LocalAllocators.
             rdesc['min_cpus'] = 1
 
+        avail_cpus = 0
         with self._lock:
             best_estimate = -2
-            best_criteria = None
+            best_criteria = {'': 'No LocalAllocator results'}
             best_allocator = None
  
             # Prefer not to repeat use of just-used allocator.
@@ -1425,7 +1437,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                     todo.append(allocator)
 
             # Process estimates.
-            host_loads = []  # Sorted list of (hostname, load)
+            host_loads = []  # Sorted list of (load, criteria)
             for i in range(len(self._allocators)):
                 worker_q, retval, exc, trace = self._reply_q.get()
                 if exc:
@@ -1447,13 +1459,21 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 if estimate is None:
                     continue
 
-                # Update loads.
+                # Accumulate available cpus in cluster.
+                avail_cpus += criteria['total_cpus']
+
+                # CPU-adjusted load (if available).
+                if 'loadavgs' in criteria:
+                    load = criteria['loadavgs'][0] / criteria['total_cpus']
+                else:  # Windows
+                    load = 0.
+
+                # Insertion sort of host_loads.
                 if estimate >= 0 and min_cpus:
-                    load = criteria['loadavgs'][0]
-                    new_info = (criteria['hostnames'][0], load)
+                    new_info = (load, criteria)
                     if host_loads:
                         for i, info in enumerate(host_loads):
-                            if load < info[1]:
+                            if load < info[0]:
                                 host_loads.insert(i, new_info)
                                 break
                         else:
@@ -1472,7 +1492,6 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                     best_allocator = allocator
                 elif (best_estimate == 0 and estimate == 0):
                     best_load = best_criteria['loadavgs'][0]
-                    load = criteria['loadavgs'][0]
                     if load < best_load:
                         best_estimate = estimate
                         best_criteria = criteria
@@ -1484,14 +1503,35 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 best_criteria = prev_criteria
                 best_allocator = prev_allocator
 
-            # Save best allocator in criteria in case we're asked to deploy.
-            if best_criteria is not None:
-                best_criteria['allocator'] = best_allocator
+            if avail_cpus < min_cpus:
+                return (-2, {'min_cpus': 'want %d, available %d' \
+                                         % (min_cpus, avail_cpus)})
 
-                # Save min_cpus hostnames in criteria.
-                best_criteria['hostnames'] = \
-                    [host_loads[i][0] \
-                     for i in range(min(min_cpus, len(host_loads)))]
+            # Save best allocator in criteria in case we're asked to deploy.
+            if best_allocator is not None:
+                best_criteria['allocator'] = best_allocator
+                if min_cpus:
+                    # Save min_cpus hostnames in criteria.
+                    hostnames = []
+                    for load, criteria in host_loads:
+                        hostname = criteria['hostnames'][0]
+                        hostnames.append(hostname)
+                        if len(hostnames) >= min_cpus:
+                            break
+                        total_cpus = criteria['total_cpus']
+                        max_load = criteria.get('max_load', 1)
+                        load *= total_cpus  # Restore from cpu-adjusted value.
+                        max_load *= total_cpus
+                        load += 1
+                        while load < max_load and len(hostnames) < min_cpus:
+                            hostnames.append(hostname)
+                            load += 1
+                        if len(hostnames) >= min_cpus:
+                            break
+                    if len(hostnames) < min_cpus:
+                        return (-1, {'min_cpus': 'want %d, idle %d' \
+                                                 % (min_cpus, len(hostnames))})
+                    best_criteria['hostnames'] = hostnames
 
             return (best_estimate, best_criteria)
 
