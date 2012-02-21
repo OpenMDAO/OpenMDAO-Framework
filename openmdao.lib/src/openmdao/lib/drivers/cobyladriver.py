@@ -52,8 +52,8 @@ class COBYLA_driver(Driver):
     rhoend = Float(1e-4, iotype='in', 
                    desc = 'final accuracy in the optimization (not precisely guaranteed)')
 
-    iprint = Enum(1, [0, 1, 2, 3], iotype='in',
-                  desc = 'controls the frequency of output: 0 (no output),1,2,3')
+    iprint = Enum(1, [-1, 0, 1, 2, 3], iotype='in',
+                  desc = 'controls the frequency of output: -1 or 0 (no output),1,2,3')
     
     maxfun = Int(1000, iotype='in',
                   desc = 'maximum number of function evaluations')
