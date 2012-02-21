@@ -75,6 +75,11 @@ class COBYLA_driver(Driver):
         
         super(COBYLA_driver, self).__init__(*args, **kwargs)
         
+        self.error_messages = {
+            1 : 'Max. number of function evaluations reached',
+            2 : 'Rounding errors are becoming damaging'
+        }
+        
         self.x = zeros(0,'d')
         self.work_vector = zeros(0,'d')
         self.gg = zeros(0,'d')
@@ -124,10 +129,8 @@ class COBYLA_driver(Driver):
             closeunit(self.iout)
 
         # Log any errors
-        if self.error_code == 1 :
-            self._logger.warning('Max. number of function evaluations reached')
-        elif self.error_code == 2 :
-            self._logger.warning('Rounding errors are becoming damaging')
+        if self.error_code != 0 :
+            self._logger.warning(self.error_messages[self.error_code])
         
         # Iteration is complete
         self._continue = False

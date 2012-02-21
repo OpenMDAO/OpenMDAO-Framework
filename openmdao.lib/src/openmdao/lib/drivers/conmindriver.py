@@ -207,9 +207,9 @@ class CONMINdriver(DriverUsesDerivatives):
     cons_is_linear = Array(zeros(0,'i'), dtype=numpy_int, iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
-    iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
+    iprint = Enum(0, [-1, 0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
                     'information during CONMIN solution. Higher values are '
-                    'more verbose.')
+                    'more verbose. 0 and -1 suppress all output.')
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                     'termination.')
     fdch = Float(.01, iotype='in', desc='Relative change in parameters '
@@ -440,7 +440,9 @@ class CONMINdriver(DriverUsesDerivatives):
         # Iteration count comes from CONMIN. You can't just count over the
         # loop because some cycles do other things (e.g., numerical
         # gradient calculation)
-        if self.iter_count != self.cnmn1.iter:
+        if (self.iter_count != self.cnmn1.iter) or \
+            self.cnmn1.igoto == 0:
+            
             self.iter_count = self.cnmn1.iter 
             
             if self.recorders:

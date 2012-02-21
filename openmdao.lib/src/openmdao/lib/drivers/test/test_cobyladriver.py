@@ -8,6 +8,7 @@ import numpy
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str, Slot
+from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.drivers.cobyladriver import COBYLA_driver
 from openmdao.util.testutil import assert_rel_error
 
@@ -83,6 +84,8 @@ class COBYLAdriverTestCase(unittest.TestCase):
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])        
+        self.top.driver.recorders = [ListCaseRecorder()]
+        self.top.driver.printvars = ['comp.opt_objective']        
         self.top.run()
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
@@ -95,6 +98,14 @@ class COBYLAdriverTestCase(unittest.TestCase):
                                self.top.comp.x[2], places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x[3], places=1)
+        
+        cases = self.top.driver.recorders[0].get_iterator()
+        end_case = cases[-1]
+        
+        self.assertEqual(self.top.comp.x[1],
+                         end_case.get_input('comp.x[1]'))
+        self.assertEqual(self.top.comp.opt_objective,
+                         end_case.get_output('comp.opt_objective'))
         
     def test_max_iter(self):
         self.top.driver.add_objective('comp.result')
