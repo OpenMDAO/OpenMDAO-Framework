@@ -1,0 +1,9 @@
+This directory contains the Fortran 77 source for 
+SLSQP, plus two helper files called openunit.f and
+closeunit.f to manipulate Fortran units from Python.
+
+For OpenMDAO, the source was modified to allow for writing
+to unit 6 as STDOUT. Also, all "SAVE" statments were
+removed and replaced with storage in the parent
+subroutine so that the code could be made thread-safe.
+In other words, this driver is now nestable.
