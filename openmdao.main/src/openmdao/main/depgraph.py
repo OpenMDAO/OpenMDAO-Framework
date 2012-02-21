@@ -84,28 +84,29 @@ class DependencyGraph(object):
         return graph
     
     def get_source(self, destpath):
-        cname, _, vname = destpath.partition('.')
-        if vname: # internal dest
-            for srccomp, link in self.in_links(cname):
-                src = link._dests.get(vname)
-                if src:
-                    if srccomp[0] == '@':
-                        return src
-                    else:
-                        return '.'.join([srccomp,src])
-        else: # boundary dest
-            try:
-                dests = self._graph['@xin']['@bin']['link']._dests
-            except KeyError:
-                dests = {}
-            src = dests.get(destpath)
-            if src:
-                return src
-            for u,v,data in self._graph.in_edges('@bout', data=True):
-                src = data['link']._dests.get(destpath)
-                if src:
-                    return '.'.join([u, src])
-        return None
+        return self._allsrcs.get(destpath)
+        #cname, _, vname = destpath.partition('.')
+        #if vname: # internal dest
+            #for srccomp, link in self.in_links(cname):
+                #src = link._dests.get(vname)
+                #if src:
+                    #if srccomp[0] == '@':
+                        #return src
+                    #else:
+                        #return '.'.join([srccomp,src])
+        #else: # boundary dest
+            #try:
+                #dests = self._graph['@xin']['@bin']['link']._dests
+            #except KeyError:
+                #dests = {}
+            #srclst = dests.get(destpath)
+            #if srclst:
+                #return srclst
+            #for u,v,data in self._graph.in_edges('@bout', data=True):
+                #srclst = data['link']._dests.get(destpath)
+                #if srclst:
+                    #return ['.'.join([u, src]) for src in srclst]
+        #return None
 
     def add(self, name):
         """Add the name of a Component to the graph."""
@@ -165,14 +166,20 @@ class DependencyGraph(object):
                 continue
             elif u == '@bin':
                 if show_passthrough:
-                    conns.extend([(src, '.'.join([v,dest])) 
-                                  for dest,src in link._dests.items() if not '.' in src])
+                    for dest,srclst in link._dests.items():
+                        for src in srclst:
+                            if '.' not in src:
+                                conns.append((src, '.'.join([v,dest])))
             elif v == '@bout':
                 if show_passthrough:
-                    conns.extend([('.'.join([u,src]), dest) 
-                                  for dest,src in link._dests.items() if not '.' in dest])
+                    for dest,srclst in link._dests.items():
+                        for src in srclst:
+                            if '.' not in dest:
+                                conns.append(('.'.join([u,src]), dest))
             else:
-                conns.extend([('.'.join([u,src]), '.'.join([v,dest])) for dest,src in link._dests.items()])
+                for dest,srclst in link._dests.items():
+                    for src in srclst:
+                        conns.append(('.'.join([u,src]), '.'.join([v,dest])))
         return conns
     
     def in_map(self, cname, varset):
@@ -224,8 +231,9 @@ class DependencyGraph(object):
         edges = []
         for name in names:
             for u,v,data in self._graph.edges(name, data=True):
-                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                    for dest,src in data['link']._dests.items()])
+                for dest, srclst in data['link']._dests.items():
+                    for src in srclst:
+                        edges.extend([('.'.join([u,src]), '.'.join([v,dest]))])
         return edges
     
     def var_in_edges(self, name=None):
@@ -237,8 +245,9 @@ class DependencyGraph(object):
         edges = []
         for name in names:
             for u,v,data in self._graph.in_edges(name, data=True):
-                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                     for dest,src in data['link']._dests.items()])
+                for dest, srclst in data['link']._dests.items():
+                    for src in srclst:
+                        edges.extend([('.'.join([u,src]), '.'.join([v,dest]))])
         return edges
     
     def get_connected_inputs(self):
@@ -466,8 +475,10 @@ class _Link(object):
     def connect(self, src, dest):
         if src not in self._srcs:
             self._srcs[src] = []
+        if dest not in self._dests:
+            self._dests[dest] = []
         self._srcs[src].append(dest)
-        self._dests[dest] = src
+        self._dests[dest].append(src)
         
     def disconnect(self, src, dest):
         if dest in self._dests:
@@ -501,9 +512,8 @@ class _Link(object):
         else:
             srcs = []
             for name in dests:
-                src = self._dests.get(name)
-                if src:
-                    srcs.append(src)
+                srclst = self._dests.get(name, ())
+                srcs.extend(srclst)
             return srcs
 
 
