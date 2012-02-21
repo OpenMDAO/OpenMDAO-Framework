@@ -88,14 +88,27 @@ class ExprMapper(object):
             self._compgraph = self._create_compgraph()
         return self._compgraph
     
+    def _update_compgraph(self, graph, srcexpr, destexpr):
+        src = srcexpr.text
+        dest = destexpr.text
+        destcomps = destexpr.get_referenced_compnames()
+        if len(destcomps) == 0:
+            pass  # boundary output
+        else:
+            for srccomp in srcexpr.get_referenced_compnames():
+                try:
+                    graph[srccomp][destcomps[0]]['srcexprs'][dest] = src
+                    graph[srccomp][destcomps[0]]['destexprs'][src].append(dest)
+                except KeyError:
+                    srcexprs = { dest: src }
+                    destexprs = { src: [dest] }
+                    graph.add_edge(srccomp, destcomps[0], srcexprs=srcexprs, destexprs=destexprs)
+        return graph
+    
     def _create_compgraph(self):
         graph = nx.DiGraph()
         for src,dest,data in self._exprgraph.edges(data=True):
-            destcomps = data['dest_expr'].get_referenced_compnames()
-            if len(destcomps) == 0:
-                continue  # boundary output
-            for srccomp in data['src_expr'].get_referenced_compnames():
-                graph.add_edge(srccomp, destcomps[0])
+            self._update_compgraph(graph, data['src_expr'], data['dest_expr'])
         return graph
         
     def add(self, name):
@@ -109,13 +122,14 @@ class ExprMapper(object):
         src = eliminate_expr_ws(src)
         dest = eliminate_expr_ws(dest)
         
-        if dest in self._exprgraph:
+        if self._exprgraph.pred(dest):
             raise RuntimeError("%s is already connected to a source" % dest)
         
         destexpr = ExprEvaluator(dest, scope)
         srcexpr = ExprEvaluator(src, scope)
         
         srccomps = srcexpr.get_referenced_compnames()
+        destcomps = destexpr.get_referenced_compnames()
         destvars = destexpr.get_referenced_varpaths()
         
         if len(destvars) != 1:
@@ -123,37 +137,22 @@ class ExprMapper(object):
         
         compgraph = self.get_compgraph()
         
-        for destcomp in destexpr.get_referenced_compnames(): # there will be 0 or 1 destcomps here
-            if destcomp in srccomps:
-                raise RuntimeError("source expression '%s' and destination expression '%s' both refer to component %s" % (src,dest,destcomp))
+        if destcomps and destcomps[0] in srccomps:
+            raise RuntimeError("source expression '%s' and destination expression '%s' both refer to component %s" % (src,dest,destcomp))
             
-            for srccomp in srccomps:
-                try:
-                    count = compgraph[srccomp][destcomp]['count']
-                except KeyError:
-                    compgraph.add_edge(srccomp, destcomp, count=1)
-                else:
-                    compgraph.add_edge(srccomp, destcomp, count=count+1)
+        self._update_compgraph(compgraph, srcexpr, destexpr)
                 
-            if is_directed_acyclic_graph(compgraph):
-                self._exprgraph.add_edge(src, dest, src_expr=srcexpr, dest_expr=destexpr)
-            else:   # cycle found
-                strongly_connected = strongly_connected_components(graph)
-                # undo our recent additions to the component graph
-                for srccomp in srccomps:
-                    count = compgraph[srccomp][destcomp]['count']
-                    if count == 1:
-                        compgraph.remove_edge(srccomp, destcomp)
-                    else:
-                        compgraph[srccomp][destcomp]['count'] = count-1
-                # do a little extra work here to give more info to the user in the error message
-                for strcon in strongly_connected:
-                    if len(strcon) > 1:
-                        raise RuntimeError(
-                            'circular dependency (%s) would be created by connecting %s to %s' %
-                                     (str(strcon), src, dest))
-        else: # boundary connection
-            pass  # TODO: do something here!
+        if is_directed_acyclic_graph(compgraph):
+            self._exprgraph.add_edge(src, dest, src_expr=srcexpr, dest_expr=destexpr)
+        else:   # cycle found
+            self._compgraph = None  # force regeneration of compgraph next time
+            strongly_connected = strongly_connected_components(compgraph)
+            # do a little extra work here to give more info to the user in the error message
+            for strcon in strongly_connected:
+                if len(strcon) > 1:
+                    raise RuntimeError(
+                        'circular dependency (%s) would be created by connecting %s to %s' %
+                                 (str(strcon), src, dest))
 
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
@@ -172,7 +171,6 @@ class ExprMapper(object):
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
-        graph = self._graph
         stack = zip(cnames, varsets)
         outset = set()  # set of changed boundary outputs
         while(stack):
@@ -205,9 +203,9 @@ class Assembly (Component):
                     "this Assembly.")
     
     def __init__(self, doc=None, directory=''):
-        super(Assembly, self).__init__(doc=doc, directory=directory)
-        
         self._expr_mapper = ExprMapper()
+        
+        super(Assembly, self).__init__(doc=doc, directory=directory)
         
         # default Driver executes its workflow once
         self.add('driver', Driver())

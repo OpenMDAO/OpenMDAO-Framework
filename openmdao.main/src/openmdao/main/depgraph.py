@@ -8,6 +8,7 @@ from networkx.algorithms.dag import topological_sort_recursive,is_directed_acycl
 from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.printexpr import eliminate_expr_ws
 
 class AlreadyConnectedError(RuntimeError):
     pass
@@ -266,6 +267,11 @@ class DependencyGraph(object):
         """Add an edge to our Component graph from 
         *srccompname* to *destcompname*.
         """
+        # make sure we don't have any whitespace buried within an expression that would cause
+        # two versions of the same expression (one with ws and one without) to appear different
+        srcpath = eliminate_expr_ws(srcpath)
+        destpath = eliminate_expr_ws(destpath)
+        
         graph = self._graph
         
         dpdot = destpath+'.'
