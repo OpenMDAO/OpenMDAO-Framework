@@ -1526,6 +1526,8 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                         while load < max_load and len(hostnames) < min_cpus:
                             hostnames.append(hostname)
                             load += 1
+                        if len(hostnames) >= min_cpus:
+                            break
                     if len(hostnames) < min_cpus:
                         return (-1, {'min_cpus': 'want %d, idle %d' \
                                                  % (min_cpus, len(hostnames))})
