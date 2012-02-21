@@ -27,7 +27,6 @@ Current version: |version|
    geometry/index
    glossary
    user-guide/index
-   
    dev-guide/todo
    arch-doc/index
   

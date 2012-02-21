@@ -97,12 +97,11 @@ The value for ``python_platform`` is typically taken from the return value of
 :meth:`distutils.util.get_platform`.
 The ``min_phys_memory`` key is also used as a queuing key.
 The ``min_cpus`` and ``max_cpus`` keys are also used as queuing keys for parallel
-applications. They are analogous to the DRMAA ``minSlots`` and ``maxSlots``
-attributes, with the intent that a 'cpu' can execute an MPI process
-(A DRMAA 'slot' is opaque and can have different interpretations).
+applications. They are analogous to the DRMAA (Distributed Resource Management
+Application API) ``minSlots`` and ``maxSlots`` attributes, with the intent that a "cpu" can execute an MPI process
+(A DRMAA "slot" is opaque and can have different interpretations).
 
-Most of the queuing keys are derived from the Distributed Resource Management
-Application API (DRMAA) standard ``JobTemplate``:
+Most of the queuing keys are derived from the DRMAA standard ``JobTemplate``:
 
 =============================  ========  ==============================================
 Queuing Key                    Value     Description
@@ -214,7 +213,7 @@ The ``HOME_DIRECTORY`` and ``WORKING_DIRECTORY`` constants in
 :mod:`openmdao.main.resource` may be used as placeholders in path
 specifications. They are translated at the server.
 
-Not all resource allocators support all the features listed above.
-Consult the allocator documentation for what is supported and how those
+Not all resource allocators support all the features listed above. Consult the allocator
+documentation to see what is supported and to find out how the 
 features are translated to the system the allocator interfaces with.
 
