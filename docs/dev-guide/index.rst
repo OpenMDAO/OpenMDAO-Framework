@@ -2,7 +2,7 @@
 .. _Developer-Guide:
 
 =================
-Developer Guide
+Code Development
 =================
 
 .. toctree::
@@ -13,7 +13,6 @@ Developer Guide
    issues
    testing
    git
-   todo
    
 
 

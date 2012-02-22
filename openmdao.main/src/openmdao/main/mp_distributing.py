@@ -196,8 +196,8 @@ class Cluster(OpenMDAO_Manager):  #pragma no cover
             if waiting:
                 if not host_processed:
                     retry += 1
-                    if retry < 600:  # ~60 seconds.
-                        time.sleep(0.1)
+                    if retry < 300:  # ~60 seconds.
+                        time.sleep(0.2)
                     else:
                         _LOGGER.warning('Cluster startup timeout,'
                                         ' hosts not started:')

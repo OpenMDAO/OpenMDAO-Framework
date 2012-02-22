@@ -5,7 +5,7 @@
 # Perform an unconstrained optimization on our paraboloid using CONMIN.
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver
 
 from openmdao.examples.simple.paraboloid import Paraboloid
@@ -13,12 +13,10 @@ from openmdao.examples.simple.paraboloid import Paraboloid
 class OptimizationUnconstrained(Assembly):
     """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
         # pylint: disable-msg=E1101
-        
-        super(OptimizationUnconstrained, self).__init__()
 
         # Create CONMIN Optimizer instance
         self.add('driver', CONMINdriver())
@@ -48,7 +46,6 @@ if __name__ == "__main__": # pragma: no cover
     import time
     
     opt_problem = OptimizationUnconstrained()
-    set_as_top(opt_problem)
 
     tt = time.time()
     opt_problem.run()

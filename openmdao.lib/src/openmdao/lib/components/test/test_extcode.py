@@ -75,8 +75,7 @@ class Model(Assembly):
     infile = File(iotype='in', local_path='input')
     outfile = File(iotype='out', path='output')
 
-    def __init__(self):
-        super(Model, self).__init__()
+    def configure(self):
         self.add('a', Unique())
         self.add('b', Unique())
         self.driver.workflow.add(['a', 'b'])
@@ -94,6 +93,7 @@ class TestCase(unittest.TestCase):
             out.write(INP_DATA)
         if os.path.exists(ENV_FILE):
             os.remove(ENV_FILE)
+        dum = Assembly() # create this here to prevent any Assemblies in tests to be 'first'
         
     def tearDown(self):
         for directory in ('a', 'b'):
@@ -124,6 +124,7 @@ class TestCase(unittest.TestCase):
         sleeper.external_files.append(
             FileMetadata(path=ENV_FILE, output=True))
         sleeper.infile = FileRef(INP_FILE, sleeper, input=True)
+        sleeper.stderr = None
 
         sleeper.run()
 
@@ -138,6 +139,13 @@ class TestCase(unittest.TestCase):
         with sleeper.outfile.open() as inp:
             result = inp.read()
         self.assertEqual(result, INP_DATA)
+
+        # Force an error.
+        sleeper.stderr = 'sleep.err'
+        sleeper.delay = -1
+        assert_raises(self, 'sleeper.run()', globals(), locals(), RuntimeError,
+                      ': return_code = 1')
+        sleeper.delay = 1
 
         # Redirect stdout & stderr.
         sleeper.env_vars = {'SLEEP_ECHO': '1'}
@@ -206,7 +214,8 @@ class TestCase(unittest.TestCase):
         sleeper.external_files.append(
             FileMetadata(path=ENV_FILE, output=True))
         sleeper.infile = FileRef(INP_FILE, sleeper, input=True)
-        sleeper.resources = {'n_cpus': 1}
+        sleeper.timeout = 5
+        sleeper.resources = {'min_cpus': 1}
 
         sleeper.run()
 
@@ -222,20 +231,35 @@ class TestCase(unittest.TestCase):
             result = inp.read()
         self.assertEqual(result, INP_DATA)
 
+        # Null input file.
+        sleeper.stdin = ''
+        assert_raises(self, 'sleeper.run()', globals(), locals(), ValueError,
+                      ": Remote execution requires stdin of DEV_NULL or"
+                      " filename, got ''")
+
+        # Specified stdin, stdout, and join stderr.
+        with open('sleep.in', 'w') as out:
+            out.write('froboz is a pig!\n')
+        sleeper.stdin = 'sleep.in'
+        sleeper.stdout = 'sleep.out'
+        sleeper.stderr = ExternalCode.STDOUT
+        sleeper.run()
+
+        # Null stderr.
+        sleeper.stderr = None
+        sleeper.run()
+
     def test_bad_alloc(self):
         logging.debug('')
         logging.debug('test_bad_alloc')
 
         extcode = set_as_top(ExternalCode())
         extcode.command = ['python', 'sleep.py']
-        extcode.resources = {'no_such_resource': 1}
+        extcode.resources = {'allocator':'LocalHost',
+                             'localhost': False}
 
-        try:
-            extcode.run()
-        except RuntimeError as exc:
-            self.assertEqual(str(exc), ': Server allocation failed :-(')
-        else:
-            self.fail('Exected RuntimeError')
+        assert_raises(self, 'extcode.run()', globals(), locals(),
+                      RuntimeError, ': Server allocation failed')
 
     def test_copy(self):
         logging.debug('')
@@ -329,7 +353,7 @@ class TestCase(unittest.TestCase):
         try:
             extcode.run()
         except ValueError as exc:
-            self.assertEqual(str(exc), ': Null command line')
+            self.assertEqual(str(exc), ': Empty command list')
         else:
             self.fail('Expected ValueError')
         finally:
@@ -341,10 +365,13 @@ class TestCase(unittest.TestCase):
         logging.debug('test_unique')
 
         model = Model()
-        for comp in (model.a, model.b):
-            self.assertEqual(comp.create_instance_dir, True)
-        self.assertNotEqual(model.a.directory, 'a')
-        self.assertNotEqual(model.b.directory, 'b')
+        ## This part isn't valid any more because Assemblies now do not configure
+        ## themselves unless they're part of a rooted hierarchy. That means in this
+        ## case that model.a and model.b won't exist until set_as_top is called on model
+        #for comp in (model.a, model.b):
+            #self.assertEqual(comp.create_instance_dir, True)
+        #self.assertNotEqual(model.a.directory, 'a')
+        #self.assertNotEqual(model.b.directory, 'b')
 
         set_as_top(model)
         for comp in (model.a, model.b):

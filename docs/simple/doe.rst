@@ -22,7 +22,7 @@ variable. Create a file called ``doe.py`` and copy the following into it:
 
 .. testcode:: simple_model_doe
 
-    from openmdao.main.api import Assembly, set_as_top
+    from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.doegenerators.api import FullFactorial
     from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -31,8 +31,7 @@ variable. Create a file called ``doe.py`` and copy the following into it:
     
     class Analysis(Assembly): 
     
-        def __init__(self): 
-            super(Analysis,self).__init__()
+        def configure(self):
             
             self.add('paraboloid',Paraboloid())
             
@@ -79,7 +78,7 @@ if you notice, we specified a ListCasRecorder as part of a list.
 
 .. testsetup:: simple_model_doe_pieces
     
-    from openmdao.main.api import Assembly, set_as_top
+    from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.doegenerators.api import FullFactorial
     from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -88,8 +87,7 @@ if you notice, we specified a ListCasRecorder as part of a list.
     
     class Analysis(Assembly): 
     
-        def __init__(self): 
-            super(Analysis,self).__init__()
+        def configure(self):
             
             self.add('paraboloid',Paraboloid())
             
@@ -130,7 +128,7 @@ To run this analysis, you would do the following:
 
 .. testsetup:: simple_model_doe_run
 
-    from openmdao.main.api import Assembly, set_as_top
+    from openmdao.main.api import Assembly
     from openmdao.lib.drivers.api import DOEdriver
     from openmdao.lib.doegenerators.api import FullFactorial
     from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -140,8 +138,7 @@ To run this analysis, you would do the following:
     
     class Analysis(Assembly): 
         
-        def __init__(self): 
-            super(Analysis,self).__init__()
+        def configure(self):
             
             self.add('paraboloid',Paraboloid())
             
@@ -167,7 +164,6 @@ To run this analysis, you would do the following:
         import time
         
         analysis = Analysis()
-        set_as_top(analysis)
     
         tt = time.time()
         analysis.run() 
@@ -198,7 +194,6 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
         from numpy import array  
         
         analysis = Analysis()
-        set_as_top(analysis)
     
         tt = time.time()
         analysis.run() 
@@ -243,12 +238,12 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
 If you would like to try this yourself, you can 
 download the whole file :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.    
 
-
-Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
-it's possible to run the various cases concurrently.  If evaluating a case
-takes considerable time and you have a multiprocessor machine, setting
-``analysis.driver.sequential`` to False will cause the cases to be evaluated
-concurrently, based on available resources, which will usually be quicker.
-Note that concurrent evaluation means you can't rely on the recorded cases
-being in the order you might expect.
+..
+  Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
+  it's possible to run the various cases concurrently.  If evaluating a case
+  takes considerable time and you have a multiprocessor machine, setting
+  ``analysis.driver.sequential`` to False will cause the cases to be evaluated
+  concurrently, based on available resources, which will usually be quicker.
+  Note that concurrent evaluation means you can't rely on the recorded cases
+  being in the order you might expect.
 

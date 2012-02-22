@@ -463,7 +463,5 @@ class PdcylComp(ExternalCode):
 
 if __name__ == "__main__": # pragma: no cover         
 
-    from openmdao.main.api import set_as_top
-    
-    my_comp = set_as_top(PdcylComp())
+    my_comp = PdcylComp()
     my_comp.run()

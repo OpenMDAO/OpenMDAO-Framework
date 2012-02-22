@@ -19,10 +19,11 @@ from openmdao.main.rbac import rbac
 from openmdao.main.resource import FactoryAllocator, \
                                    HOME_DIRECTORY, WORKING_DIRECTORY
 
-from openmdao.util.shellproc import ShellProc, STDOUT
+from openmdao.util.shellproc import ShellProc, STDOUT, DEV_NULL
 
 # Translate illegal job name characters.
-_XLATE = string.maketrans(' \n\t\r/:@\\*?', '__________')
+# (Job name may be used as script filename, so we're more restrictive than PBS)
+_XLATE = string.maketrans(' \n\r\t/\\:;*?.[]%$', '_______________')
 
 
 class PBS_Allocator(FactoryAllocator):
@@ -32,8 +33,8 @@ class PBS_Allocator(FactoryAllocator):
     name: string
         Name of allocator, used in log messages, etc.
 
-    account_id: string
-        Default value for the ``account_id`` resource key.
+    accounting_id: string
+        Default value for the ``accounting_id`` resource key.
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
@@ -51,17 +52,17 @@ class PBS_Allocator(FactoryAllocator):
     Resource configuration file entry equivalent to defaults::
 
         [PBS]
-        classname: pbs.PBS_Allocator
-        account_id: no-default-set
+        classname: openmdao.main.pbs.PBS_Allocator
+        accounting_id: no-default-set
         authkey: PublicKey
         allow_shell: True
 
     """
 
-    def __init__(self, name='PBS', account_id='no-default-set',
+    def __init__(self, name='PBS', accounting_id='no-default-set',
                  authkey=None, allow_shell=True):
         super(PBS_Allocator, self).__init__(name, authkey, allow_shell)
-        os.environ['OPENMDAO_PBS_ACCOUNTID'] = account_id
+        self.accounting_id = accounting_id
         self.factory.manager_class = _ServerManager
         self.factory.server_classname = 'pbs_pbs_PBS_Server'
 #FIXME: need to somehow determine available cpus.
@@ -76,13 +77,12 @@ class PBS_Allocator(FactoryAllocator):
             Configuration data is located under the section matching
             this allocator's `name`.
 
-        Allows modifying `account_id` and factory options.
+        Allows modifying `accounting_id` and factory options.
         """
         super(PBS_Allocator, self).configure(cfg)
-        if cfg.has_option(self.name, 'account_id'):
-            account_id = cfg.get(self.name, 'account_id')
-            self._logger.debug('    account_id: %s', account_id)
-            os.environ['OPENMDAO_PBS_ACCOUNTID'] = account_id
+        if cfg.has_option(self.name, 'accounting_id'):
+            self.accounting_id = cfg.get(self.name, 'accounting_id')
+            self._logger.debug('    accounting_id: %s', self.accounting_id)
 
     @rbac('*')
     def max_servers(self, resource_desc):
@@ -98,8 +98,8 @@ class PBS_Allocator(FactoryAllocator):
         retcode, info = self.check_compatibility(resource_desc)
         if retcode != 0:
             return (0, info)
-        elif 'n_cpus' in resource_desc:
-            return (self.n_cpus / resource_desc['n_cpus'], {})
+        elif 'min_cpus' in resource_desc:
+            return (self.n_cpus / resource_desc['min_cpus'], {})
         else:
             return (self.n_cpus, {})
 
@@ -152,19 +152,52 @@ class PBS_Allocator(FactoryAllocator):
             if key == 'localhost':
                 if value:
                     return (-2, {key: 'requested local host'})
-            elif key == 'n_cpus':
+            elif key == 'min_cpus':
                 if self.n_cpus < value:
-                    return (-2, {'n_cpus': 'want %s, have %s'
-                                           % (value, self.n_cpus)})
+                    return (-2, {'min_cpus': 'want %s, have %s'
+                                             % (value, self.n_cpus)})
+            elif key == 'max_cpus':
+                pass
             else:
                 return (-2, {key: 'unrecognized key'})
         return (0, {})
+
+    @rbac('*')
+    def deploy(self, name, resource_desc, criteria):
+        """
+        Deploy a server suitable for `resource_desc`.
+        Returns a proxy to the deployed server.
+        Overrides superclass to pass `accounting_id` to server.
+
+        name: string
+            Name for server.
+
+        resource_desc: dict
+            Description of required resources.
+
+        criteria: dict
+            The dictionary returned by :meth:`time_estimate`.
+        """
+        server = super(PBS_Allocator, self).deploy(name, resource_desc,
+                                                   criteria)
+        server.configure(self.accounting_id)
+        return server
 
 
 class PBS_Server(ObjServer):
     """ Knows about executing a command via `qsub`. """
 
     _QSUB = ['qsub']  # Replaced with fake command for testing.
+
+    @rbac('owner')
+    def configure(self, accounting_id):
+        """
+        Configure default accounting id.
+
+        accounting_id: string
+            Used as default ``accounting_id`` value.
+        """
+        self.accounting_id = accounting_id
 
     @rbac('owner')
     def execute_command(self, resource_desc):
@@ -184,17 +217,27 @@ class PBS_Server(ObjServer):
         ========================= ===========================
         Resource Key              Translation
         ========================= ===========================
-        account_id                -W group_list= `value`
+        submit_as_hold            -h
         ------------------------- ---------------------------
-        queue                     -q `value`
-        ------------------------- ---------------------------
-        job_name                  -N `value`
+        rerunnable                -r y|n
         ------------------------- ---------------------------
         working_directory         Handled in generated script
         ------------------------- ---------------------------
-        parallel_environment      Ignored
+        job_category              Ignored
         ------------------------- ---------------------------
-        n_cpus                    -l select= `value` :ncpus=1
+        min_cpus                  -l select= `value` :ncpus=1
+        ------------------------- ---------------------------
+        max_cpus                  Ignored
+        ------------------------- ---------------------------
+        min_phys_memory           Ignored
+        ------------------------- ---------------------------
+        email                     -M `value`
+        ------------------------- ---------------------------
+        email_on_started          -m b
+        ------------------------- ---------------------------
+        email_on_terminated       -m e
+        ------------------------- ---------------------------
+        job_name                  -N `value`
         ------------------------- ---------------------------
         input_path                Handled in generated script
         ------------------------- ---------------------------
@@ -204,25 +247,17 @@ class PBS_Server(ObjServer):
         ------------------------- ---------------------------
         join_files                Handled in generated script
         ------------------------- ---------------------------
-        email                     -M `value`
+        reservation_id            Ignored
         ------------------------- ---------------------------
-        block_email               -m n
+        queue_name                -q `value`
         ------------------------- ---------------------------
-        email_events              -m `value`
+        priority                  -p `value`
         ------------------------- ---------------------------
         start_time                -a `value`
         ------------------------- ---------------------------
         deadline_time             Ignored
         ------------------------- ---------------------------
-        hard_wallclock_time_limit -l walltime= `value`
-        ------------------------- ---------------------------
-        soft_wallclock_time_limit -l walltime= `value`
-        ------------------------- ---------------------------
-        hard_run_duration_limit   -l walltime= `value`
-        ------------------------- ---------------------------
-        soft_run_duration_limit   -l walltime= `value`
-        ------------------------- ---------------------------
-        job_category              Ignored
+        accounting_id             -W group_list= `value`
         ========================= ===========================
 
         Where `value` is the corresponding resource value.
@@ -240,18 +275,39 @@ class PBS_Server(ObjServer):
         If 'native_specification' is specified, it is added to the `qsub`
         command just before the name of the generated script.
 
+        Some resource limits are also handled:
+
+        ==================== =========================
+        Resource Key         Translation
+        ==================== =========================
+        core_file_size       Ignored
+        -------------------- -------------------------
+        data_seg_size        Ignored
+        -------------------- -------------------------
+        file_size            Ignored
+        -------------------- -------------------------
+        open_files           Ignored
+        -------------------- -------------------------
+        stack_size           Ignored
+        -------------------- -------------------------
+        virtual_memory       Ignored
+        -------------------- -------------------------
+        cpu_time             Ignored
+        -------------------- -------------------------
+        wallclock_time       -l walltime= `value`
+        ==================== =========================
+
         Output from `qsub` itself is routed to ``qsub.out``.
         """
         self.home_dir = os.path.expanduser('~')
         self.work_dir = ''
-        dev_null = 'nul:' if sys.platform == 'win32' else '/dev/null'
 
         cmd = list(self._QSUB)
         cmd.extend(('-V', '-W', 'block=true', '-j', 'oe'))
-        if sys.platform == 'win32':
+        if sys.platform == 'win32':  # pragma no cover
             prefix = 'REM PBS'
-            cmd.extend(('-C', prefix))
-            suffix = '.bat'
+            cmd.extend(('-C', '"%s"' % prefix))
+            suffix = '-qsub.bat'
         else:
             prefix = '#PBS'
             cmd.extend(('-S', '/bin/sh'))
@@ -272,55 +328,66 @@ class PBS_Server(ObjServer):
         # 'qsub' command line. We have to do this since otherwise there's
         # no way to set an execution directory or input path.
         if 'job_name' in resource_desc:
-            base = resource_desc['job_name']
+            base = self._jobname(resource_desc['job_name'])
         else:
             base = os.path.basename(resource_desc['remote_command'])
         script_name = '%s%s' % (base, suffix)
 
         with open(script_name, 'w') as script:
-            if sys.platform == 'win32':
+            if sys.platform == 'win32':  # pragma no cover
                 script.write('@echo off\n')
             else:
                 script.write('#!/bin/sh\n')
 
-            if 'account_id' in resource_desc:
-                account_id = resource_desc['account_id']
+            # PBS (at least at NAS) requires 'group_list' be set.
+            if 'accounting_id' in resource_desc:
+                accounting_id = resource_desc['accounting_id']
             else:
-                account_id = os.environ.get('OPENMDAO_PBS_ACCOUNTID', None)
-            script.write('%s -W group_list=%s\n' % (prefix, account_id.strip()))
+                accounting_id = self.accounting_id
+            script.write('%s -W group_list=%s\n'
+                         % (prefix, accounting_id.strip()))
 
             # Process description in fixed, repeatable order.
-            keys = ('queue',
-                    'job_name',
+            keys = ('submit_as_hold',
+                    'rerunnable',
                     'job_environment',
-                    'n_cpus',
+                    'min_cpus',
+                    'email',
+                    'email_on_started',
+                    'email_on_terminated',
+                    'job_name',
                     'input_path',
                     'output_path',
                     'error_path',
                     'join_files',
-                    'email',
-                    'block_email',
-                    'email_events',
-                    'start_time',
-                    'hard_wallclock_time_limit',
-                    'soft_wallclock_time_limit',
-                    'hard_run_duration_limit',
-                    'soft_run_duration_limit')
+                    'queue_name',
+                    'priority',
+                    'start_time')
 
+            email_events = ''
             for key in keys:
                 try:
                     value = resource_desc[key]
                 except KeyError:
                     continue
 
-                if key == 'queue':
-                    script.write('%s -q %s\n' % (prefix, value))
-                elif key == 'job_name':
-                    script.write('%s -N %s\n' % (prefix, self._jobname(value)))
+                if key == 'submit_as_hold':
+                    if value:
+                        script.write('%s -h\n' % prefix)
+                elif key == 'rerunnable':
+                    script.write('%s -r %s\n' % (prefix, 'y' if value else 'n'))
                 elif key == 'job_environment':
                     env = value
-                elif key == 'n_cpus':
+                elif key == 'min_cpus':
                     script.write('%s -l select=%d:ncpus=1\n' % (prefix, value))
+                elif key == 'email':
+                    script.write('%s -M %s\n' % (prefix, ','.join(value)))
+                elif key == 'email_on_started':
+                    email_events += 'b'
+                elif key == 'email_on_terminated':
+                    email_events += 'e'
+                elif key == 'job_name':
+                    script.write('%s -N %s\n' % (prefix, self._jobname(value)))
                 elif key == 'input_path':
                     inp = value
                 elif key == 'output_path':
@@ -329,32 +396,24 @@ class PBS_Server(ObjServer):
                     err = value
                 elif key == 'join_files':
                     join_files = value
-                elif key == 'email':
-                    script.write('%s -M %s\n' % (prefix, ','.join(value)))
-                elif key == 'block_email':
-                    if value:
-                        script.write('%s -m n\n' % prefix)
-                elif key == 'email_events':
-                    value = value.replace('s', '')  # No suspend event
-                    if value:
-                        script.write('%s -m %s\n' % (prefix, value))
+                elif key == 'queue_name':
+                    script.write('%s -q %s\n' % (prefix, value))
+                elif key == 'priority':
+                    script.write('%s -p %d\n' % (prefix, value))
                 elif key == 'start_time':
-                    script.write('%s -a %s\n' % (prefix, value))
-                elif key == 'hard_wallclock_time_limit':
+                    script.write('%s -a %s\n'
+                                 % (prefix, value.strftime('%Y%m%d%H%M.%S')))
+
+            if email_events:
+                script.write('%s -m %s\n' % (prefix, email_events))
+
+            # Set resource limits.
+            if 'resource_limits' in resource_desc:
+                limits = resource_desc['resource_limits']
+                if 'wallclock_time' in limits:
+                    wall_time = limits['wallclock_time']
                     script.write('%s -l walltime=%s\n'
-                                 % (prefix, self._timelimit(value)))
-                elif key == 'soft_wallclock_time_limit':
-                    script.write('%s -l walltime=%s\n'
-                                 % (prefix, self._timelimit(value)))
-                elif key == 'hard_run_duration_limit':
-                    script.write('%s -l walltime=%s\n'
-                                 % (prefix, self._timelimit(value)))
-                elif key == 'soft_run_duration_limit':
-                    script.write('%s -l walltime=%s\n'
-                                 % (prefix, self._timelimit(value)))
-    
-            if 'native_specification' in resource_desc:
-                cmd.extend(resource_desc['native_specification'])
+                                 % (prefix, self._timelimit(wall_time)))
 
             # Have script move to work directory relative to
             # home directory on execution host.
@@ -362,7 +421,7 @@ class PBS_Server(ObjServer):
             work = os.path.realpath(self.work_dir or os.getcwd())
             if work.startswith(home):
                 work = work[len(home)+1:]
-                if sys.platform == 'win32':
+                if sys.platform == 'win32':  # pragma no cover
                     script.write('cd %HOMEDRIVE%%HOMEPATH%\n')
                 else:
                     script.write('cd $HOME\n')
@@ -378,20 +437,25 @@ class PBS_Server(ObjServer):
                 for arg in resource_desc['args']:
                     script.write(' %s' % self._fix_path(arg))
 
-            script.write(' <%s' % (inp or dev_null))
+            script.write(' <%s' % (inp or DEV_NULL))
             script.write(' >%s' % (out or '%s.stdout' % base))
             if join_files or err is None:
                 script.write(' 2>&1')
             else:
                 script.write(' 2>%s' % err)
             script.write('\n')
-            if sys.platform != 'win32':
-                os.chmod(script_name, 0700)
+
+        if sys.platform != 'win32':
+            os.chmod(script_name, 0700)
+
+        # Add 'escape' clause.
+        if 'native_specification' in resource_desc:
+            cmd.extend(resource_desc['native_specification'])
 
         cmd.append(os.path.join('.', script_name))
         self._logger.info('%r', ' '.join(cmd))
         try:
-            process = ShellProc(cmd, dev_null, 'qsub.out', STDOUT, env)
+            process = ShellProc(cmd, DEV_NULL, 'qsub.out', STDOUT, env)
         except Exception as exc:
             self._logger.error('exception creating process: %s', exc)
             raise

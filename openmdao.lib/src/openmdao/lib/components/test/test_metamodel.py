@@ -76,10 +76,16 @@ class Dummy(Component):
 
     def execute(self): 
         self.y = 2*self.x
+        
+class DummyError(Component): 
+    x = Float(1.2,iotype="in")
+    y = Float(0,iotype="out")
+
+    def execute(self): 
+        self.raise_exception("Test Error",RuntimeError)
 
 class Sim(Assembly):
-    def __init__(self): 
-        super(Sim,self).__init__()
+    def configure(self):
 
         self.add('mm',MetaModel())
         self.mm.surrogate = {'default':KrigingSurrogate()}
@@ -122,6 +128,23 @@ class MetaModelTestCase(unittest.TestCase):
         asm.connect('metamodel.d','comp2.b')
         return asm
         
+    def test_comp_error(self): 
+        a = Assembly()
+        a.add('m',MetaModel()) 
+        a.m.surrogate = {'default':KrigingSurrogate()}
+        a.m.model = DummyError()
+        
+        a.m.train_next = True
+        
+        a.driver.workflow.add('m')
+        try: 
+            a.run()
+        except RuntimeError as err: 
+            self.assertEqual("m.model: Test Error",str(err))
+        else: 
+            self.fail("RuntimeError expected")
+
+    
     def test_in_assembly(self):
         asm = self._get_assembly()
         self.assertEqual(set(asm.list_connections()), 
@@ -369,7 +392,7 @@ class MetaModelTestCase(unittest.TestCase):
         
         
     def test_reset_nochange_inputs(self):
-        s = Sim()
+        s = set_as_top(Sim())
         
         s.mm.train_next = True
         s.mm.x = 1
