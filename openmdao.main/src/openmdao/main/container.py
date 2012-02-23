@@ -485,6 +485,7 @@ class Container(HasTraits):
                 'add does not allow dotted path names like %s' %
                 name, ValueError)
         if is_instance(obj, Container):
+            self._check_recursion(obj)
             if isinstance(obj, OpenMDAO_Proxy):
                 obj.parent = self._get_proxy(obj)
             else:
@@ -510,6 +511,18 @@ class Container(HasTraits):
                     "' object is not an instance of Container.",
                     TypeError)
         return obj
+
+    def _check_recursion(self, obj):
+        """ Check if adding `obj` will cause container recursion. """
+        ancestors = set()
+        ancestors.add(self)
+        parent = self.parent
+        while is_instance(parent, Container):
+            ancestors.add(parent)
+            parent = parent.parent
+        if obj in ancestors:
+            self.raise_exception('add would cause container recursion',
+                                 ValueError)
 
     def _get_proxy(self, proxy):
         """
