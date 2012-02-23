@@ -83,6 +83,20 @@ class ExprMapper(object):
         self._compgraph = None  # component dependency graph
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
     
+    def get_source(self, dest_expr):
+        """Returns the source expression that is connected to the given 
+        destination expression.
+        """
+        srctxt = self._exprgraph.pred[dest_expr].keys()[0]
+        return self._exprgraph.node(srctxt)['expr']
+    
+    def get_dests(self, src_expr):
+        """Returns the list of destination expressions that are connected to the given 
+        source expression.
+        """
+        graph = self._exprgraph
+        return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
+    
     def get_compgraph(self):
         """Return the cached component graph or create a new one if it doesnt' exist."""
         if self._compgraph is None:
@@ -113,8 +127,10 @@ class ExprMapper(object):
     def _create_compgraph(self):
         """Create a new component graph based on information in the expression graph."""
         graph = nx.DiGraph()
-        for src,dest,data in self._exprgraph.edges(data=True):
-            self._update_compgraph(graph, data['src_expr'], data['dest_expr'])
+        for src,dest in self._exprgraph.edges():
+            self._update_compgraph(graph, 
+                                   self._exprgraph.node(src)['expr'], 
+                                   self._exprgraph.node(dest)['expr'])
         return graph
         
     def connect(self, src, dest, scope):
@@ -125,8 +141,8 @@ class ExprMapper(object):
         src = eliminate_expr_ws(src)
         dest = eliminate_expr_ws(dest)
         
-        if self._exprgraph.pred.get(dest):
-            raise RuntimeError("%s is already connected to a source" % dest)
+        if dest in self._exprgraph:
+            raise RuntimeError("%s is already connected to source %s" % (dest, self.get_source(dest)))
         
         destexpr = ExprEvaluator(dest, scope)
         srcexpr = ExprEvaluator(src, scope)
@@ -146,7 +162,11 @@ class ExprMapper(object):
         self._update_compgraph(compgraph, srcexpr, destexpr)
                 
         if is_directed_acyclic_graph(compgraph):
-            self._exprgraph.add_edge(src, dest, src_expr=srcexpr, dest_expr=destexpr)
+            if src not in self._exprgraph:
+                self._exprgraph.add_node(src, expr=srcexpr)
+            if dest not in self._exprgraph:
+                self._exprgraph.add_node(dest, expr=destexpr)
+            self._exprgraph.add_edge(src, dest)
         else:   # cycle found
             self._compgraph = None  # force regeneration of compgraph next time
             strongly_connected = strongly_connected_components(compgraph)
@@ -459,17 +479,24 @@ class Assembly (Component):
             return newsrcs
         
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname, varnames):
-        """Transfer input data to input variables on the specified component.
-        The varnames iterator is assumed to contain local names (no component name), 
-        for example: ['a', 'b'].
+    def update_inputs(self, compname, exprs):
+        """Transfer input data to input expressions on the specified component.
+        The exprs iterator is assumed to contain expression strings that reference
+        component variables relative to the component, e.g., 'abc[3][1]' rather
+        than 'comp1.abc[3][1]'.
         """
         parent = self.parent
-        vset = set(varnames)
-        if compname[0] == '@':
+        if compname is None: # update boundary outputs (which are inputs in this scope)
             destcomp = self
+            exprpaths = exprs
         else:
             destcomp = getattr(self, compname)
+            exprpaths = ['.'.join(compname, n) for n in exprs]
+        
+        for expr in exprpaths:
+            srcexpr = self._expr_mapper.get_source(expr)
+            
+            
         for srccompname,srcs,dests in self._expr_mapper.in_map(compname, vset):
             if srccompname == '@bin':   # boundary inputs
                 invalid_srcs = [s for s in srcs if not self._valid_dict[s]]
@@ -520,7 +547,7 @@ class Assembly (Component):
         """
         simple, compmap = partition_names_by_comp(outnames)
         if simple:  # boundary outputs
-            self.update_inputs('@bout', simple)
+            self.update_inputs(None, simple)
         for cname, vnames in compmap.items():  # auto passthroughs to internal variables
             getattr(self, cname).update_outputs(vnames)
             self.set_valid(vnames, True)
