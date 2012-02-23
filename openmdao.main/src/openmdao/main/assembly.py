@@ -84,45 +84,48 @@ class ExprMapper(object):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
     
     def get_compgraph(self):
+        """Return the cached component graph or create a new one if it doesnt' exist."""
         if self._compgraph is None:
             self._compgraph = self._create_compgraph()
         return self._compgraph
     
     def _update_compgraph(self, graph, srcexpr, destexpr):
+        """Update the component graph based on a new connection between a source expression
+        and a destination expression.
+        """
         src = srcexpr.text
         dest = destexpr.text
         destcomps = destexpr.get_referenced_compnames()
         if len(destcomps) == 0:
             pass  # boundary output
         else:
+            destcomp = destcomps.pop()
             for srccomp in srcexpr.get_referenced_compnames():
                 try:
-                    graph[srccomp][destcomps[0]]['srcexprs'][dest] = src
-                    graph[srccomp][destcomps[0]]['destexprs'][src].append(dest)
+                    graph[srccomp][destcomp]['srcexprs'][dest] = src
+                    graph[srccomp][destcomp]['destexprs'][src].append(dest)
                 except KeyError:
                     srcexprs = { dest: src }
                     destexprs = { src: [dest] }
-                    graph.add_edge(srccomp, destcomps[0], srcexprs=srcexprs, destexprs=destexprs)
+                    graph.add_edge(srccomp, destcomp, srcexprs=srcexprs, destexprs=destexprs)
         return graph
     
     def _create_compgraph(self):
+        """Create a new component graph based on information in the expression graph."""
         graph = nx.DiGraph()
         for src,dest,data in self._exprgraph.edges(data=True):
             self._update_compgraph(graph, data['src_expr'], data['dest_expr'])
         return graph
         
-    def add(self, name):
-        compgraph = self.get_compgraph()
-        compgraph.add_node(name)
-
     def connect(self, src, dest, scope):
+        """Connect a source expression to a destination expression."""
         
         # make sure we don't have any whitespace buried within the expression that would cause
         # two versions of the same expression (one with ws and one without) to appear different
         src = eliminate_expr_ws(src)
         dest = eliminate_expr_ws(dest)
         
-        if self._exprgraph.pred(dest):
+        if self._exprgraph.pred.get(dest):
             raise RuntimeError("%s is already connected to a source" % dest)
         
         destexpr = ExprEvaluator(dest, scope)
@@ -137,7 +140,7 @@ class ExprMapper(object):
         
         compgraph = self.get_compgraph()
         
-        if destcomps and destcomps[0] in srccomps:
+        if destcomps and destcomps.pop() in srccomps:
             raise RuntimeError("source expression '%s' and destination expression '%s' both refer to component %s" % (src,dest,destcomp))
             
         self._update_compgraph(compgraph, srcexpr, destexpr)
@@ -171,24 +174,29 @@ class ExprMapper(object):
             If True, force invalidation to continue even if a component in
             the dependency chain was already invalid.
         """
+        compgraph = self.get_compgraph()
         stack = zip(cnames, varsets)
         outset = set()  # set of changed boundary outputs
         while(stack):
-            src, varset = stack.pop()
-            for dest,link in self.out_links(src):
-                if varset is None:
-                    srcvars = set(link._srcs.keys())
-                else:
-                    srcvars = varset
-                if dest == '@bout':
-                    outset.update(link.get_dests(varset))
-                else:
-                    dests = link.get_dests(varset)
-                    if dests:
-                        comp = getattr(scope, dest)
-                        outs = comp.invalidate_deps(varnames=dests, force=force)
-                        if (outs is None) or outs:
-                            stack.append((dest, outs))
+            srccomp, varset = stack.pop()
+            for srcnode, destcomp, data in compgraph.edges(srccomp, data=True):
+                invalid_destvars = []
+                # if varset is None that means that ALL outputs of srccomp are invalid,
+                #    so invalidate all connected destinations
+                # if varset is not None, then invalidate any destinations connected to
+                #    src expressions that reference the invalid outputs
+                for srcexpr, destexprs in data['src_exprs'].items():
+                    if varset is None or varset.intersection(srcexpr.get_referenced_varpaths()):
+                        invalid_dests.extend([d.text for d in destexprs])
+                        for destexpr in destexprs:
+                            varpaths = destexpr.get_referenced_varpaths()
+                            invalid_destvars = [vp for vp in varpaths if '.' in vp]
+                            outset.update([vp for vp in varpaths if '.' not in vp])
+                if invalid_destvars:
+                    comp = getattr(scope, destcomp)
+                    outs = comp.invalidate_deps(varnames=invalid_destvars, force=force)
+                    if (outs is None) or outs:
+                        stack.append((destcomp, outs))
         return outset
 
 
@@ -212,16 +220,16 @@ class Assembly (Component):
         
         set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
         
-    def add(self, name, obj):
-        """Call the base class *add*.  Then,
-        if obj is a Component, add it to the component graph.
+    #def add(self, name, obj):
+        #"""Call the base class *add*.  Then,
+        #if obj is a Component, add it to the component graph.
         
-        Returns the added object.
-        """
-        obj = super(Assembly, self).add(name, obj)
-        if is_instance(obj, Component):
-            self._expr_mapper.add(obj.name)
-        return obj
+        #Returns the added object.
+        #"""
+        #obj = super(Assembly, self).add(name, obj)
+        ##if is_instance(obj, Component):
+            ##self._expr_mapper.add(obj.name)
+        #return obj
         
     def remove(self, name):
         """Remove the named container object from this assembly and remove
