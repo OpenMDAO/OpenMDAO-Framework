@@ -4,7 +4,7 @@ from openmdao.main.api import Driver, Architecture,SequentialWorkflow
 
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
+from openmdao.lib.drivers.api import SLSQP_driver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
 
 class BLISS(Architecture): 
@@ -90,7 +90,8 @@ class BLISS(Architecture):
         
         bbopts = []
         for comp,local_params in local_dvs.iteritems(): 
-            bbopt = self.parent.add('bbopt_%s'%comp,CONMINdriver())
+            bbopt = self.parent.add('bbopt_%s'%comp,SLSQP_driver())
+            bbopt.differentiator = FiniteDifference()
             bbopt.linobj = True
             bbopt.force_execute = True
             bbopts.append('bbopt_%s'%comp)
@@ -134,7 +135,8 @@ class BLISS(Architecture):
         df = []
         dg = []
         
-        sysopt = self.parent.add('sysopt', CONMINdriver())
+        sysopt = self.parent.add('sysopt', SLSQP_driver())
+        sysopt.differentiator = FiniteDifference()
         sysopt.recorders = self.data_recorders
         sysopt.linobj = True
         sysopt.force_execute = True    

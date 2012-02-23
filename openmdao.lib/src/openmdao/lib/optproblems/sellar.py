@@ -78,7 +78,6 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
         #print "(%f, %f, %f)" % (z1, z2, x1)        
 
 
-
 class Discipline2(Component):
     """Component containing Discipline 2"""
     
