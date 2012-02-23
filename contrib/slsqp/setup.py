@@ -28,11 +28,11 @@ if sys.platform == 'win32':
         os.environ['PATH'] = ';'.join(path)
 
 config = Configuration(name='slsqp')
-config.add_library('slsqp',
-    sources=['*.f'])
 config.add_extension('slsqp',
-    sources=['f2py/slsqp.pyf'],
-    libraries=['slsqp'])
+                     sources=['*.f',
+                              'f2py/slsqp.pyf'],
+                     include_dirs=include_dirs,
+                     library_dirs=library_dirs)
 config.add_data_files('LICENSE','README')
 
 kwds = {'install_requires':['numpy'],

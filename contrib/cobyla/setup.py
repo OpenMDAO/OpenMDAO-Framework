@@ -28,11 +28,11 @@ if sys.platform == 'win32':
         os.environ['PATH'] = ';'.join(path)
 
 config = Configuration(name='cobyla')
-config.add_library('cobyla',
-    sources=['*.f'])
 config.add_extension('cobyla',
-    sources=['f2py/cobyla.pyf'],
-    libraries=['cobyla'])
+                     sources=['*.f',
+                              'f2py/cobyla.pyf'],
+                     include_dirs=include_dirs,
+                     library_dirs=library_dirs)
 config.add_data_files('LICENSE','README')
 
 kwds = {'install_requires':['numpy'],
