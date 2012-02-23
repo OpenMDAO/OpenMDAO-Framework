@@ -23,6 +23,7 @@ class IDF(Architecture):
         #create the top level optimizer
         self.parent.add("driver",SLSQP_driver())
         self.parent.driver.differentiator = FiniteDifference()
+        self.parent.driver.iprint = -1
         self.parent.driver.recorders = self.data_recorders
         params = self.parent.get_parameters()
         global_dvs = []
@@ -50,6 +51,6 @@ class IDF(Architecture):
         #add the coupling vars parameters/constraints to the solver
         for key,couple in self.parent.get_coupling_vars().iteritems(): 
             self.parent.driver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99,name=key)
-            self.parent.driver.add_constraint("(%s-%s) = 0"%(couple.indep.target,couple.dep.target))
-            self.parent.driver.add_constraint("(%s-%s) = 0"%(couple.dep.target,couple.indep.target))
+            self.parent.driver.add_constraint("(%s-%s) <= .001"%(couple.indep.target,couple.dep.target))
+            self.parent.driver.add_constraint("(%s-%s) <= .001"%(couple.dep.target,couple.indep.target))
             
