@@ -47,8 +47,9 @@ class OptimizationConstrained(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     import time
+    from openmdao.main.api import set_as_top
     
-    opt_problem = OptimizationConstrained()
+    opt_problem = set_as_top(OptimizationConstrained())
     
     tt = time.time()
     opt_problem.run()
