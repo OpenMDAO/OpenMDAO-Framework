@@ -207,9 +207,9 @@ class CONMINdriver(DriverUsesDerivatives):
     cons_is_linear = Array(zeros(0,'i'), dtype=numpy_int, iotype='in', 
         desc='Array designating whether each constraint is linear.')
                  
-    iprint = Enum(0, [-1, 0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
+    iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
                     'information during CONMIN solution. Higher values are '
-                    'more verbose. 0 and -1 suppress all output.')
+                    'more verbose. 0 suppresses all output.')
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                     'termination.')
     fdch = Float(.01, iotype='in', desc='Relative change in parameters '

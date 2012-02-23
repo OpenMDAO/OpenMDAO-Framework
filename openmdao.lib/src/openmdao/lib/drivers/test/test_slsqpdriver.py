@@ -70,7 +70,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
         self.top.add('driver', SLSQP_driver())
         self.top.add('comp', OptRosenSuzukiComponent())
         self.top.driver.workflow.add('comp')
-        self.top.driver.iprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.differentiator = FiniteDifference()
         
     def tearDown(self):

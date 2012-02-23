@@ -20,6 +20,7 @@ except ImportError as err:
     
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
+from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
@@ -53,8 +54,8 @@ class SLSQP_driver(DriverUsesDerivatives):
     maxiter = Int(50, iotype='in', 
                    desc = 'Maximum number of iterations')
 
-    iprint = Enum(0, [-1, 0, 1, 2], iotype='in',
-                  desc = 'controls the frequency of output: -1 (no output),0,1,2')
+    iprint = Enum(0, [0, 1, 2, 3], iotype='in',
+                  desc = 'controls the frequency of output: 0 (no output),1,2,3')
     
     iout = Int(6, iotype='in',
                   desc = 'FORTRAN output unit. Leave this at 6 for STDOUT')
@@ -89,6 +90,10 @@ class SLSQP_driver(DriverUsesDerivatives):
         self.x = zeros(0,'d')
         self.x_lower_bounds = zeros(0,'d')
         self.x_upper_bounds = zeros(0,'d')
+        
+        # We auto-fill the slot because the gradient is required
+        # in this implementation
+        self.differentiator = FiniteDifference()
         
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
@@ -147,7 +152,7 @@ class SLSQP_driver(DriverUsesDerivatives):
               slsqp(self.ncon, self.neqcon, la, self.nparam, \
                     self.x, self.x_lower_bounds, self.x_upper_bounds, \
                     self.ff, self.gg, df, dg, self.accuracy, self.maxiter, \
-                    self.iprint, self.iout, self.output_filename, \
+                    self.iprint-1, self.iout, self.output_filename, \
                     self.error_code, w, lw, jw, ljw, \
                     self.nfunc, self.ngrad, \
                     self._func, self._grad)
@@ -237,11 +242,13 @@ class SLSQP_driver(DriverUsesDerivatives):
         self.differentiator.calc_gradient()
         self.ffd_order = 0
             
-        df[:-1] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
+        df[0:self.nparam] = \
+            self.differentiator.get_gradient(self.get_objectives().keys()[0])
 
         if self.ncon > 0 :
             for i, con in enumerate(self.get_constraints().keys()):
-                dg[i][:-1] = -self.differentiator.get_gradient(con)
+                dg[i][0:self.nparam] = \
+                    -self.differentiator.get_gradient(con)
         
         return df, dg
     

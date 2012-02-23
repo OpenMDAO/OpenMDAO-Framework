@@ -20,8 +20,8 @@ class SellarIDF(Assembly):
         self.add('driver', CONMINdriver())
 
         # Disciplines
-        self.add('dis1', sellar.Discipline1_WithDerivatives())
-        self.add('dis2', sellar.Discipline2_WithDerivatives())
+        self.add('dis1', sellar.Discipline1())
+        self.add('dis2', sellar.Discipline2())
         
         # Driver process definition
         self.driver.workflow.add(['dis1', 'dis2'])
