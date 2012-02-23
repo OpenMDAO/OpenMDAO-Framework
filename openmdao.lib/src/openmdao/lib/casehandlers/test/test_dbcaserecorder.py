@@ -169,13 +169,13 @@ class DBCaseRecorderTestCase(unittest.TestCase):
     def test_string(self):
         recorder = DBCaseRecorder()
         case = Case(inputs=[('str', 'Normal String'),
-                            ('unicode', u'Unicode String')])
+                            ('unicode', u'Unicode String'),
+                            ('list', ['Hello', 'world'])])  # Check pickling.
         recorder.record(case)
         for case in recorder.get_iterator():
-            self.assertTrue(isinstance(case['str'], str))
             self.assertEqual(case['str'], 'Normal String')
-            self.assertTrue(isinstance(case['unicode'], unicode))
             self.assertEqual(case['unicode'], u'Unicode String')
+            self.assertEqual(case['list'], ['Hello', 'world'])
 
 
 class NestedCaseTestCase(unittest.TestCase):
