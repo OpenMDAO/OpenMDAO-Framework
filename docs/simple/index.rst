@@ -14,6 +14,7 @@ Tutorial: The Basics
    constrained
    doe
    derivatives
+   optimizers
    variables
 
    
