@@ -514,15 +514,12 @@ class Container(HasTraits):
 
     def _check_recursion(self, obj):
         """ Check if adding `obj` will cause container recursion. """
-        ancestors = set()
-        ancestors.add(self)
-        parent = self.parent
-        while is_instance(parent, Container):
-            ancestors.add(parent)
-            parent = parent.parent
-        if obj in ancestors:
-            self.raise_exception('add would cause container recursion',
-                                 ValueError)
+        ancestor = self
+        while is_instance(ancestor, Container):
+            if obj is ancestor:
+                self.raise_exception('add would cause container recursion',
+                                     ValueError)
+            ancestor = ancestor.parent
 
     def _get_proxy(self, proxy):
         """

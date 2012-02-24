@@ -83,7 +83,8 @@ instances of the ``Paraboloid`` function and connect them together in series.
 
 Components are connected by using the ``connect`` function built into the
 assembly. ``Connect`` takes two arguments, the first of which must be a component
-output, and the second of which must be a component input. These are expressed
+output, and the second of which must be a component input or a sequence of
+component inputs. These are expressed
 using their locations in the OpenMDAO model hierarchy with respect to the scope
 of their parent assembly. Additionally, only one output can
 be connected to any input.  On the other hand, it is fine to connect an output to multiple
