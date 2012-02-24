@@ -45,8 +45,7 @@ class App(web.Application):
         app_path      = os.path.dirname(os.path.abspath(__file__))
         static_path   = os.path.join(app_path, 'static')
         template_path = os.path.join(app_path, 'tmpl')
-        session_path  = os.path.join(app_path, 'sessions')
-            
+        
         settings = { 
             'login_url':         '/login',
             'static_path':       os.path.join(app_path, 'static'),
@@ -55,7 +54,11 @@ class App(web.Application):
             'debug':             True,
         }
         
-        self.session_manager = TornadoSessionManager(secret,session_path)
+        user_dir = os.path.expanduser("~/.openmdao/gui/")
+        session_dir = os.path.join(user_dir, 'sessions')
+        ensure_dir(session_dir)
+            
+        self.session_manager = TornadoSessionManager(secret,session_dir)
         self.server_manager  = ConsoleServerFactory()
         
         super(App, self).__init__(handlers, **settings)
