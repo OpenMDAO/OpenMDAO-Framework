@@ -22,9 +22,9 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
-    contextMenu.append(jQuery('<li>Update</li>').click(function(ev) {
-        update();
-    }));
+    //contextMenu.append(jQuery('<li>Update</li>').click(function(ev) {
+    //    update();
+    //}));
     // contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
         // promptForRefresh();
     // }));
@@ -34,21 +34,23 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     // submit a command
     jQuery('#'+formID).submit(function() {
         var cmd = command.val();
-        command.val("");
-        updateHistory('\n>>> '+cmd);
-        model.issueCommand(cmd,
-            // success, record any response in the history & clear the command
-            function(responseText) {
-                debug.info('cmd response:',responseText)
-                if (responseText.length > 0) {
-                    updateHistory(responseText);
+        if (cmd.length > 0) {
+            command.val("");
+            updateHistory('\n>>> '+cmd);
+            model.issueCommand(cmd,
+                // success, record any response in the history & clear the command
+                function(responseText) {
+                    debug.info('cmd:',cmd,'response:',responseText)
+                    if (responseText.length > 0) {
+                        updateHistory(responseText);
+                    }
+                },
+                // failure
+                function(jqXHR, textStatus, errorThrown) {
+                    alert('Error issuing command: '+jqXHR.statusText)
                 }
-            },
-            // failure
-            function(jqXHR, textStatus, errorThrown) {
-                alert('Error issuing command: '+jqXHR.statusText)
-            }
-        );
+            );
+        }
         return false;
     })
     
@@ -132,11 +134,10 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     // ask model for an update whenever something changes
     //model.addListener(update)
 
-
-    debug.info('making ajax call to get output WS...');
+    // make ajax call to get outstream websocket
     jQuery.ajax({
         type: 'GET',
-        url:  'outport',
+        url:  'output',
         success: function(addr) {
             debug.info('got output websocket address:' + addr);
             sck = new WebSocket(addr);
@@ -150,13 +151,12 @@ openmdao.Console = function(formID,commandID,historyID,model) {
             sck.onmessage = function(e) {
                 debug.info('output socket message:',e);
                 updateHistory(e.data);
-                updateoutput();                    
             };            
         },
         error: function(jqXHR, textStatus, errorThrown) {
-                   debug.error("Error getting console WS (status="+jqXHR.status+"): "+jqXHR.statusText)
+                   debug.error("Error getting output socket (status="+jqXHR.status+"): "+jqXHR.statusText)
                    debug.error(jqXHR,textStatus,errorThrown)
        }
-    })           
+    })          
         
 }

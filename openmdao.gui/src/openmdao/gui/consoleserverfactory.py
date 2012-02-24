@@ -844,7 +844,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         filepath = os.getcwd()+'/'+str(filename)
         if os.path.exists(filepath):
-            contents=open(filepath, 'r').read()
+            contents=open(filepath, 'rb').read()
             return contents
         else:
             return None

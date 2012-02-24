@@ -1,7 +1,7 @@
 import sys, os, traceback
 import time
 import jsonpickle
-import multiprocessing
+import subprocess
 
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
@@ -268,14 +268,18 @@ class ModelHandler(BaseHandler):
         self.write(json)
 
 class OutputHandler(BaseHandler):
-    ''' get any outstanding output from the model
+    ''' initialize the web socket server & return the socket
     '''
     @web.authenticated
     def get(self):
-        cserver = self.get_server()
+        out_url = self.application.server_manager.get_out_url(self.get_sessionid())
+        ws_url  = '/workspace/outstream'
+        ws_port = get_unused_ip_port()        
+        subprocess.Popen(['python','outstreamserver.py','-z',out_url,'-p',str(ws_port),'-u',ws_url])
+        ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
         self.content_type = 'text/html'
-        self.write(cserver.get_output())
-
+        self.write(ws_addr)
+        
 class ProjectHandler(BaseHandler):
     ''' GET:  load model fom the given project archive,
               or reload remebered project for session if no file given
@@ -379,69 +383,6 @@ class TestHandler(BaseHandler):
         self.render('workspace/test.html')
 
 
-def serveOutput(out_url,ws_url,ws_port):
-    print '<<<'+str(os.getpid())+'>>> serveOutput'
-    from zmq.eventloop import ioloop
-    ioloop.install()
-
-    class OutputWSHandler(websocket.WebSocketHandler):
-        def initialize(self,addr):
-            self.addr = addr
-            
-        def open(self):
-            stream = None
-            try:
-                context = zmq.Context()
-                socket = context.socket(zmq.SUB)
-                socket.connect(self.addr)
-                socket.setsockopt(zmq.SUBSCRIBE, '')
-                stream = ZMQStream(socket)
-            except Exception, err:
-                print 'error getting outstream:',err
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                traceback.print_exception(exc_type, exc_value, exc_traceback)
-                traceback.print_tb(exc_traceback, limit=30)   
-                if stream and not stream.closed():
-                    stream.close()
-            else:
-                stream.on_recv(self._write_message)
-
-        def _write_message(self, message):
-            # Make sure that we're handling unicode
-            for part in message:
-                if not isinstance(part, unicode):
-                    enc = sys.getdefaultencoding()
-                    part = part.decode(enc, 'replace')
-                self.write_message(part)
-            
-        def on_message(self, message):
-            print 'outstream message received:', message
-
-        def on_close(self):
-            print 'outstream connection closed'
-        
-    application = web.Application([
-        (ws_url, OutputWSHandler, dict(addr=out_url))
-    ])
-    http_server = httpserver.HTTPServer(application)
-    http_server.listen(ws_port)
-    ioloop.IOLoop.instance().start()
-
-class OutputServerHandler(BaseHandler):
-    ''' initialize the web socket server & return the socket
-    '''
-    @web.authenticated
-    def get(self):
-        out_url = self.application.server_manager.get_out_url(self.get_sessionid())
-        ws_url  = '/workspace/output_ws'
-        ws_port = get_unused_ip_port()
-        srvr = multiprocessing.Process(target=serveOutput, args=(out_url,ws_url,ws_port))
-        srvr.start()
-        ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
-        self.content_type = 'text/html'
-        self.write(ws_addr)
-        
-
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
     web.url(r'/workspace/components/?',     ComponentsHandler),
@@ -464,8 +405,5 @@ handlers = [
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
-    
-    web.url(r'/workspace/outport/?',        OutputServerHandler),
-
 ]
 

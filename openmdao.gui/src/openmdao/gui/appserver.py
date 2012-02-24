@@ -5,6 +5,7 @@ from optparse import OptionParser
 
 # zmq
 import zmq
+from zmq.eventloop import ioloop
 
 # tornado
 from tornado import httpserver, web
@@ -17,10 +18,10 @@ from openmdao.gui.session import TornadoSessionManager
 #from openmdao.gui.consoleserverfactory import ConsoleServerFactory
 from openmdao.gui.try_zmq import ConsoleServerFactory
 
-print '<<<'+str(os.getpid())+'>>> WebApp ..............'
+print '<<<'+str(os.getpid())+'>>> AppServer ..............'
 
-class WebApp(web.Application):
-    ''' openmdao web application server
+class App(web.Application):
+    ''' openmdao web application
         extends tornado web app with URL mappings, settings and server manager
     '''
 
@@ -57,14 +58,12 @@ class WebApp(web.Application):
         self.session_manager = TornadoSessionManager(secret,session_path)
         self.server_manager  = ConsoleServerFactory()
         
-        super(WebApp, self).__init__(handlers, **settings)
+        super(App, self).__init__(handlers, **settings)
         
-
-class WrappedApp(object):
-    ''' openmdao application
+class AppServer(object):
+    ''' openmdao web application server
         wraps tornado web app, runs http server and opens browser
     '''
-
     def __init__(self,options):
         self.options = options
         
@@ -77,9 +76,6 @@ class WrappedApp(object):
         if (options.port < 1):
             options.port = get_unused_ip_port()
             
-        from zmq.eventloop import ioloop
-        ioloop.install()
-
         # dev options
         if options.development:
             # save secret between restarts
@@ -89,17 +85,24 @@ class WrappedApp(object):
             else:
                 secret = os.urandom(1024)
                 open(secret_file,'wb').write(secret)
-            self.web_app = WebApp(secret)
+            self.web_app = App(secret)
         else:
-            self.web_app = WebApp()
+            self.web_app = App()
             
         self.http_server = httpserver.HTTPServer(self.web_app)
-        self.http_server.listen(options.port)
         
-        if not options.serveronly:
-            launch_browser(options.port, options.browser)
+    def serve(self):
+        ''' start server listening on port, launch browser if requested  & start the ioloop
+        '''
+        self.http_server.listen(self.options.port)        
 
-        ioloop.IOLoop.instance().start()
+        if not self.options.serveronly:
+            launch_browser(self.options.port, self.options.browser)
+            
+        try:
+            ioloop.IOLoop.instance().start()
+        except KeyboardInterrupt:
+            print '<<<'+str(os.getpid())+'>>> AppServer: interrupt received, shutting down.'
 
     @staticmethod
     def get_options_parser():
@@ -153,14 +156,19 @@ class WrappedApp(object):
         from django.core.management import execute_manager
         execute_manager(settings,argv=[__file__,'syncdb'])
 
-
 def main():
     ''' process command line arguments and do as commanded
     '''
-    parser = WrappedApp.get_options_parser()
-    (options, args) = parser.parse_args()
-    app = WrappedApp(options)
     
+    # install zmq ioloop before creating any tornado objects
+    ioloop.install()
+    
+    # create the server and kick it off
+    parser = AppServer.get_options_parser()
+    (options, args) = parser.parse_args()
+    server = AppServer(options)
+    server.serve()
+        
 if __name__ == '__main__':
     # dont run main() if this is a forked windows process
     if sys.modules['__main__'].__file__ == __file__:
