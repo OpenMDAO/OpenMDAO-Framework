@@ -31,6 +31,10 @@ _iodict = { 'out': 'output', 'in': 'input' }
 __has_top__ = False
 __toplock__ = threading.RLock()
 
+
+#fake nodes for boundary and passthrough connections
+_fakes = ['@xin', '@xout', '@bin', '@bout']
+
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
     If first_only is True, then only set it as a top if a global
@@ -84,6 +88,27 @@ class ExprMapper(object):
         self._compgraph = None  # component dependency graph
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
     
+    def copy_graph(self):
+        graph = self.get_compgraph().copy()
+        graph.remove_nodes_from(_fakes)
+        return graph
+
+    def get_connected_inputs(self):
+        conn_inputs = []
+        graph = self._exprgraph
+        for node, data in graph.nodes(data=True):
+            if graph.in_degree(node) > 0:
+                conn_inputs.extend([v for v in data['expr'].get_referenced_varpaths() if '.' not in v])
+        return conn_inputs
+    
+    def get_connected_outputs(self):
+        conn_outputs = []
+        graph = self._exprgraph
+        for node, data in graph.nodes(data=True):
+            if graph.out_degree(node) > 0:
+                conn_outputs.extend([v for v in data['expr'].get_referenced_varpaths() if '.' not in v])
+        return conn_outputs
+    
     def get_source(self, dest_expr):
         """Returns the source expression that is connected to the given 
         destination expression.
@@ -116,22 +141,32 @@ class ExprMapper(object):
         dest = destexpr.text
         destcomps = destexpr.get_referenced_compnames()
         if len(destcomps) == 0:
-            pass  # boundary output
+            destcomp = '@bout'  # boundary output
         else:
             destcomp = destcomps.pop()
-            for srccomp in srcexpr.get_referenced_compnames():
-                try:
-                    graph[srccomp][destcomp]['srcexprs'][dest] = src
-                    graph[srccomp][destcomp]['destexprs'][src].append(dest)
-                except KeyError:
-                    srcexprs = { dest: src }
-                    destexprs = { src: [dest] }
-                    graph.add_edge(srccomp, destcomp, srcexprs=srcexprs, destexprs=destexprs)
+            if destcomp == 'parent':
+                destcomp = '@xout'
+            
+        for srcpath in srcexpr.get_referenced_varpaths():
+            if srcpath.startswith('parent.'):
+                srccomp = '@xin'
+            elif '.' in srcpath:
+                srccomp, _, srcvar = srcpath.partition('.')
+            else:
+                srccomp = '@bin'
+            try:
+                graph[srccomp][destcomp]['srcexprs'][dest] = src
+                graph[srccomp][destcomp]['destexprs'][src].append(dest)
+            except KeyError:
+                srcexprs = { dest: src }
+                destexprs = { src: [dest] }
+                graph.add_edge(srccomp, destcomp, srcexprs=srcexprs, destexprs=destexprs)
         return graph
     
     def _create_compgraph(self):
         """Create a new component graph based on information in the expression graph."""
         graph = nx.DiGraph()
+        graph.add_nodes_from(_fakes)
         for src,dest in self._exprgraph.edges():
             self._update_compgraph(graph, 
                                    self._exprgraph.node(src)['expr'], 
@@ -139,6 +174,9 @@ class ExprMapper(object):
         return graph
         
     def connect(self, src, dest, scope):
+        self._exprgraph.add_edge(src, dest)
+
+    def check_connect(self, src, dest, scope):
         """Connect a source expression to a destination expression."""
         
         # make sure we don't have any whitespace buried within the expression that would cause
@@ -161,12 +199,11 @@ class ExprMapper(object):
             scope.raise_exception("destination expr '%s' does not refer to a single variable." % dest,
                                   RuntimeError)
         
-        compgraph = self.get_compgraph()
-        
         if destcomps and destcomps.pop() in srccomps:
             scope.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." % (src,dest),
                                   RuntimeError)
             
+        compgraph = self.get_compgraph()
         self._update_compgraph(compgraph, srcexpr, destexpr)
                 
         if is_directed_acyclic_graph(compgraph):
@@ -174,7 +211,6 @@ class ExprMapper(object):
                 self._exprgraph.add_node(src, expr=srcexpr)
             if dest not in self._exprgraph:
                 self._exprgraph.add_node(dest, expr=destexpr)
-            self._exprgraph.add_edge(src, dest)
         else:   # cycle found
             self._compgraph = None  # force regeneration of compgraph next time
             strongly_connected = strongly_connected_components(compgraph)
@@ -240,9 +276,10 @@ class Assembly (Component):
                     "this Assembly.")
     
     def __init__(self, doc=None, directory=''):
-        self._expr_mapper = ExprMapper()
         
         super(Assembly, self).__init__(doc=doc, directory=directory)
+        
+        self._depgraph = ExprMapper()
         
         # default Driver executes its workflow once
         self.add('driver', Driver())
@@ -257,14 +294,14 @@ class Assembly (Component):
         #"""
         #obj = super(Assembly, self).add(name, obj)
         ##if is_instance(obj, Component):
-            ##self._expr_mapper.add(obj.name)
+            ##self._depgraph.add(obj.name)
         #return obj
         
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        self._expr_mapper.remove(name)
+        self._depgraph.remove(name)
         for obj in self.__dict__.values():
             if obj is not cont and is_instance(obj, Driver):
                 obj.workflow.remove(name)
@@ -367,7 +404,7 @@ class Assembly (Component):
         destpath: str
             Pathname of destination variable.
         """
-        srcexpr, destexpr = self._expr_mapper.connect(srcpath, destpath, self)
+        srcexpr, destexpr = self._depgraph.check_connect(srcpath, destpath, self)
         srcvars = srcexpr.get_referenced_varpaths()
         destvar = destexpr.get_referenced_varpaths().pop()
         
@@ -431,7 +468,7 @@ class Assembly (Component):
         and outputs. 
         """
         if varpath2 is None:
-            for src,sink in self._expr_mapper.connections_to(varpath):
+            for src,sink in self._depgraph.connections_to(varpath):
                 if src.startswith('@'):
                     src = src.split('.',1)[1]
                 if sink.startswith('@'):
@@ -456,8 +493,10 @@ class Assembly (Component):
         self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
         
         # now update boundary outputs
+        boundary_outs = self._depgraph.get_connected_outputs()
+        
         valids = self._valid_dict
-        for srccompname,link in self._expr_mapper.in_links('@bout'):
+        for srccompname,link in self._depgraph.in_links('@bout'):
             srccomp = getattr(self, srccompname)
             for dest,src in link._dests.items():
                 if valids[dest] is False:
@@ -483,10 +522,10 @@ class Assembly (Component):
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        return self._expr_mapper.list_connections(show_passthrough)
+        return self._depgraph.list_connections(show_passthrough)
 
     def _cvt_input_srcs(self, sources):
-        link = self._expr_mapper.get_link('@xin', '@bin')
+        link = self._depgraph.get_link('@xin', '@bin')
         if link is None:
             return sources
         else:
@@ -515,10 +554,10 @@ class Assembly (Component):
             exprpaths = ['.'.join([compname, n]) for n in exprs]
         
         for expr in exprpaths:
-            srcexpr = self._expr_mapper.get_source(expr)
+            srcexpr = self._depgraph.get_source(expr)
             
             
-        for srccompname,srcs,dests in self._expr_mapper.in_map(compname, vset):
+        for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
             if srccompname == '@bin':   # boundary inputs
                 invalid_srcs = [s for s in srcs if not self._valid_dict[s]]
                 if len(invalid_srcs) > 0:
@@ -606,7 +645,7 @@ class Assembly (Component):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
         """
-        bouts = self._expr_mapper.invalidate_deps(self, [childname], [outs], force)
+        bouts = self._depgraph.invalidate_deps(self, [childname], [outs], force)
         if bouts and self.parent:
             self.parent.child_invalidated(self.name, bouts, force)
         return bouts
@@ -649,7 +688,7 @@ class Assembly (Component):
               # are always valid
             self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
 
-        outs = self._expr_mapper.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
+        outs = self._depgraph.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
 
         if outs:
             self.set_valid(outs, False)
