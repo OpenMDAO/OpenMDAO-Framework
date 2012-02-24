@@ -101,11 +101,6 @@ class ZMQServer(Process):
         super(ZMQServer, self).__init__()
         
     def run(self):
-        import zmq
-        from zmq.eventloop import ioloop
-        from zmq.eventloop.zmqstream import ZMQStream
-        ioloop.install()
-        
         # redirect stdout/stderr to a ZMQ socket
         try:
             context = zmq.Context()

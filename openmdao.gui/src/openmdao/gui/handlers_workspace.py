@@ -274,8 +274,11 @@ class OutputHandler(BaseHandler):
     def get(self):
         out_url = self.application.server_manager.get_out_url(self.get_sessionid())
         ws_url  = '/workspace/outstream'
-        ws_port = get_unused_ip_port()        
-        subprocess.Popen(['python','outstreamserver.py','-z',out_url,'-p',str(ws_port),'-u',ws_url])
+        ws_port = get_unused_ip_port()
+        file_path   = os.path.dirname(os.path.abspath(__file__))
+        server_file = os.path.join(file_path, 'outstreamserver.py')
+        cmd = ['python',server_file,'-z',str(out_url),'-p',str(ws_port),'-u',str(ws_url)]        
+        subprocess.Popen(cmd)
         ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
         self.content_type = 'text/html'
         self.write(ws_addr)
