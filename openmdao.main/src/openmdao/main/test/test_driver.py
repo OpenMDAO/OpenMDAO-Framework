@@ -46,7 +46,8 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(_get_entry_group(Driver()), 'openmdao.driver')
 
     def test_default_value_force(self):
-        self.assertTrue(self.asm.driver.force_execute, "Driver default value for force_execute should be True.")
+        #driver default value should be True
+        self.assertTrue(self.asm.driver.force_execute)
         
 if __name__ == "__main__":
     unittest.main()
