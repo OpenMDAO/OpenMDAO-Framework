@@ -212,7 +212,6 @@ Now, let's build a new assembly that includes all three simulations run sequenti
                 self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
-                self.sim_EPA_city.force_execute = True
                 
                 # EPA Highway MPG Sim Setup
                 self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
@@ -223,7 +222,6 @@ Now, let's build a new assembly that includes all three simulations run sequenti
                 self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-                self.sim_EPA_highway.force_execute = True
                         
         if __name__ == "__main__": 
         
@@ -246,13 +244,3 @@ Each simulation driver has a workflow, so the `vehicle` instance is added to eac
 of their workflows. After that, the simulation connections are specified. The variable
 `profilename` is the name of the file that contains the EPA driving profile, which
 is essentially velocity as a function of time.
-
-Finally, notice that the variable ``force_execute`` is set to True. All drivers have a
-``force_execute`` flag, which can be set to True to ensure that a component will always
-run when its workflow is executed. Since these drivers are basically independent and
-have no data connections, there is no way to automatically determine if they have become
-invalidated (as changing an upstream input would do) and hence need to be run. With
-``force_execute`` set to True, the driver always runs. Note that our top level driver is
-the default sequential execution driver, so this model can run without ``force_execute``.
-However, ``force_execute`` is definitely needed if we want to take this model and optimize
-it, which we will do next.

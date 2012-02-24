@@ -560,6 +560,19 @@ class AssemblyTestCase(unittest.TestCase):
             os.remove(egg_info[0])
             shutil.rmtree('Top')
 
+    def test_multiconnect(self):
+        top = Assembly()
+        for name in ('m1', 'm2', 'm3'):
+            top.add(name, Multiplier())
+            top.driver.workflow.add(name)
+        top.connect('m1.rval_out', ('m2.mult', 'm3.mult'))
+        top.m1.rval_in = 1.
+        top.m2.rval_in = 3.
+        top.m3.rval_in = 4.
+        top.run()
+        self.assertEqual(top.m2.rval_out, 4.5)
+        self.assertEqual(top.m3.rval_out, 6.)
+
 
 if __name__ == "__main__":
     unittest.main()

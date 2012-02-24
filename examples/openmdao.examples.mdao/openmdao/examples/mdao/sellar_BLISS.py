@@ -57,7 +57,6 @@ class SellarBLISS(Assembly):
         self.mda.add_constraint('dis2.y2 = dis1.y2')
         self.mda.add_parameter('dis2.y1', low=-9.e99, high=9.e99,start=3.16)
         self.mda.add_constraint('dis2.y1 = dis1.y1')
-        self.mda.force_execute = True
         
         # Discipline 1 Sensitivity Analysis
         self.add('sa_dis1', SensitivityDriver())
@@ -67,7 +66,6 @@ class SellarBLISS(Assembly):
         self.sa_dis1.add_objective(objective, name='obj')
         self.sa_dis1.differentiator = FiniteDifference()
         self.sa_dis1.default_stepsize = 1.0e-6
-        self.sa_dis1.force_execute = True
         
         # Discipline 2 Sensitivity Analysis
         # dis2 has no local parameter, so there is no need to treat it as
@@ -85,7 +83,6 @@ class SellarBLISS(Assembly):
         self.ssa.add_objective(objective, name='obj')
         self.ssa.differentiator = FiniteDifference()
         self.ssa.default_stepsize = 1.0e-6
-        self.ssa.force_execute = True
         
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
@@ -100,7 +97,6 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_constraint('(x1_store-dis1.x1)>-.5')
         self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
-        self.bbopt1.force_execute = True
         
         # Global Optimization
         self.add('sysopt', CONMINdriver())
@@ -117,7 +113,6 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_constraint('z_store[1]-dis1.z2>-.5')
         self.sysopt.linobj = True
         self.sysopt.iprint = 0
-        self.sysopt.force_execute = True
             
         self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt']) 
 

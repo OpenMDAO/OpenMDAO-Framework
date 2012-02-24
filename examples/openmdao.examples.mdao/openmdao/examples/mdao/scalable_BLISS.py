@@ -78,8 +78,6 @@ class Scalable(UnitScalableProblem):
         mda.add_parameter("d2.y_in1",low=-1e99,high=1e99)
         mda.add_constraint("d2.y_out=d0.y_in1")
         mda.add_constraint("d2.y_out=d1.y_in1")
-
-        mda.force_execute = True
         
         sa0 = self.add('sa0',SensitivityDriver())
         sa0.differentiator = FiniteDifference()
@@ -88,7 +86,6 @@ class Scalable(UnitScalableProblem):
         sa0.add_parameter('d0.x2',low=-10,high=10)
         sa0.add_objective(obj)
         sa0.add_constraint(d0_const)
-        sa0.force_execute=True
         
         sa1 = self.add('sa1',SensitivityDriver())
         sa1.differentiator = FiniteDifference()
@@ -97,7 +94,6 @@ class Scalable(UnitScalableProblem):
         sa1.add_parameter('d1.x2',low=-10,high=10)
         sa1.add_objective(obj)
         sa1.add_constraint(d1_const)
-        sa1.force_execute=True
         
         sa2 = self.add('sa2',SensitivityDriver())
         sa2.differentiator = FiniteDifference()
@@ -106,7 +102,6 @@ class Scalable(UnitScalableProblem):
         sa2.add_parameter('d0.x2',low=-10,high=10)
         sa2.add_objective(obj)
         sa2.add_constraint(d2_const)
-        sa2.force_execute=True
         
         ssa = self.add('ssa',SensitivityDriver()) 
         ssa.differentiator = FiniteDifference()
@@ -117,7 +112,6 @@ class Scalable(UnitScalableProblem):
         ssa.add_constraint(d0_const)
         ssa.add_constraint(d1_const)
         ssa.add_constraint(d2_const)
-        ssa.force_execute=True
         
         bbopt0 = self.add('bbopt0',CONMINdriver())
         bbopt0.add_parameter('d0_local_des_vars[0]',low=-10,high=10)
@@ -135,7 +129,6 @@ class Scalable(UnitScalableProblem):
         bbopt0.add_constraint('(d0_local_des_vars[0]-d0.x0)>=(-percent*d0.x0-.0001)*factor**(mda.exec_count-offset)')
         bbopt0.add_constraint('(d0_local_des_vars[1]-d1.x1)>=(-percent*d0.x1-.0001)*factor**(mda.exec_count-offset)')
         bbopt0.add_constraint('(d0_local_des_vars[2]-d2.x2)>=(-percent*d0.x2-.0001)*factor**(mda.exec_count-offset)')
-        bbopt0.force_execute=True
         
         bbopt1 = self.add('bbopt1',CONMINdriver())
         bbopt1.add_parameter('d1_local_des_vars[0]',low=-10,high=10)
@@ -154,7 +147,6 @@ class Scalable(UnitScalableProblem):
         bbopt1.add_constraint('(d1_local_des_vars[0]-d1.x0)>=(-percent*d1.x0-.0001)*factor**(mda.exec_count-offset)')
         bbopt1.add_constraint('(d1_local_des_vars[1]-d1.x1)>=(-percent*d1.x1-.0001)*factor**(mda.exec_count-offset)')
         bbopt1.add_constraint('(d1_local_des_vars[2]-d1.x2)>=(-percent*d1.x2-.0001)*factor**(mda.exec_count-offset)')
-        bbopt1.force_execute=True
         
         bbopt2 = self.add('bbopt2',CONMINdriver())
         bbopt2.add_parameter('d2_local_des_vars[0]',low=-10,high=10)
@@ -173,7 +165,6 @@ class Scalable(UnitScalableProblem):
         bbopt2.add_constraint('(d2_local_des_vars[0]-d2.x0)>=(-percent*d2.x0-.0001)*factor**(mda.exec_count-offset)')
         bbopt2.add_constraint('(d2_local_des_vars[1]-d2.x1)>=(-percent*d2.x1-.0001)*factor**(mda.exec_count-offset)')
         bbopt2.add_constraint('(d2_local_des_vars[2]-d2.x2)>=(-percent*d2.x2-.0001)*factor**(mda.exec_count-offset)')
-        bbopt2.force_execute=True
         
         sysopt = self.add('sysopt',CONMINdriver())
         sysopt.add_parameter('global_des_vars[0]',low=-10,high=10)
@@ -198,9 +189,7 @@ class Scalable(UnitScalableProblem):
         sysopt.add_constraint('(global_des_vars[1]-d0.z1) <= (-percent*d0.z1 -.0001)*factor**(mda.exec_count-offset)')
         sysopt.add_constraint('(global_des_vars[2]-d0.z2) >= (percent*d0.z2 +.0001)*factor**(mda.exec_count-offset)')
         sysopt.add_constraint('(global_des_vars[2]-d0.z2) <= (-percent*d0.z2 -.0001)*factor**(mda.exec_count-offset)')
-        
-        sysopt.force_execute=True
-        
+                
         debug = self.add('debug',DebugComp())
         debug.force_execute = True
         

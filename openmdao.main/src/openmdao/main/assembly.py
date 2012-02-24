@@ -197,19 +197,27 @@ class Assembly (Component):
 
     @rbac(('owner', 'user'))
     def connect(self, srcpath, destpath):
-        """Connect one src Variable to one destination Variable. This could be
-        a normal connection between variables from two internal Components, or
-        it could be a passthrough connection, which connects across the scope boundary
-        of this object.  When a pathname begins with 'parent.', that indicates
-        that it is referring to a Variable outside of this object's scope.
+        """Connect one source Variable to one or more destination Variables.
+        This could be a normal connection between variables from two internal
+        Components, or it could be a passthrough connection, which connects
+        across the scope boundary of this object.  When a pathname begins with
+        'parent.', that indicates that it is referring to a Variable outside
+        of this object's scope.
         
         srcpath: str
             Pathname of source variable.
             
-        destpath: str
-            Pathname of destination variable.
+        destpath: str or list(str)
+            Pathname of destination variable(s).
         """
         srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
+        if isinstance(destpath, basestring):
+            destpath = (destpath,)
+        for dst in destpath:
+            self._connect(srcpath, srccompname, srccomp, srcvarname, dst)
+
+    def _connect(self, srcpath, srccompname, srccomp, srcvarname, destpath):
+        """Handle one destination."""
         destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
         if srccomp is not self.parent and destcomp is not self.parent:
