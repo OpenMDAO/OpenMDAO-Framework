@@ -11,6 +11,7 @@ import threading
 from enthought.traits.api import Missing
 import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.interfaces import implements, IDriver
 from openmdao.main.container import find_trait_and_value
@@ -87,8 +88,12 @@ class ExprMapper(object):
         """Returns the source expression that is connected to the given 
         destination expression.
         """
-        srctxt = self._exprgraph.pred[dest_expr].keys()[0]
-        return self._exprgraph.node(srctxt)['expr']
+        dct = self._exprgraph.pred.get(dest_expr)
+        if dct and len(dct) > 0:
+            srctxt = dct.keys()[0]
+            return self._exprgraph.node[srctxt]['expr']
+        else:
+            return None
     
     def get_dests(self, src_expr):
         """Returns the list of destination expressions that are connected to the given 
@@ -141,8 +146,9 @@ class ExprMapper(object):
         src = eliminate_expr_ws(src)
         dest = eliminate_expr_ws(dest)
         
-        if dest in self._exprgraph:
-            raise RuntimeError("%s is already connected to source %s" % (dest, self.get_source(dest)))
+        if self.get_source(dest) is not None:
+            scope.raise_exception("'%s' is already connected to source '%s'" % (dest, self.get_source(dest)),
+                                  RuntimeError)
         
         destexpr = ExprEvaluator(dest, scope)
         srcexpr = ExprEvaluator(src, scope)
@@ -152,12 +158,14 @@ class ExprMapper(object):
         destvars = destexpr.get_referenced_varpaths()
         
         if len(destvars) != 1:
-            raise RuntimeError("destination expr '%s' does not refer to a single variable." % dest)
+            scope.raise_exception("destination expr '%s' does not refer to a single variable." % dest,
+                                  RuntimeError)
         
         compgraph = self.get_compgraph()
         
         if destcomps and destcomps.pop() in srccomps:
-            raise RuntimeError("source expression '%s' and destination expression '%s' both refer to component %s" % (src,dest,destcomp))
+            scope.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." % (src,dest),
+                                  RuntimeError)
             
         self._update_compgraph(compgraph, srcexpr, destexpr)
                 
@@ -173,9 +181,10 @@ class ExprMapper(object):
             # do a little extra work here to give more info to the user in the error message
             for strcon in strongly_connected:
                 if len(strcon) > 1:
-                    raise RuntimeError(
+                    scope.raise_exception(
                         'circular dependency (%s) would be created by connecting %s to %s' %
-                                 (str(strcon), src, dest))
+                                 (str(strcon), src, dest), RuntimeError)
+        return srcexpr, destexpr
 
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
@@ -343,7 +352,7 @@ class Assembly (Component):
         if t and t.iotype:
             return (None, self, path)
         return (compname, getattr(self, compname), varname)
-
+        
     @rbac(('owner', 'user'))
     def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
@@ -358,43 +367,55 @@ class Assembly (Component):
         destpath: str
             Pathname of destination variable.
         """
-        self._expr_mapper.connect(srcpath, destpath, self)
+        srcexpr, destexpr = self._expr_mapper.connect(srcpath, destpath, self)
+        srcvars = srcexpr.get_referenced_varpaths()
+        destvar = destexpr.get_referenced_varpaths().pop()
         
-        srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
-        destcompname, destcomp, destvarname = self._split_varpath(destpath)
+        config_changed = False
+        cross_boundary = False
         
-        if srccomp is not self.parent and destcomp is not self.parent:
-            dest_io = 'out' if destcomp is self else 'in'
-            src_io = 'in' if srccomp is self else 'out'
-            
-            srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
-            desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
-            
-            # test type compatability
-            ttype = desttrait.trait_type
-            if not ttype:
-                ttype = desttrait
-            try:
-                if ttype.get_val_wrapper:
-                    srcval = srccomp.get_wrapped_attr(srcvarname)
+        destcompname, destcomp, destvarname = self._split_varpath(destvar)
+        
+        if not destvar.startswith('parent.'):
+            for srcvar in srcvars:
+                if srcvar.startswith('parent.'):
+                    cross_boundary = True
                 else:
-                    srcval = srccomp.get(srcvarname)
-                if ttype.validate:
-                    ttype.validate(destcomp, destvarname, srcval)
-                else:
-                    pass  # no validate function on destination trait. Most likely
-                          # it's a property trait.  No way to validate without
-                          # unknown side effects.
-            except Exception as err:
-                self.raise_exception("can't connect '%s' to '%s': %s" %
-                                     (srcpath, destpath, str(err)), RuntimeError)
+                    srccompname, srccomp, srcvarname = self._split_varpath(srcvar)
                     
+                    if srccomp is not self and destcomp is not self:
+                        config_changed = True
+        
+                    dest_io = 'out' if destcomp is self else 'in'
+                    src_io = 'in' if srccomp is self else 'out'
+                    
+                    srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
+                    desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
+                    
+                    ttype = desttrait.trait_type
+                    if not ttype:
+                        ttype = desttrait
+                    try:
+                        if ttype.get_val_wrapper:
+                            srcval = srccomp.get_wrapped_attr(srcvarname)
+                        else:
+                            srcval = srccomp.get(srcvarname)
+                        if ttype.validate:
+                            ttype.validate(destcomp, destvarname, srcval)
+                        else:
+                            pass  # no validate function on destination trait. Most likely
+                                  # it's a property trait.  No way to validate without
+                                  # unknown side effects.
+                    except Exception as err:
+                        self.raise_exception("can't connect '%s' to '%s': %s" %
+                                             (srcpath, destpath, str(err)), RuntimeError)
+
         super(Assembly, self).connect(srcpath, destpath)
         
         # if it's an internal connection, could change dependencies, so we have
         # to call config_changed to notify our driver
-        if srccomp is not self.parent and destcomp is not self.parent:
-            if srccomp is not self and destcomp is not self:
+        if not cross_boundary:
+            if config_changed:
                 self.config_changed(update_parent=False)
 
             outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
@@ -491,7 +512,7 @@ class Assembly (Component):
             exprpaths = exprs
         else:
             destcomp = getattr(self, compname)
-            exprpaths = ['.'.join(compname, n) for n in exprs]
+            exprpaths = ['.'.join([compname, n]) for n in exprs]
         
         for expr in exprpaths:
             srcexpr = self._expr_mapper.get_source(expr)
