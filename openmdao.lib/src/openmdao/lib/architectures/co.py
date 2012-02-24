@@ -122,7 +122,6 @@ class CO(Architecture):
             local_opt.fdchm = .001
             local_opt.delfun = .0001
             local_opt.dabfun = .000001
-            local_opt.force_execute = True
 
         """    print local_opt.name
             print local_opt.get_objectives().keys()[0]

@@ -60,7 +60,6 @@ class BLISS(Architecture):
         ssa.workflow.add("mda")
         ssa.differentiator = FiniteDifference()
         ssa.default_stepsize = 1.0e-6
-        ssa.force_execute = True
         ssa.add_objective(objective[1].text,name=objective[0])
         for comps,param in global_dvs: 
             
@@ -73,7 +72,6 @@ class BLISS(Architecture):
         for comp,local_params in local_dvs.iteritems(): 
             sa = self.parent.add('sa_%s'%comp, SensitivityDriver())    
             sa.default_stepsize = 1.0e-6
-            sa.force_execute = True
             sa_s.append('sa_%s'%comp)
             for param in local_params: 
                 sa.add_parameter(param.targets,low=param.low,high=param.high,fd_step=.001)
@@ -92,7 +90,6 @@ class BLISS(Architecture):
         for comp,local_params in local_dvs.iteritems(): 
             bbopt = self.parent.add('bbopt_%s'%comp,CONMINdriver())
             bbopt.linobj = True
-            bbopt.force_execute = True
             bbopts.append('bbopt_%s'%comp)
             
             x_store = "%s_local_des_vars"%comp
@@ -136,8 +133,7 @@ class BLISS(Architecture):
         
         sysopt = self.parent.add('sysopt', CONMINdriver())
         sysopt.recorders = self.data_recorders
-        sysopt.linobj = True
-        sysopt.force_execute = True    
+        sysopt.linobj = True   
         for i,(comps,param) in enumerate(global_dvs): 
             z_store = "global_des_vars[%d]"%i
             target = list(param.targets)[0]

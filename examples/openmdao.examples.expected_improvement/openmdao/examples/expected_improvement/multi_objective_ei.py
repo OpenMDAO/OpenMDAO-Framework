@@ -89,12 +89,10 @@ class Analysis(Assembly):
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
         self.MOEI_opt.add_objective("MOEI.PI")
-        self.MOEI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("spiral_meta_model.train_next")
         self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
-        self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
         self.iter.iterations = 30
