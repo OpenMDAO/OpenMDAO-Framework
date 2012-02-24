@@ -9,7 +9,7 @@ import numpy
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str, Slot
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.drivers.cobyladriver import COBYLA_driver
+from openmdao.lib.drivers.cobyladriver import COBYLAdriver
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -66,7 +66,7 @@ class COBYLAdriverTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
-        self.top.add('driver', COBYLA_driver())
+        self.top.add('driver', COBYLAdriver())
         self.top.add('comp', OptRosenSuzukiComponent())
         self.top.driver.workflow.add('comp')
         self.top.driver.iprint = 0

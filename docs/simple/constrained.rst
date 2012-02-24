@@ -33,7 +33,7 @@ model by adding one line to the ``initialize`` function:
     
 .. testcode:: simple_model_Unconstrained_pieces
 
-        # CONMIN Constraints
+        # Constraints
         self.driver.add_constraint('paraboloid.x-paraboloid.y >= 15.0')
 
 The ``add_constraint`` method is used to add a constraint to the driver.

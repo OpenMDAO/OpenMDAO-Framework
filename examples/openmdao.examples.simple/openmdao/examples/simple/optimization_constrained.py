@@ -33,23 +33,22 @@ class OptimizationConstrained(Assembly):
         self.driver.fdch = .000001
         self.driver.fdchm = .000001
         
-        # CONMIN Objective 
+        # Objective 
         self.driver.add_objective('paraboloid.f_xy')
         
-        # CONMIN Design Variables 
+        # Design Variables 
         self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
         self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
         
-        # CONMIN Constraints
+        # Constraints
         self.driver.add_constraint('paraboloid.x-paraboloid.y >= 15.0')
         
         
 if __name__ == "__main__": # pragma: no cover         
 
     import time
-    from openmdao.main.api import set_as_top
     
-    opt_problem = set_as_top(OptimizationConstrained())
+    opt_problem = OptimizationConstrained()
     
     tt = time.time()
     opt_problem.run()

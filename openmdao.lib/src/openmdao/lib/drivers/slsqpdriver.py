@@ -34,7 +34,7 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
     
 @stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasConstraints, HasObjective)
-class SLSQP_driver(DriverUsesDerivatives):
+class SLSQPdriver(DriverUsesDerivatives):
     """Minimize a function using the Sequential Least SQuares Programming
     (SLSQP) method,
 
@@ -72,7 +72,7 @@ class SLSQP_driver(DriverUsesDerivatives):
     
     def __init__(self, *args, **kwargs):
         
-        super(SLSQP_driver, self).__init__(*args, **kwargs)
+        super(SLSQPdriver, self).__init__(*args, **kwargs)
         
         self.error_messages = {
             -1 : "Gradient evaluation required (g & a)",
@@ -180,7 +180,7 @@ class SLSQP_driver(DriverUsesDerivatives):
         
         Note: m, me, la, n, f, and g are unused inputs."""
         self.set_parameters(xnew)
-        super(SLSQP_driver, self).run_iteration()
+        super(SLSQPdriver, self).run_iteration()
         f = self.eval_objective()
         
         if isnan(f):
