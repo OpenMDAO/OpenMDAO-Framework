@@ -42,7 +42,8 @@ class Driver(Component):
         self._iter = None
         super(Driver, self).__init__(doc=doc)
         self.workflow = Dataflow(self)
-        
+        self.force_execute = True 
+ 
     def _workflow_changed(self, oldwf, newwf):
         if newwf is not None:
             newwf._parent = self

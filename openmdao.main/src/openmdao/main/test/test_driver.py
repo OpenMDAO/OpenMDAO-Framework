@@ -30,7 +30,6 @@ class DriverTestCase(unittest.TestCase):
         top.driver.workflow.add('evcomp')
         
     def test_add_event(self):
-        self.asm.driver.force_execute = True
         self.asm.evcomp.force_execute = True
         for i in range(3):
             self.asm.run()
@@ -46,6 +45,8 @@ class DriverTestCase(unittest.TestCase):
     def test_get_entry_group(self):
         self.assertEqual(_get_entry_group(Driver()), 'openmdao.driver')
 
+    def test_default_value_force(self):
+        self.assertTrue(self.asm.driver.force_execute, "Driver default value for force_execute should be True.")
         
 if __name__ == "__main__":
     unittest.main()
