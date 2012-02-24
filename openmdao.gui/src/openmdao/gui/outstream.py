@@ -16,14 +16,9 @@ class OutStream(object):
         (Borrowed from IPython, but stripped down a bit...)
     """
 
-    # The time interval between automatic flushes, in seconds.
-    flush_interval = 0.05
-    topic=None
-
     def __init__(self, pub_socket, name):
         self.pub_socket = pub_socket
         self.name = name
-        self.parent_header = {}
         self._new_buffer()
 
     def close(self):
@@ -62,13 +57,8 @@ class OutStream(object):
             if not isinstance(string, unicode):
                 enc = sys.getdefaultencoding()
                 string = string.decode(enc, 'replace')
-
             self._buffer.write(string)
-            current_time = time.time()
-            if self._start <= 0:
-                self._start = current_time
-            elif current_time - self._start > self.flush_interval:
-                self.flush()
+            self.flush()
 
     def writelines(self, sequence):
         if self.pub_socket is None:
@@ -79,7 +69,6 @@ class OutStream(object):
 
     def _new_buffer(self):
         self._buffer = StringIO()
-        self._start = -1
 
 class OutStreamRedirector(Process):
     ''' listen for output on the given port and dump it to a file
