@@ -8,7 +8,8 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 
 
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow, Component, Assembly
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil,FixedPointIterator,NeiborhoodDOEdriver, SLSQP_driver
+from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil, \
+     FixedPointIterator,NeiborhoodDOEdriver, SLSQP_driver#, COBYLA_driver as SLSQP_driver
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, OptLatinHypercube, LatinHypercube

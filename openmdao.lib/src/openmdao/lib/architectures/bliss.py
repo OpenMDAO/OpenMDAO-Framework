@@ -5,7 +5,7 @@ from openmdao.main.api import Driver, Architecture,SequentialWorkflow
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import SLSQP_driver, BroydenSolver, \
-                                     SensitivityDriver, FixedPointIterator
+                                     SensitivityDriver, FixedPointIterator#, COBYLA_driver as SLSQP_driver
 
 class BLISS(Architecture): 
     """Bi-Level Integrated Systems Synthesis architecture"""
