@@ -1,5 +1,5 @@
 from openmdao.main.api import Driver, Architecture
-from openmdao.lib.drivers.api import SLSQP_driver
+from openmdao.lib.drivers.api import SLSQP_driver#, COBYLA_driver as SLSQP_driver
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
 class IDF(Architecture):

@@ -176,8 +176,9 @@ class SLSQP_driver(DriverUsesDerivatives):
         Note: m, me, la, n, f, and g are unused inputs."""
         self.set_parameters(xnew)
         super(SLSQP_driver, self).run_iteration()
-        f = self.eval_objective()
         
+        f = self.eval_objective()
+
         if isnan(f):
             msg = "Numerical overflow in the objective"
             self.raise_exception(msg, RuntimeError)
@@ -236,7 +237,7 @@ class SLSQP_driver(DriverUsesDerivatives):
         self.ffd_order = 1
         self.differentiator.calc_gradient()
         self.ffd_order = 0
-            
+                                         
         df[:-1] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
 
         if self.ncon > 0 :

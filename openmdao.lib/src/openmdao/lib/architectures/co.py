@@ -1,7 +1,7 @@
 """Implementation of the Colaborative Optimization Optimization Architecture"""
 
 from openmdao.main.api import Driver, Architecture
-from openmdao.lib.drivers.api import SLSQP_driver
+from openmdao.lib.drivers.api import SLSQP_driver#, COBYLA_driver as SLSQP_driver
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
@@ -36,9 +36,11 @@ class CO(Architecture):
         
         #Global Driver    
         global_opt = self.parent.add('driver', SLSQP_driver())
-        global_opt.recorders = self.data_recorders
-        global_opt.iprint = -1 
         global_opt.differentiator = FiniteDifference()
+        global_opt.recorders = self.data_recorders
+        global_opt.print_vars = ['dis1.y1', 'dis2.y2']
+        global_opt.iprint = -1
+       
         
         initial_conditions = [param.evaluate() for comp,param in global_dvs]
         #print "global initial conditions: ", initial_conditions
@@ -89,7 +91,6 @@ class CO(Architecture):
             local_opt = self.parent.add('local_opt_%s'%comp,SLSQP_driver())
             local_opt.differentiator = FiniteDifference()
             local_opt.iprint = -1
-            
             global_opt.workflow.add(local_opt.name)
             residuals = []
             for param in params: 
@@ -112,6 +113,7 @@ class CO(Architecture):
             global_constraint = "%s<=.001"%residuals
             global_opt.add_constraint(global_constraint)
             local_opt.add_objective(residuals)
+            local_opt.force_execute = True
 
         """    print local_opt.name
             print local_opt.get_objectives().keys()[0]
@@ -134,5 +136,4 @@ class CO(Architecture):
         
         print 
         print"""            
-            
             

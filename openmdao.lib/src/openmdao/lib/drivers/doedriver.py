@@ -64,7 +64,7 @@ class NeiborhoodDOEdriver(CaseIterDriverBase):
     
     alpha=Float(.3, low=.01, high =1.0, iotype='in',desc='Multiplicative factor for neighborhood DOE Driver')
     
-    beta=Float(.1, low=.001, high=1.0,iotype='in',desc='Another factor for neighborhood DOE Driver')
+    beta=Float(.001, low=.001, high=1.0,iotype='in',desc='Another factor for neighborhood DOE Driver')
 
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""

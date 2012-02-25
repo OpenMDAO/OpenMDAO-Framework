@@ -8,7 +8,8 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 
 
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow, Component, Assembly
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil,FixedPointIterator,NeiborhoodDOEdriver
+from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil,FixedPointIterator,NeiborhoodDOEdriver, SLSQP_driver
+from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, OptLatinHypercube, LatinHypercube
 from openmdao.lib.components.api import MetaModel
@@ -17,27 +18,28 @@ from openmdao.lib.casehandlers.api import DBCaseRecorder
 
 class SubSystemObj(Component): 
     """Component which adds the weight factors for each output state variable 
-    for a given subsystem 
-    """
+    for a given subsystem """
     
     f_wy = Float(0.0,iotype="out",desc="subsystem objective")
     
-    def __init__(self,num_outputs): 
+    def __init__(self,num_vars): 
         super(SubSystemObj,self).__init__()
-        
+        self.num_vars = num_vars
         self.var_names = []
         self.weights = []
-        for i in range(0,num_outputs): 
+        
+    def configure(self):    
+        for i in range(0,self.num_vars): 
             name = "y%d"%i
             self.add_trait(name,Float(0.0,
-                                      iotype="in",
-                                      desc=" input variable #%d"%i))
+                                   iotype="in",
+                                   desc=" input variable #%d"%i))
             self.var_names.append(name)
             
             name = "w%d"%i
-            self.add_trait(name,
-                           Float(1.0, iotype="in",
-                                 desc="weighting factor for input variable #%d"%i))
+            self.add_trait(name,Float(1.0,
+                                   iotype="in",
+                                   desc="weighting factor for input variable #%d"%i))
             
             self.weights.append(name)
             
@@ -45,13 +47,13 @@ class SubSystemObj(Component):
         self.f_wy = sum([getattr(self,w)*getattr(self,v) for w,v in zip(self.weights,self.var_names)])
         
 class Broadcast(Component): 
-    """Used to create outputs in the SubSytemOpt assembly"""
+    """Used to create outputs in the SubSytemOpt assmebly"""
     
     input = Float(0.0,iotype="in")
     output = Float(0.0,iotype="out")
     
     def execute(self):
-        self.output = self.input
+        self.output = self.input        
         
 class SubSystemOpt(Assembly): 
     """ assembly which takes global inputs, coupling indeps, and weight factors as inputs, 
@@ -59,68 +61,61 @@ class SubSystemOpt(Assembly):
     
     def __init__(self,component,global_params,local_params,couple_deps,couple_indeps,constraints): 
         super(SubSystemOpt,self).__init__()
-        self.global_params = global_params 
-        self.local_params = local_params 
+       
+        self.component = component
+        self.global_params = global_params
+        self.local_params = local_params
         self.couple_deps = couple_deps
         self.couple_indeps = couple_indeps
-        self.constraints = constraints 
+        self.constraints = constraints
         
-        
-    def configure(self):  
-        dep_outputs = set([c.dep.target for c in self.couple_deps])        
-        self.add('objective_comp',SubSystemObj(len(dep_state_vars)))
+    def configure(self):     
+        dep_couple_vars = set([c.dep.target for c in self.couple_deps])        
+        self.add('objective_comp',SubSystemObj(len(dep_couple_vars)))
         self.add(self.component.name,self.component)
         for p in self.global_params:
-            try:
-                self.create_passthrough(p.get_referenced_varpaths().pop()) #promote the global des vars
-            except KeyError as err: 
-                # if two elements of an array are in the globals, you need this hack to prevent an error
-                if "already exists" in str(err): pass
-                
+            
+            self.create_passthrough(p.target) #promote the global des vars
     
         if self.local_params: #if there are none, you don't do an optimization
             self.add('driver',CONMINdriver())
-            self.driver.print_results = False
             self.driver.add_objective("objective_comp.f_wy")
-            #self.driver.fdch = .00001
+            self.driver.fdch = .00001
             #self.driver.fdchm = .0001
             
             #this is not really necessary, but you might want to track it anyway...
             self.create_passthrough("objective_comp.f_wy") #promote the objective function    
 
             for p in self.local_params: 
-                try: 
-                    var = p.get_referenced_varpaths().pop()
-                    self.parent.create_passthrough(var)
-                except KeyError as err: 
-                    # if two elements of an array are in the globals, you need this hack to prevent an error
-                    if "already exists" in str(err): pass   
-                #print broadcast_name
-                #self.add(broadcast_name,Broadcast())
-                #self.add_trait(var_name,Float(0.0,iotype="in",desc="localy optimized value for %s"%target))
-                #self.connect("%s.output"%broadcast_name,target) #connect broadcast output to input of component
-                #self.connect("%s.output"%broadcast_name,var_name) #connect broadcast output to variable in assembly
-                self.driver.add_parameter(p.target,low=p.low,high=p.high) #optimizer varries broadcast input
+                target = p.target
+                var_name = target.split(".")[-1]
                 
+                #TODO: since the local variables are optimized, they become outputs now
+                broadcast_name = 'output_%s'%var_name
+                self.add(broadcast_name,Broadcast())
+                self.add_trait(var_name,Float(0.0,iotype="out",desc="localy optimized value for %s"%target))
+                setattr(self,var_name,self.get(target))
+
+                self.connect("%s.output"%broadcast_name,target) #connect broadcast output to input of component
+                self.connect("%s.output"%broadcast_name,var_name) #connect broadcast output to variable in assembly
+                self.driver.add_parameter("%s.input"%broadcast_name,low=p.low,high=p.high) #optimizer varries broadcast input
+            
             for c in self.constraints: 
                 self.driver.add_constraint(str(c))
-                                        
+                
+                
+                
+                        
         for c in self.couple_indeps: 
-            try:
-                self.create_passthrough(c.indep.get_referenced_varpaths().pop()) #promote the couple inputs to the component
-            except KeyError as err: 
-                    # if two elements of an array are in the globals, you need this hack to prevent an error
-                    if "already exists" in str(err): pass   
-
+            self.create_passthrough(c.indep.target) #promote the couple inputs to the component
+        
         self.weights = self.objective_comp.weights
         self.var_names = self.objective_comp.var_names
         
         for w,var,c in zip(self.objective_comp.weights,
                            self.objective_comp.var_names,
-                           dep_state_vars): 
-            print c
-            exit()
-            self.create_passthrough(c) #prmote the coupling deps outputs
+                           dep_couple_vars): 
+            self.create_passthrough(c) #prmote the state vars to be outputs
             self.connect(c,"objective_comp.%s"%var) #also connect the state vars to the inputs of the objective come
             self.create_passthrough("objective_comp.%s"%w) #promote the weights
                 
@@ -135,7 +130,7 @@ class BLISS2000(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
-        self.has_global_des_vars = True
+        self.requires_global_des_vars = True
 
     
     def configure(self): 
@@ -149,6 +144,7 @@ class BLISS2000(Architecture):
         
         locals=self.parent.get_local_des_vars()
         
+        
         objective = self.parent.get_objectives().items()[0]
         comp_constraints = self.parent.get_constraints_by_comp()
         coupling = self.parent.get_coupling_vars()
@@ -157,14 +153,15 @@ class BLISS2000(Architecture):
         
         driver=self.parent.add("driver",FixedPointIterator())
                
-        driver.workflow = SequentialWorkflow()
-        driver.max_iteration=50
-        driver.tolerance = .0001
+        driver.workflow = SequentialWorkflow()           
+        driver.max_iteration=20 #should be enough to converge
+        driver.tolerance = .005
         meta_models = {}
         self.sub_system_opts = {}
         for comp in des_vars: 
             mm_name = "meta_model_%s"%comp
-            meta_model = self.parent.add(mm_name,MetaModel()) 
+            meta_model = self.parent.add(mm_name,MetaModel()) #metamodel now replaces old component with same name 
+            #driver.add_event("%s.reset_training_data"%mm_name)
 
             meta_models[comp] = meta_model
             meta_model.surrogate = {'default':ResponseSurface()}
@@ -178,7 +175,6 @@ class BLISS2000(Architecture):
                                       couple_deps.get(comp),
                                       couple_indeps.get(comp),
                                       comp_constraints.get(comp)))
-                sso.configure()
                 self.sub_system_opts[comp] = sso
                 meta_model.model = sso 
             else: #otherwise, just use the comp
@@ -188,7 +184,7 @@ class BLISS2000(Architecture):
             #add a doe trainer for each metamodel
             dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
             
-            for couple in couple_indeps[comp]:
+            for couple in couple_indeps[comp] :
                 dis_doe.add_parameter("meta_model_%s"%couple.indep.target,low=-1e99,high=1e99) #change to -1e99/1e99 
                 
             for param,group in global_dvs:
@@ -213,11 +209,10 @@ class BLISS2000(Architecture):
             self.parent.add('%s_store'%l[0],Float(0.0))        
         
         #optimization of system objective function using the discipline meta models
-        sysopt=self.parent.add('sysopt', CONMINdriver())   
-        sysopt.print_results = False
+        sysopt=self.parent.add('sysopt', SLSQP_driver())   
         sysopt.recorders = self.data_recorders
-        #sysopt.fdch = .0001
-        #sysopt.fdchm = .0001
+        sysopt.iprint = -1
+        sysopt.differentiator = FiniteDifference()
         
         obj2= objective[1].text
         for comp in objective[1].get_referenced_compnames():            
@@ -244,8 +239,8 @@ class BLISS2000(Architecture):
             
             #feasibility constraints, referenced to metamodels
             s1,s2= "meta_model_"+couple.dep.target,"meta_model_"+couple.indep.target
-            sysopt.add_constraint('%s<=%s'%(s2,s1))
-            sysopt.add_constraint('%s>=%s'%(s2,s1))
+            sysopt.add_constraint('(%s-%s)**2<=0.0001'%(s2,s1))
+            #sysopt.add_constraint('%s>=%s'%(s2,s1))
             
         
         #add constraints, referenced to metamodels
@@ -274,7 +269,3 @@ class BLISS2000(Architecture):
             s2='%s_store'%l[0]
             driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
             driver.add_constraint('%s.%s = %s'%(mm,l[0],s2))             
-        
-        #create the top level driver. Runs a single MDA then begins the BLISS2000 iterative process.
-        
-
