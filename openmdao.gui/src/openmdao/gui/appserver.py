@@ -74,10 +74,7 @@ class AppServer(object):
         self.options = options
         
         if options.initialize or not os.path.exists('settings.py'):
-            if options.reset:
-                initialize_settings(reset=True)
-            else:
-                initialize_settings(reset=False)
+            self.initialize_settings(options.reset)
 
         if (options.port < 1):
             options.port = get_unused_ip_port()
@@ -130,6 +127,7 @@ class AppServer(object):
                           
         return parser
 
+    @staticmethod
     def initialize_settings(reset):
         ''' first time setup (or re-setup)
         '''
