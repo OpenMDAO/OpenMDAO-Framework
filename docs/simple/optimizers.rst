@@ -29,29 +29,29 @@ The following tables summarizes the optimizers that are currently included in Op
 +------------------+-----------------------+-----------+-----------+---------------------------------------------------------------------------------------------------------------------+
 |``Genetic``       |  None                 |   No      |   No      | General genetic algorithm framework based on PyEvolve.                                                              |
 +------------------+-----------------------+-----------+-----------+---------------------------------------------------------------------------------------------------------------------+
-|``NEWSUMTdriver`` |  Computed by OpenMDAO |   Yes     |   No      | NEWton’s method Sequence of Unconstrained Minimizations                                                             |
+|``NEWSUMTdriver`` |  Computed by OpenMDAO |   Yes     |   No      | NEWton's method Sequence of Unconstrained Minimizations                                                             |
 |                  |  or NEWSUMT           |           |           |                                                                                                                     |
 +------------------+-----------------------+-----------+-----------+---------------------------------------------------------------------------------------------------------------------+
 |``SLSQPdriver``   |  Computed by OpenMDAO |   Yes     |   Yes     | Sequential Least SQuares Programming                                                                                |
 +------------------+-----------------------+-----------+-----------+---------------------------------------------------------------------------------------------------------------------+
 
 Any of these optimizers can be added to your model by importing them from ``openmdao.lib.drivers.api``.
-You will generally choose an optimizer based on prior knowlege of how well a particular algorithm
+You will generally choose an optimizer based on prior knowledge of how well a particular algorithm
 is suited to your type of problem. Specific limitations of the optimizers may also come into play. For
-example, if your problem has equality constraints, then you can only use the ``SLSQPdriver`` unlessyou
+example, if your problem has equality constraints, then you can only use the ``SLSQPdriver`` unless you
 can rewrite your equality constraint as a pair of inequality constraints. Likewise, if you are optimizing
 a component that provides an analytical gradient, that gradient can only be used by an optimizer that
 supports them. 
 
 In the example below, you will have the opportunity to try out all of the OpenMDAO optimizers on the
-Paraboloid problem. This will give you some basic insight into their performance and should familarize
+Paraboloid problem. This will give you some basic insight into their performance and should familiarize
 you with their most useful settings.
 
 
 Swapping Optimizers
 ~~~~~~~~~~~~~~~~~~~
 
-In previous examples, we found the minimum value of a paraboid both with and without constraints. We also
+In previous examples, we found the minimum value of a paraboloid both with and without constraints. We also
 learned how to add derivative functions to our components and use them in an optimizer's calculation of the
 gradient. We did all of this using the CONMIN optimizer. Now, let's investigate the rest of OpenMDAO's 
 optimizers and see how they compare to CONMIN.
@@ -148,17 +148,17 @@ Let's start by creating the following model and calling it ``demo_opt.py``.
             print "Elapsed time: ", t2-t1, "seconds"
 
 We've gone ahead and imported every optimizer to make swapping them fairly easy. There are several
-blocks of lines that are commmented out in this code. Most of these contain settings for the optimizers.
+blocks of lines that are commented out in this code. Most of these contain settings for the optimizers.
 Settings are usually very specific to an optimizer, so we will want to take care that only the lines for
 the optimizer we are using are active. The parameters, objective(s), and constraints(s) can all stay the
 same when you swap in a new optimizer, provided they are supported (e.g., equality constraints are only
-supported by ``SLSQPdriver``.) Also, we will sometimes slot a FiniteDifferent differentiator, though that
+supported by ``SLSQPdriver``.) Also, we will sometimes slot a FiniteDifference differentiator, though that
 line of code is currently commented out. We are using the ``ParaboloidDerivative`` component, which
 contains the analytical derivatives. In all of the finite difference calculations, whether initiated by 
 OpenMDAO, CONMIN, or NEWSUMT, the FDAD (Finite Difference with Analytical Derivatives) approach is
 used, so the analytical derivatives are used to replace model execution under finite difference.
 
-So first, let's run ``demo_opt.py``. This first case is the constrainted optimization of the
+So first, let's run ``demo_opt.py``. This first case is the constrained optimization of the
 paraboloid using CONMIN's internal finite difference calculation.
 
 Note that the sample results presented here are representative of what you should see, but they
@@ -247,7 +247,7 @@ Then run ``demo_opt.py``.
     Elapsed time:  0.0497758388519 seconds
     
 We didn't do as well here with NEWSUMT. However, the default number of iterations for NEWSUMT
-is 10. We can tell that we are hitting that because we've perfomed 10 gradient executions. Note
+is 10. We can tell that we are hitting that because we've performed 10 gradient executions. Note
 that we would also be able to tell that from the number of driver iterations, which in NEWSUMT
 is stored in iter_count. Note that not every driver reports an iteration count, so we didn't
 print it here. Let's boost our maximum number of iterations:
@@ -351,11 +351,11 @@ Running ``demo_opt.py``:
     Minimum found at (7.166661, -7.833339)
     Elapsed time:  0.0184278488159 seconds
     
-This results in 7 more function executions and a better minimum (although the value of the minumum
+This results in 7 more function executions and a better minimum (although the value of the minimum
 is cut off in our printout because of the print display resolution -- you can make it more explicit
 with a specified-width format like %.15f.) COBYLA needed 3 times the number of function evaluation as CONMIN, but
 it got to a much better value, and it does not exhibit any hyper-sensitivity with respect to its
-settings. Note also that COBYLA's elapsed time is stil lower. The optimizer seems to have less
+settings. Note also that COBYLA's elapsed time is still lower. The optimizer seems to have less
 overhead, which could be important for evaluating large numbers of fast objectives, but will be
 lost in the wash when dealing with slow functions.
 
@@ -430,7 +430,7 @@ And now for something completely different, lets try the Genetic optimizer.
                 # Create Optimizer instance
                 self.add('driver', Genetic())
                 
-Genetic is currently our only evolutionary algorithm optimizer. As such, it has some
+``Genetic`` is currently our only evolutionary algorithm optimizer. As such, it has some
 settings that are quite different:
                 
 ::
@@ -447,7 +447,20 @@ settings that are quite different:
                 
 These are mostly the default values, although ``selection_method`` was changed to 'rank' because
 it seemed to give better answers for this problem. ``Genetic`` does not use the differentiator
-socket, so we don't need to worry about gradients. Run ``demo_opt.py``:
+socket, so we don't need to worry about gradients. Also, ``Genetic`` doesn't handle any kind of
+constraint, so we will only be able to play around with the unconstrained problem.
+
+::
+
+        # Inequality Constraints
+        #self.driver.add_constraint('comp.x-comp.y >= 15.0')
+        
+        # Equality Constraints
+        #self.driver.add_constraint('comp.x-comp.y=15.0')
+        
+
+
+Now we are ready to run ``demo_opt.py``:
 
 ::
 
@@ -458,10 +471,34 @@ socket, so we don't need to worry about gradients. Run ``demo_opt.py``:
     Minimum found at (8.805645, -9.066226)
     Elapsed time:  2.13916110992 seconds
 
-There should be no suprises here. This is not the kind of problem you would normally throw at
+There should be no surprises here. This is not the kind of problem you would normally throw at
 a genetic algorithm. Note that the answers are not deterministic, so re-running this will always give
 different results.
 
 Optimizers from Plugins
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+If you would like to choose from even more optimizers, another place to look is on the official
+plugins repository. This repository generally contains OpenMDAO plugins that are wrappers of
+other existing external applications which could not be included in OpenMDAO. Some of these may
+be commercial products (like Nastran), but others may even be open source packages. Most of 
+the time, the plugin just contains the OpenMDAO wrapper file, and you will need to procure and
+install the application on its own. Presently, the official plugins repository contains two
+optimizers.  ``ipopt_wrapper`` is a wrapper for the `IPOPT <https://projects.coin-or.org/Ipopt>`_ 
+interior point optimizer. ``pyopt_driver`` is a wrapper for the `pyOpt <http://www.pyopt.org/>`_
+optimization framework. You should definitely check out pyOpt because it contains more than 15
+optimization algorithms, most of which aren't in OpenMDAO. Roughly half of them are included in
+the pyOpt installation, while the other half are commercial and require a separate installation
+of the optimization code. Some of the pyOpt's optimizers include ALPSO (Augmented Lagrangian
+Particle Swarm Optimizer), SNOPT (Sparse NOnlinear OPTimizer), and the famous NSGA2. To install
+the pyopt_driver, type the following in an activated OpenMDAO environment at your operating
+system prompt:
+
+::
+
+                plugin install --github pyopt_driver
+
+Note that you will also need to install pyOpt separately, either into your system environment, or
+directly into OpenMDAO's python.
+
+This concludes the tutorial on optimizers.
