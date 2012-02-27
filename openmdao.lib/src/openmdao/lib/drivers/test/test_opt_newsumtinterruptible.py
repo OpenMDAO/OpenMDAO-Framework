@@ -223,7 +223,7 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):
@@ -275,7 +275,7 @@ class NEWSUMTdriverParaboloidWithLinearConstraintTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         self.top.driver.ilin = numpy.array( [1], dtype=int )
         
@@ -311,7 +311,7 @@ class NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 300
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):
@@ -349,7 +349,7 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         # use finite differences for gradients for objective
         #      and constraint functions
         # use the default values for the step size = 0.01
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.epsrsf = 0.0000005
         
     def tearDown(self):
@@ -410,7 +410,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):
@@ -466,7 +466,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 100
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 1
         self.top.driver.epsrsf = 0.0005
         self.top.driver.epsodm = 0.001
@@ -733,7 +733,7 @@ class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):

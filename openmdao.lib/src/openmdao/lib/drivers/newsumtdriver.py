@@ -225,7 +225,7 @@ class _contrl(object):
         self.g0 = 0.0
         self.ifd = 0
         self.iflapp = 0
-        self.jprint = 0
+        self.iprint = 0
         self.jsigng = 0
         self.lobj = 0
         self.maxgsn = 0
@@ -312,9 +312,9 @@ class NEWSUMTdriver(DriverUsesDerivatives):
                       initial step size of the one-dimensional \
                       minimization.')
     
-    jprint = Int(0, iotype='in', desc='Print information during NEWSUMT \
+    iprint = Int(0, iotype='in', desc='Print information during NEWSUMT \
                     solution. Higher values are more verbose. If 0,\
-                    print initial and final designs only.', high=3, low=-1)
+                    print initial and final designs only.', high=4, low=0)
     lobj = Int(0, iotype='in', desc='Set to 1 if linear objective function.')
     maxgsn = Int(20, iotype='in', desc='Maximum allowable number of golden \
                     section iterations used for 1D minimization.')
@@ -546,7 +546,7 @@ class NEWSUMTdriver(DriverUsesDerivatives):
         self.contrl.g0 = self.g0
         self.contrl.ifd = ifd
         self.contrl.iflapp = 0
-        self.contrl.jprint = self.jprint
+        self.contrl.jprint = self.iprint - 1
         self.contrl.jsigng = 1
         self.contrl.lobj = self.lobj
         self.contrl.maxgsn = self.maxgsn
