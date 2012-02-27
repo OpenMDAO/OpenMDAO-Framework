@@ -11,6 +11,11 @@ from openmdao.util.network import get_unused_ip_port
 
 from random import randrange
 
+debug = True
+def DEBUG(msg):
+    if debug:
+        print '<<<'+str(os.getpid())+'>>> OutStreamServer --',msg
+
 class OutStream(object):
     """ A file like object that publishes the stream to a 0MQ PUB socket.
         (Borrowed from IPython, but stripped down a bit...)
@@ -75,7 +80,7 @@ class OutStreamRedirector(Process):
     '''
     def __init__(self,name,addr,filename='sys.stdout'):
         super(OutStreamRedirector, self).__init__()
-        print '<<<'+str(os.getpid())+'>>>',name,'..............'
+        DEBUG(name+'..............')
         print addr,'-->',filename
         self.name = name
         self.addr = addr
@@ -119,7 +124,7 @@ class OutStreamRedirector(Process):
             print 'Error writing to file:',err
 
     def terminate(self):
-        print '<<<'+str(os.getpid())+'>>>',self.name,'shutting down .........'
+        DEBUG(self.name+'shutting down .........')
         super(OutStreamRedirector, self).terminate()
 
 
@@ -169,7 +174,7 @@ def try_outstream():
         print ' Interrupted'       
 
 def try_outstream_redirector():
-    print '<<<'+str(os.getpid())+'>>> try_outstream_redirector ..............'
+    DEBUG('try_outstream_redirector ..............')
     ioloop.install()
     loop = ioloop.IOLoop.instance()
     context = zmq.Context()

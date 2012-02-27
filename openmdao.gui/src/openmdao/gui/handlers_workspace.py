@@ -302,7 +302,6 @@ class ProjectHandler(BaseHandler):
         if filename:
             self.delete_server()
             cserver = self.get_server()
-            print 'cserver:',cserver
             cserver.load_project(MEDIA_ROOT+'/'+filename)
             self.redirect(self.application.reverse_url('workspace'))
         else:

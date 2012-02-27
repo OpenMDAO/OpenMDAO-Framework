@@ -15,10 +15,13 @@ from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.session import TornadoSessionManager 
-#from openmdao.gui.consoleserverfactory import ConsoleServerFactory
-from openmdao.gui.try_zmq import ConsoleServerFactory
+from openmdao.gui.zmqservermanager import ZMQServerManager
 
-print '<<<'+str(os.getpid())+'>>> AppServer ..............'
+debug = True
+def DEBUG(msg):
+    if debug:
+        print '<<<'+str(os.getpid())+'>>> AppServer --',msg
+
 
 class App(web.Application):
     ''' openmdao web application
@@ -59,7 +62,7 @@ class App(web.Application):
         ensure_dir(session_dir)
             
         self.session_manager = TornadoSessionManager(secret,session_dir)
-        self.server_manager  = ConsoleServerFactory()
+        self.server_manager  = ZMQServerManager('openmdao.gui.consoleserverfactory.ConsoleServer')
         
         super(App, self).__init__(handlers, **settings)
         
@@ -105,7 +108,7 @@ class AppServer(object):
         try:
             ioloop.IOLoop.instance().start()
         except KeyboardInterrupt:
-            print '<<<'+str(os.getpid())+'>>> AppServer: interrupt received, shutting down.'
+            DEBUG('interrupt received, shutting down.')
 
     @staticmethod
     def get_options_parser():
@@ -162,6 +165,7 @@ class AppServer(object):
 def main():
     ''' process command line arguments and do as commanded
     '''
+    DEBUG('starting server...')
     
     # install zmq ioloop before creating any tornado objects
     ioloop.install()

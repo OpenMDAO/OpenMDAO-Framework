@@ -9,6 +9,11 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
+debug = True
+def DEBUG(msg):
+    if debug:
+        print '<<<'+str(os.getpid())+'>>> OutStreamServer --',msg
+
 class OutStreamHandler(websocket.WebSocketHandler):
     ''' a handler that forwards output from a ZMQStream to a WebSocket
     '''
@@ -24,7 +29,7 @@ class OutStreamHandler(websocket.WebSocketHandler):
             socket.setsockopt(zmq.SUBSCRIBE, '')
             stream = ZMQStream(socket)
         except Exception, err:
-            print 'error getting outstream:',err
+            DEBUG('error getting outstream:'+err)
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             traceback.print_tb(exc_traceback, limit=30)   
@@ -42,10 +47,10 @@ class OutStreamHandler(websocket.WebSocketHandler):
             self.write_message(part)
         
     def on_message(self, message):
-        print 'outstream message received:', message
+        DEBUG('outstream message received:'+message)
 
     def on_close(self):
-        print 'outstream connection closed'
+        DEBUG('outstream connection closed')
 
 
 class OutStreamApp(web.Application):
@@ -78,7 +83,7 @@ class OutStreamServer(object):
         try:
             ioloop.IOLoop.instance().start()
         except KeyboardInterrupt:
-            print '<<<'+str(os.getpid())+'>>> OutStreamServer: interrupt received, shutting down.'
+            DEBUG('interrupt received, shutting down.')
 
     @staticmethod
     def get_options_parser():
@@ -103,12 +108,12 @@ class OutStreamServer(object):
         '''
         file_path   = os.path.abspath(__file__)
         cmd = ['python',file_path,'-z',str(out_url),'-p',str(ws_port),'-u',str(ws_url)]        
-        subprocess.Popen(cmd)
+        return subprocess.Popen(cmd)
 
 def main():
     ''' process command line arguments and do as commanded
     '''
-    print '<<<'+str(os.getpid())+'>>> OutStreamServer ..............'
+    DEBUG('starting server...')
 
     # install zmq ioloop before creating any tornado objects
     ioloop.install()
