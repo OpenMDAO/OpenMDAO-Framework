@@ -94,7 +94,7 @@ and ``SellarDiscipline2`` to the assembly. Then add those instances to the workf
 .. testcode:: MDF_parts
     :hide:
     
-    self= set_as_top(SellarMDF())
+    self = set_as_top(SellarMDF())
 
 .. testcode:: MDF_parts
 
