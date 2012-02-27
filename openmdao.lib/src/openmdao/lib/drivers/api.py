@@ -7,10 +7,10 @@
 OpenMDAO drivers in the standard library."""
 
 # Drivers
-from openmdao.lib.drivers.cobyladriver import COBYLA_driver
+from openmdao.lib.drivers.cobyladriver import COBYLAdriver
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.newsumtdriver import NEWSUMTdriver
-from openmdao.lib.drivers.slsqpdriver import SLSQP_driver
+from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.genetic import Genetic
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
