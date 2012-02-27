@@ -38,7 +38,6 @@ ATTR = 1
 CALL = 2
 SLICE = 3
 
-
 class ExprTransformer(ast.NodeTransformer):
     """Transforms dotted name references, e.g., abc.d.g in an expression AST
     into scope.get('abc.d.g') and turns assignments into the appropriate
@@ -47,13 +46,15 @@ class ExprTransformer(ast.NodeTransformer):
     executed there. For example, abc.d[xyz](1, pdq-10).value would translate
     to, e.g., scope.get('abc.d', [(0,xyz), (0,[1,pdq-10]), (1,'value')]).
     """
-    def __init__(self, expreval, rhs=None, setter='set', getter='get'):
+    def __init__(self, expreval, rhs=None, getters=None, default_getter='get'):
         self.expreval = expreval
         self.rhs = rhs
         self._stack = []  # use this to see if we're inside of parens or brackets so
                           # that we always translate to 'get' even if we're on the lhs
-        self.setter = setter
-        self.getter = getter
+        if getters is None:
+            getters = {}
+        self.getters = getters
+        self.default_getter = default_getter
         super(ExprTransformer, self).__init__()
         
     def visit(self, node, subs=None):
@@ -79,13 +80,13 @@ class ExprTransformer(ast.NodeTransformer):
         if scope:
             parts = name.split('.',1)
             names = ['scope']
-            if scope.contains(parts[0]):
-                self.expreval.var_names.add(name)
-                if len(parts) == 1: # short name, so just do a simple attr lookup on scope
-                    names.append(name)
-                    return _get_attr_node(names)
-            else:
-                self.expreval.var_names.add(name)
+            #if scope.contains(parts[0]):
+                #self.expreval.var_names.add(name)
+                #if len(parts) == 1: # short name, so just do a simple attr lookup on scope
+                    #names.append(name)
+                    #return _get_attr_node(names)
+            #else:
+            self.expreval.var_names.add(name)
         else:
             raise RuntimeError("expression has no scope")
 
@@ -93,8 +94,13 @@ class ExprTransformer(ast.NodeTransformer):
         if self.rhs and len(self._stack) == 0:
             fname = 'set'
             args.append(self.rhs)
+            keywords = [ast.keyword('src', ast.Name(id='_local_src_',
+                                                    lineno=node.lineno,
+                                                    col_offset=1,
+                                                    ctx=ast.Load()))]
         else:
-            fname = 'get'
+            fname = self.getters.get(name, self.default_getter)
+            keywords = []
         names.append(fname)
 
         called_obj = _get_attr_node(names)
@@ -102,7 +108,7 @@ class ExprTransformer(ast.NodeTransformer):
             args.append(ast.List(elts=subs, ctx=ast.Load()))
 
         return ast.copy_location(ast.Call(func=called_obj, args=args,
-                                             ctx=node.ctx, keywords=[]), node)
+                                          ctx=node.ctx, keywords=keywords), node)
     
     def visit_Name(self, node, subs=None):
         return self._name_to_node(node, node.id, subs)
@@ -207,7 +213,7 @@ class ExprTransformer(ast.NodeTransformer):
             raise RuntimeError("only one expression is allowed on left hand side of assignment")
         rhs=self.visit(node.value)
         lhs = ExprTransformer(self.expreval, rhs=rhs, 
-                              setter=self.setter, getter=self.getter).visit(node.targets[0])
+                              getters=self.getters).visit(node.targets[0])
         if isinstance(lhs, (ast.Name,ast.Subscript,ast.Attribute)):
             lhs.ctx = ast.Store()
             return ast.Assign(targets=[lhs], value=rhs)
@@ -228,14 +234,14 @@ class ExprEvaluator(object):
     see the doc string for the ``container._process_index_entry`` function.
     """
     
-    def __init__(self, text, scope=None, setter='set', getter='get'):
+    def __init__(self, text, scope=None, getters=None, default_getter='get'):
         self._scope = None
         self.scope = scope
         self._allow_set = False
         self.text = text
         self.var_names = set()
-        self.setter = setter
-        self.getter = getter
+        self.getters = getters
+        self.default_getter = default_getter
     
     @property
     def text(self):
@@ -300,7 +306,7 @@ class ExprEvaluator(object):
         Returns False if the name refers to nothing in _expr_dict, e.g., mycomp.x.
         """
         global _expr_dict
-        if hasattr(__builtin__, name) or name=='_local_setter':
+        if hasattr(__builtin__, name) or name=='_local_setter_':
             return True
         parts = name.split('.')
         obj = _expr_dict.get(parts[0], _Missing)
@@ -325,26 +331,30 @@ class ExprEvaluator(object):
             self._allow_set = False
         return root
         
-    def _parse(self):
-        self._allow_set = True
-        self.var_names = set()
-        new_ast = ExprTransformer(self, setter=self.setter, getter=self.getter).visit(self._pre_parse())
+    def _parse_get(self):
+        new_ast = ExprTransformer(self, getters=self.getters, 
+                                  default_getter=self.default_getter).visit(self._pre_parse())
         
         # compile the transformed AST
         ast.fix_missing_locations(new_ast)
         mode = 'exec' if isinstance(new_ast, ast.Module) else 'eval'
-        self._code = compile(new_ast, '<string>', mode)
+        return compile(new_ast, '<string>', mode)
+        
+    def _parse(self):
+        self._allow_set = True
+        self.var_names = set()
+        self._code = self._parse_get()
         
         if self._allow_set: # set up a compiled assignment statement
-            assign_txt = "%s=_local_setter" % self.text
+            assign_txt = "%s=_local_setter_" % self.text
             root = ast.parse(assign_txt, mode='exec')
             ## transform into a 'set' call to set the specified variable
-            assign_ast = ExprTransformer(self, setter=self.setter, getter=self.getter).visit(root)
+            assign_ast = ExprTransformer(self, getters=self.getters,
+                                         default_getter=self.default_getter).visit(root)
             ast.fix_missing_locations(assign_ast)
             self._assignment_code = compile(assign_ast,'<string>','exec')
             
         self._parse_needed = False
-        return new_ast
                 
     def _get_updated_scope(self, scope):
         oldscope = self.scope
@@ -355,7 +365,7 @@ class ExprEvaluator(object):
             self.scope = scope
         return scope
 
-    def evaluate(self, scope=None):
+    def evaluate(self, scope=None, wrapped=False):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
         """
@@ -369,16 +379,20 @@ class ExprEvaluator(object):
             raise type(err)("can't evaluate expression "+
                             "'%s': %s" %(self.text,str(err)))
 
-    def set(self, val, scope=None):
+    def set(self, val, scope=None, src=None):
         """Set the value of the referenced object to the specified value."""
         global _expr_dict
         scope = self._get_updated_scope(scope)
         
         if self.is_valid_assignee():
             # self.assignment_code is a compiled version of an assignment statement
-            # of the form  'somevar = _local_setter', so we set _local_setter here
-            # and the exec call will pull it out of the locals dict
-            _local_setter = val 
+            # of the form  'somevar = _local_setter_', so we set _local_setter_ here
+            # and the exec call will pull it out of the locals dict. _local_src_ is
+            # another local variable corresponding to the 'src' arg which is used
+            # to determine if a connected expression is being set by the source it's
+            # connected to.
+            _local_setter_ = val 
+            _local_src_ = src
             if self._parse_needed:
                 self._parse()
             exec(self._assignment_code, _expr_dict, locals())
@@ -444,14 +458,19 @@ class ExprEvaluator(object):
         """Return True if all variables referenced by our expression
         are valid.
         """
-        scope = self.scope
-        if scope: # and scope.parent:
+        if self.scope:
             if self._parse_needed:
                 self._parse()
-            #if not all(scope.parent.get_valid(self.var_names)):
-            if not all(scope.get_valid(self.var_names)):
+            if not all(self.scope.get_valid(self.var_names)):
                 return False
         return True
+    
+    def invalid_refs(self):
+        """Return a list of invalid variables referenced by this expression."""
+        if self._parse_needed:
+            self._parse()
+        valids = self.scope.get_valid(self.var_names)
+        return [n for n,v in zip(self.var_names, valids) if v is True]
     
     def check_resolve(self):
         """Return True if all variables referenced by our expression can
@@ -462,8 +481,6 @@ class ExprEvaluator(object):
         if len(self.var_names) > 0:
             scope = self.scope
             if scope:
-                #if scope.parent:
-                    #scope = scope.parent
                 for name in self.var_names:
                     if not scope.contains(name):
                         return False

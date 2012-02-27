@@ -23,7 +23,7 @@ from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.printexpr import eliminate_expr_ws
+from openmdao.main.printexpr import eliminate_expr_ws, ExprNameTransformer
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -94,18 +94,35 @@ class ExprMapper(object):
         return graph
 
     def get_connected_inputs(self):
+        """Return a list of connected variables on the input boundary"""
         conn_inputs = []
         graph = self._exprgraph
         for node, data in graph.nodes(data=True):
-            if graph.in_degree(node) > 0:
-                conn_inputs.extend([v for v in data['expr'].get_referenced_varpaths() if '.' not in v])
+            expr = data['expr']
+            if graph.out_degree(node) > 0:
+                conn_inputs.extend([v for v in expr.get_referenced_varpaths() if '.' not in v])
         return conn_inputs
     
+    def get_output_exprs(self):
+        """Return all destination expressions at the output boundary"""
+        exprs = []
+        for node, data in self._exprgraph.nodes(data=True):
+            if self._exprgraph.in_degree(node) > 0:
+                expr = data['expr']
+                if len(expr.get_referenced_compnames()) == 0:
+                    exprs.append(expr)
+        return exprs
+        
+    def get_expr(self, text):
+        return self._exprgraph.node[text]['expr']
+    
     def get_connected_outputs(self):
+        """Return a list of connected variables on the output boundary"""
         conn_outputs = []
         graph = self._exprgraph
         for node, data in graph.nodes(data=True):
-            if graph.out_degree(node) > 0:
+            expr = data['expr']
+            if graph.in_degree(node) > 0:
                 conn_outputs.extend([v for v in data['expr'].get_referenced_varpaths() if '.' not in v])
         return conn_outputs
     
@@ -126,6 +143,8 @@ class ExprMapper(object):
         """
         graph = self._exprgraph
         return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
+    
+    
     
     def get_compgraph(self):
         """Return the cached component graph or create a new one if it doesnt' exist."""
@@ -244,14 +263,17 @@ class ExprMapper(object):
         outset = set()  # set of changed boundary outputs
         while(stack):
             srccomp, varset = stack.pop()
+            if varset is not None and not isinstance(varset, set):
+                varset = set(varset)
             for srcnode, destcomp, data in compgraph.edges(srccomp, data=True):
                 invalid_destvars = []
                 # if varset is None that means that ALL outputs of srccomp are invalid,
                 #    so invalidate all connected destinations
                 # if varset is not None, then invalidate any destinations connected to
                 #    src expressions that reference the invalid outputs
-                for srcexpr, destexprs in data['src_exprs'].items():
-                    if varset is None or varset.intersection(srcexpr.get_referenced_varpaths()):
+                for srcexprtxt, destexprs in data['srcexprs'].items():
+                    if varset is None or varset.intersection(
+                                 self._exprgraph.node[srcexprtxt]['expr'].get_referenced_varpaths()):
                         invalid_dests.extend([d.text for d in destexprs])
                         for destexpr in destexprs:
                             varpaths = destexpr.get_referenced_varpaths()
@@ -409,15 +431,15 @@ class Assembly (Component):
         destvar = destexpr.get_referenced_varpaths().pop()
         
         config_changed = False
-        cross_boundary = False
+        internal = False
         
         destcompname, destcomp, destvarname = self._split_varpath(destvar)
         
         if not destvar.startswith('parent.'):
             for srcvar in srcvars:
-                if srcvar.startswith('parent.'):
-                    cross_boundary = True
-                else:
+                if not srcvar.startswith('parent.'):
+                    internal = True
+                    
                     srccompname, srccomp, srcvarname = self._split_varpath(srcvar)
                     
                     if srccomp is not self and destcomp is not self:
@@ -451,7 +473,7 @@ class Assembly (Component):
         
         # if it's an internal connection, could change dependencies, so we have
         # to call config_changed to notify our driver
-        if not cross_boundary:
+        if internal:
             if config_changed:
                 self.config_changed(update_parent=False)
 
@@ -492,24 +514,23 @@ class Assembly (Component):
         """Runs driver and updates our boundary variables."""
         self.driver.run(ffd_order=self.ffd_order, case_id=self._case_id)
         
-        # now update boundary outputs
-        boundary_outs = self._depgraph.get_connected_outputs()
-        
         valids = self._valid_dict
-        for srccompname,link in self._depgraph.in_links('@bout'):
-            srccomp = getattr(self, srccompname)
-            for dest,src in link._dests.items():
-                if valids[dest] is False:
-                    setattr(self, dest, srccomp.get_wrapped_attr(src))
+        
+        # now update boundary outputs
+        for expr in self._depgraph.get_output_exprs():
+            if valids[expr.text] is False:
+                srcexpr = self._depgraph.get_expr(expr.text)
+                expr.set(srcexpr.evaluate(), src=srcexpr.text)
+                # setattr(self, dest, srccomp.get_wrapped_attr(src))
+            else:
+                # PassthroughProperty always valid for some reason.
+                try:
+                    dst_type = self.get_trait(dest).trait_type
+                except AttributeError:
+                    pass
                 else:
-                    # PassthroughProperty always valid for some reason.
-                    try:
-                        dst_type = self.get_trait(dest).trait_type
-                    except AttributeError:
-                        pass
-                    else:
-                        if isinstance(dst_type, PassthroughProperty):
-                            setattr(self, dest, srccomp.get_wrapped_attr(src))
+                    if isinstance(dst_type, PassthroughProperty):
+                        setattr(self, dest, srccomp.get_wrapped_attr(src))
     
     def step(self):
         """Execute a single child component and return."""
@@ -524,19 +545,19 @@ class Assembly (Component):
         """
         return self._depgraph.list_connections(show_passthrough)
 
-    def _cvt_input_srcs(self, sources):
-        link = self._depgraph.get_link('@xin', '@bin')
-        if link is None:
-            return sources
-        else:
-            newsrcs = []
-            dests = link._dests
-            for s in sources:
-                if '.' in s:
-                    newsrcs.append(dests[s])
-                else:
-                    newsrcs.append(s)
-            return newsrcs
+    #def _cvt_input_srcs(self, sources):
+        #link = self._depgraph.get_link('@xin', '@bin')
+        #if link is None:
+            #return sources
+        #else:
+            #newsrcs = []
+            #dests = link._dests
+            #for s in sources:
+                #if '.' in s:
+                    #newsrcs.append(dests[s])
+                #else:
+                    #newsrcs.append(s)
+            #return newsrcs
         
     @rbac(('owner', 'user'))
     def update_inputs(self, compname, exprs):
@@ -547,59 +568,33 @@ class Assembly (Component):
         """
         parent = self.parent
         if compname is None: # update boundary outputs (which are inputs in this scope)
-            destcomp = self
-            exprpaths = exprs
-        else:
-            destcomp = getattr(self, compname)
-            exprpaths = ['.'.join([compname, n]) for n in exprs]
+            invalids = [e for e in exprs if not self._valid_dict[e]]
+            if len(invalids) > 0:
+                if parent:
+                    parent.update_inputs(self.name, invalids)
+                # invalid inputs have been updated, so mark them as valid
+                for name in invalids:
+                    self._valid_dict[name] = True
+            return
         
-        for expr in exprpaths:
+        expr_info = []
+        invalids = []
+        for expr in ['.'.join([compname, n]) for n in exprs]:
             srcexpr = self._depgraph.get_source(expr)
+            invalids.extend(srcexpr.invalid_refs())
+            expr_info.append((srcexpr, self._depgraph.get_expr(expr)))
             
+        # if source exprs reference invalid vars, request an update
+        if invalids:
+            simple, compmap = partition_names_by_comp(invalids)
+            if simple and self.parent:
+                self.parent.update_inputs(self.name, simple)
+            for cname, vnames in compmap.items():
+                getattr(self, cname).update_outputs(vnames)
+                #self.set_valid(vnames, True)
             
-        for srccompname,srcs,dests in self._depgraph.in_map(compname, vset):
-            if srccompname == '@bin':   # boundary inputs
-                invalid_srcs = [s for s in srcs if not self._valid_dict[s]]
-                if len(invalid_srcs) > 0:
-                    if parent:
-                        parent.update_inputs(self.name, invalid_srcs)
-                    # invalid inputs have been updated, so mark them as valid
-                    for name in invalid_srcs:
-                        self._valid_dict[name] = True
-                srccompname = ''
-                srccomp = self
-                srcs = self._cvt_input_srcs(srcs)
-            else:
-                srccomp = getattr(self, srccompname)
-                if not srccomp.is_valid():
-                    srccomp.update_outputs(srcs)
-            
-            # TODO: add multiget/multiset stuff here...
-            for src,dest in zip(srcs, dests):
-                try:
-                    srcval = srccomp.get_wrapped_attr(src)
-                except Exception, err:
-                    self.raise_exception(
-                        "error retrieving value for %s from '%s': %s" %
-                        (src,srccompname,str(err)), type(err))
-                try:
-                    if srccomp is self:
-                        srcname = src
-                    else:
-                        srcname = '.'.join([srccompname, src])
-                    if destcomp is self:
-                        setattr(destcomp, dest, srcval)
-                    else:
-                        #destcomp.set(dest, srcval, src='parent.'+srcname)
-                        # don't need to do source checking here unless we've messed up our bookkeeping
-                        destcomp.set(dest, srcval, force=True)
-                except Exception, exc:
-                    if compname[0] == '@':
-                        dname = dest
-                    else:
-                        dname = '.'.join([compname, dest])
-                    msg = "cannot set '%s' from '%s': %s" % (dname, srcname, exc)
-                    self.raise_exception(msg, type(exc))
+        for srcexpr, destexpr in expr_info:
+            destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
             
     def update_outputs(self, outnames):
         """Execute any necessary internal or predecessor components in order

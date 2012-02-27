@@ -167,6 +167,10 @@ class ExprPrinter(ast.NodeVisitor):
     
         self.write(')')
         
+    def visit_keyword(self, node):
+        self.write("%s=" % node.arg)
+        self.visit(node.value)
+        
     def visit_Num(self, node):
         self.write(str(node.n))
         
