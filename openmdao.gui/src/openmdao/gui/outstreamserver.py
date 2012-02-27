@@ -19,15 +19,20 @@ class OutStreamHandler(websocket.WebSocketHandler):
     '''
     def initialize(self,addr):
         self.addr = addr
-        
+        DEBUG('OutStreamHandler initialized at '+self.addr)
+
     def open(self):
+        DEBUG('OutStreamHandler opening... ')
         stream = None
         try:
             context = zmq.Context()
+            DEBUG('OutStreamHandler context: '+str(context))
             socket = context.socket(zmq.SUB)
             socket.connect(self.addr)
             socket.setsockopt(zmq.SUBSCRIBE, '')
+            DEBUG('OutStreamHandler socket: '+str(socket))
             stream = ZMQStream(socket)
+            DEBUG('OutStreamHandler stream: '+str(stream))            
         except Exception, err:
             DEBUG('error getting outstream:'+err)
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -39,6 +44,7 @@ class OutStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
+        DEBUG('OutStreamHandler _write_message: '+str(message))            
         # Make sure that we're handling unicode
         for part in message:
             if not isinstance(part, unicode):

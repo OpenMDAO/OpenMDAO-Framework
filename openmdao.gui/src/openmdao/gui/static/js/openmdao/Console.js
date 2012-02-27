@@ -152,6 +152,9 @@ openmdao.Console = function(formID,commandID,historyID,model) {
                 debug.info('output socket message:',e);
                 updateHistory(e.data);
             };            
+            sck.onerror = function (e) {
+                debug.info('output socket error',e);
+            };
         },
         error: function(jqXHR, textStatus, errorThrown) {
                    debug.error("Error getting output socket (status="+jqXHR.status+"): "+jqXHR.statusText)
