@@ -200,7 +200,6 @@ The code for this looks like this:
                 self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
-                self.sim_EPA_city.force_execute = True
                 
                 # EPA Highway MPG Sim Setup
                 self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
@@ -211,7 +210,6 @@ The code for this looks like this:
                 self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-                self.sim_EPA_highway.force_execute = True        
                 
         if __name__ == "__main__":
         

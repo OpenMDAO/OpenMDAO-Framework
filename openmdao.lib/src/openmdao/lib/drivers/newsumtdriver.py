@@ -29,6 +29,7 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
+from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.datatypes.array import Array
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
@@ -145,6 +146,10 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
                     g[i] = val[0]-val[1]
                 else:
                     g[i] = val[1]-val[0]
+                    
+        # save constraint values in driver if this isn't a finite difference
+        if imode != 1:
+            driver.constraint_vals = g
 
     elif info == 3 :
         # evaluate the first and second order derivatives
@@ -444,6 +449,32 @@ class NEWSUMTdriver(DriverUsesDerivatives):
             self.set_parameters(dvals)
         
             super(NEWSUMTdriver, self).run_iteration()
+            
+        if self.recorders:
+            # Write out some relevant information to the recorder
+            
+            dvals = [float(val) for val in self.design_vals]
+            
+            case_input = []
+            for var, val in zip(self.get_parameters().keys(), dvals):
+                case_name = var[0] if isinstance(var, tuple) else var
+                case_input.append([case_name, val])
+            if self.printvars:
+                case_output = [(name,
+                                ExprEvaluator(name, scope=self.parent).evaluate())
+                                       for name in self.printvars]
+            else:
+                case_output = []
+            case_output.append(["objective", self._obj])
+        
+            for i, val in enumerate(self.constraint_vals):
+                case_output.append(["Constraint%d" % i, val])
+            
+            case = Case(case_input, case_output,parent_uuid=self._case_id)
+            
+            #FIXME: the driver should probably just add its own recorder for this information
+            #       instead of just putting it into the first recorder it finds
+            self.recorders[0].record(case)
         
     def _config_newsumt(self):
         """Set up arrays for the Fortran newsumt routine, and perform some

@@ -74,7 +74,7 @@ that are more permanent, for example, the :ref:`DBcaseRecorder <openmdao.lib.cas
 saves all your cases to a SQLite database to be reviewed later. 
 
 All CaseRecorders have the same interface and can be all be used interchangably. In fact, 
-if you notice, we specified a ListCasRecorder as part of a list. 
+if you notice, we specified a ListCaseRecorder as part of a list. 
 
 .. testsetup:: simple_model_doe_pieces
     
@@ -238,12 +238,12 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
 If you would like to try this yourself, you can 
 download the whole file :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.    
 
-
-Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
-it's possible to run the various cases concurrently.  If evaluating a case
-takes considerable time and you have a multiprocessor machine, setting
-``analysis.driver.sequential`` to False will cause the cases to be evaluated
-concurrently, based on available resources, which will usually be quicker.
-Note that concurrent evaluation means you can't rely on the recorded cases
-being in the order you might expect.
+..
+  Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
+  it's possible to run the various cases concurrently.  If evaluating a case
+  takes considerable time and you have a multiprocessor machine, setting
+  ``analysis.driver.sequential`` to False will cause the cases to be evaluated
+  concurrently, based on available resources, which will usually be quicker.
+  Note that concurrent evaluation means you can't rely on the recorded cases
+  being in the order you might expect.
 

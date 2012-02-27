@@ -1,0 +1,3 @@
+include *.f
+include f2py/*.pyf
+include LICENSE README

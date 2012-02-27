@@ -23,7 +23,7 @@ you see represent both.
 .. index:: WorkFlow, BroydenSolver, FixedPointIterator
 
 The diagram also shows a solver that takes the output of the component dataflow
-and feeds it back into the input. OpenMDAO has two solvers: FixedPointIterator
+and feeds it back into the input. OpenMDAO has two solvers in the standard library: FixedPointIterator
 and BroydenSolver. The FixedPointIterator is a solver that performs fixed point iteration,
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
 other words, *y2* is passed from the output of ``SellarDiscipline2`` to the input of ``SellarDiscipline1``,
@@ -34,14 +34,14 @@ the output and calculates a new input each iteration. Convergence is achieved wh
 residual between the output and input is driven to zero.
 
 
-The major difference between the MDF problem and some of the previous examples is the
-presence of nested drivers. Drivers can be nested in OpenMDAO using WorkFlows
+An important thing to take note of in the problem setup for MDF is the presence of 
+nested driver and multiple workflows. Drivers can be nested in OpenMDAO using WorkFlows
 in the iteration hierarchy. A :term:`WorkFlow` is an object that determines execution
 order for a group of Components. Each driver contains a single WorkFlow. For
 each iteration, a Driver will execute one pass through the WorkFlow, executing
 the components contained therein in the order the WorkFlow prescribes.
 Although in many cases a WorkFlow contains just Components, it can also
-contain Drivers. This allows nested iterative processes to be created. The
+contain Drivers, which then have thier own workflows. This allows nested iterative processes to be created. The
 following diagram shows an iteration hierarchy for the MDF problem.
    
 .. figure:: Arch-MDF-OpenMDAO.png

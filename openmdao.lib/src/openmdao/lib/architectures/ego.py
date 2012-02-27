@@ -92,13 +92,11 @@ class EGO(Architecture):
         for name,param in self.parent.get_parameters().iteritems(): 
             EI_opt.add_parameter(param)
         EI_opt.add_objective("EI.%s"%self.EI_PI)
-        EI_opt.force_execute = True
         
         retrain = self.parent.add("retrain",Driver())
         retrain.recorders = self.data_recorders
         
         retrain.add_event("%s.train_next"%self.comp_name)
-        retrain.force_execute = True
         
         iter = self.parent.add("iter",IterateUntil())
         iter.max_iterations = self.sample_iterations
