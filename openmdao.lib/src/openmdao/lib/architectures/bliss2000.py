@@ -71,16 +71,25 @@ class SubSystemOpt(Assembly):
         self.constraints = constraints
         
         self.var_map = {}
+        self.weights= []
+        self.var_names = []
         
     def configure(self):     
         dep_couple_vars = set([c.dep.target for c in self.couple_deps])        
-        self.add('objective_comp',SubSystemObj(len(dep_couple_vars)))
+        
         self.add(self.component.name,self.component)
-        for p in self.global_params:
-            self.var_map[p.target] = p.target.split(".")[-1]
-            self.create_passthrough(p.target) #promote the global des vars
+        for i,p in enumerate(self.global_params):
+            name = "global_%d"%i
+            self.var_map[p.target] = name
+            self.add_trait(name,Float(0.0,iotype="in",desc="global design var for %s"%p.target.split(".")[-1]))
+            self.connect(name,p.target) #promote the global des vars
+            setattr(self,name,self.get(p.target))
     
         if self.local_params: #if there are none, you don't do an optimization
+            self.add('objective_comp',SubSystemObj(len(dep_couple_vars)))
+            self.weights = self.objective_comp.weights
+            self.var_names = self.objective_comp.var_names
+        
             self.add('driver',CONMINdriver())
             self.driver.add_objective("objective_comp.f_wy")
             self.driver.fdch = .00001
@@ -94,7 +103,7 @@ class SubSystemOpt(Assembly):
                 var_name = "local_%d"%i
                 self.var_map[target] = var_name
                 
-                #TODO: since the local variables are optimized, they become outputs now
+                #since the local variables are optimized, they become outputs now
                 broadcast_name = 'output_%s'%var_name
                 self.add(broadcast_name,Broadcast())
                 self.add_trait(var_name,Float(0.0,iotype="out",desc="localy optimized value for %s"%target))
@@ -106,21 +115,29 @@ class SubSystemOpt(Assembly):
             
             for c in self.constraints: 
                 self.driver.add_constraint(str(c))
-                        
+                
+            for w,var,c in zip(self.objective_comp.weights,
+                           self.objective_comp.var_names,
+                           dep_couple_vars): 
+                self.var_map[c] = c.split(".")[-1]
+                self.create_passthrough(c) #prmote the state vars to be outputs
+                self.connect(c,"objective_comp.%s"%var) #also connect the state vars to the inputs of the objective come
+                self.create_passthrough("objective_comp.%s"%w) #promote the weights    
+                
+        else: #no locals, so just promote the coupling deps
+            #no optimizer, so add the comp to the default workflow
+            self.driver.workflow.add(self.component.name)
+            for c in dep_couple_vars: 
+                self.var_map[c] = c.split(".")[-1]
+                self.create_passthrough(c) #prmote the state vars to be outputs
+                
         for c in self.couple_indeps:
             self.var_map[c.indep.target] = c.indep.target.split(".")[-1]
             self.create_passthrough(c.indep.target) #promote the couple inputs to the component
         
-        self.weights = self.objective_comp.weights
-        self.var_names = self.objective_comp.var_names
         
-        for w,var,c in zip(self.objective_comp.weights,
-                           self.objective_comp.var_names,
-                           dep_couple_vars): 
-            self.var_map[c] = c.split(".")[-1]
-            self.create_passthrough(c) #prmote the state vars to be outputs
-            self.connect(c,"objective_comp.%s"%var) #also connect the state vars to the inputs of the objective come
-            self.create_passthrough("objective_comp.%s"%w) #promote the weights
+        
+        
                 
             
 class BLISS2000(Architecture):
@@ -172,21 +189,19 @@ class BLISS2000(Architecture):
             meta_model.surrogate = {'default':ResponseSurface()}
             #if there are locals, you need to make a SubSystemOpt assembly
             comp_obj = self.parent.get(comp)
-            if local_dvs_by_comp.get(comp): 
-                sso = self.parent.add('sub_system_opt_%s'%comp,
-                                      SubSystemOpt(comp_obj,
-                                      global_dvs_by_comp.get(comp),
-                                      local_dvs_by_comp.get(comp),
-                                      couple_deps.get(comp),
-                                      couple_indeps.get(comp),
-                                      comp_constraints.get(comp)))
-                self.sub_system_opts[comp] = sso
-                meta_model.model = sso 
-                for name,mapped_name in sso.var_map.iteritems():
-                    system_var_map[name] = "%s.%s"%(mm_name,mapped_name)
-                
-            else: #otherwise, just use the comp
-                meta_model.model = comp_obj
+             
+            sso = self.parent.add('sub_system_opt_%s'%comp,
+                                  SubSystemOpt(comp_obj,
+                                  global_dvs_by_comp.get(comp),
+                                  local_dvs_by_comp.get(comp),
+                                  couple_deps.get(comp),
+                                  couple_indeps.get(comp),
+                                  comp_constraints.get(comp)))
+            self.sub_system_opts[comp] = sso
+            meta_model.model = sso 
+            for name,mapped_name in sso.var_map.iteritems():
+                system_var_map[name] = "%s.%s"%(mm_name,mapped_name)
+                                
             meta_model.recorder = DBCaseRecorder()
             
             #add a doe trainer for each metamodel
@@ -195,9 +210,8 @@ class BLISS2000(Architecture):
             for couple in couple_indeps[comp] :
                 dis_doe.add_parameter("meta_model_%s"%couple.indep.target,low=-1e99,high=1e99) #change to -1e99/1e99 
                 
-            for param,group in global_dvs:
-                dis_doe.add_parameter("meta_model_%s.%s"%(comp,param),low=group.low, high=group.high,start=group.start)
-            
+            for dv in global_dvs_by_comp[comp]:
+                dis_doe.add_parameter(system_var_map[dv.target],low=dv.low, high=dv.high,start=dv.start)
             if local_dvs_by_comp.get(comp): #add weights if they are there
                 for w in meta_model.model.weights: 
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,w),low=-3,high=3)
@@ -210,11 +224,7 @@ class BLISS2000(Architecture):
             dis_doe.force_execute = True
             driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
                 
-        for l in locals:
-            s=l[0].replace('.','_')
-            self.parent.add('%s_store'%s,Float(0.0))
-        for l in global_dvs:
-            self.parent.add('%s_store'%l[0],Float(0.0))        
+      
         
         #optimization of system objective function using the discipline meta models
         sysopt=self.parent.add('sysopt', SLSQP_driver())   
@@ -229,11 +239,9 @@ class BLISS2000(Architecture):
             obj2=obj2.replace(var_name,mapped_name)
         sysopt.add_objective(obj2)
         #add global design variables as parameters
+
         for param,group in global_dvs:
-            plist=[]
-            for comp,globalt in des_vars.iteritems():
-                mm_name = "meta_model_%s.%s"%(comp,param)
-                plist.append(mm_name)
+            plist=[system_var_map[t] for t in group.targets]
             sysopt.add_parameter(plist, low=group.low, high=group.high,start=group.start)
         
         #add the subsytem weights to the system optimization
@@ -265,15 +273,18 @@ class BLISS2000(Architecture):
         
         comp=des_vars.keys()[0]
         mm='meta_model_%s'%comp
-        
-        
+
+        #create some placeholder variables for the fixed point iteration         
         for l in locals:
             s=l[0].replace('.','_')
+            
             s2='%s_store'%s
+            self.parent.add(s2,Float(0.0))
             driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
             driver.add_constraint('%s = %s'%(system_var_map[l[1].target],s2))
             
         for l in global_dvs:
             s2='%s_store'%l[0]
+            self.parent.add(s2,Float(0.0)) 
             driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
-            driver.add_constraint('%s.%s = %s'%(mm,l[0],s2))             
+            driver.add_constraint('%s = %s'%(system_var_map[l[1].target],s2))             
