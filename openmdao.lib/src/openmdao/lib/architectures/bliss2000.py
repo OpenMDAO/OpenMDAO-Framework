@@ -265,7 +265,6 @@ class BLISS2000(Architecture):
             for c in constraints:  
                 c=str(c).replace(comp,"meta_model_%s"%comp)
                 sysopt.add_constraint(c)
-        sysopt.force_execute=True    
         
         driver.workflow.add('sysopt')
 

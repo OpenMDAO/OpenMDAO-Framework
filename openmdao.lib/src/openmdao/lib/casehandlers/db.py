@@ -40,6 +40,7 @@ class DBCaseIterator(object):
             self._connection = None
             self.dbfile = dbfile
         self.selectors = selectors
+        self._connection.text_factory = sqlite3.OptimizedUnicode
 
     @property
     def dbfile(self):

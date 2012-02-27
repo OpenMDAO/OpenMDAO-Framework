@@ -113,7 +113,7 @@ class CO(Architecture):
             global_constraint = "%s<=.001"%residuals
             global_opt.add_constraint(global_constraint)
             local_opt.add_objective(residuals)
-            local_opt.force_execute = True
+
 
         """    print local_opt.name
             print local_opt.get_objectives().keys()[0]

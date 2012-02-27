@@ -179,10 +179,10 @@ Now these inputs are available to connect to the components, so we connect them 
 
 .. testcode:: Code7b
 
-        self.connect('velocity', 'chassis.velocity')
-        self.connect('velocity', 'transmission.velocity')
-        self.connect('tire_circumference', 'chassis.tire_circ')
-        self.connect('tire_circumference', 'transmission.tire_circ')
+        self.connect('velocity',
+                     ['chassis.velocity', 'transmission.velocity'])
+        self.connect('tire_circumference',
+                     ['chassis.tire_circ', 'transmission.tire_circ'])
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
 Transmission components. While this might seem redundant, it demonstrates

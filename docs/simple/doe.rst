@@ -74,7 +74,7 @@ that are more permanent, for example, the :ref:`DBcaseRecorder <openmdao.lib.cas
 saves all your cases to a SQLite database to be reviewed later. 
 
 All CaseRecorders have the same interface and can be all be used interchangably. In fact, 
-if you notice, we specified a ListCasRecorder as part of a list. 
+if you notice, we specified a ListCaseRecorder as part of a list. 
 
 .. testsetup:: simple_model_doe_pieces
     

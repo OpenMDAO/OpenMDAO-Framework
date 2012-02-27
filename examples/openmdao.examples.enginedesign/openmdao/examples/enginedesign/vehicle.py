@@ -118,10 +118,10 @@ class Vehicle(Assembly):
         self.create_passthrough('chassis.acceleration')
         
         # These vars have unit conversions
-        self.connect('velocity', 'chassis.velocity')
-        self.connect('velocity', 'transmission.velocity')
-        self.connect('tire_circumference', 'chassis.tire_circ')
-        self.connect('tire_circumference', 'transmission.tire_circ')
+        self.connect('velocity',
+                     ['chassis.velocity', 'transmission.velocity'])
+        self.connect('tire_circumference',
+                     ['chassis.tire_circ', 'transmission.tire_circ'])
 
         # Hook it all up
         self.connect('transmission.RPM','engine.RPM')
