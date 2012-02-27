@@ -1,4 +1,5 @@
 import sys, os, traceback
+import subprocess
 
 from optparse import OptionParser
 
@@ -7,8 +8,6 @@ from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
-
-print '<<<'+str(os.getpid())+'>>> OutStreamServer ..............'
 
 class OutStreamHandler(websocket.WebSocketHandler):
     ''' a handler that forwards output from a ZMQStream to a WebSocket
@@ -94,10 +93,23 @@ class OutStreamServer(object):
                           help="the url to expose for the websocket")
         return parser
 
+    @staticmethod
+    def spawn_process(out_url,ws_port,ws_url):
+        ''' run outstreamserver in it's own process, mapping a zmq stream to a websocket
+            args:
+                out_url     the url of the ZMQStream
+                ws_port     the port to serve the WebSocket on
+                ws_url      the url to map to the WebSocket
+        '''
+        file_path   = os.path.abspath(__file__)
+        cmd = ['python',file_path,'-z',str(out_url),'-p',str(ws_port),'-u',str(ws_url)]        
+        subprocess.Popen(cmd)
+
 def main():
     ''' process command line arguments and do as commanded
     '''
-    
+    print '<<<'+str(os.getpid())+'>>> OutStreamServer ..............'
+
     # install zmq ioloop before creating any tornado objects
     ioloop.install()
     

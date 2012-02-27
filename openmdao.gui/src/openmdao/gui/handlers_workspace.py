@@ -1,7 +1,6 @@
 import sys, os, traceback
 import time
 import jsonpickle
-import subprocess
 
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
@@ -15,6 +14,7 @@ from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.util import *
 from openmdao.gui.settings import MEDIA_ROOT
 from openmdao.gui.handlers import BaseHandler
+from openmdao.gui.outstreamserver import OutStreamServer
 
 
 class AddonForm(forms.Form):
@@ -275,10 +275,7 @@ class OutputHandler(BaseHandler):
         out_url = self.application.server_manager.get_out_url(self.get_sessionid())
         ws_url  = '/workspace/outstream'
         ws_port = get_unused_ip_port()
-        file_path   = os.path.dirname(os.path.abspath(__file__))
-        server_file = os.path.join(file_path, 'outstreamserver.py')
-        cmd = ['python',server_file,'-z',str(out_url),'-p',str(ws_port),'-u',str(ws_url)]        
-        subprocess.Popen(cmd)
+        OutStreamServer.spawn_process(out_url,ws_port,ws_url)
         ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
         self.content_type = 'text/html'
         self.write(ws_addr)
