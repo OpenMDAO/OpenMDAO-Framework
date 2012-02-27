@@ -12,7 +12,7 @@ The EPA fuel economy tests are a bit more tricky, though they also require an in
 time. For these tests, the vehicle assembly must be executed while varying the throttle and
 gear position inputs to match a desired acceleration for the integration
 segment. Both of these solution procedures were implemented in Python as *drivers.* The
-SimAcceleratio driver simulates the acceleration test, and the ``SimEconomy`` driver
+SimAcceleration driver simulates the acceleration test, and the ``SimEconomy`` driver
 simulates the EPA fuel economy test.
 
 Recall that in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`, a Driver

@@ -72,7 +72,7 @@ is ready for training.
  .. testcode:: MetaModel_parts
     :hide:
     
-    self=set_as_top(Simulation())
+    self =set_as_top(Simulation())
 
 .. testcode:: MetaModel_parts
 

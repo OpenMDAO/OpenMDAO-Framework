@@ -49,7 +49,7 @@ follows:
 
 .. testcode:: NEWSUMT_load
 
-    from openmdao.main.api import Assembly, set_as_top
+    from openmdao.main.api import Assembly
     from openmdao.examples.enginedesign.vehicle import Vehicle
     from openmdao.lib.drivers.api import CONMINdriver
 
@@ -141,29 +141,29 @@ nonlinear objective function.
 
         self.driver.lobj = 0
 
-The ``jprint`` parameter can be used to display diagnostic
+The ``iprint`` parameter can be used to display diagnostic
 messages. These messages are currently sent to the standard
 output.
 
 .. testcode:: NEWSUMT_show
 
-        self.driver.jprint = 0
+        self.driver.iprint = 0
 
-Higher positive values of ``jprint`` turn on the display of more levels of output, as summarized below.
+Higher positive values of ``iprint`` turn on the display of more levels of output, as summarized below.
 
 ===============  ========================================================
 Value            Result
 ===============  ========================================================
-``jprint = -1``  All output is suppressed, including warnings
+``iprint = 0``   All output is suppressed, including warnings
 ---------------  --------------------------------------------------------
-``jprint = 0``   Print initial and final designs only
+``iprint = 1``   Print initial and final designs only
 ---------------  --------------------------------------------------------
-``jprint = 1``   Print brief results of analysis for initial and final designs 
+``iprint = 2``   Print brief results of analysis for initial and final designs 
                  together with minimal intermediate information
 ---------------  --------------------------------------------------------
-``jprint = 2``   Detailed printing
+``iprint = 3``   Detailed printing
 ---------------  --------------------------------------------------------
-``jprint = 3``   Debugging printing
+``iprint = 4``   Debugging printing
 ===============  ========================================================
 
 
