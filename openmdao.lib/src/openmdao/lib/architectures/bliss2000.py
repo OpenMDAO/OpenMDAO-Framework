@@ -70,12 +70,14 @@ class SubSystemOpt(Assembly):
         self.couple_indeps = couple_indeps
         self.constraints = constraints
         
+        self.var_map = {}
+        
     def configure(self):     
         dep_couple_vars = set([c.dep.target for c in self.couple_deps])        
         self.add('objective_comp',SubSystemObj(len(dep_couple_vars)))
         self.add(self.component.name,self.component)
         for p in self.global_params:
-            
+            self.var_map[p.target] = p.target.split(".")[-1]
             self.create_passthrough(p.target) #promote the global des vars
     
         if self.local_params: #if there are none, you don't do an optimization
@@ -87,9 +89,10 @@ class SubSystemOpt(Assembly):
             #this is not really necessary, but you might want to track it anyway...
             self.create_passthrough("objective_comp.f_wy") #promote the objective function    
 
-            for p in self.local_params: 
+            for i,p in enumerate(self.local_params): 
                 target = p.target
-                var_name = target.split(".")[-1]
+                var_name = "local_%d"%i
+                self.var_map[target] = var_name
                 
                 #TODO: since the local variables are optimized, they become outputs now
                 broadcast_name = 'output_%s'%var_name
@@ -103,11 +106,9 @@ class SubSystemOpt(Assembly):
             
             for c in self.constraints: 
                 self.driver.add_constraint(str(c))
-                
-                
-                
                         
-        for c in self.couple_indeps: 
+        for c in self.couple_indeps:
+            self.var_map[c.indep.target] = c.indep.target.split(".")[-1]
             self.create_passthrough(c.indep.target) #promote the couple inputs to the component
         
         self.weights = self.objective_comp.weights
@@ -116,6 +117,7 @@ class SubSystemOpt(Assembly):
         for w,var,c in zip(self.objective_comp.weights,
                            self.objective_comp.var_names,
                            dep_couple_vars): 
+            self.var_map[c] = c.split(".")[-1]
             self.create_passthrough(c) #prmote the state vars to be outputs
             self.connect(c,"objective_comp.%s"%var) #also connect the state vars to the inputs of the objective come
             self.create_passthrough("objective_comp.%s"%w) #promote the weights
@@ -159,6 +161,8 @@ class BLISS2000(Architecture):
         driver.tolerance = .005
         meta_models = {}
         self.sub_system_opts = {}
+        
+        system_var_map = {}
         for comp in des_vars: 
             mm_name = "meta_model_%s"%comp
             meta_model = self.parent.add(mm_name,MetaModel()) #metamodel now replaces old component with same name 
@@ -178,6 +182,9 @@ class BLISS2000(Architecture):
                                       comp_constraints.get(comp)))
                 self.sub_system_opts[comp] = sso
                 meta_model.model = sso 
+                for name,mapped_name in sso.var_map.iteritems():
+                    system_var_map[name] = "%s.%s"%(mm_name,mapped_name)
+                
             else: #otherwise, just use the comp
                 meta_model.model = comp_obj
             meta_model.recorder = DBCaseRecorder()
@@ -216,10 +223,11 @@ class BLISS2000(Architecture):
         sysopt.differentiator = FiniteDifference()
         
         obj2= objective[1].text
-        for comp in objective[1].get_referenced_compnames():            
-            obj2=obj2.replace(comp,"meta_model_%s"%comp)        
+        #for comp in objective[1].get_referenced_compnames():            
+        #    obj2=obj2.replace(comp,"meta_model_%s"%comp)  
+        for var_name, mapped_name in system_var_map.iteritems(): 
+            obj2=obj2.replace(var_name,mapped_name)
         sysopt.add_objective(obj2)
-        
         #add global design variables as parameters
         for param,group in global_dvs:
             plist=[]
@@ -261,10 +269,9 @@ class BLISS2000(Architecture):
         
         for l in locals:
             s=l[0].replace('.','_')
-            vname= l[0].split('.')[1]
             s2='%s_store'%s
             driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
-            driver.add_constraint('%s.%s = %s'%(mm,vname,s2))
+            driver.add_constraint('%s = %s'%(system_var_map[l[1].target],s2))
             
         for l in global_dvs:
             s2='%s_store'%l[0]
