@@ -33,7 +33,7 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
     
 @stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
-class COBYLA_driver(Driver):
+class COBYLAdriver(Driver):
     """Minimize a function using the Constrained Optimization BY Linear
     Approximation (COBYLA) method
 
@@ -52,8 +52,8 @@ class COBYLA_driver(Driver):
     rhoend = Float(1e-4, iotype='in', 
                    desc = 'final accuracy in the optimization (not precisely guaranteed)')
 
-    iprint = Enum(1, [-1, 0, 1, 2, 3], iotype='in',
-                  desc = 'controls the frequency of output: -1 or 0 (no output),1,2,3')
+    iprint = Enum(1, [0, 1, 2, 3], iotype='in',
+                  desc = 'controls the frequency of output: 0 (no output),1,2,3')
     
     maxfun = Int(1000, iotype='in',
                   desc = 'maximum number of function evaluations')
@@ -73,7 +73,7 @@ class COBYLA_driver(Driver):
 
     def __init__(self, *args, **kwargs):
         
-        super(COBYLA_driver, self).__init__(*args, **kwargs)
+        super(COBYLAdriver, self).__init__(*args, **kwargs)
         
         self.error_messages = {
             1 : 'Max. number of function evaluations reached',
@@ -142,7 +142,7 @@ class COBYLA_driver(Driver):
         Note: n, m, f, and g are unused inputs."""
         
         self.set_parameters(xnew)
-        super(COBYLA_driver, self).run_iteration()
+        super(COBYLAdriver, self).run_iteration()
         f = self.eval_objective()
         
         if isnan(f):

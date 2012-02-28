@@ -8,7 +8,6 @@ User Guide
 
    fundamentals
    creating_comps
-   simulation
    drivers
    derivatives
    running_openmdao
