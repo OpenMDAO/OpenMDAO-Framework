@@ -51,7 +51,8 @@ There are different kinds of variables available in OpenMDAO, such as Float, Int
 When you connect two variables together, they need be compatible. You can't, for instance, connect 
 a  String to a Float. Float variables have a special property 
 that they can have physical units specified. The framework will automatically convert between compatible 
-units when they are connected, and it will prevent you from connecting incompatible units. A complete 
+units when they are connected, and it will prevent you from connecting incompatible units. A more complete 
+description of connections is given :ref:`below <connection-overview>`.
 
 .. seealso:: :ref:`units`
 
@@ -193,6 +194,8 @@ the Paraboloid is accessed via ``self.paraboloid``.
 
 A Component can also be removed from an Assembly using ``remove``.
 
+
+.. _`connection-overview`: 
 
 Connecting Components
 ----------------------
