@@ -81,6 +81,7 @@ class SubSystemOpt(Assembly):
         for i,p in enumerate(self.global_params):
             name = "global_%d"%i
             self.var_map[p.target] = name
+            print p.target
             self.add_trait(name,Float(0.0,iotype="in",desc="global design var for %s"%p.target.split(".")[-1]))
             self.connect(name,p.target) #promote the global des vars
             setattr(self,name,self.get(p.target))
