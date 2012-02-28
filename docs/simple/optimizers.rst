@@ -9,9 +9,8 @@ Choosing an Optimizer
 When the initial versions of OpenMDAO were released, the standard library only contained
 two optimizers -- the gradient optimizer ``CONMIN``, and the genetic optimizer ``genetic``.
 OpenMDAO now includes several optimizers, provides access to a few more optimizers as plugins,
-and will continue to benefit from community contributions. This tutorial will discuss the
-currently available optimizers as well as mention some of the official plugins. Finally,
-the Paraboloid example will be used to demonstrate optimizer swapping.
+and will continue to benefit from community contributions. Let's walk through how you can 
+use all the different optimziers offered on the parabolid example problem. 
 
 OpenMDAO Optimizers
 ~~~~~~~~~~~~~~~~~~~
@@ -36,12 +35,10 @@ The following tables summarizes the optimizers that are currently included in Op
 +------------------+-----------------------+-----------+-----------+---------------------------------------------------------------------------------------------------------------------+
 
 Any of these optimizers can be added to your model by importing them from ``openmdao.lib.drivers.api``.
-You will generally choose an optimizer based on prior knowledge of how well a particular algorithm
-is suited to your type of problem. Specific limitations of the optimizers may also come into play. For
+Which optimizer should you use? The answer is highly problem dependent. For
 example, if your problem has equality constraints, then you can only use the ``SLSQPdriver`` unless you
-can rewrite your equality constraint as a pair of inequality constraints. Likewise, if you are optimizing
-a component that provides an analytical gradient, that gradient can only be used by an optimizer that
-supports them. 
+can rewrite your equality constraint as a pair of inequality constraints. Similarly, ``COBYLAdriver`` 
+is a gradient free optimization which might be suitable if you want to avoid finite difference calculations. 
 
 In the example below, you will have the opportunity to try out all of the OpenMDAO optimizers on the
 Paraboloid problem. This will give you some basic insight into their performance and should familiarize
@@ -153,13 +150,15 @@ Settings are usually very specific to an optimizer, so we will want to take care
 the optimizer we are using are active. The parameters, objective(s), and constraints(s) can all stay the
 same when you swap in a new optimizer, provided they are supported (e.g., equality constraints are only
 supported by ``SLSQPdriver``.) Also, we will sometimes slot a FiniteDifference differentiator, though that
-line of code is currently commented out. We are using the ``ParaboloidDerivative`` component, which
-contains the analytical derivatives. In all of the finite difference calculations, whether initiated by 
-OpenMDAO, CONMIN, or NEWSUMT, the FDAD (Finite Difference with Analytical Derivatives) approach is
-used, so the analytical derivatives are used to replace model execution under finite difference.
+line of code is currently commented out. Some optimizers, like ``CONMINdriver``, have their own finite 
+difference capability. Others, like ``SLSQ_driver`` do not, and use the one from OpenMDAO. Regardless, 
+since we're using the ``ParaboloidDerivative`` component, which contains the analytical derivatives, 
+all of the finite difference calculations will use the FDAD (Finite Difference with Analytical 
+Derivatives) approach. So even if the optimizer is trying to do finite differences, OpenMDAO will 
+make use of the analytic derivatives that are provided to speed up the optimization.
 
-So first, let's run ``demo_opt.py``. This first case is the constrained optimization of the
-paraboloid using CONMIN's internal finite difference calculation.
+So first, let's run :download:`demo_opt.py <../../examples/openmdao.examples.simple/openmdao/examples/simple/demo_opt.py>`. 
+This first case is the constrained optimization of the paraboloid using CONMIN's internal finite difference calculation.
 
 Note that the sample results presented here are representative of what you should see, but they
 may differ depending on your system architecture.
@@ -173,13 +172,12 @@ may differ depending on your system architecture.
     Minimum found at (7.175777, -7.824223)
     Elapsed time:  0.0239610671997 seconds
 
-We obtained this value after adjusting some of CONMIN's settings from their defaults. In our
-experience, CONMIN is notoriously sensitive to the values of these settings, in particular the
+We obtained this value after adjusting some of CONMIN's settings from their defaults. 
+CONMIN is notoriously sensitive to the values of these settings, in particular the
 relative and minimum absolute stepsize changes in the finite difference calculation (fdch and
 fdchm). The answer that CONMIN gives here didn't quite reach the minimum, which we've found with
 other optimizers to lie at(7.166667, -7.833333). More exploration of CONMIN's settings could
-possibly yield a better answer, but this would not be a reasonable avenue of investigation when the
-optimum isn't known.
+possibly yield a better answer, but thats not a reasonable thing to do for a real problem. 
 
 Let's let OpenMDAO perform the finite difference instead of CONMIN. To do this, uncomment the
 line that sockets the differentiator.
@@ -216,7 +214,7 @@ where it is added to the assembly.
                 self.add('driver', NEWSUMTdriver())
                 
 Now, we need to change over to use the NEWSUMT settings and deactivate the CONMIN settings.
-Let's also unsocket OpenMDAO's finite difference. Th
+Let's also unsocket OpenMDAO's finite difference. 
                 
 ::
 
@@ -272,7 +270,7 @@ Our answer has improved, and is slightly better than what CONMIN reported. Note 
 number of functional executions is an order of magnitude more than CONMIN. For a problem
 with a long runtime, this optimizer may be significantly slower.
 
-Let's slot OpenMDAO's finite difference differentiator.
+Let's slot OpenMDAO's finite difference differentiator. 
 
 ::
 
@@ -293,7 +291,7 @@ Then run ``demo_opt.py``.
 The answer is about the same. One notable difference is a doubling of the number of gradient executions.
 This is because NEWSUMT is the only optimizer which asks for an explicit Hessian (i.e., 2nd derivative)
 of the objective and constraints. Hessian calculation is expensive, and scales n-squared with the number
-of parameters. When NEWSUMT calculates its own Hessian, it seems to be using some approximations to speed
+of parameters. When NEWSUMT calculates the Hessian internally, it is using some approximations to speed
 the calculation. Thus, it might be advisable to use NEWSUMT's gradient calculation.
 
 Next, let's try the ``COBYLAdriver``.
@@ -305,12 +303,9 @@ Next, let's try the ``COBYLAdriver``.
                 
 
 We don't have to unsocket the finite difference driver, as COBYLA is a gradient-free method, and
-will not use it.
+will not use it. But you can comment it out if you want to, the answer won't change. 
 
 ::
-
-                # NEWSUMT-specific Settings
-                #self.driver.itmax = 50
                 
                 # COBYLA-specific Settings
                 self.driver.rhobeg = 1.0
@@ -318,7 +313,7 @@ will not use it.
                 self.driver.maxfun = 1000
 
 COBYLA has very few settings. The ``rhoend`` parameter is equivalent to a convergence tolerance, and
-of course ``maxfun`` is the maximum number of iterations. Now try running ``demo_opt.py``.
+``maxfun`` is the maximum number of iterations. Now try running ``demo_opt.py``.
 
 ::
 
@@ -356,12 +351,11 @@ is cut off in our printout because of the print display resolution -- you can ma
 with a specified-width format like %.15f.) COBYLA needed 3 times the number of function evaluation as CONMIN, but
 it got to a much better value, and it does not exhibit any hyper-sensitivity with respect to its
 settings. Note also that COBYLA's elapsed time is still lower. The optimizer seems to have less
-overhead, which could be important for evaluating large numbers of fast objectives, but will be
-lost in the wash when dealing with slow functions.
+overhead, which affects the total wall time for trivial functions like our paraboloid. But that overhead won't matter
+for real analyses that have any appreciable computational cost. 
 
-Next up is SLSQP. This optimizer requires a gradient, but it cannot provide its own. Since a
-finite difference driver would always be required, one is always socketed in the SLSQPdriver by default,
-so adding it is unnecessary. No harm is done if you socket one after instantiating. Add an SLSQPdriver
+Next up is SLSQP. This optimizer requires a gradient but has no internal finite difference calculations,
+so by default SLSQPdriver always uses the OpenMDAO finite difference engine. Add an SLSQPdriver
 instance to your model:
 
 ::
@@ -374,10 +368,6 @@ SLSQP only has a couple of settings, none of which will be moved off the default
 
 ::
 
-                # COBYLA-specific Settings
-                #self.driver.rhobeg = 1.0
-                #self.driver.rhoend = 1.0e-5
-                #self.driver.maxfun = 1000
                 
                 # SLSQP-specific Settings
                 self.driver.accuracy = 1.0e-6
@@ -395,8 +385,8 @@ Now, lets run ``demo_opt.py``:
     Elapsed time:  0.00905513763428 seconds
 
 The SLSQP driver performs incredibly well on this problem! It gets the closest to the minimum with
-the least number of function executions and in the quickest clock time. This optimizer is quickly
-becoming our favorite. It is also our only optimizer that can handle equality constraints, so let's
+the least number of function executions and in the quickest wall time. It is also our only optimizer 
+that can directly handle equality constraints, so let's
 try one. We already know that the solution to our constrained problem lies along the constraint. We
 could express this as an equality constraint, and expect that the same solution would be reached. The
 equality constraint was included in ``demo_opt.py``, so comment and uncomment as such:
@@ -446,9 +436,9 @@ settings that are quite different:
                 self.selection_method = 'rank'
                 
 These are mostly the default values, although ``selection_method`` was changed to 'rank' because
-it seemed to give better answers for this problem. ``Genetic`` does not use the differentiator
-socket, so we don't need to worry about gradients. Also, ``Genetic`` doesn't handle any kind of
-constraint, so we will only be able to play around with the unconstrained problem.
+it seemed to give better answers for this problem. ``Genetic`` does not use the need any gradient 
+information, so we don't need to worry about finite difference calculations here. Also, ``Genetic`` doesn't handle any kind of
+constraints, so we will only be able to play around with the unconstrained problem.
 
 ::
 
