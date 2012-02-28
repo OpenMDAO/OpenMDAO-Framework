@@ -148,7 +148,7 @@ but will introduce the rest via a series of tutorials in teh following sections.
 
 
 Building a Simulation Model
-===========================
+---------------------------
 
 A *model* is a hierarchical collection of components with an assembly at its root. 
 The root assembly is also called the *top level assembly.* 
