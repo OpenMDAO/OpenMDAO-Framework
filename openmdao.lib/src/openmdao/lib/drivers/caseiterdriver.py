@@ -23,6 +23,8 @@ from openmdao.util.filexfer import filexfer
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
 
+from openmdao.lib.casehandlers.api import ListCaseRecorder
+
 _EMPTY     = 'empty'
 _LOADING   = 'loading'
 _EXECUTING = 'executing'
@@ -697,9 +699,21 @@ class CaseIteratorDriver(CaseIterDriverBase):
     iterator = Slot(ICaseIterator, iotype='in',
                       desc='Iterator supplying Cases to evaluate.')
     
+    evaluated = Slot(ICaseIterator, iotype='out',
+                      desc='Iterator supplying evaluated Cases.')
+    
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         if self.iterator is not None:
             return iter(self.iterator)
         else:
             self.raise_exception("iterator has not been set", ValueError)
+
+    def execute(self):
+        """ Evaluate cases from `iterator` and place in `evaluated`. """
+        self.evaluated = None
+        if not self.recorders:
+            self.recorders.append(ListCaseRecorder())
+        super(CaseIteratorDriver, self).execute()
+        self.evaluated = self.recorders[0].get_iterator()
+
