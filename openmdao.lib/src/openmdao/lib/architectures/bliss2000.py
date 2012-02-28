@@ -116,11 +116,13 @@ class SubSystemOpt(Assembly):
             for c in self.constraints: 
                 self.driver.add_constraint(str(c))
                 
-            for w,var,c in zip(self.objective_comp.weights,
+            for i,(w,var,c) in enumerate(zip(self.objective_comp.weights,
                            self.objective_comp.var_names,
-                           dep_couple_vars): 
-                self.var_map[c] = c.split(".")[-1]
-                self.create_passthrough(c) #prmote the state vars to be outputs
+                           dep_couple_vars)): 
+                name = "couple_dep_%d"%i
+                self.var_map[c] = name
+                self.add_trait(name,Float(0.0,iotype="out",desc="coupling dependent for %s"%c))
+                self.connect(c,name) #prmote the coupling deps to be outputs
                 self.connect(c,"objective_comp.%s"%var) #also connect the state vars to the inputs of the objective come
                 self.create_passthrough("objective_comp.%s"%w) #promote the weights    
                 
@@ -252,10 +254,11 @@ class BLISS2000(Architecture):
         
         for key,couple in coupling.iteritems():
             s=couple.indep.target
-            sysopt.add_parameter("meta_model_%s"%s, low=-1e99, high=1e99) #fix later
+            mapped_name = system_var_map[s]
+            sysopt.add_parameter(mapped_name, low=-1e99, high=1e99)
             
             #feasibility constraints, referenced to metamodels
-            s1,s2= "meta_model_"+couple.dep.target,"meta_model_"+couple.indep.target
+            s1,s2= system_var_map[couple.dep.target], system_var_map[couple.indep.target]
             sysopt.add_constraint('(%s-%s)**2<=0.0001'%(s2,s1))
             #sysopt.add_constraint('%s>=%s'%(s2,s1))
             
@@ -263,8 +266,10 @@ class BLISS2000(Architecture):
         #add constraints, referenced to metamodels
         for comp,constraints in comp_constraints.iteritems():
             for c in constraints:  
-                c=str(c).replace(comp,"meta_model_%s"%comp)
-                sysopt.add_constraint(c)
+                new_c = str(c)
+                for var,mapped_name in system_var_map.iteritems():
+                    new_c = new_c.replace(var,mapped_name)
+                sysopt.add_constraint(new_c)
         
         driver.workflow.add('sysopt')
 
