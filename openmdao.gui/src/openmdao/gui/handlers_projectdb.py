@@ -31,7 +31,13 @@ class IndexHandler(BaseHandler):
     '''
     @web.authenticated
     def get(self):
-        dbuser = User.objects.get(username__exact=self.current_user)
+        try:
+            dbuser = User.objects.get(username__exact=self.current_user)
+        except User.DoesNotExist:
+            # just add new user to database (not really using authentication for now)
+            dbuser = User.objects.create_user(self.current_user, 'email', 'password')
+            dbuser.save()
+            
         project_list = Project.objects.filter(user=dbuser)
         self.render('projdb/project_list.html', 
                      project_list=project_list, user=self.current_user)

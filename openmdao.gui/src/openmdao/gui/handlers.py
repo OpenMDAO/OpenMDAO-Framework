@@ -1,8 +1,10 @@
+import getpass
 
 # tornado
 from tornado.web import RequestHandler
 from openmdao.gui.session import TornadoSession
 
+SINGLE_USER = True
 
 class BaseHandler(RequestHandler):
     ''' override the get_current_user() method in your request handlers to determine
@@ -18,8 +20,7 @@ class BaseHandler(RequestHandler):
         return self.get_secure_cookie('user')
         
     def get_server(self):
-        cserver = self.application.server_manager.server(self.get_sessionid())
-        return cserver
+        return self.application.server_manager.server(self.get_sessionid())
         
     def delete_server(self):
         self.application.server_manager.delete_server(self.get_sessionid())
@@ -30,7 +31,14 @@ class LoginHandler(BaseHandler):
         which is then saved in a cookie.
     '''
     def get(self):
-        self.write('<html><body bgcolor="Grey"><form action="/login" method="post">'
+        if SINGLE_USER:
+            # single user scenario, auto-login based on username
+            username = getpass.getuser()
+            print 'Auto-login:',username
+            self.set_secure_cookie('user', username)
+            self.redirect('/')
+        else:
+            self.write('<html><body bgcolor="Grey"><form action="/login" method="post">'
                    'Name: <input type="text" name="name">'
                    '<input type="submit" value="Sign in">'
                    '</form></body></html>')

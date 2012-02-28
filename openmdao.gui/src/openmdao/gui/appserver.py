@@ -163,7 +163,6 @@ class AppServer(object):
 def main():
     ''' process command line arguments and do as commanded
     '''
-    DEBUG('starting server...')
     
     # install zmq ioloop before creating any tornado objects
     ioloop.install()
@@ -172,6 +171,8 @@ def main():
     parser = AppServer.get_options_parser()
     (options, args) = parser.parse_args()
     server = AppServer(options)
+    
+    DEBUG('starting server...')
     server.serve()
         
 if __name__ == '__main__':
