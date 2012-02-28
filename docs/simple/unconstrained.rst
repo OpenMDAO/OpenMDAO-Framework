@@ -109,7 +109,7 @@ calling the driver's ``add_objective`` function.
         
 .. testcode:: simple_model_Unconstrained_pieces
 
-            # CONMIN Objective 
+            # Objective 
             self.driver.add_objective('paraboloid.f_xy')
             
 
@@ -128,7 +128,7 @@ individually using the ``add_parameter`` method:
         
 .. testcode:: simple_model_Unconstrained_pieces
 
-            # CONMIN Design Variables 
+            # Design Variables 
             self.driver.add_parameter('paraboloid.x', -50, 50)
             self.driver.add_parameter('paraboloid.y', -50, 50)
 

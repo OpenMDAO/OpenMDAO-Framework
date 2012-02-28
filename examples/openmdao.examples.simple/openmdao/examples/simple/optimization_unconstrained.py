@@ -33,10 +33,10 @@ class OptimizationUnconstrained(Assembly):
         self.driver.fdch = .000001
         self.driver.fdchm = .000001
         
-        # CONMIN Objective 
+        # Objective 
         self.driver.add_objective('paraboloid.f_xy')
         
-        # CONMIN Design Variables 
+        # Design Variables 
         self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
         self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
         

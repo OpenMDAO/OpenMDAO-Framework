@@ -10,7 +10,7 @@ from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str, Slot
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.slsqpdriver import SLSQP_driver
+from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -67,10 +67,10 @@ class SLSPQdriverTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
-        self.top.add('driver', SLSQP_driver())
+        self.top.add('driver', SLSQPdriver())
         self.top.add('comp', OptRosenSuzukiComponent())
         self.top.driver.workflow.add('comp')
-        self.top.driver.iprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.differentiator = FiniteDifference()
         
     def tearDown(self):

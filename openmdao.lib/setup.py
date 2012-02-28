@@ -57,7 +57,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
       openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
-      openmdao.lib.drivers.cobyladriver.COBYLA_driver = openmdao.lib.drivers.cobyladriver:COBYLA_driver
+      openmdao.lib.drivers.cobyladriver.COBYLAdriver = openmdao.lib.drivers.cobyladriver:COBYLAdriver
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
       openmdao.lib.drivers.doedriver.NeiborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeiborhoodDOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
@@ -65,7 +65,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
       openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
-      openmdao.lib.drivers.slsqpdriver.SLSQP_driver = openmdao.lib.drivers.slsqpdriver:SLSQP_driver
+      openmdao.lib.drivers.slsqpdriver.SLSQPdriver = openmdao.lib.drivers.slsqpdriver:SLSQPdriver
       openmdao.lib.drivers.sensitivity.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
 
       [openmdao.component]
