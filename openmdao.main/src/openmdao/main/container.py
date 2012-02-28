@@ -47,7 +47,7 @@ from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
-from openmdao.main.expreval import INDEX,ATTR,CALL,SLICE
+from openmdao.main.expreval import INDEX, ATTR, CALL, SLICE, ExprEvaluator
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -136,7 +136,7 @@ def _process_index_entry(obj, idx):
                 kwargs = {}
             return obj.__call__(*args, **kwargs)
     elif idx[0] == SLICE:
-        return obj.__getitem__(slice(idx[1],idx[2],idx[3]))
+        return obj.__getitem__(slice(*idx[1]))
     
     raise ValueError("invalid index: %s" % idx)
 
@@ -306,9 +306,13 @@ class Container(HasTraits):
             Pathname of destination variable.
         """
         cname = None
+        srcexpr = ExprEvaluator(srcpath, self)
+        destexpr = ExprEvaluator(destpath, self)
+        
         if not destpath.startswith('parent.'):
-            if not self.contains(destpath):
-                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+            destvar = destexpr.get_referenced_varpaths().pop()
+            if not destexpr.check_resolve():
+                self.raise_exception("Can't find '%s'" % destvar, AttributeError)
             parts = destpath.split('.')
             for i in range(len(parts)):
                 dname = '.'.join(parts[:i+1])
@@ -317,23 +321,22 @@ class Container(HasTraits):
                     self.raise_exception(
                         "'%s' is already connected to source '%s'" % 
                         (dname, sname), RuntimeError)
+                    
             cname2, _, restofpath = destpath.partition('.')
-            if cname == cname2 and cname is not None:
-                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
-                                     (srcpath,destpath), RuntimeError)
             if restofpath:
                 child = getattr(self, cname2)
                 if is_instance(child, Container):
-                    child.connect('parent.'+srcpath, restofpath)
+                    child.connect(srcexpr.scope_transform(self, child), restofpath)
                     
-        if not srcpath.startswith('parent.'):
-            if not self.contains(srcpath):
-                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
-            cname, _, restofpath = srcpath.partition('.')
-            if restofpath:
-                child = getattr(self, cname)
-                if is_instance(child, Container):
-                    child.connect(restofpath, 'parent.'+destpath)
+        if not 'parent' in srcexpr.get_referenced_compnames():
+            for src in srcexpr.get_referenced_varpaths():
+                if not self.contains(src):
+                    self.raise_exception("Can't find '%s'" % src, AttributeError)
+                cname, _, restofpath = src.partition('.')
+                if restofpath:
+                    child = getattr(self, cname)
+                    if is_instance(child, Container):
+                        child.connect(restofpath, destexpr.scope_transform(self, child))
                 
         self._depgraph.connect(srcpath, destpath, self)
 
@@ -990,7 +993,10 @@ class Container(HasTraits):
         # _input_trait_modified, so do it manually
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
-        if old != value:
+        eq = (old == value)
+        if not isinstance(eq, bool): # FIXME: probably a numpy sub-array. assume value has changed for now...
+            eq = False
+        if not eq:
             self._call_execute = True
             self._input_updated(name)
             

@@ -207,8 +207,8 @@ class ExprMapper(object):
             scope.raise_exception("'%s' is already connected to source '%s'" % (dest, self.get_source(dest)),
                                   RuntimeError)
         
-        destexpr = ExprEvaluator(dest, scope)
-        srcexpr = ExprEvaluator(src, scope)
+        destexpr = ExprEvaluator(dest, scope, default_getter='get_wrapped_attr')
+        srcexpr = ExprEvaluator(src, scope, default_getter='get_wrapped_attr')
         
         srccomps = srcexpr.get_referenced_compnames()
         destcomps = destexpr.get_referenced_compnames()

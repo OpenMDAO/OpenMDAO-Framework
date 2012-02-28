@@ -73,16 +73,11 @@ class ExprEvalTestCase(unittest.TestCase):
         self.top.comp.x = 3.14
         self.top.comp.y = 42.
 
-    def _ast_to_text(self, node):
-        ep = ExprPrinter()
-        ep.visit(node)
-        return ep.get_text()
-        
     def _do_tests(self, tests, top):
         # each test is a tuple of the form (input, expected output)
         for tst in tests:
             ex = ExprEvaluator(tst[0], top)
-            self.assertEqual(self._ast_to_text(ex._parse()), tst[1])
+            self.assertEqual(ex.new_text, tst[1])
             
     def test_eq(self): 
         ex1 = ExprEvaluator('comp.x', self.top)
@@ -97,7 +92,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.f', "scope.get('a.f')"),
             ('a.f**2', "scope.get('a.f')**2"),
             ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
-            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
+            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_)"),
         ]
         self._do_tests(tests, self.top)
         
@@ -111,7 +106,7 @@ class ExprEvalTestCase(unittest.TestCase):
     def test_dicts(self):
         tests = [
             ("comp.indct['foo.bar']","scope.get('comp.indct',[(0,'foo.bar')])"),
-            ("comp.indct['foo.bar']=comp.cont.f","scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')])"),
+            ("comp.indct['foo.bar']=comp.cont.f","scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')],src=_local_src_)"),
         ]
         self._do_tests(tests, self.top)
         
@@ -126,14 +121,14 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.a2d[-a.a1d[2]][foo.bar]', 
              "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)])),(0,scope.get('foo.bar'))])"),
             ('a.a2d[-a.a1d[2]]=a.f', 
-             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))])"),
+             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))],src=_local_src_)"),
             ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
-            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
+            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_)"),
             ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[(0,1+3**4*1)])"),
             ('a.b[1][2]', "scope.get('a.b',[(0,1),(0,2)])"),
             ('abs(a.b[1][2])', "abs(scope.get('a.b',[(0,1),(0,2)]))"),
             ('a.b[1][x.y]', "scope.get('a.b',[(0,1),(0,scope.get('x.y'))])"),  
-            ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[(0,1)]))"),
+            ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[(0,1)]),src=_local_src_)"),
             ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[(0,-3)])"),
         ]
         self._do_tests(tests, self.top)
@@ -223,11 +218,6 @@ class ExprEvalTestCase(unittest.TestCase):
         ex = ExprEvaluator("comp.get_attr('get_cont')(1).a1d", self.top)
         self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
         
-        # try an expression that's a simple assignment
-        ex = ExprEvaluator("f = 10.333", self.top.a)
-        self.assertEqual(ex.evaluate(), None)
-        self.assertEqual(self.top.a.f, 10.333)
-        
         
     def test_reparse_on_scope_change(self):
         self.top.comp.x = 99.5
@@ -235,7 +225,7 @@ class ExprEvalTestCase(unittest.TestCase):
         
         ex = ExprEvaluator('comp.x', self.top)
         self.assertEqual(99.5, ex.evaluate())
-        self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.x')")
+        self.assertEqual(ex.new_text, "scope.get('comp.x')")
         
         ex.scope = self.top.a
         try:
@@ -244,9 +234,9 @@ class ExprEvalTestCase(unittest.TestCase):
             self.assertEqual(str(err), "a: object has no attribute 'comp.x'")
         else:
             self.fail("AttributeError expected")
-        self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.x')")
+        self.assertEqual(ex.new_text, "scope.get('comp.x')")
         self.assertEqual(99.5, ex.evaluate(self.top)) # set scope back to self.top
-        self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.x')")
+        self.assertEqual(ex.new_text, "scope.get('comp.x')")
         
         ex.text = 'comp.y'
         try:
@@ -258,7 +248,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ex.scope = self.top
         ex.set(11.1)
         self.assertEqual(11.1, self.top.comp.y)
-        self.assertEqual(self._ast_to_text(ex._parse()), "scope.get('comp.y')")
+        self.assertEqual(ex.new_text, "scope.get('comp.y')")
         
     def test_no_scope(self):
         ex = ExprEvaluator('abs(-3)+int(2.3)+math.floor(5.4)')
@@ -446,6 +436,17 @@ class ExprEvalTestCase(unittest.TestCase):
         exp = ExprEvaluator('sin(0.3)', top.driver)
         self.assertEqual(exp.get_required_compnames(top),
                          set())
+        
+    def test_scope_transform(self):
+        exp = ExprEvaluator('var+abs(comp.x)*a.a1d[2]', self.top)
+        self.assertEqual(exp.new_text, "scope.get('var')+abs(scope.get('comp.x'))*scope.get('a.a1d',[(0,2)])")
+        xformed = exp.scope_transform(self.top, self.top.comp)
+        self.assertEqual(xformed, 'parent.var+abs(x)*parent.a.a1d[2]')
+        
+        exp = ExprEvaluator('parent.var+abs(x)*parent.a.a1d[2]', self.top.comp)
+        xformed = exp.scope_transform(self.top.comp, self.top)
+        self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
+        
         
 if __name__ == "__main__":
     unittest.main()

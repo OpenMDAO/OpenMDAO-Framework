@@ -694,7 +694,7 @@ class Component (Container):
                     
         super(Component, self).connect(srcpath, destpath)
         
-        # move this to after the super connect call so if there's a 
+        # this is after the super connect call so if there's a 
         # problem we don't have to undo it
         if valids_update is not None:
             self._valid_dict[valids_update[0]] = valids_update[1]
