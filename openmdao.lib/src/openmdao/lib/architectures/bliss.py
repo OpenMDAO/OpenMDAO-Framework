@@ -4,8 +4,8 @@ from openmdao.main.api import Driver, Architecture,SequentialWorkflow
 
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import SLSQP_driver, BroydenSolver, \
-                                     SensitivityDriver, FixedPointIterator#, COBYLA_driver as SLSQP_driver
+from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
+                                     SensitivityDriver, FixedPointIterator#, COBYLAdriver as SLSQPdriver
 
 class BLISS(Architecture): 
     """Bi-Level Integrated Systems Synthesis architecture"""
@@ -31,7 +31,7 @@ class BLISS(Architecture):
         
         self.parent.add('driver',FixedPointIterator())
         self.parent.driver.max_iteration = 50
-        self.parent.driver.tolerance = .001
+        self.parent.driver.tolerance = .005
         
         
         initial_conditions = [param.start for comp,param in global_dvs]
@@ -88,9 +88,9 @@ class BLISS(Architecture):
         
         bbopts = []
         for comp,local_params in local_dvs.iteritems(): 
-            bbopt = self.parent.add('bbopt_%s'%comp,SLSQP_driver())
+            bbopt = self.parent.add('bbopt_%s'%comp,SLSQPdriver())
             bbopt.differentiator = FiniteDifference()
-            bbopt.iprint = -1
+            bbopt.iprint = 0
 
             bbopts.append('bbopt_%s'%comp)
             
@@ -133,10 +133,10 @@ class BLISS(Architecture):
         df = []
         dg = []
         
-        sysopt = self.parent.add('sysopt', SLSQP_driver())
+        sysopt = self.parent.add('sysopt', SLSQPdriver())
         sysopt.differentiator = FiniteDifference()
         sysopt.recorders = self.data_recorders
-        sysopt.iprint = -1
+        sysopt.iprint = 0
 
         for i,(comps,param) in enumerate(global_dvs): 
             z_store = "global_des_vars[%d]"%i

@@ -9,7 +9,7 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 
 from openmdao.main.api import Driver, Architecture,SequentialWorkflow, Component, Assembly
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil, \
-     FixedPointIterator,NeiborhoodDOEdriver, SLSQP_driver#, COBYLA_driver as SLSQP_driver
+     FixedPointIterator,NeiborhoodDOEdriver, SLSQPdriver#, COBYLAdriver as SLSQPdriver
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, OptLatinHypercube, LatinHypercube
@@ -81,7 +81,6 @@ class SubSystemOpt(Assembly):
         for i,p in enumerate(self.global_params):
             name = "global_%d"%i
             self.var_map[p.target] = name
-            print p.target
             self.add_trait(name,Float(0.0,iotype="in",desc="global design var for %s"%p.target.split(".")[-1]))
             self.connect(name,p.target) #promote the global des vars
             setattr(self,name,self.get(p.target))
@@ -186,7 +185,7 @@ class BLISS2000(Architecture):
         for comp in des_vars: 
             mm_name = "meta_model_%s"%comp
             meta_model = self.parent.add(mm_name,MetaModel()) #metamodel now replaces old component with same name 
-            #driver.add_event("%s.reset_training_data"%mm_name)
+            driver.add_event("%s.reset_training_data"%mm_name)
 
             meta_models[comp] = meta_model
             meta_model.surrogate = {'default':ResponseSurface()}
@@ -231,9 +230,9 @@ class BLISS2000(Architecture):
       
         
         #optimization of system objective function using the discipline meta models
-        sysopt=self.parent.add('sysopt', SLSQP_driver())   
+        sysopt=self.parent.add('sysopt', SLSQPdriver())   
         sysopt.recorders = self.data_recorders
-        sysopt.iprint = -1
+        sysopt.iprint = 0
         sysopt.differentiator = FiniteDifference()
         
         obj2= objective[1].text

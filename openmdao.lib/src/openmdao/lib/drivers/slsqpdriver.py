@@ -180,7 +180,7 @@ class SLSQPdriver(DriverUsesDerivatives):
         
         Note: m, me, la, n, f, and g are unused inputs."""
         self.set_parameters(xnew)
-        super(SLSQP_driver, self).run_iteration()      
+        super(SLSQPdriver, self).run_iteration()      
         f = self.eval_objective()
 
         if isnan(f):
