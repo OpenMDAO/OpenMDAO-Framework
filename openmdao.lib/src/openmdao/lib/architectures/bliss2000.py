@@ -129,17 +129,17 @@ class SubSystemOpt(Assembly):
         else: #no locals, so just promote the coupling deps
             #no optimizer, so add the comp to the default workflow
             self.driver.workflow.add(self.component.name)
-            for c in dep_couple_vars: 
-                self.var_map[c] = c.split(".")[-1]
-                self.create_passthrough(c) #prmote the state vars to be outputs
+            for i,c in enumerate(dep_couple_vars): 
+                name = "couple_dep_%d"%i
+                self.var_map[c] = name
+                self.add_trait(name,Float(0.0,iotype="out",desc="coupling dependent for %s"%c))
+                self.connect(c,name) #prmote the coupling deps to be outputs
                 
-        for c in self.couple_indeps:
-            self.var_map[c.indep.target] = c.indep.target.split(".")[-1]
-            self.create_passthrough(c.indep.target) #promote the couple inputs to the component
-        
-        
-        
-        
+        for i,c in enumerate(self.couple_indeps):
+            name = "couple_indep_%d"%i
+            self.var_map[c.indep.target] = name
+            self.add_trait(name,Float(0.0,iotype="in",desc="coupling independent for %s"%c))
+            self.connect(name,c.indep.target)        
                 
             
 class BLISS2000(Architecture):
@@ -176,7 +176,7 @@ class BLISS2000(Architecture):
         driver=self.parent.add("driver",FixedPointIterator())
                
         driver.workflow = SequentialWorkflow()           
-        driver.max_iteration=20 #should be enough to converge
+        driver.max_iteration=15 #should be enough to converge
         driver.tolerance = .005
         meta_models = {}
         self.sub_system_opts = {}
@@ -210,7 +210,8 @@ class BLISS2000(Architecture):
             dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
             
             for couple in couple_indeps[comp] :
-                dis_doe.add_parameter("meta_model_%s"%couple.indep.target,low=-1e99,high=1e99) #change to -1e99/1e99 
+                mapped_name = system_var_map[couple.indep.target]
+                dis_doe.add_parameter(mapped_name,low=-1e99,high=1e99) #change to -1e99/1e99 
                 
             for dv in global_dvs_by_comp[comp]:
                 dis_doe.add_parameter(system_var_map[dv.target],low=dv.low, high=dv.high,start=dv.start)
