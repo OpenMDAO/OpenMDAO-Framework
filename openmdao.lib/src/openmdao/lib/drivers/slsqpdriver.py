@@ -241,14 +241,9 @@ class SLSQPdriver(DriverUsesDerivatives):
         self.ffd_order = 1
         self.differentiator.calc_gradient()
         self.ffd_order = 0
-<<<<<<< HEAD
-                                         
-        df[:-1] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
-=======
             
         df[0:self.nparam] = \
             self.differentiator.get_gradient(self.get_objectives().keys()[0])
->>>>>>> 3d1aed33e09ef065261d9b0f8d2686e0dc99290b
 
         if self.ncon > 0 :
             for i, con in enumerate(self.get_constraints().keys()):

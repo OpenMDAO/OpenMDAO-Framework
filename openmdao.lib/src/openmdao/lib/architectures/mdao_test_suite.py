@@ -130,10 +130,10 @@ def run_arch_test_suite(arch=[], optproblems=[]):
             print "Success"
             
             des_vars = prob.get_des_vars_by_comp()
-            print "  Function Evaluations: "
+            print "  Function Evaluations (Derivative Evaluations): "
             for comp_name in des_vars: 
                 comp = prob.get(comp_name)
-                print "    %s: %d"%(comp_name,comp.exec_count)
+                print "    %s: %d (%d)"%(comp_name,comp.exec_count,comp.derivative_exec_count)
             print "  Errors: "
             for k,v in prob.check_solution().iteritems(): 
                 print "    ",k,": ",v
