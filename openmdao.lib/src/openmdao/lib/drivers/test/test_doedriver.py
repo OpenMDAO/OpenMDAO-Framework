@@ -16,9 +16,9 @@ from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.doedriver import DOEdriver, NeiborhoodDOEdriver
-from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
+                                          DumpCaseRecorder
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 

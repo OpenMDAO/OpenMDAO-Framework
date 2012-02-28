@@ -1,10 +1,13 @@
+"""A CaseRecorder and CaseIterator that store the cases in a relational
+DB (Python's sqlite.)
+"""
 
 import sys
 import sqlite3
 import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
-
+u
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 

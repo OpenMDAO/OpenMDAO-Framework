@@ -94,15 +94,17 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
       
       [openmdao.caserecorder]
-      openmdao.lib.casehandlers.dumpcaserecorder.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcaserecorder:DumpCaseRecorder
-      openmdao.lib.casehandlers.listcaserecorder.ListCaseRecorder = openmdao.lib.casehandlers.listcaserecorder:ListCaseRecorder
-      openmdao.lib.casehandlers.db.DBCaseRecorder = openmdao.lib.casehandlers.db:DBCaseRecorder
+      openmdao.lib.casehandlers.dumpcase.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcase:DumpCaseRecorder
+      openmdao.lib.casehandlers.listcase.ListCaseRecorder = openmdao.lib.casehandlers.listcase:ListCaseRecorder
+      openmdao.lib.casehandlers.dbcase.DBCaseRecorder = openmdao.lib.casehandlers.dbcase:DBCaseRecorder
+      openmdao.lib.casehandlers.csvcase.CSVCaseRecorder = openmdao.lib.casehandlers.csvcase:CSVCaseRecorder
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
 
       [openmdao.caseiterator]
-      openmdao.lib.casehandlers.listcaseiter.ListCaseIterator = openmdao.lib.casehandlers.listcaseiter:ListCaseIterator
-      openmdao.lib.casehandlers.db.DBCaseIterator = openmdao.lib.casehandlers.db:DBCaseIterator
+      openmdao.lib.casehandlers.listcase.ListCaseIterator = openmdao.lib.casehandlers.listcase:ListCaseIterator
+      openmdao.lib.casehandlers.dbcase.DBCaseIterator = openmdao.lib.casehandlers.dbcase:DBCaseIterator
+      openmdao.lib.casehandlers.csvcase.CSVCaseIterator = openmdao.lib.casehandlers.csvcase:CSVCaseIterator
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
       

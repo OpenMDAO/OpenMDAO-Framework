@@ -19,10 +19,9 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
-from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.listcase import ListCaseRecorder, ListCaseIterator
 
 from openmdao.test.cluster import init_cluster
 
