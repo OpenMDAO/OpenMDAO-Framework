@@ -123,7 +123,7 @@ def run_arch_test_suite(arch=[], optproblems=[]):
             except RuntimeError as err: 
                 arch_data[p] = False #not compatible, so just move on
                 print "Incompatible"
-                raise err
+                #raise err
                 continue 
                            
             prob.run()

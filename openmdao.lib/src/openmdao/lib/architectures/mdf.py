@@ -1,5 +1,7 @@
 from openmdao.main.api import Driver, Architecture
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
+from openmdao.lib.drivers.api import SLSQP_driver, BroydenSolver#, COBYLA_driver as SLSQP_driver
+
+from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
 class MDF(Architecture):
     
@@ -17,15 +19,9 @@ class MDF(Architecture):
         """setup and MDF architecture inside this assembly.
         """
         #create the top level optimizer
-        self.parent.add("driver",CONMINdriver())
-        self.parent.driver.cons_is_linear = [1]*len(self.parent.list_constraints())
-        self.parent.driver.iprint = 0
-        self.parent.driver.itmax = 30
-        self.parent.driver.fdch = .001
-        self.parent.driver.fdchm = .001
-        self.parent.driver.delfun = .0001
-        self.parent.driver.dabfun = .000001
-        self.parent.driver.ctlmin = 0.0001
+        self.parent.add("driver",SLSQP_driver())
+        self.parent.driver.differentiator = FiniteDifference()
+        self.parent.driver.iprint = -1
         self.parent.driver.recorders = self.data_recorders
         
         params = self.parent.get_parameters()

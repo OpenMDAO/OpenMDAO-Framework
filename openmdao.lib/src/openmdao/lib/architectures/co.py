@@ -1,7 +1,7 @@
 """Implementation of the Colaborative Optimization Optimization Architecture"""
 
 from openmdao.main.api import Driver, Architecture
-from openmdao.lib.drivers.api import CONMINdriver
+from openmdao.lib.drivers.api import SLSQP_driver#, COBYLA_driver as SLSQP_driver
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
@@ -35,17 +35,12 @@ class CO(Architecture):
         self.target_var_map = dict()
         
         #Global Driver    
-        global_opt = self.parent.add('driver', CONMINdriver())
+        global_opt = self.parent.add('driver', SLSQP_driver())
+        global_opt.differentiator = FiniteDifference()
         global_opt.recorders = self.data_recorders
         global_opt.print_vars = ['dis1.y1', 'dis2.y2']
-        global_opt.iprint = 0
-        global_opt.itmax = 100
-        global_opt.fdch = .003
-        global_opt.fdchm = .003
-        global_opt.delfun = .0001
-        global_opt.dabfun = .00001
-        global_opt.ct = -.0008
-        global_opt.ctlmin = 0.0008         
+        global_opt.iprint = -1
+       
         
         initial_conditions = [param.evaluate() for comp,param in global_dvs]
         #print "global initial conditions: ", initial_conditions
@@ -93,7 +88,9 @@ class CO(Architecture):
         
         #setup the local optimizations
         for comp,params in all_dvs_by_comp.iteritems(): 
-            local_opt = self.parent.add('local_opt_%s'%comp,CONMINdriver())
+            local_opt = self.parent.add('local_opt_%s'%comp,SLSQP_driver())
+            local_opt.differentiator = FiniteDifference()
+            local_opt.iprint = -1
             global_opt.workflow.add(local_opt.name)
             residuals = []
             for param in params: 
@@ -116,12 +113,7 @@ class CO(Architecture):
             global_constraint = "%s<=.001"%residuals
             global_opt.add_constraint(global_constraint)
             local_opt.add_objective(residuals)
-            local_opt.iprint = 0
-            local_opt.itmax = 100
-            local_opt.fdch = .001
-            local_opt.fdchm = .001
-            local_opt.delfun = .0001
-            local_opt.dabfun = .000001
+
 
         """    print local_opt.name
             print local_opt.get_objectives().keys()[0]
@@ -144,5 +136,4 @@ class CO(Architecture):
         
         print 
         print"""            
-            
             

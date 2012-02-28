@@ -180,9 +180,9 @@ class SLSQPdriver(DriverUsesDerivatives):
         
         Note: m, me, la, n, f, and g are unused inputs."""
         self.set_parameters(xnew)
-        super(SLSQPdriver, self).run_iteration()
+        super(SLSQP_driver, self).run_iteration()      
         f = self.eval_objective()
-        
+
         if isnan(f):
             msg = "Numerical overflow in the objective"
             self.raise_exception(msg, RuntimeError)
@@ -241,9 +241,14 @@ class SLSQPdriver(DriverUsesDerivatives):
         self.ffd_order = 1
         self.differentiator.calc_gradient()
         self.ffd_order = 0
+<<<<<<< HEAD
+                                         
+        df[:-1] = self.differentiator.get_gradient(self.get_objectives().keys()[0])
+=======
             
         df[0:self.nparam] = \
             self.differentiator.get_gradient(self.get_objectives().keys()[0])
+>>>>>>> 3d1aed33e09ef065261d9b0f8d2686e0dc99290b
 
         if self.ncon > 0 :
             for i, con in enumerate(self.get_constraints().keys()):

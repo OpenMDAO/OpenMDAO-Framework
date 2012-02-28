@@ -4,8 +4,8 @@ from openmdao.main.api import Driver, Architecture,SequentialWorkflow
 
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
-                                     SensitivityDriver, FixedPointIterator
+from openmdao.lib.drivers.api import SLSQP_driver, BroydenSolver, \
+                                     SensitivityDriver, FixedPointIterator#, COBYLA_driver as SLSQP_driver
 
 class BLISS(Architecture): 
     """Bi-Level Integrated Systems Synthesis architecture"""
@@ -88,8 +88,10 @@ class BLISS(Architecture):
         
         bbopts = []
         for comp,local_params in local_dvs.iteritems(): 
-            bbopt = self.parent.add('bbopt_%s'%comp,CONMINdriver())
-            bbopt.linobj = True
+            bbopt = self.parent.add('bbopt_%s'%comp,SLSQP_driver())
+            bbopt.differentiator = FiniteDifference()
+            bbopt.iprint = -1
+
             bbopts.append('bbopt_%s'%comp)
             
             x_store = "%s_local_des_vars"%comp
@@ -131,9 +133,11 @@ class BLISS(Architecture):
         df = []
         dg = []
         
-        sysopt = self.parent.add('sysopt', CONMINdriver())
+        sysopt = self.parent.add('sysopt', SLSQP_driver())
+        sysopt.differentiator = FiniteDifference()
         sysopt.recorders = self.data_recorders
-        sysopt.linobj = True   
+        sysopt.iprint = -1
+
         for i,(comps,param) in enumerate(global_dvs): 
             z_store = "global_des_vars[%d]"%i
             target = list(param.targets)[0]
