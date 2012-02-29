@@ -13,6 +13,7 @@ from nose import SkipTest
 from openmdao.main.api import Component, Container
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.container import _get_entry_group
+from openmdao.util.testutil import assert_raises
 
 
 class MyComponent(Component):
@@ -27,7 +28,7 @@ class MyComponent(Component):
     def execute(self):
         self.xout = self.x * 2.
         
-        
+
 class TestCase(unittest.TestCase):
     """ Test of Component. """
 
@@ -189,6 +190,25 @@ class TestCase(unittest.TestCase):
         self.comp.set('x', 99.999)
         self.assertEqual(self.comp._valid_dict['xout'], False)
         
+    def test_override(self):
+        code = """\
+class BadComponent(Component):
+    run = Float(iotype='in')
+"""
+        assert_raises(self, code, globals(), locals(), NameError,
+                      "BadComponent overrides attribute 'run' of Component",
+                      use_exec=True)
+
+        code = "Component.add_class_trait('run', Float(iotype='in'))"
+        assert_raises(self, code, globals(), locals(), NameError,
+                      "Would override attribute 'run' of Component")
+
+        comp = Component()
+        comp.add_trait('x', Float(iotype='in'))
+
+        code = "comp.add_trait('run', Float(iotype='in'))"
+        assert_raises(self, code, globals(), locals(), NameError,
+                      "Would override attribute 'run' of Component")
 
 
 if __name__ == '__main__':
