@@ -712,8 +712,9 @@ class CaseIteratorDriver(CaseIterDriverBase):
     def execute(self):
         """ Evaluate cases from `iterator` and place in `evaluated`. """
         self.evaluated = None
-        if not self.recorders:
-            self.recorders.append(ListCaseRecorder())
-        super(CaseIteratorDriver, self).execute()
-        self.evaluated = self.recorders[0].get_iterator()
+        self.recorders.append(ListCaseRecorder())
+        try:
+            super(CaseIteratorDriver, self).execute()
+        finally:
+            self.evaluated = self.recorders.pop().get_iterator()
 
