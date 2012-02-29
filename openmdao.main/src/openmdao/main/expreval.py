@@ -295,6 +295,18 @@ class ExprEvaluator(object):
         if self._parse_needed:
             self._pre_parse()
         return self._allow_set
+    
+    def refers_to(self, name):
+        """Returns True if this expression refers to the given variable or component"""
+        if self._parse_needed:
+            self._parse()
+        for vname in self.var_names:
+            if name == vname:
+                return True
+            parts = name.split('.', 1)
+            if parts[0] == name:
+                return True
+        return False
 
     def __getstate__(self):
         """Return dict representing this container's state."""

@@ -144,8 +144,6 @@ class ExprMapper(object):
         graph = self._exprgraph
         return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
     
-    
-    
     def get_compgraph(self):
         """Return the cached component graph or create a new one if it doesnt' exist."""
         if self._compgraph is None:
@@ -194,7 +192,51 @@ class ExprMapper(object):
         
     def connect(self, src, dest, scope):
         self._exprgraph.add_edge(src, dest)
+        
+    def find_referring_exprs(self, name):
+        """Returns a list of expressions that reference the given name, which
+        can refer to either a variable or a component.
+        """
+        return [ex for ex,data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
+    
+    def _remove_disconnected_exprs(self):
+        # remove all expressions that are no longer connected to anything
+        to_remove = []
+        graph = self._exprgraph
+        for expr in graph.nodes():
+            if graph.in_degree(expr) == 0 and graph.out_degree(expr) == 0:
+                to_remove.append(expr)
+        for expr in to_remove:
+            graph.remove_node(expr)
 
+    def disconnect(self, srcpath, destpath=None):
+        """Disconnect the given expressions/variables/components."""
+        self._compgraph = None  # force later rebuild of component graph
+        graph = self._exprgraph
+        
+        if destpath is None:
+            if srcpath in graph:
+                graph.remove_node(srcpath)
+            else:
+                for expr in self.find_referring_exprs(srcpath):
+                    graph.remove_node(expr)
+            self._remove_disconnected_exprs()
+            return
+
+        if srcpath in graph and destpath in graph:
+            graph.remove_edge(srcpath, destpath)
+            self._remove_disconnected_exprs()
+        else: # assume they're disconnecting two variables, so find connected exprs that refer to them
+            src_exprs = set([exp.text for exp in self.find_referring_exprs(srcpath)])
+            dest_exprs = set([exp.text for exp in self.find_referring_exprs(destpath)])
+            
+            to_remove = []
+            for src,dest in graph.edges():
+                if src in src_exprs and dest in dest_exprs:
+                    to_remove.append((src, dest))
+                    
+            graph.remove_edges_from(to_remove)
+            
     def check_connect(self, src, dest, scope):
         """Connect a source expression to a destination expression."""
         
@@ -241,6 +283,13 @@ class ExprMapper(object):
                                  (str(strcon), src, dest), RuntimeError)
         return srcexpr, destexpr
 
+    def _get_invalidated_destexprs(self, scope, compname, varset):
+        """For a given set of variable names that has changed (or None),
+        return a list of all destination expressions that are invalidated.
+        """
+        if varset is None:
+            
+        
     def invalidate_deps(self, scope, cnames, varsets, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
         variables that depend on output sets for the given component names.
@@ -263,18 +312,20 @@ class ExprMapper(object):
         outset = set()  # set of changed boundary outputs
         while(stack):
             srccomp, varset = stack.pop()
+            destexprs = self._get_invalidated_destexprs(scope, srccomp, varset)
+            
             if varset is not None and not isinstance(varset, set):
                 varset = set(varset)
-            for srcnode, destcomp, data in compgraph.edges(srccomp, data=True):
+            for srcnode, destcomp in compgraph.edges(srccomp):
                 invalid_destvars = []
+                vpaths = self._exprgraph.node[srcnode]['expr'].get_referenced_varpaths()
                 # if varset is None that means that ALL outputs of srccomp are invalid,
                 #    so invalidate all connected destinations
                 # if varset is not None, then invalidate any destinations connected to
                 #    src expressions that reference the invalid outputs
-                for srcexprtxt, destexprs in data['srcexprs'].items():
-                    if varset is None or varset.intersection(
-                                 self._exprgraph.node[srcexprtxt]['expr'].get_referenced_varpaths()):
-                        invalid_dests.extend([d.text for d in destexprs])
+                for destexprtxt in data['destexprs'][srcnode]:
+                    if varset is None or varset.intersection(vpaths):
+                        invalid_destvars.append(destexprtxt)
                         for destexpr in destexprs:
                             varpaths = destexpr.get_referenced_varpaths()
                             invalid_destvars = [vp for vp in varpaths if '.' in vp]
