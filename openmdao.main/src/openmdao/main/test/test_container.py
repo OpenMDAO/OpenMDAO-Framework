@@ -405,6 +405,14 @@ class ContainerTestCase(unittest.TestCase):
                       globals(), locals(), ValueError,
                       "b: add would cause container recursion")
 
+    def test_set_output(self):
+        c = Container()
+        c.add_trait('inp', Float(iotype='in'))
+        c.add_trait('out', Float(iotype='out'))
+        c.set('inp', 42)
+        assert_raises(self, "c.set('out', 666)", globals(), locals(),
+                      RuntimeError, ": Cannot set output 'out'")
+
 
 if __name__ == "__main__":
     import nose
