@@ -952,9 +952,12 @@ class Container(SafeHasTraits):
                         self._input_updated(path)
                 else:  # array index specified
                     self._index_set(path, value, index)
-            elif index:  # array index specified for output
+            elif iotype == 'out':
+                self.raise_exception('Cannot set output %r' % path,
+                                     RuntimeError)
+            elif index:  # array index specified
                 self._index_set(path, value, index)
-            else: # output
+            else:
                 setattr(self, path, value)
 
     def _process_index_entry(self, obj, idx):
