@@ -432,7 +432,9 @@ class Container(SafeHasTraits):
 
     @classmethod
     def add_class_trait(cls, name, *trait):
-        """ Try to keep from clobbering framework stuff. """
+        """Overrides HasTraits definition of *add_class_trait* in order to
+        try to keep from clobbering framework stuff.
+        """
         bases = [cls]
         bases.extend(cls.__bases__)
         for base in bases:
