@@ -393,6 +393,30 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set(['d']))
         self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set(['b']))
                 
+    def test_simple_run(self):
+        self.top.connect('c1.c', 'c2.a')
+        self.top.connect('c1.d', 'c2.b')
+        self.top.driver.workflow.add(['c1','c2'])
+        self.top.run()
+        self.assertEqual(self.top.c1.a, 1)
+        self.assertEqual(self.top.c1.b, 2)
+        self.assertEqual(self.top.c1.c, 3)
+        self.assertEqual(self.top.c1.d, -1)
+        self.assertEqual(self.top.c2.a, 3)
+        self.assertEqual(self.top.c2.b, -1)
+        self.assertEqual(self.top.c2.c, 2)
+        self.assertEqual(self.top.c2.d, 4)
+        
+        self.top.c1.a = 2
+        self.top.run()
+        self.assertEqual(self.top.c1.a, 2)
+        self.assertEqual(self.top.c1.b, 2)
+        self.assertEqual(self.top.c1.c, 4)
+        self.assertEqual(self.top.c1.d, 0)
+        self.assertEqual(self.top.c2.a, 4)
+        self.assertEqual(self.top.c2.b, 0)
+        self.assertEqual(self.top.c2.c, 4)
+        self.assertEqual(self.top.c2.d, 4)
         
 if __name__ == "__main__":
     

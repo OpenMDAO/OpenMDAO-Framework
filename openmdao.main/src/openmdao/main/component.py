@@ -380,9 +380,9 @@ class Component (Container):
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
             valids[name] = True
-        # make sure our inputs are valid too
-        for name in self.list_inputs(valid=False):
-            valids[name] = True
+        ## make sure our inputs are valid too
+        #for name in self.list_inputs(valid=False):
+            #valids[name] = True
         self._call_execute = False
         
     def _post_run (self):
@@ -418,7 +418,7 @@ class Component (Container):
         try:
             self._pre_execute(force)
             if self._call_execute or force:
-                #print 'execute: %s' % self.get_pathname()
+                print 'execute: %s' % self.get_pathname()
                 
                 if ffd_order == 1 and \
                    hasattr(self, 'calculate_first_derivatives'):
@@ -438,8 +438,8 @@ class Component (Container):
                     self.exec_count += 1
                     
                 self._post_execute()
-            #else:
-                #print 'skipping: %s' % self.get_pathname()
+            else:
+                print 'skipping: %s' % self.get_pathname()
             self._post_run()
         finally:
             if self.directory:
