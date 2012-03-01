@@ -11,7 +11,7 @@ Overview of the OpenMDAO Framework
 
 MDAO stands for `Multidisciplinary Design Analysis and Optimization`. OpenMDAO is an
 open source framework for analyzing and solving MDAO problems. In OpenMDAO, a
-problem is represented by a system of objects called components. Befor you start 
+problem is represented by a system of objects called components. Before you start 
 looking over all of our tutorials, it might help you to understand the fundamental 
 structure of the framework. There are four main classes that you will work with: 
 :term:`Component`, :term:`Driver`, :term:`Workflow`, :term:`Assembly`
@@ -49,10 +49,10 @@ There are different kinds of variables available in OpenMDAO, such as Float, Int
 .. seealso:: :ref:`Variables`
 
 When you connect two variables together, they need be compatible. You can't, for instance, connect 
-a  String to a Float. Float variables have a special property 
-that they can have physical units specified. The framework will automatically convert between compatible 
-units when they are connected, and it will prevent you from connecting incompatible units. A more complete 
-description of connections is given :ref:`below <connection-overview>`.
+a String to a Float. Float variables have a special property that allows them to have physical units
+specified. The framework will automatically convert between compatible units when they are
+connected, and it will prevent you from connecting incompatible units. A more complete description
+of connections is given :ref:`below <Connecting-Components>`.
 
 .. seealso:: :ref:`units`
 
@@ -62,7 +62,7 @@ Driver
 ------
 Once you have a bunch of components, you're going to want to do something with them, 
 like run an optimization or a Design of Experiments. Any kind of iterative execution 
-of components is controlled by a :term:`Driver`. There are a number of differnent kinds 
+of components is controlled by a :term:`Driver`. There are a number of different kinds 
 of drivers in the standard library, but you could also write your own if need be. 
 
 .. _`workflow overview`:
@@ -70,17 +70,17 @@ of drivers in the standard library, but you could also write your own if need be
 Workflow
 --------
 
-When a Driver is running, it need to know which components to execute and in what order 
+When a Driver is running, it needs to know which components to execute and in what order 
 to execute them. This behavior is controlled by the :term:`Workflow` class. Each driver 
 has a workflow associated with it. You can think of the workflow as being responsible for 
 controlling the process used to run a given analysis. 
 
 Although in many cases a workflow contains just basic components, it can also contain 
 other drivers. This allows nested iterative processes to be created. 
-Nested iterations provides the flexibility needed to build 
+Nested iterations provide the flexibility needed to build 
 complex optimization processes defined by MDAO architectures. 
-Also Components are allowed to show up multiple times in a single workflow
-or in multiple parts of a nested workflow. This can be used, for 
+Also, Components are allowed to show up multiple times in a single workflow
+or in multiple parts of a nested workflow.  can be used, for 
 example, if you need to train a meta model in one part of a workflow 
 and then optimize it in another. We often refer to collection of drivers/workflows
 in a given model as an :term:`iteration hierarchy`. 
@@ -104,13 +104,13 @@ appears in two different workflows.
 Assembly 
 --------
 
-An :term:`Assembly` is a container to put all of your components, drivers, and workflows in. 
-A named *driver*. When an Assembly executes, it will always look for a Driver named `driver` and 
-start there, then work its way down the iteration hierarchy. 
+An :term:`Assembly` is a container for all of your components, drivers, and workflows. When an
+Assembly executes, it will always look for a Driver named `driver` and  start there, then work its
+way down the iteration hierarchy. 
 
-Besided being a container for all the other objects, and Assembly has two other main functions. 
+Besides being a container for all the other objects, an Assembly has two other main functions. 
 It is responsible for managing all of the data connections between components in the framework. 
-Whenever data needs to move from one component to annother, that is specified via the `connect`
+Whenever data needs to move from one component to another, this action is specified via the `connect`
 method of the assembly. 
 
 .. _`driver intro2`:
@@ -122,9 +122,9 @@ method of the assembly.
    View of an Assembly Showing Data Flow
 
    
-An Assembly is also a special type of Component itself. Assemblies, like regular 
+An Assembly itself is also a special type of Component. Assemblies, like regular 
 components, can have their own inputs and outputs. You can take advantage of this behavior
-to construct nested models that can help simplify complex analyses a bit. You could 
+to construct nested models that can help simplify a complex analysis a bit. You could 
 produce a model of a jet engine from a number of analysis tools, then wrap that 
 up into an assembly that is used as part of an aircraft simulation. 
 
@@ -144,8 +144,8 @@ So assemblies allow us to organize our model into a hierarchy of submodels, and 
 submodel, drivers and workflows give us a flexible way to define an iteration scheme.
 
 
-Thats pretty much it for the basic structure of OpenMDAO. There is a lot more to deal with,
-but will introduce the rest via a series of tutorials in teh following sections. 
+That's pretty much it for the basic structure of OpenMDAO. There is a lot more to deal with,
+but we'll introduce the rest via a series of tutorials in the following sections. 
 
 
 Building a Simulation Model
@@ -194,6 +194,7 @@ the Paraboloid is accessed via ``self.paraboloid``.
 
 A Component can also be removed from an Assembly using ``remove``.
 
+.. _`Connecting-Components`:
 
 .. _`connection-overview`: 
 
@@ -295,17 +296,14 @@ need to reconfigure their connections during runtime, so it is available.
 Interacting with Files and Directories
 ---------------------------------------
 
-Many components will need to read from and write to files during
-model execution. For example, a component might need to generate input files
-for and parse output files from an external application. When writing 
-components such as these, it is important to understand how objects in OpenMDAO
-interact with the file system.
+Many components will need to read from and write to files during model execution. For example, a
+component might need to generate input files for and parse output files from an external
+application. When writing  components such as these, it is important to understand how objects in
+OpenMDAO interact with the file system.
 
-The top assembly in the OpenMDAO model hierarchy contains the root path. This
-path is not known until after the assembly is instantiated (to learn
-how to set the root path, see :ref:`Setting-the-Top-Level-Assembly`). All 
-components that are part of an assembly with a valid absolute directory have
-the same absolute directory.
+The top assembly in the OpenMDAO model hierarchy contains the root path. This path is not known
+until after the assembly is instantiated. All components that are part of an assembly with a valid
+absolute directory have the same absolute directory.
 
 You can change the absolute path of the working directory for any
 component on instantiation by setting the *directory* attribute in the
