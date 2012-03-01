@@ -3,7 +3,7 @@
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import CONMINdriver
 from openmdao.lib.datatypes.api import Float, Array
-
+from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
 class CO(Architecture): 
     
@@ -35,7 +35,7 @@ class CO(Architecture):
         self.target_var_map = dict()
         
         #Global Driver    
-        global_opt = self.parent.add('driver', CONMINdriver()) 
+        global_opt = self.parent.add('driver', CONMINdriver())
         global_opt.recorders = self.data_recorders
         global_opt.print_vars = ['dis1.y1', 'dis2.y2']
         global_opt.iprint = 0
@@ -45,10 +45,7 @@ class CO(Architecture):
         global_opt.delfun = .0001
         global_opt.dabfun = .00001
         global_opt.ct = -.0008
-        global_opt.ctlmin = 0.0008  
-        
-        
-        
+        global_opt.ctlmin = 0.0008         
         
         initial_conditions = [param.evaluate() for comp,param in global_dvs]
         #print "global initial conditions: ", initial_conditions
@@ -87,10 +84,11 @@ class CO(Architecture):
             
         #create the new objective with the target variables
         obj = objective.items()[0]
-        varpaths = obj[1].get_referenced_varpaths()
-        new_objective = obj[1].text         
-        for var in varpaths: 
-            new_objective = new_objective.replace(var,self.target_var_map[var])
+
+        new_objective = obj[1].text
+        for old_var,new_var in sorted(self.target_var_map.items(),key=lambda x: len(x[0]), reverse=True):    
+            new_objective = new_objective.replace(old_var,new_var)
+            
         global_opt.add_objective(new_objective,name=obj[1])
         
         #setup the local optimizations
@@ -124,7 +122,6 @@ class CO(Architecture):
             local_opt.fdchm = .001
             local_opt.delfun = .0001
             local_opt.dabfun = .000001
-            local_opt.force_execute = True
 
         """    print local_opt.name
             print local_opt.get_objectives().keys()[0]

@@ -45,8 +45,7 @@ class RosenSuzukiComponent(Component):
 class MyModel(Assembly):
     """ Use Distribution Case Driver with RosenSuzukiComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', DistributionCaseDriver())
         self.add('driven', RosenSuzukiComponent())
         self.driver.workflow.add('driven')

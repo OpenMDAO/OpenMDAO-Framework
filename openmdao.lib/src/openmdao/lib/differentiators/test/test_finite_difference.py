@@ -7,7 +7,7 @@ import unittest
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float, Int
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.main.api import Component, Assembly
+from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -45,11 +45,7 @@ class Driv(DriverUsesDerivatives):
 class Assy(Assembly):
     """ Assembly with driver and comp"""
     
-    def __init__(self):
-        """ Initialize it"""
-        
-        # pylint: disable-msg=E1101
-        super(Assy, self).__init__()
+    def configure(self):
 
         self.add('comp', Comp())
         self.add('driver', Driv())
@@ -71,7 +67,7 @@ class FiniteDifferenceTestCase(unittest.TestCase):
     """ Test of Component. """
 
     def setUp(self):
-        self.model = Assy()
+        self.model = set_as_top(Assy())
         
     def test_first_order(self):
         

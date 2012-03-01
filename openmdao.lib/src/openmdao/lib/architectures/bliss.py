@@ -10,11 +10,6 @@ from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
 class BLISS(Architecture): 
     """Bi-Level Integrated Systems Synthesis architecture"""
     
-    move_limit_percent = Float(default=20.0,low=0.0,high=100.0,iotype="in",desc="percentage of the total variable range "
-                               "to use for the move limit. Value will be used to limit the optimization"
-                               "of the linear models to + or - this percentage from the current value")    
-    
-
     def __init__(self): 
         super(BLISS,self).__init__()
         
@@ -38,7 +33,8 @@ class BLISS(Architecture):
         self.parent.driver.max_iteration = 50
         self.parent.driver.tolerance = .001
         
-        initial_conditions = [self.parent.get(param.target) for comp,param in global_dvs]
+        
+        initial_conditions = [param.start for comp,param in global_dvs]
         self.parent.add_trait('global_des_vars',Array(initial_conditions))
         for i,(comps,param) in enumerate(global_dvs): 
             targets = param.targets
@@ -46,7 +42,7 @@ class BLISS(Architecture):
             self.parent.driver.add_constraint("global_des_vars[%d]=%s"%(i,targets[0]))
             
         for comp,local_params in local_dvs.iteritems(): 
-            initial_conditions = [self.parent.get(param.targets[0]) for param in local_params]
+            initial_conditions = [param.start for param in local_params]
             self.parent.add_trait('%s_local_des_vars'%comp,Array(initial_conditions))
             for i,param in enumerate(local_params): 
                 self.parent.driver.add_parameter(param.targets,low=param.low,high=param.high)
@@ -64,7 +60,6 @@ class BLISS(Architecture):
         ssa.workflow.add("mda")
         ssa.differentiator = FiniteDifference()
         ssa.default_stepsize = 1.0e-6
-        ssa.force_execute = True
         ssa.add_objective(objective[1].text,name=objective[0])
         for comps,param in global_dvs: 
             
@@ -77,7 +72,6 @@ class BLISS(Architecture):
         for comp,local_params in local_dvs.iteritems(): 
             sa = self.parent.add('sa_%s'%comp, SensitivityDriver())    
             sa.default_stepsize = 1.0e-6
-            sa.force_execute = True
             sa_s.append('sa_%s'%comp)
             for param in local_params: 
                 sa.add_parameter(param.targets,low=param.low,high=param.high,fd_step=.001)
@@ -96,8 +90,6 @@ class BLISS(Architecture):
         for comp,local_params in local_dvs.iteritems(): 
             bbopt = self.parent.add('bbopt_%s'%comp,CONMINdriver())
             bbopt.linobj = True
-            bbopt.iprint = 0
-            bbopt.force_execute = True
             bbopts.append('bbopt_%s'%comp)
             
             x_store = "%s_local_des_vars"%comp
@@ -141,9 +133,7 @@ class BLISS(Architecture):
         
         sysopt = self.parent.add('sysopt', CONMINdriver())
         sysopt.recorders = self.data_recorders
-        sysopt.linobj = True
-        sysopt.iprint = 0
-        sysopt.force_execute = True    
+        sysopt.linobj = True   
         for i,(comps,param) in enumerate(global_dvs): 
             z_store = "global_des_vars[%d]"%i
             target = list(param.targets)[0]

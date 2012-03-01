@@ -27,8 +27,8 @@ class Vehicle(Assembly):
     velocity = Float(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
-    def __init__(self):
-        """ Creates a new Vehicle Assembly object
+    def configure(self):
+        """ Configures a new Vehicle Assembly object
 
         # Design parameters promoted from Engine
         stroke = 78.8              # Stroke (mm)
@@ -70,8 +70,6 @@ class Vehicle(Assembly):
         acceleration               # Calculated vehicle acceleration (m/s^2)
         """
         
-        super(Vehicle, self).__init__()
-
         # Create component instances
         
         self.add('transmission', Transmission())
@@ -120,10 +118,10 @@ class Vehicle(Assembly):
         self.create_passthrough('chassis.acceleration')
         
         # These vars have unit conversions
-        self.connect('velocity', 'chassis.velocity')
-        self.connect('velocity', 'transmission.velocity')
-        self.connect('tire_circumference', 'chassis.tire_circ')
-        self.connect('tire_circumference', 'transmission.tire_circ')
+        self.connect('velocity',
+                     ['chassis.velocity', 'transmission.velocity'])
+        self.connect('tire_circumference',
+                     ['chassis.tire_circ', 'transmission.tire_circ'])
 
         # Hook it all up
         self.connect('transmission.RPM','engine.RPM')

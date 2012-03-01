@@ -51,7 +51,7 @@ in the lower level optimization objectives. Hence, no `iotype` is set.
 .. testcode:: CO_parts
 
         from openmdao.lib.datatypes.api import Float, Array
-        from openmdao.main.api import Assembly
+        from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
         from openmdao.lib.optproblems import sellar
         
@@ -64,14 +64,7 @@ in the lower level optimization objectives. Hence, no `iotype` is set.
             local_des_var_targets = Array([1.0,])
             coupling_var_targets = Array([3.16,0])
         
-            def __init__(self):
-                """ Creates a new Assembly with this problem
-                
-                Optimal Design at (1.9776, 0, 0)
-                
-                Optimal Objective = 3.18339"""
-                
-                super(SellarCO, self).__init__()
+            def configure(self):
                 
                 # Global Optimization
                 self.add('driver', CONMINdriver())
@@ -93,7 +86,7 @@ Now we need to set up the parameters for the outer optimization loop.
 .. testcode:: CO_parts
     :hide:
     
-    self = SellarCO()
+    self = set_as_top(SellarCO())
 
 .. testcode:: CO_parts
 
@@ -141,7 +134,7 @@ Finally, we set up our local optimization loops.
 .. testcode:: CO_parts
     :hide:
     
-    self = SellarCO()
+    self = set_as_top(SellarCO())
     
 .. testcode:: CO_parts
 
@@ -168,7 +161,6 @@ Finally, we set up our local optimization loops.
         self.localopt1.fdchm = .001
         self.localopt1.delfun = .0001
         self.localopt1.dabfun = .000001
-        self.localopt1.force_execute = True
         
         #Parameters - Local Optimization 2
         self.localopt2.add_objective('(global_des_var_targets[0]-dis2.z1)**2 + ' + \
@@ -185,7 +177,6 @@ Finally, we set up our local optimization loops.
         self.localopt2.fdchm = .003
         self.localopt2.delfun = .001
         self.localopt2.dabfun = .00001
-        self.localopt2.force_execute = True
 
 This problem is contained in 
 :download:`sellar_CO.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_CO.py>`. 

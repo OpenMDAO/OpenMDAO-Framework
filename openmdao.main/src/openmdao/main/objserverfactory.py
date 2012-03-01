@@ -32,7 +32,7 @@ from openmdao.main.releaseinfo import __version__
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
 from openmdao.util.publickey import make_private, read_authorized_keys, \
                                     write_authorized_keys, HAVE_PYWIN32
-from openmdao.util.shellproc import ShellProc, STDOUT
+from openmdao.util.shellproc import ShellProc, STDOUT, DEV_NULL
 
 _PROXIES = {}
 
@@ -346,16 +346,6 @@ class ObjServer(object):
             from enthought.traits.trait_numeric import AbstractArray
             dummy = AbstractArray()
 
-    # We only reset logging on the remote side.
-    def _reset_logging(self, filename='server.out'):  #pragma no cover
-        """ Reset stdout/stderr and logging after switching destination. """
-        sys.stdout = open(filename, 'w')
-        sys.stderr = sys.stdout
-        logging.root.handlers = []
-        logging.basicConfig(level=logging.NOTSET, datefmt='%b %d %H:%M:%S',
-            format='%(asctime)s %(levelname)s %(name)s: %(message)s',
-            filename='openmdao_log.txt', filemode='w')
-
     @rbac('*')
     def echo(self, *args):
         """
@@ -399,7 +389,8 @@ class ObjServer(object):
         If neither 'error_path' nor 'join_files' are specified,
         ``<remote_command>.stderr`` is used.
 
-        If specified, 'hard_run_duration_limit' is used as a timeout.
+        If specified in the 'resource_limits' dictionary, 'wallclock_time' is
+        used as a timeout.
 
         All other queuing resource keys are ignored.
 
@@ -414,8 +405,9 @@ class ObjServer(object):
         command = resource_desc['remote_command']
         self._check_path(command, 'execute_command')
         base = os.path.basename(command)
+        command = [command]
         if 'args' in resource_desc:
-            command = '%s %s' % (command, ' '.join(resource_desc['args']))
+            command.extend(resource_desc['args'])
 
         self._logger.debug('execute_command %s %r', job_name, command)
         if not self._allow_shell:
@@ -429,7 +421,7 @@ class ObjServer(object):
             stdin = resource_desc['input_path']
             self._check_path(stdin, 'execute_command')
         except KeyError:
-            stdin = 'nul:' if sys.platform == 'win32' else '/dev/null'
+            stdin = DEV_NULL
 
         try:
             stdout = resource_desc['output_path']
@@ -448,7 +440,8 @@ class ObjServer(object):
             else:
                 stderr = STDOUT if join_files else base+'.stderr'
 
-        timeout = resource_desc.get('hard_run_duration_limit', 0)
+        limits = resource_desc.get('resource_limits', {})
+        timeout = limits.get('wallclock_time', 0)
         poll_delay = 1
 
         try:
@@ -687,7 +680,8 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
     try:
         return _PROXIES[key]
     except KeyError:
-        if tunnel:
+        # Requires ssh setup.
+        if tunnel:  # pragma no cover
             location = setup_tunnel(address, port)
         else:
             location = key

@@ -76,7 +76,7 @@ class SellarBroyden(Assembly):
     January 1996.
     """
 
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
@@ -84,8 +84,6 @@ class SellarBroyden(Assembly):
         Optimal Objective = 3.18339"""
         
         # pylint: disable-msg=E1101
-        
-        super(SellarBroyden, self).__init__()
         
         # create solver instance
         self.add('driver', BroydenSolver())
@@ -156,13 +154,7 @@ class DumbAssembly(Assembly):
     """Assembly with DumbComp.
     """
 
-    def __init__(self):
-        """ A new do-nothing assembly
-        """
-        
-        # pylint: disable-msg=E1101
-        
-        super(DumbAssembly, self).__init__()
+    def configure(self):
         
         # create solver instance
         self.add('driver', BroydenSolver())
@@ -180,14 +172,10 @@ class MIMOBroyden(Assembly):
     """Solution of the MIMO problem using MDF.
     """
 
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         root at (0,1)
         """
-        
-        # pylint: disable-msg=E1101
-        
-        super(MIMOBroyden, self).__init__()
         
         # create solver instance
         self.add('driver', BroydenSolver())

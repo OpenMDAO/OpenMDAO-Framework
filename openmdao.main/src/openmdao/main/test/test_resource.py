@@ -2,6 +2,7 @@
 Test resource allocation.
 """
 
+import datetime
 import getpass
 import glob
 import logging
@@ -19,7 +20,7 @@ from openmdao.main.mp_util import read_server_config
 from openmdao.main.objserverfactory import connect, start_server
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import ResourceAllocator, LocalAllocator, \
-                                   ClusterAllocator
+                                   ClusterAllocator, RESOURCE_LIMITS
 from openmdao.util.testutil import assert_raises, find_python
 
 # Users who have ssh configured correctly for testing.
@@ -107,12 +108,16 @@ class TestCase(unittest.TestCase):
 
         n_servers, criteria = \
             self.local.max_servers({'python_version':sys.version[:3],
-                                    'n_cpus':1})
+                                    'min_cpus':1})
         try:
             n_cpus = multiprocessing.cpu_count()
         except (AttributeError, NotImplementedError):
             n_cpus = 1
         self.assertEqual(n_servers, self.local.max_load * n_cpus)
+
+        n_servers, criteria = \
+            self.local.max_servers({'min_cpus':1000})
+        self.assertEqual(n_servers, 0)
 
         n_servers, criteria = \
             self.local.max_servers({'python_version':'bad-version'})
@@ -122,10 +127,11 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_hostnames')
 
-        hostnames = RAM.get_hostnames({'n_cpus':1})
+        hostnames = RAM.get_hostnames({'min_cpus':1})
         self.assertEqual(hostnames[0], platform.node())
         
-        hostnames = RAM.get_hostnames({'no_such_resource':1})
+        hostnames = RAM.get_hostnames({'allocator':'LocalHost',
+                                       'localhost':False})
         self.assertEqual(hostnames, None)
         
     def test_resources(self):
@@ -138,7 +144,7 @@ class TestCase(unittest.TestCase):
         result = RAM.allocate({'exclude':[platform.node()]})
         self.assertEqual(result, (None, None))
 
-        result = RAM.allocate({'n_cpus':1000000})
+        result = RAM.allocate({'min_cpus':1000000})
         self.assertEqual(result, (None, None))
 
         result = RAM.allocate({'orphan_modules':['xyzzy']})
@@ -147,8 +153,125 @@ class TestCase(unittest.TestCase):
         result = RAM.allocate({'python_version':'xyzzy'})
         self.assertEqual(result, (None, None))
 
-        result = RAM.allocate({'xyzzy':None})
-        self.assertEqual(result, (None, None))
+        start_time = datetime.datetime(2012, 2, 8, 16, 42)
+        resource_limits = {}
+        for i, limit in enumerate(RESOURCE_LIMITS):
+            resource_limits[limit] = i
+        RAM.validate_resources(dict(remote_command='echo',
+                                    args=['hello', 'world'],
+                                    submit_as_hold=True,
+                                    rerunnable=True,
+                                    job_environment={'ENV_VAR': 'env_value'},
+                                    working_directory='.',
+                                    job_category='MPI',
+                                    min_cpus=256,
+                                    max_cpus=512,
+                                    email=['user1@host1', 'user2@host2'],
+                                    email_on_started=True,
+                                    email_on_terminated=True,
+                                    job_name='TestJob',
+                                    input_path='echo.in',
+                                    output_path='echo.out',
+                                    error_path='echo.err',
+                                    join_files=True,
+                                    reservation_id='res-1234',
+                                    queue_name='debug_q',
+                                    priority=42,
+                                    start_time=start_time,
+                                    resource_limits=resource_limits,
+                                    accounting_id='CFD-R-US',
+                                    native_specification=('-ac', 'name=value')))
+
+        code = "RAM.validate_resources(dict(max_cpus=2))"
+        assert_raises(self, code, globals(), locals(), KeyError,
+                      "'min_cpus required if max_cpus specified'")
+
+        code = "RAM.validate_resources(dict(min_cpus=2, max_cpus=1))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "max_cpus 1 < min_cpus 2")
+
+        # Must be positive.
+        code = "RAM.validate_resources(dict(min_cpus=-2))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'min_cpus': -2")
+
+        # Must be sequence.
+        code = "RAM.validate_resources(dict(args='hello'))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'args': 'hello'")
+
+        # Must be strings.
+        code = "RAM.validate_resources(dict(args=['hello', 42]))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'args': ['hello', 42]")
+
+        # Must be registered allocator.
+        code = "RAM.validate_resources(dict(allocator='NoSuchAllocator'))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'allocator': 'NoSuchAllocator'")
+
+        # Must be dict.
+        code = "RAM.validate_resources(dict(job_environment='hello'))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'job_environment': 'hello'")
+
+        # Key must be string.
+        env = {}
+        env[3] = 'hello'
+        code = "RAM.validate_resources(dict(job_environment=env))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'job_environment':"
+                      " {3: 'hello'}")
+
+        # Key must not have whitespace.
+        env = {}
+        env['hello there'] = 'world'
+        code = "RAM.validate_resources(dict(job_environment=env))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'job_environment':"
+                      " {'hello there': 'world'}")
+
+        # Value must be string.
+        env = {}
+        env['hello'] = 3
+        code = "RAM.validate_resources(dict(job_environment=env))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'job_environment':"
+                      " {'hello': 3}")
+
+        # Must be dict.
+        code = "RAM.validate_resources(dict(resource_limits='hello'))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'resource_limits': 'hello'")
+
+        # Must be known key.
+        limits = {}
+        limits['no-such-resource'] = 1
+        code = "RAM.validate_resources(dict(resource_limits=limits))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'resource_limits':"
+                      " {'no-such-resource': 1}")
+
+        # Value must be int.
+        limits = {}
+        limits['wallclock_time'] = 'infinite'
+        code = "RAM.validate_resources(dict(resource_limits=limits))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'resource_limits':"
+                      " {'wallclock_time': 'infinite'}")
+
+        # Value must be >= 0.
+        limits = {}
+        limits['wallclock_time'] = -1
+        code = "RAM.validate_resources(dict(resource_limits=limits))"
+        assert_raises(self, code, globals(), locals(), ValueError,
+                      "Invalid resource value for 'resource_limits':"
+                      " {'wallclock_time': -1}")
+
+        # Must be known resource.
+        code = "RAM.validate_resources(dict(no_such_resource=2))"
+        assert_raises(self, code, globals(), locals(), KeyError,
+                      '"Invalid resource key \'no_such_resource\'"')
 
     def test_bad_host(self):
         logging.debug('')
@@ -361,7 +484,7 @@ max_load: 100
 
         # Add, insert, get, remove.
         local3 = LocalAllocator('Local3')
-        local4 = LocalAllocator('Local4')
+        local4 = LocalAllocator('Local4', total_cpus=4)
         RAM.add_allocator(local3)
         try:
             allocator_names = \
@@ -388,6 +511,10 @@ max_load: 100
                       globals(), locals(), ValueError,
                       "allocator 'Local3' not found")
 
+        assert_raises(self, "LocalAllocator('BadLoad', max_load=-2)",
+                      globals(), locals(), ValueError,
+                      "BadLoad: max_load must be > 0, got -2")
+
     def test_base(self):
         logging.debug('')
         logging.debug('test_base')
@@ -398,8 +525,16 @@ max_load: 100
 
         allocator = ResourceAllocator('dummy')
         self.assertEqual(allocator.name, 'dummy')
+
+        # Just show they can be called.
         allocator.invalidate()
         allocator.configure('')
+
+        retcode, info = \
+            allocator.check_compatibility({'remote_command': 'echo',
+                                           'no-such-key': True})
+        self.assertEqual(retcode, 0)
+        self.assertEqual(info, ['no-such-key'])
 
         assert_raises(self, "allocator.max_servers(dict())",
                       globals(), locals(), NotImplementedError, 'max_servers')

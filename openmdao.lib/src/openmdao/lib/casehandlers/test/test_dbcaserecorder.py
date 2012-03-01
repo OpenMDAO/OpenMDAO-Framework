@@ -166,6 +166,18 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         except OSError:
             logging.error("problem removing directory %s" % tmpdir)
 
+    def test_string(self):
+        recorder = DBCaseRecorder()
+        case = Case(inputs=[('str', 'Normal String'),
+                            ('unicode', u'Unicode String'),
+                            ('list', ['Hello', 'world'])])  # Check pickling.
+        recorder.record(case)
+        for case in recorder.get_iterator():
+            self.assertEqual(case['str'], 'Normal String')
+            self.assertEqual(case['unicode'], u'Unicode String')
+            self.assertEqual(case['list'], ['Hello', 'world'])
+
+
 class NestedCaseTestCase(unittest.TestCase):
 
     def setUp(self):

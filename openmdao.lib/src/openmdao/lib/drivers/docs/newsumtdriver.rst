@@ -56,11 +56,9 @@ follows:
     class EngineOptimization(Assembly):
         """ Top level assembly for optimizing a vehicle. """
     
-        def __init__(self):
+        def configure(self):
             """ Creates a new Assembly for vehicle performance optimization."""
             
-            super(EngineOptimization, self).__init__()
-
             # Create CONMIN Optimizer instance
             self.add('driver', NEWSUMTdriver())
         
@@ -110,7 +108,8 @@ parameter.
     :hide:
     
     from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-    self = EngineOptimization()
+    from openmdao.main.api import set_as_top
+    self = set_as_top(EngineOptimization())
     
 .. testcode:: NEWSUMT_fd
 
@@ -142,29 +141,29 @@ nonlinear objective function.
 
         self.driver.lobj = 0
 
-The ``jprint`` parameter can be used to display diagnostic
+The ``iprint`` parameter can be used to display diagnostic
 messages. These messages are currently sent to the standard
 output.
 
 .. testcode:: NEWSUMT_show
 
-        self.driver.jprint = 0
+        self.driver.iprint = 0
 
-Higher positive values of ``jprint`` turn on the display of more levels of output, as summarized below.
+Higher positive values of ``iprint`` turn on the display of more levels of output, as summarized below.
 
 ===============  ========================================================
 Value            Result
 ===============  ========================================================
-``jprint = -1``  All output is suppressed, including warnings
+``iprint = 0``   All output is suppressed, including warnings
 ---------------  --------------------------------------------------------
-``jprint = 0``   Print initial and final designs only
+``iprint = 1``   Print initial and final designs only
 ---------------  --------------------------------------------------------
-``jprint = 1``   Print brief results of analysis for initial and final designs 
+``iprint = 2``   Print brief results of analysis for initial and final designs 
                  together with minimal intermediate information
 ---------------  --------------------------------------------------------
-``jprint = 2``   Detailed printing
+``iprint = 3``   Detailed printing
 ---------------  --------------------------------------------------------
-``jprint = 3``   Debugging printing
+``iprint = 4``   Debugging printing
 ===============  ========================================================
 
 
@@ -178,7 +177,8 @@ The default value is 10.
 .. testsetup:: NEWSUMT_show
     
     from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-    self = EngineOptimization()
+    from openmdao.main.api import set_as_top
+    self = set_as_top(EngineOptimization())
 
 .. testcode:: NEWSUMT_show
 

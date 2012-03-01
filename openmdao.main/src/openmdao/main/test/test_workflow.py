@@ -34,8 +34,7 @@ class TestComponent(Component):
 class Model(Assembly):
     """ Just a simple three-component workflow. """
 
-    def __init__(self):
-        super(Model, self).__init__()
+    def configure(self):
         self.add('comp_a', TestComponent())
         self.add('comp_b', TestComponent())
         self.add('comp_c', TestComponent())
