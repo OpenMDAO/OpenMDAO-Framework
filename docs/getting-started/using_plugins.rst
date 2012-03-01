@@ -14,8 +14,7 @@ https://github.com/OpenMDAO-Plugins/ .
 
 These plugins are all open source, although some of them are component wraps
 of proprietary or otherwise-restricted codes (e.g., Nastran) that you will
-have to obtain separately. In most cases, the plugin only contains the
-OpenMDAO wrapper code.
+have to obtain separately. 
 
 From an activated OpenMDAO environment, you can also display a list of 
 the plugin distributions that are available from the OpenMDAO-Plugins
@@ -93,13 +92,12 @@ You should get a response that looks something like this:
 
 This shows both the plugin name and the versions.
 
-Some plugins cannot be built into the OpenMDAO distribution 
-because they wrap software that cannot be included in OpenMDAO.
-
-The default behavior of ``plugin list`` is to show every installed plugin whether it is
-built into the OpenMDAO distribution or has been added to the OpenMDAO environment from
-some other source.  To show only plugins that are *not* built into the OpenMDAO distribution,
-use the ``--external`` option. A shortcut for ``--external`` is ``-e``.  For example:
+You'll notice that the output includes a lot of things that are installed as part 
+of the standard library. The default behavior of ``plugin list`` is to show every 
+installed plugin whether it is built into the OpenMDAO distribution or has been 
+added to the OpenMDAO environment from some other source.  To show only plugins 
+that are *not* built into the OpenMDAO distribution, use the ``--external`` 
+option. A shortcut for ``--external`` is ``-e``.  For example:
 
 ::
 
@@ -182,23 +180,6 @@ you can then view the documentation for it using
 
     plugin docs pyopt_driver
 
-For a plugin that is built into the OpenMDAO distribution, for example, 
-CONMIN, use this command:
-
-::
-
-    plugin docs CONMINdriver
-
-Notice that for a builtin plugin, you need to use the class name in this 
-command while for an external plugin, you need to use the package name.
-
-If you are not certain what is the class name and what is the 
-package name, here is more information that might help.
-In the output of the ``plugin list`` command, CONMIN is listed as
-  
-::
-
-    openmdao.lib.drivers.conmindriver.CONMINdriver
 
 The last part of that, after the final dot, is the class name and
 should be used in the ``plugin docs`` command. 
@@ -221,13 +202,6 @@ can import the module using:
 ::
 
     import pyopt_driver
-
-For a plugin that is built into the OpenMDAO distribution, for example, 
-CONMIN, use the following form for the import:
-
-::
-
-    import openmdao.lib.drivers.conmindriver
     
 
 Quick Command Reference for "plugin" Command
