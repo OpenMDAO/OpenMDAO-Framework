@@ -5,12 +5,11 @@ from time import strftime
 # tornado
 from tornado import web
 
-# using django ORM, etc
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+from django.conf import settings
+
 from django import forms
 from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
-from openmdao.gui.settings import MEDIA_ROOT
 from openmdao.gui.projdb.models import Project
 from django.shortcuts import get_object_or_404
 
@@ -49,8 +48,7 @@ class DeleteHandler(BaseHandler):
     def post(self, project_id):
         p = get_object_or_404(Project, pk=project_id)
         if p.filename:
-            dir = 'projects/'+self.current_user
-            filename = MEDIA_ROOT+'/'+str(p.filename)
+            filename = os.path.join(self.get_project_dir(),str(p.filename))
             if os.path.exists(filename):
                 os.remove(filename)
         p.delete()
@@ -79,19 +77,18 @@ class DetailHandler(BaseHandler):
             
             # if there's no proj file yet, create en empty one
             if not p.filename:
-                dir = 'projects/'+self.current_user
-                if not os.path.isdir(dir):
-                    os.makedirs(dir)
                 if len(p.version):
                     filename = p.projectname+'-'+p.version+'.proj'
                 else:
                     filename = p.projectname+'.proj'  
+                dir = self.get_project_dir()
                 i=1
-                while os.path.exists(MEDIA_ROOT+'/'+dir+'/'+filename):
+                while os.path.exists(os.path.join(dir,filename)):
                     filename = filename+str(i)
                     i = i+1
                 file_content = ContentFile('')
-                p.filename.save(filename, file_content)                
+                p.filename.save(filename, file_content)
+                print 'created file:',p.filename,filename
             p.save()
             self.redirect(self.request.uri)
         else:
@@ -122,8 +119,7 @@ class DownloadHandler(BaseHandler):
     def get(self, project_id):
         p = get_object_or_404(Project, pk=project_id)
         if p.filename:
-            dir = 'projects/'+self.current_user
-            filename = MEDIA_ROOT+'/'+str(p.filename)
+            filename = os.path.join(self.get_project_dir(),p.filename)
             if os.path.exists(filename):
                 proj_file = file(filename,'rb')
                 from django.core.servers.basehttp import FileWrapper

@@ -12,7 +12,6 @@ from django import forms
 from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import *
-from openmdao.gui.settings import MEDIA_ROOT
 from openmdao.gui.handlers import BaseHandler
 from openmdao.gui.outstreamserver import OutStreamServer
 
@@ -278,6 +277,7 @@ class OutputHandler(BaseHandler):
         OutStreamServer.spawn_process(out_url,ws_port,ws_url)
         ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
         self.content_type = 'text/html'
+        time.sleep(2)  # give server a chance to spool up
         self.write(ws_addr)
         
 class ProjectHandler(BaseHandler):
@@ -302,7 +302,8 @@ class ProjectHandler(BaseHandler):
         if filename:
             self.delete_server()
             cserver = self.get_server()
-            cserver.load_project(MEDIA_ROOT+'/'+filename)
+            filename = os.path.join(self.get_project_dir(),filename)
+            cserver.load_project(filename)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')

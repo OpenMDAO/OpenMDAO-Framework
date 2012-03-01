@@ -25,6 +25,9 @@ class BaseHandler(RequestHandler):
     def delete_server(self):
         self.application.server_manager.delete_server(self.get_sessionid())
         
+    def get_project_dir(self):
+        return self.application.project_dir
+        
 
 class LoginHandler(BaseHandler):
     ''' lets users log into the application simply by specifying a nickname,
