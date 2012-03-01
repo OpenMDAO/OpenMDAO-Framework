@@ -625,7 +625,7 @@ class ConsoleServer(cmd.Cmd):
                 if not is_instance(v,Component):
                     attr['name'] = vname
                     attr['type'] = type(v).__name__
-                    attr['value'] = v
+                    attr['value'] = str(v)
                     attr['valid'] = comp.get_valid([vname])[0]
                     meta = comp.get_metadata(vname);
                     if meta:
