@@ -6,7 +6,7 @@ Using Plugins from the Official OpenMDAO Plugin Repository
 ===============================================================
 
 What Official OpenMDAO Plugins Are Available?
----------------------------
+---------------------------------------------
 
 The OpenMDAO project also hosts a set of official plugins in a GitHub
 top-level organization called **OpenMDAO-Plugins**. You can visit this site at
