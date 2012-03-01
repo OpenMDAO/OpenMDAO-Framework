@@ -710,7 +710,7 @@ class Component (Container):
             if '.' in destpath:
                 del self._valid_dict[destpath]
             else:
-                self._valid_dict[destpath] = True  # disconnected inputs are always valid
+                self._valid_dict[destpath] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
     
     @rbac(('owner', 'user'))

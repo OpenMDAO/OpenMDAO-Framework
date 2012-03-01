@@ -458,7 +458,8 @@ class ExprEvaluator(object):
 
     def get_referenced_compnames(self):
         """Return a set of source or dest Component names based on the 
-        pathnames of Variables referenced in our expression string. 
+        pathnames of Variables referenced in our expression string. No checking
+        is performed to verify that a given name refers to an actual Component.
         """
         if self._parse_needed:
             self._parse()

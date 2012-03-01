@@ -366,15 +366,33 @@ class DependsTestCase2(unittest.TestCase):
         self.top.add('c2', Simple())
         self.top.add('c1', Simple())
     
-    def test_connected_outs(self):
+    def test_connected_vars(self):
         self.assertEqual(self.top.c1.list_outputs(connected=True), [])
+        self.assertEqual(self.top.c2.list_inputs(connected=True), [])
         self.top.connect('c1.c', 'c2.a')
         self.assertEqual(self.top.c1.list_outputs(connected=True), ['c'])
+        self.assertEqual(self.top.c2.list_inputs(connected=True), ['a'])
         self.top.connect('c1.d', 'c2.b')
         self.assertEqual(set(self.top.c1.list_outputs(connected=True)), set(['c', 'd']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=True)), set(['a', 'b']))
         self.top.disconnect('c1.d', 'c2.b')
         self.assertEqual(self.top.c1.list_outputs(connected=True), ['c'])
-        
+        self.assertEqual(self.top.c2.list_inputs(connected=True), ['a'])
+                
+    def test_unconnected_vars(self):
+        extras = set(self.top.c1.list_vars())-set(['a','b','c','d'])
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set(['c', 'd']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set(['a', 'b']))
+        self.top.connect('c1.c', 'c2.a')
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set(['d']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set(['b']))
+        self.top.connect('c1.d', 'c2.b')
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set())
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set())
+        self.top.disconnect('c1.d', 'c2.b')
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set(['d']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set(['b']))
+                
         
 if __name__ == "__main__":
     
