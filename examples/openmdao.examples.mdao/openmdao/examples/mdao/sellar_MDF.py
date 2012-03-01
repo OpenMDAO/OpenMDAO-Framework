@@ -39,7 +39,7 @@ class SellarMDF(Assembly):
         self.connect('dis1.y1','dis2.y1')
         
         # Iteration loop
-        self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.solver.add_parameter('dis1.y2', low=-1.e99, high=1.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
         # equivilent form
         # self.solver.add_constraint('dis2.y2 - dis1.y2 = 0')

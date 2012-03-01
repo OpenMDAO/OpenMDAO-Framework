@@ -78,8 +78,10 @@ coupling variables are also included as optimizer  parameters.
         
         #Local Design Variables and Coupling Variables
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
-        self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
-        self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
+        self.driver.add_parameter('dis2.y1',      low = -1e99, high=1e99)
+        self.driver.add_parameter('dis1.y2',      low = -1e99, high=1e99)
+        self.driver.add_constraint('3.16 < dis1.y1')
+        self.driver.add_constraint('dis2.y2 < 24.0')
             
         self.driver.add_constraint('(dis2.y1-dis1.y1)**2 <= 0')
         self.driver.add_constraint('(dis2.y2-dis1.y2)**2 <= 0')
@@ -144,8 +146,10 @@ optimization.
                 
                 #Local Design Variables and Coupling Variables
                 self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
-                self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
-                self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
+                self.driver.add_parameter('dis2.y1',      low = -1e99,  high=1e99)
+                self.driver.add_parameter('dis1.y2',      low = -1e99, high=1e99)
+                self.driver.add_constraint('3.16 < dis1.y1')
+                self.driver.add_constraint('dis2.y2 < 24.0')
                     
                 self.driver.add_constraint('(dis2.y1-dis1.y1)**2 <= 0')
                 self.driver.add_constraint('(dis2.y2-dis1.y2)**2 <= 0')
