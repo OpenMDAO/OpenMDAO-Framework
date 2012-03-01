@@ -8,6 +8,7 @@ Getting Started
 
    requirements.rst
    install.rst
+   using_plugins.rst
    
 
 
