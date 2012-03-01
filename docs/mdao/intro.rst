@@ -30,10 +30,6 @@ take a good amount of work to set one up. So we'll show you how to set up your p
 automatically apply the MDAO architectures. Using the automatic implementation of an architecture
 will dramatically simplify your input files.
 
-Lastly, we'll show you how to write your own automatic architecture implementation. A number of
-different architectures are available in the standard library, but if you're not happy with those or
-if you want to do research into other ones, then this last part  will help you.
-
 .. index:: Sellar
 
 All of these tutorials use the Sellar Problem, which consists of two disciplines as follows:
@@ -118,8 +114,19 @@ of the absolute value solves the problem without impacting the final converged s
 
 These two components are contained in the file :download:`sellar.py 
 </../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` in the 
-openmdao.lib.optproblems sub-package. This package contains a number of common optimization
-problems which you can use to test your own optimization problems. 
+openmdao.lib.optproblems sub-package. This part of the standard library contains a number of common optimization
+problems which you can use to test your own optimization algorithms. 
+
+Now that you have defined the components for the Sellar Problem for yourself, lets take a momement to
+consider what we have really accomplished. Firstly, we have written two (very simple) analysis components. 
+If you were working on a real problem, these would likely come in the form of some much more complex tools
+that you wrapped in the framework. But keep in mind that from an optimization point of view, weather they 
+are simple tools or wrappers for real analyses, OpenMDAO still views them as components with inputs, outputs, 
+and an execute function. 
+
+We have talked about the problem formulation, and specified that certain variables will be controlled 
+design variables, while others are coupling variables. But none of the code we have written has told 
+OpenMDAO about those details. Thats what we'll get to next! 
 
 **Reference:**
 
