@@ -37,8 +37,7 @@ class MyDriver(Driver):
 
         
 class Analysis(Assembly): 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
+    def configure(self):
         
         self._tdir = mkdtemp()
         
@@ -78,12 +77,10 @@ class Analysis(Assembly):
         self.EI_opt.add_parameter("branin_meta_model.y",low=0.,high=15.)
         
         self.EI_opt.add_objective("EI.PI")
-        self.EI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("branin_meta_model.train_next")
         self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
-        self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
         self.iter.max_iterations = 30
@@ -110,7 +107,6 @@ class Analysis(Assembly):
 
 if __name__ == "__main__": #pragma: no cover
     import sys
-    from openmdao.main.api import set_as_top
     from openmdao.lib.casehandlers.db import case_db_to_dict
     
     seed = None
@@ -135,9 +131,6 @@ if __name__ == "__main__": #pragma: no cover
     from numpy import meshgrid,array, pi,arange,cos
     
     analysis = Analysis()
-       
-    set_as_top(analysis)
-    
     analysis.run()
         
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]

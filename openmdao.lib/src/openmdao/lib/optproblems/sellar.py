@@ -127,8 +127,9 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
     
         self.derivatives.set_first_derivative('y2', 'z1', 1.0)
         self.derivatives.set_first_derivative('y2', 'z2', 1.0)
-        #need to add tiny positive offset to number to avoid numerical issues around 0
-        self.derivatives.set_first_derivative('y2', 'y1', .5*(abs(self.y1)+1e-99)**-0.5) 
+        # Derivative blows up around y1=0, and is imaginary for y1<0
+        # y1 should be kept above 0.
+        self.derivatives.set_first_derivative('y2', 'y1', .5*(abs(self.y1))**-0.5) 
        
     
     def execute(self):

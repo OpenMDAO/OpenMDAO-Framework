@@ -13,7 +13,8 @@ import nose
 import random
 import numpy.random as numpy_random
 
-from openmdao.main.api import Assembly, Component, Case, set_as_top
+from openmdao.main.api import Assembly, Component, Case, Slot, set_as_top
+from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
@@ -38,7 +39,6 @@ def rosen_suzuki(x):
     """ Evaluate polynomial from CONMIN manual. """
     return x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] + \
            2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50
-
 
 
 class DrivenComponent(Component):
@@ -67,18 +67,52 @@ class DrivenComponent(Component):
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
 
+
 def _get_driver():
     return CaseIteratorDriver()
     #return SimpleCaseIterDriver()
 
+
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', _get_driver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
+
+
+class Generator(Component):
+    """ Generates cases to be evaluated. """
+
+    cases = Slot(ICaseIterator, iotype='out')
+
+    def execute(self):
+        """ Generate some cases to be evaluated. """
+        cases = []
+        for i in range(10):
+            inputs = [('driven.x', numpy_random.normal(size=4)),
+                      ('driven.y', numpy_random.normal(size=10)),
+                      ('driven.raise_error', False),
+                      ('driven.stop_exec', False)]
+            outputs = ['driven.rosen_suzuki', 'driven.sum_y']
+            cases.append(Case(inputs, outputs, label=str(i)))
+        self.cases = ListCaseIterator(cases)
+
+
+class Verifier(Component):
+    """ Verifies evaluated cases. """
+
+    cases = Slot(ICaseIterator, iotype='in')
+
+    def execute(self):
+        """ Verify evaluated cases. """
+        for case in self.cases:
+            i = int(case.label)  # Correlation key.
+            self._logger.critical('verifying case %d', i)
+            assert case.msg is None
+            assert case['driven.rosen_suzuki'] == rosen_suzuki(case['driven.x'])
+            assert case['driven.sum_y'] == sum(case['driven.y'])
 
 
 class TestCase(unittest.TestCase):
@@ -336,12 +370,31 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noresource')
 
         # Check response to unsupported resource.
-        self.model.driver.extra_resources = {'no-such-resource': 0}
+        self.model.driver.extra_resources = {'allocator': 'LocalHost',
+                                             'localhost': False}
         self.model.driver.sequential = False
         self.model.driver.iterator = ListCaseIterator([])
         assert_raises(self, 'self.model.run()', globals(), locals(),
                       RuntimeError,
                       'driver: No servers supporting required resources')
+
+    def test_connections(self):
+        logging.debug('')
+        logging.debug('test_connections')
+
+        top = Assembly()
+        top.add('generator', Generator())
+        top.add('cid', CaseIteratorDriver())
+        top.add('driven', DrivenComponent())
+        top.add('verifier', Verifier())
+
+        top.driver.workflow.add(('generator', 'cid', 'verifier'))
+        top.cid.workflow.add('driven')
+
+        top.connect('generator.cases', 'cid.iterator')
+        top.connect('cid.evaluated', 'verifier.cases')
+
+        top.run()
 
 
 if __name__ == '__main__':

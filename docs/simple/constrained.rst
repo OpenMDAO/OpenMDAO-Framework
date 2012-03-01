@@ -24,16 +24,16 @@ model by adding one line to the ``initialize`` function:
 
 .. testsetup:: simple_model_Unconstrained_pieces
 
-    from openmdao.main.api import Assembly
+    from openmdao.main.api import Assembly, set_as_top
     from openmdao.lib.drivers.api import CONMINdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
     from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     
-    self = OptimizationUnconstrained()
+    self = set_as_top(OptimizationUnconstrained())
     
 .. testcode:: simple_model_Unconstrained_pieces
 
-        # CONMIN Constraints
+        # Constraints
         self.driver.add_constraint('paraboloid.x-paraboloid.y >= 15.0')
 
 The ``add_constraint`` method is used to add a constraint to the driver.

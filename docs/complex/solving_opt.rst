@@ -10,8 +10,8 @@ EngineOptimization class, setting it as the top assembly.
 
     >>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
     >>> from openmdao.main.api import set_as_top
-    >>> prob = EngineOptimization()
-    >>> set_as_top(prob)
+    >>> prob = set_as_top(EngineOptimization())
+    >>> prob
     <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
 The problem is set up like above. We could run it now, but first let's find out how
@@ -68,7 +68,8 @@ the expression:
 .. testsetup:: Code10
 
         from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-        self = EngineOptimization()
+        from openmdao.main.api import set_as_top
+        self = set_as_top(EngineOptimization())
         self.driver.clear_objectives()
 
 .. testcode:: Code10
@@ -93,8 +94,7 @@ Try solving the same optimization problem using this objective.
 
         >>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
         >>> from openmdao.main.api import set_as_top
-        >>> prob = EngineOptimization()
-        >>> set_as_top(prob)
+        >>> prob = set_as_top(EngineOptimization())
         <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
         >>> prob.driver.clear_objectives()
         >>> prob.driver.add_objective('-(.93*sim_EPA_city.fuel_economy + 1.07*sim_EPA_highway.fuel_economy)')
@@ -136,7 +136,7 @@ The code for this looks like this:
 .. testcode:: OptimizationSmarter
 
         # pylint: disable-msg=E0611,F0401
-        from openmdao.main.api import Assembly
+        from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.drivers.api import CONMINdriver
         
         from openmdao.examples.enginedesign.driving_sim import SimAcceleration, \
@@ -146,11 +146,9 @@ The code for this looks like this:
         class EngineOptimization(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly for vehicle performance optimization."""
                 
-                super(EngineOptimization, self).__init__()
-        
                 # pylint: disable-msg=E1101
                 
                 # Create CONMIN Optimizer instance
@@ -202,7 +200,6 @@ The code for this looks like this:
                 self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
-                self.sim_EPA_city.force_execute = True
                 
                 # EPA Highway MPG Sim Setup
                 self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
@@ -213,7 +210,6 @@ The code for this looks like this:
                 self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-                self.sim_EPA_highway.force_execute = True        
                 
         if __name__ == "__main__":
         
@@ -233,10 +229,8 @@ The code for this looks like this:
     
 
             import time
-            from openmdao.main.api import set_as_top
                 
-            opt_problem = EngineOptimization()
-            set_as_top(opt_problem)
+            opt_problem = set_as_top(EngineOptimization())
                 
             opt_problem.sim_acc.run()
             opt_problem.sim_EPA_city.run()

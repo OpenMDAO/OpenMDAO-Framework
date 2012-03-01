@@ -166,7 +166,10 @@ go-openmdao-dev.py`` from the top directory in your branch repository.
   openmdao docs              (Displays the documentation in HTML using the default browser) 
 
 .. note:: If you have a preexisting ``devenv`` directory in your branch directory, you should delete it
-   before running the go-openmdao-dev.py script. 
+   before running the ``go-openmdao-dev.py`` script. 
+
+
+
 
 
 

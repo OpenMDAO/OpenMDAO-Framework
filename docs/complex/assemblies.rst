@@ -31,10 +31,7 @@ Engine, and Chassis components.
     class Vehicle(Assembly):
         """ Vehicle assembly. """
 
-        def __init__(self):
-            """ Creates a new Vehicle Assembly object """
-
-            super(Vehicle, self).__init__()
+        def configure(self):
 
             # Create component instances
         
@@ -59,7 +56,7 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
         # Note: This block of code does not display in the documentation.
 
-        from openmdao.main.api import Assembly
+        from openmdao.main.api import Assembly, set_as_top
         from openmdao.lib.datatypes.api import Float
 
         from openmdao.examples.enginedesign.engine import Engine
@@ -69,10 +66,7 @@ Now that the components are instantiated in the assembly, they need to be hooked
         class Vehicle(Assembly):
             """ Vehicle assembly. """
     
-            def __init__(self):
-                """ Creates a new Vehicle Assembly object """
-
-                super(Vehicle, self).__init__()
+            def configure(self):
 
                 # Create component instances
         
@@ -88,7 +82,7 @@ Now that the components are instantiated in the assembly, they need to be hooked
         # blocks, and the concept of "self" is not defined when we fall out of
         # the class scope.
         
-        self = Vehicle()
+        self = set_as_top(Vehicle())
 
 .. testcode:: Code5
 
@@ -154,7 +148,7 @@ Now these inputs are available to connect to the components, so we connect them 
 
 .. testsetup:: Code7b
 
-        from openmdao.main.api import Assembly, implements, Interface
+        from openmdao.main.api import Assembly, implements, Interface, set_as_top
         from openmdao.lib.datatypes.api import Float, Int
 
         from openmdao.examples.enginedesign.engine import Engine
@@ -170,10 +164,7 @@ Now these inputs are available to connect to the components, so we connect them 
             velocity = Float(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
-            def __init__(self):
-                """ Creates a new Vehicle Assembly object. """
-        
-                super(Vehicle, self).__init__()
+            def configure(self):
 
                 # Create component instances
         
@@ -184,14 +175,14 @@ Now these inputs are available to connect to the components, so we connect them 
                 # Set up the workflow
                 self.driver.workflow.add(['transmission', 'engine', 'chassis'])
 
-        self = Vehicle()
+        self = set_as_top(Vehicle())
 
 .. testcode:: Code7b
 
-        self.connect('velocity', 'chassis.velocity')
-        self.connect('velocity', 'transmission.velocity')
-        self.connect('tire_circumference', 'chassis.tire_circ')
-        self.connect('tire_circumference', 'transmission.tire_circ')
+        self.connect('velocity',
+                     ['chassis.velocity', 'transmission.velocity'])
+        self.connect('tire_circumference',
+                     ['chassis.tire_circ', 'transmission.tire_circ'])
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
 Transmission components. While this might seem redundant, it demonstrates

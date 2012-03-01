@@ -16,14 +16,12 @@ class SellarCO(Assembly):
     local_des_var_targets = Array([1.0])
     coupling_var_targets = Array([3.16,0])
 
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
-        
-        super(SellarCO, self).__init__()
         
         # Global Optimization
         self.add('driver', CONMINdriver())
@@ -93,7 +91,6 @@ class SellarCO(Assembly):
         self.localopt1.fdchm = .003
         self.localopt1.delfun = .0001
         self.localopt1.dabfun = .000001
-        self.localopt1.force_execute = True
         
         #Parameters - Local Optimization 2
         self.localopt2.add_objective('(global_des_var_targets[0] - dis2.z1)**2 + ' + \
@@ -111,16 +108,13 @@ class SellarCO(Assembly):
         self.localopt2.fdchm = .003
         self.localopt2.delfun = .001
         self.localopt2.dabfun = .00001
-        self.localopt2.force_execute = True
 
 
 if __name__ == "__main__":        
 
     import time
-    from openmdao.main.api import set_as_top
     
     prob = SellarCO()
-    set_as_top(prob)
             
     prob.dis1.z1 = 5.0
     prob.dis2.z1 = 5.0

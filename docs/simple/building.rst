@@ -40,9 +40,7 @@ Your component should look pretty close to this when it is complete.
 To implement a component in the OpenMDAO framework, you write some Python
 code and place it in a file. This file is called a *module* in Python.
 Typically, a module will contain one component, although you can include more
-than one component in a single file. The file ``paraboloid.py`` contains the
-code shown above. Later in this tutorial we will discuss how to execute a
-model containing this component.
+than one component in a single file. 
 
 In Python, a class or function must be imported before it can be used. Most of what you need in OpenMDAO
 can be imported from: ``openmdao.main.api`` and the ``openmdao.lib`` api modules: 
@@ -60,9 +58,8 @@ Type these two lines into that file:
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
-You could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
-are importing only the classes that you need. This is a good idea because it helps to
-prevent any namespace collisions in your module. In other words:
+There are many other objects you could impoprt from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
+only import the classes that you need for your particular component to keep things neater. In other words:
 
 .. testcode:: package
 
@@ -85,18 +82,13 @@ The next line defines a class called *Paraboloid:*
     
 .. index:: classes, functions
 
-You define the Paraboloid class by deriving it from the Component class. A Paraboloid is a
-Component, so it contains all of the data and members that a Component contains. This includes a lot
-of helper functions that are used by the framework infrastructure to manage things. You don't have
-to worry about any of the framework back-end. Typically there are just two functions that you
+You define the Paraboloid class by deriving it from the Component class. All of your analyses 
+will derive from the Component class and typically there are just two functions that you
 provide -- one for initialization (anything that needs to be set up once) and one to execute the
 component (calculate the outputs from the inputs.)
 
-Please edit the ``paraboloid.py`` that you created and define the class
-Paraboloid as you did above.
-
-If you stop here, you have a Paraboloid component with no inputs, no 
-outputs, and an ``execute`` function that does nothing. The next thing you need
+Right now, your paraboloid class is defined but has no inputs, no 
+outputs, and an ``execute`` function that does nothing. So the next thing you need
 to do is define the inputs and outputs in the class definition
 by adding these lines:
 
@@ -128,17 +120,6 @@ won't be visible in the framework.
 The argument *desc* contains a description, or a string of text that describes this
 variable. This argument, while not required, is encouraged.
 
-The variable is given a name by which it will be known internally and externally.
-
-Please edit the ``paraboloid.py`` that you created and add three variables to
-class Paraboloid. You will need to have *x* and *y* as inputs and ``f_xy`` as an output. Use
-the example above to check your work.
-
-For the Paraboloid component, you have created two inputs and one output. Later
-in this example, an optimizer will set these inputs. In later examples, you
-will see how they can be set by connecting them to an output of another
-component.
-
 Finally, you need a function to execute this component:
 
 .. testcode:: simple_component_Paraboloid_pieces
@@ -155,7 +136,7 @@ Finally, you need a function to execute this component:
         
 The ``execute`` function is where you define what a component does when it runs.
 For your Paraboloid component, the equation is evaluated here. The input and
-output variables are members of the Paraboloid class, which means that
+output variables are attributes of the Paraboloid class, which means that
 they must be accessed using *self*. For example, ``self.x`` gives you the value
 stored in x. This ``self.`` can be cumbersome in a big equation, so a pair of
 internal variables, *x* and *y*, are used in the calculation.
@@ -164,15 +145,12 @@ Often, you will already have the code for evaluating your component outputs,
 but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer-Guide` 
 gives some examples of how to incorporate these kinds of components into OpenMDAO.
 
-Please edit the ``paraboloid.py`` that you created and add an ``execute`` function
-that solves the equation given above. Don't forget that indentation is important
-in Python; your ``execute`` function must be indented so that Python knows
-it is part of the Paraboloid class. The finished result should look like the code
-from the beginning of this tutorial.
+To make sure this component works, try running it. The first thing you must do before 
+running OpenMDAO is to activate the environment. You need to do this anytime you want 
+to run code in OpenMDAO. If you can't remember how to activate your environment, then refer to the 
+instructions in the section on :ref:`installation <Installation>`.
 
-To make sure this component works, try running it. Please enter the Python
-shell by typing
-
+Once you have activated your environment, you can run the Python interperater by typing
 ::
 
     python
@@ -192,7 +170,9 @@ set a new value for each of the inputs, run the component, and look at the outpu
 
 If you have done everything correctly, you should also get ``-17.0`` as the solution.    
 
-The Paraboloid component is now built and ready for inclusion in a larger model.
+The Paraboloid component is now built and ready for inclusion in a larger model. If you want to download
+our version of this file, you can find it 
+:download:`here <../../examples/openmdao.examples.simple/openmdao/examples/simple/paraboloid.py>`
 
 
 

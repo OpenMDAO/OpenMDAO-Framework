@@ -14,7 +14,6 @@ from openmdao.lib.optproblems.api import SellarProblem
 if __name__ == "__main__": # pragma: no cover
 
     import time
-    from openmdao.main.api import set_as_top
     
     prob = SellarProblem()
     prob.architecture = MDF()

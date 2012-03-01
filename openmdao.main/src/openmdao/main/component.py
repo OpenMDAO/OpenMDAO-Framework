@@ -42,13 +42,16 @@ class SimulationRoot (object):
             Path to move to.
         """
         os.chdir(path)
-        SimulationRoot.__root = os.path.realpath(os.getcwd())
+        SimulationRoot.__root = None
+        SimulationRoot.get_root()
 
     @staticmethod
     def get_root ():
         """Return this simulation's root directory path."""
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.path.realpath(os.getcwd())
+            if sys.platform == 'win32':  # pragma no cover
+                SimulationRoot.__root = SimulationRoot.__root.lower()
         return SimulationRoot.__root
 
     @staticmethod
@@ -58,9 +61,11 @@ class SimulationRoot (object):
         path: string
             Path to check.
         """
-        if SimulationRoot.__root is None:
-            SimulationRoot.__root = os.path.realpath(os.getcwd())
-        return os.path.realpath(path).startswith(SimulationRoot.__root)
+        root = SimulationRoot.get_root()
+        if sys.platform == 'win32':  # pragma no cover
+            return os.path.realpath(path).lower().startswith(root)
+        else:
+            return os.path.realpath(path).startswith(root)
     
 
 class DirectoryContext(object):
@@ -220,11 +225,11 @@ class Component (Container):
                                      name, RuntimeError)
     
     @rbac(('owner', 'user'))
-    def tree_rooted(self):
-        """Calls the base class version of *tree_rooted()*, checks our
+    def cpath_updated(self):
+        """Calls the base class version of *cpath_updated()*, checks our
         directory for validity, and creates the directory if it doesn't exist.
         """
-        super(Component, self).tree_rooted()
+        super(Component, self).cpath_updated()
 
         if self.create_instance_dir:
             # Create unique subdirectory of parent based on our name.
@@ -268,16 +273,21 @@ class Component (Container):
                         % (path, exc.strerror), OSError)
             else:
                 self.check_path(path, check_dir=True)
+                
+        if self._call_configure:
+            self.configure()
+            self._call_configure = False
+
 
     def _pre_execute (self, force=False):
-        """Prepares for execution by calling *tree_rooted()* and *check_config()* if
+        """Prepares for execution by calling *cpath_updated()* and *check_config()* if
         their "dirty" flags are set, and by requesting that the parent Assembly
         update this Component's invalid inputs.
         
         Overrides of this function must call this version.
         """
-        if self._call_tree_rooted:
-            self.tree_rooted()
+        if self._call_cpath_updated:
+            self.cpath_updated()
             
         if force:
             outs = self.invalidate_deps()
@@ -751,7 +761,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not isabs(path):
-            if self._call_tree_rooted:
+            if self._call_cpath_updated:
                 self.raise_exception("can't call get_abs_directory before hierarchy is defined",
                                      RuntimeError)
             if self.parent is not None and is_instance(self.parent, Component):

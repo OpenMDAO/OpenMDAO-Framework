@@ -67,8 +67,7 @@ class DrivenComponent(Component):
 class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', DOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
@@ -162,7 +161,7 @@ class TestCaseDOE(unittest.TestCase):
         
         self.model.run()
 
-        self.assertEqual(len(results), self.model.driver.DOEgenerator.num_sample_points)
+        self.assertEqual(len(results), self.model.driver.DOEgenerator.num_samples)
         msg = "driver: Exception getting case outputs: " \
             "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
@@ -201,8 +200,7 @@ class TestCaseDOE(unittest.TestCase):
                 
         class Analysis(Assembly): 
             
-            def __init__(self): 
-                super(Analysis,self).__init__(self)
+            def configure(self):
                 
                 self.add('d',Dummy())
                 
@@ -262,8 +260,7 @@ class TestCaseDOE(unittest.TestCase):
 class MyModel2(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel2, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', NeiborhoodDOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
@@ -356,7 +353,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         
         self.model.run()
 
-        self.assertEqual(len(results), 1+self.model.driver.DOEgenerator.num_sample_points)
+        self.assertEqual(len(results), 1+self.model.driver.DOEgenerator.num_samples)
         msg = "driver: Exception getting case outputs: " \
             "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
@@ -395,8 +392,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
                 
         class Analysis(Assembly): 
             
-            def __init__(self): 
-                super(Analysis,self).__init__(self)
+            def configure(self):
                 
                 self.add('d',Dummy())
                 

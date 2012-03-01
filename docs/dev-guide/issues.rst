@@ -72,10 +72,11 @@ be trying to hash out what the problem really is. Adding comments is one of the 
    Viewing an Existing Issue  
        
        
-When you are done with an issue, indicate this by putting ``closes GH-???`` or ``closes #???`` into your
-commit message, replacing ``???`` with your issue number. Then issue a pull request to the OpenMDAO
-team. When your pull request gets merged into the main repository, then the issue will be marked as closed
-automatically. If you just want your change to be associated with an issue without closing it, just omit
-the "closes" part.
+When you are done with an issue, indicate this by putting ``closes GH-???`` or ``closes #???`` in your
+commit message, replacing ``???`` with your issue number. Then issue a pull request to the OpenMDAO team.
+The number of the closed issue should automatically appear in your pull request title. If it doesn't, add
+it. Then, when your pull request gets merged into the main repository, the issue will automatically be
+marked as closed. If, however, you just want your change to be associated with an issue without closing it,
+just omit the "closes" part.
 
  

@@ -1,8 +1,8 @@
 
 .. _Variables:
 
-Variables
-==========
+Working with Variables
+======================
 
 In OpenMDAO, a *variable* is an attribute that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
@@ -33,99 +33,6 @@ output would look like this:
         
             self.y = 3.0*self.x
 
-The example above shows the way the majority of users will create variables.
-An alternative way to declare them is to use the ``add`` function that is part of the
-Component public interface. First, lets define the same class in the shell but without
-the variables *x* and *y*.
-  
-.. testcode:: creating_public_variables_2
-
-    from openmdao.main.api import Component
-    from openmdao.main.datatypes.api import Float
-    
-    class Simple(Component):
-        """ A simple multiplication """
-        def execute(self):
-            """ y = 3*x """
-            self.y = 3.0*self.x
-
-Next, the ``add`` function is used to add the input *x* and the output *y* after
-an instance of ``Simple`` has been created:
-
-.. doctest:: creating_public_variables_2
-
-    >>> equation = Simple()
-    >>> equation.add('x',Float(1.0, iotype='in', desc='The input x'))
-    <openmdao.main.datatypes.float.Float object at ...>
-    >>> equation.add('y',Float(iotype='out', desc='The output y'))
-    <openmdao.main.datatypes.float.Float object at ...>
-    >>> equation.x=7
-    >>> equation.run()
-    >>> equation.y
-    21.0
-
-Using ``add`` in this way allows you to create a variable dynamically at some
-point after the component has been created.
-
-    >>> from openmdao.examples.simple.paraboloid import Paraboloid
-    >>> from openmdao.lib.datatypes.api import Int
-    >>> test=Paraboloid()
-    >>> test.z
-    Traceback (most recent call last):
-    ...
-    AttributeError: 'Paraboloid' object has no attribute 'z
-    >>> test.add('z',Int(7777, iotype='out', desc='An Int'))
-    <openmdao.main.datatypes.int.Int object at ...>
-    >>> test.z
-    7777
-
-Some specialized components will make use of the ability to create
-variables on the fly, but most general components won't need this.
-
-The example above shows how to directly access a variable, but there is also an
-indirect access using a ``set`` and ``get`` method.  The framework uses ``set`` and ``get`` 
-to pass data between variables. In some cases a
-model developer may need to use them -- but only for specific cases where
-some objects are executing on remote servers.
-
-Here is an example of the ``get`` function:
-
-.. doctest:: var_indirect
-
-    >>> from openmdao.examples.enginedesign.engine import Engine
-    >>> my_engine = Engine()
-    >>> my_engine.bore
-    82.0
-    >>> my_engine.get("bore")
-    82.0
-
-Here is an example of the ``set`` function:
-
-.. doctest:: var_indirect
-
-    >>> my_engine.RPM = 2500
-    >>> my_engine.RPM
-    2500.0
-    >>> my_engine.set("RPM",3333)
-    >>> my_engine.RPM
-    3333.0
-
-.. index:: Traits
-
-Traits
---------
-
-The underlying implementation of variables in OpenMDAO was accomplished
-through a Python add-on called :term:`Traits`. Traits provide a way to 
-apply explicit typing to the normally untyped Python attributes. They also provide 
-the capability to add some other features to the variables, including 
-unit checking and conversion, default values, upper and lower bounds, and a way to create 
-callback functions that execute under specified conditions.
-
-In general, you won't need to worry about traits or how variables are
-implemented, but those of you who want to create custom datatypes can do so by
-defining a new custom trait. More details on traits can be found on
-Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 
 Built-in Variable Types
 ------------------------
@@ -163,8 +70,6 @@ Built-in Variable Types
 |          | desc = None, low = None, high = None,                        |
 |          | exclude_low = False, exclude_high = False] )``               |
 +----------+--------------------------------------------------------------+
-| Range    | Deprecated. Use OpenMDAO's Int or Float.                     |
-+----------+--------------------------------------------------------------+
 | Slot     | ``Slot( [klass = None, desc = None, iotype = None,           |
 |          | factory = None, args = None, kw = None,                      |
 |          | allow_none = True, adapt = None,                             |
@@ -173,22 +78,13 @@ Built-in Variable Types
 | Str      | ``Str( [value = None, desc = None, iotype = None] )``        |
 +----------+--------------------------------------------------------------+
 
-A more detailed list of Enthought's `Traits`__ is given in their documentation.
-Traits are also available for use as variables in the framework, though
-we haven't included examples of the more exotic ones. If you need
-to use one, remember that *iotype* and *desc* should be added to the arguments
-when one of these is instantiated. The traits use \*\*metadata to store these
-user-defined attributes.
 
-.. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#other-predefined-traits
-
-A variable is declared with a number of arguments, many of which are
+When a variable isdeclared it gets passed a number of arguments, many of which are
 optional.
 
-The *iotype* attribute is required for all variables regardless of type.
-Its sole function is to tell the framework whether the variable should be
-treated as an input or an output. Presently, the only two options for this
-attribute are ``'in'`` and ``'out'``.
+But the *iotype* attribute is required for all variables regardless of type.
+Its function is to tell the framework whether the variable should be
+treated as an input or an output.
 
 **Summary of iotypes**
 

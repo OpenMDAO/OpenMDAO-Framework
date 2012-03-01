@@ -31,7 +31,8 @@ from zope.interface import Interface, implements
 from enthought.traits.api import HasTraits, Missing, Undefined, Python, \
                                  push_exception_handler, TraitType, CTrait, List
 from enthought.traits.trait_handlers import NoDefaultSpecified, TraitListObject
-from enthought.traits.has_traits import FunctionType, _clone_trait
+from enthought.traits.has_traits import FunctionType, _clone_trait, \
+                                        MetaHasTraits
 from enthought.traits.trait_base import not_none, not_event
 
 from multiprocessing import connection
@@ -56,13 +57,6 @@ _copydict = {
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
-
-def set_as_top(cont):
-    """Specifies that the given Container is the top of a 
-    Container hierarchy.
-    """
-    cont.tree_rooted()
-    return cont
 
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
@@ -138,14 +132,42 @@ class _ContainerDepends(object):
         return self._srcs.get(destname)
 
 
-class Container(HasTraits):
+class _MetaSafe(MetaHasTraits):
+    """ Tries to keep users from shooting themselves in the foot. """
+
+    def __new__(cls, class_name, bases, class_dict):
+        # Check for overwrite of something that shouldn't be.
+        for name, obj in class_dict.items():
+            if isinstance(obj, Variable):
+                for base in bases:
+                    if name in base.__dict__:
+                        raise NameError('%s overrides attribute %r of %s'
+                                        % (class_name, name, base.__name__))
+        return super(_MetaSafe, cls).__new__(cls, class_name, bases, class_dict)
+
+
+class SafeHasTraits(HasTraits):
+    """
+    Special :class:`HasTraits` which is configured such that the class is
+    checked for any :class:`Variable` which might override an existing
+    attribute in any base class.
+    """
+    # Doing this in Container breaks implements(IContainer) such that
+    # implementedBy() would return False.
+    __metaclass__ = _MetaSafe
+
+
+class Container(SafeHasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
     implements(IContainer)
-    
+
     def __init__(self, doc=None):
         super(Container, self).__init__()
+        
+        self._call_cpath_updated = True
+        self._call_configure = True
         
         self._managers = {}  # Object manager for remote access by authkey.
         self._depgraph = _ContainerDepends()
@@ -157,8 +179,6 @@ class Container(HasTraits):
         self._name = None
         self._cached_traits_ = None
 
-        self._call_tree_rooted = True
-        
         if doc is not None:
             self.__doc__ = doc
 
@@ -188,7 +208,7 @@ class Container(HasTraits):
             self._branch_moved()
         
     def _branch_moved(self):
-        self._call_tree_rooted = True
+        self._call_cpath_updated = True
         for n,cont in self.items():
             if is_instance(cont, Container):
                 cont._branch_moved()
@@ -199,7 +219,7 @@ class Container(HasTraits):
         if self._name is None:
             if self.parent:
                 self._name = find_name(self.parent, self)
-            elif self._call_tree_rooted is False:
+            elif self._call_cpath_updated is False:
                 self._name = ''
             else:
                 return ''
@@ -410,6 +430,19 @@ class Container(HasTraits):
                 
         self._cached_traits_ = None
 
+    @classmethod
+    def add_class_trait(cls, name, *trait):
+        """Overrides HasTraits definition of *add_class_trait* in order to
+        try to keep from clobbering framework stuff.
+        """
+        bases = [cls]
+        bases.extend(cls.__bases__)
+        for base in bases:
+            if name in base.__dict__:
+                raise NameError('Would override attribute %r of %s'
+                                % (name, base.__name__))
+        return super(Container, cls).add_class_trait(name, *trait)
+
     def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
@@ -420,7 +453,15 @@ class Container(HasTraits):
         if name.endswith('_items') and trait.type == 'event':
             super(Container, self).add_trait(name, trait)
             return
-        
+
+        # Try to keep from clobbering framework stuff.
+        bases = [self.__class__]
+        bases.extend(self.__class__.__bases__)
+        for base in bases:
+            if name in base.__dict__:
+                raise NameError('Would override attribute %r of %s'
+                                % (name, base.__name__))
+
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
@@ -491,6 +532,7 @@ class Container(HasTraits):
                 'add does not allow dotted path names like %s' %
                 name, ValueError)
         if is_instance(obj, Container):
+            self._check_recursion(obj)
             if isinstance(obj, OpenMDAO_Proxy):
                 obj.parent = self._get_proxy(obj)
             else:
@@ -507,8 +549,8 @@ class Container(HasTraits):
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
-            if self._call_tree_rooted is False:
-                obj.tree_rooted()
+            if self._call_cpath_updated is False:
+                obj.cpath_updated()
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
@@ -516,6 +558,15 @@ class Container(HasTraits):
                     "' object is not an instance of Container.",
                     TypeError)
         return obj
+
+    def _check_recursion(self, obj):
+        """ Check if adding `obj` will cause container recursion. """
+        ancestor = self
+        while is_instance(ancestor, Container):
+            if obj is ancestor:
+                self.raise_exception('add would cause container recursion',
+                                     ValueError)
+            ancestor = ancestor.parent
 
     def _get_proxy(self, proxy):
         """
@@ -576,19 +627,23 @@ class Container(HasTraits):
                                  name, AttributeError)
 
     @rbac(('owner', 'user'))
-    def tree_rooted(self):
+    def configure(self):
+        pass
+    
+    @rbac(('owner', 'user'))
+    def cpath_updated(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
         Containers have been defined. It also does not guarantee that this
         component is fully configured to execute. Classes that override this
         function must call their base class version.
         
-        This version calls tree_rooted() on all of its child Containers.
+        This version calls cpath_updated() on all of its child Containers.
         """
         self._logger.rename(self.get_pathname().replace('.', ','))
-        self._call_tree_rooted = False
+        self._call_cpath_updated = False
         for cont in self.list_containers():
-            getattr(self, cont).tree_rooted()
+            getattr(self, cont).cpath_updated()
             
     def revert_to_defaults(self, recurse=True):
         """Sets the values of all of the inputs to their default values."""
@@ -897,9 +952,12 @@ class Container(HasTraits):
                         self._input_updated(path)
                 else:  # array index specified
                     self._index_set(path, value, index)
-            elif index:  # array index specified for output
+            elif iotype == 'out':
+                self.raise_exception('Cannot set output %r' % path,
+                                     RuntimeError)
+            elif index:  # array index specified
                 self._index_set(path, value, index)
-            else: # output
+            else:
                 setattr(self, path, value)
 
     def _process_index_entry(self, obj, idx):
