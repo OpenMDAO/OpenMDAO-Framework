@@ -1,9 +1,9 @@
 
 .. _`A-Simple-Tutorial-Problem`:
 
-===========================
-Tutorial: The Basics
-===========================
+==============================
+Tutorial: Simple Optimization
+==============================
 
 .. toctree::
    :maxdepth: 1

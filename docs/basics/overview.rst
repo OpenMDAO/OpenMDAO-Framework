@@ -181,10 +181,7 @@ Consider the top level assembly that was created for the
         
 
 We can see here that components that comprise the top level of this model are
-declared in the ``__init__`` function. The base class ``__init__`` function is called
-(with the ``super`` function) before anything is added to the empty assembly. This
-is important to ensure that internal framework machinery has been properly initialized
-before any methods such as ``add`` are called.
+declared in the ``configure`` function. 
 
 The ``add`` method takes a valid OpenMDAO name and a corresponding component
 instance as its arguments. This function call adds the instance to the

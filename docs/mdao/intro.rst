@@ -124,7 +124,7 @@ that you wrapped in the framework. But keep in mind that from an optimization po
 are simple tools or wrappers for real analyses, OpenMDAO still views them as components with inputs, outputs, 
 and an execute function. 
 
-We have talked about the problem formulation, and specified that certain variables will be controlled 
+We have talked about the problem formulation, and specified that certain variables will be 
 design variables, while others are coupling variables. But none of the code we have written has told 
 OpenMDAO about those details. Thats what we'll get to next! 
 
