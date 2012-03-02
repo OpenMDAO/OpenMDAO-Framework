@@ -313,11 +313,10 @@ class ExprMapper(object):
         
         invalids = []
         for expr in exprs:
-            dct = graph.pred.get(expr)
-            if len(dct) > 0: # it's a destination mode
-                pred = dct.keys()[0] # only one predecessor is possible
-                if pred in exprs:
-                    invalids.append(self.get_expr(expr))
+            dct = graph.succ.get(expr)
+            if dct:
+                for dest in dct.keys():
+                    invalids.append(self.get_expr(dest))
                     
         return invalids
         
@@ -349,7 +348,7 @@ class ExprMapper(object):
                 varpaths = destexpr.get_referenced_varpaths()
                 for vp in varpaths:
                     parts = vp.split('.', 1)
-                    if len(parts) > 0:
+                    if len(parts) > 1:
                         compvars.setdefault(parts[0], set())
                         compvars[parts[0]].add(parts[1])
                     else:
@@ -363,7 +362,7 @@ class ExprMapper(object):
                     comp = getattr(scope, cname)
                     outs = comp.invalidate_deps(varnames=compvars[cname], force=force)
                     if (outs is None) or outs:
-                        stack.append(comp, comps[comp])
+                        stack.append((cname, compvars[cname]))
         return outset
 
 

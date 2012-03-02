@@ -1311,9 +1311,10 @@ class Component (Container):
                 valids[var] = False
         else:
             conn = self.list_inputs(connected=True)
-            for var in varnames:
-                if var in conn:
-                    valids[var] = False
+            if conn:
+                for var in varnames:
+                    if var in conn:
+                        valids[var] = False
 
         # this assumes that all outputs are either valid or invalid
         if not force and outs and (valids[outs[0]] is False):
