@@ -501,7 +501,7 @@ class ExprEvaluator(object):
         if self._parse_needed:
             self._parse()
         valids = self.scope.get_valid(self.var_names)
-        return [n for n,v in zip(self.var_names, valids) if v is True]
+        return [n for n,v in zip(self.var_names, valids) if v is False]
     
     def check_resolve(self):
         """Return True if all variables referenced by our expression can

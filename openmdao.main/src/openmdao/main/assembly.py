@@ -101,7 +101,11 @@ class ExprMapper(object):
         graph = self._exprgraph
         for node, data in graph.nodes(data=True):
             if graph.out_degree(node) > 0:
-                conn_inputs.extend([v for v in data['expr'].get_referenced_varpaths() if '.' not in v])
+                if 'parent' in data['expr'].get_referenced_compnames():
+                    for succ in graph.successors(node):
+                        for vname in graph.node[succ]['expr'].get_referenced_varpaths():
+                            if '.' not in vname:
+                                conn_inputs.append(vname)
         return conn_inputs
     
     def get_output_exprs(self):
@@ -198,6 +202,16 @@ class ExprMapper(object):
                                    self._exprgraph.node(src)['expr'], 
                                    self._exprgraph.node(dest)['expr'])
         return graph
+        
+    def add(self, compname):
+        compgraph = self.get_compgraph()
+        compgraph.add_node(compname)
+        
+    def remove(self, compname):
+        """Remove any connections referring to the given component"""
+        self._compgraph = None
+        self._exprgraph.remove_nodes_from(self.find_referring_exprs(compname))
+        self._remove_disconnected_exprs()
         
     def connect(self, src, dest, scope):
         self._exprgraph.add_edge(src, dest)
@@ -365,6 +379,33 @@ class ExprMapper(object):
                         stack.append((cname, compvars[cname]))
         return outset
 
+    def find_all_connecting(self, start, end):
+        """Return the set of all components along all paths between 
+        start and end.  The start and end nodes are included
+        in the set if they're connected.
+        """
+        if start == end:
+            return set()
+        graph = self.get_compgraph()
+        fwdset = set()
+        backset = set()
+        tmpset = set([end])
+        while tmpset:
+            node = tmpset.pop()
+            if node in backset:
+                continue
+            backset.add(node)
+            tmpset.update(graph.predecessors(node))
+        
+        tmpset = set([start])
+        while tmpset:
+            node = tmpset.pop()
+            if node in fwdset:
+                continue
+            fwdset.add(node)
+            tmpset.update(graph.successors(node))
+        
+        return fwdset.intersection(backset)
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
@@ -387,16 +428,16 @@ class Assembly (Component):
         
         set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
         
-    #def add(self, name, obj):
-        #"""Call the base class *add*.  Then,
-        #if obj is a Component, add it to the component graph.
+    def add(self, name, obj):
+        """Call the base class *add*.  Then,
+        if obj is a Component, add it to the component graph.
         
-        #Returns the added object.
-        #"""
-        #obj = super(Assembly, self).add(name, obj)
-        ##if is_instance(obj, Component):
-            ##self._depgraph.add(obj.name)
-        #return obj
+        Returns the added object.
+        """
+        obj = super(Assembly, self).add(name, obj)
+        if is_instance(obj, Component):
+            self._depgraph.add(obj.name)
+        return obj
         
     def remove(self, name):
         """Remove the named container object from this assembly and remove
