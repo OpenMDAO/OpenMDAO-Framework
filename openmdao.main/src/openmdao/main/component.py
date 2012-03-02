@@ -418,7 +418,7 @@ class Component (Container):
         try:
             self._pre_execute(force)
             if self._call_execute or force:
-                print 'execute: %s' % self.get_pathname()
+                #print 'execute: %s' % self.get_pathname()
                 
                 if ffd_order == 1 and \
                    hasattr(self, 'calculate_first_derivatives'):
@@ -438,8 +438,8 @@ class Component (Container):
                     self.exec_count += 1
                     
                 self._post_execute()
-            else:
-                print 'skipping: %s' % self.get_pathname()
+            #else:
+                #print 'skipping: %s' % self.get_pathname()
             self._post_run()
         finally:
             if self.directory:
@@ -523,7 +523,7 @@ class Component (Container):
             return False
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]
-            if len(srccomps):
+            if srccomps:
                 counts = self.parent.exec_counts(srccomps)
                 for count,tup in zip(counts, self._expr_sources):
                     if count != tup[1]:

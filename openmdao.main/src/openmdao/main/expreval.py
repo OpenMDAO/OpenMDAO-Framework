@@ -378,7 +378,11 @@ class ExprEvaluator(object):
     def _parse(self):
         self._allow_set = True
         self.var_names = set()
-        new_ast, self._code = self._parse_get()
+        
+        try:
+            new_ast, self._code = self._parse_get()
+        except SyntaxError as err:
+            raise SyntaxError("failed to parse expression '%s': %s" % (self.text, str(err)))
         
         if self._allow_set: # set up a compiled assignment statement
             _, self._assignment_code = self._parse_set()
@@ -527,7 +531,7 @@ class ExprEvaluator(object):
         if self._parse_needed:
             self._parse()
         
-        oldname = scope.name + '.'
+        oldname = scope.name + '.' if scope.name else ''
         newname = new_scope.name + '.'
         if scope is new_scope.parent:
             oldname = 'parent.'
@@ -541,7 +545,10 @@ class ExprEvaluator(object):
             else:
                 mapping[var] = oldname+var
         
-        return transform_expression(self.text, mapping)
+        try:
+            return transform_expression(self.text, mapping)
+        except SyntaxError as err:
+            raise SyntaxError("failed to transform expression '%s': %s" % (self.text, str(err)))
     
     def __eq__(self,other):
         if isinstance(other,self.__class__): 

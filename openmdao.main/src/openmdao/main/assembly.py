@@ -87,7 +87,7 @@ class ExprMapper(object):
     def __init__(self, scope):
         self._compgraph = None  # component dependency graph
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
-        self._refer_cache = {} # keep track of which comps/vars are referred to by exprs
+        self._refer_cache = None # keep track of which comps/vars are referred to by exprs
         self._scope = scope
     
     def copy_graph(self):
@@ -103,9 +103,7 @@ class ExprMapper(object):
             if graph.out_degree(node) > 0:
                 if 'parent' in data['expr'].get_referenced_compnames():
                     for succ in graph.successors(node):
-                        for vname in graph.node[succ]['expr'].get_referenced_varpaths():
-                            if '.' not in vname:
-                                conn_inputs.append(vname)
+                        conn_inputs.extend(graph.node[succ]['expr'].get_referenced_varpaths())
         return conn_inputs
     
     def get_output_exprs(self):
@@ -128,8 +126,26 @@ class ExprMapper(object):
         graph = self._exprgraph
         for node, data in graph.nodes(data=True):
             if graph.in_degree(node) > 0:
-                conn_outputs.extend([v for v in data['expr'].get_referenced_varpaths() if '.' not in v])
+                if 'parent' in data['expr'].get_referenced_compnames():
+                    for pred in graph.predecessors(node):
+                        conn_outputs.extend(graph.node[pred]['expr'].get_referenced_varpaths())
         return conn_outputs
+    
+    def list_connections(self, show_passthrough=True):
+        """Return a list of tuples of the form (outvarname, invarname).
+        """
+        conns = []
+        for src, dest in self._exprgraph.edges():
+            srcexpr = self.get_expr(src)
+            destexpr = self.get_expr(dest)
+            for srcvar in srcexpr.get_referenced_varpaths():
+                if not srcvar.startswith('parent.'):
+                    if show_passthrough or '.' in srcvar:
+                        for destvar in destexpr.get_referenced_varpaths():
+                            if not destvar.startswith('parent.'):
+                                if show_passthrough or '.' in destvar:
+                                    conns.append((srcvar, destvar))
+        return conns
     
     def get_source(self, dest_expr):
         """Returns the text of the source expression that is connected to the given 
@@ -150,7 +166,7 @@ class ExprMapper(object):
     
     def get_compgraph(self):
         """Return the cached component graph or create a new one if it doesnt' exist."""
-        if self._compgraph is None:
+        if self._compgraph is None or self._refer_cache is None:
             self._compgraph = self._create_compgraph()
         return self._compgraph
     
@@ -196,6 +212,9 @@ class ExprMapper(object):
         """Create a new component graph based on information in the expression graph."""
         graph = nx.DiGraph()
         graph.add_nodes_from(_fakes)
+        if self._refer_cache is None:
+            self._refer_cache = {}
+            
         for src,dest in self._exprgraph.edges():
             self._update_compgraph(graph, 
                                    self._exprgraph.node[src]['expr'], 
@@ -208,9 +227,12 @@ class ExprMapper(object):
         
     def remove(self, compname):
         """Remove any connections referring to the given component"""
-        self._compgraph = None
-        self._exprgraph.remove_nodes_from(self.find_referring_exprs(compname))
-        self._remove_disconnected_exprs()
+        refs = self.find_referring_exprs(compname)
+        if refs:
+            self._exprgraph.remove_nodes_from(refs)
+            self._remove_disconnected_exprs()
+            self._compgraph = None
+            self._refer_cache = None
         
     def connect(self, src, dest, scope):
         self._exprgraph.add_edge(src, dest)
@@ -219,10 +241,12 @@ class ExprMapper(object):
         """Returns a list of expressions that reference the given name, which
         can refer to either a variable or a component.
         """
-        exprs = self._refer_cache.get(name)
-        if exprs:
-            return exprs
-        return [ex for ex,data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
+        if self._refer_cache is None:
+            self.get_compgraph()  # regenerates _refer_cache
+        return self._refer_cache.get(name, [])
+        #if exprs:
+            #return exprs
+        #return [ex for ex,data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
     
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
@@ -237,7 +261,7 @@ class ExprMapper(object):
     def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components."""
         self._compgraph = None  # force later rebuild of component graph
-        self._refer_cache = {}
+        self._refer_cache = None
         graph = self._exprgraph
         
         if destpath is None:
@@ -300,6 +324,7 @@ class ExprMapper(object):
                 self._exprgraph.add_node(dest, expr=destexpr)
         else:   # cycle found
             self._compgraph = None  # force regeneration of compgraph next time
+            self._refer_cache = None
             strongly_connected = strongly_connected_components(compgraph)
             # do a little extra work here to give more info to the user in the error message
             for strcon in strongly_connected:
@@ -375,7 +400,7 @@ class ExprMapper(object):
                     comp = getattr(scope, cname)
                     outs = comp.invalidate_deps(varnames=compvars[cname], force=force)
                     if (outs is None) or outs:
-                        stack.append((cname, compvars[cname]))
+                        stack.append((cname, outs))
         return outset
 
     def find_all_connecting(self, start, end):
@@ -405,6 +430,21 @@ class ExprMapper(object):
             tmpset.update(graph.successors(node))
         
         return fwdset.intersection(backset)
+
+    def __contains__(self, compname):
+        """Return True if this graph contains the given component."""
+        return compname in self.get_compgraph()
+    
+    def __eq__(self, other):
+        if isinstance(other, DependencyGraph):
+            if self._exprgraph.nodes() == other._exprgraph.nodes():
+                if self._exprgraph.edges() == other._exprgraph.edges():
+                    return True
+        return False
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+            
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
@@ -641,8 +681,9 @@ class Assembly (Component):
         # now update boundary outputs
         for expr in self._depgraph.get_output_exprs():
             if valids[expr.text] is False:
-                srcexpr = self._depgraph.get_expr(expr.text)
-                expr.set(srcexpr.evaluate(), src=srcexpr.text)
+                srctxt = self._depgraph.get_source(expr.text)
+                srcexpr = self._depgraph.get_expr(srctxt)
+                expr.set(srcexpr.evaluate(), src=srctxt)
                 # setattr(self, dest, srccomp.get_wrapped_attr(src))
             else:
                 # PassthroughProperty always valid for some reason.
@@ -652,8 +693,9 @@ class Assembly (Component):
                     pass
                 else:
                     if isinstance(dst_type, PassthroughProperty):
-                        srcexpr = self._depgraph.get_expr(expr.text)
-                        expr.set(srcexpr.evaluate(), src=srcexpr.text)
+                        srctxt = self._depgraph.get_source(expr.text)
+                        srcexpr = self._depgraph.get_expr(srctxt)
+                        expr.set(srcexpr.evaluate(), src=srctxt)
     
     def step(self):
         """Execute a single child component and return."""
@@ -704,9 +746,10 @@ class Assembly (Component):
         invalids = []
         for expr in ['.'.join([compname, n]) for n in exprs]:
             srctxt = self._depgraph.get_source(expr)
-            srcexpr = self._depgraph.get_expr(srctxt)
-            invalids.extend(srcexpr.invalid_refs())
-            expr_info.append((srcexpr, self._depgraph.get_expr(expr)))
+            if srctxt:
+                srcexpr = self._depgraph.get_expr(srctxt)
+                invalids.extend(srcexpr.invalid_refs())
+                expr_info.append((srcexpr, self._depgraph.get_expr(expr)))
             
         # if source exprs reference invalid vars, request an update
         if invalids:
