@@ -176,7 +176,7 @@ class _ContainerDepends(object):
     def __init__(self):
         self._srcs = {}
         
-    def connect(self, srcpath, destpath):
+    def connect(self, srcpath, destpath, scope):
         dpdot = destpath+'.'
         for dst,src in self._srcs.items():
             if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:

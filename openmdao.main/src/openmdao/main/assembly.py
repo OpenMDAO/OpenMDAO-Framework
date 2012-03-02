@@ -132,13 +132,12 @@ class ExprMapper(object):
         return conn_outputs
     
     def get_source(self, dest_expr):
-        """Returns the source expression that is connected to the given 
+        """Returns the text of the source expression that is connected to the given 
         destination expression.
         """
         dct = self._exprgraph.pred.get(dest_expr)
-        if dct and len(dct) > 0:
-            srctxt = dct.keys()[0]
-            return self._exprgraph.node[srctxt]['expr']
+        if dct:
+            return dct.keys()[0]
         else:
             return None
     
@@ -199,8 +198,8 @@ class ExprMapper(object):
         graph.add_nodes_from(_fakes)
         for src,dest in self._exprgraph.edges():
             self._update_compgraph(graph, 
-                                   self._exprgraph.node(src)['expr'], 
-                                   self._exprgraph.node(dest)['expr'])
+                                   self._exprgraph.node[src]['expr'], 
+                                   self._exprgraph.node[dest]['expr'])
         return graph
         
     def add(self, compname):
@@ -648,12 +647,13 @@ class Assembly (Component):
             else:
                 # PassthroughProperty always valid for some reason.
                 try:
-                    dst_type = self.get_trait(dest).trait_type
+                    dst_type = self.get_trait(expr.text).trait_type
                 except AttributeError:
                     pass
                 else:
                     if isinstance(dst_type, PassthroughProperty):
-                        setattr(self, dest, srccomp.get_wrapped_attr(src))
+                        srcexpr = self._depgraph.get_expr(expr.text)
+                        expr.set(srcexpr.evaluate(), src=srcexpr.text)
     
     def step(self):
         """Execute a single child component and return."""
@@ -703,7 +703,8 @@ class Assembly (Component):
         expr_info = []
         invalids = []
         for expr in ['.'.join([compname, n]) for n in exprs]:
-            srcexpr = self._depgraph.get_source(expr)
+            srctxt = self._depgraph.get_source(expr)
+            srcexpr = self._depgraph.get_expr(srctxt)
             invalids.extend(srcexpr.invalid_refs())
             expr_info.append((srcexpr, self._depgraph.get_expr(expr)))
             
