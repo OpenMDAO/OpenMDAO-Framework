@@ -1,5 +1,22 @@
 .. index:: Component
 
+.. index:: basic tutorial
+
+Overview
+==========
+
+In this section, you are going to learn a few of the most basic tools you need to build up analysis models 
+using the OpenMDAO script interface. To get the most out of this tutorial, you should be familiar (though you
+don't have to be proficient) with the Python language. If you don't have much experience with Python, we recommend
+trying `Dive into Python <http://www.diveintopython.net/>`_. It is an excellent introduction to Python
+that is licensed under the GNU Free Documentation License, so you can download and use it as you
+wish.
+
+We will build a component that models a paraboloid which is a function of two input variables. Then we will 
+set up an OpenMDAO model with the paraboloid component. Using that model, we will excersize some of the basic 
+features of the OpenMDAO framework like connecting inputs and outputs, and working with external files. 
+We will also use this same component in the later :ref:`tutorial on optimization <A-Simple-Tutorial-Problem>`.
+
 Building a Component - Paraboloid
 ==================================
 
@@ -36,7 +53,6 @@ paraboloid as an OpenMDAO component:
         
             self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-Your component should look pretty close to this when it is complete. 
 To implement a component in the OpenMDAO framework, you write some Python
 code and place it in a file. This file is called a *module* in Python.
 Typically, a module will contain one component, although you can include more

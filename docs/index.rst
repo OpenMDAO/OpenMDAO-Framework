@@ -8,6 +8,7 @@ Current version: |version|
    :maxdepth: 2
    
    getting-started/index
+   basics/index
    simple/index
    surrogate/index
    mdao/index

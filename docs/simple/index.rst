@@ -9,7 +9,6 @@ Tutorial: Simple Optimization
    :maxdepth: 1
    
    overview
-   building
    unconstrained
    constrained
    doe
