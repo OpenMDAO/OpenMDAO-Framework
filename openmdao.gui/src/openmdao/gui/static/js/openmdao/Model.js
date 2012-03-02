@@ -8,6 +8,8 @@ openmdao.Model=function() {
      ***********************************************************************/
      
     var self = this,
+        outstream_socket = null,
+        outstream_callbacks = []
         callbacks = [];
         
     /***********************************************************************
@@ -15,10 +17,59 @@ openmdao.Model=function() {
      ***********************************************************************/
     
     /** add a listener, i.e. a function that will be called when something changes */
-    this.addListener = function(callback) {
-        callbacks.push(callback)
+    this.addListener = function(topic, callback) {
+        if (topic == 'outstream') {
+            if (outstream_socket == null) {
+                open_outstream_socket();
+            }            
+            outstream_callbacks.push(callback);
+        }
+        else {
+            callbacks.push(callback);
+        }
     }
-
+    
+    open_outstream_socket = function() {
+        function handle_output(data) {
+            for ( var i = 0; i < outstream_callbacks.length; i++ ) {
+                if (typeof outstream_callbacks[i] == 'function') {
+                    outstream_callbacks[i](data);
+                }
+                else {
+                    debug.error('Model: outstream subscriber did not provide a valid callback function!',outstream_callbacks[i])
+                }
+            }
+        }
+    
+        // make ajax call to get outstream websocket
+        jQuery.ajax({
+            type: 'GET',
+            url:  'output',
+            success: function(addr) {
+                debug.info('got output websocket address:' + addr);
+                sck = new WebSocket(addr);
+                debug.info("opening output socket at",addr,sck);
+                sck.onopen = function (e) {
+                    debug.info('output socket opened',e);
+                };
+                sck.onclose = function (e) {
+                    debug.info('output socket closed',e);
+                };
+                sck.onmessage = function(e) {
+                    debug.info('output socket message:',e);
+                    handle_output(e.data);
+                };            
+                sck.onerror = function (e) {
+                    debug.info('output socket error',e);
+                };
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                       debug.error("Error getting output socket (status="+jqXHR.status+"): "+jqXHR.statusText)
+                       debug.error(jqXHR,textStatus,errorThrown)
+           }
+        })   
+    }
+    
     /** notify all listeners that something has changed (by calling all callbacks) */
     this.updateListeners = function() {
         for ( var i = 0; i < callbacks.length; i++ ) {

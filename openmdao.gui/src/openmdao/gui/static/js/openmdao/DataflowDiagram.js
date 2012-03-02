@@ -20,7 +20,7 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
     };
     
     // ask model for an update whenever something changes
-    model.addListener(update);
+    model.addListener(pathname,update)
     
     /** set the pathname for which to display the dataflow */
     this.showDataflow = function(path) {        

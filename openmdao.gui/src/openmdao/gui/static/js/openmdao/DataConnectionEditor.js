@@ -24,7 +24,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
     dataflowDiv.css({'background':'gray'});
     //dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
     
-    model.addListener(update)
+    model.addListener(pathname,update)
 
     function loadData(data) {
         if (!data || !data['outputs'] || !data['inputs']) {

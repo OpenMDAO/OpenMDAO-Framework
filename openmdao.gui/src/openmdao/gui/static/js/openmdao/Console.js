@@ -125,41 +125,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
             scrollToBottom();
         }
     }
-    
-    /** update the history with any new output from the model */
-    function update() {
-        model.getOutput(updateHistory)
-    }
 
     // ask model for an update whenever something changes
-    //model.addListener(update)
+    model.addListener('outstream',updateHistory)
 
-    // make ajax call to get outstream websocket
-    jQuery.ajax({
-        type: 'GET',
-        url:  'output',
-        success: function(addr) {
-            debug.info('got output websocket address:' + addr);
-            sck = new WebSocket(addr);
-            debug.info("opening output socket at",addr,sck);
-            sck.onopen = function (e) {
-                debug.info('output socket opened',e);
-            };
-            sck.onclose = function (e) {
-                debug.info('output socket closed',e);
-            };
-            sck.onmessage = function(e) {
-                debug.info('output socket message:',e);
-                updateHistory(e.data);
-            };            
-            sck.onerror = function (e) {
-                debug.info('output socket error',e);
-            };
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-                   debug.error("Error getting output socket (status="+jqXHR.status+"): "+jqXHR.statusText)
-                   debug.error(jqXHR,textStatus,errorThrown)
-       }
-    })          
-        
 }

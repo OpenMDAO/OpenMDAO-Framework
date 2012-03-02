@@ -1,22 +1,14 @@
-import logging
 import os, os.path, sys, traceback
-import platform
 import shutil
 import cmd
 import jsonpickle
 import tempfile
 import zipfile
-import threading, time
 
 from setuptools.command import easy_install
 
-from cStringIO import StringIO
-
 from enthought.traits.api import HasTraits
 from openmdao.main.variable import Variable
-
-from multiprocessing.managers import BaseManager
-from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
@@ -31,110 +23,11 @@ from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
 from zope.interface import implementedBy
 
-from openmdao.main.zmqcomp import *
-from openmdao.main.zmqrpc import *
-
 import networkx as nx
 
 from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.util import *
 
-import zmq
-from zmq.eventloop import ioloop
-from zmq.eventloop.zmqstream import ZMQStream
-ioloop.install()
-
-import random
-
-class ConsoleServerFactory(Factory):
-    ''' creates and keeps track of :class:`ConsoleServer`
-    '''
-
-    def __init__(self):
-        super(ConsoleServerFactory, self).__init__()
-        self.cserver_dict = {}
-        self.ports_dict = {}
-        self.temp_files = {}
-
-    def __del__(self):
-        ''' make sure we clean up on exit
-        '''
-        #self.cleanup()
-
-    def create(self, name, **ctor_args):
-        ''' Create a :class:`ConsoleServer` and return a proxy for it. 
-        '''
-        manager = BaseManager()
-        manager.register('ConsoleServer', ConsoleServer)
-        manager.start()
-        return manager.ConsoleServer()
-        
-    def console_server(self,server_id):
-        ''' create a new :class:`ConsoleServer` associated with an id
-        '''
-        if not self.cserver_dict.has_key(server_id):
-            cserver = self.create('mdao-'+server_id)
-            self.cserver_dict[server_id] = cserver
-        else:
-            cserver = self.cserver_dict[server_id]
-        return cserver
-        
-    def zmq_create(self, name, rep_url, pub_url):
-        ''' Create a :class:`ZMQConsoleServer` and return a proxy for it. 
-        '''
-        manager = BaseManager()
-        manager.register('ZMQConsoleServer', ZMQConsoleServer)
-        manager.start()
-        return manager.ZMQConsoleServer(name, rep_url, pub_url)
-        
-    def zmq_console_server(self,server_id):
-        ''' create a new :class:`ConsoleServer` associated with an id
-        '''
-        if not self.cserver_dict.has_key(server_id):
-            name = 'zmq-mdao-'+server_id
-            rep_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
-            print "%s serving requests on %s" % (name, rep_url)
-            pub_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
-            print "%s publishing on %s" % (name, pub_url)
-            cserver = self.zmq_create(name,rep_url,pub_url)
-            self.cserver_dict[server_id] = ZMQ_RPC(rep_url)
-            self.ports_dict[server_id] = (rep_url, pub_url)
-        else:
-            cserver = self.cserver_dict[server_id]
-        return cserver
-        
-    def delete_server(self,server_id):
-        ''' delete the :class:`ConsoleServer` associated with an id
-        '''
-        if self.cserver_dict.has_key(server_id):
-            cserver = self.cserver_dict[server_id]
-            del self.cserver_dict[server_id]
-            cserver.cleanup()
-            del cserver
-        
-    def get_tempdir(self,name):
-        ''' create a temporary directory prefixed with the given name
-        '''
-        if not name in self.temp_files:
-            self.temp_files[name] = tempfile.mkdtemp(prefix='mdao-'+name+'.')
-        return self.temp_files[name]
-        
-    def cleanup(self):        
-        ''' clean up temporary files, etc
-        '''
-        for server_id, cserver in self.cserver_dict.items():
-            del self.cserver_dict[server_id]
-            cserver.cleanup()
-            del cserver            
-        for name in self.temp_files:
-            f = self.temp_files[name]
-            if os.path.exists(f):
-                rmtree(f)
-
-class ZMQConsoleServer(object):
-    def __init__(self,server_id,rep_url,pub_url):
-        cserver = ConsoleServer('zmq-mdao-'+server_id)
-        ZmqCompWrapper.serve(cserver, rep_url=rep_url, pub_url=pub_url)
 
 class ConsoleServer(cmd.Cmd):
     ''' Object which knows how to load a model.
@@ -146,13 +39,6 @@ class ConsoleServer(cmd.Cmd):
         cmd.Cmd.__init__(self)
 
         print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
-        
-        #intercept stdout & stderr
-        # self.sysout = sys.stdout
-        # self.syserr = sys.stderr
-        # self.cout = StringIO()
-        # sys.stdout = self.cout
-        # sys.stderr = self.cout
         
         self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
         self.prompt = 'OpenMDAO>> '
@@ -166,8 +52,6 @@ class ConsoleServer(cmd.Cmd):
         self.orig_dir = os.getcwd()
         self.root_dir = tempfile.mkdtemp(self.name)
         if os.path.exists(self.root_dir):
-            logging.warning('%s: Removing existing directory %s',
-                            self.name, self.root_dir)
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
@@ -177,9 +61,6 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = ''
         self.proj = None
         self.exc_info = None
-        
-        self.cout_socket = None
-        self.cout_timer = None
         
     def error(self,err,exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -292,78 +173,6 @@ class ConsoleServer(cmd.Cmd):
                 self.default(contents)
         except Exception, err:
             self.error(err,sys.exc_info())
-
-    def get_output(self):
-        ''' get any pending output and clear the outputput buffer
-        '''
-        output = self.cout.getvalue()
-        self.cout.truncate(0)
-        return output
-
-    def publish_output(self):
-        ''' publish any pending output and clear the outputput buffer
-        '''
-        try:
-            output = self.cout.getvalue()
-            if len(output) > 0:
-                self.cout_socket.send(output)
-                self.cout.truncate(0)
-        except Exception, err:
-            self.error(err,sys.exc_info())
-
-    def get_output_port(self):
-        ''' open a ZMQ socket and start publishing cout
-            return the address of the port it's running on
-        '''
-        try:
-            context = zmq.Context()
-            self.cout_socket = context.socket(zmq.PUB)            
-            port = get_unused_ip_port()
-            addr = "tcp://127.0.0.1:%i" % port
-            print "binding cout publisher on %s" % addr
-            self.cout_socket.bind(addr)
-            
-            self.cout_timer = RepeatTimer(2,self.publish_output)
-            self.cout_timer.start()
-            
-            return addr
-        except Exception, err:
-            self.error(err,sys.exc_info())
-
-    def publish_variables(self,socket,var_names):
-        ''' publish current values of specified variables
-        '''
-        try:
-            values = {}
-            for var in var_names:
-                val = self.get_value(var)
-                if val is not None:
-                    values[var] = val                
-            if len(values) > 0:
-                socket.send(jsonpickle.encode(values))
-        except Exception, err:
-            self.error(err,sys.exc_info())
-
-    def get_variables_port(self,var_names):
-        ''' open a ZMQ socket and start publishing the value of the variables
-            return the address of the port it's running on
-        '''
-        try:
-            context = zmq.Context()
-            socket = context.socket(zmq.PUB)            
-            port = get_unused_ip_port()
-            addr = "tcp://127.0.0.1:%i" % port
-            print "binding variables publisher on %s" % addr
-            socket.bind(addr)
-            
-            print 'starting variables publisher for',var_names
-            timer = RepeatTimer(1,self.publish_variables,args=(socket,var_names))
-            timer.start()
-            
-            return addr
-        except Exception, err:
-            self.error(err,sys.exc_info())
-
 
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 
@@ -823,7 +632,6 @@ class ConsoleServer(cmd.Cmd):
         '''
         self.stdout = self.sysout
         self.stderr = self.syserr
-        logging.shutdown()
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:

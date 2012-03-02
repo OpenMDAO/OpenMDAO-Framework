@@ -51,14 +51,11 @@ class App(web.Application):
         if secret is None:
             secret = os.urandom(1024)
             
-        app_path      = os.path.dirname(os.path.abspath(__file__))
-        static_path   = os.path.join(app_path, 'static')
-        template_path = os.path.join(app_path, 'tmpl')
-        
+        app_path     = os.path.dirname(os.path.abspath(__file__))
         app_settings = { 
             'login_url':         '/login',
             'static_path':       os.path.join(app_path, 'static'),
-            'template_path':     os.path.join(app_path, 'tmpl'),
+            'template_path':     os.path.join(app_path, 'templates'),
             'cookie_secret':     secret,
             'debug':             True,
         }
@@ -72,7 +69,7 @@ class App(web.Application):
         ensure_dir(session_dir)
             
         self.session_manager = TornadoSessionManager(secret,session_dir)
-        self.server_manager  = ZMQServerManager('openmdao.gui.consoleserverfactory.ConsoleServer')
+        self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
         
         super(App, self).__init__(handlers, **app_settings)
 

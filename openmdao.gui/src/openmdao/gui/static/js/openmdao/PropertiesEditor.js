@@ -40,7 +40,7 @@ openmdao.PropertiesEditor = function(id,model) {
         return false;
     });
     
-    model.addListener(update);
+    model.addListener('',update)
           
     /** load the tables with the given properties */
     function loadTables(properties) {

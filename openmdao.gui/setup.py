@@ -28,6 +28,7 @@ setup(name='openmdao.gui',
       zip_safe=False,
       install_requires=[
           'jsonpickle', 
+          'pyzmq',
           'web.py', 
           'django'
       ],
