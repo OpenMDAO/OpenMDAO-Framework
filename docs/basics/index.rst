@@ -1,3 +1,4 @@
+.. _`basic-tutorial`:
 
 ==================== 
 Tutorial: The Basics
