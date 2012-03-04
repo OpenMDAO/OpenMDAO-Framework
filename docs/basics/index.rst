@@ -8,7 +8,6 @@ Tutorial: The Basics
    :maxdepth: 2
 
    building.rst
-   models.rst
    
    
    
