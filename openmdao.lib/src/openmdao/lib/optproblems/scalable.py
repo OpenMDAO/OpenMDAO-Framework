@@ -103,7 +103,7 @@ class UnitScalableProblem(OptProblem):
         #objective
         parts = []
         for i in range(0,prob_size): 
-            parts.append('d0.z[%d]**2'%i) #only need one target for each global
+            parts.append('d0.z[%d][0]**2'%i) #only need one target for each global
         for d in self.disciplines:
             for j in range(0,prob_size): 
                 parts.append("%s.y_out[%d][0]**2"%(d,j))

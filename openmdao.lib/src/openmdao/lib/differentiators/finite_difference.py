@@ -367,8 +367,9 @@ class FiniteDifference(HasTraits):
         some differences require the baseline point."""
 
         dvals = [float(val) for val in data_param.values()]
-        self._parent.set_parameters(dvals)
         
+        self._parent.set_parameters(dvals)
+
         # Run the model
         super(type(self._parent), self._parent).run_iteration()
         
