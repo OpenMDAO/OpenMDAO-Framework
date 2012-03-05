@@ -176,35 +176,42 @@ class ExprMapper(object):
         """
         src = srcexpr.text
         dest = destexpr.text
-        destcomps = destexpr.get_referenced_compnames()
-        if len(destcomps) == 0:
-            destcomp = '@bout'  # boundary output
-        else:
-            destcomp = destcomps.pop()
-            if destcomp == 'parent':
-                destcomp = '@xout'
-            elif not isinstance(getattr(self._scope, destcomp), Component): 
-                destcomp = '@bout' # allows for refs to attributes of a VarTree on boundary
+        #destcomps = destexpr.get_referenced_compnames()
+        #if len(destcomps) == 0:
+            #destcomp = '@bout'  # boundary output
+        #else:
+            #destcomp = destcomps.pop()
+            #if destcomp == 'parent':
+                #destcomp = '@xout'
+            #elif not isinstance(getattr(self._scope, destcomp), Component): 
+                #destcomp = '@bout' # allows for refs to attributes of a VarTree on boundary
         
-        self._refer_cache.setdefault(destcomp, set())
-        self._refer_cache[destcomp].add(dest)
+        #self._refer_cache.setdefault(destcomp, set())
+        #self._refer_cache[destcomp].add(dest)
         
         for destpath in destexpr.get_referenced_varpaths():
-            self._refer_cache.setdefault(destpath, set())
-            self._refer_cache[destpath].add(dest)
+            if destpath.startswith('parent.'):
+                destcomp = '@xout'
+            else:
+                destcomp, _, destvar = destpath.partition('.')
+                if not isinstance(getattr(self._scope, destcomp), Component): # allows for refs to attributes of a VarTree on boundary
+                    destcomp = '@bout'
+                    self._refer_cache.setdefault('.'.join([destcomp,destpath]), set()).add(dest)
+                    
+            self._refer_cache.setdefault(destcomp, set()).add(dest)
+            self._refer_cache.setdefault(destpath, set()).add(dest)
             
         for srcpath in srcexpr.get_referenced_varpaths():
             if srcpath.startswith('parent.'):
                 srccomp = '@xin'
             else:
                 srccomp, _, srcvar = srcpath.partition('.')
-                if not srcvar:
+                if not isinstance(getattr(self._scope, srccomp), Component): # allows for refs to attributes of a VarTree on boundary
                     srccomp = '@bin'
+                    self._refer_cache.setdefault('.'.join([srccomp,srcpath]), set()).add(src)
                     
-            self._refer_cache.setdefault(srcpath, set())
-            self._refer_cache.setdefault(srccomp, set())
-            self._refer_cache[srccomp].add(src)
-            self._refer_cache[srcpath].add(src)
+            self._refer_cache.setdefault(srcpath, set()).add(src)
+            self._refer_cache.setdefault(srccomp, set()).add(src)
             graph.add_edge(srccomp, destcomp)
         return graph
     
@@ -601,8 +608,8 @@ class Assembly (Component):
                     
                     srccompname, srccomp, srcvarname = self._split_varpath(srcvar)
                     
-                    if srccomp is not self and destcomp is not self:
-                        config_changed = True
+                    #if srccomp is not self and destcomp is not self:
+                    config_changed = True
         
                     dest_io = 'out' if destcomp is self else 'in'
                     src_io = 'in' if srccomp is self else 'out'

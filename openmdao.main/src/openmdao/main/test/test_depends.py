@@ -359,12 +359,27 @@ class DependsTestCase(unittest.TestCase):
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp6','comp5','comp1','comp4','comp3']))
 
+class SimplePTAsm(Assembly):
+    def configure(self):
+        self.add('c2', Simple())
+        self.add('c1', Simple())
+        
+        self.driver.workflow.add(['c1','c2'])
+
+        self.connect('c1.c', 'c2.a')
+        self.connect('c1.d', 'c2.b')
+        
+        self.create_passthrough('c1.a', 'a1')
+        self.create_passthrough('c2.d', 'd2')
+    
+    
 class DependsTestCase2(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
         self.top.add('c2', Simple())
         self.top.add('c1', Simple())
+        self.top.driver.workflow.add(['c1','c2'])
     
     def test_connected_vars(self):
         self.assertEqual(self.top.c1.list_outputs(connected=True), [])
@@ -396,7 +411,6 @@ class DependsTestCase2(unittest.TestCase):
     def test_simple_run(self):
         self.top.connect('c1.c', 'c2.a')
         self.top.connect('c1.d', 'c2.b')
-        self.top.driver.workflow.add(['c1','c2'])
         self.top.run()
         self.assertEqual(self.top.c1.a, 1)
         self.assertEqual(self.top.c1.b, 2)
@@ -418,6 +432,54 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(self.top.c2.c, 4)
         self.assertEqual(self.top.c2.d, 4)
         
+    def test_simple_passthrough(self):
+        cnames = ['a','b','c','d']
+        modnames = ['a1', 'd2']
+        
+        self.top.add('model', SimplePTAsm())
+        self.top.driver.workflow.add(['model'])
+        self.top.connect('c1.c', 'model.a1')
+        self.top.connect('model.d2', 'c2.a')
+        
+        self.assertEqual(self.top.c1.get_valid(cnames), 
+                         [True, True, False, False])
+        self.assertEqual(self.top.c2.get_valid(cnames), 
+                         [False, True, False, False])
+        self.assertEqual(self.top.model.get_valid(modnames), 
+                         [False, False])
+        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+                         [False, True, False, False])
+        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+                         [False, False, False, False])
+        
+        self.top.run()
+        
+        self.assertEqual(self.top.c1.get_valid(cnames), 
+                         [True, True, True, True])
+        self.assertEqual(self.top.c2.get_valid(cnames), 
+                         [True, True, True, True])
+        self.assertEqual(self.top.model.get_valid(modnames), 
+                         [True, True])
+        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+                         [True, True, True, True])
+        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+                         [True, True, True, True])
+
+        # test invalidation
+        self.top.c1.a = 99
+        self.assertEqual(self.top.c1.get_valid(cnames), 
+                         [True, True, False, False])
+        self.assertEqual(self.top.model.get_valid(modnames), 
+                         [False, False])
+        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+                         [False, True, False, False])
+        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+                         [False, False, False, False])
+        self.assertEqual(self.top.c2.get_valid(cnames), 
+                         [False, True, False, False])
+        
+        
+                
 if __name__ == "__main__":
     
     #import cProfile
