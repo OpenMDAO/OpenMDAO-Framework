@@ -176,18 +176,6 @@ class ExprMapper(object):
         """
         src = srcexpr.text
         dest = destexpr.text
-        #destcomps = destexpr.get_referenced_compnames()
-        #if len(destcomps) == 0:
-            #destcomp = '@bout'  # boundary output
-        #else:
-            #destcomp = destcomps.pop()
-            #if destcomp == 'parent':
-                #destcomp = '@xout'
-            #elif not isinstance(getattr(self._scope, destcomp), Component): 
-                #destcomp = '@bout' # allows for refs to attributes of a VarTree on boundary
-        
-        #self._refer_cache.setdefault(destcomp, set())
-        #self._refer_cache[destcomp].add(dest)
         
         for destpath in destexpr.get_referenced_varpaths():
             if destpath.startswith('parent.'):
@@ -251,9 +239,6 @@ class ExprMapper(object):
         if self._refer_cache is None:
             self.get_compgraph()  # regenerates _refer_cache
         return self._refer_cache.get(name, [])
-        #if exprs:
-            #return exprs
-        #return [ex for ex,data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
     
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
