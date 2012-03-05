@@ -6,7 +6,7 @@ The Sellar Problem
 ==================
 
 We will cover some of the more advanced capabilities of OpenMDAO. You should read and
-understand :ref:`A-Simple-Tutorial-Problem` and :ref:`Tutorial:-MetaModel` before starting this one. 
+understand :ref:`optimization_tutorial` and :ref:`Tutorial:-MetaModel` before starting this one. 
 
 .. 
   An understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also

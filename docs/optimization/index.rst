@@ -1,5 +1,5 @@
 
-.. _`A-Simple-Tutorial-Problem`:
+.. _`optimization_tutorial`:
 
 ==============================
 Tutorial: Simple Optimization
@@ -14,6 +14,5 @@ Tutorial: Simple Optimization
    doe
    derivatives
    optimizers
-   variables
 
    

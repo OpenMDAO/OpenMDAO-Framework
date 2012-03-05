@@ -9,7 +9,7 @@ Current version: |version|
    
    getting-started/index
    basics/index
-   simple/index
+   optimization/index
    surrogate/index
    mdao/index
 
@@ -17,6 +17,7 @@ Current version: |version|
    :maxdepth: 1
    
    complex/index
+   concurrent
    srcdocs/index
    licenses/index
    
@@ -26,7 +27,6 @@ Current version: |version|
    units
    geometry/index
    glossary
-   user-guide/index
    dev-guide/todo
    arch-doc/index
   

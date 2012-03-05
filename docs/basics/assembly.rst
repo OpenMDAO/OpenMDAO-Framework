@@ -105,7 +105,7 @@ submodel, drivers and workflows give us a flexible way to define an iteration sc
 Building a Basic Model
 ----------------------
 
-So a model is built from an aseembly which contains components, drivers, and workflows. 
+So a model is built from an assembly which contains components, drivers, and workflows. 
 Each assembly has it's own iteration hierachy, with `driver` at the root, that determines
 what and in which order components are run. 
 
@@ -127,13 +127,19 @@ what and in which order components are run.
             self.driver.workflow.add('paraboloid')
         
 
-We can see here that components that you use the `configure` method to add 
+We can see here that you use the `configure` method to add 
 things into an assembly. Within the `configure` method, you use the ``add`` method 
 which takes a valid OpenMDAO name and a corresponding component
 instance as its arguments. This adds the instance to the
 OpenMDAO model using the given name. In this case then, 
 the Paraboloid is accessed via ``self.paraboloid``.
 
+Notice that we never added any kind of driver, but we still 
+referenced it to add `paraboloid` to the workflow. Assemblies 
+always have a default driver, which simply runs once through its 
+workflow. In later tutorials, we'll show you how to replace the 
+default driver with something else like an optimzier. For now though, 
+our models just run once through their workflows. 
 
 .. _`Connecting-Components`:
 
@@ -158,6 +164,8 @@ we use `connections` for that. Lets take a look at how connections work.
             self.add("par1",Paraboloid())
             self.add("par2",Paraboloid())
             self.add("par3",Paraboloid())
+            
+            self.driver.workflow.add(['par1','par2','par3'])
         
             self.connect("par1.f_xy","par2.x")
             self.connect("par2.f_xy","par3.y")
@@ -186,6 +194,8 @@ to the inputs for the next two.
             self.add("par1",Paraboloid())
             self.add("par2",Paraboloid())
             self.add("par3",Paraboloid())
+            
+            self.driver.workflow.add(['par1','par2','par3'])
         
             self.connect("par1.f_xy","par2.x")
             self.connect("par1.f_xy","par3.y")
@@ -231,6 +241,8 @@ linked at that level.
             self.add("par2",Paraboloid())
         
             self.connect("par1.f_xy","par2.x")
+            
+            self.driver.workflow.add(['par1','par2'])
         
             self.create_passthrough('par1.x')
             self.create_passthrough('par1.y')
@@ -244,3 +256,6 @@ external to the assembly (perhaps you would like different units), then a passth
 cannot be used. Instead, the desired variables must be manually created and
 connected. You can find a more detailed example of this in the :ref:`complex tutorial
 <A-More-Complex-Tutorial-Problem>`. Most of the time passthroughs are sufficient.
+
+Next we'll move on to our tutorial for setting up a basic optimization, still using the same Paraboloid component 
+that we built for this one. 
