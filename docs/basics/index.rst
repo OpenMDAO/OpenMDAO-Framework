@@ -8,6 +8,7 @@ Tutorial: The Basics
    :maxdepth: 2
 
    building.rst
+   assembly.rst
    
    
    
