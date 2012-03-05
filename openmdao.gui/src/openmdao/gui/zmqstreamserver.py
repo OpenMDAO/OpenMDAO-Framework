@@ -1,4 +1,4 @@
-import sys, os, traceback
+import sys, os, time, traceback
 import subprocess
 
 import jsonpickle
@@ -21,9 +21,14 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
     ''' a handler that forwards output from a ZMQStream to a WebSocket
     '''
     def initialize(self,addr):
+        self.enc = sys.getdefaultencoding()
         self.addr = addr
+        self.message_count = 0
+        self.time_opened = 0
+        self.time_closed = 0
 
     def open(self):
+        self.time_opened = time.time()
         stream = None
         try:
             context = zmq.Context()
@@ -43,23 +48,38 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def _write_message(self, message):
         if len(message) == 1:
-            message = message[0]
-            if not isinstance(message, unicode):
-                enc = sys.getdefaultencoding()
-                message = message.decode(enc, 'replace')
-            self.write_message(message)
+            try:
+                message = message[0]
+                if not isinstance(message, unicode):
+                    message = message.decode(self.enc, 'replace')
+                self.write_message(message)
+            except Exception, err:
+                DEBUG('Unable to write message to stream:')
+                DEBUG('message:'+message)
+                print err
         elif len(message) == 2:
-            topic = message[0]
-            content = pickle.loads(message[1])
-            json = jsonpickle.encode([ topic, content ])
-            #DEBUG('zmqstream message received:'+json)
-            self.write_message(json)
+            try:
+                self.message_count += 1
+                topic = message[0]
+                content = pickle.loads(message[1])
+                json = jsonpickle.encode([ topic, content ])
+                #DEBUG('zmqstream message received:'+json)
+                self.write_message(json)
+            except Exception, err:
+                DEBUG('Unable to write JSON to stream:')
+                DEBUG('JSON:'+json)
+                print err
         
     def on_message(self, message):
         pass
 
     def on_close(self):
         DEBUG('zmqstream connection closed')
+        self.time_closed = time.time()
+        total_time = self.time_closed - self.time_opened        
+        rate = self.message_count/total_time
+        if self.message_count > 0:
+            print self.message_count,'messages in',total_time,'secs (',str(rate),')'
 
 
 class ZMQStreamApp(web.Application):
