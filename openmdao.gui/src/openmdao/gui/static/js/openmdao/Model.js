@@ -8,35 +8,22 @@ openmdao.Model=function() {
      ***********************************************************************/
      
     var self = this,
+        outstream_topic = 'outstream',
         outstream_socket = null,
-        outstream_callbacks = []
-        callbacks = [];
-        
-    /***********************************************************************
-     *  privileged
-     ***********************************************************************/
-    
-    /** add a listener, i.e. a function that will be called when something changes */
-    this.addListener = function(topic, callback) {
-        if (topic == 'outstream') {
-            if (outstream_socket == null) {
-                open_outstream_socket();
-            }            
-            outstream_callbacks.push(callback);
-        }
-        else {
-            callbacks.push(callback);
-        }
-    }
-    
-    open_outstream_socket = function() {
+        subscribers = {};
+ 
+    /** initialize the outstream websocket */
+    open_outstream_socket = function(topic) {
         function handle_output(data) {
-            for ( var i = 0; i < outstream_callbacks.length; i++ ) {
-                if (typeof outstream_callbacks[i] == 'function') {
-                    outstream_callbacks[i](data);
+            var callbacks = subscribers[topic];
+            debug.info('updating subscribers to:',topic,callbacks)
+            for (i = 0; i < callbacks.length; i++) {
+                debug.info('updating',callbacks[i])
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](data);
                 }
                 else {
-                    debug.error('Model: outstream subscriber did not provide a valid callback function!',outstream_callbacks[i])
+                    debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
                 }
             }
         }
@@ -46,38 +33,65 @@ openmdao.Model=function() {
             type: 'GET',
             url:  'output',
             success: function(addr) {
-                debug.info('got output websocket address:' + addr);
                 sck = new WebSocket(addr);
-                debug.info("opening output socket at",addr,sck);
+                debug.info('outstream websocket at',addr,sck);
                 sck.onopen = function (e) {
-                    debug.info('output socket opened',e);
+                    debug.info('outstream socket opened',e);
                 };
                 sck.onclose = function (e) {
-                    debug.info('output socket closed',e);
+                    debug.info('outstream socket closed',e);
                 };
                 sck.onmessage = function(e) {
-                    debug.info('output socket message:',e);
+                    debug.info('outstream socket message:',e);
                     handle_output(e.data);
                 };            
                 sck.onerror = function (e) {
-                    debug.info('output socket error',e);
+                    debug.info('outstream socket error',e);
                 };
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                       debug.error("Error getting output socket (status="+jqXHR.status+"): "+jqXHR.statusText)
-                       debug.error(jqXHR,textStatus,errorThrown)
+                debug.error("Error getting outstream socket (status="+jqXHR.status+"): "+jqXHR.statusText)
+                debug.error(jqXHR,textStatus,errorThrown)
            }
         })   
     }
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
     
-    /** notify all listeners that something has changed (by calling all callbacks) */
-    this.updateListeners = function() {
-        for ( var i = 0; i < callbacks.length; i++ ) {
-            if (typeof callbacks[i] == 'function') {
-                callbacks[i]();
+    /** add a subscriber (i.e. a function to be called) for messgages with the given topic */
+    this.addListener = function(topic, callback) {
+        if (topic in subscribers) {
+            subscribers[topic].push(callback);
+        }
+        else {
+            subscribers[topic] = [ callback ]
+            if (topic === outstream_topic && outstream_socket === null) {
+                open_outstream_socket(outstream_topic);
             }
-            else {
-                debug.error('Model: listener did not provide a valid callback function!',callback[i])
+        }
+    }
+    
+   /** notify all listeners that something has changed (by calling all subscribers) 
+       FIXME: this is an intermediate stage function, until everything is hooked up
+       via websockets
+   */
+    this.updateListeners = function() {
+        var i, callbacks;
+        for (topic in subscribers) {
+            if (topic !== outstream_topic) {
+                callbacks = subscribers[topic];
+                debug.info('updating subscribers to:',topic,callbacks)
+                for (i = 0; i < callbacks.length; i++) {
+                    debug.info('updating',callbacks[i])
+                    if (typeof callbacks[i] === 'function') {
+                        callbacks[i]();
+                    }
+                    else {
+                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                    }
+                }
             }
         }
     }
