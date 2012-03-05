@@ -57,7 +57,7 @@ openmdao.Model=function() {
     /** initialize the publisher websocket */
     open_publisher_socket = function() {
         function handle_message(message) {
-            debug.info('received message from publisher:',message)
+            debug.info('received message from publisher:',jQuery.parseJSON(message))
         }
     
         // make ajax call to get publisher websocket
@@ -74,7 +74,6 @@ openmdao.Model=function() {
                     debug.info('publisher socket closed',e);
                 };
                 publisher_socket.onmessage = function(e) {
-                    debug.info('publisher socket message:',e);
                     handle_message(e.data);
                 };            
                 publisher_socket.onerror = function (e) {

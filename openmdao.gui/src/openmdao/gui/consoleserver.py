@@ -14,6 +14,7 @@ from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
 from openmdao.main.driver import Driver
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.publisher import Publisher
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
@@ -576,6 +577,7 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         self.proj.activate()
+        Publisher.get_instance()
         
     def save_project(self):
         ''' save the cuurent project state & export it whence it came

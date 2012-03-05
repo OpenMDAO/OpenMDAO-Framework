@@ -1,6 +1,9 @@
 import sys, os, traceback
 import subprocess
 
+import jsonpickle
+import cPickle as pickle
+
 from optparse import OptionParser
 
 import zmq
@@ -39,15 +42,21 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
-        # Make sure that we're handling unicode
-        for part in message:
-            if not isinstance(part, unicode):
+        if len(message) == 1:
+            message = message[0]
+            if not isinstance(message, unicode):
                 enc = sys.getdefaultencoding()
-                part = part.decode(enc, 'replace')
-            self.write_message(part)
+                message = message.decode(enc, 'replace')
+            self.write_message(message)
+        elif len(message) == 2:
+            topic = message[0]
+            content = pickle.loads(message[1])
+            json = jsonpickle.encode([ topic, content ])
+            #DEBUG('zmqstream message received:'+json)
+            self.write_message(json)
         
     def on_message(self, message):
-        DEBUG('zmqstream message received:'+message)
+        pass
 
     def on_close(self):
         DEBUG('zmqstream connection closed')
