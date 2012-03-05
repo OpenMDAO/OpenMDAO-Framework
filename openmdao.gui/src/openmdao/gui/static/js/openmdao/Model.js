@@ -9,16 +9,15 @@ openmdao.Model=function() {
      
     var self = this,
         outstream_topic = 'outstream',
-        outstream_socket = null,
+        outstream_socket = false,
+        publisher_socket = false,
         subscribers = {};
  
     /** initialize the outstream websocket */
     open_outstream_socket = function(topic) {
         function handle_output(data) {
             var callbacks = subscribers[topic];
-            debug.info('updating subscribers to:',topic,callbacks)
             for (i = 0; i < callbacks.length; i++) {
-                debug.info('updating',callbacks[i])
                 if (typeof callbacks[i] === 'function') {
                     callbacks[i](data);
                 }
@@ -33,19 +32,18 @@ openmdao.Model=function() {
             type: 'GET',
             url:  'outstream',
             success: function(addr) {
-                sck = new WebSocket(addr);
-                debug.info('outstream websocket at',addr,sck);
-                sck.onopen = function (e) {
+                outstream_socket = new WebSocket(addr);
+                debug.info('outstream websocket at',addr,outstream_socket);
+                outstream_socket.onopen = function (e) {
                     debug.info('outstream socket opened',e);
                 };
-                sck.onclose = function (e) {
+                outstream_socket.onclose = function (e) {
                     debug.info('outstream socket closed',e);
                 };
-                sck.onmessage = function(e) {
-                    debug.info('outstream socket message:',e);
+                outstream_socket.onmessage = function(e) {
                     handle_output(e.data);
                 };            
-                sck.onerror = function (e) {
+                outstream_socket.onerror = function (e) {
                     debug.info('outstream socket error',e);
                 };
             },
@@ -62,24 +60,24 @@ openmdao.Model=function() {
             debug.info('received message from publisher:',message)
         }
     
-        // make ajax call to get outstream websocket
+        // make ajax call to get publisher websocket
         jQuery.ajax({
             type: 'GET',
-            url:  'publisher',
+            url:  'pubstream',
             success: function(addr) {
-                sck = new WebSocket(addr);
-                debug.info('publisher websocket at',addr,sck);
-                sck.onopen = function (e) {
+                publisher_socket = new WebSocket(addr);
+                debug.info('publisher websocket at',addr,publisher_socket);
+                publisher_socket.onopen = function (e) {
                     debug.info('publisher socket opened',e);
                 };
-                sck.onclose = function (e) {
+                publisher_socket.onclose = function (e) {
                     debug.info('publisher socket closed',e);
                 };
-                sck.onmessage = function(e) {
+                publisher_socket.onmessage = function(e) {
                     debug.info('publisher socket message:',e);
-                    handle_output(e.data);
+                    handle_message(e.data);
                 };            
-                sck.onerror = function (e) {
+                publisher_socket.onerror = function (e) {
                     debug.info('publisher socket error',e);
                 };
             },
@@ -101,8 +99,13 @@ openmdao.Model=function() {
         }
         else {
             subscribers[topic] = [ callback ]
-            if (topic === outstream_topic && outstream_socket === null) {
+            if (topic === outstream_topic && !outstream_socket) {
+                outstream_socket = true;
                 open_outstream_socket(outstream_topic);
+            }
+            if (!publisher_socket) {
+                publisher_socket = true;
+                open_publisher_socket();
             }
         }
     }

@@ -13,7 +13,6 @@ from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import *
 from openmdao.gui.handlers import BaseHandler
-from openmdao.gui.zmqstreamserver import ZMQStreamServer
 
 
 class AddonForm(forms.Form):
@@ -267,19 +266,13 @@ class ModelHandler(BaseHandler):
         self.write(json)
 
 class OutstreamHandler(BaseHandler):
-    ''' initialize the web socket server & return the socket
+    ''' return the url of the zmq outstream server,
     '''
     @web.authenticated
     def get(self):
-        out_url = self.application.server_manager.get_out_url(self.get_sessionid())
-        ws_url  = '/workspace/outstream'
-        ws_port = get_unused_ip_port()
-        ZMQStreamServer.spawn_process(out_url,ws_port,ws_url)
-        ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
-        self.content_type = 'text/html'
-        time.sleep(2)  # give server a chance to spool up
-        self.write(ws_addr)
-        
+        outstream_url = self.application.server_manager.get_outstream_server(self.get_sessionid(),'/workspace/outstream')
+        self.write(outstream_url)
+
 class ProjectHandler(BaseHandler):
     ''' GET:  load model fom the given project archive,
               or reload remebered project for session if no file given
@@ -316,6 +309,14 @@ class PlotHandler(BaseHandler):
         cserver = self.get_server()
         port = cserver.get_varserver(name)
         self.write(port)
+
+class PubstreamHandler(BaseHandler):
+    ''' return the url of the zmq publisher server,
+    '''
+    @web.authenticated
+    def get(self):
+        pubstream_url = self.application.server_manager.get_pubstream_server(self.get_sessionid(),'/workspace/pubstream')
+        self.write(pubstream_url)
         
 class StructureHandler(BaseHandler):
     ''' get the structure of the specified assembly, or of the global 
@@ -401,6 +402,7 @@ handlers = [
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
+    web.url(r'/workspace/pubstream/?',      PubstreamHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
