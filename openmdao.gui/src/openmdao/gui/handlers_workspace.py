@@ -13,7 +13,7 @@ from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import *
 from openmdao.gui.handlers import BaseHandler
-from openmdao.gui.outstreamserver import OutStreamServer
+from openmdao.gui.zmqstreamserver import ZMQStreamServer
 
 
 class AddonForm(forms.Form):
@@ -266,7 +266,7 @@ class ModelHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(json)
 
-class OutputHandler(BaseHandler):
+class OutstreamHandler(BaseHandler):
     ''' initialize the web socket server & return the socket
     '''
     @web.authenticated
@@ -274,7 +274,7 @@ class OutputHandler(BaseHandler):
         out_url = self.application.server_manager.get_out_url(self.get_sessionid())
         ws_url  = '/workspace/outstream'
         ws_port = get_unused_ip_port()
-        OutStreamServer.spawn_process(out_url,ws_port,ws_url)
+        ZMQStreamServer.spawn_process(out_url,ws_port,ws_url)
         ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
         self.content_type = 'text/html'
         time.sleep(2)  # give server a chance to spool up
@@ -398,7 +398,7 @@ handlers = [
     web.url(r'/workspace/files/?',          FilesHandler),
     web.url(r'/workspace/geometry',         GeometryHandler),
     web.url(r'/workspace/model/?',          ModelHandler),
-    web.url(r'/workspace/output/?',         OutputHandler),
+    web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/types/?',          TypesHandler),

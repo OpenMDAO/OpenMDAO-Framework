@@ -31,7 +31,7 @@ openmdao.Model=function() {
         // make ajax call to get outstream websocket
         jQuery.ajax({
             type: 'GET',
-            url:  'output',
+            url:  'outstream',
             success: function(addr) {
                 sck = new WebSocket(addr);
                 debug.info('outstream websocket at',addr,sck);
@@ -56,6 +56,40 @@ openmdao.Model=function() {
         })   
     }
 
+    /** initialize the publisher websocket */
+    open_publisher_socket = function() {
+        function handle_message(message) {
+            debug.info('received message from publisher:',message)
+        }
+    
+        // make ajax call to get outstream websocket
+        jQuery.ajax({
+            type: 'GET',
+            url:  'publisher',
+            success: function(addr) {
+                sck = new WebSocket(addr);
+                debug.info('publisher websocket at',addr,sck);
+                sck.onopen = function (e) {
+                    debug.info('publisher socket opened',e);
+                };
+                sck.onclose = function (e) {
+                    debug.info('publisher socket closed',e);
+                };
+                sck.onmessage = function(e) {
+                    debug.info('publisher socket message:',e);
+                    handle_output(e.data);
+                };            
+                sck.onerror = function (e) {
+                    debug.info('publisher socket error',e);
+                };
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                debug.error("Error getting publisher socket (status="+jqXHR.status+"): "+jqXHR.statusText)
+                debug.error(jqXHR,textStatus,errorThrown)
+           }
+        })   
+    }
+    
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -74,8 +108,8 @@ openmdao.Model=function() {
     }
     
    /** notify all listeners that something has changed (by calling all subscribers) 
-       FIXME: this is an intermediate stage function, until everything is hooked up
-       via websockets
+       FIXME: this is a temporary function, to be deleted when everything is hooked
+       up via websockets
    */
     this.updateListeners = function() {
         var i, callbacks;
@@ -84,7 +118,7 @@ openmdao.Model=function() {
                 callbacks = subscribers[topic];
                 debug.info('updating subscribers to:',topic,callbacks)
                 for (i = 0; i < callbacks.length; i++) {
-                    debug.info('updating',callbacks[i])
+                    //debug.info('updating',callbacks[i])
                     if (typeof callbacks[i] === 'function') {
                         callbacks[i]();
                     }

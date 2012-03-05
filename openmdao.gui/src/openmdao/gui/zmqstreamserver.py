@@ -12,9 +12,9 @@ from tornado import httpserver, web, websocket
 debug = True
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> OutStreamServer --',msg
+        print '<<<'+str(os.getpid())+'>>> ZMQStreamServer --',msg
 
-class OutStreamHandler(websocket.WebSocketHandler):
+class ZMQStreamHandler(websocket.WebSocketHandler):
     ''' a handler that forwards output from a ZMQStream to a WebSocket
     '''
     def initialize(self,addr):
@@ -29,7 +29,7 @@ class OutStreamHandler(websocket.WebSocketHandler):
             socket.setsockopt(zmq.SUBSCRIBE, '')
             stream = ZMQStream(socket)
         except Exception, err:
-            print 'Error getting outstream:',err
+            print 'Error getting ZMQ stream:',err
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
             traceback.print_tb(exc_traceback, limit=30)   
@@ -47,32 +47,32 @@ class OutStreamHandler(websocket.WebSocketHandler):
             self.write_message(part)
         
     def on_message(self, message):
-        DEBUG('outstream message received:'+message)
+        DEBUG('zmqstream message received:'+message)
 
     def on_close(self):
-        DEBUG('outstream connection closed')
+        DEBUG('zmqstream connection closed')
 
 
-class OutStreamApp(web.Application):
+class ZMQStreamApp(web.Application):
     ''' a web application that serves a ZMQStream over a WebSocket
     '''
     def __init__(self, zmqstream_addr, websocket_url):            
         handlers = [
-            (websocket_url, OutStreamHandler, dict(addr=zmqstream_addr))
+            (websocket_url, ZMQStreamHandler, dict(addr=zmqstream_addr))
         ]
         settings = { 
             'login_url':         '/login',
             'debug':             True,
         }        
-        super(OutStreamApp, self).__init__(handlers, **settings)
+        super(ZMQStreamApp, self).__init__(handlers, **settings)
 
 
-class OutStreamServer(object):
+class ZMQStreamServer(object):
     ''' runs an http server hat serves a ZMQStream over a WebSocket
     '''
     def __init__(self,options):
         self.options = options
-        self.web_app = OutStreamApp(options.addr,options.url)
+        self.web_app = ZMQStreamApp(options.addr,options.url)
         self.http_server = httpserver.HTTPServer(self.web_app)
 
     def serve(self):
@@ -99,15 +99,15 @@ class OutStreamServer(object):
         return parser
 
     @staticmethod
-    def spawn_process(out_url,ws_port,ws_url='/'):
-        ''' run outstreamserver in it's own process, mapping a zmq stream to a websocket
+    def spawn_process(zmq_url,ws_port,ws_url='/'):
+        ''' run zmqstreamserver in it's own process, mapping a zmq stream to a websocket
             args:
-                out_url     the url of the ZMQStream
+                zmq_url     the url of the ZMQStream
                 ws_port     the port to serve the WebSocket on
                 ws_url      the url to map to the WebSocket
         '''
         file_path   = os.path.abspath(__file__)
-        cmd = ['python',file_path,'-z',str(out_url),'-p',str(ws_port),'-u',str(ws_url)]        
+        cmd = ['python',file_path,'-z',str(zmq_url),'-p',str(ws_port),'-u',str(ws_url)]        
         return subprocess.Popen(cmd)
 
 def main():
@@ -119,9 +119,9 @@ def main():
     ioloop.install()
     
     # create the server and kick it off
-    parser = OutStreamServer.get_options_parser()
+    parser = ZMQStreamServer.get_options_parser()
     (options, args) = parser.parse_args()
-    server = OutStreamServer(options)
+    server = ZMQStreamServer(options)
     server.serve()
     
 if __name__ == '__main__':
