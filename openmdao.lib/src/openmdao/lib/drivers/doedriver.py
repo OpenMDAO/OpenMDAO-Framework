@@ -38,6 +38,15 @@ class DOEdriver(CaseIterDriverBase):
     case_filter = Slot(ICaseFilter, iotype='in',
                        desc='Selects cases to be run.')
 
+    def execute(self):
+        """Generate and Evaluate cases."""
+        self._csv_file = None
+        try:
+            super(DOEdriver, self).execute()
+        finally:
+            if self._csv_file is not None:
+                self._csv_file.close()
+
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         return self._get_cases()
@@ -54,8 +63,8 @@ class DOEdriver(CaseIterDriverBase):
         if record_doe:
             if not self.doe_filename:
                 self.doe_filename = '%s.csv' % self.name
-            csv_file = open(self.doe_filename, 'wb')
-            csv_writer = csv.writer(csv_file)
+            self._csv_file = open(self.doe_filename, 'wb')
+            csv_writer = csv.writer(self._csv_file)
 
         for i, row in enumerate(self.DOEgenerator):
             if record_doe:
@@ -70,7 +79,8 @@ class DOEdriver(CaseIterDriverBase):
                 yield case
 
         if record_doe:
-            csv_file.close()
+            self._csv_file.close()
+            self._csv_file = None
 
 
 @add_delegate(HasParameters)            
