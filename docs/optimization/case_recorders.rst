@@ -126,8 +126,7 @@ as an input or output, and a number of other metadata fields. Run the above code
 
 ::
 
-"label","uuid","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","Constraint4","objective","Constraint0","Constraint1","Constraint2
-","Constraint3","/METADATA","retries","max_retries","parent_uuid","msg"
+"label","uuid","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","Constraint4","objective","Constraint0","Constraint1","Constraint2","Constraint3","/METADATA","retries","max_retries","parent_uuid","msg"
 "","6be3af7e-67a6-11e1-af51-005056b50025","",0.0,1e-06,"",0.0,21.999994,14.999999,0.0,0.0,0.0,"","","",""
 "","6be4adfc-67a6-11e1-af51-005056b50025","",-7.54160275589,7.4584047025,"",0.0,-26.8280028871,-7.45839724736e-06,0.0,0.0,0.0,"","","",""
 "","6be59636-67a6-11e1-af51-005056b50025","",-7.81867047557,7.38483984481,"",0.0,-26.9305645958,-0.203510320387,0.0,0.0,0.0,"","","",""
