@@ -79,6 +79,10 @@ virtualenv.  It would need to be deactivated, changed, rebuilt, and then reactiv
 
 Not running installation or testing in bash will cause things to fail.
 
+If a user has multiple versions of Python installed on her machine, the user needs to make sure that the version 
+that's being run when the user says ``python`` is an OpenMDAO-compatible version.  Otherwise, the user needs
+to specify the Python version in the command line, e.g. ``python2.6 go-openmdao.py``.
+
 **Windows**
 Usernames with spaces have been known to cause various problems in our tests for distributed simulations.
 
