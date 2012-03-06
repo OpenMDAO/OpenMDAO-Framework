@@ -180,9 +180,9 @@ class SLSQPdriver(DriverUsesDerivatives):
         
         Note: m, me, la, n, f, and g are unused inputs."""
         self.set_parameters(xnew)
-        super(SLSQPdriver, self).run_iteration()
+        super(SLSQPdriver, self).run_iteration()      
         f = self.eval_objective()
-        
+
         if isnan(f):
             msg = "Numerical overflow in the objective"
             self.raise_exception(msg, RuntimeError)

@@ -1,7 +1,7 @@
-.. index:: constraints, CONMIN
+.. index:: constraints, SLSQP
 .. _`constrained-optimization`:
 
-Building a Model - Constrained Optimization using CONMIN
+Building a Model - Constrained Optimization
 =========================================================
 
 Usually, an optimization problem also contains constraints that reduce the design space.
@@ -14,8 +14,7 @@ instantiated and run.
 
 In OpenMDAO, you can construct a constraint with an expression string, which is
 an equation or inequality built using available variables with Python
-mathematical syntax and functions. CONMIN supports inequality
-constraints but not equality constraints.
+mathematical syntax and functions. 
 
 You want to add the constraint ``x-y >= 15`` to this problem. The unconstrained
 minimum violates this constraint, so a new minimum must be found by
@@ -25,7 +24,7 @@ model by adding one line to the ``initialize`` function:
 .. testsetup:: simple_model_Unconstrained_pieces
 
     from openmdao.main.api import Assembly, set_as_top
-    from openmdao.lib.drivers.api import CONMINdriver
+    from openmdao.lib.drivers.api import SLSQPdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
     from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     
@@ -49,9 +48,7 @@ When it is executed, it should produce this output:
 
 :: 
 
-    [ CONMIN output not shown ]
-    CONMIN Iterations:  6
-    Minimum found at (7.175775, -7.824225)
+    Minimum found at (7.166667, -7.833334)
     Elapsed time:  0.0295481681824 seconds
     
 Notice that the minimum of the constrained problem is different from the minimum of
