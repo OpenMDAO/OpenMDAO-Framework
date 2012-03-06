@@ -57,7 +57,7 @@ You can run this same problem at the command prompt by typing:
     python engine_optimization.py
 
 This script prints out a little more information than we've shown in this
-example. See the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>` 
+example. See the :ref:`Optimization Tutorial <optimization_tutorial>` 
 for a refresher on how to set up a component to run at the command prompt.
 
 String expressions can be used to pose more sophisticated objective expressions

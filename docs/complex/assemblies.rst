@@ -196,8 +196,9 @@ above. As inputs, the Vehicle takes a commanded velocity, throttle position, a g
 a set of vehicle design parameters, and outputs the vehicle's instantaneous acceleration and rate of fuel
 burn. 
 
+        >>> from openmdao.main.api import set_as_top
         >>> from openmdao.examples.enginedesign.vehicle import Vehicle
-        >>> my_car = Vehicle()
+        >>> my_car = set_as_top(Vehicle())
         >>> my_car.velocity = 25.0
         >>> my_car.current_gear = 3
         >>> my_car.throttle = .5
