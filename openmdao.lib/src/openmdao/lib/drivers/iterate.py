@@ -125,7 +125,6 @@ class FixedPointIterator(Driver):
             
                 term = val.evaluate(self.parent)
                 delta[i] = term[0] - term[1]
-            
             history[self.current_iteration] = delta
             
             if norm(delta, order) < self.tolerance:

@@ -18,8 +18,8 @@ class Discipline1(Component):
     # pylint: disable-msg=E1101
     z1 = Float(0.0, iotype='in', desc='Global Design Variable')
     z2 = Float(0.0, iotype='in', desc='Global Design Variable')
-    x1 = Float(0.0, iotype='in', desc='Local Design Variable')
-    y2 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
+    x1 = Float(1.0, iotype='in', desc='Local Design Variable')
+    y2 = Float(1.0, iotype='in', desc='Disciplinary Coupling')
 
     y1 = Float(iotype='out', desc='Output of this Discipline')        
 
@@ -44,7 +44,7 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
     z1 = Float(0.0, iotype='in', desc='Global Design Variable')
     z2 = Float(0.0, iotype='in', desc='Global Design Variable')
     x1 = Float(0.0, iotype='in', desc='Local Design Variable')
-    y2 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
+    y2 = Float(1.0, iotype='in', desc='Disciplinary Coupling')
 
     y1 = Float(iotype='out', desc='Output of this Discipline')        
    
@@ -78,14 +78,13 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
         #print "(%f, %f, %f)" % (z1, z2, x1)        
 
 
-
 class Discipline2(Component):
     """Component containing Discipline 2"""
     
     # pylint: disable-msg=E1101
     z1 = Float(0.0, iotype='in', desc='Global Design Variable')
     z2 = Float(0.0, iotype='in', desc='Global Design Variable')
-    y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
+    y1 = Float(1.0, iotype='in', desc='Disciplinary Coupling')
 
     y2 = Float(iotype='out', desc='Output of this Discipline')        
 
@@ -111,7 +110,7 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
     # pylint: disable-msg=E1101
     z1 = Float(0.0, iotype='in', desc='Global Design Variable')
     z2 = Float(0.0, iotype='in', desc='Global Design Variable')
-    y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
+    y1 = Float(1.0, iotype='in', desc='Disciplinary Coupling')
 
     y2 = Float(iotype='out', desc='Output of this Discipline') 
     
@@ -172,8 +171,8 @@ class SellarProblem(OptProblem):
         self.add_parameter("dis1.x1",low=0,high=10,start=1.0)
         
         #Coupling Vars
-        self.add_coupling_var(("dis2.y1","dis1.y1"),name="y1",start=0.0)
-        self.add_coupling_var(("dis1.y2","dis2.y2"),name="y2",start=0.0)
+        self.add_coupling_var(("dis2.y1","dis1.y1"),name="y1",start=1.0)
+        self.add_coupling_var(("dis1.y2","dis2.y2"),name="y2",start=1.0)
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)',name="obj1")
         self.add_constraint('3.16 < dis1.y1')
@@ -217,8 +216,8 @@ class SellarProblemWithDeriv(OptProblem):
         self.add_parameter("dis1.x1",low=0,high=10,start=1.0)
         
         #Coupling Vars
-        self.add_coupling_var(("dis2.y1","dis1.y1"),name="y1",start=0.0)
-        self.add_coupling_var(("dis1.y2","dis2.y2"),name="y2",start=0.0)
+        self.add_coupling_var(("dis2.y1","dis1.y1"),name="y1",start=1.0)
+        self.add_coupling_var(("dis1.y2","dis2.y2"),name="y2",start=1.0)
                            
         self.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)',name="obj1")
         self.add_constraint('3.16 < dis1.y1')

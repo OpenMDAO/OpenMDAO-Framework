@@ -5,7 +5,7 @@ Problem Overview
 ==================
 
 This tutorial covers some of the more advanced capabilities of OpenMDAO. You should read and understand
-the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>` before starting this one.
+the :ref:`simple tutorial problem <optimization_tutorial>` before starting this one.
 
 
 The objective of this tutorial problem is to design an automobile that performs "well" as measured
