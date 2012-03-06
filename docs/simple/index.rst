@@ -13,6 +13,7 @@ Tutorial: The Basics
    unconstrained
    constrained
    doe
+   case_recorders
    derivatives
    optimizers
    variables

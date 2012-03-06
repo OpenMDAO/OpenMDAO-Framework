@@ -9,9 +9,10 @@ import unittest
 from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
                                           ListCaseIterator, ListCaseRecorder, \
                                           DumpCaseRecorder
-from openmdao.lib.datatypes.api import Str, Slot
+from openmdao.lib.datatypes.api import Array, Str, Slot
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.api import Component, Assembly, Case, set_as_top
+from openmdao.main.numpy_fallback import array
 from openmdao.test.execcomp import ExecComp
 
 
@@ -24,14 +25,15 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         top.add('comp2', ExecComp(exprs=['z=x+1']))
         top.connect('comp1.z', 'comp2.x')
         top.comp1.add('a_string', Str("Hello',;','", iotype='out'))
-        #top.comp1.add('a_list', List([1, 'one', 1.0], iotype='out'))
+        top.comp1.add('a_array', Array(array([1.0, 3.0, 5.5]), iotype='out'))
+        top.comp1.add('x_array', Array(array([1.0, 1.0, 1.0]), iotype='in'))
         driver.workflow.add(['comp1', 'comp2'])
         
         # now create some Cases
-        outputs = ['comp1.z', 'comp2.z', 'comp1.a_string']
+        outputs = ['comp1.z', 'comp2.z', 'comp1.a_string', 'comp1.a_array[2]']
         cases = []
         for i in range(10):
-            inputs = [('comp1.x', i+0.1), ('comp1.y', i*2 + .1)]
+            inputs = [('comp1.x', i+0.1), ('comp1.y', i*2 + .1), ('comp1.x_array[1]', 99.88)]
             cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
         driver.iterator = ListCaseIterator(cases)
         
@@ -39,8 +41,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
     def tearDown(self):
         
-        #if os.path.exists(self.filename):
-        #    os.remove(self.filename)        
+        if os.path.exists(self.filename):
+            os.remove(self.filename)        
         pass
 
     def test_inoutCSV(self):
@@ -64,9 +66,11 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      comp1.x: 8.1',
+            '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',
             '   outputs:',
             #"      comp1.a_list: [1, 'one', 1.0]",
+            "      comp1.a_array[2]: 5.5",
             "      comp1.a_string: Hello',;','",
             '      comp1.z: 24.2',
             '      comp2.z: 25.2',
@@ -102,8 +106,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      comp1.x: 8.1',
+            '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',
             '   outputs:',
+            "      comp1.a_array[2]: 5.5",
             "      comp1.a_string: Hello',;','",
             '      comp1.z: 24.2',
             '      comp2.z: 25.2',

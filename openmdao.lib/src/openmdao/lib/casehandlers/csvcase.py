@@ -2,8 +2,8 @@
 """
 
 import csv
-from cPickle import dumps, loads, HIGHEST_PROTOCOL
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
@@ -264,7 +264,8 @@ class CSVCaseRecorder(object):
                     raise ValueError('CSV format does not support ' + \
                                'variables of type %s' % type(value))
             
-        for item in (case.retries, case.max_retries, case.parent_uuid, case.msg):
+        for item in (case.retries, case.max_retries, \
+                     case.parent_uuid, case.msg):
             data.append(item)
         
         self.csv_writer.writerow(data)

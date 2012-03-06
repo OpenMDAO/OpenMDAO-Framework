@@ -465,7 +465,7 @@ class CONMINdriver(DriverUsesDerivatives):
                 for i, val in enumerate(self.constraint_vals):
                     case_output.append(["Constraint%d" % i, val])
                 
-                case = Case(case_input, case_output,parent_uuid=self._case_id)
+                case = Case(case_input, case_output, parent_uuid=self._case_id)
                 
                 for recorder in self.recorders:
                     recorder.record(case)

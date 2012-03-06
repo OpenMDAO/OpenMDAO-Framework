@@ -1,6 +1,7 @@
 """A Case Iterator and CaseRecorder that stores the cases in a list.
 """
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 
 
@@ -32,5 +33,6 @@ class ListCaseRecorder(object):
         self.cases.append(case)
 
     def get_iterator(self):
+        '''Return ListCaseIterator that uses our current list.'''
         return ListCaseIterator(self.cases)
     
