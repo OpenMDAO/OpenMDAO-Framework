@@ -144,7 +144,7 @@ class CSVCaseIterator(object):
             
             in_start = row.index('/INPUTS') + 1
             out_start = row.index('/OUTPUTS') + 1
-            out_end = row.index('/SPECIAL')
+            out_end = row.index('/METADATA')
             
             if in_start < out_start-1:
                 for i in range(in_start, out_start-1):
@@ -236,7 +236,7 @@ class CSVCaseRecorder(object):
             for name in case.keys(iotype='out'):
                 headers.append(name)
                 
-            for item in ['/SPECIAL', 'retries', 'max_retries', 'parent_uuid', \
+            for item in ['/METADATA', 'retries', 'max_retries', 'parent_uuid', \
                            'msg']:
                 headers.append(item)
                     
