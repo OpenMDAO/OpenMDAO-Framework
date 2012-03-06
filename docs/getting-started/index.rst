@@ -8,6 +8,8 @@ Getting Started
 
    requirements.rst
    install.rst
+   troubleshooting.rst
+   
    
 
 
