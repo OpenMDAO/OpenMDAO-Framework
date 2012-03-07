@@ -13,6 +13,36 @@ openmdao.Model=function() {
         publisher_socket = false,
         subscribers = {};
  
+     /** initialize a websocket, after getting the address from the specified url */
+    open_websocket = function(url,message_handler) {
+        // make ajax call to get outstream websocket
+        jQuery.ajax({
+            type: 'GET',
+            url:  url,
+            success: function(addr) {
+                socket = new WebSocket(addr);
+                debug.info('websocket at',addr,socket);
+                socket.onopen = function (e) {
+                    debug.info('websocket opened',e);
+                };
+                socket.onclose = function (e) {
+                    debug.info('websocket closed',e);
+                };
+                socket.onmessage = function(e) {
+                    message_handler(e.data);
+                };            
+                socket.onerror = function (e) {
+                    debug.info('websocket error',e);
+                };
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                debug.error("Error getting websocket (status="+jqXHR.status+"): "+jqXHR.statusText)
+                debug.error(jqXHR,textStatus,errorThrown)
+           }
+        })   
+    }
+    
+    
     /** initialize the outstream websocket */
     open_outstream_socket = function(topic) {
         function handle_output(data) {
@@ -25,66 +55,30 @@ openmdao.Model=function() {
                     debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
                 }
             }
-        }
-    
-        // make ajax call to get outstream websocket
-        jQuery.ajax({
-            type: 'GET',
-            url:  'outstream',
-            success: function(addr) {
-                outstream_socket = new WebSocket(addr);
-                debug.info('outstream websocket at',addr,outstream_socket);
-                outstream_socket.onopen = function (e) {
-                    debug.info('outstream socket opened',e);
-                };
-                outstream_socket.onclose = function (e) {
-                    debug.info('outstream socket closed',e);
-                };
-                outstream_socket.onmessage = function(e) {
-                    handle_output(e.data);
-                };            
-                outstream_socket.onerror = function (e) {
-                    debug.info('outstream socket error',e);
-                };
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                debug.error("Error getting outstream socket (status="+jqXHR.status+"): "+jqXHR.statusText)
-                debug.error(jqXHR,textStatus,errorThrown)
-           }
-        })   
+        }        
+        open_websocket('outstream',handle_output);
     }
 
     /** initialize the publisher websocket */
     open_publisher_socket = function() {
         function handle_message(message) {
+            message[0] = 'prob.'+message[0]  // FIXME: HACK!!
             debug.info('received message from publisher:',jQuery.parseJSON(message))
+            var callbacks = subscribers[message[0]];
+            debug.info('subscribers:',subscribers)
+            debug.info('subscribers:',callbacks)
+            if (callbacks) {
+                for (i = 0; i < callbacks.length; i++) {
+                    if (typeof callbacks[i] === 'function') {
+                        callbacks[i](message);
+                    }
+                    else {
+                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                    }
+                }
+            }
         }
-    
-        // make ajax call to get publisher websocket
-        jQuery.ajax({
-            type: 'GET',
-            url:  'pubstream',
-            success: function(addr) {
-                publisher_socket = new WebSocket(addr);
-                debug.info('publisher websocket at',addr,publisher_socket);
-                publisher_socket.onopen = function (e) {
-                    debug.info('publisher socket opened',e);
-                };
-                publisher_socket.onclose = function (e) {
-                    debug.info('publisher socket closed',e);
-                };
-                publisher_socket.onmessage = function(e) {
-                    handle_message(e.data);
-                };            
-                publisher_socket.onerror = function (e) {
-                    debug.info('publisher socket error',e);
-                };
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                debug.error("Error getting publisher socket (status="+jqXHR.status+"): "+jqXHR.statusText)
-                debug.error(jqXHR,textStatus,errorThrown)
-           }
-        })   
+        open_websocket('pubstream',handle_message);        
     }
     
     /***********************************************************************
@@ -94,10 +88,13 @@ openmdao.Model=function() {
     /** add a subscriber (i.e. a function to be called) for messgages with the given topic */
     this.addListener = function(topic, callback) {
         if (topic in subscribers) {
+            debug.info('adding to existing topic',topic,callback)
             subscribers[topic].push(callback);
         }
         else {
+            debug.info('creating new topic',topic,callback)
             subscribers[topic] = [ callback ]
+            debug.info('subscribers',subscribers)
             if (topic === outstream_topic && !outstream_socket) {
                 outstream_socket = true;
                 open_outstream_socket(outstream_topic);

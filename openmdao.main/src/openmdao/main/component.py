@@ -20,13 +20,13 @@ from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import implements, IComponent, ICaseIterator
+from openmdao.main.interfaces import implements, IComponent, ICaseIterator, IDriver
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
-from openmdao.main.mp_support import is_instance
+from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.publisher import Publisher
 
@@ -180,7 +180,7 @@ class Component (Container):
         if self._exec_state != state:
             self._exec_state = state
             pub = Publisher.get_instance()
-            if pub:
+            if pub and has_interface(self,IDriver):
                 pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
             
     # call this if any trait having 'iotype' metadata of 'in' is changed

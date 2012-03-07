@@ -11,14 +11,19 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
     self.pathname = pathname;
         
     /** update the schematic with data from the model */
-    function update() {
-        model.getWorkflow(self.pathname, 
-                          pane.loadData, 
-                          function(jqXHR, textStatus, errorThrown) {
-                              self.pathname = ''
-                              debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                              debug.error('jqXHR:',jqXHR)
-                          })
+    function update(message) {
+        if (message) {
+            debug.info('WorkflowDiagram got message:',message);
+        }
+        else {
+            model.getWorkflow(self.pathname, 
+                              pane.loadData, 
+                              function(jqXHR, textStatus, errorThrown) {
+                                  self.pathname = ''
+                                  debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                                  debug.error('jqXHR:',jqXHR)
+                              });
+        }
     };
     
     // ask model for an update whenever something changes
