@@ -14,7 +14,7 @@ from openmdao.main.datatypes.api import Bool, Dict, Enum, Int, Slot
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
-from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
+from openmdao.main.interfaces import ICaseIterator, ICaseRecorder, ICaseFilter
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
@@ -654,13 +654,6 @@ class CaseIterDriverBase(Driver):
         else:
             self._top_levels[server].set(name, value, index)
 
-    def _model_get(self, server, name, index):
-        """ Get value from server's model. """
-        if server is None:
-            return self.parent.get(name, index)
-        else:
-            return self._top_levels[server].get(name, index)
-
     def _model_execute(self, server):
         """ Execute model in server. """
         self._exceptions[server] = None
@@ -702,12 +695,24 @@ class CaseIteratorDriver(CaseIterDriverBase):
     evaluated = Slot(ICaseIterator, iotype='out',
                       desc='Iterator supplying evaluated Cases.')
     
+    filter = Slot(ICaseFilter, iotype='in',
+                  desc='Filter used to select cases to evaluate.')
+
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         if self.iterator is not None:
-            return iter(self.iterator)
+            if self.filter is None:
+                return iter(self.iterator)
+            else:
+                return self._select_cases()
         else:
             self.raise_exception("iterator has not been set", ValueError)
+
+    def _select_cases(self):
+        """ Select cases to be evaluated. """
+        for i, case in enumerate(iter(self.iterator)):
+            if self.filter.select(i, case):
+                yield case
 
     def execute(self):
         """ Evaluate cases from `iterator` and place in `evaluated`. """

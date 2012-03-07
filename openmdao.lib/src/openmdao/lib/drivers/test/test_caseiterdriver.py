@@ -20,7 +20,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
 from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.api import ListCaseIterator, SequenceCaseFilter
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
@@ -396,9 +396,27 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
+    def test_rerun(self):
+        logging.debug('')
+        logging.debug('test_rerun')
+
+        self.run_cases(sequential=True)
+        orig_cases = self.model.driver.recorders[0].cases
+        self.model.driver.iterator = ListCaseIterator(orig_cases)
+        rerun_seq = (1, 3, 5, 7, 9)
+        self.model.driver.filter = SequenceCaseFilter(rerun_seq)
+        rerun = ListCaseRecorder()
+        self.model.driver.recorders[0] = rerun
+        self.model.run()
+
+        self.assertEqual(len(orig_cases), 10)
+        self.assertEqual(len(rerun.cases), len(rerun_seq))
+        for i, case in enumerate(rerun.cases):
+            self.assertEqual(case, orig_cases[rerun_seq[i]])
+
 
 if __name__ == '__main__':
-    sys.argv.append('--cover-package=openmdao.drivers')
+    sys.argv.append('--cover-package=openmdao.lib.drivers')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

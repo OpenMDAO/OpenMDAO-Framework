@@ -59,7 +59,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
       openmdao.lib.drivers.cobyladriver.COBYLAdriver = openmdao.lib.drivers.cobyladriver:COBYLAdriver
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
-      openmdao.lib.drivers.doedriver.NeiborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeiborhoodDOEdriver
+      openmdao.lib.drivers.doedriver.NeighborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeighborhoodDOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
@@ -111,6 +111,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.doegenerators.central_composite.CentralComposite = openmdao.lib.doegenerators.central_composite:CentralComposite
       openmdao.lib.doegenerators.optlh.OptLatinHypercube = openmdao.lib.doegenerators.optlh:OptLatinHypercube
       openmdao.lib.doegenerators.uniform.Uniform = openmdao.lib.doegenerators.uniform:Uniform
+      openmdao.lib.doegenerators.csvfile.CSVFile = openmdao.lib.doegenerators.csvfile:CSVFile
 
       [openmdao.architecture]
       openmdao.lib.architectures.bliss.BLISS = openmdao.lib.architectures.bliss:BLISS
