@@ -41,5 +41,10 @@ operate.
 The *min* and *max* metadata of the parameters are used to denote the range for
 each variable over which the DOE will span.
 
+By default, the normalized parameter values are written to a CSV file in the
+driver's execution directory, with a name of ``<driver-name>.csv``.  This can be
+used later to rerun all of the cases by using a :class:`CSVFile` DOE generator.
+You can also select which cases should be run by filling the `case_filter` slot.
+
 *Source Documentation for doedriver.py*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

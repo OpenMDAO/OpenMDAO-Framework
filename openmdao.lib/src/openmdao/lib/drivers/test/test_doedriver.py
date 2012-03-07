@@ -2,29 +2,22 @@
 Test DOEdriver.
 """
 
-import glob
 import logging
+import nose
 import os.path
 import pkg_resources
-import platform
 import sys
 import unittest
 
 from openmdao.lib.datatypes.api import Event
 
-from openmdao.main.api import Assembly, Component, Case, set_as_top
-from openmdao.main.exceptions import RunStopped
-from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
-from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.drivers.doedriver import DOEdriver, NeiborhoodDOEdriver
-from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
-                                          DumpCaseRecorder
-from openmdao.lib.doegenerators.optlh import OptLatinHypercube
-from openmdao.lib.doegenerators.full_factorial import FullFactorial
-
-    
-# Users who have ssh configured correctly for testing.
-SSH_USERS = []
+from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.lib.datatypes.api import Float, Bool
+from openmdao.lib.casehandlers.api import SequenceCaseFilter
+from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
+from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
+from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial, \
+                                           CSVFile
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -32,7 +25,7 @@ ORIG_DIR = os.getcwd()
 # pylint: disable-msg=E1101
 
 
-def rosen_suzuki(x0,x1,x2,x3):
+def rosen_suzuki(x0, x1, x2, x3):
     """ Evaluate polynomial from CONMIN manual. """
     return x0**2 - 5.*x0 + x1**2 - 5.*x1 + \
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
@@ -58,7 +51,7 @@ class DrivenComponent(Component):
 
     def execute(self):
         """ Compute results from input vector. """
-        self.rosen_suzuki = rosen_suzuki(self.x0,self.x1,self.x2,self.x3)
+        self.rosen_suzuki = rosen_suzuki(self.x0, self.x1, self.x2, self.x3)
         if self._raise_err:
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
@@ -73,12 +66,11 @@ class MyModel(Assembly):
         self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
-        self.driver.add_parameter(('driven.x0','driven.y0'),low=-10.,high=10.,
-                                      scaler=20., adder=10.)
-        for name in ['x1','x2', 'x3']:
-            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.,
-                                      scaler=20., adder=10.)
-                                    
+        self.driver.add_parameter(('driven.x0', 'driven.y0'),
+                                  low=-10., high=10., scaler=20., adder=10.)
+        for name in ['x1', 'x2', 'x3']:
+            self.driver.add_parameter("driven.%s" % name,
+                                      low=-10., high=10., scaler=20., adder=10.)
 
 
 class TestCaseDOE(unittest.TestCase):
@@ -94,6 +86,8 @@ class TestCaseDOE(unittest.TestCase):
     def tearDown(self):
         self.model.pre_delete()
         self.model = None
+        if os.path.exists('driver.csv'):
+            os.remove('driver.csv')
 
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
@@ -121,8 +115,8 @@ class TestCaseDOE(unittest.TestCase):
         try:
             self.model.driver.add_parameter('foobar.blah')
         except AttributeError as err:
-            self.assertEqual(str(err), 
-                             "driver: Can't add parameter 'foobar.blah' because it doesn't exist.")
+            self.assertEqual(str(err), "driver: Can't add parameter"
+                             " 'foobar.blah' because it doesn't exist.")
             
     def test_event_removal(self):
         self.model.driver.add_event('driven.err_event')
@@ -134,10 +128,12 @@ class TestCaseDOE(unittest.TestCase):
         
     def test_param_removal(self):
         lst = self.model.driver.list_param_targets()
-        self.assertEqual(lst, ['driven.x0', 'driven.y0', 'driven.x1', 'driven.x2', 'driven.x3'])
+        self.assertEqual(lst, ['driven.x0', 'driven.y0',
+                               'driven.x1', 'driven.x2', 'driven.x3'])
         self.model.driver.remove_parameter('driven.x1')
         lst = self.model.driver.list_param_targets()
-        self.assertEqual(lst, ['driven.x0', 'driven.y0', 'driven.x2', 'driven.x3'])
+        self.assertEqual(lst, ['driven.x0', 'driven.y0',
+                               'driven.x2', 'driven.x3'])
 
     def test_no_event(self):
         logging.debug('')
@@ -145,8 +141,8 @@ class TestCaseDOE(unittest.TestCase):
         try:
             self.model.driver.add_event('foobar.blah')
         except AttributeError as err:
-            self.assertEqual(str(err), 
-                             "driver: Can't add event 'foobar.blah' because it doesn't exist")
+            self.assertEqual(str(err), "driver: Can't add event"
+                             " 'foobar.blah' because it doesn't exist")
         else:
             self.fail("expected AttributeError")
 
@@ -161,9 +157,10 @@ class TestCaseDOE(unittest.TestCase):
         
         self.model.run()
 
-        self.assertEqual(len(results), self.model.driver.DOEgenerator.num_samples)
+        self.assertEqual(len(results),
+                         self.model.driver.DOEgenerator.num_samples)
         msg = "driver: Exception getting case outputs: " \
-            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
+              "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 
@@ -191,9 +188,9 @@ class TestCaseDOE(unittest.TestCase):
         
     def test_output_error(self):
         class Dummy(Component): 
-            x = Float(0,iotype="in")
-            y = Float(0,iotype="out")
-            z = Float(0,iotype="out")
+            x = Float(0, iotype="in")
+            y = Float(0, iotype="out")
+            z = Float(0, iotype="out")
             
             def execute(self): 
                 self.y = 10+self.x
@@ -201,14 +198,12 @@ class TestCaseDOE(unittest.TestCase):
         class Analysis(Assembly): 
             
             def configure(self):
-                
-                self.add('d',Dummy())
-                
-                self.add('driver',DOEdriver())
+                self.add('d', Dummy())
+                self.add('driver', DOEdriver())
                 self.driver.DOEgenerator = FullFactorial(2) 
                 self.driver.recorders = [DumpCaseRecorder()]
-                self.driver.add_parameter('d.x',low=0,high=10)     
-                self.driver.case_outputs = ['d.y','d.bad','d.z']
+                self.driver.add_parameter('d.x', low=0, high=10)     
+                self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
                 
         a = Analysis()
         
@@ -237,8 +232,8 @@ class TestCaseDOE(unittest.TestCase):
             self.verify_results(forced_errors)
         else:
             assert_raises(self, 'self.model.run()', globals(), locals(),
-                          RuntimeError,
-                          "driver: Run aborted: RuntimeError('driven: Forced error',)")
+                          RuntimeError, "driver: Run aborted:"
+                          " RuntimeError('driven: Forced error',)")
 
     def test_scaling(self):
         self.model.driver.DOEgenerator = ff = FullFactorial(num_levels=3)
@@ -257,22 +252,43 @@ class TestCaseDOE(unittest.TestCase):
                 self.assertEqual(case['driven.rosen_suzuki'],
                                  rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
 
+    def test_rerun(self):
+        logging.debug('')
+        logging.debug('test_rerun')
+
+        self.run_cases(sequential=True)
+        orig_cases = self.model.driver.recorders[0].cases
+
+        self.model.driver.DOEgenerator = CSVFile(self.model.driver.doe_filename)
+        self.model.driver.record_doe = False
+        rerun_seq = (1, 3, 5, 7, 9)
+        self.model.driver.case_filter = SequenceCaseFilter(rerun_seq)
+        rerun = ListCaseRecorder()
+        self.model.driver.recorders[0] = rerun
+        self.model.run()
+
+        self.assertEqual(len(orig_cases), 10)
+        self.assertEqual(len(rerun.cases), len(rerun_seq))
+        for i, case in enumerate(rerun.cases):
+            self.assertEqual(case, orig_cases[rerun_seq[i]])
+
+
 class MyModel2(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
     def configure(self):
-        self.add('driver', NeiborhoodDOEdriver())
+        self.add('driver', NeighborhoodDOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.case_outputs = ['driven.rosen_suzuki']
-        self.driver.add_parameter(('driven.x0','driven.y0'),low=-10.,high=10.,
-                                      scaler=20., adder=10.)
-        for name in ['x1','x2', 'x3']:
-            self.driver.add_parameter("driven.%s"%name,low=-10.,high=10.,
-                                      scaler=20., adder=10.)
+        self.driver.add_parameter(('driven.x0', 'driven.y0'),
+                                  low=-10., high=10., scaler=20., adder=10.)
+        for name in ['x1', 'x2', 'x3']:
+            self.driver.add_parameter("driven.%s" % name,
+                                      low=-10., high=10., scaler=20., adder=10.)
                 
-                
+
 class TestCaseNeighborhoodDOE(unittest.TestCase):
     """ Test NeighborhoodDOEdriver. """
 
@@ -313,8 +329,8 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         try:
             self.model.driver.add_parameter('foobar.blah')
         except AttributeError as err:
-            self.assertEqual(str(err), 
-                             "driver: Can't add parameter 'foobar.blah' because it doesn't exist.")
+            self.assertEqual(str(err), "driver: Can't add parameter"
+                             " 'foobar.blah' because it doesn't exist.")
             
     def test_event_removal(self):
         self.model.driver.add_event('driven.err_event')
@@ -326,10 +342,12 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         
     def test_param_removal(self):
         lst = self.model.driver.list_param_targets()
-        self.assertEqual(lst, ['driven.x0', 'driven.y0', 'driven.x1', 'driven.x2', 'driven.x3'])
+        self.assertEqual(lst, ['driven.x0', 'driven.y0',
+                               'driven.x1', 'driven.x2', 'driven.x3'])
         self.model.driver.remove_parameter('driven.x1')
         lst = self.model.driver.list_param_targets()
-        self.assertEqual(lst, ['driven.x0', 'driven.y0', 'driven.x2', 'driven.x3'])
+        self.assertEqual(lst, ['driven.x0', 'driven.y0',
+                               'driven.x2', 'driven.x3'])
 
     def test_no_event(self):
         logging.debug('')
@@ -337,8 +355,8 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         try:
             self.model.driver.add_event('foobar.blah')
         except AttributeError as err:
-            self.assertEqual(str(err), 
-                             "driver: Can't add event 'foobar.blah' because it doesn't exist")
+            self.assertEqual(str(err), "driver: Can't add event"
+                             " 'foobar.blah' because it doesn't exist")
         else:
             self.fail("expected AttributeError")
 
@@ -355,7 +373,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
 
         self.assertEqual(len(results), 1+self.model.driver.DOEgenerator.num_samples)
         msg = "driver: Exception getting case outputs: " \
-            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
+              "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
             self.assertEqual(case.msg, msg)
 
@@ -383,9 +401,9 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         
     def test_output_error(self):
         class Dummy(Component): 
-            x = Float(0,iotype="in")
-            y = Float(0,iotype="out")
-            z = Float(0,iotype="out")
+            x = Float(0, iotype="in")
+            y = Float(0, iotype="out")
+            z = Float(0, iotype="out")
             
             def execute(self): 
                 self.y = 10+self.x
@@ -393,14 +411,12 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         class Analysis(Assembly): 
             
             def configure(self):
-                
-                self.add('d',Dummy())
-                
-                self.add('driver',NeiborhoodDOEdriver())
+                self.add('d', Dummy())
+                self.add('driver', NeighborhoodDOEdriver())
                 self.driver.DOEgenerator = FullFactorial(2) 
                 self.driver.recorders = [DumpCaseRecorder()]
-                self.driver.add_parameter('d.x',low=0,high=10)     
-                self.driver.case_outputs = ['d.y','d.bad','d.z']
+                self.driver.add_parameter('d.x', low=0, high=10)     
+                self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
                 
         a = Analysis()
         
@@ -429,8 +445,8 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
             self.verify_results(forced_errors)
         else:
             assert_raises(self, 'self.model.run()', globals(), locals(),
-                          RuntimeError,
-                          "driver: Run aborted: RuntimeError('driven: Forced error',)")
+                          RuntimeError, "driver: Run aborted:"
+                          " RuntimeError('driven: Forced error',)")
 
     def test_scaling(self):
         self.model.driver.DOEgenerator = ff = FullFactorial(num_levels=3)
@@ -451,4 +467,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         
 
 if __name__ == "__main__":
-    unittest.main()
+    sys.argv.append('--cover-package=openmdao.lib.drivers')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
+
