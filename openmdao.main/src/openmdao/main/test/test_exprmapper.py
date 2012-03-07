@@ -74,8 +74,8 @@ class ExprMapperTestCase(unittest.TestCase):
     def test_add(self):
         for name in nodes:
             self.assertTrue(name in self.dep)
-        for name in _fakes:
-            self.assertTrue(name in self.dep)
+        #for name in _fakes:
+            #self.assertTrue(name in self.dep)
         
     def test_remove(self):
         self.dep.remove('B')
@@ -120,11 +120,11 @@ class ExprMapperTestCase(unittest.TestCase):
 
     def test_connections_to(self):
         self.assertEqual(set(self.dep.connections_to('c')),
-                         set([('@bout.c','@xout.parent.Y.a'),
-                              ('D.c', '@bout.c')]))
+                         set([('c','parent.Y.a'),
+                              ('D.c', 'c')]))
         self.assertEqual(set(self.dep.connections_to('a')),
-                         set([('@xin.parent.X.c','@bin.a'),
-                              ('@bin.a','B.a')]))
+                         set([('parent.X.c','a'),
+                              ('a','B.a')]))
         
         self.dep.connect('A.c', 'C.b', self.scope)
         self.dep.connect('A.c', 'C.a', self.scope)
@@ -136,7 +136,7 @@ class ExprMapperTestCase(unittest.TestCase):
 
         # now test component connections
         self.assertEqual(set(self.dep.connections_to('A')),
-                         set([('@bin.A.b','A.b'),
+                         set([('parent.X.d','A.b'),
                               ('A.c','B.b'),
                               ('A.c','C.a'),
                               ('A.c','C.b')]))
@@ -144,7 +144,7 @@ class ExprMapperTestCase(unittest.TestCase):
         self.assertEqual(set(self.dep.connections_to('D')),
                          set([('B.c','D.a'),
                               ('C.c','D.b'),
-                              ('D.c','@bout.c')]))
+                              ('D.c','c')]))
 
     def test_disconnect(self):
         self.dep.disconnect('a') # this should disconnect extern to a and 
@@ -165,7 +165,15 @@ class ExprMapperTestCase(unittest.TestCase):
         dep = ExprMapper(self.scope)
         for node in ['A','B','C','D','E','F']:
             dep.add(node)
+            if not self.scope.contains(node):
+                self.scope.add('F', Component())
         self.assertEqual(dep.find_all_connecting('A','F'), set())
+        dep.check_connect('A.c', 'B.a', self.scope)
+        dep.check_connect('B.c', 'C.a', self.scope)
+        dep.check_connect('C.d', 'D.a', self.scope)
+        dep.check_connect('A.d', 'D.b', self.scope)
+        dep.check_connect('A.d', 'F.b', self.scope)
+        
         dep.connect('A.c', 'B.a', self.scope)
         dep.connect('B.c', 'C.a', self.scope)
         dep.connect('C.d', 'D.a', self.scope)
@@ -173,11 +181,36 @@ class ExprMapperTestCase(unittest.TestCase):
         dep.connect('A.d', 'F.b', self.scope)
         self.assertEqual(dep.find_all_connecting('A','F'), set(['A','F']))
         self.assertEqual(dep.find_all_connecting('A','D'), set(['A','B','C','D']))
+        dep.check_connect('C.d', 'F.a', self.scope)
         dep.connect('C.d', 'F.a', self.scope)
         self.assertEqual(dep.find_all_connecting('A','F'), set(['A','B','C','F']))
         
-            
+    def test_find_referring_exprs(self):
+        self.assertEqual(set(self.dep.find_referring_exprs('A')),
+                         set(['A.c','A.b']))
+        self.assertEqual(set(self.dep.find_referring_exprs('parent')),
+                         set(['parent.X.c','parent.X.d','parent.Y.a','parent.Y.b']))
+    
+    def test_get_invalidated_destexprs(self):
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, None, ['a','c'])]),
+                         set(['B.a','parent.Y.a']))
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'A', None)]),
+                         set(['B.b']))
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'C', None)]),
+                         set(['D.b','parent.Y.b']))
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'C', ['c'])]),
+                         set(['D.b']))
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'C', ['d'])]),
+                         set(['parent.Y.b']))
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'D', ['d'])]),
+                         set())
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'parent', ['X.c'])]),
+                         set(['a']))
+        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'parent', ['X.d'])]),
+                         set(['A.b']))
+    
     def test_expressions(self):
+        self.fail("not implemented")
         dep, scope = self.make_graph(['E', 'A', 'B'], [])
         dep.add('E')
         dep.connect('parent.X.d+a', 'E.a[3]', scope)

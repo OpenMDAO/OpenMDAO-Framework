@@ -24,6 +24,7 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.printexpr import eliminate_expr_ws, ExprNameTransformer
+from openmdao.util.nameutil import partition_names_by_comp
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -33,7 +34,7 @@ __toplock__ = threading.RLock()
 
 
 #fake nodes for boundary and passthrough connections
-_fakes = ['@xin', '@xout', '@bin', '@bout']
+#_fakes = ['@xin', '@xout', '@bin', '@bout']
 
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
@@ -86,13 +87,14 @@ class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
     def __init__(self, scope):
         self._compgraph = None  # component dependency graph
+        self._vargraph = None
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
-        self._refer_cache = None # keep track of which comps/vars are referred to by exprs
+        #self._refer_cache = None # keep track of which comps/vars are referred to by exprs
         self._scope = scope
     
     def copy_graph(self):
-        graph = self.get_compgraph().copy()
-        graph.remove_nodes_from(_fakes)
+        graph = nx.DiGraph(self.get_compgraph()) # this way avoids a deep copy
+        #graph.remove_nodes_from(_fakes)
         return graph
 
     def get_connected_inputs(self):
@@ -164,9 +166,15 @@ class ExprMapper(object):
         graph = self._exprgraph
         return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
     
+    def get_vargraph(self):
+        """Return the cached variable graph or create a new one if it doesn't exist."""
+        if self._vargraph is None:
+            self._vargraph = self._create_vargraph()
+        return self._vargraph
+    
     def get_compgraph(self):
         """Return the cached component graph or create a new one if it doesnt' exist."""
-        if self._compgraph is None or self._refer_cache is None:
+        if self._compgraph is None:
             self._compgraph = self._create_compgraph()
         return self._compgraph
     
@@ -174,41 +182,52 @@ class ExprMapper(object):
         """Update the component graph based on a new connection between a source expression
         and a destination expression.
         """
-        src = srcexpr.text
-        dest = destexpr.text
+        #src = srcexpr.text
+        #dest = destexpr.text
         
-        for destpath in destexpr.get_referenced_varpaths():
-            if destpath.startswith('parent.'):
-                destcomp = '@xout'
+        for destpath in destexpr.get_referenced_compnames():
+            #destcomp, _, destvar = destpath.partition('.')
+            #if destcomp == 'parent':
+                #destcomp = '@xout'
+                #self._refer_cache.setdefault('.'.join([destcomp,destpath]), set()).add(dest)
+            #elif not destvar:
+                #destcomp = '@bout'
+                #self._refer_cache.setdefault('.'.join([destcomp,destpath]), set()).add(dest)
+            #self._refer_cache.setdefault(destcomp, set()).add(dest)
+            #self._refer_cache.setdefault(destpath, set()).add(dest)
+            if destpath == 'parent':
+                destpath = '@xout'
+            if destpath in graph:
+                graph.node[destpath]['exprs'].append(destexpr)
             else:
-                destcomp, _, destvar = destpath.partition('.')
-                if not isinstance(getattr(self._scope, destcomp), Component): # allows for refs to attributes of a VarTree on boundary
-                    destcomp = '@bout'
-                    self._refer_cache.setdefault('.'.join([destcomp,destpath]), set()).add(dest)
-                    
-            self._refer_cache.setdefault(destcomp, set()).add(dest)
-            self._refer_cache.setdefault(destpath, set()).add(dest)
+                graph.add_node(destpath, exprs=[destexpr])
             
-        for srcpath in srcexpr.get_referenced_varpaths():
-            if srcpath.startswith('parent.'):
-                srccomp = '@xin'
-            else:
-                srccomp, _, srcvar = srcpath.partition('.')
-                if not isinstance(getattr(self._scope, srccomp), Component): # allows for refs to attributes of a VarTree on boundary
-                    srccomp = '@bin'
-                    self._refer_cache.setdefault('.'.join([srccomp,srcpath]), set()).add(src)
-                    
-            self._refer_cache.setdefault(srcpath, set()).add(src)
-            self._refer_cache.setdefault(srccomp, set()).add(src)
-            graph.add_edge(srccomp, destcomp)
+            for srcpath in srcexpr.get_referenced_compnames():
+                #srccomp, _, srcvar = srcpath.partition('.')
+                #if srccomp == 'parent':
+                    #srccomp = '@xin'
+                    #self._refer_cache.setdefault('.'.join([srccomp,srcpath]), set()).add(src)
+                #elif not srcvar:
+                    #srccomp = '@bin'
+                    #self._refer_cache.setdefault('.'.join([srccomp,srcpath]), set()).add(src)
+                #self._refer_cache.setdefault(srccomp, set()).add(src)
+                #self._refer_cache.setdefault(srcpath, set()).add(src)
+                if srcpath == 'parent':
+                    srcpath = '@xin'
+                if srcpath in graph:
+                    graph.node[srcpath]['exprs'].append(srcexpr)
+                else:
+                    graph.add_node(srcpath, exprs=[srcexpr])
+                
+                graph.add_edge(srcpath, destpath)
         return graph
     
     def _create_compgraph(self):
         """Create a new component graph based on information in the expression graph."""
         graph = nx.DiGraph()
-        graph.add_nodes_from(_fakes)
-        if self._refer_cache is None:
-            self._refer_cache = {}
+        #graph.add_nodes_from(_fakes)
+        #if self._refer_cache is None:
+            #self._refer_cache = {}
             
         for src,dest in self._exprgraph.edges():
             self._update_compgraph(graph, 
@@ -216,9 +235,29 @@ class ExprMapper(object):
                                    self._exprgraph.node[dest]['expr'])
         return graph
         
+    def _create_vargraph(self):
+        """Create a new variable graph based on information in the expression graph."""
+        graph = nx.DiGraph()
+            
+        for src,dest in self._exprgraph.edges():
+            destexpr = self._exprgraph.node[dest]['expr']
+            destpath = destexpr.get_referenced_varpaths().pop()
+            if destpath in graph:
+                graph.node[destpath]['exprs'].append(destexpr)
+            else:
+                graph.add_node(destpath, exprs=[destexpr])
+            srcexpr = self._exprgraph.node[src]['expr']
+            for srcpath in srcexpr.get_referenced_varpaths():
+                if srcpath in graph:
+                    graph.node[srcpath]['exprs'].append(srcexpr)
+                else:
+                    graph.add_node(srcpath, exprs=[srcexpr])
+                graph.add_edge(srcpath, destpath)
+        return graph
+        
     def add(self, compname):
         compgraph = self.get_compgraph()
-        compgraph.add_node(compname)
+        #compgraph.add_node(compname)
         
     def remove(self, compname):
         """Remove any connections referring to the given component"""
@@ -227,7 +266,8 @@ class ExprMapper(object):
             self._exprgraph.remove_nodes_from(refs)
             self._remove_disconnected_exprs()
             self._compgraph = None
-            self._refer_cache = None
+            #self._refer_cache = None
+            self._vargraph = None
         
     def connect(self, src, dest, scope):
         self._exprgraph.add_edge(src, dest)
@@ -236,9 +276,25 @@ class ExprMapper(object):
         """Returns a list of expressions that reference the given name, which
         can refer to either a variable or a component.
         """
-        if self._refer_cache is None:
-            self.get_compgraph()  # regenerates _refer_cache
-        return self._refer_cache.get(name, [])
+        #if self._refer_cache is None:
+            #self.get_compgraph()  # regenerates _refer_cache
+        vargraph = self.get_vargraph()
+        if name in vargraph:
+            return vargraph.node[name]['exprs']
+        compgraph = self.get_compgraph()
+        if name in compgraph:
+            return compgraph.node[name]['exprs']
+        return []
+    
+    def connections_to(self, path):
+        """Returns a list of tuples of the form (srcpath, destpath) for
+        all connections between the variable or component specified
+        by *path*.
+        """
+        exprs = self.find_referring_exprs(path)
+        edges = [(src, dest) for src,dest in self._exprgraph.edges(exprs)]
+        edges.extend([(src, dest) for src,dest in self._exprgraph.in_edges(exprs)])
+        return edges
     
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
@@ -253,7 +309,7 @@ class ExprMapper(object):
     def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components."""
         self._compgraph = None  # force later rebuild of component graph
-        self._refer_cache = None
+        #self._refer_cache = None
         graph = self._exprgraph
         
         if destpath is None:
@@ -280,7 +336,7 @@ class ExprMapper(object):
             graph.remove_edges_from(to_remove)
             
     def check_connect(self, src, dest, scope):
-        """Connect a source expression to a destination expression."""
+        """Check validity of connecting a source expression to a destination expression."""
         
         # make sure we don't have any whitespace buried within the expression that would cause
         # two versions of the same expression (one with ws and one without) to appear different
@@ -316,7 +372,7 @@ class ExprMapper(object):
                 self._exprgraph.add_node(dest, expr=destexpr)
         else:   # cycle found
             self._compgraph = None  # force regeneration of compgraph next time
-            self._refer_cache = None
+            #self._refer_cache = None
             strongly_connected = strongly_connected_components(compgraph)
             # do a little extra work here to give more info to the user in the error message
             for strcon in strongly_connected:
@@ -338,29 +394,35 @@ class ExprMapper(object):
         if varset is None:
             exprs.update(self.find_referring_exprs(compname))
         else:
-            for varpath in ['.'.join([compname, v]) for v in varset]:
-                exprs.update(self.find_referring_exprs(varpath))
-        
+            if compname:
+                for varpath in ['.'.join([compname, v]) for v in varset]:
+                    exprs.update(self.find_referring_exprs(varpath))
+            else:
+                for varpath in varset:
+                    exprs.update(self.find_referring_exprs(varpath))
+                    
         invalids = []
         for expr in exprs:
             dct = graph.succ.get(expr)
             if dct:
-                for dest in dct.keys():
-                    invalids.append(self.get_expr(dest))
-                    
+                invalids.extend([self.get_expr(dest) for dest in dct.keys()])
+            else:
+                dct = graph.pred.get(expr)
+                if dct:
+                    for pred in dct.keys():
+                        if self.get_expr(pred).refs_parent():
+                            invalids.append(self.get_expr(expr))
+                            break
         return invalids
         
-    def invalidate_deps(self, scope, cnames, varsets, force=False):
+    def invalidate_deps(self, scope, compname, varset, force=False):
         """Walk through all dependent nodes in the graph, invalidating all
-        variables that depend on output sets for the given component names.
+        variables that depend on the given variable names.
         
         scope: Component
             Scoping object containing this dependency graph.
             
-        cnames: list of str
-            Names of starting nodes.
-            
-        varsets: list of sets of str
+        varset: list of set of str
             Sets of names of outputs from each starting node.
             
         force: bool (optional)
@@ -368,29 +430,29 @@ class ExprMapper(object):
             the dependency chain was already invalid.
         """
         compgraph = self.get_compgraph()
-        stack = zip(cnames, varsets)
+        stack = [(compname, varset)]
         outset = set()  # set of changed boundary outputs
+        visited = set()
         while(stack):
             srccomp, varset = stack.pop()
             destexprs = self._get_invalidated_destexprs(scope, srccomp, varset)
             compvars = {}
             for destexpr in destexprs:
-                varpaths = destexpr.get_referenced_varpaths()
-                for vp in varpaths:
-                    parts = vp.split('.', 1)
-                    if len(parts) > 1:
-                        compvars.setdefault(parts[0], set())
-                        compvars[parts[0]].add(parts[1])
-                    else:
-                        outset.add(vp)
+                if destexpr.text not in visited:
+                    visited.add(destexpr.text)
+                    destexpr.get_compvar_dict(compvars)
             
-            for cname in compvars.keys():
-                if cname not in compgraph:  # must be some output var that has its own attributes
+            for cname,vset in compvars.items():
+                if cname is None:
+                    outset.update(vset)
+                elif cname == 'parent':
+                    scope.parent.invalidate_deps(['.'.join([scope.name,v]) for v in vset], force=force)
+                    #outset.update(vset)
+                elif cname not in compgraph:  # must be some output var that has its own attributes
                     outset.add(cname)
-                    del compvars[cname]
                 else:
                     comp = getattr(scope, cname)
-                    outs = comp.invalidate_deps(varnames=compvars[cname], force=force)
+                    outs = comp.invalidate_deps(varnames=vset, force=force)
                     if (outs is None) or outs:
                         stack.append((cname, outs))
         return outset
@@ -745,12 +807,13 @@ class Assembly (Component):
             
         # if source exprs reference invalid vars, request an update
         if invalids:
-            simple, compmap = partition_names_by_comp(invalids)
-            if simple and self.parent:
-                self.parent.update_inputs(self.name, simple)
-            for cname, vnames in compmap.items():
-                getattr(self, cname).update_outputs(vnames)
-                #self.set_valid(vnames, True)
+            for cname, vnames in partition_names_by_comp(invalids).items():
+                if cname is None:
+                    if self.parent:
+                        self.parent.update_inputs(self.name, vnames)
+                else:
+                    getattr(self, cname).update_outputs(vnames)
+                    #self.set_valid(vnames, True)
             
         for srcexpr, destexpr in expr_info:
             destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
@@ -759,12 +822,12 @@ class Assembly (Component):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
         """
-        simple, compmap = partition_names_by_comp(outnames)
-        if simple:  # boundary outputs
-            self.update_inputs(None, simple)
-        for cname, vnames in compmap.items():  # auto passthroughs to internal variables
-            getattr(self, cname).update_outputs(vnames)
-            self.set_valid(vnames, True)
+        for cname,vnames in partition_names_by_comp(outnames).items():
+            if cname is None: #boundary outputs
+                self.update_inputs(None, vnames)
+            else:
+                getattr(self, cname).update_outputs(vnames)
+                self.set_valid(vnames, True)
         
     def get_valid(self, names):
         """Returns a list of boolean values indicating whether the named
@@ -775,14 +838,12 @@ class Assembly (Component):
         ret = [None]*len(names)
         posdict = dict([(name,i) for i,name in enumerate(names)])
         
-        simple,compmap = partition_names_by_comp(names)
-        if simple:
-            vals = super(Assembly, self).get_valid(simple)
-            for i,val in enumerate(vals):
-                ret[posdict[simple[i]]] = val
-
-        if compmap:
-            for compname, varnames in compmap.items():
+        for compname, varnames in partition_names_by_comp(names).items():
+            if compname is None:
+                vals = super(Assembly, self).get_valid(varnames)
+                for i,val in enumerate(vals):
+                    ret[posdict[varnames[i]]] = val
+            else:
                 vals = getattr(self, compname).get_valid(varnames)
                 for i,val in enumerate(vals):
                     full = '.'.join([compname,varnames[i]])
@@ -799,7 +860,7 @@ class Assembly (Component):
         """Invalidate all variables that depend on the outputs provided
         by the child that has been invalidated.
         """
-        bouts = self._depgraph.invalidate_deps(self, [childname], [outs], force)
+        bouts = self._depgraph.invalidate_deps(self, childname, outs, force)
         if bouts and self.parent:
             self.parent.child_invalidated(self.name, bouts, force)
         return bouts
@@ -832,7 +893,11 @@ class Assembly (Component):
         if force:
             invalidated_ins = names
         else:
-            invalidated_ins = [n for n in names if valids[n] is True]
+            #invalidated_ins = [n for n in names if valids[n] is True]
+            invalidated_ins = []
+            for name in names:
+                if ('.' not in name and valids[name]) or self.get_valid([name])[0]:
+                    invalidated_ins.append(name)
             if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
                 return []
 
@@ -842,10 +907,21 @@ class Assembly (Component):
               # are always valid
             self.set_valid([n for n in invalidated_ins if n in conn_ins], False)
 
-        outs = self._depgraph.invalidate_deps(self, ['@bin'], [invalidated_ins], force)
+        #info = {}
+        #for v in invalidated_ins:
+            #if v.startswith('parent.'):
+                #info.setdefault('@xin', []).append(v)
+                #continue
+            #cname, _, vname = v.partition('.')
+            #if not vname:
+                #info.setdefault('@bin', []).append(v)
+            #else:
+                #info.setdefault(cname, []).append(vname)
+        outs = self._depgraph.invalidate_deps(self, None, invalidated_ins, force)
 
         if outs:
             self.set_valid(outs, False)
+            
         return outs
     
     def exec_counts(self, compnames):
@@ -929,21 +1005,5 @@ def dump_iteration_tree(obj):
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()
-
-
-def partition_names_by_comp(names):
-    """Take an iterator of names and return a tuple of the form (namelist,
-    compmap) where namelist is a list of simple names (no dots) and compmap is
-    a dict with component names keyed to lists of variable names.
-    """
-    simple = []
-    compmap = {}
-    for name in names:
-        parts = name.split('.', 1)
-        if len(parts) == 1:
-            simple.append(name)
-        else:
-            compmap.setdefault(parts[0], []).append(parts[1])
-    return (simple, compmap)
 
 

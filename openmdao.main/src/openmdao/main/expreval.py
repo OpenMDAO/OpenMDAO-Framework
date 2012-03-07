@@ -10,6 +10,7 @@ import copy
 import __builtin__
 
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
+from openmdao.util.nameutil import partition_names_by_comp
 
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
@@ -459,6 +460,14 @@ class ExprEvaluator(object):
         if self._parse_needed:
             self._parse()
         return self.var_names.copy()
+    
+    def get_compvar_dict(self, dct=None):
+        """Return a dict of compname vs. set of vars for that comp. Simple
+        names (no '.') will have a compname of None
+        """
+        if self._parse_needed:
+            self._parse()
+        return partition_names_by_comp(self.var_names, dct)
 
     def get_referenced_compnames(self):
         """Return a set of source or dest Component names based on the 
@@ -500,6 +509,15 @@ class ExprEvaluator(object):
                 return False
         return True
     
+    def refs_parent(self):
+        """Return True if this expression references a variable in parent."""
+        if self._parse_needed:
+            self._parse()
+        for name in self.var_names:
+            if name.startswith('parent.'):
+                return True
+        return False
+
     def invalid_refs(self):
         """Return a list of invalid variables referenced by this expression."""
         if self._parse_needed:
