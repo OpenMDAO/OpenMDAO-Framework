@@ -7,12 +7,15 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 """
 
 
-from openmdao.main.api import Driver, Architecture,SequentialWorkflow, Component, Assembly
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver,IterateUntil, \
-     FixedPointIterator,NeiborhoodDOEdriver, SLSQPdriver#, COBYLAdriver as SLSQPdriver
+from openmdao.main.api import Driver, Architecture, SequentialWorkflow, \
+                              Component, Assembly
+from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
+                                     IterateUntil, FixedPointIterator, \
+                                     NeighborhoodDOEdriver, SLSQPdriver
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.surrogatemodels.api import ResponseSurface
-from openmdao.lib.doegenerators.api import CentralComposite, OptLatinHypercube, LatinHypercube
+from openmdao.lib.doegenerators.api import CentralComposite, \
+                                           OptLatinHypercube, LatinHypercube
 from openmdao.lib.components.api import MetaModel
 from openmdao.lib.datatypes.api import Float, Array, Slot
 from openmdao.lib.casehandlers.api import DBCaseRecorder
@@ -207,7 +210,7 @@ class BLISS2000(Architecture):
             meta_model.recorder = DBCaseRecorder()
             
             #add a doe trainer for each metamodel
-            dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
+            dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeighborhoodDOEdriver())
             
             for couple in couple_indeps[comp] :
                 mapped_name = system_var_map[couple.indep.target]
