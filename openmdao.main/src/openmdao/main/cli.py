@@ -9,6 +9,7 @@ from subprocess import call, check_call
 
 from openmdao.main.plugin import plugin_docs, plugin_build_docs, print_sub_help
 from openmdao.test.testing import read_config, filter_config, run_openmdao_suite
+from openmdao.util.fileutil import get_cfg_file
 
 def list_testhosts(parser, options, args=None):
     if args:
@@ -43,7 +44,7 @@ def _get_openmdao_parser():
     
     parser = subparsers.add_parser('list_testhosts', help='list hosts in testhosts config file')
     parser.add_argument("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
-                        default='~/.openmdao/testhosts.cfg',
+                        default=get_cfg_file(),
                         help="Path of config file where info for remote testing/building hosts is located")
     parser.add_argument("--filter", action='append', dest='filters', 
                         default=[],

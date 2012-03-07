@@ -260,3 +260,16 @@ def build_directory(dct, force=False, topdir='.'):
                         f.write(val)
     finally:
         os.chdir(startdir)
+
+
+def get_cfg_file():
+    """Attempts to get the /OpenMDAO-Framework/config/testhosts.cfg first, then 
+    gets the ~/.openmdao/testhosts.cfg next."""
+    bindir = os.path.dirname(sys.executable)
+    branchdir = os.path.dirname(os.path.dirname(bindir))
+    cfgdir = os.path.join(branchdir, 'config')
+    cfgfile = os.path.join(cfgdir, 'testhosts.cfg')
+    altcfg = '~/.openmdao/testhosts.cfg'  
+    if os.path.isfile(cfgfile):
+        return cfgfile
+    else: return altcfg  
