@@ -210,7 +210,7 @@ class BLISS2000(Architecture):
             meta_model.recorder = DBCaseRecorder()
             
             #add a doe trainer for each metamodel
-            dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeiborhoodDOEdriver())
+            dis_doe=self.parent.add("DOE_Trainer_%s"%comp,NeighborhoodDOEdriver())
             
             for couple in couple_indeps[comp] :
                 mapped_name = system_var_map[couple.indep.target]
