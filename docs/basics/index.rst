@@ -1,7 +1,7 @@
 .. _`basic-tutorial`:
 
 ==================== 
-Tutorial: The Basics
+The Basics
 ==================== 
 
 .. toctree::
