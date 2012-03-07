@@ -256,17 +256,6 @@ class DepGraphTestCase(unittest.TestCase):
         for line, expect in zip(lines, expected):
             self.assertEqual(line, expect)
             
-    def test_expressions(self):
-        dep, scope = self.make_graph(['E', 'A', 'B'], [])
-        dep.add('E')
-        dep.connect('parent.X.d+a', 'E.a[3]', scope)
-        dep.connect('A.c', 'E.a[4]', scope)
-        dep.connect('B.c', 'E.b', scope)
-        self.assertEqual(set(dep.var_in_edges('E')),
-                         set([('@bin.E.a[3]','E.a[3]'),
-                              ('@bin.a','E.a[3]'),
-                              ('A.c', 'E.a[4]'),
-                              ('B.c', 'E.b')]))
 
 if __name__ == "__main__":
     unittest.main()

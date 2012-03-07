@@ -304,7 +304,7 @@ class ExprEvaluator(object):
         for vname in self.var_names:
             if name == vname:
                 return True
-            parts = name.split('.', 1)
+            parts = vname.split('.', 1)
             if parts[0] == name:
                 return True
         return False

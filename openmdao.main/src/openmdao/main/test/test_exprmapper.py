@@ -1,42 +1,58 @@
 import unittest
 import StringIO
 
-from openmdao.main.assembly import ExprMapper
+from openmdao.main.assembly import ExprMapper, Assembly, set_as_top
 from openmdao.main.component import Component
+from openmdao.main.datatypes.api import Int
 
 _fakes = ['@xin', '@bin', '@bout', '@xout']
-nodes = ['A', 'B', 'C', 'D']
+nodes = ['A', 'B', 'C', 'D', 'parent.X', 'parent.Y']
 
+class Simple(Component):
+    
+    a = Int(iotype='in')
+    b = Int(iotype='in')
+    c = Int(iotype='out')
+    d = Int(iotype='out')
+    
+    def __init__(self):
+        super(Simple, self).__init__()
+        self.a = 1
+        self.b = 2
+        self.c = 3
+        self.d = -1
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
 
 class ExprMapperTestCase(unittest.TestCase):
 
     def make_graph(self, nodes=(), connections=()):
-        scope = Component()
-        dep = ExprMapper(scope)
+        scope = set_as_top(Assembly())
+        sub = scope.add('sub',Assembly())
+        dep = ExprMapper(sub)
         for name in nodes:
-            dep.add(name)
-            setattr(scope, name, Component())
+            if name.startswith('parent.'):
+                scope.add(name.split('.',1)[1], Simple())
+            else:
+                sub.add(name, Simple())
+                dep.add(name)
         for src,dest in connections:
-            srcparts = src.split('.')
-            destparts = dest.split('.')
-            if srcparts[0] != 'parent':
-                if len(srcparts) > 1:
-                    if not getattr(scope, srcparts[0]).contains(srcparts[1]):
-                        setattr(getattr(scope, srcparts[0]), srcparts[1], 1)
+            if '.' not in src and not sub.contains(src):
+                if dest.startswith('parent.'):
+                    iotype='out'
                 else:
-                    if not scope.contains(src):
-                        setattr(scope, src, 1)
-            if destparts[0] != 'parent':
-                if len(destparts) > 1:
-                    if not getattr(scope, destparts[0]).contains(destparts[1]):
-                        setattr(getattr(scope, destparts[0]), destparts[1], 1)
+                    iotype='in'
+                sub.add(src, Int(1, iotype=iotype))
+            if '.' not in dest and not sub.contains(dest):
+                if src.startswith('parent.'):
+                    iotype='in'
                 else:
-                    if not scope.contains(dest):
-                        setattr(scope, dest, 1)
-                
-            dep.check_connect(src, dest, scope)
-            dep.connect(src, dest, scope)
-        return dep, scope
+                    iotype='out'
+                sub.add(dest, Int(1, iotype=iotype))
+            dep.connect(src, dest, sub)
+        return dep, sub
 
     def setUp(self):
         self.internal_conns = [
@@ -73,7 +89,8 @@ class ExprMapperTestCase(unittest.TestCase):
 
     def test_add(self):
         for name in nodes:
-            self.assertTrue(name in self.dep)
+            if not name.startswith('parent.'):
+                self.assertTrue(name in self.dep)
         #for name in _fakes:
             #self.assertTrue(name in self.dep)
         
@@ -98,7 +115,7 @@ class ExprMapperTestCase(unittest.TestCase):
         try:
             self.dep.check_connect('A.d', 'B.a', self.scope)
         except Exception as err:
-            self.assertEqual(str(err), ": 'B.a' is already connected to source 'a'")
+            self.assertEqual(str(err), "sub: 'B.a' is already connected to source 'a'")
         else:
             self.fail('Exception expected')
             
@@ -106,7 +123,7 @@ class ExprMapperTestCase(unittest.TestCase):
         try:
             self.dep.check_connect('parent.foo.bar', 'a', self.scope)
         except Exception as err:
-            self.assertEqual(str(err), ": 'a' is already connected to source 'parent.X.c'")
+            self.assertEqual(str(err), "sub: 'a' is already connected to source 'parent.X.c'")
         else:
             self.fail('Exception expected')
 
@@ -114,7 +131,7 @@ class ExprMapperTestCase(unittest.TestCase):
         try:
             self.dep.check_connect('B.d', 'c', self.scope)
         except Exception as err:
-            self.assertEqual(str(err), ": 'c' is already connected to source 'D.c'")
+            self.assertEqual(str(err), "sub: 'c' is already connected to source 'D.c'")
         else:
             self.fail('Exception expected')
 
@@ -166,7 +183,7 @@ class ExprMapperTestCase(unittest.TestCase):
         for node in ['A','B','C','D','E','F']:
             dep.add(node)
             if not self.scope.contains(node):
-                self.scope.add('F', Component())
+                self.scope.add('F', Simple())
         self.assertEqual(dep.find_all_connecting('A','F'), set())
         dep.check_connect('A.c', 'B.a', self.scope)
         dep.check_connect('B.c', 'C.a', self.scope)
@@ -210,12 +227,17 @@ class ExprMapperTestCase(unittest.TestCase):
                          set(['A.b']))
     
     def test_expressions(self):
-        self.fail("not implemented")
         dep, scope = self.make_graph(['E', 'A', 'B'], [])
         dep.add('E')
         dep.connect('parent.X.d+a', 'E.a[3]', scope)
         dep.connect('A.c', 'E.a[4]', scope)
         dep.connect('B.c', 'E.b', scope)
+        self.assertEqual(set(dep._depgraph.var_in_edges('E')),
+                         set([('@bin.E.a[3]','E.a[3]'),
+                              ('@bin.a','E.a[3]'),
+                              ('A.c', 'E.a[4]'),
+                              ('B.c', 'E.b')]))
+
 
 if __name__ == "__main__":
     unittest.main()
