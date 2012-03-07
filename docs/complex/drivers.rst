@@ -15,7 +15,7 @@ segment. Both of these solution procedures were implemented in Python as *driver
 SimAcceleration driver simulates the acceleration test, and the ``SimEconomy`` driver
 simulates the EPA fuel economy test.
 
-Recall that in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`, a Driver
+Recall that in the :ref:`Optimization Tutorial <optimization_tutorial>`, a Driver
 called CONMINdriver was used to optimize the Paraboloid problem. Similarly, the algorithms
 that perform these tests have been implemented as OpenMDAO drivers that can be found
 in ``driving_sim.py``. These drivers contain OpenMDAO variables where you can specify

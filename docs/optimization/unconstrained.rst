@@ -6,8 +6,8 @@
 Building a Model - Unconstrained Optimization using CONMIN
 ===========================================================
 
-Your next task is to build a model that finds the minimum value for the Paraboloid component
-described above. This model contains the Paraboloid as well as a gradient optimizer
+Your next task is to build a model that finds the minimum value for the Paraboloid component. 
+This model contains the Paraboloid as well as a gradient optimizer
 called :term:`CONMIN`, from the OpenMDAO standard library. 
 Create a file called ``optimization_unconstrained.py`` and copy this
 block of code into it.
@@ -15,16 +15,16 @@ block of code into it.
 .. testcode:: simple_model_Unconstrained
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.drivers.api import CONMINdriver
+    from openmdao.lib.drivers.api import SLSQPdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
 
     class OptimizationUnconstrained(Assembly):
-        """Unconstrained optimization of the Paraboloid with CONMIN."""
+        """Unconstrained optimization of the Paraboloid Component."""
     
         def configure(self):
         
-            # Create CONMIN Optimizer instance
-            self.add('driver', CONMINdriver())
+            # Create Optimizer instance
+            self.add('driver', SLSQPdriver())
         
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
@@ -32,16 +32,13 @@ block of code into it.
             # Driver process definition
             self.driver.workflow.add('paraboloid')
 
-            # CONMIN Flags
+            # SLSQP Flags
             self.driver.iprint = 0
-            self.driver.itmax = 30
-            self.driver.fdch = .000001
-            self.driver.fdchm = .000001
-        
-            # CONMIN Objective 
+
+            # Objective 
             self.driver.add_objective('paraboloid.f_xy')
         
-            # CONMIN Design Variables 
+            # Design Variables 
             self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
             self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
 
@@ -51,14 +48,14 @@ block of code into it.
 An :term:`Assembly` is a container that can hold any number of components, drivers, and other
 assemblies. An Assembly also manages the connections between the components that it
 contains. In this problem the assembly includes a single
-Paraboloid component and a CONMINdriver named *driver*. The name *driver* is special. When an 
+Paraboloid component and a SLSQPdriver named *driver*. The name *driver* is special. When an 
 assembly is executed, it looks for a Driver named *driver* and executes it. The 
 OptimizationUnconstrained class is derived from Assembly. 
 
 .. testsetup:: simple_model_Unconstrained_pieces
 
     from openmdao.main.api import Assembly
-    from openmdao.lib.drivers.api import CONMINdriver
+    from openmdao.lib.drivers.api import SLSQPdriver
     from openmdao.examples.simple.paraboloid import Paraboloid
     from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     
@@ -81,22 +78,22 @@ When configuring you use the ``add`` function put things into the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
-            # Create CONMIN Optimizer instance
-            self.add('driver', CONMINdriver())
+            # Create Optimizer instance
+            self.add('driver', SLSQPdriver())
 
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
             
 
 Here you will make an instance of the *Paraboloid* component that you created above and
-give it the name *paraboloid.* Similarly you will create an instance of CONMINdriver and 
+give it the name *paraboloid.* Similarly you will create an instance of SLSQPdriver and 
 give it the name *driver*. These are now accessible in the ``OptimizationUnconstrained`` assembly 
 via ``self.paraboloid`` and ``self.driver``. Remember, assemblies always look for the Driver called ``driver`` to run the
 model. 
 
-Next, the CONMINdriver needs to be told what to run. Every driver has a :term:`Workflow`
+Next, *driver* needs to be told what to run. Every driver has a :term:`Workflow`
 that contains a list of the components that the driver tells to run. We can add the
-*Paraboloid* component to the driver's workflow by using its ``add`` function.
+*paraboloid* component to the driver's workflow by using its ``add`` function.
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -113,7 +110,6 @@ calling the driver's ``add_objective`` function.
             self.driver.add_objective('paraboloid.f_xy')
             
 
-            
 Every variable has a unique name in the OpenMDAO data hierarchy. This
 name combines the variable name with its parents' names. You can think
 of it as something similar to the path name in a file system, but it uses a "."
@@ -138,24 +134,15 @@ validity for these variables, so that the unconstrained optimization can be
 performed on a bounded region. For this problem, you are constraining `x` and `y`
 to lie between ``[-50, 50]``.
         
-The problem is now essentially ready to execute. CONMIN contains quite a few
-additional control parameters, though the default values for many of them are
-adequate. These parameters are detailed in the section on :ref:`CONMINDriver`.
+The problem is now essentially ready to execute. We're just going to set 
+the optimizer's verbosity to a minumum. You can turn it up if you want more
+information about whats going on. 
         
 .. testcode:: simple_model_Unconstrained_pieces
 
-            # CONMIN Flags
-            self.driver.iprint = 1
-            self.driver.itmax = 30
-            self.driver.fdch = .000001
-            self.driver.fdchm = .000001
+            # SQLSQP Flags
+            self.driver.iprint = 0
 
-The parameters specified here include the debug verbosity (*iprint*) and the number of
-iterations (*itmax*). The relative and absolute step sizes for the
-numerical gradient calculation are adjusted to reduce the step size for this
-problem (*fdch* and *fdchm*). If the default values are used, only two places of
-accuracy can be obtained in the calculated minimum because CONMIN's default step
-size is too large for this problem.
 
 Congradulations! You just built your first model in OpenMDAO. Now let's run it. 
 
@@ -188,7 +175,6 @@ also import your assembly into another model without running it. So the final li
         opt_problem.run()
 
         print "\n"
-        print "CONMIN Iterations: ", opt_problem.driver.iter_count
         print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.x, \
                                          opt_problem.paraboloid.y)
         print "Elapsed time: ", time.time()-tt, "seconds"
@@ -197,8 +183,7 @@ also import your assembly into another model without running it. So the final li
     :hide:
 
     ...
-    CONMIN Iterations:  5
-    Minimum found at (6.666309, -7.333026)
+    Minimum found at (6.666667, -7.333334)
     Elapsed time:  ... seconds
         
  
@@ -222,8 +207,6 @@ This should produce the output:
 
 :: 
 
-    [ CONMIN output not shown ]
-    CONMIN Iterations:  5
     Minimum found at (6.666309, -7.333026)
     Elapsed time:  0.0558300018311 seconds
 

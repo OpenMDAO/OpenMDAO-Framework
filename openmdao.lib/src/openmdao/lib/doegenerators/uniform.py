@@ -5,7 +5,7 @@ into the DOEgenerator socket on a DOEdriver."""
 from numpy import linspace,random
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Int
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.main.interfaces import implements, IDOEgenerator
 
 class Uniform(HasTraits):
