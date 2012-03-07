@@ -2,7 +2,7 @@
 .. _`optimization_tutorial`:
 
 ==============================
-Tutorial: Simple Optimization
+Simple Optimization
 ==============================
 
 .. toctree::

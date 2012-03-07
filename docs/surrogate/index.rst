@@ -1,7 +1,7 @@
 
 .. _Tutorial:-MetaModel:
 
-Tutorial: MetaModel
+MetaModel
 ============================
 
 .. toctree::

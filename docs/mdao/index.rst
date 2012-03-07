@@ -1,7 +1,7 @@
 
 .. _Tutorial:-MDAO-Architectures:
 
-Tutorial: MDAO Architectures
+MDAO Architectures
 ============================
 
 .. toctree::
