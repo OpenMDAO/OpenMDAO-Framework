@@ -21,9 +21,13 @@ ListCaseRecorder    Python List
 ================== ==================================================================
 
 The recorders are interchangable, so you can use any of them in a slot that can accept them. All
-drivers contain a slot that can accept a list of case recorders. Each driver determines what it
-needs to write. In the previous example, the ``DOEdriver`` saves each point in the DOE as a
-case. However, a single-objective optimizer such as CONMINdriver saves the state of the model
+drivers contain a slot that can accept a list of case recorders. Why a list? That is so you can have the same
+case data recorded in multiple ways if you want to. For example, you could have use the DumpCaseRecorder 
+to output data to the screen, and use the DBCaseRecorder to save the same data to database. 
+
+Each driver determines what it needs to write to the recorders in it's list. 
+In the previous example, the ``DOEdriver`` saves each point in the DOE as a
+case. However, a single-objective optimizer such as the ``SLSQPdriver`` saves the state of the model
 at each iteration in the optimization so that the convergence history can be observed. The
 state of the model includes the parameters, objective, constraints, and any other data that
 the user chooses to include by listing them in the ``printvars`` variable.
@@ -37,84 +41,12 @@ list. Of these recorders, the CSVCaseRecorder is the most useful for passing dat
 such as an external post-processing tool. The DBCaseRecorder is the most useful for saving data
 for later use.
 
-Let's consider our simple unconstrained optimization of the Paraboloid component with CONMIN. We would
+Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would
 like to print out the convergence history of the variables, objective, and constraint into a csv
 file, which we can read into Excel for some post processing. Additionally, we would like to save an
 SQLite database for future use. The code for this should look like:
 
-.. testcode:: Paraboloid_case_handlers
-
-        from openmdao.main.api import Assembly
-        from openmdao.lib.drivers.api import CONMINdriver
-        
-        from openmdao.examples.simple.paraboloid import Paraboloid
-        
-        class OptimizationConstrained(Assembly):
-            """Constrained optimization of the Paraboloid with CONMIN."""
-            
-            def configure(self):
-                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
-                
-                # pylint: disable-msg=E1101
-        
-                # Create Paraboloid component instances
-                self.add('paraboloid', Paraboloid())
-        
-                # Create CONMIN Optimizer instance
-                self.add('driver', CONMINdriver())
-                
-                # Driver process definition
-                self.driver.workflow.add('paraboloid')
-                
-                # CONMIN Flags
-                self.driver.iprint = 0
-                self.driver.itmax = 30
-                self.driver.fdch = .000001
-                self.driver.fdchm = .000001
-                
-                # Objective 
-                self.driver.add_objective('paraboloid.f_xy')
-                
-                # Design Variables 
-                self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
-                self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
-                
-                # Constraints
-                self.driver.add_constraint('paraboloid.x-paraboloid.y >= 15.0')
-                
-                
-        if __name__ == "__main__": # pragma: no cover         
-        
-            import time
-            
-            opt_problem = OptimizationConstrained()
-            
-            #-----------------------------
-            # Set up our CaseRecorders
-            #-----------------------------
-                
-            from openmdao.lib.casehandlers.api import CSVCaseRecorder, DBCaseRecorder
-                
-            opt_problem.driver.recorders = [CSVCaseRecorder(filename='converge.csv'), 
-                                            DBCaseRecorder(dbfile='converge.db', append=False)]
-                                                
-            #-----------------------------
-            # Run problem
-            #-----------------------------
-                
-            opt_problem.run()
-            
-            #----------------------------------------------------
-            # Print out history of our objective for inspection
-            #----------------------------------------------------
-                
-            for case in opt_problem.driver.recorders[0].get_iterator():
-                print case['objective']
-            
-            print "\n"
-            print "CONMIN Iterations: ", opt_problem.driver.iter_count
-            print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.x, \
-                                                 opt_problem.paraboloid.y)
+.. literalinclude:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
 Here, we set ``opt_problem.driver.recorders`` to be a list that contains the csv and db case recorders. The
 ``CSVCaseRecorder`` takes a filename as an argument, as does the ``DBCaseRecorder``. These files will be
@@ -126,21 +58,19 @@ as an input or output, and a number of other metadata fields. Run the above code
 
 ::
 
-"label","uuid","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","Constraint4","objective","Constraint0","Constraint1","Constraint2","Constraint3","/METADATA","retries","max_retries","parent_uuid","msg"
-"","6be3af7e-67a6-11e1-af51-005056b50025","",0.0,1e-06,"",0.0,21.999994,14.999999,0.0,0.0,0.0,"","","",""
-"","6be4adfc-67a6-11e1-af51-005056b50025","",-7.54160275589,7.4584047025,"",0.0,-26.8280028871,-7.45839724736e-06,0.0,0.0,0.0,"","","",""
-"","6be59636-67a6-11e1-af51-005056b50025","",-7.81867047557,7.38483984481,"",0.0,-26.9305645958,-0.203510320387,0.0,0.0,0.0,"","","",""
-"","6be684f6-67a6-11e1-af51-005056b50025","",-7.77597457081,7.22403265322,"",0.0,-27.0734583953,-7.22402542941e-06,0.0,0.0,0.0,"","","",""
-"","6be79940-67a6-11e1-af51-005056b50025","",-7.81007102711,7.19970818675,"",0.0,-27.0760422275,-0.00977921386021,0.0,0.0,0.0,"","","",""
-"","6be8ab0a-67a6-11e1-af51-005056b50025","",-7.82982627771,7.18204792231,"",0.0,-27.0770934079,-0.0118742000216,0.0,0.0,0.0,"","","",""
-"","6be99664-67a6-11e1-af51-005056b50025","",-7.82422478018,7.17577473428,"",0.0,-27.0830846921,4.85536538974e-07,0.0,0.0,0.0,"","","",""
+"label","uuid","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","objective","Constraint0","/METADATA","retries","max_retries","parent_uuid","msg"
+"","ef56c020-686a-11e1-94f8-34159e027f06","",0.0,0.0,"",22.0,-15.0,"","","",""
+"","ef57b322-686a-11e1-94f8-34159e027f06","",-8.50000000486,6.50000000636,"",-25.7499999974,1.12260067908e-08,"","","",""
+"","ef583c84-686a-11e1-94f8-34159e027f06","",-6.7370023896,8.26299760727,"",-23.4775087306,-3.13171355515e-09,"","","",""
+"","ef587384-686a-11e1-94f8-34159e027f06","",-7.83333333577,7.16666667003,"",-27.0833333304,5.79672487788e-09,"","","",""
+
 
 This file should be readable into an application that accepts a csv input file. The first line is a header that contains
 the variable names for the values that are printed. Notice that the objective and constraints are printed for an optimizer
 driver. The first column is a case label, which is currently empty for cases generated from a driver. The second column
 is a string that contains a unique identifier for this case. Columns with a section header ("/INPUTS", "/OUTPUTS",
 "/METADATA") do not contain any data. The final columns in the file contain some metadata associated with the case. None
-of these are set by ``CONMINDriver.`` Note that in OpenMDAO's flavor of csv, all string data must be enclosed in double
+of these are set by ``SLSQPdriver.`` Note that in OpenMDAO's flavor of csv, all string will always be enclosed in double
 quotes.
 
 The ``CSVCaseRecorder`` supports simple data types -- integers, floats, and strings. It also supports single elements of an array.

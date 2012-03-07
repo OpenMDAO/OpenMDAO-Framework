@@ -8,7 +8,9 @@ Getting Started
 
    requirements.rst
    install.rst
+   troubleshooting.rst
    using_plugins.rst
+
    
    
 
