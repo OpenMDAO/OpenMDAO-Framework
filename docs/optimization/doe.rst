@@ -69,8 +69,8 @@ inputs being set into your model; then the model gets run, and some outputs are 
 want to record the results of this process for each case in the DOE. You use a :ref:`CaseRecorder
 <openmdao.lib.casehandler.api.py>` for that.  The CaseRecorder's job is to store the information from each
 case in some fashion. In this example  we used a :ref:`ListCaseRecorder
-<openmdao.lib.casehandlers.listcaseiter.py>` which just stored them in memory. There are other kinds though
-that are more permanent, for example, the :ref:`DBcaseRecorder <openmdao.lib.casehandlers.db.py>`, which 
+<openmdao.lib.casehandlers.listcase.py>` which just stored them in memory. There are other kinds though
+that are more permanent, for example, the :ref:`DBcaseRecorder <openmdao.lib.casehandlers.dbcase.py>`, which 
 saves all your cases to a SQLite database to be reviewed later. 
 
 All CaseRecorders have the same interface and can be all be used interchangably. In fact, 

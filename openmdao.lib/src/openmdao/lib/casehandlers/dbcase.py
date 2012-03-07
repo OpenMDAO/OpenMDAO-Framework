@@ -1,3 +1,6 @@
+"""A CaseRecorder and CaseIterator that store the cases in a relational
+DB (Python's sqlite.)
+"""
 
 import sys
 import sqlite3
@@ -5,10 +8,12 @@ import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
-_casetable_attrs = set(['id','uuid','parent','label','msg','retries','model_id','timeEnter'])
+_casetable_attrs = set(['id','uuid','parent','label','msg','retries', \
+                        'model_id','timeEnter'])
 _vartable_attrs = set(['var_id','name','case_id','sense','value'])
 
 def _query_split(query):
