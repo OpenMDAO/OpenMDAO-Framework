@@ -148,7 +148,7 @@ class ExprMapper(object):
             self._remove_disconnected_exprs()
         
     def connect(self, src, dest, scope):
-        srcexpr, destexpr = self.check_connect(src, dest, self)
+        srcexpr, destexpr = self.check_connect(src, dest, scope)
         srcvars = srcexpr.get_referenced_varpaths()
         destvar = destexpr.get_referenced_varpaths().pop()
         
@@ -186,7 +186,7 @@ class ExprMapper(object):
                                              (src, dest, str(err)), RuntimeError)
         for srcvar in srcvars:
             try:
-                self._depgraph.connect(srcvar, destvar, self)
+                self._depgraph.connect(srcvar, destexpr.text, self)
             except Exception as err:
                 scope.raise_exception("Can't connect '%s' to '%s': %s" % 
                                       (srcvar, destvar, str(err)), RuntimeError)
@@ -500,12 +500,17 @@ class Assembly (Component):
 
         if not destexpr.refs_parent() and not srcexpr.refs_parent():
             config_changed = True
+        else:
+            config_changed = False
                     
         # if it's an internal connection, could change dependencies, so we have
         # to call config_changed to notify our driver
         if config_changed:
             self.config_changed(update_parent=False)
 
+            destvar = destexpr.get_referenced_varpaths().pop()
+            destcompname, destcomp, destvarname = self._split_varpath(destvar)
+            
             outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
             if (outs is None) or outs:
                 bouts = self.child_invalidated(destcompname, outs, force=True)

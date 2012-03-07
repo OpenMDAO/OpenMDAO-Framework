@@ -358,7 +358,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('comp2: rout must be an input variable',
+            self.assertEqual(": can't connect 'comp1.rout' to 'comp2.rout': comp2: rout must be an input variable",
                              str(err))
         else:
             self.fail('exception expected')
@@ -384,7 +384,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units','comp2.s')
         except AttributeError, err:
             self.assertEqual(str(err), 
-                    "comp1: Cannot locate variable named 'rout.units'")
+                    ": Can't find 'comp1.rout.units'")
         else:
             self.fail('NameError expected')
             

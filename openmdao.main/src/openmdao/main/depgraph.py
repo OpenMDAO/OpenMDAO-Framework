@@ -271,11 +271,11 @@ class DependencyGraph(object):
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
         
-        dpdot = destpath+'.'
-        for dst,src in self._allsrcs.items():
-            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
-                raise AlreadyConnectedError("%s is already connected to source %s" %
-                                            (dst, src))
+        #dpdot = destpath+'.'
+        #for dst,src in self._allsrcs.items():
+            #if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
+                #raise AlreadyConnectedError("%s is already connected to source %s" %
+                                            #(dst, src))
         #oldsrc = self.get_source('.'.join([destcompname,destvarname]))
         #if oldsrc:
             #raise AlreadyConnectedError("%s is already connected to source %s" %

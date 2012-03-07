@@ -227,8 +227,7 @@ class ExprMapperTestCase(unittest.TestCase):
                          set(['A.b']))
     
     def test_expressions(self):
-        dep, scope = self.make_graph(['E', 'A', 'B'], [])
-        dep.add('E')
+        dep, scope = self.make_graph(['E', 'A', 'B','parent.X'], [('parent.X.c','a')])
         dep.connect('parent.X.d+a', 'E.a[3]', scope)
         dep.connect('A.c', 'E.a[4]', scope)
         dep.connect('B.c', 'E.b', scope)
