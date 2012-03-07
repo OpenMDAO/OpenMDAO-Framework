@@ -12,6 +12,7 @@ Tutorial: Simple Optimization
    unconstrained
    constrained
    doe
+   case_recorders
    derivatives
    optimizers
 

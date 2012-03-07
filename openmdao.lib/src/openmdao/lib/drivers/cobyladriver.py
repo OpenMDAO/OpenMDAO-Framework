@@ -187,10 +187,8 @@ class COBYLAdriver(Driver):
             
             case = Case(case_input, case_output, parent_uuid=self._case_id)
             
-            #FIXME: the driver should probably just add its own recorder for
-            #this information instead of just putting it into the first
-            #recorder it finds
-            self.recorders[0].record(case)
+            for recorder in self.recorders:
+                recorder.record(case)
             
         return f, g
         
