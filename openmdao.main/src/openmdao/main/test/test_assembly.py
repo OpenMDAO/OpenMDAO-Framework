@@ -414,7 +414,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except Exception, err:
-            self.assertEqual(": circular dependency (['comp2', 'comp1']) would be created by"+
+            self.assertEqual(": Can't connect 'comp2.rout' to 'comp1.r': circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('Exception expected')
