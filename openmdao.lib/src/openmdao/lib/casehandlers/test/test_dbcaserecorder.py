@@ -13,9 +13,11 @@ import copy
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator
-from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder, case_db_to_dict 
-from openmdao.lib.drivers.api import SimpleCaseIterDriver, DOEdriver, CaseIteratorDriver
+from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator, \
+                                          DBCaseRecorder, DumpCaseRecorder, \
+                                          case_db_to_dict 
+from openmdao.lib.drivers.api import SimpleCaseIterDriver, DOEdriver, \
+                                     CaseIteratorDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 from openmdao.main.caseiter import caseiter_to_dict

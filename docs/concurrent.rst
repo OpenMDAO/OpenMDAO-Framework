@@ -1,6 +1,11 @@
+Working with Parallel Computational Resources
+======================================================
 
-Running OpenMDAO
-==================
+
+Warning: This is a very advanced topic, for dealing with parallel compute resources 
+in OpenMDAO. If you have not gone through at least our :ref:`Basic Tutorial <basic-tutorial>`
+and our :ref:`Optimization Tutorial <optimization_tutorial>` then you should go and get more 
+familiar with the foundations of OpenMDAO first. 
 
 .. _Specifying-Computational-Resources:
 
@@ -216,4 +221,3 @@ specifications. They are translated at the server.
 Not all resource allocators support all the features listed above. Consult the allocator
 documentation to see what is supported and to find out how the 
 features are translated to the system the allocator interfaces with.
-

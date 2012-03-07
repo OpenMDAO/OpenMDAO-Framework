@@ -3,8 +3,7 @@
 import unittest
 from numpy import array
 from openmdao.lib.components.expected_improvement_multiobj import MultiObjExpectedImprovement
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
-from openmdao.lib.casehandlers.api import CaseSet
+from openmdao.lib.casehandlers.api import CaseSet, ListCaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.case import Case
 

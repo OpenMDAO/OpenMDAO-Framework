@@ -180,9 +180,9 @@ class SLSQPdriver(DriverUsesDerivatives):
         
         Note: m, me, la, n, f, and g are unused inputs."""
         self.set_parameters(xnew)
-        super(SLSQPdriver, self).run_iteration()
+        super(SLSQPdriver, self).run_iteration()      
         f = self.eval_objective()
-        
+
         if isnan(f):
             msg = "Numerical overflow in the objective"
             self.raise_exception(msg, RuntimeError)
@@ -223,10 +223,8 @@ class SLSQPdriver(DriverUsesDerivatives):
             
             case = Case(case_input, case_output, parent_uuid=self._case_id)
             
-            #FIXME: the driver should probably just add its own recorder for
-            #this information instead of just putting it into the first
-            #recorder it finds
-            self.recorders[0].record(case)
+            for recorder in self.recorders:
+                recorder.record(case)
 
             
         return f, g

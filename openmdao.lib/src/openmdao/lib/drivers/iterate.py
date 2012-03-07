@@ -115,7 +115,8 @@ class FixedPointIterator(Driver):
                 
                 case = Case(case_input, case_output,parent_uuid=self._case_id)
                 
-                self.recorders[0].record(case)
+                for recorder in self.recorders:
+                    recorder.record(case)
                 
             self.current_iteration += 1
         
@@ -124,7 +125,6 @@ class FixedPointIterator(Driver):
             
                 term = val.evaluate(self.parent)
                 delta[i] = term[0] - term[1]
-            
             history[self.current_iteration] = delta
             
             if norm(delta, order) < self.tolerance:

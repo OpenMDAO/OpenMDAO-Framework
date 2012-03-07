@@ -804,7 +804,7 @@ def plugin_makedist(parser, options, args=None):
     os.chdir(options.dist_dir_path)
     
     try:
-        plugin_build_docs(options)
+        plugin_build_docs(parser, options)
         
         cfg = SafeConfigParser(dict_type=OrderedDict)
         cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')

@@ -4,7 +4,7 @@
 
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.main.api import Assembly
-from openmdao.lib.drivers.api import CONMINdriver
+from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.optproblems import sellar
 
 
@@ -24,9 +24,9 @@ class SellarCO(Assembly):
         Optimal Objective = 3.18339"""
         
         # Global Optimization
-        self.add('driver', CONMINdriver())
-        self.add('localopt1', CONMINdriver())
-        self.add('localopt2', CONMINdriver())
+        self.add('driver', SLSQPdriver())
+        self.add('localopt1', SLSQPdriver())
+        self.add('localopt2', SLSQPdriver())
         self.driver.workflow.add(['localopt1', 
                                   'localopt2'])
         
@@ -64,13 +64,7 @@ class SellarCO(Assembly):
         
         self.driver.printvars = ['dis1.y1', 'dis2.y2']
         self.driver.iprint = 0
-        self.driver.itmax = 100
-        self.driver.fdch = .003
-        self.driver.fdchm = .003
-        self.driver.delfun = .0001
-        self.driver.dabfun = .00001
-        self.driver.ct = -.0008
-        self.driver.ctlmin = 0.0008
+
 
         #Parameters - Local Optimization 1
         self.localopt1.add_objective('(global_des_var_targets[0] - dis1.z1)**2 + '
@@ -82,15 +76,10 @@ class SellarCO(Assembly):
         self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
         self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
         self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
-        self.localopt1.add_parameter('dis1.y2', low = -10.0,  high = 24.0)
-        #self.localopt1.add_constraint('dis1.y1 < 10.0')
-        #self.localopt1.add_constraint('dis1.y1 > 3.16')
+        self.localopt1.add_parameter('dis1.y2', low = -1e99,  high = 1e99)
+        self.localopt1.add_constraint('dis1.y1 > 3.16')
         self.localopt1.iprint = 0
-        self.localopt1.itmax = 100
-        self.localopt1.fdch = .003
-        self.localopt1.fdchm = .003
-        self.localopt1.delfun = .0001
-        self.localopt1.dabfun = .000001
+
         
         #Parameters - Local Optimization 2
         self.localopt2.add_objective('(global_des_var_targets[0] - dis2.z1)**2 + ' + \
@@ -99,15 +88,10 @@ class SellarCO(Assembly):
                                      '(coupling_var_targets[1] - dis2.y2)**2')
         self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
         self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
-        self.localopt2.add_parameter('dis2.y1', low = 3.16,  high = 10.0)
-        #self.localopt2.add_constraint('dis2.y2 > -10.0')
-        #self.localopt2.add_constraint('dis2.y2 < 24.0')
+        self.localopt2.add_parameter('dis2.y1', low = -1e99,  high = 1e99)
+        self.localopt2.add_constraint('dis2.y2 < 24.0')
         self.localopt2.iprint = 0
-        self.localopt2.itmax = 100
-        self.localopt2.fdch = .003
-        self.localopt2.fdchm = .003
-        self.localopt2.delfun = .001
-        self.localopt2.dabfun = .00001
+
 
 
 if __name__ == "__main__":        
@@ -131,7 +115,6 @@ if __name__ == "__main__":
     prob.run()
 
     print "\n"
-    print "CONMIN Iterations: ", prob.driver.iter_count
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                              prob.dis1.z2, \
                                              prob.dis1.x1)
