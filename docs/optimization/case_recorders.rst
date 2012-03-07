@@ -27,7 +27,7 @@ to output data to the screen, and use the DBCaseRecorder to save the same data t
 
 Each driver determines what it needs to write to the recorders in it's list. 
 In the previous example, the ``DOEdriver`` saves each point in the DOE as a
-case. However, a single-objective optimizer such as the ``SLSQPdriver``openm saves the state of the model
+case. However, a single-objective optimizer such as the ``SLSQPdriver`` saves the state of the model
 at each iteration in the optimization so that the convergence history can be observed. The
 state of the model includes the parameters, objective, constraints, and any other data that
 the user chooses to include by listing them in the ``printvars`` variable.
