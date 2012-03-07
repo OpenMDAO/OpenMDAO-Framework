@@ -12,6 +12,7 @@ from multiprocessing import Process
 from openmdao.devtools.ec2 import run_on_ec2
 from openmdao.util.debug import print_funct_call
 from openmdao.test.testing import read_config, filter_config
+from openmdao.util.fileutil import get_cfg_file
 
 def run_on_host(host, config, conn, funct, outdir, **kwargs):
     """Runs the given funct on the specified host."""
@@ -59,7 +60,7 @@ def run_on_host(host, config, conn, funct, outdir, **kwargs):
         
 def add_config_options(parser):
     parser.add_argument("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
-                        default='~/.openmdao/testhosts.cfg',
+                        default=get_cfg_file(),
                         help="Path of config file where info for hosts is located")
     parser.add_argument("--host", action='append', dest='hosts', metavar='HOST',
                         default=[],
