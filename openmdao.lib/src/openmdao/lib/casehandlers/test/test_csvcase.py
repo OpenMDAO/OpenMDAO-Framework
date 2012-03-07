@@ -46,14 +46,15 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         pass
 
     def test_inoutCSV(self):
-        """This test runs some cases, puts them in a CSV file using a CSVCaseRecorder,
-        then runs the model again using the same cases, pulled out of the CSV file
-        by a CSVCaseIterator.  Finally the cases are dumped to a string after
-        being run for the second time.
-        """
+        
+        #This test runs some cases, puts them in a CSV file using a CSVCaseRecorder,
+        #then runs the model again using the same cases, pulled out of the CSV file
+        #by a CSVCaseIterator.  Finally the cases are dumped to a string after
+        #being run for the second time.
         
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.run()
+        self.top.driver.recorders[0].outfile.close()
         
         # now use the CSV recorder as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
@@ -88,12 +89,13 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             self.fail("couldn't find the expected Case")
             
     def test_inoutCSV_delimiter(self):
-        """Repeat test above using semicolon delimiter and ' as quote char.
-        """
+        
+        #Repeat test above using semicolon delimiter and ' as quote char.
         
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename, delimiter=';', \
                                                      quotechar="'")]
         self.top.run()
+        self.top.driver.recorders[0].outfile.close()
         
         # now use the DB as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
@@ -236,8 +238,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             self.top.driver.recorders[0].record(case)
         except ValueError, err:
             msg = "CSV format does not support variables of type <type 'NoneType'>"
+            self.top.driver.recorders[0].outfile.close()
             self.assertEqual(msg, str(err))
         else:
+            self.top.driver.recorders[0].outfile.close()
             self.fail('ValueError Expected')
         
 
