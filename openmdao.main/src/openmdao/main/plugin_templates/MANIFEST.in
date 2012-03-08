@@ -1,0 +1,3 @@
+graft src/%(name)s/sphinx_build/html
+recursive-include src/%(name)s/test *.py
+
