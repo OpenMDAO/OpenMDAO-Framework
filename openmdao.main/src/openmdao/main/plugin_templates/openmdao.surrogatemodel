@@ -1,0 +1,16 @@
+__all__ = ['%(classname)s']
+
+from enthought.traits.api import HasTraits
+
+from openmdao.main.interfaces import implements, ISurrogate
+
+class %(classname)s(HasTraits):
+
+    implements(ISurrogate)
+    
+    def train(self, X, Y):
+        """Train the surrogate model with the given set of inputs and outputs."""
+        
+    def predict(self, new_x):
+        """Calculates a predicted value of the response based on the current
+        trained model for the supplied list of inputs.        
