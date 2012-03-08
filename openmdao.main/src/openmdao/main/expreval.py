@@ -542,7 +542,7 @@ class ExprEvaluator(object):
             return self.var_names.copy()
         return []
     
-    def scope_transform(self, scope, new_scope):
+    def scope_transform(self, scope, new_scope, parent=None):
         """Return a transformed version of our text string where the attribute names are
         changed based on a change in scope to the given object.
         """
@@ -551,9 +551,9 @@ class ExprEvaluator(object):
         
         oldname = scope.name + '.' if scope.name else ''
         newname = new_scope.name + '.'
-        if scope is new_scope.parent:
+        if scope is new_scope.parent or scope is parent:
             oldname = 'parent.'
-        elif new_scope is scope.parent:
+        elif new_scope is scope.parent or new_scope is parent:
             newname = 'parent.'
             
         mapping = {}

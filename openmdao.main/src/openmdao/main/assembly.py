@@ -246,13 +246,8 @@ class ExprMapper(object):
         else: # assume they're disconnecting two variables, so find connected exprs that refer to them
             src_exprs = set(self.find_referring_exprs(srcpath))
             dest_exprs = set(self.find_referring_exprs(destpath))
-            
-            to_remove = []
-            for src,dest in graph.edges():
-                if src in src_exprs and dest in dest_exprs:
-                    to_remove.append((src, dest))
-                    
-            graph.remove_edges_from(to_remove)
+            graph.remove_edges_from([(src,dest) for src,dest in graph.edges() 
+                                           if src in src_exprs and dest in dest_exprs])
             
     def check_connect(self, src, dest, scope):
         """Check validity of connecting a source expression to a destination expression."""
@@ -640,8 +635,12 @@ class Assembly (Component):
                     #self.set_valid(vnames, True)
             
         for srcexpr, destexpr in expr_info:
-            destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
-            
+            try:
+                destexpr.set(srcexpr.evaluate(), src=srcexpr.text)
+            except Exception as err:
+                self.raise_exception("cannot set '%s' from '%s': %s" % 
+                                     (destexpr.text, srcexpr.text, str(err)), type(err))
+        
     def update_outputs(self, outnames):
         """Execute any necessary internal or predecessor components in order
         to make the specified output variables valid.
@@ -720,8 +719,11 @@ class Assembly (Component):
             #invalidated_ins = [n for n in names if valids[n] is True]
             invalidated_ins = []
             for name in names:
+                #try:
                 if ('.' not in name and valids[name]) or self.get_valid([name])[0]:
                     invalidated_ins.append(name)
+                #except KeyError:
+                    #pass # it's not an I/O variable
             if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
                 return []
 

@@ -1271,6 +1271,7 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
+    @rbac(('owner', 'user'))
     def get_valid(self, names):
         """Get the value of the validity flag for the specified variables.
         Returns a list of bools.

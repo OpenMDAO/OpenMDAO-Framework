@@ -39,15 +39,14 @@ from multiprocessing import connection
 from openmdao.main.variable import Variable
 from openmdao.main.filevar import FileRef
 from openmdao.main.datatypes.slot import Slot
-
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
+from openmdao.main.expreval import INDEX, ATTR, CALL, SLICE, ExprEvaluator
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
-from openmdao.main.expreval import INDEX, ATTR, CALL, SLICE, ExprEvaluator
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -157,6 +156,28 @@ def _get_indexed_value(obj, name, index):
             obj = _process_index_entry(obj, idx)
     return obj
         
+def _index_to_text(index):
+    """Returns a string representation of the given index. Doesn't work for functions"""
+    if index:
+        parts = []
+        for idx in index:
+            if not isinstance(idx, tuple):
+                parts.append('[%s]' % idx)
+            elif idx[0] == INDEX:
+                parts.append('[%s]' % idx[1])
+            elif idx[0] == ATTR:
+                parts.append('.%s' % idx[1])
+            elif idx[0] == CALL:
+                if len(idx) == 1:
+                    parts.append('()')
+                else:
+                    raise NotImplementedError('conversion of function calls within an index to text is not supported yet')
+            elif idx[0] == SLICE:
+                s = '[%s:%s:%s]' % tuple(idx[1])
+                parts.append(s.replace('None', '').replace('::',':'))
+        return ''.join(parts)
+    else:
+        return ''
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -305,41 +326,56 @@ class Container(HasTraits):
         destpath: str
             Pathname of destination variable.
         """
-        cname = None
+        child_connections = []  # for undo
         srcexpr = ExprEvaluator(srcpath, self)
         destexpr = ExprEvaluator(destpath, self)
-        
-        if not destpath.startswith('parent.'):
-            destvar = destexpr.get_referenced_varpaths().pop()
-            if not destexpr.check_resolve():
-                self.raise_exception("Can't find '%s'" % destvar, AttributeError)
-            parts = destpath.split('.')
-            for i in range(len(parts)):
-                dname = '.'.join(parts[:i+1])
-                sname = self._depgraph.get_source(dname)
-                if sname is not None:
-                    self.raise_exception(
-                        "'%s' is already connected to source '%s'" % 
-                        (dname, sname), RuntimeError)
-                    
-            cname2, _, restofpath = destpath.partition('.')
-            if restofpath:
-                child = getattr(self, cname2)
-                if is_instance(child, Container):
-                    child.connect(srcexpr.scope_transform(self, child), restofpath)
-                    
-        if not 'parent' in srcexpr.get_referenced_compnames():
-            for src in srcexpr.get_referenced_varpaths():
-                if not self.contains(src):
-                    self.raise_exception("Can't find '%s'" % src, AttributeError)
-                cname, _, restofpath = src.partition('.')
-                if restofpath:
-                    child = getattr(self, cname)
-                    if is_instance(child, Container):
-                        child.connect(restofpath, destexpr.scope_transform(self, child))
-                
-        self._depgraph.connect(srcpath, destpath, self)
+        destvar = destexpr.get_referenced_varpaths().pop()
 
+        # check for self connections
+        if not destvar.startswith('parent.'):
+            dpart = destvar.split('.',1)[0]
+            for src in srcexpr.get_referenced_varpaths():
+                if dpart == src.split('.',1)[0]:
+                    self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
+                                         (srcpath, destpath), RuntimeError)
+        try:
+            if not destpath.startswith('parent.'):
+                if not destexpr.check_resolve():
+                    self.raise_exception("Can't find '%s'" % destvar, AttributeError)
+                parts = destpath.split('.')
+                for i in range(len(parts)):
+                    dname = '.'.join(parts[:i+1])
+                    sname = self._depgraph.get_source(dname)
+                    if sname is not None:
+                        self.raise_exception(
+                            "'%s' is already connected to source '%s'" % 
+                            (dname, sname), RuntimeError)
+                        
+                cname2, _, restofpath = destpath.partition('.')
+                if restofpath:
+                    child = getattr(self, cname2)
+                    if is_instance(child, Container):
+                        childsrc = srcexpr.scope_transform(self, child, parent=self)
+                        child.connect(childsrc, restofpath)
+                        child_connections.append((child, childsrc, restofpath)) 
+                        
+            if not 'parent' in srcexpr.get_referenced_compnames():
+                for src in srcexpr.get_referenced_varpaths():
+                    if not self.contains(src):
+                        self.raise_exception("Can't find '%s'" % src, AttributeError)
+                    cname, _, restofpath = src.partition('.')
+                    if restofpath:
+                        child = getattr(self, cname)
+                        if is_instance(child, Container):
+                                childdest = destexpr.scope_transform(self, child, parent=self)
+                                child.connect(restofpath, childdest)
+                                child_connections.append((child, restofpath, childdest)) 
+
+            self._depgraph.connect(srcpath, destpath, self)
+        except Exception as err:
+            for child, childsrc, childdest in child_connections:
+                child.disconnect(childsrc, childdest)
+            raise
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -998,7 +1034,8 @@ class Container(HasTraits):
             eq = False
         if not eq:
             self._call_execute = True
-            self._input_updated(name)
+            if name in self._valid_dict:
+                self._input_updated(name)
             
     def _input_check(self, name, old):
         """This raises an exception if the specified input is attached

@@ -365,7 +365,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('comp1: r must be an output variable',
+            self.assertEqual(": can't connect 'comp1.r' to 'comp2.rout': comp1: r must be an output variable",
                              str(err))
         else:
             self.fail('RuntimeError expected')

@@ -44,6 +44,8 @@ def _cvt_names_to_graph(srcpath, destpath):
 #fake nodes for boundary and passthrough connections
 _fakes = ['@xin', '@xout', '@bin', '@bout']
 
+_exprset = set('+-/*[]()&| %<>!') # to use as a quick check for exprs to avoid overhead of constructing an ExprEvaluator
+
 class DependencyGraph(object):
     """
     A dependency graph for Components.  Each edge contains a _Link object, which 
@@ -271,11 +273,14 @@ class DependencyGraph(object):
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
         
-        #dpdot = destpath+'.'
-        #for dst,src in self._allsrcs.items():
-            #if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
-                #raise AlreadyConnectedError("%s is already connected to source %s" %
-                                            #(dst, src))
+        # regular variable inputs can only have one source, but expression inputs, e.g., x[3]
+        # can have multiple ones
+        if not _exprset.intersection(destpath):
+            dpdot = destpath+'.'
+            for dst,src in self._allsrcs.items():
+                if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
+                    raise AlreadyConnectedError("%s is already connected to source %s" %
+                                                (dst, src))
         #oldsrc = self.get_source('.'.join([destcompname,destvarname]))
         #if oldsrc:
             #raise AlreadyConnectedError("%s is already connected to source %s" %
