@@ -68,16 +68,14 @@ class ZMQServer(object):
     def spawn_server(classpath,rep_url,pub_url,out_url):
         ''' run server in it's own process
         '''
-        file_path   = os.path.abspath(__file__)
+        file_path = os.path.abspath(__file__)
         cmd = ['python',file_path,'-c',str(classpath),'-r',str(rep_url),'-p',str(pub_url),'-o',str(out_url)]
         return subprocess.Popen(cmd)
 
 def main():
-    ''' process command line arguments and do as commanded
+    ''' process command line arguments, create server and start it up
     '''
-    DEBUG('..............')
-
-    # install zmq ioloop before creating any tornado objects
+    # make sure to install zmq ioloop before creating any tornado objects
     ioloop.install()
     
     # create the server and kick it off
@@ -90,4 +88,3 @@ if __name__ == '__main__':
     # dont run main() if this is a forked windows process
     if sys.modules['__main__'].__file__ == __file__:
         main()
-

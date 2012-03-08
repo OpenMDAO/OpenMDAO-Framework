@@ -156,7 +156,6 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
 
     /** update workflow diagram */
     this.loadData = function(json) {
-        debug.info('WorkflowPane loading data...')
         workflow.clear()
         flow_figs = {}
         if (Object.keys(json).length > 0) {

@@ -30,12 +30,13 @@ class Publisher(object):
     
     def publish(self, topic, value):
         with self._lock:
+            #print 'publishing %s' % topic
             self._sender.send_multipart([topic, pickle.dumps(value, -1)])
     
     def publish_list(self, items):
         with self._lock:
             for topic, value in items:
-                print 'publishing %s' % topic
+                print 'publishing list %s' % topic
                 self._sender.send_multipart([topic, pickle.dumps(value, -1)])
                 
     @staticmethod

@@ -135,16 +135,14 @@ class ZMQStreamServer(object):
                 ws_port     the port to serve the WebSocket on
                 ws_url      the url to map to the WebSocket
         '''
-        file_path   = os.path.abspath(__file__)
+        file_path = os.path.abspath(__file__)
         cmd = ['python',file_path,'-z',str(zmq_url),'-p',str(ws_port),'-u',str(ws_url)]        
         return subprocess.Popen(cmd)
 
 def main():
-    ''' process command line arguments and do as commanded
+    ''' process command line arguments, create server and start it up
     '''
-    DEBUG('starting server...')
-
-    # install zmq ioloop before creating any tornado objects
+    # make sure to install zmq ioloop before creating any tornado objects
     ioloop.install()
     
     # create the server and kick it off

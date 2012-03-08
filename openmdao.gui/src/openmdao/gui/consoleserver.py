@@ -624,7 +624,6 @@ class ConsoleServer(cmd.Cmd):
             self.create(classname,name)
             self.ensure_root_names()            
 
-            
     def create(self,typname,name):
         ''' create a new object of the given type. 
         '''

@@ -51,18 +51,23 @@ class ZMQServerManager(object):
             return None
             
     def delete_server(self,server_id):
-        ''' delete the server associated with an id
+        ''' delete the server(s) associated with an id
         '''
         if server_id in self.server_dict:
             server_info = self.server_dict[server_id]
-            server = server_info['server']
             del self.server_dict[server_id]
+            
+            if 'out_server' in server_info:
+                server_info['out_server'].terminate()
+            if 'pub_server' in server_info:
+                server_info['pub_server'].terminate()
+            
+            server = server_info['server']
             try:
                 server.cleanup()
             except Exception, err:
                 pass
             server.terminate()
-            del server
 
     def get_pub_url(self,server_id):
         ''' get the url of the publisher socket for the server associated with
@@ -94,9 +99,9 @@ class ZMQServerManager(object):
         else:
             ws_port = get_unused_ip_port()
             ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
-            server_info['pub_server'] = ws_addr
-            ZMQStreamServer.spawn_process(server_info['pub_url'],ws_port,ws_url)
-            time.sleep(2)  # give server a chance to spool up
+            server_info['pub_server'] = ZMQStreamServer.spawn_process(server_info['pub_url'],ws_port,ws_url)
+            server_info['pub_server_url'] = ws_addr
+            time.sleep(1)  # give server a chance to spool up
             return ws_addr
     
     def get_outstream_server(self,server_id,ws_url):
@@ -109,8 +114,7 @@ class ZMQServerManager(object):
         else:
             ws_port = get_unused_ip_port()
             ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
-            server_info['out_server'] = ws_addr
-            ZMQStreamServer.spawn_process(server_info['out_url'],ws_port,ws_url)
-            time.sleep(2)  # give server a chance to spool up
+            server_info['out_server'] = ZMQStreamServer.spawn_process(server_info['out_url'],ws_port,ws_url)
+            server_info['out_server_url'] = ws_addr
+            time.sleep(1)  # give server a chance to spool up
             return ws_addr
-    
