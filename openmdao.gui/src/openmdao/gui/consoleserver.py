@@ -31,9 +31,8 @@ from openmdao.gui.util import *
 
 
 class ConsoleServer(cmd.Cmd):
-    ''' Object which knows how to load a model.
-    Executes in a subdirectory of the startup directory.
-    All remote file accesses must be within the tree rooted there.
+    ''' Object which knows how to load a model and provides a command line interface
+        and various methods to access and modify that model.
     '''
 
     def __init__(self, name='', host=''):
@@ -131,15 +130,18 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self.error(err,sys.exc_info())
 
-    #def set_top(self,pathname):
-        #print 'setting top to:',pathname
-        #cont, root = self.get_container(pathname)
-        #if cont:
-            #self.proj.__dict__['top'] = cont
-            #set_as_top(cont)
-        #else:
-            #print pathname,'not found.'
+        self.ensure_root_names()            
 
+    def ensure_root_names(self):
+        ''' Ensure that all containers in the project dictionary know their
+            own name
+        '''
+        g = self.proj.__dict__.items()
+        for k,v in g:
+            if has_interface(v,IContainer):
+                if v.name != k:
+                    v.name = k
+            
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
@@ -153,7 +155,9 @@ class ConsoleServer(cmd.Cmd):
                 self.error(err,sys.exc_info())
         else:
             print "Execution failed: No 'top' assembly was found."
-        
+
+        self.ensure_root_names()            
+       
     def execfile(self, filename):
         ''' execfile in server's globals. 
         '''
@@ -174,6 +178,8 @@ class ConsoleServer(cmd.Cmd):
                 self.default(contents)
         except Exception, err:
             self.error(err,sys.exc_info())
+
+        self.ensure_root_names()            
 
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 
@@ -373,10 +379,10 @@ class ConsoleServer(cmd.Cmd):
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
         for comp in drvr.workflow:
-            pathname = root+'.'+comp.get_pathname() if root else comp.get_pathname()
+            pathname = comp.get_pathname()
             if is_instance(comp,Assembly) and comp.driver:
                 ret['workflow'].append({ 
-                    'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
+                    'pathname': pathname,
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
                     'driver':   self._get_workflow(comp.driver,pathname+'.driver',root)
                 })
@@ -577,6 +583,7 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         self.proj.activate()
+        self.ensure_root_names()                    
         Publisher.get_instance()
         
     def save_project(self):
@@ -615,6 +622,8 @@ class ConsoleServer(cmd.Cmd):
                 print "Error adding component: parent",parentname,"not found."
         else:
             self.create(classname,name)
+            self.ensure_root_names()            
+
             
     def create(self,typname,name):
         ''' create a new object of the given type. 
@@ -624,6 +633,7 @@ class ConsoleServer(cmd.Cmd):
                 self.default(name+'='+typname+'()')
             else:
                 self.proj.__dict__[name]=create(typname)
+                self.ensure_root_names()
         except Exception, err:
             self.error(err,sys.exc_info())
             

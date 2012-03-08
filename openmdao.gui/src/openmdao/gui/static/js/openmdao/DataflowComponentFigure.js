@@ -28,6 +28,11 @@ openmdao.DataflowComponentFigure=function(myModel,pathname,type){
 
     // do not allow moving (TODO: allow moving)
     this.setCanDrag(false);
+    
+    // change color based on execution status
+    topic = pathname+'.exec_state'
+    debug.info('DataflowComponentFigure',pathname,'subscribing to',topic)
+    myModel.addListener(topic,this.setExecState.bind(this));    
 };
 
 openmdao.DataflowComponentFigure.prototype=new draw2d.Node();
@@ -253,6 +258,7 @@ openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
+/**
 openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
     //this.getWorkflow().showTooltip(new openmdao.Tooltip(this.pathname),true);
@@ -261,3 +267,18 @@ openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
 openmdao.DataflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };
+**/
+
+openmdao.DataflowComponentFigure.prototype.setExecState=function(message){
+    var state = message[1];
+    //debug.info('DataflowComponentFigure',this.pathname,state);
+    if (state === "VALID") {
+        this.setColor(new draw2d.Color(0,255,0));
+    }
+    else if (state === "INVALID") {
+        this.setColor(new draw2d.Color(255,0,0));
+    }
+    else if (state === "RUNNING") {
+        this.setColor(new draw2d.Color(0,0,255));
+    }
+}

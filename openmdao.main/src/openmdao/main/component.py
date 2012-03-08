@@ -180,7 +180,7 @@ class Component (Container):
         if self._exec_state != state:
             self._exec_state = state
             pub = Publisher.get_instance()
-            if pub and has_interface(self,IDriver):
+            if pub:
                 pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
             
     # call this if any trait having 'iotype' metadata of 'in' is changed

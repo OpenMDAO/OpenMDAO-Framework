@@ -98,8 +98,13 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         
         if (flow) {
             // add driver figure
-            comp_fig = new openmdao.WorkflowComponentFigure(model,path,type);
-            comp_figs[path] = comp_fig;
+            if (path in comp_figs) {
+                comp_fig = comp_figs[path];
+            }
+            else {
+                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type);
+                comp_figs[path] = comp_fig;
+            }
             
             flow_fig = flow_figs[flow_name];
             if (flow_fig) {
@@ -131,8 +136,13 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         }
         else {
             // add component figure
-            comp_fig = new openmdao.WorkflowComponentFigure(model,path,type);
-            comp_figs[path] = comp_fig;
+            if (path in comp_figs) {
+                comp_fig = comp_figs[path];
+            }
+            else {
+                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type);
+                comp_figs[path] = comp_fig;
+            }
 
             flow_fig = flow_figs[flow_name];
             if (flow_fig) {
@@ -146,8 +156,8 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
 
     /** update workflow diagram */
     this.loadData = function(json) {
+        debug.info('WorkflowPane loading data...')
         workflow.clear()
-        comp_figs = {}
         flow_figs = {}
         if (Object.keys(json).length > 0) {
             updateFigures('',json);

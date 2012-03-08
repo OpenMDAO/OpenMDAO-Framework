@@ -13,8 +13,11 @@ openmdao.Model=function() {
         publisher_socket = false,
         subscribers = {};
  
-     /** initialize a websocket, after getting the address from the specified url */
-    open_websocket = function(url,message_handler) {
+     /** initialize a websocket
+            url:        the URL of the address on which to open the websocket
+            handler:    the message handler for the websocket
+     */
+    open_websocket = function(url,handler) {
         // make ajax call to get outstream websocket
         jQuery.ajax({
             type: 'GET',
@@ -29,7 +32,7 @@ openmdao.Model=function() {
                     debug.info('websocket closed',e);
                 };
                 socket.onmessage = function(e) {
-                    message_handler(e.data);
+                    handler(e.data);
                 };            
                 socket.onerror = function (e) {
                     debug.info('websocket error',e);
@@ -45,7 +48,7 @@ openmdao.Model=function() {
     
     /** initialize the outstream websocket */
     open_outstream_socket = function(topic) {
-        function handle_output(data) {
+        open_websocket('outstream', function(data) {
             var callbacks = subscribers[topic];
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
@@ -53,20 +56,19 @@ openmdao.Model=function() {
                 }
                 else {
                     debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
-                }
-            }
-        }        
-        open_websocket('outstream',handle_output);
+                };
+            };
+        });
     }
 
     /** initialize the publisher websocket */
     open_publisher_socket = function() {
-        function handle_message(message) {
-            message[0] = 'prob.'+message[0]  // FIXME: HACK!!
-            debug.info('received message from publisher:',jQuery.parseJSON(message))
+        open_websocket('pubstream', function(message) {
+            message = jQuery.parseJSON(message);
             var callbacks = subscribers[message[0]];
-            debug.info('subscribers:',subscribers)
-            debug.info('subscribers:',callbacks)
+            //debug.info('received message:',message[0],message[1])
+            //debug.info('subscribers:',subscribers)            
+            //debug.info('callbacks:',callbacks)
             if (callbacks) {
                 for (i = 0; i < callbacks.length; i++) {
                     if (typeof callbacks[i] === 'function') {
@@ -74,11 +76,10 @@ openmdao.Model=function() {
                     }
                     else {
                         debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
-                    }
-                }
-            }
-        }
-        open_websocket('pubstream',handle_message);        
+                    };
+                };
+            };
+        });
     }
     
     /***********************************************************************
@@ -88,45 +89,35 @@ openmdao.Model=function() {
     /** add a subscriber (i.e. a function to be called) for messgages with the given topic */
     this.addListener = function(topic, callback) {
         if (topic in subscribers) {
-            debug.info('adding to existing topic',topic,callback)
             subscribers[topic].push(callback);
+            debug.info('added subscriber to topic',topic,subscribers)                        
         }
         else {
-            debug.info('creating new topic',topic,callback)
             subscribers[topic] = [ callback ]
-            debug.info('subscribers',subscribers)
+            debug.info('added topic to subscribers',topic,subscribers)                        
             if (topic === outstream_topic && !outstream_socket) {
                 outstream_socket = true;
                 open_outstream_socket(outstream_topic);
             }
-            if (!publisher_socket) {
+            else if (!publisher_socket) {
                 publisher_socket = true;
                 open_publisher_socket();
             }
         }
     }
     
-   /** notify all listeners that something has changed (by calling all subscribers) 
-       FIXME: this is a temporary function, to be deleted when everything is hooked
-       up via websockets
-   */
-    this.updateListeners = function() {
-        var i, callbacks;
-        for (topic in subscribers) {
-            if (topic !== outstream_topic) {
-                callbacks = subscribers[topic];
-                debug.info('updating subscribers to:',topic,callbacks)
-                for (i = 0; i < callbacks.length; i++) {
-                    //debug.info('updating',callbacks[i])
-                    if (typeof callbacks[i] === 'function') {
-                        callbacks[i]();
-                    }
-                    else {
-                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
-                    }
-                }
+   /** notify all generic listeners that something may have changed  */
+    this.updateListeners = function() {        
+        var callbacks = subscribers[''];
+        for (i = 0; i < callbacks.length; i++) {
+            //debug.info('updating',callbacks[i])
+            if (typeof callbacks[i] === 'function') {
+                callbacks[i]();
             }
-        }
+            else {
+                debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+            }
+        }        
     }
 
     /** get the list of object types that are available for creation */
