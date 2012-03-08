@@ -6,7 +6,7 @@ from openmdao.lib.datatypes.api import Float
 
 # Make sure that your class has some kind of docstring. Otherwise
 # the descriptions for your variables won't show up in the
-# source ducumentation.
+# source documentation.
 class MyComponent(Component):
     """An example Component plugin class. """
     
