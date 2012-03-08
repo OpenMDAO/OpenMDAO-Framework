@@ -92,13 +92,15 @@ class HasCouplingVars(object):
                 self._parent.raise_exception("Cant add coupling variable with dep '%s' "
                                              "because is not a valid variable"%dep,
                                              ValueError)        
-        if self._couples: 
+        if self._couples:          
             if indep in [c[0] for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
                                              "exists in assembly"%indep,ValueError)    
-            if dep in [c[1] for c in self._couples]:
-                self._parent.raise_exception("Coupling variable with dep '%s' already "
-                                             "exists in assembly"%dep,ValueError)
+            
+            #It should be allowed for dependents to repeat    
+            #if dep in [c[1] for c in self._couples]:
+            #   self._parent.raise_exception("Coupling variable with dep '%s' already "
+            #                                 "exists in assembly"%dep,ValueError)
         
         if name is None: 
             name = indep_dep
@@ -165,27 +167,37 @@ class ArchitectureAssembly(Assembly):
             self.raise_exception("This Assembly was already configured with another "
                                  "architecture.", RuntimeError)
     
-    def configure(self): 
-        """checks the configuration of the assmebly to make sure it's compatible 
-        with the architecture. Then initializes all the values in the 
-        parameters and coupling vars and configures the architecture"""
-        
-        self.architecture.check_config()
-        self.architecture.configure()
-        self.architecture.configured = True
-        
     def initialize(self): 
         """Sets all des_vars and coupling_vars to the start values, if specified""" 
         self.init_parameters()
         self.init_coupling_vars()
     
     def check_config(self):
+        """checks the configuration of the assembly to make sure it's compatible 
+        with the architecture. Then initializes all the values in the 
+        parameters and coupling vars and configures the architecture if it hasn't
+        been done already.
+        """
         super(ArchitectureAssembly, self).check_config()
         if self.architecture is not None:
-            if self.architecture.configured:
-                self.architecture.check_config()
-            else:
-                self.configure()
+            self.architecture.check_config()
+            if not self.architecture.configured:
+                self.architecture.configure()
+                self.architecture.configured = True
+     
+    def get_des_vars_by_comp(self): 
+        """Return a dictionary of component names/list of parameters for 
+        all parameters."""
+        result = {}
+        for k,v in self.get_parameters().items():
+            data = v.get_referenced_vars_by_compname()
+            for name,vars in data.iteritems(): 
+                try: 
+                    result[name].extend(vars)
+                except KeyError: 
+                    result[name] = list(vars)
+        
+        return result                  
                 
     def get_local_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 
@@ -232,8 +244,8 @@ class ArchitectureAssembly(Assembly):
     
     
     def get_des_vars_by_comp(self): 
-        """Return a dictionary of component names/ list of parameters fo all 
-        parameters (global and local)""" 
+        """Return a dictionary of component names/list of parameters 
+        (global and local)""" 
         
         result = self.get_local_des_vars_by_comp()
         for k,v in self.get_global_des_vars_by_comp().iteritems(): 
@@ -245,8 +257,8 @@ class ArchitectureAssembly(Assembly):
         return result
     
     def get_coupling_indeps_by_comp(self): 
-        """Returns a dictionary of coupling var independents 
-        keyed to the component they are part of""" 
+        """Returns a dictionary of coupling var independent  
+        parameter objects, keyed to the component they are part of""" 
         
         result = {}
         for indep_dep,couple in self.get_coupling_vars().iteritems(): 
@@ -259,7 +271,7 @@ class ArchitectureAssembly(Assembly):
         return result        
                 
     def get_coupling_deps_by_comp(self): 
-        """Returns a dictionary of coupling var independents 
+        """Returns a dictionary of coupling var dependent 
         keyed to the component they are part of""" 
         
         result = {}
@@ -281,8 +293,10 @@ class ArchitectureAssembly(Assembly):
                     result[comp].append(const)
                 except: 
                     result[comp] = [const,]
-        return result 
 
+        return result 
+    
+    
     
 class OptProblem(ArchitectureAssembly): 
     """Class for specifying test problems for optimization 
@@ -334,4 +348,4 @@ class OptProblem(ArchitectureAssembly):
                 pass
             
         return error    
-                
+

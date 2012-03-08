@@ -11,7 +11,7 @@
 from openmdao.main.api import Assembly
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
+from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
 
 from openmdao.lib.optproblems import sellar
@@ -25,15 +25,13 @@ class SellarBLISS(Assembly):
     z_store = Array([0,0],dtype=Float)
     x1_store = Float(0.0)
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
                 
-        super(SellarBLISS, self).__init__()        
-
         # Disciplines
         self.add('dis1', sellar.Discipline1())
         self.add('dis2', sellar.Discipline2())
@@ -59,7 +57,6 @@ class SellarBLISS(Assembly):
         self.mda.add_constraint('dis2.y2 = dis1.y2')
         self.mda.add_parameter('dis2.y1', low=-9.e99, high=9.e99,start=3.16)
         self.mda.add_constraint('dis2.y1 = dis1.y1')
-        self.mda.force_execute = True
         
         # Discipline 1 Sensitivity Analysis
         self.add('sa_dis1', SensitivityDriver())
@@ -69,7 +66,6 @@ class SellarBLISS(Assembly):
         self.sa_dis1.add_objective(objective, name='obj')
         self.sa_dis1.differentiator = FiniteDifference()
         self.sa_dis1.default_stepsize = 1.0e-6
-        self.sa_dis1.force_execute = True
         
         # Discipline 2 Sensitivity Analysis
         # dis2 has no local parameter, so there is no need to treat it as
@@ -87,11 +83,10 @@ class SellarBLISS(Assembly):
         self.ssa.add_objective(objective, name='obj')
         self.ssa.differentiator = FiniteDifference()
         self.ssa.default_stepsize = 1.0e-6
-        self.ssa.force_execute = True
         
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
-        self.add('bbopt1', CONMINdriver())
+        self.add('bbopt1', SLSQPdriver())
         self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0, start=1.0)
         self.bbopt1.add_objective('sa_dis1.F[0] + sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
         self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) < 0')
@@ -100,12 +95,10 @@ class SellarBLISS(Assembly):
         
         self.bbopt1.add_constraint('(x1_store-dis1.x1)<.5')
         self.bbopt1.add_constraint('(x1_store-dis1.x1)>-.5')
-        self.bbopt1.linobj = True
         self.bbopt1.iprint = 0
-        self.bbopt1.force_execute = True
         
         # Global Optimization
-        self.add('sysopt', CONMINdriver())
+        self.add('sysopt', SLSQPdriver())
         self.sysopt.add_parameter('z_store[0]', low=-10.0, high=10.0, start=5.0)
         self.sysopt.add_parameter('z_store[1]', low=0.0, high=10.0, start=2.0)
         self.sysopt.add_objective('ssa.F[0]+ ssa.dF[0][0]*(z_store[0]-dis1.z1) + ssa.dF[0][1]*(z_store[1]-dis1.z2)')
@@ -117,9 +110,7 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_constraint('z_store[0]-dis1.z1>-.5')
         self.bbopt1.add_constraint('z_store[1]-dis1.z2<.5')
         self.bbopt1.add_constraint('z_store[1]-dis1.z2>-.5')
-        self.sysopt.linobj = True
         self.sysopt.iprint = 0
-        self.sysopt.force_execute = True
             
         self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt']) 
 
@@ -128,11 +119,9 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     import math
-    from openmdao.main.api import set_as_top
     
     prob = SellarBLISS()
     prob.name = "top"
-    set_as_top(prob)
             
     tt = time.time()
     prob.run()
@@ -143,4 +132,3 @@ if __name__ == "__main__": # pragma: no cover
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", (prob.dis1.x1)**2 + prob.dis1.z2 + prob.dis1.y1 + math.exp(-prob.dis2.y2)
     print "Elapsed time: ", time.time()-tt, "seconds"
-

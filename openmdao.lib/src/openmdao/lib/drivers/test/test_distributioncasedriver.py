@@ -8,7 +8,7 @@ from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.lib.drivers.distributioncasedriver import DistributionCaseDriver
 from openmdao.lib.drivers.distributioncasedriver import FiniteDifferenceGenerator
-from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.main.case import _Missing
 
 class SimpleComponent(Component):
@@ -45,8 +45,7 @@ class RosenSuzukiComponent(Component):
 class MyModel(Assembly):
     """ Use Distribution Case Driver with RosenSuzukiComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', DistributionCaseDriver())
         self.add('driven', RosenSuzukiComponent())
         self.driver.workflow.add('driven')

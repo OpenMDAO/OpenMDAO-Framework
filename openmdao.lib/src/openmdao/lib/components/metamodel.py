@@ -6,7 +6,7 @@ from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case, Slot
 from openmdao.lib.datatypes.api import Slot, ListStr, Event, \
-     List, Str, Dict
+     List, Str, Dict, Bool
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator
 from openmdao.main.uncertain_distributions import UncertainDistribution, \
@@ -49,6 +49,10 @@ class MetaModel(Component):
                           'arguments that should be passed to the surrogate model. Keys should '
                           'match those in the surrogate dictionary. Values can be a list of ordered '
                           'arguments, a dictionary of named arguments, or a two-tuple of a list and a dictionary.')
+    
+    report_errors = Bool(True,iotype="in",desc="If True, metamodel will report errors reported from the component. "
+                         "If False, metamodel will swallow the errors but log that they happened and exclude the case"
+                         "from the training set")
     
     recorder = Slot(ICaseRecorder,
                         desc = 'Records training cases')
@@ -140,7 +144,10 @@ class MetaModel(Component):
                 self.model.run(force=True)
 
             except Exception as err:
-                self._failed_training_msgs.append(str(err))
+                if self.report_errors: 
+                    raise err
+                else:    
+                    self._failed_training_msgs.append(str(err))
             else: #if no exceptions are generated, save the data
                 self._training_input_history.append(inputs)
                 self.update_outputs_from_model()
@@ -199,9 +206,11 @@ class MetaModel(Component):
                 cval = self._const_inputs.get(i, _missing)
                 if cval is _missing:
                     inputs.append(val)
+                
                 elif val != cval:
                     self.raise_exception("ERROR: training input '%s' was a constant value of (%s) but the value has changed to (%s)." %
                                          (name, cval, val), ValueError)
+                                    
             for name, tup in self._surrogate_info.items():
                 surrogate = tup[0]
                 # copy output to boudary
@@ -361,4 +370,3 @@ class MetaModel(Component):
         elif self.excludes and name in self.excludes:
             return False
         return True
-    

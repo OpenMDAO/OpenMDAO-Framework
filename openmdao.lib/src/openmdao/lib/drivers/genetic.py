@@ -78,8 +78,8 @@ class Genetic(Driver):
                     "for repeatable results; otherwise leave as None for truly "
                     "random seeding.")
     
-    def __init__(self, doc=None):
-        super(Genetic, self).__init__(doc)
+    def __init__(self, *args, **kwargs):
+        super(Genetic, self).__init__(*args, **kwargs)
     
     def _make_alleles(self): 
         """ Returns a GAllelle.Galleles instance with alleles corresponding to 
@@ -94,8 +94,7 @@ class Genetic(Driver):
             low = param.low
             high = param.high
       
-            metadata = param.get_metadata()[0][1]
-            
+            metadata = param.get_metadata()[1]            
             #then it's a float or an int, or a member of an array
             if ('low' in metadata or 'high' in metadata) or array_test.search(param.targets[0]): 
                 if isinstance(val, real_types):                

@@ -51,8 +51,7 @@ class MyDriver(Driver):
             recorder.record(case)
         
 class Analysis(Assembly):
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
+    def configure(self):
         
         self._tdir = mkdtemp()
         
@@ -90,12 +89,10 @@ class Analysis(Assembly):
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
         self.MOEI_opt.add_objective("MOEI.PI")
-        self.MOEI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("spiral_meta_model.train_next")
         self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
-        self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
         self.iter.iterations = 30
@@ -126,8 +123,7 @@ class Analysis(Assembly):
 
 if __name__ == "__main__": #pragma: no cover
     import sys
-    from openmdao.main.api import set_as_top
-    from openmdao.lib.casehandlers.db import case_db_to_dict
+    from openmdao.lib.casehandlers.api import case_db_to_dict
     
     seed = None
     backend = None
@@ -154,7 +150,6 @@ if __name__ == "__main__": #pragma: no cover
     
     #create the analysis
     analysis = Analysis()
-    set_as_top(analysis)
     #run the analysis
     analysis.run()
     

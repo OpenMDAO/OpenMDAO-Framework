@@ -33,24 +33,22 @@ are instantiated and the workflow is defined.
 .. testcode:: IDF_parts
 
         from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.drivers.api import CONMINdriver
+        from openmdao.lib.drivers.api import SLSQPdriver
         
         from openmdao.lib.optproblems import sellar
         
         class SellarIDF(Assembly): #TEST
             """ Optimization of the Sellar problem using IDF"""
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly with this problem
                 
                 Optimal Design at (1.9776, 0, 0)
                 
                 Optimal Objective = 3.18339"""
                         
-                super(SellarIDF, self).__init__()
-        
                 # create Optimizer instance
-                self.add('driver', CONMINdriver())
+                self.add('driver', SLSQPdriver())
         
                 # Disciplines
                 self.add('dis1', sellar.Discipline1())
@@ -59,18 +57,15 @@ are instantiated and the workflow is defined.
                 # Driver process definition
                 self.driver.workflow.add(['dis1', 'dis2'])
 
-That's all it takes to setup the workflow for IDF. All that is left to do is set up the CONMIN
+That's all it takes to setup the workflow for IDF. All that is left to do is set up the
 optimizer.  In the code below, pay attention to how we handle the global design variables ``z1`` and
 ``z2``. We set them up the same way we did for the MDF architecture. However, unlike the MDF, the
-coupling variables are also included as optimizer  parameters. We also introduce the CONMIN
-parameter *ct*, which is the constraint thickness for nonlinear constraints. Our constraints are
-nonlinear, but note that any constraint that involves a component output is most likely a nonlinear
-constraint because outputs are usually nonlinear functions of the design variables.
+coupling variables are also included as optimizer  parameters.
 
 .. testcode:: IDF_parts
     :hide:
     
-    self = SellarIDF()
+    self = set_as_top(SellarIDF())
 
 .. testcode:: IDF_parts
 
@@ -83,36 +78,30 @@ constraint because outputs are usually nonlinear functions of the design variabl
         
         #Local Design Variables and Coupling Variables
         self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
-        self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
-        self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
+        self.driver.add_parameter('dis2.y1',      low = -1e99, high=1e99)
+        self.driver.add_parameter('dis1.y2',      low = -1e99, high=1e99)
+        self.driver.add_constraint('3.16 < dis1.y1')
+        self.driver.add_constraint('dis2.y2 < 24.0')
             
-        self.driver.add_constraint('(dis2.y1-dis1.y1)**3 <= 0')
-        self.driver.add_constraint('(dis1.y1-dis2.y1)**3 <= 0')
-        self.driver.add_constraint('(dis2.y2-dis1.y2)**3 <= 0')
-        self.driver.add_constraint('(dis1.y2-dis2.y2)**3 <= 0')
+        self.driver.add_constraint('(dis2.y1-dis1.y1)**2 <= 0')
+        self.driver.add_constraint('(dis2.y2-dis1.y2)**2 <= 0')
   
         self.driver.iprint = 0
-        self.driver.itmax = 100
-        self.driver.fdch = .003
-        self.driver.fdchm = .003
-        self.driver.delfun = .0001
-        self.driver.dabfun = .00001
-        self.driver.ct = -.01
-        self.driver.ctlmin = 0.001
         
 
 Technically, IDF requires the use of equality constraints to enforce coupling between the disciplines. 
-Since CONMIN doesn't support equality constraints, we have to fall back on a
+Not all optimizers support explicit equality constraints, so we have to fall back on a
 trick where we replace it with an equivalent pair of inequality constraints.
 For example, if we want to constrain ``x=2``, we could constraint ``x<=2`` and ``x>=2`` and
-let the optimizer converge to a solution where both constraints are active.
-Working with two inequalities is a bit trickier though, because it can introduce some instability to 
-the optimizer and affect its final solution. 
+let the optimizer converge to a solution where both constraints are active. Or you could condence 
+that down to a single constraint of ``(x-2)**2<=0``. 
+SLSQP is a sequential quadratic programming algorithm that actually does support equality constraints, 
+but we've left the inequality forms in there to make it easier to try other optimziers if you want to. 
 
-You might consider trying a fancier solution such as constraining ``abs(dis2.y1-dis1.y1)<=0``. Be careful though, 
-because this nonlinear constraint has a discontinuous slope, and CONMIN won't handle that very well. 
-After some experimentation, we found that cubing the difference between the coupling variables, 
-i.e., ``(dis1.y1-dis2.y1)**3``, seemed to make CONMIN happy and helped convergence. 
+By the way, you might consider trying a fancier solution such as constraining ``abs(dis2.y1-dis1.y1)<=0``. 
+Be careful though, because this nonlinear constraint has a discontinuous slope which can make it 
+very hard for some optimizers to converge. Use the squared form of the constraint, as we did in our 
+sample code, instead. 
 
 When you put it all together, you get 
 :download:`sellar_IDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_IDF.py>`. 
@@ -121,8 +110,8 @@ optimization.
 
 .. testcode:: IDF_full
 
-        from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.drivers.api import CONMINdriver
+        from openmdao.main.api import Assembly
+        from openmdao.lib.drivers.api import SLSQPdriver
         
         from openmdao.lib.optproblems import sellar
         
@@ -130,17 +119,15 @@ optimization.
         class SellarIDF(Assembly):
             """ Optimization of the Sellar problem using IDF"""
             
-            def __init__(self):
+            def configure(self):
                 """ Creates a new Assembly with this problem
                 
                 Optimal Design at (1.9776, 0, 0)
                 
                 Optimal Objective = 3.18339"""
                         
-                super(SellarIDF, self).__init__()
-        
                 # create Optimizer instance
-                self.add('driver', CONMINdriver())
+                self.add('driver', SLSQPdriver())
         
                 # Disciplines
                 self.add('dis1', sellar.Discipline1())
@@ -159,29 +146,21 @@ optimization.
                 
                 #Local Design Variables and Coupling Variables
                 self.driver.add_parameter('dis1.x1',      low = 0.0,   high=10.0)
-                self.driver.add_parameter('dis2.y1',      low = 3.16,  high=10.0)
-                self.driver.add_parameter('dis1.y2',      low = -10.0, high=24.0)
+                self.driver.add_parameter('dis2.y1',      low = -1e99,  high=1e99)
+                self.driver.add_parameter('dis1.y2',      low = -1e99, high=1e99)
+                self.driver.add_constraint('3.16 < dis1.y1')
+                self.driver.add_constraint('dis2.y2 < 24.0')
                     
-                self.driver.add_constraint('(dis2.y1-dis1.y1)**3 <= 0')
-                self.driver.add_constraint('(dis1.y1-dis2.y1)**3 <= 0')
-                self.driver.add_constraint('(dis2.y2-dis1.y2)**3 <= 0')
-                self.driver.add_constraint('(dis1.y2-dis2.y2)**3 <= 0')
+                self.driver.add_constraint('(dis2.y1-dis1.y1)**2 <= 0')
+                self.driver.add_constraint('(dis2.y2-dis1.y2)**2 <= 0')
           
                 self.driver.iprint = 0
-                self.driver.itmax = 100
-                self.driver.fdch = .003
-                self.driver.fdchm = .003
-                self.driver.delfun = .0001
-                self.driver.dabfun = .00001
-                self.driver.ct = -.01
-                self.driver.ctlmin = 0.001
         
         
         if __name__ == "__main__":
             import time
             
             prob = SellarIDF()
-            set_as_top(prob)
             
             # pylint: disable-msg=E1101
                 
@@ -194,7 +173,6 @@ optimization.
             prob.run()
         
             print "\n"
-            print "CONMIN Iterations: ", prob.driver.iter_count
             print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                                      prob.dis2.z2, \
                                                      prob.dis1.x1)
@@ -208,9 +186,8 @@ output that resembles this:
 ::
 
         $ python sellar_IDF.py
-        CONMIN Iterations:  10
-        Minimum found at (1.976427, 0.000287, 0.000000)
-        Couping vars: 3.156521, 3.754359
+        Minimum found at (1.976427, 0.000000, 0.000000)
+        Couping vars: 3.159994, 3.755276
         Minimum objective:  3.18022323743
         Elapsed time:  0.200541973114 seconds
 

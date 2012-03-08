@@ -10,7 +10,7 @@ from openmdao.main.interfaces import implements, ICaseRecorder
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
@@ -76,10 +76,16 @@ class Dummy(Component):
 
     def execute(self): 
         self.y = 2*self.x
+        
+class DummyError(Component): 
+    x = Float(1.2,iotype="in")
+    y = Float(0,iotype="out")
+
+    def execute(self): 
+        self.raise_exception("Test Error",RuntimeError)
 
 class Sim(Assembly):
-    def __init__(self): 
-        super(Sim,self).__init__()
+    def configure(self):
 
         self.add('mm',MetaModel())
         self.mm.surrogate = {'default':KrigingSurrogate()}
@@ -122,6 +128,23 @@ class MetaModelTestCase(unittest.TestCase):
         asm.connect('metamodel.d','comp2.b')
         return asm
         
+    def test_comp_error(self): 
+        a = Assembly()
+        a.add('m',MetaModel()) 
+        a.m.surrogate = {'default':KrigingSurrogate()}
+        a.m.model = DummyError()
+        
+        a.m.train_next = True
+        
+        a.driver.workflow.add('m')
+        try: 
+            a.run()
+        except RuntimeError as err: 
+            self.assertEqual("m.model: Test Error",str(err))
+        else: 
+            self.fail("RuntimeError expected")
+
+    
     def test_in_assembly(self):
         asm = self._get_assembly()
         self.assertEqual(set(asm.list_connections()), 
@@ -367,26 +390,9 @@ class MetaModelTestCase(unittest.TestCase):
             self.fail('Expected Exception')
         self.assertEqual(metamodel.includes, [])
         
-    def test_reset_training_data_event(self):
-        metamodel = MetaModel()
-        metamodel.name = 'meta'
-        metamodel.surrogate = {'default':KrigingSurrogate()}
-        metamodel.model = Simple()
-        metamodel.recorder = DumbRecorder()
-        simple = Simple()
-        
-        metamodel.a = 1.
-        metamodel.b = 2.
-        metamodel.train_next = True
-        metamodel.run()
-        
-        metamodel.a = 2.
-        metamodel.b = 3.
-        metamodel.train_next = True
-        metamodel.run()
         
     def test_reset_nochange_inputs(self):
-        s = Sim()
+        s = set_as_top(Sim())
         
         s.mm.train_next = True
         s.mm.x = 1
@@ -400,8 +406,32 @@ class MetaModelTestCase(unittest.TestCase):
         
         s.mm.x = 10
         s.mm.reset_training_data = True
+        self.assertEqual(len(s.mm._training_input_history), 0)
+        for name, tup in s.mm._surrogate_info.items():
+            self.assertEqual(s.mm._surrogate_info[name][1],[])
+
         #all meta model inputs should remain at their current values
         self.assertEqual(s.mm.x, 10)
+
+        
+        s.mm.train_next = True
+        s.mm.x = 10
+        s.run()
+        self.assertEqual(s.mm.x, 10)
+        
+        
+        s.mm.train_next = True
+        s.mm.x = 20
+        s.run()
+        self.assertEqual(s.mm.x, 20)
+        
+        s.mm.train_next = True
+        s.mm.x = 30
+        s.run()
+        self.assertEqual(s.mm.x, 30)
+        
+        s.run()
+        
         
 if __name__ == "__main__":
     unittest.main()

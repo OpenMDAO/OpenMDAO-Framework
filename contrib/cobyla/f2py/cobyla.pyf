@@ -1,0 +1,50 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module cobyla__user__routines 
+    interface cobyla_user_interface 
+        subroutine calcfc(n,m,x,f,con)
+            integer intent(in) :: n
+            integer intent(in) :: m
+            double precision dimension(n),depend(n),intent(in) :: x
+            double precision intent(in,out) :: f
+            double precision intent(in,out),dimension(m),depend(m) :: con
+        end subroutine calcfc
+    end interface cobyla_user_interface
+end python module cobyla__user__routines
+python module cobyla ! in 
+    interface  ! in : cobyla
+        subroutine cobyla(calcfc,n,m,x,rhobeg,rhoend,iprint,maxfun,w,iact,ifail,nfvals,iout,ifile,ff,gg) ! in :cobyla:source/cobyla.f
+            use cobyla__user__routines
+            external calcfc
+            integer intent(in) :: n
+            integer intent(in) :: m
+            double precision dimension(n),intent(inout),depend(n) :: x
+            double precision intent(in) :: rhobeg
+            double precision intent(in) :: rhoend
+            integer intent(in) :: iprint
+            integer intent(in) :: maxfun
+            double precision dimension(n*(3*n+2*m+11)+4*m+6),intent(in),depend(n,m) :: w
+            integer dimension(m+1),intent(in,out),depend(m) :: iact
+            integer intent(in,out) :: ifail
+            integer intent(in,out) :: nfvals
+            integer intent(in) :: iout
+            character*(*) intent(in) :: ifile
+            double precision intent(inout) :: ff
+            double precision dimension(m),intent(inout),depend(m) :: gg
+        end subroutine cobyla
+        subroutine openunit(unitnum,filename,filestatus,fileaction,ierror) ! in :cobyla:source/openunit.f
+            integer intent(in) :: unitnum
+            character*(*) intent(in) :: filename
+            character*(*) intent(in) :: filestatus
+            character*(*) intent(in) :: fileaction
+            integer intent(out) :: ierror
+        end subroutine openunit
+        subroutine pyflush(unitnum) ! in :cobyla:source/openunit.f
+            integer :: unitnum
+        end subroutine pyflush
+        subroutine closeunit(unitnum) ! in :cobyla:source/closeunit.f
+            integer intent(in) :: unitnum
+        end subroutine closeunit
+    end interface 
+end python module cobyla

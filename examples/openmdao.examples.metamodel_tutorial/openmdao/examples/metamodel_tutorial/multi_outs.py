@@ -1,4 +1,4 @@
-from openmdao.main.api import Assembly, Component, SequentialWorkflow
+from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
 from math import sin, cos
 
 from openmdao.lib.datatypes.api import Float
@@ -23,8 +23,7 @@ class Trig(Component):
 class Simulation(Assembly):
 
         
-    def __init__(self):
-        super(Simulation,self).__init__()
+    def configure(self):
     
         #Components
         self.add("trig_meta_model",MetaModel())
@@ -41,7 +40,6 @@ class Simulation(Assembly):
         self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Trainer.add_event("trig_meta_model.train_next")
         self.DOE_Trainer.recorders = [DBCaseRecorder()]
-        self.DOE_Trainer.force_execute = True
         
         #MetaModel Validation
         self.add("trig_calc",Trig())
@@ -51,7 +49,6 @@ class Simulation(Assembly):
         self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
         self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
         self.DOE_Validate.recorders = [DBCaseRecorder()]
-        self.DOE_Validate.force_execute = True
         
         #Iteration Hierarchy
         self.driver.workflow = SequentialWorkflow()
@@ -64,7 +61,7 @@ class Simulation(Assembly):
 if __name__ == "__main__":
     
     
-    sim = Simulation()
+    sim = set_as_top(Simulation())
     sim.run()
         
     #This is how you can access any of the data

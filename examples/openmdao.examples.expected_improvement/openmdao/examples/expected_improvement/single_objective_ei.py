@@ -37,8 +37,7 @@ class MyDriver(Driver):
 
         
 class Analysis(Assembly): 
-    def __init__(self,*args,**kwargs):
-        super(Analysis,self).__init__(self,*args,**kwargs)
+    def configure(self):
         
         self._tdir = mkdtemp()
         
@@ -78,12 +77,10 @@ class Analysis(Assembly):
         self.EI_opt.add_parameter("branin_meta_model.y",low=0.,high=15.)
         
         self.EI_opt.add_objective("EI.PI")
-        self.EI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("branin_meta_model.train_next")
         self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
-        self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
         self.iter.max_iterations = 30
@@ -110,8 +107,7 @@ class Analysis(Assembly):
 
 if __name__ == "__main__": #pragma: no cover
     import sys
-    from openmdao.main.api import set_as_top
-    from openmdao.lib.casehandlers.db import case_db_to_dict
+    from openmdao.lib.casehandlers.api import case_db_to_dict
     
     seed = None
     backend = None
@@ -135,9 +131,6 @@ if __name__ == "__main__": #pragma: no cover
     from numpy import meshgrid,array, pi,arange,cos
     
     analysis = Analysis()
-       
-    set_as_top(analysis)
-    
     analysis.run()
         
     points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
@@ -185,6 +178,18 @@ if __name__ == "__main__": #pragma: no cover
 
     color_map = get_cmap('spring')
     
+    print "# adaptive samples:", len(data_EI['branin_meta_model.x'])
+    
+    points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
+    distance = [10000.,10000.,10000.]
+    closest_points = [(),(),()]
+    for x,y,z in zip(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],data_EI['branin_meta_model.f_xy']): 
+        for i,p in enumerate(points): 
+            d = ((p[0]-x)**2 + (p[1]-y)**2)**.5
+            if d < distance[i]:
+                distance[i] = d
+                closest_points[i] = (x,y,z.mu)
+    print "closes solutions: ", closest_points    
     
     plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
                 s=30,
@@ -221,7 +226,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.title("Branin Meta Model Contours")
     plt.text(10.9,11,"Meta Model\nFunction\nValue")
     
-    plt.show()
+    #plt.show()
 
     analysis.cleanup()
     

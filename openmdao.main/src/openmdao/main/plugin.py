@@ -804,7 +804,7 @@ def plugin_makedist(parser, options, args=None):
     os.chdir(options.dist_dir_path)
     
     try:
-        plugin_build_docs(options)
+        plugin_build_docs(parser, options)
         
         cfg = SafeConfigParser(dict_type=OrderedDict)
         cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
@@ -900,7 +900,13 @@ def _plugin_docs(plugin_name, browser=None):
         except ImportError:
             pass
     else:
-        raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
+        # Possibly something in contrib that's a directory.
+        try:
+            __import__(plugin_name)
+            mod = sys.modules[plugin_name]
+            modname = plugin_name
+        except ImportError:
+            raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
     
     if modname.startswith('openmdao.'): # lookup in builtin docs
         fparts = mod.__file__.split(os.sep)
@@ -953,7 +959,7 @@ def plugin_install(parser, options, args=None):
             try:
                 resp = urllib2.urlopen(url)
             except urllib2.HTTPError:
-                print "\nERROR: plugin named not found in OpenMDAO-Plugins"
+                print "\nERROR: plugin named '%s' not found in OpenMDAO-Plugins" % name
                 exit()
                 
             for line in resp.fp:
@@ -962,8 +968,16 @@ def plugin_install(parser, options, args=None):
                 tags = []
                 for item in text:
                     tags.append(item['name'])
+            try:
+                tags.sort(key=lambda s: map(int, s.split('.')))
+            except ValueError:
+                print "\nERROR: the releases for the plugin named '%s' have not been tagged correctly for installation. You may want to contact the repository owner" % name
+                exit()
                 
-            tags.sort(key=lambda s: map(int, s.split('.')))
+            if not tags:
+                print "\nERROR: plugin named '%s' has no tagged releases. You may want to contact the repository owner to create a tag" % name
+                exit()
+                
             version = tags[-1]
             
         url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)

@@ -42,7 +42,8 @@ class Driver(Component):
         self._iter = None
         super(Driver, self).__init__(doc=doc)
         self.workflow = Dataflow(self)
-        
+        self.force_execute = True 
+ 
     def _workflow_changed(self, oldwf, newwf):
         if newwf is not None:
             newwf._parent = self
@@ -84,9 +85,10 @@ class Driver(Component):
             else:
                 diff = reqcomps - iterset
                 if len(diff) > 0:
-                    raise RuntimeError("Expressions in this Driver require the following "
-                                       "Components that are not part of the "
-                                       "workflow: %s" % list(diff))
+                    #raise RuntimeError("Expressions in this Driver require the following "
+                    #                   "Components that are not part of the "
+                    #                   "workflow: %s" % list(diff))
+                    pass
             # calling get_components() here just makes sure that all of the
             # components can be resolved
             comps = self.workflow.get_components()
@@ -214,6 +216,7 @@ class Driver(Component):
     def pre_iteration(self):
         """Called prior to each iteration.  This is where iteration events are set."""
         self.set_events()
+        
         
     def run_iteration(self):
         """Runs workflow."""

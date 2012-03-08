@@ -35,7 +35,7 @@ class FixedPointIterator(Driver):
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
     
-    tolerance = Float(1.0e-5, iotype='in', desc='Absolute convergence '
+    tolerance = Float(1.0e-3, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
     
     norm_order = Enum('Infinity', ['Infinity', 'Euclidean'], 
@@ -89,8 +89,10 @@ class FixedPointIterator(Driver):
             # check max iteration
             if self.current_iteration >= self.max_iteration-1:
                 self.history = history[:self.current_iteration+1, :]
-                self.raise_exception('Max iterations exceeded without ' + \
-                                     'convergence.', RuntimeError)
+                
+                self._logger.warning('Max iterations exceeded without ' + \
+                                     'convergence.')
+                return
                 
             # Pass output to input
             val0 += history[self.current_iteration, :]
@@ -113,7 +115,8 @@ class FixedPointIterator(Driver):
                 
                 case = Case(case_input, case_output,parent_uuid=self._case_id)
                 
-                self.recorders[0].record(case)
+                for recorder in self.recorders:
+                    recorder.record(case)
                 
             self.current_iteration += 1
         
@@ -122,7 +125,6 @@ class FixedPointIterator(Driver):
             
                 term = val.evaluate(self.parent)
                 delta[i] = term[0] - term[1]
-            
             history[self.current_iteration] = delta
             
             if norm(delta, order) < self.tolerance:

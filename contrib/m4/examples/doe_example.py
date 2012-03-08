@@ -6,7 +6,7 @@ and use it to set component inputs and get component outputs.
 The component in question just evaluates a simple expression.
 """
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 
 import m4.doe
 import m4.dummy_components
@@ -15,8 +15,7 @@ class MyModel(Assembly):
     """ Simple M4 DOE example.  """
 
     #name='M4_DOE_example'
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
 
         # Specify DOE driver.
         doe = self.add('M4_DOE', m4.doe.DOE())
@@ -44,7 +43,7 @@ class MyModel(Assembly):
 
 
 if __name__ == '__main__': # pragma no cover
-    top = set_as_top(MyModel())
+    top = MyModel()
 #    top.run()
     top.check_save_load()  # Note: requires correct pythonV.R
 

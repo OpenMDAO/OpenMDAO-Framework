@@ -10,11 +10,11 @@ import thread
 import threading
 import traceback
 
-from openmdao.main.datatypes.api import Bool, Enum, Int, Slot
+from openmdao.main.datatypes.api import Bool, Dict, Enum, Int, Slot
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
-from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
+from openmdao.main.interfaces import ICaseIterator, ICaseRecorder, ICaseFilter
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
@@ -22,6 +22,8 @@ from openmdao.util.filexfer import filexfer
 
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
+
+from openmdao.lib.casehandlers.api import ListCaseRecorder
 
 _EMPTY     = 'empty'
 _LOADING   = 'loading'
@@ -46,15 +48,22 @@ class CaseIterDriverBase(Driver):
                         desc='If True, reload the model between executions.')
 
     error_policy = Enum(values=('ABORT', 'RETRY'), iotype='in',
-                        desc='If ABORT, any error stops the evaluation of the whole set of cases.')
+                        desc='If ABORT, any error stops the evaluation of the'
+                             ' whole set of cases.')
 
     max_retries = Int(1, low=0, iotype='in',
                       desc='Maximum number of times to retry a failed case.')
 
+    extra_resources = Dict(iotype='in',
+                           desc='Extra resource requirements (unusual).')
+
+    ignore_egg_requirements = Bool(False, iotype='in',
+                                   desc='If True, no distribution or orphan'
+                                        ' requirements will be included in the'
+                                        ' generated egg.')
+
     def __init__(self, *args, **kwargs):
         super(CaseIterDriverBase, self).__init__(*args, **kwargs)
-        self.extra_reqs = {}  # Extra resource requirements (unusual)
-
         self._iter = None  # Set to None when iterator is empty.
         self._replicants = 0
         self._abort_exc = None  # Set if error_policy == ABORT.
@@ -171,10 +180,11 @@ class CaseIterDriverBase(Driver):
                 # distributions required by the egg.
                 allocators = RAM.list_allocators()
                 need_reqs = False
-                for allocator in allocators:
-                    if not isinstance(allocator, LocalAllocator):
-                        need_reqs = True
-                        break
+                if not self.ignore_egg_requirements:
+                    for allocator in allocators:
+                        if not isinstance(allocator, LocalAllocator):
+                            need_reqs = True
+                            break
 
                 driver = self.parent.driver
                 self.parent.add('driver', Driver()) # this driver will execute the workflow once
@@ -207,8 +217,8 @@ class CaseIterDriverBase(Driver):
             'required_distributions':self._egg_required_distributions,
             'orphan_modules':self._egg_orphan_modules,
             'python_version':sys.version[:3]}
-        if self.extra_reqs:
-            resources.update(self.extra_reqs)
+        if self.extra_resources:
+            resources.update(self.extra_resources)
         max_servers = RAM.max_servers(resources)
         self._logger.debug('max_servers %d', max_servers)
         if max_servers <= 0:
@@ -296,20 +306,26 @@ class CaseIterDriverBase(Driver):
                 name, result, exc = self._reply_q.get(timeout=timeout)
             # Hard to force worker to hang, which is handled here.
             except Queue.Empty:  #pragma no cover
-                self._logger.error('Timeout waiting with nothing left to do:')
+                msgs = []
                 for name, in_use in self._in_use.items():
                     if in_use:
                         try:
                             server = self._servers[name]
                             info = self._server_info[name]
                         except KeyError:
-                            self._logger.error('    %r: no startup reply', name)
+                            msgs.append('%r: no startup reply' % name)
+                            self._in_use[name] = False
                         else:
-                            self._logger.error('    %r: %r %s %s', name,
-                                               self._servers[name],
-                                               self._server_states[name],
-                                               self._server_info[name])
-                        self._in_use[name] = False
+                            state = self._server_states[name]
+                            if state not in (_LOADING, _EXECUTING):
+                                msgs.append('%r: %r %s %s'
+                                            % (name, self._servers[name],
+                                               state, self._server_info[name]))
+                                self._in_use[name] = False
+                if msgs:
+                    self._logger.error('Timeout waiting with nothing left to do:')
+                    for msg in msgs:
+                        self._logger.error('    %s', msg)
             else:
                 self._in_use[name] = self._server_ready(name)
 
@@ -638,13 +654,6 @@ class CaseIterDriverBase(Driver):
         else:
             self._top_levels[server].set(name, value, index)
 
-    def _model_get(self, server, name, index):
-        """ Get value from server's model. """
-        if server is None:
-            return self.parent.get(name, index)
-        else:
-            return self._top_levels[server].get(name, index)
-
     def _model_execute(self, server):
         """ Execute model in server. """
         self._exceptions[server] = None
@@ -683,9 +692,34 @@ class CaseIteratorDriver(CaseIterDriverBase):
     iterator = Slot(ICaseIterator, iotype='in',
                       desc='Iterator supplying Cases to evaluate.')
     
+    evaluated = Slot(ICaseIterator, iotype='out',
+                      desc='Iterator supplying evaluated Cases.')
+    
+    filter = Slot(ICaseFilter, iotype='in',
+                  desc='Filter used to select cases to evaluate.')
+
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         if self.iterator is not None:
-            return iter(self.iterator)
+            if self.filter is None:
+                return iter(self.iterator)
+            else:
+                return self._select_cases()
         else:
             self.raise_exception("iterator has not been set", ValueError)
+
+    def _select_cases(self):
+        """ Select cases to be evaluated. """
+        for i, case in enumerate(iter(self.iterator)):
+            if self.filter.select(i, case):
+                yield case
+
+    def execute(self):
+        """ Evaluate cases from `iterator` and place in `evaluated`. """
+        self.evaluated = None
+        self.recorders.append(ListCaseRecorder())
+        try:
+            super(CaseIteratorDriver, self).execute()
+        finally:
+            self.evaluated = self.recorders.pop().get_iterator()
+

@@ -15,11 +15,7 @@ from openmdao.examples.enginedesign.vehicle import Vehicle
 class EngineOptimization(Assembly):
     """Optimization of a Vehicle."""
     
-    def __init__(self):
-        """ Creates a new Assembly for vehicle performance optimization."""
-        
-        super(EngineOptimization, self).__init__()
-
+    def configure(self):
         # pylint: disable-msg=E1101
         
         # Create CONMIN Optimizer instance
@@ -68,7 +64,6 @@ class EngineOptimization(Assembly):
         self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
         self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
         self.sim_EPA_city.profilename = 'EPA-city.csv'
-        self.sim_EPA_city.force_execute = True
         
         # EPA Highway MPG Sim Setup
         self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
@@ -79,7 +74,6 @@ class EngineOptimization(Assembly):
         self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
         self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
         self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-        self.sim_EPA_highway.force_execute = True
 
 if __name__ == "__main__": # pragma: no cover         
 
@@ -101,10 +95,8 @@ if __name__ == "__main__": # pragma: no cover
     
 
     import time
-    from openmdao.main.api import set_as_top
     
     opt_problem = EngineOptimization()
-    set_as_top(opt_problem)
     
     opt_problem.sim_acc.run()
     opt_problem.sim_EPA_city.run()

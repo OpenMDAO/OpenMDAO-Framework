@@ -1,5 +1,7 @@
 from openmdao.main.api import Driver, Architecture
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver
+from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver#, COBYLAdriver as SLSQPdriver
+
+from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
 class MDF(Architecture):
     
@@ -11,20 +13,16 @@ class MDF(Architecture):
         self.constraint_types = ['ineq']
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
+        self.has_global_des_vars = False
     
     def configure(self): 
         """setup and MDF architecture inside this assembly.
         """
         #create the top level optimizer
-        self.parent.add("driver",CONMINdriver())
-        self.parent.driver.cons_is_linear = [1]*len(self.parent.list_constraints())
+        self.parent.add("driver",SLSQPdriver())
+        self.parent.driver.differentiator = FiniteDifference()
         self.parent.driver.iprint = 0
-        self.parent.driver.itmax = 30
-        self.parent.driver.fdch = .001
-        self.parent.driver.fdchm = .001
-        self.parent.driver.delfun = .0001
-        self.parent.driver.dabfun = .000001
-        self.parent.driver.ctlmin = 0.0001
+        self.parent.driver.recorders = self.data_recorders
         
         params = self.parent.get_parameters()
         global_dvs = []
@@ -38,7 +36,6 @@ class MDF(Architecture):
         
         for k,v in self.parent.get_local_des_vars(): 
             local_dvs.append(v)
-            #add the local design variables to the driver
             self.parent.driver.add_parameter(v,name=k)
          
         #TODO: possibly add method for passing constraint directly?
@@ -59,7 +56,7 @@ class MDF(Architecture):
         
         #add the coupling vars parameters/constraints to the solver
         for key,couple in self.parent.get_coupling_vars().iteritems(): 
-            self.parent.solver.add_parameter(couple.indep.target, low=-9.e99, high=9.e99,name=key)
+            self.parent.solver.add_parameter(couple.indep.target, low=-1.e99, high=1.e99,name=key)
             self.parent.solver.add_constraint("%s=%s"%(couple.indep.target,couple.dep.target))
 
         #setup the workflows

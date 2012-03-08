@@ -2,30 +2,37 @@
 .. index:: MDAO tutorial problem
 
 
-Introduction
-=============
+The Sellar Problem
+==================
 
-This tutorial shows how to create a model to solve a simple problem consisting of
-two coupled disciplines using several MDAO strategies, including:
+We will cover some of the more advanced capabilities of OpenMDAO. You should read and
+understand :ref:`optimization_tutorial` and :ref:`Tutorial:-MetaModel` before starting this one. 
+
+.. 
+  An understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
+  recommended.
+
+This tutorial illustrates the features of OpenMDAO that support the use of decomposition-based MDAO
+architectures, such as:
 
 #. Multidisciplinary Design Feasible (MDF)
 #. Independent Design Feasible (IDF)
 #. Collaborative Optimization (CO)
 
-The tutorial will introduce you to using the iteration hierarchy to construct these three 
-common MDAO architectures from scratch. If you are thinking about creating a new architecture, 
-or just implementing one you have seen, but is not currently available within OpenMDAO, then this 
-tutorial will show you how. 
+First we'll walk through the manual implementation of these architectures on a simple 
+example problem. This will introduce you to using iteration hierarchy, metamodeling, 
+and Design of Experiments (DOE) to construct different kinds of optimization processes. 
+Understanding this section is important if you want to implement a new MDAO architecture 
+or an existing one that is not currently available within OpenMDAO.
 
-We will cover some of the more advanced capabilities of OpenMDAO. You should read and
-understand :ref:`A-Simple-Tutorial-Problem` before starting this one. An
-understanding of the material presented in :ref:`A-More-Complex-Tutorial-Problem` is also
-recommended.
-
+Once you understand how to construct an MDAO architecture by hand, you may realize that it can
+take a good amount of work to set one up. So we'll show you how to set up your problem so you can
+automatically apply the MDAO architectures. Using the automatic implementation of an architecture
+will dramatically simplify your input files.
 
 .. index:: Sellar
 
-All of these tutorials use the Sellar problem which consists of two disciplines as follows:
+All of these tutorials use the Sellar Problem, which consists of two disciplines as follows:
 
 
 .. figure:: SellarResized.png
@@ -101,15 +108,25 @@ Disciplines 1 and 2 were implemented in OpenMDAO as components.
             
 ``Discipline2`` contains a square root of variable *y1* in its calculation. For negative values
 of *y1,* the result would be imaginary, so the absolute value is taken before the square root
-is applied. This component is clearly not valid for ``y1 < 0``, and our first thought was to add
-a *low* attribute to the variable definition for *y1.* However, the solver that was used to
-converge the two disciplines occasionally forced *y1* to go slightly negative. The inclusion
-of the absolute value solved the problem without impacting the eventual convergence of the
-solver.
+is applied. This component is clearly not valid for ``y1 < 0``, but some solvers could 
+occasionally force *y1* to go slightly negative while trying to converge the two disciplines . The inclusion
+of the absolute value solves the problem without impacting the final converged solution.
 
-These two components are contained in the file `sellar.py </../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` 
-. in the openmdao.lib.optproblems sub-package. This package contains a number of common optimization
-problems which you can use to test your own optimization problems. 
+These two components are contained in the file :download:`sellar.py 
+</../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` in the 
+openmdao.lib.optproblems sub-package. This part of the standard library contains a number of common optimization
+problems which you can use to test your own optimization algorithms. 
+
+Now that you have defined the components for the Sellar Problem for yourself, lets take a momement to
+consider what we have really accomplished. Firstly, we have written two (very simple) analysis components. 
+If you were working on a real problem, these would likely come in the form of some much more complex tools
+that you wrapped in the framework. But keep in mind that from an optimization point of view, weather they 
+are simple tools or wrappers for real analyses, OpenMDAO still views them as components with inputs, outputs, 
+and an execute function. 
+
+We have talked about the problem formulation, and specified that certain variables will be 
+design variables, while others are coupling variables. But none of the code we have written has told 
+OpenMDAO about those details. Thats what we'll get to next! 
 
 **Reference:**
 
