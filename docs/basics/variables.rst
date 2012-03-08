@@ -42,9 +42,9 @@ Built-in Variable Types
 **Summary of Variable Types**
 
 +----------+--------------------------------------------------------------+
-| Nam      | Callable Signature                                           |
+| Name     | Callable Signature                                           |
 +==========+==============================================================+
-| Arr      | ``Array( [default_value = None, shape = None, value = None,  |
+| Array    | ``Array( [default_value = None, shape = None, value = None,  |
 |          | dtype = None, units = None, iotype = None, desc = None,      |
 |          | units = None] )``                                            |
 +----------+--------------------------------------------------------------+
