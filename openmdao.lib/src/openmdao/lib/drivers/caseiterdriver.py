@@ -33,6 +33,7 @@ class _ServerError(Exception):
     """ Raised when a server thread has problems. """
     pass
 
+
 class CaseIterDriverBase(Driver):
     """
     A base class for Drivers that run sets of cases in a manner similar
@@ -65,6 +66,7 @@ class CaseIterDriverBase(Driver):
     def __init__(self, *args, **kwargs):
         super(CaseIterDriverBase, self).__init__(*args, **kwargs)
         self._iter = None  # Set to None when iterator is empty.
+        self._seqno = 0    # Used to set itername for case.
         self._replicants = 0
         self._abort_exc = None  # Set if error_policy == ABORT.
 
@@ -143,12 +145,15 @@ class CaseIterDriverBase(Driver):
             self.setup()
 
         try:
-            self._todo.append(self._iter.next())
+            case = self._iter.next()
         except StopIteration:
             if not self._rerun:
                 self._iter = None
+                self._seqno = 0
                 raise
 
+        self._seqno += 1
+        self._todo.append((case, self._seqno))
         self._server_cases[None] = None
         self._server_states[None] = _EMPTY
         while self._server_ready(None, stepping=True):
@@ -202,6 +207,7 @@ class CaseIterDriverBase(Driver):
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
         self._iter = self.get_case_iterator()
+        self._seqno = 0
         
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
@@ -236,11 +242,15 @@ class CaseIterDriverBase(Driver):
 
             # Get next case. Limits servers started if max_servers > cases.
             try:
-                self._todo.append(self._iter.next())
+                case = self._iter.next()
             except StopIteration:
                 if not self._rerun:
                     self._iter = None
+                    self._seqno = 0
                     break
+
+            self._seqno += 1
+            self._todo.append((case, self._seqno))
 
             # Start server worker thread.
             n_servers += 1
@@ -422,7 +432,7 @@ class CaseIterDriverBase(Driver):
                         in_use = False
 
         elif state == _EXECUTING:
-            case = self._server_cases[server]
+            case, seqno = self._server_cases[server]
             self._server_cases[server] = None
             exc = self._model_status(server)
             if exc is None:
@@ -444,7 +454,7 @@ class CaseIterDriverBase(Driver):
                 self._stop = True
 
             # Record the data.
-            self._record_case(case)
+            self._record_case(case, seqno)
 
             # Set up for next case.
             in_use = self._start_processing(server, stepping, reload=True)
@@ -500,10 +510,12 @@ class CaseIterDriverBase(Driver):
         """ Look for the next case and start it. """
         if self._todo:
             self._logger.debug('    run startup case')
-            in_use = self._run_case(self._todo.pop(0), server)
+            case, seqno = self._todo.pop(0)
+            in_use = self._run_case(case, seqno, server)
         elif self._rerun:
             self._logger.debug('    rerun case')
-            in_use = self._run_case(self._rerun.pop(0), server, rerun=True)
+            case, seqno = self._rerun.pop(0)
+            in_use = self._run_case(case, seqno, server, rerun=True)
         elif self._iter is None:
             self._logger.debug('    no more cases')
             in_use = False
@@ -515,13 +527,15 @@ class CaseIterDriverBase(Driver):
             except StopIteration:
                 self._logger.debug('    no more cases')
                 self._iter = None
+                self._seqno = 0
                 in_use = False
             else:
                 self._logger.debug('    run next case')
-                in_use = self._run_case(case, server)
+                self._seqno += 1
+                in_use = self._run_case(case, self._seqno, server)
         return in_use
 
-    def _run_case(self, case, server, rerun=False):
+    def _run_case(self, case, seqno, server, rerun=False):
         """ Setup and start a case. Returns True if started. """
         if not rerun:
             if not case.max_retries:
@@ -545,22 +559,22 @@ class CaseIterDriverBase(Driver):
                 msg = 'Exception setting case inputs: %s' % exc
                 self._logger.debug('    %s', msg)
                 self.raise_exception(msg, _ServerError)
-            self._server_cases[server] = case
+            self._server_cases[server] = (case, seqno)
             self._model_execute(server)
             self._server_states[server] = _EXECUTING
         except _ServerError as exc:
             case.msg = str(exc)
-            self._record_case(case)
+            self._record_case(case, seqno)
             return self._start_processing(server, stepping=False)
         else:
             return True
 
-    def _record_case(self, case):
+    def _record_case(self, case, seqno):
         """ If successful, record the case. Otherwise possibly retry. """
         if case.msg and case.retries < case.max_retries:
             case.msg = None
             case.retries += 1
-            self._rerun.append(case)
+            self._rerun.append((case, seqno))
         else:
             for recorder in self.recorders:
                 recorder.record(case)
@@ -659,7 +673,7 @@ class CaseIterDriverBase(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.workflow.run(case_id=self._server_cases[server].uuid)
+                self.workflow.run(case_id=self._server_cases[server][0].uuid)
             except Exception as exc:
                 self._exceptions[server] = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
@@ -668,8 +682,10 @@ class CaseIterDriverBase(Driver):
 
     def _remote_model_execute(self, server):
         """ Execute model in remote server. """
+        case, seqno = self._server_cases[server]
         try:
-            self._top_levels[server].run()
+            self._top_levels[server].set_itername(self.get_itername(), seqno)
+            self._top_levels[server].run(case_id=case.uuid)
         except Exception as exc:
             self._exceptions[server] = TracedError(exc, traceback.format_exc())
             self._logger.error('Caught exception from server %r, PID %d on %s: %r',
