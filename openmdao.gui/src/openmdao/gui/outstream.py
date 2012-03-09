@@ -11,11 +11,6 @@ from openmdao.util.network import get_unused_ip_port
 
 from random import randrange
 
-debug = True
-def DEBUG(msg):
-    if debug:
-        print '<<<'+str(os.getpid())+'>>> OutStreamServer --',msg
-
 class OutStream(object):
     """ A file like object that publishes the stream to a 0MQ PUB socket.
         (Borrowed from IPython, but stripped down a bit...)
@@ -80,8 +75,6 @@ class OutStreamRedirector(Process):
     '''
     def __init__(self,name,addr,filename='sys.stdout'):
         super(OutStreamRedirector, self).__init__()
-        DEBUG(name+'..............')
-        print addr,'-->',filename
         self.name = name
         self.addr = addr
         self.filename = filename
@@ -93,7 +86,6 @@ class OutStreamRedirector(Process):
             self.file = sys.stderr
         else:
             self.file = open(self.filename,'a+b')
-            print 'set file to',self.file
             
         ioloop.install()
         loop = ioloop.IOLoop.instance()
@@ -102,7 +94,6 @@ class OutStreamRedirector(Process):
         try:
             context = zmq.Context()
             socket = context.socket(zmq.SUB)
-            print self.name,'listening for output on',self.addr
             socket.connect(self.addr)
             socket.setsockopt(zmq.SUBSCRIBE, '')
             stream = ZMQStream(socket)
@@ -124,102 +115,6 @@ class OutStreamRedirector(Process):
             print 'Error writing to file:',err
 
     def terminate(self):
-        DEBUG(self.name+'shutting down .........')
         super(OutStreamRedirector, self).terminate()
 
-
-def try_outstream():
-    ioloop.install()    
-    loop = ioloop.IOLoop.instance()
-    context = zmq.Context()
-
-    out_url = "tcp://127.0.0.1:5656"
     
-    # set up publisher
-    try:
-        cout_socket = context.socket(zmq.PUB)
-        print "binding output to %s" % out_url
-        cout_socket.bind(out_url)
-        sys.stdout = OutStream(cout_socket,'cout')
-    except Exception, err:
-        print err
-
-    # set up subscriber
-    def _write_message(msg):
-        print  >> sys.stderr, 'output>>',msg
-        
-    stream = None
-    try:
-        socket = context.socket(zmq.SUB)
-        print  >> sys.stderr, 'listening for output on',out_url
-        socket.connect(out_url)
-        socket.setsockopt(zmq.SUBSCRIBE, '')
-        stream = ZMQStream(socket)
-    except Exception, err:
-        print  >> sys.stderr, '    error getting outstream:',err
-        if stream and not stream.closed():
-            stream.close()
-    else:
-        stream.on_recv(_write_message)
-    
-    
-    def say_hello():
-        print "hello"
-
-    timer = ioloop.PeriodicCallback(say_hello, 1000)
-    timer.start()
-    try:
-        loop.start()
-    except KeyboardInterrupt:
-        print ' Interrupted'       
-
-def try_outstream_redirector():
-    DEBUG('try_outstream_redirector ..............')
-    ioloop.install()
-    loop = ioloop.IOLoop.instance()
-    context = zmq.Context()
-
-    out_url = "tcp://127.0.0.1:%i" % get_unused_ip_port()
-    
-    # set up subscriber
-    sub = OutStreamRedirector('TestRedirector',out_url,'testfil.out')
-    print 'TestRedirector has been created...'
-    sub.start()
-    print 'TestRedirector has been started...'
-    
-    # set up publisher
-    sysout = sys.stdout
-    try:
-        cout_socket = context.socket(zmq.PUB)
-        print "binding output to %s" % out_url
-        cout_socket.bind(out_url)
-        sys.stdout = OutStream(cout_socket,'cout')
-    except Exception, err:
-        print err
-    
-    # create timer to feed the publisher
-    names =  ['billy', 'tommy', 'johnny', 'susie', 'mary', 'bobby']
-    def say_hello():
-        print 'hello',names[randrange(len(names))]
-    hello_timer = ioloop.PeriodicCallback(say_hello, 1000)
-    hello_timer.start()
-
-    # create timer to shut down after 10 seconds
-    def all_done():
-        sys.stdout = sysout
-        loop.stop()
-        sub.terminate()
-        print '\nThanks for playing!'
-    done_timer = ioloop.DelayedCallback(all_done, 10000)
-    done_timer.start()
-
-    # kick it off
-    try:
-        loop.start()
-    except KeyboardInterrupt:
-        print ' Interrupted'
-    
-
-if __name__ == '__main__':
-    #try_outstream()
-    try_outstream_redirector()

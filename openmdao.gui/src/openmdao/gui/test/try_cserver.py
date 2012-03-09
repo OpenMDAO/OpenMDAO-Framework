@@ -1,71 +1,64 @@
-import unittest, os
+import unittest, os, time
 
-from openmdao.gui.consoleserverfactory import *
+from openmdao.gui.zmqservermanager import ZMQServerManager
+from openmdao.gui.outstream import OutStreamRedirector
 
 class test_cserver(unittest.TestCase):
     
     def setUp(self):
-        self.server_mgr = ConsoleServerFactory()
-        self.cserver = self.server_mgr.console_server('test')
-        self.print_output()
-
-    def print_output(self):
-        print 'server output:'
-        print self.cserver.get_output()
+        self.server_mgr = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
+        self.cserver = self.server_mgr.server('test')
         
+        out_url = self.server_mgr.get_out_url('test')
+        self.out_rdr = OutStreamRedirector('OUT',out_url,'test.out')
+        self.out_rdr.start()
+            
+        pub_url = self.server_mgr.get_pub_url('test')
+        self.pub_rdr = OutStreamRedirector('PUB',pub_url,'test.pub')
+        self.pub_rdr.start()
+        
+        time.sleep(5)   # give them time to start up 
+
     def test_conmin(self):
         div = '-'*70
         
         print div
         print 'LOAD PROJECT'
         self.cserver.load_project(os.getcwd()+'/simple_1.proj')
-        self.print_output()
             
         print div
         print 'CHECK FILES (note paraboloid.py defining Paraboloid)'
         print self.cserver.get_files()
-        self.print_output()
         
         print div
         print 'ADD CONMIN DRIVER'
         print self.cserver.add_component('driver',
-           'openmdao.lib.drivers.conmindriver.CONMINdriver');
-        self.print_output()
+           'openmdao.lib.drivers.conmindriver.CONMINdriver','');
         
-        # NOTE: this is not legit, but demonstrates that the error doesn't occur
-        #       if you don't add() CONMINdriver to top
-        # print 'SET DRIVER TO CONMIN DRIVER'
-        # self.cserver.onecmd('from openmdao.main.factorymanager import *')
-        # self.cserver.onecmd('top.driver=create("openmdao.lib.drivers.conmindriver.CONMINdriver")')
-        # self.print_output()
-
         print div
         print 'CHECK DRIVER ATTRIBUTES'
         print self.cserver.get_attributes('driver')
-        self.print_output()
         
         print div
         print 'IMPORT PARABOLOID'
         self.cserver.onecmd('from paraboloid import Paraboloid')
-        self.print_output()
 
         print div
         print 'CHECK DRIVER ATTRIBUTES'
         print self.cserver.get_attributes('driver')
-        self.print_output()
 
         print div
         print 'CREATE PARABOLOID'
         self.cserver.add_component('p','Paraboloid');
-        self.print_output()
         
         print div
         print 'CHECK DRIVER ATTRIBUTES'
         print self.cserver.get_attributes('driver')
-        self.print_output()
 
     def tearDown(self):
-        self.server_mgr.cleanup()
+        time.sleep(5)
+        self.out_rdr.terminate()
+        self.pub_rdr.terminate()
             
 if __name__ == "__main__":
     unittest.main()
