@@ -48,6 +48,14 @@ appears in two different parts of the iteration hierarchy.
    View of an Iteration Hierarchy
 
 
+Each component can report its location in the iteration hierarchy by its
+:term:`iteration coordinates`.  The coordinates are of the form
+``<workflow execution count>-<component index in workflow>`` for each level in
+the hierarchy. For example, when `component2` above is executing in the
+workflow for `driver3` for the first time its iteration coordinates would be
+``1-3.1-1``. Which denotes the first execution of the top workflow, third
+component (`driver3`), first execution of that driver's workflow, first
+component in that workflow (`component2`).
    
 An :term:`Assembly` is a container for your analysis models.   When an
 Assembly executes, it will always look for a Driver named `driver` and  start there, then work its

@@ -165,7 +165,7 @@ class Component (Container):
         
         self.ffd_order = 0
         self._case_id = ''
-
+        self._itername = ''
 
     @property
     def dir_context(self):
@@ -173,6 +173,21 @@ class Component (Container):
         if self._dir_context is None:
             self._dir_context = DirectoryContext(self)
         return self._dir_context
+
+    @rbac(('owner', 'user'))
+    def get_itername(self):
+        """Return current 'iteration coordinates'."""
+        return self._itername
+
+    @rbac(('owner', 'user'))
+    def set_itername(self, itername):
+        """Set current 'iteration coordinates'. Typically called by the
+        current workflow just before running the component.
+
+        itername: string
+            Iteration coordinates.
+        """
+        self._itername = itername
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
@@ -439,8 +454,8 @@ class Component (Container):
                     
                 else:
                     # Component executes as normal
-                    self.execute()
                     self.exec_count += 1
+                    self.execute()
                     
                 self._post_execute()
             #else:
@@ -524,7 +539,7 @@ class Component (Container):
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
-            self.call_execute = True
+            self._call_execute = True
             return False
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]

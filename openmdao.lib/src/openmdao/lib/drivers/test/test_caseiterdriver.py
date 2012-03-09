@@ -19,7 +19,7 @@ from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
-from openmdao.lib.datatypes.api import Float, Bool, Array
+from openmdao.lib.datatypes.api import Float, Bool, Array, Int, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
@@ -113,6 +113,17 @@ class Verifier(Component):
             assert case.msg is None
             assert case['driven.rosen_suzuki'] == rosen_suzuki(case['driven.x'])
             assert case['driven.sum_y'] == sum(case['driven.y'])
+
+
+class TracedComponent(Component):
+    """ Used to check iteration coordinates. """
+
+    inp = Int(iotype='in')
+    itername = Str(iotype='out')
+
+    def execute(self):
+        """ Record iteration coordinate. """
+        self.itername = self.get_itername()
 
 
 class TestCase(unittest.TestCase):
@@ -413,6 +424,49 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(rerun.cases), len(rerun_seq))
         for i, case in enumerate(rerun.cases):
             self.assertEqual(case, orig_cases[rerun_seq[i]])
+
+    def test_itername(self):
+        logging.debug('')
+        logging.debug('test_itername')
+
+        top = set_as_top(Assembly())
+        top.add('driver', CaseIteratorDriver())
+        top.add('comp1', TracedComponent())
+        top.add('comp2', TracedComponent())
+        top.driver.workflow.add(('comp1', 'comp2'))
+
+        cases = []
+        for i in range(3):
+            cases.append(Case(label=str(i),
+                              inputs=(('comp1.inp', i), ('comp2.inp', i)),
+                              outputs=(('comp1.itername', 'comp2.itername'))))
+        # Sequential.
+        top.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(top.driver.evaluated)
+
+        # Concurrent.
+        top.driver.sequential = False
+        top.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(top.driver.evaluated)
+
+    def verify_itername(self, cases):
+        # These iternames will have the case's uuid prepended.
+        expected = (('1-1', '1-2'),
+                    ('2-1', '2-2'),
+                    ('3-1', '3-2'))
+
+        for case in cases:
+            logging.debug('%s: %r %r', case.label,
+                          case['comp1.itername'], case['comp2.itername'])
+            i = int(case.label)
+            uuid1, dot, iter1 = case['comp1.itername'].partition('.')
+            uuid2, dot, iter2 = case['comp2.itername'].partition('.')
+            self.assertEqual(uuid1, case.uuid)
+            self.assertEqual(iter1, expected[i][0])
+            self.assertEqual(uuid2, case.uuid)
+            self.assertEqual(iter2, expected[i][1])
 
 
 if __name__ == '__main__':

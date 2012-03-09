@@ -5,7 +5,8 @@ import shutil
 import unittest
 import sys
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, SimulationRoot
+from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
+                              set_as_top, SimulationRoot
 from openmdao.main.datatypes.api import Float, Str, Slot, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
@@ -136,6 +137,48 @@ class Comp(Component):
         self._logger.debug('    %r %r', self.x, self.y)
         self.z = self.x * self.y
         self._logger.debug('    done')
+
+
+class TracedAssembly(Assembly):
+    """ Records `itername` in trace buffer. """
+
+    def __init__(self, trace_buf):
+        super(TracedAssembly, self).__init__()
+        self.force_execute = True
+        self.trace_buf = trace_buf
+
+    def execute(self):
+        msg = '%s: %s' % (self.get_pathname(), self.get_itername())
+        self.trace_buf.append(msg)
+        super(TracedAssembly, self).execute()
+
+
+class TracedIterator(Driver):
+    """ Records `itername` in trace buffer. """
+
+    def __init__(self, trace_buf, count):
+        super(TracedIterator, self).__init__()
+        self.trace_buf = trace_buf
+        self.max_iterations = count
+
+    def execute(self):
+        msg = '%s: %s' % (self.get_pathname(), self.get_itername())
+        self.trace_buf.append(msg)
+        for i in range(self.max_iterations):
+            super(TracedIterator, self).execute()
+
+
+class TracedComponent(Component):
+    """ Records `itername` in trace buffer. """
+
+    def __init__(self, trace_buf):
+        super(TracedComponent, self).__init__()
+        self.force_execute = True
+        self.trace_buf = trace_buf
+
+    def execute(self):
+        msg = '%s: %s' % (self.get_pathname(), self.get_itername())
+        self.trace_buf.append(msg)
 
 
 class AssemblyTestCase(unittest.TestCase):
@@ -573,7 +616,129 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.m2.rval_out, 4.5)
         self.assertEqual(top.m3.rval_out, 6.)
 
+    def test_itername(self):
+        # top
+        #     comp1
+        #     driverA
+        #         comp1
+        #         comp2
+        #     driverB
+        #         comp2
+        #         subassy
+        #             comp3
+        trace_buf = []
+        top = TracedAssembly(trace_buf)
+        top.add('driver', TracedIterator(trace_buf, 2))
+        top.add('comp1', TracedComponent(trace_buf))
+        top.add('driverA', TracedIterator(trace_buf, 3))
+        top.add('comp2', TracedComponent(trace_buf))
+        top.add('driverB', TracedIterator(trace_buf, 2))
 
+        sub = top.add('subassy', TracedAssembly(trace_buf))
+        sub.add('driver', TracedIterator(trace_buf, 2))
+        sub.add('comp3', TracedComponent(trace_buf))
+        sub.driver.workflow.add('comp3')
+
+        # Default didn't execute comp1 first.
+        top.driver.workflow = SequentialWorkflow()
+        top.driver.workflow.add(('comp1', 'driverA', 'driverB'))
+        top.driverA.workflow.add(('comp1', 'comp2'))
+        top.driverB.workflow.add(('comp2', 'subassy'))
+
+        top.run()
+        top.run(case_id='ReRun')
+
+        expected = """\
+: 
+driver: 
+comp1: 1-1
+driverA: 1-2
+comp1: 1-2.1-1
+comp2: 1-2.1-2
+comp1: 1-2.2-1
+comp2: 1-2.2-2
+comp1: 1-2.3-1
+comp2: 1-2.3-2
+driverB: 1-3
+comp2: 1-3.1-1
+subassy: 1-3.1-2
+subassy.driver: 1-3.1-2
+subassy.comp3: 1-3.1-2.1-1
+subassy.comp3: 1-3.1-2.2-1
+comp2: 1-3.2-1
+subassy: 1-3.2-2
+subassy.driver: 1-3.2-2
+subassy.comp3: 1-3.2-2.1-1
+subassy.comp3: 1-3.2-2.2-1
+comp1: 2-1
+driverA: 2-2
+comp1: 2-2.1-1
+comp2: 2-2.1-2
+comp1: 2-2.2-1
+comp2: 2-2.2-2
+comp1: 2-2.3-1
+comp2: 2-2.3-2
+driverB: 2-3
+comp2: 2-3.1-1
+subassy: 2-3.1-2
+subassy.driver: 2-3.1-2
+subassy.comp3: 2-3.1-2.1-1
+subassy.comp3: 2-3.1-2.2-1
+comp2: 2-3.2-1
+subassy: 2-3.2-2
+subassy.driver: 2-3.2-2
+subassy.comp3: 2-3.2-2.1-1
+subassy.comp3: 2-3.2-2.2-1
+: 
+driver: 
+comp1: ReRun.1-1
+driverA: ReRun.1-2
+comp1: ReRun.1-2.1-1
+comp2: ReRun.1-2.1-2
+comp1: ReRun.1-2.2-1
+comp2: ReRun.1-2.2-2
+comp1: ReRun.1-2.3-1
+comp2: ReRun.1-2.3-2
+driverB: ReRun.1-3
+comp2: ReRun.1-3.1-1
+subassy: ReRun.1-3.1-2
+subassy.driver: ReRun.1-3.1-2
+subassy.comp3: ReRun.1-3.1-2.1-1
+subassy.comp3: ReRun.1-3.1-2.2-1
+comp2: ReRun.1-3.2-1
+subassy: ReRun.1-3.2-2
+subassy.driver: ReRun.1-3.2-2
+subassy.comp3: ReRun.1-3.2-2.1-1
+subassy.comp3: ReRun.1-3.2-2.2-1
+comp1: ReRun.2-1
+driverA: ReRun.2-2
+comp1: ReRun.2-2.1-1
+comp2: ReRun.2-2.1-2
+comp1: ReRun.2-2.2-1
+comp2: ReRun.2-2.2-2
+comp1: ReRun.2-2.3-1
+comp2: ReRun.2-2.3-2
+driverB: ReRun.2-3
+comp2: ReRun.2-3.1-1
+subassy: ReRun.2-3.1-2
+subassy.driver: ReRun.2-3.1-2
+subassy.comp3: ReRun.2-3.1-2.1-1
+subassy.comp3: ReRun.2-3.1-2.2-1
+comp2: ReRun.2-3.2-1
+subassy: ReRun.2-3.2-2
+subassy.driver: ReRun.2-3.2-2
+subassy.comp3: ReRun.2-3.2-2.1-1
+subassy.comp3: ReRun.2-3.2-2.2-1"""
+        expected = expected.split('\n')
+        errors = 0
+        for i, line in enumerate(trace_buf):
+            if line != expected[i]:
+                logging.error('%d: expected %r, got %r', i, expoected[i], line)
+                errors += 1
+        self.assertEqual(errors, 0)
+        self.assertEqual(len(trace_buf), len(expected))
+
+       
 if __name__ == "__main__":
     unittest.main()
 
