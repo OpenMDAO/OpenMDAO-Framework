@@ -197,13 +197,17 @@ class _ContainerDepends(object):
     def __init__(self):
         self._srcs = {}
         
-    def connect(self, srcpath, destpath, scope):
-        dpdot = destpath+'.'
-        for dst,src in self._srcs.items():
-            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
-                raise RuntimeError("'%s' is already connected to source '%s'" %
-                                   (dst, src))
-        self._srcs[destpath] = srcpath
+    def connect(self, srcpath, destpath, scope, expr=None):
+        if not (expr and expr.text == srcpath):
+            dpdot = destpath+'.'
+            for dst,src in self._srcs.items():
+                if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
+                    raise RuntimeError("'%s' is already connected to source '%s'" %
+                                       (dst, src))
+        if expr is not None:
+            self._srcs[destpath] = expr.text
+        else:
+            self._srcs[destpath] = srcpath
         
     def disconnect(self, srcpath, destpath):
         try:
@@ -371,7 +375,7 @@ class Container(HasTraits):
                                 child.connect(restofpath, childdest)
                                 child_connections.append((child, restofpath, childdest)) 
 
-            self._depgraph.connect(srcpath, destpath, self)
+            self._depgraph.connect(srcpath, destpath, self, expr=srcexpr)
         except Exception as err:
             for child, childsrc, childdest in child_connections:
                 child.disconnect(childsrc, childdest)
@@ -973,7 +977,8 @@ class Container(HasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
-                src = 'parent.'+src
+                #src = 'parent.'+src
+                src = ExprEvaluator(src,scope=self).scope_transform(self, obj, parent=self)
             obj.set(restofpath, value, index, src=src, force=force)
         else:
             try:

@@ -265,22 +265,22 @@ class DependencyGraph(object):
         except KeyError:
             return []
     
-    def connect(self, srcpath, destpath, scope):
+    def connect(self, srcpath, destpath, scope, expr=None):
         """Add an edge to our Component graph from 
-        *srccompname* to *destcompname*.
+        *srccompname* to *destcompname*.  If expr is defined, it's
+        the actual ExprEvaluator object for the source.
         """
         graph = self._graph
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
         
-        # regular variable inputs can only have one source, but expression inputs, e.g., x[3]
-        # can have multiple ones
-        if not _exprset.intersection(destpath):
-            dpdot = destpath+'.'
-            for dst,src in self._allsrcs.items():
-                if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
-                    raise AlreadyConnectedError("%s is already connected to source %s" %
-                                                (dst, src))
+        if not (expr and self._allsrcs.get(destpath) == expr.text):
+            if not _exprset.intersection(srcpath):
+                dpdot = destpath+'.'
+                for dst,src in self._allsrcs.items():
+                    if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
+                        raise AlreadyConnectedError("%s is already connected to source %s" %
+                                                    (dst, src))
         #oldsrc = self.get_source('.'.join([destcompname,destvarname]))
         #if oldsrc:
             #raise AlreadyConnectedError("%s is already connected to source %s" %
@@ -335,7 +335,10 @@ class DependencyGraph(object):
                                      (str(strcon), 
                                       '.'.join([srccompname,srcvarname]), 
                                       '.'.join([destcompname,destvarname])))
-        self._allsrcs[destpath] = srcpath
+        if expr is not None:
+            self._allsrcs[destpath] = expr.text
+        else:
+            self._allsrcs[destpath] = srcpath
         
     def _comp_connections(self, cname):
         """Returns a list of tuples of the form (srcpath, destpath) for all

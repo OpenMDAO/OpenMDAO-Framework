@@ -147,7 +147,7 @@ class ExprMapper(object):
             self._exprgraph.remove_nodes_from(refs)
             self._remove_disconnected_exprs()
         
-    def connect(self, src, dest, scope):
+    def connect(self, src, dest, scope, expr=None):
         srcexpr, destexpr = self.check_connect(src, dest, scope)
         srcvars = srcexpr.get_referenced_varpaths()
         destvar = destexpr.get_referenced_varpaths().pop()
@@ -186,7 +186,7 @@ class ExprMapper(object):
                                              (src, dest, str(err)), RuntimeError)
         for srcvar in srcvars:
             try:
-                self._depgraph.connect(srcvar, destexpr.text, self)
+                self._depgraph.connect(srcvar, destexpr.text, self, expr=srcexpr)
             except Exception as err:
                 scope.raise_exception("Can't connect '%s' to '%s': %s" % 
                                       (srcvar, destvar, str(err)), RuntimeError)
