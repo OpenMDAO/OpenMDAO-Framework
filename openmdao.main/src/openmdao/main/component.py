@@ -425,6 +425,8 @@ class Component (Container):
             
         case_id: str
             Identifier for the Case that is associated with this run. (Default is '')
+            If applied to the top-level assembly, this will be prepended to
+            all iteration coordinates.
         """
         if self.directory:
             self.push_dir()
