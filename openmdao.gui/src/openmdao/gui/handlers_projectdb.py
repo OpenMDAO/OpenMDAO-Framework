@@ -119,7 +119,7 @@ class DownloadHandler(BaseHandler):
     def get(self, project_id):
         p = get_object_or_404(Project, pk=project_id)
         if p.filename:
-            filename = os.path.join(self.get_project_dir(),p.filename)
+            filename = os.path.join(self.get_project_dir(),str(p.filename))
             if os.path.exists(filename):
                 proj_file = file(filename,'rb')
                 from django.core.servers.basehttp import FileWrapper
