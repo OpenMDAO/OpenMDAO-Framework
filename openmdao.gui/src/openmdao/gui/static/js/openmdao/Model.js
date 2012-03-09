@@ -66,9 +66,6 @@ openmdao.Model=function() {
         open_websocket('pubstream', function(message) {
             message = jQuery.parseJSON(message);
             var callbacks = subscribers[message[0]];
-            //debug.info('received message:',message[0],message[1])
-            //debug.info('subscribers:',subscribers)            
-            //debug.info('callbacks:',callbacks)
             if (callbacks) {
                 for (i = 0; i < callbacks.length; i++) {
                     if (typeof callbacks[i] === 'function') {
@@ -90,11 +87,9 @@ openmdao.Model=function() {
     this.addListener = function(topic, callback) {
         if (topic in subscribers) {
             subscribers[topic].push(callback);
-            debug.info('added subscriber to topic',topic,subscribers)                        
         }
         else {
             subscribers[topic] = [ callback ]
-            debug.info('added topic to subscribers',topic,subscribers)                        
             if (topic === outstream_topic && !outstream_socket) {
                 outstream_socket = true;
                 open_outstream_socket(outstream_topic);

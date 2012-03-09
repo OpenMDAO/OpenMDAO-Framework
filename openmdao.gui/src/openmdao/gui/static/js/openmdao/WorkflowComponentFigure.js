@@ -35,7 +35,6 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
     
     // change color based on execution status
     topic = pathname+'.exec_state'
-    debug.info('WorkflowComponentFigure',pathname,'subscribing to',topic)
     myModel.addListener(topic, this.setExecState.bind(this));    
 };
 
