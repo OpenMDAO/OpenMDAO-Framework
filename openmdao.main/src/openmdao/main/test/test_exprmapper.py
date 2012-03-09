@@ -26,33 +26,33 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
 
-class ExprMapperTestCase(unittest.TestCase):
-
-    def make_graph(self, nodes=(), connections=()):
-        scope = set_as_top(Assembly())
-        sub = scope.add('sub',Assembly())
-        dep = ExprMapper(sub)
-        for name in nodes:
-            if name.startswith('parent.'):
-                scope.add(name.split('.',1)[1], Simple())
+def make_graph(nodes=(), connections=()):
+    scope = set_as_top(Assembly())
+    sub = scope.add('sub',Assembly())
+    dep = ExprMapper(sub)
+    for name in nodes:
+        if name.startswith('parent.'):
+            scope.add(name.split('.',1)[1], Simple())
+        else:
+            sub.add(name, Simple())
+            dep.add(name)
+    for src,dest in connections:
+        if '.' not in src and not sub.contains(src):
+            if dest.startswith('parent.'):
+                iotype='out'
             else:
-                sub.add(name, Simple())
-                dep.add(name)
-        for src,dest in connections:
-            if '.' not in src and not sub.contains(src):
-                if dest.startswith('parent.'):
-                    iotype='out'
-                else:
-                    iotype='in'
-                sub.add(src, Int(1, iotype=iotype))
-            if '.' not in dest and not sub.contains(dest):
-                if src.startswith('parent.'):
-                    iotype='in'
-                else:
-                    iotype='out'
-                sub.add(dest, Int(1, iotype=iotype))
-            dep.connect(src, dest, sub)
-        return dep, sub
+                iotype='in'
+            sub.add(src, Int(1, iotype=iotype))
+        if '.' not in dest and not sub.contains(dest):
+            if src.startswith('parent.'):
+                iotype='in'
+            else:
+                iotype='out'
+            sub.add(dest, Int(1, iotype=iotype))
+        dep.connect(src, dest, sub)
+    return dep, sub
+
+class ExprMapperTestCase(unittest.TestCase):
 
     def setUp(self):
         self.internal_conns = [
@@ -70,17 +70,17 @@ class ExprMapperTestCase(unittest.TestCase):
             ('parent.X.d', 'A.b'),
             ('C.d', 'parent.Y.b'),
             ]
-        self.dep, self.scope = self.make_graph(nodes, 
-                                               self.internal_conns+
-                                               self.boundary_conns+
-                                               self.cross_conns)
+        self.dep, self.scope = make_graph(nodes, 
+                                          self.internal_conns+
+                                          self.boundary_conns+
+                                          self.cross_conns)
 
 
     def test_get_source(self):
-        dep, scope = self.make_graph(nodes, 
-                                     self.internal_conns+
-                                     self.boundary_conns+
-                                     self.cross_conns)
+        dep, scope = make_graph(nodes, 
+                                self.internal_conns+
+                                self.boundary_conns+
+                                self.cross_conns)
         
         self.assertEqual(dep.get_source('B.a'), 'a')
         self.assertEqual(dep.get_source('A.a'), None)
@@ -227,7 +227,7 @@ class ExprMapperTestCase(unittest.TestCase):
                          set(['A.b']))
     
     def test_expressions(self):
-        dep, scope = self.make_graph(['E', 'A', 'B','parent.X'], [('parent.X.c','a')])
+        dep, scope = make_graph(['E', 'A', 'B','parent.X'], [('parent.X.c','a')])
         dep.connect('parent.X.d+a', 'E.a[3]', scope)
         dep.connect('A.c', 'E.a[4]', scope)
         dep.connect('B.c', 'E.b', scope)
