@@ -49,6 +49,8 @@ Component, Driver, and Variable plugins for OpenMDAO
           'ordereddict',
           'conmin==1.0.1', 
           'newsumt==1.1.0',
+          'coblya==1.0.1',
+          'slsqp==1.0.1',
           'numpy',
           'scipy',
           ],
