@@ -29,6 +29,16 @@ import networkx as nx
 from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.util import *
 
+def modifies_model(target):
+    ''' decorator for methods that modify the model
+        performs maintenance on root level containers/assemblies
+    '''
+    def wrapper(self, *args, **kwargs):
+        result = target(self, *args, **kwargs)
+        self._update_roots()
+        return result
+    return wrapper
+
 
 class ConsoleServer(cmd.Cmd):
     ''' Object which knows how to load a model and provides a command line interface
@@ -61,8 +71,20 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = ''
         self.proj = None
         self.exc_info = None
-        
-    def error(self,err,exc_info):
+
+    def _update_roots(self):
+        ''' Ensure that all root containers in the project dictionary know
+            their own name and that all root assemblies are set as top
+        '''
+        g = self.proj.__dict__.items()
+        for k,v in g:
+            if has_interface(v,IContainer):
+                if v.name != k:
+                    v.name = k
+            if is_instance(v,Assembly):
+                set_as_top(v)
+                    
+    def _error(self,err,exc_info):
         ''' print error message and save stack trace in case it's requested
         '''
         self.exc_info = exc_info
@@ -95,18 +117,20 @@ class ConsoleServer(cmd.Cmd):
         self._hist += [ line.strip() ]
         return line
 
+    @modifies_model
     def onecmd(self, line):
         self._hist += [ line.strip() ]
         # Override the onecmd() method so we can trap error returns
         try:
             cmd.Cmd.onecmd(self, line)
         except Exception, err:
-            self.error(err,sys.exc_info())
+            self._error(err,sys.exc_info())
 
     def emptyline(self):
         # Default for empty line is to repeat last command - yuck
         pass
-
+        
+    @modifies_model
     def default(self, line):       
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
@@ -121,27 +145,16 @@ class ConsoleServer(cmd.Cmd):
             try:
                 exec(line) in self.proj.__dict__
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             try:
                 result = eval(line, self.proj.__dict__)
                 if result is not None:
                     print result
             except Exception, err:
-                self.error(err,sys.exc_info())
-
-        self.ensure_root_names()            
-
-    def ensure_root_names(self):
-        ''' Ensure that all containers in the project dictionary know their
-            own name
-        '''
-        g = self.proj.__dict__.items()
-        for k,v in g:
-            if has_interface(v,IContainer):
-                if v.name != k:
-                    v.name = k
+                self._error(err,sys.exc_info())
             
+    @modifies_model
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
@@ -152,12 +165,10 @@ class ConsoleServer(cmd.Cmd):
                 top.run(*args, **kwargs)
                 print "Execution complete."
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             print "Execution failed: No 'top' assembly was found."
 
-        self.ensure_root_names()            
-       
     def execfile(self, filename):
         ''' execfile in server's globals. 
         '''
@@ -177,9 +188,7 @@ class ConsoleServer(cmd.Cmd):
                 contents = 'if True:\n' + contents[idx:]
                 self.default(contents)
         except Exception, err:
-            self.error(err,sys.exc_info())
-
-        self.ensure_root_names()            
+            self._error(err,sys.exc_info())
 
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 
@@ -215,7 +224,7 @@ class ConsoleServer(cmd.Cmd):
                 try:
                     cont = self.proj.__dict__[root].get(rest)
                 except Exception, err:
-                    self.error(err,sys.exc_info())
+                    self._error(err,sys.exc_info())
         return cont, root
         
     def _get_components(self,cont,pathname=None):
@@ -299,7 +308,7 @@ class ConsoleServer(cmd.Cmd):
                         connections.append([src, dst])
                 conns['connections'] = connections;
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         return jsonpickle.encode(conns)
 
     def set_connections(self,pathname,src_name,dst_name,connections):
@@ -322,7 +331,7 @@ class ConsoleServer(cmd.Cmd):
                         asm.connect(src,dst)
                 conns['connections'] = connections;
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
 
     def _get_structure(self,asm,pathname):
         ''' get the list of components and connections between them
@@ -357,7 +366,7 @@ class ConsoleServer(cmd.Cmd):
                 asm, root = self.get_container(pathname)
                 structure = self._get_structure(asm, pathname)
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             components = []
             g = self.proj.__dict__.items()
@@ -406,7 +415,7 @@ class ConsoleServer(cmd.Cmd):
             try:
                 flow = self._get_workflow(drvr,pathname,root)
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         return jsonpickle.encode(flow)
 
     def _get_attributes(self,comp,pathname,root):
@@ -555,7 +564,7 @@ class ConsoleServer(cmd.Cmd):
                 attr = self._get_attributes(comp,pathname,root)
                 attr['type'] = type(comp).__name__
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         return jsonpickle.encode(attr)
     
     def get_available_types(self):
@@ -574,16 +583,16 @@ class ConsoleServer(cmd.Cmd):
                         self.known_types.append( ( k , 'n/a') )
                 except Exception, err:
                     # print 'Class',k,'not included in working types'
-                    # self.error(err,sys.exc_info())
+                    # self._error(err,sys.exc_info())
                     pass
         return packagedict(self.known_types)
 
+    @modifies_model
     def load_project(self,filename):
         print 'loading project from:',filename
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         self.proj.activate()
-        self.ensure_root_names()                    
         Publisher.get_instance()
         
     def save_project(self):
@@ -601,10 +610,11 @@ class ConsoleServer(cmd.Cmd):
                 else:
                     print 'Export failed, directory not known'
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             print 'No Project to save'
 
+    @modifies_model
     def add_component(self,name,classname,parentname):
         ''' add a new component of the given type to the specified parent. 
         '''
@@ -617,13 +627,13 @@ class ConsoleServer(cmd.Cmd):
                     else:
                         parent.add(name,create(classname))
                 except Exception, err:
-                    self.error(err,sys.exc_info())
+                    self._error(err,sys.exc_info())
             else:
                 print "Error adding component: parent",parentname,"not found."
         else:
             self.create(classname,name)
-            self.ensure_root_names()            
 
+    @modifies_model
     def create(self,typname,name):
         ''' create a new object of the given type. 
         '''
@@ -632,11 +642,10 @@ class ConsoleServer(cmd.Cmd):
                 self.default(name+'='+typname+'()')
             else:
                 self.proj.__dict__[name]=create(typname)
-                self.ensure_root_names()
         except Exception, err:
-            self.error(err,sys.exc_info())
-            
-        return self.proj.__dict__
+            self._error(err,sys.exc_info())
+
+        return self.proj.__dict__            
 
     def cleanup(self):
         ''' Cleanup this server's directory. 
@@ -649,7 +658,7 @@ class ConsoleServer(cmd.Cmd):
                 print "trying to rmtree ",self.root_dir
                 shutil.rmtree(self.root_dir)
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         
     def get_files(self):
         ''' get a nested dictionary of files in the working directory
