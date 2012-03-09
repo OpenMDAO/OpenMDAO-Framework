@@ -5,7 +5,7 @@ import logging
 import nose
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Int
+from openmdao.lib.datatypes.api import Int, Array
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -478,6 +478,34 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(self.top.c2.get_valid(cnames), 
                          [False, True, False, False])
         
+    def test_array_expr(self):
+        class Dummy(Component): 
+        
+            x = Array([[-1, 1],[-2, 2]],iotype="in",shape=(2,2))
+            y = Array([[-1, 1],[-2, 2]],iotype="out",shape=(2,2))
+            
+            def execute(self): 
+                self.y = self.x
+                
+        class Stuff(Assembly): 
+        
+            def configure(self):
+                self.add('d1',Dummy())
+                self.add('d2',Dummy())
+                
+                self.connect('d1.y[0][0]','d2.x[1][0]')   
+                self.connect('d1.y[1][0]','d2.x[0][0]')
+                
+                self.driver.workflow.add(['d1','d2'])
+        
+        s = set_as_top(Stuff())
+        s.d1.x = [[-5,-6], [-7,-8]]
+        s.run()
+        self.assertEqual(s.d2.x[0,0], -7)
+        self.assertEqual(s.d2.x[1,0], -5)
+        self.assertEqual(s.d2.x[0,1], 1)
+        self.assertEqual(s.d2.x[1,1], 2)
+
         
                 
 if __name__ == "__main__":

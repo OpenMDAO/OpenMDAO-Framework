@@ -140,7 +140,7 @@ def _process_index_entry(obj, idx):
     raise ValueError("invalid index: %s" % idx)
 
 
-def _index_retains_metadata(idx):
+def _index_retains_metadata(index):
     fails = (CALL, ATTR)
     for idx in index:
         if idx[0] in fails:
