@@ -1,3 +1,3 @@
 recursive-include src/openmdao/main/test/src *.py
-recursive-include src/openmdao/main/plugin_templates *.template
+recursive-include src/openmdao/main/plugin_templates *
 
