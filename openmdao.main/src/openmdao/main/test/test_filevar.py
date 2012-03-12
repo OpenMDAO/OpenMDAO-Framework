@@ -184,7 +184,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.run()
         except ValueError, exc:
-            msg = "middle.passthrough: Illegal path '/illegal'," \
+            msg = "middle.passthrough (1-2.1-1): Illegal path '/illegal'," \
                   " not a descendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
