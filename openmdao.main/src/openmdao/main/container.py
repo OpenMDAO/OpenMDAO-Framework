@@ -1356,7 +1356,22 @@ class Container(SafeHasTraits):
 
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
-        full_msg = "%s: " % self.get_pathname() + msg
+        coords = ''
+        obj = self
+        while obj is not None:
+            try:
+                coords = obj.get_itername()
+            except AttributeError:
+                try:
+                    obj = obj.parent
+                except AttributeError:
+                    break
+            else:
+                break
+        if coords:
+            full_msg = '%s (%s): %s' % (self.get_pathname(), coords, msg)
+        else:
+            full_msg = '%s: %s' % (self.get_pathname(), msg)
         self._logger.error(msg)
         raise exception_class(full_msg)
     
