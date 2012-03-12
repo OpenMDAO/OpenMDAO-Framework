@@ -149,7 +149,9 @@ class DependencyGraph(object):
                 else:
                     srcvars = varset
                 if dest == '@bout':
-                    outset.update(link.get_dests(varset))
+                    bouts = link.get_dests(varset)
+                    outset.update(bouts)
+                    scope.set_valid(bouts, False)
                 else:
                     dests = link.get_dests(varset)
                     if dests:

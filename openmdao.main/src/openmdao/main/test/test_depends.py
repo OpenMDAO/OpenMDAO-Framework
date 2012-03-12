@@ -605,10 +605,10 @@ class ExprDependsTestCase(unittest.TestCase):
         self.assertEqual(exec_order, ['comp4'])
         self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
         top.sub.comp2.a = 99
-        self.assertEqual(top.sub.comp2.get_valid(vnames), [False, True, False, False])
+        self.assertEqual(top.sub.comp2.get_valid(vnames), [True, True, False, False])
         self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
         exec_order = []
-        top.run()
+        top.sub.run()
         self.assertEqual(exec_order, ['comp2','comp4'])
         self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
         top.sub.comp2.a = 88
