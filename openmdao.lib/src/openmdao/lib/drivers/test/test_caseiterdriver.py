@@ -5,6 +5,7 @@ Test CaseIteratorDriver.
 import logging
 import os
 import pkg_resources
+import re
 import sys
 import time
 import unittest
@@ -33,6 +34,11 @@ from openmdao.util.testutil import assert_raises
 ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
+
+def replace_uuid(msg):
+    """ Replace UUID in `msg` with ``UUID``. """
+    pattern = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    return re.sub(pattern, 'UUID', msg)
 
 
 def rosen_suzuki(x):
@@ -267,8 +273,9 @@ class TestCase(unittest.TestCase):
             try:
                 self.model.run()
             except Exception as err:
+                err = replace_uuid(str(err))
                 startmsg = 'driver: Run aborted: Traceback '
-                endmsg = 'driven: Forced error'
+                endmsg = 'driven (UUID.4-1): Forced error'
                 self.assertEqual(str(err)[:len(startmsg)], startmsg)
                 self.assertEqual(str(err)[-len(endmsg):], endmsg)
             else:
@@ -280,7 +287,9 @@ class TestCase(unittest.TestCase):
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                self.assertEqual(case.msg, 'driven: Forced error')
+                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                msg = replace_uuid(case.msg)
+                self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
@@ -349,10 +358,12 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "driver: Exception getting case outputs: " \
-            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
-            self.assertEqual(case.msg, msg)
+            expected = "driver: Exception getting case outputs: " \
+                       "driven \(UUID.[0-9]+-1\): " \
+                       "'DrivenComponent' object has no attribute 'sum_z'"
+            msg = replace_uuid(case.msg)
+            self.assertTrue(re.match(expected, msg))
 
     def test_noiterator(self):
         logging.debug('')
