@@ -227,6 +227,44 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.assertEqual(case1.label, 'case1')
         
         
+    def test_inoutCSV_empty_inputs(self):
+        
+        # now create some Cases
+        outputs = ['comp1.z']
+        cases = []
+        for i in range(10):
+            inputs = []
+            cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
+            self.top.driver.iterator = ListCaseIterator(cases)
+            
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.run()
+        self.top.driver.recorders[0].outfile.close()
+        
+        # now use the CSV recorder as source of Cases
+        self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
+        
+        sout = StringIO.StringIO()
+        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.run()
+        expected = [
+            'Case: case8',
+            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   outputs:',
+            '      comp1.z: 0.0',
+            ]
+        lines = sout.getvalue().split('\n')
+        for index, line in enumerate(lines):
+            if line.startswith('Case: case8'):
+                for i in range(len(expected)):
+                    if expected[i].startswith('   uuid:'):
+                        self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    else:
+                        self.assertEqual(lines[index+i], expected[i])
+                break
+        else:
+            self.fail("couldn't find the expected Case")
+            
     def test_CSVCaseRecorder_messages(self):
         
         self.top.comp2.add('a_slot', Slot(object, iotype='in'))
