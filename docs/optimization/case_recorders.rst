@@ -20,7 +20,7 @@ DumpCaseRecorder    File-like object, defaults to sys.stdout
 ListCaseRecorder    Python List
 ================== ==================================================================
 
-The recorders are interchangable, so you can use any of them in a slot that can accept them. All
+The recorders are interchangeable, so you can use any of them in a slot that can accept them. All
 drivers contain a slot that can accept a list of case recorders. Why a list? That is so you can have the same
 case data recorded in multiple ways if you want to. For example, you could have use the DumpCaseRecorder 
 to output data to the screen, and use the DBCaseRecorder to save the same data to database. 
@@ -33,7 +33,7 @@ state of the model includes the parameters, objective, constraints, and any othe
 the user chooses to include by listing them in the ``printvars`` variable.
 
 The ``CSVCaseRecorder`` outputs the selected variables into a file in the csv
-(Comma Seperated Value) format. The ``DBCaseRecorder`` stores the selected variables in an
+(Comma Separated Value) format. The ``DBCaseRecorder`` stores the selected variables in an
 SQLite database, which can be stored in memory or on disc as a binary file. The ``DumpCaseRecorder``
 is used to output the selected variables into a file-like object. The default object is sys.stdout,
 which redirects the output to STDOUT. Finally, the ``ListCaseRecorder`` stores the cases in a Python
@@ -77,4 +77,4 @@ The ``CSVCaseRecorder`` supports simple data types -- integers, floats, and stri
 The chosen element becomes a column in the csv file. Some of the more complicated data types -- dictionaries, lists, multi-dimensional
 arrays, custom data objects -- are not yet supported by the CSVCaseRecorder, and it is not clear how some of these could best be
 represented in a comma-separated format. However, the other case recorders should support every type of variable, provided that
-it is serializable.
+it can be serialized.
