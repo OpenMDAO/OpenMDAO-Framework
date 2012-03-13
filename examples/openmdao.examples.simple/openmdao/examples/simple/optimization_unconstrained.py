@@ -34,8 +34,8 @@ class OptimizationUnconstrained(Assembly):
         self.driver.add_objective('paraboloid.f_xy')
         
         # Design Variables 
-        self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
-        self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
+        self.driver.add_parameter('paraboloid.x', low=-50., high=50.,scaler=1,adder=0)
+        self.driver.add_parameter('paraboloid.y', low=-50., high=50.,scaler=1,adder=0)
         
 
 if __name__ == "__main__": # pragma: no cover         
