@@ -7,7 +7,7 @@ import sys
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
                               set_as_top, SimulationRoot
-from openmdao.main.datatypes.api import Float, Int, Str, Slot, List
+from openmdao.main.datatypes.api import Float, Int, Str, Slot, List, Array
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 
@@ -756,7 +756,26 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         self.assertEqual(errors, 0)
         self.assertEqual(len(trace_buf), len(expected))
 
-       
+    def test_expr(self):
+        class Dummy(Component): 
+        
+            z = Array([[0],[0],[0]],iotype="in",shape=(3,1))
+            
+            def execute(self): 
+                pass
+            
+              
+        class TestA(Assembly): 
+           
+            x = Float(0.0,iotype="in")
+           
+            def configure(self): 
+                self.add('d',Dummy())
+                self.connect('x','d.z[0][0]')
+               
+               
+        t = TestA()
+
 if __name__ == "__main__":
     unittest.main()
 

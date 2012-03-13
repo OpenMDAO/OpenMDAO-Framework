@@ -413,18 +413,28 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        if not srcpath.startswith('parent.'):
-            if not self.contains(srcpath):
-                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
-            cname, _, restofpath = srcpath.partition('.')
+        srcexpr = ExprEvaluator(srcpath, self)
+        destexpr = ExprEvaluator(destpath, self)
+        destvar = destexpr.get_referenced_varpaths().pop()
+        if not 'parent' in srcexpr.get_referenced_compnames():
+            for src in srcexpr.get_referenced_varpaths():
+                if not self.contains(src):
+                    self.raise_exception("Can't find '%s'" % src, AttributeError)
+                cname, _, restofpath = src.partition('.')
+                if restofpath:
+                    child = getattr(self, cname)
+                    if is_instance(child, Container):
+                            childdest = destexpr.scope_transform(self, child, parent=self)
+                            child.disconnect(restofpath, childdest)
+        if not destvar.startswith('parent.'):
+            if not self.contains(destvar):
+                self.raise_exception("Can't find '%s'" % destvar, AttributeError)
+            cname2, _, restofpath = destvar.partition('.')
             if restofpath:
-                getattr(self, cname).disconnect(restofpath, 'parent.'+destpath)
-        if not destpath.startswith('parent.'):
-            if not self.contains(destpath):
-                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            cname2, _, restofpath = destpath.partition('.')
-            if restofpath:
-                getattr(self, cname2).disconnect('parent.'+srcpath, restofpath)
+                child = getattr(self, cname2)
+                if is_instance(child, Container):
+                    childsrc = srcexpr.scope_transform(self, child, parent=self)
+                    child.disconnect(childsrc, restofpath)
         
         if cname == cname2 and cname is not None:
             self.raise_exception("Can't disconnect '%s' from '%s'. "

@@ -7,6 +7,7 @@ import weakref
 import math
 import ast
 import copy
+import re
 import __builtin__
 
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
@@ -31,6 +32,9 @@ else:
     _expr_dict['numpy'] = numpy
 
 _Missing = object()
+
+
+_expr_split = re.compile('[\+\-\*\/\:\!\<\>\|\&\=\%]+')
 
 
 # some constants used in the get/set downstream protocol
@@ -299,16 +303,23 @@ class ExprEvaluator(object):
     
     def refers_to(self, name):
         """Returns True if this expression refers to the given variable or component"""
-        if self._parse_needed:
-            self._parse()
-        for vname in self.var_names:
-            if name == vname:
-                return True
-            parts = vname.split('.', 1)
-            if parts[0] == name:
+        if name == self.text:
+            return True
+        elif name in self.text:
+            nlen = len(name)
+            if not self.text[nlen].isalnum():
                 return True
         return False
 
+    def subexprs(self):
+        """This returns a list of subexpressions of this expression, splitting on
+        certain operators but not on [] for example, so array entry references are
+        kept intact.  It's not totally general, but works for simple expressions
+        involving array entry references with constant indices, which are the types
+        of expressions that are allowed by the Assembly.connect() method.
+        """
+        return [exp for exp in re.split(_expr_split, self.text)]
+        
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = self.__dict__.copy()

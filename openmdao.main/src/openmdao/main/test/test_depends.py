@@ -567,10 +567,16 @@ class ExprDependsTestCase(unittest.TestCase):
         self.assertEqual(list(self.top.c2.c), [2,2,6,10,10])
         self.assertEqual(list(self.top.c2.d), [0,-2,0,2,0])
         
+        # make sure only one connection allowed to a particular array entry
         try:
             self.top.connect('c1.d[1]', 'c2.a[1]')
         except Exception as err:
             self.assertEqual(str(err), ": 'c2.a[1]' is already connected to source 'c1.d[2]'")
+            
+        # let's disconnect one entry and check the valid dict
+        self.top.disconnect('c2.a[1]')
+        self.assertEqual(self.top.c2._valid_dict['a[3]'], True)
+        self.assertTrue('a[1]' not in self.top.c2._valid_dict)
 
     def test_invalidation(self):
         global exec_order

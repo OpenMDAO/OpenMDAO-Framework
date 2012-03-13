@@ -226,8 +226,6 @@ class ExprMapper(object):
 
     def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components."""
-        #self._compgraph = None  # force later rebuild of component graph
-        #self._refer_cache = None
         graph = self._exprgraph
         
         self._depgraph.disconnect(srcpath, destpath)
