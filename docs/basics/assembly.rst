@@ -55,7 +55,13 @@ the hierarchy. For example, when `component2` above is executing in the
 workflow for `driver3` for the first time its iteration coordinates would be
 ``1-3.1-1``. Which denotes the first execution of the top workflow, third
 component (`driver3`), first execution of that driver's workflow, first
-component in that workflow (`component2`).
+component in that workflow (`component2`). To have all components report their
+iteration coordinates to stderr (the default):
+
+.. testcode:: iteration_tracing
+
+    from openmdao.util.log import enable_trace
+    enable_trace()
    
 An :term:`Assembly` is a container for your analysis models.   When an
 Assembly executes, it will always look for a Driver named `driver` and  start there, then work its

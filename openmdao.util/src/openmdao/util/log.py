@@ -33,6 +33,7 @@ The example below is equivalent to calling enable_console():
 
 #public symbols
 __all__ = ['logger', 'getLogger', 'enable_console', 'disable_console',
+           'TRACER', 'enable_trace', 'disable_trace',
            'Logger', 'NullLogger',
            'LOG_DEBUG', 'LOG_INFO', 'LOG_WARNING', 'LOG_ERROR', 'LOG_CRITICAL']
 
@@ -81,9 +82,6 @@ logging.addLevelName(logging.CRITICAL, 'C')
 
 logger = logging.getLogger('')
 
-# Optional handler which writes messages to sys.stderr
-CONSOLE = None
-
 # If a logging config file exists, use it.
 if os.path.exists('logging.cfg'):
     logging.config.fileConfig('logging.cfg')
@@ -93,6 +91,9 @@ def getLogger(name):
     """ Return the named logger. """
     return logging.getLogger(name)
     
+
+# Optional handler which writes messages to sys.stderr
+CONSOLE = None
 
 def enable_console():
     """ Configure logging to receive log messages at the console. """
@@ -111,9 +112,42 @@ def disable_console():
     """ Stop receiving log messages at the console. """
     logger.removeHandler(CONSOLE)
 
-
 if int(os.environ.get('OPENMDAO_ENABLE_CONSOLE', '0')):
     enable_console()
+
+
+# Optional logger for iteration coordinates.
+TRACER = None
+
+def enable_trace(stream=None):
+    """
+    Enable iteration tracing.
+
+    stream: file or string
+        File object or filename for trace output.
+        Only used on first enable, default ``sys.stderr``.
+    """
+    global TRACER
+    if TRACER is None:
+        TRACER = logging.getLogger('TRACER')
+        TRACER.propagate = False
+        formatter = logging.Formatter('%(message)s')
+        if stream is None:
+            stream = sys.stderr
+        elif isinstance(stream, basestring):
+            stream = open(stream, 'w')
+        handler = logging.StreamHandler(stream)
+        handler.setFormatter(formatter)
+        TRACER.addHandler(handler)
+    TRACER.setLevel(logging.DEBUG)
+
+def disable_trace():
+    """ Disable iteration tracing. """
+    if TRACER is not None:
+        TRACER.setLevel(logging.CRITICAL)
+
+if int(os.environ.get('OPENMDAO_ENABLE_TRACE', '0')):
+    enable_trace()
 
 
 class Logger(object):

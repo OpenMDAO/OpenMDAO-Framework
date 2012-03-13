@@ -1,5 +1,6 @@
 # pylint: disable-msg=C0111,C0103
 
+import cStringIO
 import os
 import shutil
 import unittest
@@ -10,6 +11,7 @@ from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
 from openmdao.main.datatypes.api import Float, Str, Slot, List
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
+from openmdao.util.log import enable_trace, disable_trace
 
 
 class Multiplier(Component):
@@ -179,6 +181,12 @@ class TracedComponent(Component):
     def execute(self):
         msg = '%s: %s' % (self.get_pathname(), self.get_itername())
         self.trace_buf.append(msg)
+
+
+class Dummy(Component):
+    """ Just defines an empty execute. """
+    def execute(self):
+        pass
 
 
 class AssemblyTestCase(unittest.TestCase):
@@ -738,7 +746,44 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         self.assertEqual(errors, 0)
         self.assertEqual(len(trace_buf), len(expected))
 
-       
+    def test_tracing(self):
+        # Check tracing of iteration coordinates.
+        top = Assembly()
+        comp = top.add('comp1', Dummy())
+        comp.force_execute = True
+        top.add('driverA', Driver())
+        comp = top.add('comp2', Dummy())
+        comp.force_execute = True
+        top.add('driverB', Driver())
+
+        sub = top.add('subassy', Assembly())
+        sub.force_execute = True
+        comp = sub.add('comp3', Dummy())
+        comp.force_execute = True
+        sub.driver.workflow.add('comp3')
+
+        top.driver.workflow = SequentialWorkflow()
+        top.driver.workflow.add(('comp1', 'driverA', 'driverB'))
+        top.driverA.workflow.add(('comp1', 'comp2'))
+        top.driverB.workflow.add(('comp2', 'subassy'))
+
+        trace_out = cStringIO.StringIO()
+        enable_trace(trace_out)
+        top.run()
+        expected = """\
+1-1
+1-2.1-1
+1-2.1-2
+1-3.1-1
+1-3.1-2.1-1
+"""
+        self.assertEqual(trace_out.getvalue(), expected)
+
+        disable_trace()
+        top.run()
+        self.assertEqual(trace_out.getvalue(), expected)
+
+
 if __name__ == "__main__":
     unittest.main()
 

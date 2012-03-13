@@ -10,7 +10,7 @@ import threading
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
 
-from openmdao.main.interfaces import implements, IDriver
+from openmdao.main.interfaces import implements, IAssembly, IDriver
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
@@ -78,7 +78,9 @@ class Assembly (Component):
     and outputs between its children.  When executed, it runs the top level
     Driver called 'driver'.
     """
-    
+
+    implements(IAssembly)
+
     driver = Slot(IDriver, allow_none=True,
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
