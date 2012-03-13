@@ -1043,7 +1043,7 @@ class Container(SafeHasTraits):
             except Exception:
                 return self._set_failed(path, value, index, src, force)
                 
-            if iotype == 'in': # setting an input, so have to check source
+            if iotype == 'in' or src is not None: # setting an input or a boundary output, so have to check source
                 if not force:
                     self._check_source(path, src)
                 if index is None:

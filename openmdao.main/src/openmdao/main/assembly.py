@@ -505,16 +505,16 @@ class Assembly (Component):
             destination expression string(s).
         """
         src = eliminate_expr_ws(src)
-        dest = eliminate_expr_ws(dest)
-        srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
-        if isinstance(destpath, basestring):
-            destpath = (destpath,)
-        for dst in destpath:
-            self._connect(srcpath, srccompname, srccomp, srcvarname, dst)
+        srccompname, srccomp, srcvarname = self._split_varpath(src)
+        if isinstance(dest, basestring):
+            dest = (dest,)
+        for dst in dest:
+            dst = eliminate_expr_ws(dst)
+            self._connect(src, srccompname, srccomp, srcvarname, dst)
 
-    def _connect(self, srcpath, srccompname, srccomp, srcvarname, destpath):
+    def _connect(self, src, srccompname, srccomp, srcvarname, dest):
         """Handle one connection destination."""
-        destcompname, destcomp, destvarname = self._split_varpath(destpath)
+        destcompname, destcomp, destvarname = self._split_varpath(dest)
         
         super(Assembly, self).connect(src, dest)
         
