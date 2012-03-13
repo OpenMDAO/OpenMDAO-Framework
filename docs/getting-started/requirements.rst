@@ -14,10 +14,10 @@ additional :ref:`system requirements <developer-requirements>` on certain platfo
 OpenMDAO requires that the following software be installed at the system level on all platforms:
 
 - Python (2.6.x or 2.7.x) 
-   *In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python builds, such as Enthought,
+   * In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python builds, such as Enthought,
    Active State python or python(x,y) are not officially supported at this time, though some may work with OpenMDAO.  
  
-   *OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the incorrect
+   * OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the incorrect
    Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only lead
    to problems.
 
