@@ -58,20 +58,19 @@ as an input or output, and a number of other metadata fields. Run the above code
 
 ::
 
-"label","uuid","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","objective","Constraint0","/METADATA","retries","max_retries","parent_uuid","msg"
-"","ef56c020-686a-11e1-94f8-34159e027f06","",0.0,0.0,"",22.0,-15.0,"","","",""
-"","ef57b322-686a-11e1-94f8-34159e027f06","",-8.50000000486,6.50000000636,"",-25.7499999974,1.12260067908e-08,"","","",""
-"","ef583c84-686a-11e1-94f8-34159e027f06","",-6.7370023896,8.26299760727,"",-23.4775087306,-3.13171355515e-09,"","","",""
-"","ef587384-686a-11e1-94f8-34159e027f06","",-7.83333333577,7.16666667003,"",-27.0833333304,5.79672487788e-09,"","","",""
+"label","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","objective","Constraint0","/METADATA","retries","max_retries","parent_uuid","msg"
+"","",0.0,0.0,"",22.0,-15.0,"","","",""
+"","",-8.50000000486,6.50000000636,"",-25.7499999974,1.12260067908e-08,"","","",""
+"","",-6.7370023896,8.26299760727,"",-23.4775087306,-3.13171355515e-09,"","","",""
+"","",-7.83333333577,7.16666667003,"",-27.0833333304,5.79672487788e-09,"","","",""
 
 
 This file should be readable into an application that accepts a csv input file. The first line is a header that contains
 the variable names for the values that are printed. Notice that the objective and constraints are printed for an optimizer
-driver. The first column is a case label, which is currently empty for cases generated from a driver. The second column
-is a string that contains a unique identifier for this case. Columns with a section header ("/INPUTS", "/OUTPUTS",
-"/METADATA") do not contain any data. The final columns in the file contain some metadata associated with the case. None
-of these are set by ``SLSQPdriver.`` Note that in OpenMDAO's flavor of csv, all string will always be enclosed in double
-quotes.
+driver. The first column is a case label, which is currently empty for cases generated from a driver. Columns with a
+section header ("/INPUTS", "/OUTPUTS", "/METADATA") do not contain any data. The final columns in the file contain 
+some metadata associated with the case. None of these are set by ``SLSQPdriver.`` Note that in OpenMDAO's flavor of
+csv, all string data will always be enclosed in double quotes.
 
 The ``CSVCaseRecorder`` supports simple data types -- integers, floats, and strings. It also supports single elements of an array.
 The chosen element becomes a column in the csv file. Some of the more complicated data types -- dictionaries, lists, multi-dimensional
