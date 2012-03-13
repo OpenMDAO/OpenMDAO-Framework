@@ -79,7 +79,7 @@ Built-in Variable Types
 +----------+--------------------------------------------------------------+
 
 
-When a variable isdeclared it gets passed a number of arguments, many of which are
+When a variable is declared, it gets passed a number of arguments, many of which are
 optional.
 
 But the *iotype* attribute is required for all variables regardless of type.
