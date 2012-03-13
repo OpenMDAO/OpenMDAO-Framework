@@ -505,38 +505,32 @@ class Assembly (Component):
             destination expression string(s).
         """
         src = eliminate_expr_ws(src)
-        srccompname, srccomp, srcvarname = self._split_varpath(src)
+        
         if isinstance(dest, basestring):
             dest = (dest,)
         for dst in dest:
             dst = eliminate_expr_ws(dst)
-            self._connect(src, srccompname, srccomp, srcvarname, dst)
+            self._connect(src, dst)
 
-    def _connect(self, src, srccompname, srccomp, srcvarname, dest):
+    def _connect(self, src, dest):
         """Handle one connection destination."""
-        destcompname, destcomp, destvarname = self._split_varpath(dest)
-        
         super(Assembly, self).connect(src, dest)
         
         srcexpr = self._depgraph.get_expr(src)
-        destexpr = self._depgraph.get_expr(dest)
-
-        if not destexpr.refs_parent() and not srcexpr.refs_parent():
-            config_changed = True
-        else:
-            config_changed = False
+        if not srcexpr.refs_parent():
+            destexpr = self._depgraph.get_expr(dest)
+            if not destexpr.refs_parent():
+                # if it's an internal connection, could change dependencies, so we have
+                # to call config_changed to notify our driver
+                self.config_changed(update_parent=False)
+    
+                destvar = destexpr.get_referenced_varpaths().pop()
+                destcompname, destcomp, destvarname = self._split_varpath(destvar)
+                
+                outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
+                if (outs is None) or outs:
+                    bouts = self.child_invalidated(destcompname, outs, force=True)
                     
-        # if it's an internal connection, could change dependencies, so we have
-        # to call config_changed to notify our driver
-        if config_changed:
-            self.config_changed(update_parent=False)
-
-            destvar = destexpr.get_referenced_varpaths().pop()
-            destcompname, destcomp, destvarname = self._split_varpath(destvar)
-            
-            outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
-            if (outs is None) or outs:
-                bouts = self.child_invalidated(destcompname, outs, force=True)
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
