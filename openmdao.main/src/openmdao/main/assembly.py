@@ -367,6 +367,25 @@ class Assembly (Component):
         
         set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
         
+    @rbac(('owner', 'user'))
+    def set_itername(self, itername, seqno=0):
+        """
+        Set current 'iteration coordinates'. Overrides :class:`Component`
+        to propagate to driver, and optionally set the initial count in the
+        driver's workflow. Setting the initial count is typically done by
+        :class:`CaseIterDriverBase` on a remote top level assembly.
+
+        itername: string
+            Iteration coordinates.
+
+        seqno: int
+            Initial execution count for driver's workflow.
+        """
+        super(Assembly, self).set_itername(itername)
+        self.driver.set_itername(itername)
+        if seqno:
+            self.driver.workflow.set_initial_count(seqno)
+
     def add(self, name, obj):
         """Call the base class *add*.  Then,
         if obj is a Component, add it to the component graph.
@@ -482,11 +501,20 @@ class Assembly (Component):
         src: str
             Source expression string.
             
-        dest: str
-            destination expression string.
+        dest: str or list(str)
+            destination expression string(s).
         """
         src = eliminate_expr_ws(src)
         dest = eliminate_expr_ws(dest)
+        srccompname, srccomp, srcvarname = self._split_varpath(srcpath)
+        if isinstance(destpath, basestring):
+            destpath = (destpath,)
+        for dst in destpath:
+            self._connect(srcpath, srccompname, srccomp, srcvarname, dst)
+
+    def _connect(self, srcpath, srccompname, srccomp, srcvarname, destpath):
+        """Handle one connection destination."""
+        destcompname, destcomp, destvarname = self._split_varpath(destpath)
         
         super(Assembly, self).connect(src, dest)
         

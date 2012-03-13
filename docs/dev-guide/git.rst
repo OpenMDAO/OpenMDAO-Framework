@@ -3,7 +3,7 @@
 .. _Helpful-Git-Commands:
 
 
-Appendix A: Helpful Git Commands
+Appendix: Helpful Git Commands
 ===================================
 
 This section contains commands that developers would use on a regular basis

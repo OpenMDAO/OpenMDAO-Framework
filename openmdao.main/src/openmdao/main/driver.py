@@ -42,7 +42,8 @@ class Driver(Component):
         self._iter = None
         super(Driver, self).__init__(doc=doc)
         self.workflow = Dataflow(self)
-        
+        self.force_execute = True 
+ 
     def _workflow_changed(self, oldwf, newwf):
         if newwf is not None:
             newwf._parent = self
@@ -151,6 +152,29 @@ class Driver(Component):
                 for start in setcomps:
                     full.update(graph.find_all_connecting(start, end))
         return full
+
+    @rbac('*', 'owner')
+    def run (self, force=False, ffd_order=0, case_id=''):
+        """Run this object. This should include fetching input variables if necessary,
+        executing, and updating output variables. Do not override this function.
+
+        force: bool
+            If True, force component to execute even if inputs have not
+            changed. (Default is False)
+            
+        ffd_order: int
+            Order of the derivatives to be used during Fake
+            Finite Difference (typically 1 or 2). During regular execution,
+            ffd_order should be 0. (Default is 0)
+            
+        case_id: str
+            Identifier for the Case that is associated with this run. (Default is '')
+            If applied to the top-level assembly, this will be prepended to
+            all iteration coordinates.
+        """
+        # Override just to reset the workflow :-(
+        self.workflow.reset()
+        super(Driver, self).run(force, ffd_order, case_id)
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition

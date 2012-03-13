@@ -1,7 +1,7 @@
 .. _units:
 
 
-Appendix A: Summary of Units
+Appendix: Summary of Units
 =============================
 
 .. index::  units

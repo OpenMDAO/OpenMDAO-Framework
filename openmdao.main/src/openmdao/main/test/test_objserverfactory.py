@@ -7,6 +7,7 @@ but in an unobservable manner as far as test coverage is concerned.
 import logging
 import os.path
 import shutil
+import socket
 import sys
 import time
 import unittest
@@ -14,7 +15,9 @@ import nose
 
 from openmdao.main.component import SimulationRoot
 from openmdao.main.objserverfactory import ObjServerFactory, ObjServer, \
-                                           start_server
+                                           start_server, stop_server, \
+                                           connect_to_server, _PROXIES
+from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.testutil import assert_raises
 
 
@@ -50,9 +53,22 @@ class TestCase(unittest.TestCase):
             exec_comp = factory.create('openmdao.test.execcomp.ExecComp')
             exec_comp.run()
 
-            # Force failed factory server startup via invalid port.
-            assert_raises(self, "start_server(port='xyzzy')",
+            # Start server, connect, stop.
+            server, cfg = start_server()
+            proxy = connect_to_server(cfg)
+            shutil.copy(cfg, 'saved_cfg')
+            stop_server(server, cfg)
+
+            _PROXIES.clear()
+            assert_raises(self, "connect_to_server('saved_cfg')",
                           globals(), locals(), RuntimeError,
+                          "Can't connect to server at ")
+
+            # Force failed factory server startup via invalid port.
+            address = socket.gethostbyname(socket.gethostname())
+            code = "start_server(address=address, port='xyzzy'," \
+                                 " allow_shell=True, tunnel=True, resources='')"
+            assert_raises(self, code, globals(), locals(), RuntimeError,
                           'Server startup failed')
 
             # Try to release a server that doesn't exist (release takes an
@@ -60,6 +76,11 @@ class TestCase(unittest.TestCase):
             assert_raises(self, "factory.release('xyzzy')",
                           globals(), locals(), ValueError,
                           "can't identify server at 'not-a-proxy'")
+
+            # get_ram() is used by RAM.add_remotes().
+            ram = factory.get_ram()
+            self.assertTrue(ram is RAM._get_instance())
+
         finally:
             if factory is not None:
                 factory.cleanup()
@@ -181,6 +202,18 @@ class TestCase(unittest.TestCase):
             else:
                 self.fail('Expected TypeError')
 
+            # isdir().
+            self.assertTrue(server.isdir('.'))
+
+            # listdir().
+            self.assertEqual(sorted(server.listdir('.')),
+                             [egg_info[0], 'fred', 'xyzzy', 'zipped'])
+            if sys.platform == 'win32':
+                msg = "[Error 3] The system cannot find the path specified: '42/*.*'"
+            else:
+                msg = "[Errno 2] No such file or directory: '42'"
+            assert_raises(self, "server.listdir('42')",
+                          globals(), locals(), OSError, msg)
         finally:
             SimulationRoot.chroot('..')
             shutil.rmtree(testdir)
@@ -200,20 +233,32 @@ class TestCase(unittest.TestCase):
             server = ObjServer(allow_shell=True)
 
             # Execute a command.
-            cmd = 'dir' if sys.platform == 'win32' else 'ls'
+            if sys.platform == 'win32':
+                cmd = 'cmd'
+                args = ['/c', 'dir']
+            else:
+                cmd = 'ls'
+                args = []
             rdesc = {'remote_command': cmd,
-                     'output_path': 'cmd.out',
-                     'hard_runtime_limit': 10}
+                     'args': args,
+                     'output_path': 'cmd.out'}
             return_code, error_msg = server.execute_command(rdesc)
             self.assertEqual(return_code, 0)
 
-            # Non-zero return code.
+            # Bad command, specify lots of resources.
+            with open('stdin1', 'w') as out:
+                out.write('z')
             rdesc = {'remote_command': 'no-such-command',
-                     'output_path': 'stdout1',
+                     'args': ['a', 'b', 'c'],
+                     'input_path': 'stdin1',
                      'error_path': 'stderr1',
-                     'hard_runtime_limit': 10}
-            return_code, error_msg = server.execute_command(rdesc)
-            self.assertNotEqual(return_code, 0)
+                     'wallclock_time': 10}
+            if sys.platform == 'win32':
+                msg = '[Error 2] The system cannot find the file specified'
+            else:
+                msg = '[Errno 2] No such file or directory'
+            assert_raises(self, 'server.execute_command(rdesc)',
+                          globals(), locals(), OSError, msg)
 
             # Load a model.
             exec_comp = server.create('openmdao.test.execcomp.ExecComp')

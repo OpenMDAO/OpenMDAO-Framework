@@ -32,7 +32,7 @@ from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
 
 from openmdao.lib.datatypes.api import Float, Int
-from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseRecorder
 
 from openmdao.test.execcomp import ExecComp
 
@@ -509,7 +509,7 @@ class TestCase(unittest.TestCase):
         # This 'spook' creation is only for testing.
         # Normally the protector would run with regular credentials
         # in effect at the proprietary site.
-        user = 'spooky@'+socket.gethostname()
+        user = 'i am a spy@'+socket.gethostname()
         key_pair = get_key_pair(user)
         data = '\n'.join([user, '0', key_pair.publickey().exportKey()])
         hash = hashlib.sha256(data).digest()

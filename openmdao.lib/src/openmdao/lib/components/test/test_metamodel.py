@@ -10,7 +10,7 @@ from openmdao.main.interfaces import implements, ICaseRecorder
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
@@ -76,6 +76,13 @@ class Dummy(Component):
 
     def execute(self): 
         self.y = 2*self.x
+        
+class DummyError(Component): 
+    x = Float(1.2,iotype="in")
+    y = Float(0,iotype="out")
+
+    def execute(self): 
+        self.raise_exception("Test Error",RuntimeError)
 
 class Sim(Assembly):
     def configure(self):
@@ -121,6 +128,23 @@ class MetaModelTestCase(unittest.TestCase):
         asm.connect('metamodel.d','comp2.b')
         return asm
         
+    def test_comp_error(self): 
+        a = Assembly()
+        a.add('m',MetaModel()) 
+        a.m.surrogate = {'default':KrigingSurrogate()}
+        a.m.model = DummyError()
+        
+        a.m.train_next = True
+        
+        a.driver.workflow.add('m')
+        try: 
+            a.run()
+        except RuntimeError as err: 
+            self.assertEqual("m.model: Test Error",str(err))
+        else: 
+            self.fail("RuntimeError expected")
+
+    
     def test_in_assembly(self):
         asm = self._get_assembly()
         self.assertEqual(set(asm.list_connections()), 

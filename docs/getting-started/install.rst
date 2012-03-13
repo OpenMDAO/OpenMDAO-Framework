@@ -47,13 +47,6 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
    will have installed OpenMDAO. There are just a couple more steps to follow
    before you can start using it.
    
-   You can also specify additional required packages by passing *-r* arguments 
-   to go-openmdao.py, e.g.,
-   
-   ::
-   
-      python go-openmdao.py -r myplugin -r myotherplugin==1.3
-      
 
 **Activate your virtual environment**
 

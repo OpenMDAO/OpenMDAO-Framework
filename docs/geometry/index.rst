@@ -2,7 +2,7 @@
 .. _geometry:
 
 ===================================================
-Appendix C: Geometry Interfaces (Working Document)
+Appendix: Geometry Interfaces (Working Document)
 ===================================================
 
 .. toctree::
