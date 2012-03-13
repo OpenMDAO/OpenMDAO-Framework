@@ -18,7 +18,8 @@ from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import implements, IComponent, ICaseIterator
+from openmdao.main.interfaces import implements, obj_has_interface, IAssembly, \
+                                     IComponent, ICaseIterator, IDriver
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -26,6 +27,9 @@ from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.datatypes.slot import Slot
+
+import openmdao.util.log as tracing
+
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -457,6 +461,10 @@ class Component (Container):
                 else:
                     # Component executes as normal
                     self.exec_count += 1
+                    if tracing.TRACER is not None and \
+                        not obj_has_interface(self, IAssembly) and \
+                        not obj_has_interface(self, IDriver):
+                            tracing.TRACER.debug(self.get_itername())
                     self.execute()
                     
                 self._post_execute()

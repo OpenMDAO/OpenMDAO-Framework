@@ -302,6 +302,13 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
+
+class IAssembly(IComponent):
+    """An interface for objects that contain a driver and its workflow components."""
+
+    driver = Attribute("object that manage's the iteration of a workflow")
+
+
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""
 
