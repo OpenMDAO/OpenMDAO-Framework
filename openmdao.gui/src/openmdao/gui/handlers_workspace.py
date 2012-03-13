@@ -270,8 +270,8 @@ class OutstreamHandler(BaseHandler):
     '''
     @web.authenticated
     def get(self):
-        outstream_url = self.application.server_manager.get_outstream_server(self.get_sessionid(),'/workspace/outstream')
-        self.write(outstream_url)
+        url = self.application.server_manager.get_out_server_url(self.get_sessionid(),'/workspace/outstream')
+        self.write(url)
 
 class ProjectHandler(BaseHandler):
     ''' GET:  load model fom the given project archive,
@@ -315,8 +315,8 @@ class PubstreamHandler(BaseHandler):
     '''
     @web.authenticated
     def get(self):
-        pubstream_url = self.application.server_manager.get_pubstream_server(self.get_sessionid(),'/workspace/pubstream')
-        self.write(pubstream_url)
+        url = self.application.server_manager.get_pub_server_url(self.get_sessionid(),'/workspace/pubstream')
+        self.write(url)
         
 class StructureHandler(BaseHandler):
     ''' get the structure of the specified assembly, or of the global 

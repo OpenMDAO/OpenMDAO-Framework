@@ -29,9 +29,7 @@ class ZMQServerManager(object):
                 rep_url = url_fmt % get_unused_ip_port()
                 pub_url = url_fmt % get_unused_ip_port()
                 out_url = url_fmt % get_unused_ip_port()
-                DEBUG("%s RPC on %s" % (server_id, rep_url))
-                DEBUG("%s pub on %s" % (server_id, pub_url))
-                DEBUG("%s out on %s" % (server_id, out_url))
+                DEBUG("%s \n\t RPC on %s \n\t pub on %s \n\t out on %s" % (server_id, rep_url, pub_url, out_url))
                 server = ZMQServer.spawn_server(self.classpath,rep_url,pub_url,out_url)
                 proxy = ZMQ_RPC(rep_url)
                 self.server_dict[server_id] = {
@@ -69,7 +67,7 @@ class ZMQServerManager(object):
                 pass
             server.terminate()
 
-    def get_pub_url(self,server_id):
+    def get_pub_socket_url(self,server_id):
         ''' get the url of the publisher socket for the server associated with
             an id
         '''
@@ -79,7 +77,7 @@ class ZMQServerManager(object):
         else:
             return None
         
-    def get_out_url(self,server_id):
+    def get_out_socket_url(self,server_id):
         ''' get the url of the output socket for the server associated with
             an id
         '''
@@ -89,7 +87,7 @@ class ZMQServerManager(object):
         else:
             return None
 
-    def get_pubstream_server(self,server_id,ws_url):
+    def get_pub_server_url(self,server_id,ws_url):
         ''' get the publisher socket web server for the server associated with
             an id, create one if none exists
         '''
@@ -104,7 +102,7 @@ class ZMQServerManager(object):
             time.sleep(1)  # give server a chance to spool up
             return ws_addr
     
-    def get_outstream_server(self,server_id,ws_url):
+    def get_out_server_url(self,server_id,ws_url):
         ''' get the output socket web server for the server associated with
             an id, create one if none exists
         '''

@@ -12,7 +12,6 @@ try:
     from zmq.eventloop import ioloop, zmqstream
 except ImportError:
     zmq = None
-    
 
 class Publisher(object):
 
@@ -30,14 +29,16 @@ class Publisher(object):
     
     def publish(self, topic, value):
         with self._lock:
-            #print 'publishing %s' % topic
             self._sender.send_multipart([topic, pickle.dumps(value, -1)])
+            if hasattr(self._sender, 'flush'):
+                self._sender.flush()            
     
     def publish_list(self, items):
         with self._lock:
             for topic, value in items:
-                #print 'publishing list %s' % topic
                 self._sender.send_multipart([topic, pickle.dumps(value, -1)])
+            if hasattr(self._sender, 'flush'):
+                self._sender.flush()            
                 
     @staticmethod
     def get_instance():
