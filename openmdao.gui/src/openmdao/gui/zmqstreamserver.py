@@ -63,7 +63,6 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 topic = message[0]
                 content = pickle.loads(message[1])
                 json = jsonpickle.encode([ topic, content ])
-                #DEBUG('zmqstream message received:'+json)
                 self.write_message(json)
             except Exception, err:
                 DEBUG('Unable to write JSON to stream:')
@@ -75,11 +74,11 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def on_close(self):
         DEBUG('zmqstream connection closed')
-        self.time_closed = time.time()
-        total_time = self.time_closed - self.time_opened        
-        rate = self.message_count/total_time
-        if self.message_count > 0:
-            print self.message_count,'messages in',total_time,'secs (',str(rate),')'
+        if debug:
+            total_time = time.time() - self.time_opened        
+            rate = self.message_count/total_time
+            if self.message_count > 0:
+                print '%d messages in %d secs (%d msg/sec)' % (self.message_count, total_time, rate)
 
 
 class ZMQStreamApp(web.Application):
