@@ -11,8 +11,10 @@ from enthought.traits.api import List
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
                                      IHasEvents, implements
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
+from openmdao.main.case import Case
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.main.hasparameters import HasParameters
@@ -22,7 +24,7 @@ from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Slot, Str
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -33,6 +35,11 @@ class Driver(Component):
 
     recorders = List(Slot(ICaseRecorder, required=False), 
                      desc='Case recorders for iteration data.')
+    
+    # Extra variables for printing
+    printvars = List(Str, iotype='in', desc='List of extra variables to '
+                               'output in the recorders.')
+    
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__
@@ -163,8 +170,8 @@ class Driver(Component):
             changed. (Default is False)
             
         ffd_order: int
-            Order of the derivatives to be used during Fake
-            Finite Difference (typically 1 or 2). During regular execution,
+            Order of the derivatives to be used when finite differncing (1 for first
+            derivatives, 2 for second derivativse). During regular execution,
             ffd_order should be 0. (Default is 0)
             
         case_id: str
@@ -269,3 +276,98 @@ class Driver(Component):
         super(Driver, self).config_changed(update_parent)
         if self.workflow is not None:
             self.workflow.config_changed()
+            
+    def record_case(self):
+        """ A driver can call this function to record the current state of the
+        current iteration as a Case into all slotted case recorders. Generally,
+        the driver should call this function once per iteration, and may also
+        need to call it at the conclusion.
+        
+        All paramters, objectives, and constraints are included in the Case output,
+        along with all extra variables listed in self.printvars.
+        """
+
+        if not self.recorders:
+            return
+        
+        case_input = []
+        case_output = []
+        
+        # Parameters
+        for name, param in self.get_parameters().iteritems():
+            if isinstance(name, tuple):
+                name = name[0]
+            case_input.append([name, param.evaluate(self.parent)])
+          
+        # Objectives
+        if hasattr(self, 'eval_objective'):
+            case_output.append(["objective", self.eval_objective()])
+    
+        # Constraints
+        if hasattr(self, 'get_ineq_constraints'):
+            for name, con in self.get_ineq_constraints().iteritems():
+                val = con.evaluate(self.parent)
+                if '>' in val[2]:
+                    case_output.append(["Constraint ( %s )" % name,
+                                                              val[0]-val[1]])
+                else:
+                    case_output.append(["Constraint ( %s )" % name,
+                                                              val[1]-val[0]])
+            
+        if hasattr(self, 'get_eq_constraints'):
+            for name, con in self.get_eq_constraints().iteritems():
+                val = con.evaluate(self.parent)
+                case_output.append(["Constraint ( %s )" % name, val[1]-val[0]])
+            
+        # User-requested variables
+        for printvar in self.printvars:
+            
+            if printvar == '*':
+                printvars = self._get_all_varpaths('*')
+            else:
+                printvars = [printvar]
+                
+            for var in printvars:
+                iotype = self.parent.get_metadata(var, 'iotype')
+                if iotype == 'in':
+                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    case_input.append([var, val])
+                elif iotype == 'out':
+                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    case_output.append([var, val])
+                else:
+                    msg = "%s is not an input or output" % var
+                    self.raise_exception(msg, ValueError)
+                        
+        # Pull iteration coord from workflow
+        coord = self.workflow._iterbase('')
+        
+        case = Case(case_input, case_output, label=coord,
+                    parent_uuid=self._case_id)
+        
+        for recorder in self.recorders:
+            recorder.record(case)
+        
+    def _get_all_varpaths(self, pattern):
+        ''' Return a list of all varpaths in the driver's workflow that
+        match the specified pattern.
+        
+        Used by record_case.'''
+        
+        all_vars = []
+        for comp in self.workflow._iterator:
+            
+            # All variables from components in workflow
+            for var in comp.list_vars():
+                all_vars.append(var)
+
+            # Recurse into drivers
+            if isinstance(comp, Driver):
+                print "Doesn't recurse drivers (yet)"
+                
+                
+        print all_vars
+        return all_vars
+                
+            
+            

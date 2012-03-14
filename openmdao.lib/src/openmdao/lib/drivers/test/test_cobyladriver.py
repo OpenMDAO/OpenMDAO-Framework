@@ -42,6 +42,7 @@ class OptRosenSuzukiComponent(Component):
     x = Array(iotype='in', low=-10, high=99)
     result = Float(iotype='out')
     obj_string = Str(iotype='out')
+    opt_objective = Float(iotype='out')
     
     # pylint: disable-msg=C0103
     def __init__(self, doc=None):
