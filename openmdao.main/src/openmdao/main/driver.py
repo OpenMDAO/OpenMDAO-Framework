@@ -301,7 +301,7 @@ class Driver(Component):
           
         # Objectives
         if hasattr(self, 'eval_objective'):
-            case_output.append(["objective", self.eval_objective()])
+            case_output.append(["Objective", self.eval_objective()])
     
         # Constraints
         if hasattr(self, 'get_ineq_constraints'):
@@ -355,11 +355,11 @@ class Driver(Component):
         Used by record_case.'''
         
         all_vars = []
-        for comp in self.workflow._iterator:
+        for comp in self.workflow.__iter__():
             
             # All variables from components in workflow
             for var in comp.list_vars():
-                all_vars.append(var)
+                all_vars.append('%s.%s' % (comp.name, var))
 
             # Recurse into drivers
             if isinstance(comp, Driver):

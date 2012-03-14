@@ -58,7 +58,7 @@ as an input or output, and a number of other metadata fields. Run the above code
 
 ::
 
-"label","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","objective","Constraint ( paraboloid.x-paraboloid.y >= 15.0 )","/METADATA","retries","max_retries","parent_uuid","msg"
+"label","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","Objective","Constraint ( paraboloid.x-paraboloid.y >= 15.0 )","/METADATA","retries","max_retries","parent_uuid","msg"
 "1","",0.0,0.0,"",22.0,-15.0,"","","",""
 "2","",-8.50000000486,6.50000000636,"",-25.7499999974,1.12260067908e-08,"","","","",""
 "3","",-6.7370023896,8.26299760727,"",-23.4775087306,-3.13171355515e-09,"","","","",""
