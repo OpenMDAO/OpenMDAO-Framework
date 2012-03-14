@@ -498,7 +498,7 @@ def plugin_makedist(parser, options, args=None):
     startdir = os.getcwd()
     os.chdir(options.dist_dir_path)
     
-    templates, class_templates, test_template = load_templates()
+    templates, class_templates, test_template = _load_templates()
 
     try:
         plugin_build_docs(parser, options)
