@@ -1,6 +1,6 @@
 ## utility functions used by openmdao gui
 
-import os, os.path
+import sys, os, os.path
 import webbrowser
 from xml.dom.minidom import Document
 
@@ -133,13 +133,21 @@ def launch_browser(port,preferred_browser=None):
     url = 'http://localhost:'+str(port)    
     print 'Opening URL in browser: '+url+' (pid='+str(os.getpid())+')'
     
-    # webbrowser doesn't know about chrome, so try to find it (this is for win7)
+    # webbrowser doesn't know about chrome, so try to find it
     if preferred_browser and preferred_browser.lower() == 'chrome':
-        USERPROFILE = os.getenv("USERPROFILE")
-        if USERPROFILE:
-            CHROMEPATH = USERPROFILE+'\AppData\Local\Google\Chrome\Application\chrome.exe'
+    	if sys.platform == 'win32':
+    	    # Windows7
+            USERPROFILE = os.getenv("USERPROFILE")
+            if USERPROFILE:
+                CHROMEPATH = USERPROFILE+'\AppData\Local\Google\Chrome\Application\chrome.exe'
+       	        if os.path.isfile(CHROMEPATH):
+                    preferred_browser = CHROMEPATH.replace('\\','\\\\')+' --app=%s'
+        elif sys.platform == 'darwin':
+            # Mac OSX
+            CHROMEPATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
        	    if os.path.isfile(CHROMEPATH):
-                preferred_browser = CHROMEPATH.replace('\\','\\\\')+' --app=%s'
+       	        CHROMEPATH = CHROMEPATH.replace('Google Chrome','Google\ Chrome')
+                preferred_browser = 'open -a '+CHROMEPATH+' %s'       
     
     # try to get preferred browser, fall back to default
     if preferred_browser:
