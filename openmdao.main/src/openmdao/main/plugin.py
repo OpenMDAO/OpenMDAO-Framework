@@ -886,6 +886,7 @@ def plugin_build_docs(parser, options, args=None):
     cfg.set('metadata', 'entry_points', 
             _get_entry_points(os.path.join(destdir,'src')))
     
+    templates, class_templates, test_template = _load_templates()
     template_options = _get_template_options(destdir, cfg)
 
     dirstruct = {
