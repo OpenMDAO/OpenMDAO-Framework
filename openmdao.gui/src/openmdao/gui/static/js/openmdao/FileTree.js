@@ -51,6 +51,9 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             }
             html += "</li>";
         }
+        else {
+            html = '';
+        }
         return html;
     }
     
