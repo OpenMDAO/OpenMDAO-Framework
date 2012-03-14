@@ -43,7 +43,7 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
-from openmdao.main.expreval import INDEX, ATTR, CALL, SLICE, ExprEvaluator
+from openmdao.main.expreval import INDEX, ATTR, CALL, SLICE, ExprEvaluator, ConnectedExprEvaluator
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -357,8 +357,8 @@ class Container(SafeHasTraits):
             Pathname of destination variable.
         """
         child_connections = []  # for undo
-        srcexpr = ExprEvaluator(srcpath, self)
-        destexpr = ExprEvaluator(destpath, self)
+        srcexpr = ConnectedExprEvaluator(srcpath, self)
+        destexpr = ConnectedExprEvaluator(destpath, self)
         destvar = destexpr.get_referenced_varpaths().pop()
 
         # check for self connections
@@ -390,10 +390,11 @@ class Container(SafeHasTraits):
                         child_connections.append((child, childsrc, restofpath)) 
                         
             if not 'parent' in srcexpr.get_referenced_compnames():
-                for src in srcexpr.get_referenced_varpaths():
+                for src,srcref in srcexpr.vars_and_refs():
                     if not self.contains(src):
                         self.raise_exception("Can't find '%s'" % src, AttributeError)
-                    cname, _, restofpath = src.partition('.')
+                        
+                    cname, _, restofpath = srcref.partition('.')
                     if restofpath:
                         child = getattr(self, cname)
                         if is_instance(child, Container):
@@ -413,14 +414,15 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        srcexpr = ExprEvaluator(srcpath, self)
-        destexpr = ExprEvaluator(destpath, self)
+        srcexpr = ConnectedExprEvaluator(srcpath, self)
+        destexpr = ConnectedExprEvaluator(destpath, self)
         destvar = destexpr.get_referenced_varpaths().pop()
+        destref = destexpr.refs().pop()
         if not 'parent' in srcexpr.get_referenced_compnames():
-            for src in srcexpr.get_referenced_varpaths():
+            for src,srcref in srcexpr.vars_and_refs():
                 if not self.contains(src):
                     self.raise_exception("Can't find '%s'" % src, AttributeError)
-                cname, _, restofpath = src.partition('.')
+                cname, _, restofpath = srcref.partition('.')
                 if restofpath:
                     child = getattr(self, cname)
                     if is_instance(child, Container):
@@ -429,7 +431,7 @@ class Container(SafeHasTraits):
         if not destvar.startswith('parent.'):
             if not self.contains(destvar):
                 self.raise_exception("Can't find '%s'" % destvar, AttributeError)
-            cname2, _, restofpath = destvar.partition('.')
+            cname2, _, restofpath = destref.partition('.')
             if restofpath:
                 child = getattr(self, cname2)
                 if is_instance(child, Container):

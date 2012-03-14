@@ -18,6 +18,7 @@ from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
+from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, IComponent, ICaseIterator
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -706,13 +707,16 @@ class Component (Container):
         """
         valids_update = None
         
-        if srcpath.startswith('parent.'):  # internal destination
-            valids_update = (destpath, False)
-            self.config_changed(update_parent=False)
-        elif destpath.startswith('parent.'): # internal source
-            if srcpath not in self._valid_dict:
-                valids_update = (srcpath, True)
-            self._connected_outputs = None  # reset cached value of connected outputs
+        for ref in ConnectedExprEvaluator(srcpath, self).refs():
+            if ref.startswith('parent.'):  # internal destination
+                valids_update = (destpath, False)
+                self.config_changed(update_parent=False)
+                break
+        else:
+            if destpath.startswith('parent.'): # internal source
+                if srcpath not in self._valid_dict:
+                    valids_update = (srcpath, True)
+                self._connected_outputs = None  # reset cached value of connected outputs
                     
         super(Component, self).connect(srcpath, destpath)
         

@@ -22,7 +22,7 @@ from openmdao.main.driver import Driver
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.printexpr import eliminate_expr_ws, ExprNameTransformer
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.depgraph import DependencyGraph
@@ -184,12 +184,13 @@ class ExprMapper(object):
                     except Exception as err:
                         scope.raise_exception("can't connect '%s' to '%s': %s" %
                                              (src, dest, str(err)), RuntimeError)
-        for srcvar in srcvars:
+        srcrefs = srcexpr.refs()
+        for srcref in srcrefs:
             try:
-                self._depgraph.connect(srcvar, destexpr.text, self, expr=srcexpr)
+                self._depgraph.connect(srcref, destexpr.text, self, expr=srcexpr)
             except Exception as err:
                 scope.raise_exception("Can't connect '%s' to '%s': %s" % 
-                                      (srcvar, destvar, str(err)), RuntimeError)
+                                      (srcref, destexpr.text, str(err)), RuntimeError)
             
         if src not in self._exprgraph:
             self._exprgraph.add_node(src, expr=srcexpr)
@@ -259,18 +260,12 @@ class ExprMapper(object):
             scope.raise_exception("'%s' is already connected to source '%s'" % (dest, self.get_source(dest)),
                                   RuntimeError)
         
-        destexpr = ExprEvaluator(dest, scope, default_getter='get_wrapped_attr')
-        srcexpr = ExprEvaluator(src, scope, default_getter='get_wrapped_attr')
+        destexpr = ConnectedExprEvaluator(dest, scope, default_getter='get_wrapped_attr', 
+                                          is_dest=True)
+        srcexpr = ConnectedExprEvaluator(src, scope, default_getter='get_wrapped_attr')
         
         srccomps = srcexpr.get_referenced_compnames()
         destcomps = destexpr.get_referenced_compnames()
-        destvars = destexpr.get_referenced_varpaths()
-        
-        if len(destvars) != 1:
-            scope.raise_exception("destination expr '%s' does not refer to a single variable." % dest,
-                                  RuntimeError)
-        
-        destvar = destvars.pop()
         
         if destcomps and destcomps.pop() in srccomps:
             scope.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." % (src,dest),
@@ -522,8 +517,8 @@ class Assembly (Component):
                 # to call config_changed to notify our driver
                 self.config_changed(update_parent=False)
     
-                destvar = destexpr.get_referenced_varpaths().pop()
-                destcompname, destcomp, destvarname = self._split_varpath(destvar)
+                destref = destexpr.refs().pop()
+                destcompname, destcomp, destvarname = self._split_varpath(destref)
                 
                 outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
                 if (outs is None) or outs:

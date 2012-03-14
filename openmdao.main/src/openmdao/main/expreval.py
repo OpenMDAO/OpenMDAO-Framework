@@ -33,10 +33,6 @@ else:
 
 _Missing = object()
 
-
-_expr_split = re.compile('[\+\-\*\/\:\!\<\>\|\&\=\%]+')
-
-
 # some constants used in the get/set downstream protocol
 INDEX = 0
 ATTR = 1
@@ -224,6 +220,130 @@ class ExprTransformer(ast.NodeTransformer):
             return ast.Assign(targets=[lhs], value=rhs)
         return lhs
 
+class ExprExaminer(ast.NodeVisitor):
+    """"Examines various properties of an expression for later analysis."""
+    def __init__(self, node):
+        super(ExprExaminer, self).__init__()
+        self.const = True
+        self.simplevar = True  # if true, it's just a simple variable name (possibly with dots)
+        self.refs= set()  # variables and/or subscripted variables referenced in this expression
+        self.const_indices = True
+        self.assignable = True
+        
+        self.visit(node)
+        
+        if len(self.refs) > 1:
+            ep = ExprPrinter()
+            ep.visit(node)
+            txt = ep.get_text()
+            for ref in sorted(self.refs, key=len, reverse=True):
+                if ref not in txt:
+                    self.refs.remove(ref)
+                txt = txt.replace(ref, '')
+
+    def visit_Index(self, node):
+        self.simplevar = self.const = False
+        if not isinstance(node.value, ast.Num):
+            self.const_indices = False
+        self.visit(node.value)
+
+    def visit_Assign(self, node):
+        self.assignable = False
+        self.const = False
+        self.simplevar = False
+        super(ExprExaminer, self).generic_visit(node)
+        
+    def visit_Slice(self, node):
+        self.simplevar = self.const = False
+        if node.lower is not None:
+            if not isinstance(node.lower, ast.Num):
+                self.const_indices = False
+            self.visit(node.lower)
+        if node.upper is not None:
+            if not isinstance(node.upper, ast.Num):
+                self.const_indices = False
+            self.visit(node.upper)
+        if node.step is not None:
+            if not isinstance(node.step, ast.Num):
+                self.const_indices = False
+            self.visit(node.step)
+
+    def visit_Name(self, node):
+        self.const = False
+        self.refs.add(node.id)
+        super(ExprExaminer, self).generic_visit(node)
+        
+    def visit_Attribute(self, node):
+        self.const = False
+        long_name = _get_long_name(node)
+        if long_name:
+            self.refs.add(long_name)
+        else:
+            self.simplevar = False
+            super(ExprExaminer, self).generic_visit(node)
+        
+    def visit_Subscript(self, node):
+        self.const = False
+        p = ExprPrinter()
+        p.visit(node)
+        self.refs.add(p.get_text())
+        super(ExprExaminer, self).generic_visit(node)
+        
+    def visit_Num(self, node):
+        self.simplevar = False
+        if self.const:
+            self.assignable = False
+        super(ExprExaminer, self).generic_visit(node)
+
+    def _ignore(self, node):
+        super(ExprExaminer, self).generic_visit(node)
+        
+    def _no_assign(self, node):
+        self.assignable = self.simplevar = False
+        super(ExprExaminer, self).generic_visit(node)
+        
+    visit_Load       = _ignore
+    visit_Store      = _ignore
+    visit_Expr       = _ignore
+    visit_Expression = _ignore
+
+    visit_Call       = _no_assign
+    visit_USub       = _no_assign
+    visit_UAdd       = _no_assign
+    visit_And        = _no_assign
+    visit_Or         = _no_assign
+        
+    # operators
+    visit_Add        = _no_assign
+    visit_Sub        = _no_assign
+    visit_Mult       = _no_assign
+    visit_Div        = _no_assign
+    visit_Mod        = _no_assign
+    visit_Pow        = _no_assign
+    visit_LShift     = _no_assign
+    visit_Rshift     = _no_assign
+    visit_BitOr      = _no_assign
+    visit_BitXor     = _no_assign
+    visit_BitAnd     = _no_assign
+    visit_FloorDiv   = _no_assign
+        
+    # cmp operators
+    visit_Eq         = _no_assign
+    visit_NotEq      = _no_assign
+    visit_Lt         = _no_assign
+    visit_LtE        = _no_assign
+    visit_Gt         = _no_assign
+    visit_GtE        = _no_assign
+    visit_Is         = _no_assign
+    visit_IsNot      = _no_assign
+    visit_In         = _no_assign
+    visit_NotIn      = _no_assign
+
+    def generic_visit(self, node):
+        self.simplevar = False
+        super(ExprExaminer, self).generic_visit(node)
+    
+
 class ExprEvaluator(object):
     """A class that translates an expression string into a new string
     containing any necessary framework access functions, e.g., set, get. The
@@ -258,17 +378,15 @@ class ExprEvaluator(object):
 
     @property
     def new_text(self):
-        new_ast, _ = self._parse_get()
         ep = ExprPrinter()
-        ep.visit(new_ast)
+        ep.visit(self._parse_get()[0])
         return ep.get_text()
         
     def set_text(self):
         self._pre_parse()
         if self._allow_set:
-            new_ast = self._parse_set()
             ep = ExprPrinter()
-            ep.visit(new_ast)
+            ep.visit(self._parse_set())
             return ep.get_text()
         return ''
         
@@ -306,20 +424,12 @@ class ExprEvaluator(object):
         if name == self.text:
             return True
         elif name in self.text:
-            nlen = len(name)
-            if not self.text[nlen].isalnum():
+            if name in self.get_referenced_varpaths():
+                return True
+            if name in self.get_referenced_compnames():
                 return True
         return False
 
-    def subexprs(self):
-        """This returns a list of subexpressions of this expression, splitting on
-        certain operators but not on [] for example, so array entry references are
-        kept intact.  It's not totally general, but works for simple expressions
-        involving array entry references with constant indices, which are the types
-        of expressions that are allowed by the Assembly.connect() method.
-        """
-        return [exp for exp in re.split(_expr_split, self.text)]
-        
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = self.__dict__.copy()
@@ -589,6 +699,50 @@ class ExprEvaluator(object):
     
     def __str__(self):
         return self._text
+
+class ConnectedExprEvaluator(ExprEvaluator):
+    """An ExprEvaluator that restricts the allowable syntax to only those
+    expressions that can be connected within a model.  For example, array
+    indexing is allowed, but all indices must be constants if the expression
+    is on the destination side of a connection.
+    """
+    def __init__(self, *args, **kwargs):
+        self._is_dest = kwargs.get('is_dest', False)
+        if 'is_dest' in kwargs:
+            del kwargs['is_dest']
+        self._examiner = None
+        super(ConnectedExprEvaluator, self).__init__(*args, **kwargs)
+        
+    def _parse(self):
+        super(ConnectedExprEvaluator, self)._parse()
+        self._examiner = ExprExaminer(ast.parse(self.text, mode='eval'))
+        if self._is_dest:
+            if len(self._examiner.refs) != 1:
+                raise RuntimeError("bad destination expression '%s': must be a single variable name or an index or slice into an array variable" %
+                                   self.text)
+            if not self._examiner.const_indices:
+                raise RuntimeError("bad destination expression '%s': only constant array indices are allowed" %
+                                   self.text)
+            if not self._examiner.assignable:
+                raise RuntimeError("bad destination expression '%s': not assignable" %
+                                   self.text)
+    def refs(self):
+        if self._parse_needed:
+            self._parse()
+        return self._examiner.refs.copy()
+    
+    def vars_and_refs(self):
+        refs = self.refs()
+        varpaths = self.get_referenced_varpaths()
+        if len(refs) != len(varpaths):
+            raise RuntimeError("# of refs != # of vars in expression '%s'" % self.text)
+        return zip(varpaths, refs)
+    
+    def refers_to(self, name):
+        """Returns True if this expression refers to the given variable or component"""
+        if super(ConnectedExprEvaluator, self).refers_to(name):
+            return True
+        return name in self.refs()
 
 if __name__ == '__main__':
     import sys

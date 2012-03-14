@@ -4,7 +4,7 @@ import ast
 
 from openmdao.main.numpy_fallback import array
 from openmdao.main.datatypes.array import Array
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator, ExprExaminer
 from openmdao.main.printexpr import ExprPrinter, transform_expression
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
@@ -447,6 +447,38 @@ class ExprEvalTestCase(unittest.TestCase):
         xformed = exp.scope_transform(self.top.comp, self.top)
         self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
         
+class ExprExaminerTestCase(unittest.TestCase):
+    def _examine(self, text, simplevar=True, assignable=True, const_indices=True, 
+                 refs=None, const=False):
+        ee = ExprExaminer(ast.parse(text, mode='eval'))
+        self.assertEqual(ee.simplevar, simplevar)
+        self.assertEqual(ee.assignable, assignable)
+        self.assertEqual(ee.const_indices, const_indices)
+        self.assertEqual(ee.const, const)
+        if refs is None:
+            refs = set()
+        self.assertEqual(refs, ee.refs)
+        return ee
+        
+    def test_exprs(self):
+        self._examine("7", simplevar=False, assignable=False, const=True)
+        self._examine("7+6", simplevar=False, assignable=False, const=True)
+        self._examine("7+6/(8-4)*13", simplevar=False, assignable=False, const=True)
+        self._examine("x", refs=set(['x']))
+        self._examine("x[2]", simplevar=False, refs=set(['x[2]']))
+        self._examine("x[2]+x", simplevar=False, assignable=False, refs=set(['x[2]', 'x']))
+        self._examine("x[2]*y[4]", simplevar=False, assignable=False,
+                      refs=set(['x[2]','y[4]']))
+        self._examine("x[y]", simplevar=False, const_indices=False, refs=set(['x[y]']))
+        self._examine("x[y[5]]", simplevar=False, const_indices=False, 
+                      refs=set(['x[y[5]]']))
+        self._examine("x[1:4:2]", simplevar=False, refs=set(['x[1:4:2]']))
+        self._examine("x[1:4:y]", simplevar=False, const_indices=False, refs=set(['x[1:4:y]']))
+        self._examine("x+y", simplevar=False, assignable=False, refs=set(['x','y']))
+        self._examine("x*y", simplevar=False, assignable=False, refs=set(['x','y']))
+        self._examine("x()", simplevar=False, assignable=False, refs=set(['x']))
+        self._examine("x(7)", simplevar=False, assignable=False, refs=set(['x']))
+        self._examine("x==6", simplevar=False, assignable=False, refs=set(['x']))
         
 if __name__ == "__main__":
     unittest.main()
