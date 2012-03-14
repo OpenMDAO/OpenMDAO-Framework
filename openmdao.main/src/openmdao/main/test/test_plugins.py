@@ -65,7 +65,7 @@ class PluginsTestCase(unittest.TestCase):
         # Errors.
         code = 'plugin_quickstart(parser, options, args)'
         assert_raises(self, code, globals(), locals(), OSError,
-                      "Can't create directory %r because it already exists."
+                      "Can't create directory '%s' because it already exists."
                       % os.path.join(self.tdir, 'foobar'))
 
         argv = ['quickstart', 'foobar', 'stuff']
@@ -97,7 +97,10 @@ class PluginsTestCase(unittest.TestCase):
             with open('makedist.out', 'r') as inp:
                 logdata = inp.read()
             self.assertEqual(retval, 0)
-            self.assertTrue(os.path.exists('foobar-1.1.tar.gz'))
+            if sys.platform == 'win32':
+                self.assertTrue(os.path.exists('foobar-1.1.zip'))
+            else:
+                self.assertTrue(os.path.exists('foobar-1.1.tar.gz'))
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
@@ -124,7 +127,7 @@ class PluginsTestCase(unittest.TestCase):
         code = 'plugin_makedist(parser, options, args)'
         distdir = os.path.join(os.getcwd(), 'no-such-directory')
         assert_raises(self, code, globals(), locals(), IOError,
-                      'directory %r does not exist' % distdir)
+                      "directory '%s' does not exist" % distdir)
 
         # Existing distribution.
         sys.stdout = cStringIO.StringIO()
@@ -248,7 +251,7 @@ class PluginsTestCase(unittest.TestCase):
         code = 'plugin_build_docs(parser, options, args)'
         distdir = os.path.join(os.getcwd(), 'no-such-directory')
         assert_raises(self, code, globals(), locals(), IOError,
-                      'directory %r does not exist' % distdir)
+                      "directory '%s' does not exist" % distdir)
 
         distdir = os.path.join(self.tdir, 'foobar')
         os.remove(os.path.join(distdir, 'setup.py'))
@@ -257,7 +260,7 @@ class PluginsTestCase(unittest.TestCase):
         options, args = parser.parse_known_args(argv)
         code = 'plugin_build_docs(parser, options, args)'
         assert_raises(self, code, globals(), locals(), IOError,
-                      "directory %r does not contain 'setup.py'" % distdir)
+                      "directory '%s' does not contain 'setup.py'" % distdir)
 
     def test_docs(self):
         argv = ['docs', 'no-such-plugin']
