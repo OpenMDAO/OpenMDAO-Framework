@@ -9,6 +9,7 @@ for WebSockets is required.
 
 import os, sys
 import os.path
+import time
 
 from optparse import OptionParser
 
@@ -31,7 +32,7 @@ from django.conf import settings
 debug = True
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> AppServer --',msg
+        print '<<<'+str(os.getpid())+'>>> OMG --',msg
 
 def get_user_dir():
     user_dir = os.path.expanduser("~/.openmdao/gui/")
@@ -44,10 +45,11 @@ class App(web.Application):
     '''
 
     def __init__(self, secret=None):
-        from openmdao.gui.handlers import LoginHandler, LogoutHandler
+        from openmdao.gui.handlers import LoginHandler, LogoutHandler, ExitHandler
         handlers = [
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
+            web.url(r'/exit',   ExitHandler),
             web.url(r'/',       web.RedirectHandler, {'url':'/projects', 'permanent':False}),           
         ]        
         
@@ -81,6 +83,11 @@ class App(web.Application):
         self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
         
         super(App, self).__init__(handlers, **app_settings)
+        
+    def exit(self):
+        self.server_manager.cleanup()
+        DEBUG('Exit requested, shutting down....\n')
+        ioloop.IOLoop.instance().add_timeout(time.time()+5, sys.exit) 
 
 class AppServer(object):
     ''' openmdao web application server

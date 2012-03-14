@@ -62,3 +62,10 @@ class LogoutHandler(BaseHandler):
         self.clear_cookie('user')
         self.redirect('/')
         
+class ExitHandler(BaseHandler):
+    ''' lets users log out of the application simply by deleting the nickname cookie
+    '''
+    def get(self):
+        self.application.exit()
+        self.render('closewindow.html')
+

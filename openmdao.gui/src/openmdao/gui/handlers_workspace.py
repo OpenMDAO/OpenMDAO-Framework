@@ -200,19 +200,6 @@ class ExecHandler(BaseHandler):
             self.content_type = 'text/html'
             self.write(result)
 
-class ExitHandler(BaseHandler):
-    ''' close the browser window and shut down the server    
-        (unfortunately neither of these things actually work)
-        TODO: kill server based on PID per example at:
-        http://blog.perplexedlabs.com/2010/07/01/pythons-tornado-has-swept-me-off-my-feet/
-    '''
-    @web.authenticated
-    def get(self):
-        self.delete_server()        
-        self.render('closewindow.html')
-        time.sleep(2)
-        quit()
-
 class FileHandler(BaseHandler):
     ''' get/set the specified file/folder
     '''
@@ -394,7 +381,6 @@ handlers = [
     web.url(r'/workspace/command',          CommandHandler),
     web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
-    web.url(r'/workspace/exit/?',           ExitHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
     web.url(r'/workspace/files/?',          FilesHandler),
     web.url(r'/workspace/geometry',         GeometryHandler),

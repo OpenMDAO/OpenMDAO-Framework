@@ -9,10 +9,6 @@
 </head>
 
 <body id="{% block body_id %}{% end %}" bgcolor="Grey">
-	<!----------------------------------------->
-	<!-- load all the scripts & style sheets -->
-	<!----------------------------------------->
-
     <link rel="stylesheet" href="/static/css/mdao-styles.css">
 
     <div id="body">
@@ -27,8 +23,10 @@
     </div>
 
     {% block footer %}
+    <p>    
+     <!-- a href="/logout?next=/">Logout</a> ({{ current_user }}) &nbsp &nbsp -->
+     <a href="/exit">Exit</a> 
     {% end %}
-    
 </body>
 
 </html>

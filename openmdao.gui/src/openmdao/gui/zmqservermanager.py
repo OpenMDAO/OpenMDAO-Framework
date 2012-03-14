@@ -116,3 +116,10 @@ class ZMQServerManager(object):
             server_info['out_server_url'] = ws_addr
             time.sleep(1)  # give server a chance to spool up
             return ws_addr
+            
+    def cleanup(self):
+        ''' delete all servers
+        '''
+        keys = self.server_dict.keys()
+        for server_id in keys:
+            self.delete_server(server_id)

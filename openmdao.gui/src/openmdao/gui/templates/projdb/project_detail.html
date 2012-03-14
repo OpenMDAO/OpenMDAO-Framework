@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
 {% block title %}
-    {{ project.projectname }}
+    Project: {{ project.projectname }}
 {% end %}
 
 {% block content %}
 
-    <h1>{{ project.projectname }}</h1>
+    <h2>{{ project.projectname }}</h2>
     
     <form action="/projects/{{ project.id }}/" method="POST">
         <table>
@@ -41,8 +41,10 @@
     </form>
     {% end %}        
     <br>
+    
+    <p>
+    <a href="/projects/">Back to Projects</a>
+    
 {% end %}
 
-{% block footer %}
-   <a href="/projects/">Back to Projects</a>    <a href="/logout?next=/">Logout</a>
-{% end %}
+

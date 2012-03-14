@@ -5,7 +5,7 @@
 {% end %}
 
 {% block content %}
-    <p>Welcome, {{ current_user }}. Here are your projects:</p>
+    <h2>Your OpenMDAO Projects:</h2>
 
     {% if project_list %}
         <ul>
@@ -16,13 +16,7 @@
     {% else %}
         <p>No projects are available.</p>
     {% end %}
-<p>
-<a href='/projects/new/'>New project</a>
-<p>
-<a href='/projects/add/'>Add existing project</a>
-{% end %}
 
-
-{% block footer %}
-    <a href="/logout?next=/">Logout</a>
+    <p>
+    <a href='/projects/new/'>Add new project</a> &nbsp &nbsp <a href='/projects/add/'>Add existing project</a>
 {% end %}
