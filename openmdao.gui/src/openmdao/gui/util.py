@@ -147,7 +147,12 @@ def launch_browser(port,preferred_browser=None):
             CHROMEPATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
        	    if os.path.isfile(CHROMEPATH):
        	        CHROMEPATH = CHROMEPATH.replace('Google Chrome','Google\ Chrome')
-                preferred_browser = 'open -a '+CHROMEPATH+' %s'       
+                preferred_browser = 'open -a '+CHROMEPATH+' %s'
+        elif sys.platform == 'linux2':
+            # Linux
+            CHROMEPATH = '/usr/bin/chromium-browser'
+       	    if os.path.isfile(CHROMEPATH):
+                preferred_browser = CHROMEPATH+' --app=%s &'
     
     # try to get preferred browser, fall back to default
     if preferred_browser:
