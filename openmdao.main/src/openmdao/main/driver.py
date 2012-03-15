@@ -3,6 +3,8 @@
 #public symbols
 __all__ = ["Driver"]
 
+from fnmatch import fnmatch
+
 from networkx.algorithms.shortest_paths.generic import shortest_path
 from enthought.traits.api import List
 
@@ -294,10 +296,11 @@ class Driver(Component):
         case_output = []
         
         # Parameters
-        for name, param in self.get_parameters().iteritems():
-            if isinstance(name, tuple):
-                name = name[0]
-            case_input.append([name, param.evaluate(self.parent)])
+        if hasattr(self, 'get_parameters'):
+            for name, param in self.get_parameters().iteritems():
+                if isinstance(name, tuple):
+                    name = name[0]
+                case_input.append([name, param.evaluate(self.parent)])
           
         # Objectives
         if hasattr(self, 'eval_objective'):
@@ -322,8 +325,8 @@ class Driver(Component):
         # User-requested variables
         for printvar in self.printvars:
             
-            if printvar == '*':
-                printvars = self._get_all_varpaths('*')
+            if  '*' in printvar:
+                printvars = self._get_all_varpaths(printvar)
             else:
                 printvars = [printvar]
                 
@@ -348,26 +351,40 @@ class Driver(Component):
         for recorder in self.recorders:
             recorder.record(case)
         
-    def _get_all_varpaths(self, pattern):
+    def _get_all_varpaths(self, pattern, header=''):
         ''' Return a list of all varpaths in the driver's workflow that
         match the specified pattern.
         
         Used by record_case.'''
+        
+        # assume we don't want this in driver's imports
+        from openmdao.main.assembly import Assembly
         
         all_vars = []
         for comp in self.workflow.__iter__():
             
             # All variables from components in workflow
             for var in comp.list_vars():
-                all_vars.append('%s.%s' % (comp.name, var))
+                all_vars.append('%s%s.%s' % (header, comp.name, var))
 
-            # Recurse into drivers
-            if isinstance(comp, Driver):
-                print "Doesn't recurse drivers (yet)"
+            # Recurse into assemblys
+            if isinstance(comp, Assembly):
+                
+                assy_header = '%s%s.' % (header, comp.name)
+                assy_vars = comp.driver._get_all_varpaths(pattern, assy_header)
+                all_vars = all_vars + assy_vars
                 
                 
-        print all_vars
-        return all_vars
+        # Match pattern in our var names
+        matched_vars = []
+        if pattern == '*':
+            matched_vars = all_vars
+        else:
+            for item in all_vars:
+                if fnmatch(item, pattern):
+                    matched_vars.append(item)
+        
+        return matched_vars
                 
             
             

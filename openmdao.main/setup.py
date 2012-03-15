@@ -68,6 +68,9 @@ setup(name='openmdao.main',
       openmdao.main.driver_uses_derivatives.DriverUsesDerivatives = openmdao.main.driver_uses_derivatives:DriverUsesDerivatives
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       
+      [openmdao.driver]
+      openmdao.main.assembly.Assembly_Driver = openmdao.main.assembly:Assembly_Driver
+      
       [openmdao.variable]
       openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
       openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
