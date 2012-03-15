@@ -18,7 +18,8 @@ from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import implements, IComponent, ICaseIterator
+from openmdao.main.interfaces import implements, obj_has_interface, IAssembly, \
+                                     IComponent, ICaseIterator, IDriver
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -26,6 +27,9 @@ from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.datatypes.slot import Slot
+
+import openmdao.util.log as tracing
+
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -42,13 +46,16 @@ class SimulationRoot (object):
             Path to move to.
         """
         os.chdir(path)
-        SimulationRoot.__root = os.getcwd()
+        SimulationRoot.__root = None
+        SimulationRoot.get_root()
 
     @staticmethod
     def get_root ():
         """Return this simulation's root directory path."""
         if SimulationRoot.__root is None:
-            SimulationRoot.__root = os.getcwd()
+            SimulationRoot.__root = os.path.realpath(os.getcwd())
+            if sys.platform == 'win32':  # pragma no cover
+                SimulationRoot.__root = SimulationRoot.__root.lower()
         return SimulationRoot.__root
 
     @staticmethod
@@ -58,9 +65,11 @@ class SimulationRoot (object):
         path: string
             Path to check.
         """
-        if SimulationRoot.__root is None:
-            SimulationRoot.__root = os.getcwd()
-        return path.startswith(SimulationRoot.__root)
+        root = SimulationRoot.get_root()
+        if sys.platform == 'win32':  # pragma no cover
+            return os.path.realpath(path).lower().startswith(root)
+        else:
+            return os.path.realpath(path).startswith(root)
     
 
 class DirectoryContext(object):
@@ -160,7 +169,7 @@ class Component (Container):
         
         self.ffd_order = 0
         self._case_id = ''
-
+        self._itername = ''
 
     @property
     def dir_context(self):
@@ -168,6 +177,21 @@ class Component (Container):
         if self._dir_context is None:
             self._dir_context = DirectoryContext(self)
         return self._dir_context
+
+    @rbac(('owner', 'user'))
+    def get_itername(self):
+        """Return current 'iteration coordinates'."""
+        return self._itername
+
+    @rbac(('owner', 'user'))
+    def set_itername(self, itername):
+        """Set current 'iteration coordinates'. Typically called by the
+        current workflow just before running the component.
+
+        itername: string
+            Iteration coordinates.
+        """
+        self._itername = itername
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
@@ -220,11 +244,11 @@ class Component (Container):
                                      name, RuntimeError)
     
     @rbac(('owner', 'user'))
-    def tree_rooted(self):
-        """Calls the base class version of *tree_rooted()*, checks our
+    def cpath_updated(self):
+        """Calls the base class version of *cpath_updated()*, checks our
         directory for validity, and creates the directory if it doesn't exist.
         """
-        super(Component, self).tree_rooted()
+        super(Component, self).cpath_updated()
 
         if self.create_instance_dir:
             # Create unique subdirectory of parent based on our name.
@@ -268,16 +292,21 @@ class Component (Container):
                         % (path, exc.strerror), OSError)
             else:
                 self.check_path(path, check_dir=True)
+                
+        if self._call_configure:
+            self.configure()
+            self._call_configure = False
+
 
     def _pre_execute (self, force=False):
-        """Prepares for execution by calling *tree_rooted()* and *check_config()* if
+        """Prepares for execution by calling *cpath_updated()* and *check_config()* if
         their "dirty" flags are set, and by requesting that the parent Assembly
         update this Component's invalid inputs.
         
         Overrides of this function must call this version.
         """
-        if self._call_tree_rooted:
-            self.tree_rooted()
+        if self._call_cpath_updated:
+            self.cpath_updated()
             
         if force:
             outs = self.invalidate_deps()
@@ -400,6 +429,8 @@ class Component (Container):
             
         case_id: str
             Identifier for the Case that is associated with this run. (Default is '')
+            If applied to the top-level assembly, this will be prepended to
+            all iteration coordinates.
         """
         if self.directory:
             self.push_dir()
@@ -429,8 +460,12 @@ class Component (Container):
                     
                 else:
                     # Component executes as normal
-                    self.execute()
                     self.exec_count += 1
+                    if tracing.TRACER is not None and \
+                        not obj_has_interface(self, IAssembly) and \
+                        not obj_has_interface(self, IDriver):
+                            tracing.TRACER.debug(self.get_itername())
+                    self.execute()
                     
                 self._post_execute()
             #else:
@@ -514,7 +549,7 @@ class Component (Container):
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
-            self.call_execute = True
+            self._call_execute = True
             return False
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]
@@ -751,7 +786,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not isabs(path):
-            if self._call_tree_rooted:
+            if self._call_cpath_updated:
                 self.raise_exception("can't call get_abs_directory before hierarchy is defined",
                                      RuntimeError)
             if self.parent is not None and is_instance(self.parent, Component):

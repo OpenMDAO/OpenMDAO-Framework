@@ -1,0 +1,16 @@
+__all__ = ['%(classname)s']
+
+from openmdao.main.variable import Variable
+
+class %(classname)s(Variable):
+
+    #def __init__(self, default_value = ???, **metadata):
+    #    super(%(classname)s, self).__init__(default_value=default_value,
+    #                                        **metadata)
+
+    def validate(self, object, name, value):
+        pass
+        # insert validation code here
+        
+        # in the event of an error, call
+        # self.error(object, name, value)

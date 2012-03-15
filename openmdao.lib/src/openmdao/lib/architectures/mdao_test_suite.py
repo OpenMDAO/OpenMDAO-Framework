@@ -107,7 +107,7 @@ def run_arch_test_suite(arch=[], optproblems=[]):
         converge_file = open('%s_convergence_data.py'%prob_name,'w')
         
         for a in arch:
-            prob = p.__class__()
+            prob = openmdao.main.api.set_as_top(p.__class__())
             arch_name = a.__class__.__name__
             
             prob.architecture = a.__class__()
@@ -123,21 +123,22 @@ def run_arch_test_suite(arch=[], optproblems=[]):
             except RuntimeError as err: 
                 arch_data[p] = False #not compatible, so just move on
                 print "Incompatible"
+                #raise err
                 continue 
                            
             prob.run()
             print "Success"
             
             des_vars = prob.get_des_vars_by_comp()
-            print "  Function Evaluations: "
+            print "  Function Evaluations (Derivative Evaluations): "
             for comp_name in des_vars: 
                 comp = prob.get(comp_name)
-                print "    %s: %d"%(comp_name,comp.exec_count)
+                print "    %s: %d (%d)"%(comp_name,comp.exec_count,comp.derivative_exec_count)
             print "  Errors: "
             for k,v in prob.check_solution().iteritems(): 
                 print "    ",k,": ",v
             #print prob.check_solution()
-             
+
             iter_data = prob.architecture.data_recorders[0].get_iterator()
             data = [case['objective'] for case in iter_data]
             #converge_file.write('%s = %s'%(arch_name,str(data)))

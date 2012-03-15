@@ -600,7 +600,7 @@ namelist called `MAIN` would look like this:
             sb.add_var("areal")
             
             # Add an internal variable
-            sb.add_new_var("Py", 3.14)
+            sb.add_newvar("Py", 3.14)
             
             # Generate the input file for FLOPS
             sb.generate()
@@ -627,8 +627,11 @@ The ``add_var`` method is used to add a variable to the ``Namelist``. The only
 needed argument is the variable's name in the component. The variable's type
 is used to determine what kind of namelist variable to output. If you need to
 add something to the namelist that isn't contained in one of the component's
-variables, then use the ``add_new_var`` method, giving it a name and a value as
-arguments.
+variables, then use the ``add_newvar`` method, giving it a name and a value as
+arguments. This method is what you will use if your variable has a different
+name in your component than in the namelist file (i.e., you may have decided
+to use a more descriptive name in Openmdao instead of the original cryptic
+6-character Fortran name.)
 
 Another method, ``add_comment``, lets you add a comment to the
 namelist. Of course, this isn't an essential function, but there are times you

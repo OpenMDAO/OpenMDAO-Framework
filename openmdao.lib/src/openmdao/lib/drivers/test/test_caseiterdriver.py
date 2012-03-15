@@ -5,6 +5,7 @@ Test CaseIteratorDriver.
 import logging
 import os
 import pkg_resources
+import re
 import sys
 import time
 import unittest
@@ -13,16 +14,17 @@ import nose
 import random
 import numpy.random as numpy_random
 
-from openmdao.main.api import Assembly, Component, Case, set_as_top
+from openmdao.main.api import Assembly, Component, Case, Slot, set_as_top
+from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
-from openmdao.lib.datatypes.api import Float, Bool, Array
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
+from openmdao.lib.datatypes.api import Float, Bool, Array, Int, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
-from openmdao.lib.casehandlers.listcaserecorder import ListCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
+                                          SequenceCaseFilter
 
 from openmdao.test.cluster import init_cluster
 
@@ -33,12 +35,16 @@ ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
 
+def replace_uuid(msg):
+    """ Replace UUID in `msg` with ``UUID``. """
+    pattern = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    return re.sub(pattern, 'UUID', msg)
+
 
 def rosen_suzuki(x):
     """ Evaluate polynomial from CONMIN manual. """
     return x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] + \
            2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50
-
 
 
 class DrivenComponent(Component):
@@ -67,18 +73,63 @@ class DrivenComponent(Component):
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
 
+
 def _get_driver():
     return CaseIteratorDriver()
     #return SimpleCaseIterDriver()
 
+
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def configure(self):
         self.add('driver', _get_driver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
+
+
+class Generator(Component):
+    """ Generates cases to be evaluated. """
+
+    cases = Slot(ICaseIterator, iotype='out')
+
+    def execute(self):
+        """ Generate some cases to be evaluated. """
+        cases = []
+        for i in range(10):
+            inputs = [('driven.x', numpy_random.normal(size=4)),
+                      ('driven.y', numpy_random.normal(size=10)),
+                      ('driven.raise_error', False),
+                      ('driven.stop_exec', False)]
+            outputs = ['driven.rosen_suzuki', 'driven.sum_y']
+            cases.append(Case(inputs, outputs, label=str(i)))
+        self.cases = ListCaseIterator(cases)
+
+
+class Verifier(Component):
+    """ Verifies evaluated cases. """
+
+    cases = Slot(ICaseIterator, iotype='in')
+
+    def execute(self):
+        """ Verify evaluated cases. """
+        for case in self.cases:
+            i = int(case.label)  # Correlation key.
+            self._logger.critical('verifying case %d', i)
+            assert case.msg is None
+            assert case['driven.rosen_suzuki'] == rosen_suzuki(case['driven.x'])
+            assert case['driven.sum_y'] == sum(case['driven.y'])
+
+
+class TracedComponent(Component):
+    """ Used to check iteration coordinates. """
+
+    inp = Int(iotype='in')
+    itername = Str(iotype='out')
+
+    def execute(self):
+        """ Record iteration coordinate. """
+        self.itername = self.get_itername()
 
 
 class TestCase(unittest.TestCase):
@@ -222,8 +273,9 @@ class TestCase(unittest.TestCase):
             try:
                 self.model.run()
             except Exception as err:
+                err = replace_uuid(str(err))
                 startmsg = 'driver: Run aborted: Traceback '
-                endmsg = 'driven: Forced error'
+                endmsg = 'driven (UUID.4-1): Forced error'
                 self.assertEqual(str(err)[:len(startmsg)], startmsg)
                 self.assertEqual(str(err)[-len(endmsg):], endmsg)
             else:
@@ -235,7 +287,9 @@ class TestCase(unittest.TestCase):
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                self.assertEqual(case.msg, 'driven: Forced error')
+                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                msg = replace_uuid(case.msg)
+                self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
@@ -304,10 +358,12 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "driver: Exception getting case outputs: " \
-            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
-            self.assertEqual(case.msg, msg)
+            expected = "driver: Exception getting case outputs: " \
+                       "driven \(UUID.[0-9]+-1\): " \
+                       "'DrivenComponent' object has no attribute 'sum_z'"
+            msg = replace_uuid(case.msg)
+            self.assertTrue(re.match(expected, msg))
 
     def test_noiterator(self):
         logging.debug('')
@@ -336,16 +392,96 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noresource')
 
         # Check response to unsupported resource.
-        self.model.driver.extra_resources = {'no-such-resource': 0}
+        self.model.driver.extra_resources = {'allocator': 'LocalHost',
+                                             'localhost': False}
         self.model.driver.sequential = False
         self.model.driver.iterator = ListCaseIterator([])
         assert_raises(self, 'self.model.run()', globals(), locals(),
                       RuntimeError,
                       'driver: No servers supporting required resources')
 
+    def test_connections(self):
+        logging.debug('')
+        logging.debug('test_connections')
+
+        top = Assembly()
+        top.add('generator', Generator())
+        top.add('cid', CaseIteratorDriver())
+        top.add('driven', DrivenComponent())
+        top.add('verifier', Verifier())
+
+        top.driver.workflow.add(('generator', 'cid', 'verifier'))
+        top.cid.workflow.add('driven')
+
+        top.connect('generator.cases', 'cid.iterator')
+        top.connect('cid.evaluated', 'verifier.cases')
+
+        top.run()
+
+    def test_rerun(self):
+        logging.debug('')
+        logging.debug('test_rerun')
+
+        self.run_cases(sequential=True)
+        orig_cases = self.model.driver.recorders[0].cases
+        self.model.driver.iterator = ListCaseIterator(orig_cases)
+        rerun_seq = (1, 3, 5, 7, 9)
+        self.model.driver.filter = SequenceCaseFilter(rerun_seq)
+        rerun = ListCaseRecorder()
+        self.model.driver.recorders[0] = rerun
+        self.model.run()
+
+        self.assertEqual(len(orig_cases), 10)
+        self.assertEqual(len(rerun.cases), len(rerun_seq))
+        for i, case in enumerate(rerun.cases):
+            self.assertEqual(case, orig_cases[rerun_seq[i]])
+
+    def test_itername(self):
+        logging.debug('')
+        logging.debug('test_itername')
+
+        top = set_as_top(Assembly())
+        top.add('driver', CaseIteratorDriver())
+        top.add('comp1', TracedComponent())
+        top.add('comp2', TracedComponent())
+        top.driver.workflow.add(('comp1', 'comp2'))
+
+        cases = []
+        for i in range(3):
+            cases.append(Case(label=str(i),
+                              inputs=(('comp1.inp', i), ('comp2.inp', i)),
+                              outputs=(('comp1.itername', 'comp2.itername'))))
+        # Sequential.
+        top.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(top.driver.evaluated)
+
+        # Concurrent.
+        top.driver.sequential = False
+        top.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(top.driver.evaluated)
+
+    def verify_itername(self, cases):
+        # These iternames will have the case's uuid prepended.
+        expected = (('1-1', '1-2'),
+                    ('2-1', '2-2'),
+                    ('3-1', '3-2'))
+
+        for case in cases:
+            logging.debug('%s: %r %r', case.label,
+                          case['comp1.itername'], case['comp2.itername'])
+            i = int(case.label)
+            uuid1, dot, iter1 = case['comp1.itername'].partition('.')
+            uuid2, dot, iter2 = case['comp2.itername'].partition('.')
+            self.assertEqual(uuid1, case.uuid)
+            self.assertEqual(iter1, expected[i][0])
+            self.assertEqual(uuid2, case.uuid)
+            self.assertEqual(iter2, expected[i][1])
+
 
 if __name__ == '__main__':
-    sys.argv.append('--cover-package=openmdao.drivers')
+    sys.argv.append('--cover-package=openmdao.lib.drivers')
     sys.argv.append('--cover-erase')
     nose.runmodule()
 

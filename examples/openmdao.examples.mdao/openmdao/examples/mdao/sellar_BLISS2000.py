@@ -25,15 +25,13 @@ class SellarBLISS2000(Assembly):
     z_store = Array([0,0],dtype=Float)
     x1_store = Float(0.0)
     
-    def __init__(self):
+    def configure(self):
         """ Creates a new Assembly with this problem
         
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
                 
-        super(SellarBLISS2000, self).__init__()        
-
         # Disciplines
         self.add('dis1', sellar.Discipline1())
         self.add('dis2', sellar.Discipline2())
@@ -52,11 +50,9 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     import math
-    from openmdao.main.api import set_as_top
     
     prob = SellarBLISS()
     prob.name = "top"
-    set_as_top(prob)
             
     tt = time.time()
     prob.run()

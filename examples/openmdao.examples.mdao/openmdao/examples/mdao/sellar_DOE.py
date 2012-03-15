@@ -9,8 +9,7 @@ from openmdao.lib.optproblems import sellar
 class SellarDOE(Assembly): 
     """Example assembly for running a Design Of Experiments (DOE) on a set of components"""
     
-    def __init__(self): 
-        super(SellarDOE,self).__init__()
+    def configure(self):
         
         self.add("driver",DOEdriver())
         self.driver.recorders = [ListCaseRecorder()]

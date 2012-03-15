@@ -12,10 +12,10 @@ The EPA fuel economy tests are a bit more tricky, though they also require an in
 time. For these tests, the vehicle assembly must be executed while varying the throttle and
 gear position inputs to match a desired acceleration for the integration
 segment. Both of these solution procedures were implemented in Python as *drivers.* The
-SimAcceleratio driver simulates the acceleration test, and the ``SimEconomy`` driver
+SimAcceleration driver simulates the acceleration test, and the ``SimEconomy`` driver
 simulates the EPA fuel economy test.
 
-Recall that in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`, a Driver
+Recall that in the :ref:`Optimization Tutorial <optimization_tutorial>`, a Driver
 called CONMINdriver was used to optimize the Paraboloid problem. Similarly, the algorithms
 that perform these tests have been implemented as OpenMDAO drivers that can be found
 in ``driving_sim.py``. These drivers contain OpenMDAO variables where you can specify
@@ -74,10 +74,7 @@ top level assembly would look like this:
         class VehicleSim(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
-                """ Creates a new Assembly for vehicle performance optimization."""
-                
-                super(VehicleSim, self).__init__()
+            def configure(self):
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())
@@ -97,10 +94,7 @@ top level assembly would look like this:
                 
         if __name__ == "__main__": 
         
-            from openmdao.main.api import set_as_top
             my_sim = VehicleSim()
-            set_as_top(my_sim)
-    
             my_sim.run()
             
             print "Time (0-60): ", my_sim.driver.accel_time
@@ -184,10 +178,7 @@ Now, let's build a new assembly that includes all three simulations run sequenti
         class VehicleSim2(Assembly):
             """Optimization of a Vehicle."""
             
-            def __init__(self):
-                """ Creates a new Assembly for vehicle performance optimization."""
-                
-                super(VehicleSim2, self).__init__()
+            def configure(self):
         
                 # Create Vehicle instance
                 self.add('vehicle', Vehicle())
@@ -221,7 +212,6 @@ Now, let's build a new assembly that includes all three simulations run sequenti
                 self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
-                self.sim_EPA_city.force_execute = True
                 
                 # EPA Highway MPG Sim Setup
                 self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
@@ -232,14 +222,10 @@ Now, let's build a new assembly that includes all three simulations run sequenti
                 self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-                self.sim_EPA_highway.force_execute = True
                         
         if __name__ == "__main__": 
         
-            from openmdao.main.api import set_as_top
             my_sim = VehicleSim2()
-            set_as_top(my_sim)
-    
             my_sim.run()
             
             print "Time (0-60): ", my_sim.sim_acc.accel_time
@@ -258,13 +244,3 @@ Each simulation driver has a workflow, so the `vehicle` instance is added to eac
 of their workflows. After that, the simulation connections are specified. The variable
 `profilename` is the name of the file that contains the EPA driving profile, which
 is essentially velocity as a function of time.
-
-Finally, notice that the variable ``force_execute`` is set to True. All drivers have a
-``force_execute`` flag, which can be set to True to ensure that a component will always
-run when its workflow is executed. Since these drivers are basically independent and
-have no data connections, there is no way to automatically determine if they have become
-invalidated (as changing an upstream input would do) and hence need to be run. With
-``force_execute`` set to True, the driver always runs. Note that our top level driver is
-the default sequential execution driver, so this model can run without ``force_execute``.
-However, ``force_execute`` is definitely needed if we want to take this model and optimize
-it, which we will do next.

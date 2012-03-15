@@ -1,4 +1,3 @@
-
 # pylint: disable-msg=F0401
 
 import os,sys
@@ -49,6 +48,8 @@ Component, Driver, and Variable plugins for OpenMDAO
           'ordereddict',
           'conmin==1.0.1', 
           'newsumt==1.1.0',
+          'cobyla==1.0.1',
+          'slsqp==1.0.1',
           'numpy',
           'scipy',
           ],
@@ -57,13 +58,15 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
       openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
+      openmdao.lib.drivers.cobyladriver.COBYLAdriver = openmdao.lib.drivers.cobyladriver:COBYLAdriver
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
-      openmdao.lib.drivers.doedriver.NeiborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeiborhoodDOEdriver
+      openmdao.lib.drivers.doedriver.NeighborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeighborhoodDOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
       openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
+      openmdao.lib.drivers.slsqpdriver.SLSQPdriver = openmdao.lib.drivers.slsqpdriver:SLSQPdriver
       openmdao.lib.drivers.sensitivity.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
 
       [openmdao.component]
@@ -92,15 +95,17 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
       
       [openmdao.caserecorder]
-      openmdao.lib.casehandlers.dumpcaserecorder.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcaserecorder:DumpCaseRecorder
-      openmdao.lib.casehandlers.listcaserecorder.ListCaseRecorder = openmdao.lib.casehandlers.listcaserecorder:ListCaseRecorder
-      openmdao.lib.casehandlers.db.DBCaseRecorder = openmdao.lib.casehandlers.db:DBCaseRecorder
+      openmdao.lib.casehandlers.dumpcase.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcase:DumpCaseRecorder
+      openmdao.lib.casehandlers.listcase.ListCaseRecorder = openmdao.lib.casehandlers.listcase:ListCaseRecorder
+      openmdao.lib.casehandlers.dbcase.DBCaseRecorder = openmdao.lib.casehandlers.dbcase:DBCaseRecorder
+      openmdao.lib.casehandlers.csvcase.CSVCaseRecorder = openmdao.lib.casehandlers.csvcase:CSVCaseRecorder
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
 
       [openmdao.caseiterator]
-      openmdao.lib.casehandlers.listcaseiter.ListCaseIterator = openmdao.lib.casehandlers.listcaseiter:ListCaseIterator
-      openmdao.lib.casehandlers.db.DBCaseIterator = openmdao.lib.casehandlers.db:DBCaseIterator
+      openmdao.lib.casehandlers.listcase.ListCaseIterator = openmdao.lib.casehandlers.listcase:ListCaseIterator
+      openmdao.lib.casehandlers.dbcase.DBCaseIterator = openmdao.lib.casehandlers.dbcase:DBCaseIterator
+      openmdao.lib.casehandlers.csvcase.CSVCaseIterator = openmdao.lib.casehandlers.csvcase:CSVCaseIterator
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
       
@@ -109,6 +114,7 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.doegenerators.central_composite.CentralComposite = openmdao.lib.doegenerators.central_composite:CentralComposite
       openmdao.lib.doegenerators.optlh.OptLatinHypercube = openmdao.lib.doegenerators.optlh:OptLatinHypercube
       openmdao.lib.doegenerators.uniform.Uniform = openmdao.lib.doegenerators.uniform:Uniform
+      openmdao.lib.doegenerators.csvfile.CSVFile = openmdao.lib.doegenerators.csvfile:CSVFile
 
       [openmdao.architecture]
       openmdao.lib.architectures.bliss.BLISS = openmdao.lib.architectures.bliss:BLISS

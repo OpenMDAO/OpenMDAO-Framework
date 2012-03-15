@@ -14,7 +14,7 @@ class EngineOptimizationSmarterTestCase(unittest.TestCase):
     """ Test """
 
     def setUp(self):
-        self.model = EngineOptimization()
+        self.model = set_as_top(EngineOptimization())
 
     def tearDown(self):
         self.model.pre_delete()

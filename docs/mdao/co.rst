@@ -51,8 +51,8 @@ in the lower level optimization objectives. Hence, no `iotype` is set.
 .. testcode:: CO_parts
 
         from openmdao.lib.datatypes.api import Float, Array
-        from openmdao.main.api import Assembly
-        from openmdao.lib.drivers.api import CONMINdriver
+        from openmdao.main.api import Assembly, set_as_top
+        from openmdao.lib.drivers.api import SLSQPdriver
         from openmdao.lib.optproblems import sellar
         
         
@@ -64,19 +64,12 @@ in the lower level optimization objectives. Hence, no `iotype` is set.
             local_des_var_targets = Array([1.0,])
             coupling_var_targets = Array([3.16,0])
         
-            def __init__(self):
-                """ Creates a new Assembly with this problem
-                
-                Optimal Design at (1.9776, 0, 0)
-                
-                Optimal Objective = 3.18339"""
-                
-                super(SellarCO, self).__init__()
+            def configure(self):
                 
                 # Global Optimization
-                self.add('driver', CONMINdriver())
-                self.add('localopt1', CONMINdriver())
-                self.add('localopt2', CONMINdriver())
+                self.add('driver', SLSQPdriver())
+                self.add('localopt1', SLSQPdriver())
+                self.add('localopt2', SLSQPdriver())
                 self.driver.workflow.add(['localopt1', 
                                           'localopt2'])
                 
@@ -93,7 +86,7 @@ Now we need to set up the parameters for the outer optimization loop.
 .. testcode:: CO_parts
     :hide:
     
-    self = SellarCO()
+    self = set_as_top(SellarCO())
 
 .. testcode:: CO_parts
 
@@ -121,13 +114,7 @@ Now we need to set up the parameters for the outer optimization loop.
                 
                 self.driver.printvars = ['dis1.y1', 'dis2.y2']
                 self.driver.iprint = 0
-                self.driver.itmax = 100
-                self.driver.fdch = .003
-                self.driver.fdchm = .003
-                self.driver.delfun = .0001
-                self.driver.dabfun = .00001
-                self.driver.ct = -.0008
-                self.driver.ctlmin = 0.0008
+
 
 Here we are able to build a complicated expression for the sum of the squares
 of all of the residuals and use it as our constraint. This is another
@@ -141,7 +128,7 @@ Finally, we set up our local optimization loops.
 .. testcode:: CO_parts
     :hide:
     
-    self = SellarCO()
+    self = set_as_top(SellarCO())
     
 .. testcode:: CO_parts
 
@@ -163,12 +150,7 @@ Finally, we set up our local optimization loops.
         self.localopt1.add_parameter('dis1.y2', low = -1e99, high = 1e99)
         self.localopt1.add_constraint('3.16 < dis1.y1')
         self.localopt1.iprint = 0
-        self.localopt1.itmax = 100
-        self.localopt1.fdch = .001
-        self.localopt1.fdchm = .001
-        self.localopt1.delfun = .0001
-        self.localopt1.dabfun = .000001
-        self.localopt1.force_execute = True
+
         
         #Parameters - Local Optimization 2
         self.localopt2.add_objective('(global_des_var_targets[0]-dis2.z1)**2 + ' + \
@@ -180,12 +162,7 @@ Finally, we set up our local optimization loops.
         self.localopt2.add_parameter('dis2.y1', low = -1e99,  high = 1e99)
         self.localopt2.add_constraint('dis2.y2 < 24.0')
         self.localopt2.iprint = 0
-        self.localopt2.itmax = 100
-        self.localopt2.fdch = .003
-        self.localopt2.fdchm = .003
-        self.localopt2.delfun = .001
-        self.localopt2.dabfun = .00001
-        self.localopt2.force_execute = True
+
 
 This problem is contained in 
 :download:`sellar_CO.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_CO.py>`. 
@@ -196,12 +173,12 @@ output that resembles this:
 ::
 
         $ python sellar_CO.py
-        CONMIN Iterations:  40
-        Minimum found at (1.957268, 0.013438, 0.050903)
-        Couping vars: 3.157715, 3.788089
-        Minimum objective:  [3.18226721772]
-        Elapsed time:  16.130461216 seconds
+        Minimum found at (1.977769, 0.000000, 0.000000)
+        Minimum target was at (1.978398, -0.000000, 0.000006)
+        Couping vars: 3.160216, 3.756415
+        Couping var targets: 3.160000, 3.756708
+        Minimum objective:  3.18336051509
+        Elapsed time:  1.83842110634 seconds
 
 
-After 40 iterations of the top level optimizer, CO gives an answer that's slightly off the optimum, but the calculated
-objective is still very close.
+

@@ -163,7 +163,7 @@ class LatinHypercube(HasTraits):
     """    
     implements(IDOEgenerator)
     
-    num_sample_points = Int(20, desc="Number of sample points in the DOE sample set.")
+    num_samples = Int(20, desc="Number of sample points in the DOE sample set.")
     
     num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE.")
     
@@ -171,7 +171,7 @@ class LatinHypercube(HasTraits):
         super(LatinHypercube,self).__init__()
         
         if num_samples is not None:
-            self.num_sample_points = num_samples
+            self.num_samples = num_samples
 
 
     def __iter__(self):
@@ -179,7 +179,7 @@ class LatinHypercube(HasTraits):
         return self._get_input_values()
     
     def _get_input_values(self):
-        rand_doe = rand_latin_hypercube(self.num_sample_points, self.num_parameters)
+        rand_doe = rand_latin_hypercube(self.num_samples, self.num_parameters)
 
         for row in rand_doe:
             yield row
@@ -192,7 +192,7 @@ class OptLatinHypercube(HasTraits):
     """    
     implements(IDOEgenerator)
     
-    num_sample_points = Int(20, desc="Number of sample points in the DOE sample set.")
+    num_samples = Int(20, desc="Number of sample points in the DOE sample set.")
     
     num_parameters = Int(2, desc="Number of parameters, or dimensions, for the DOE.")
     
@@ -208,7 +208,7 @@ class OptLatinHypercube(HasTraits):
         
         self.qs = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
         if num_samples is not None:
-            self.num_sample_points = num_samples
+            self.num_samples = num_samples
         if population is not None:
             self.population = population
         if generations is not None: 
@@ -219,7 +219,7 @@ class OptLatinHypercube(HasTraits):
         return self._get_input_values()
     
     def _get_input_values(self):
-        rand_doe = rand_latin_hypercube(self.num_sample_points, self.num_parameters)
+        rand_doe = rand_latin_hypercube(self.num_samples, self.num_parameters)
         best_lhc = LHC_indivudal(rand_doe, q=1, p=_norm_map[self.norm_method])
         
         for q in self.qs:

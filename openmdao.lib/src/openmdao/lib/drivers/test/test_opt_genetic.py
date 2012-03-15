@@ -34,8 +34,7 @@ class SphereFunction(Component):
         
 
 class Asmb(Assembly): 
-    def __init__(self,*args,**kwargs):
-        super(Asmb,self).__init__(*args,**kwargs)
+    def configure(self):
         self.add('sphere',SphereFunction())
         self.driver.workflow.add('sphere')
         self.create_passthrough('sphere.x')
@@ -231,10 +230,8 @@ class TestCase(unittest.TestCase):
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 
-            def __init__(self):
+            def configure(self):
                 """Adds the Genetic driver to the assembly"""
-
-                super(Simulation,self).__init__()
 
                 opt = self.add('optimizer',Genetic())
                 self.add('comp',SomeComp())
@@ -256,10 +253,8 @@ class TestCase(unittest.TestCase):
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 
-            def __init__(self):
+            def configure(self):
                 """Adds the Genetic driver to the assembly"""
-
-                super(Simulation,self).__init__()
 
                 self.add('driver',Genetic())
                 self.add('comp',SomeComp())
@@ -268,7 +263,7 @@ class TestCase(unittest.TestCase):
                 self.driver.add_parameter('comp.z')
         
         try:         
-            s = Simulation()    
+            s = set_as_top(Simulation()    )
         except ValueError,err:
             self.assertEqual(str(err),
                 "driver: The value of parameter 'comp.z' must be a real or integral type, but its type is 'str'.")

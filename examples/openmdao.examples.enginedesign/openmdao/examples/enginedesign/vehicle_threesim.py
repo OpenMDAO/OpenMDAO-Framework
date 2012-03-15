@@ -11,11 +11,9 @@ from openmdao.examples.enginedesign.vehicle import Vehicle
 class VehicleSim2(Assembly):
     """Optimization of a Vehicle."""
     
-    def __init__(self):
-        """ Creates a new Assembly for vehicle performance optimization."""
+    def configure(self):
+        """ Configures a new Assembly for vehicle performance optimization."""
         
-        super(VehicleSim2, self).__init__()
-
         # Create Vehicle instance
         self.add('vehicle', Vehicle())
         
@@ -48,7 +46,6 @@ class VehicleSim2(Assembly):
         self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
         self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
         self.sim_EPA_city.profilename = 'EPA-city.csv'
-        self.sim_EPA_city.force_execute = True
         
         # EPA Highway MPG Sim Setup
         self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
@@ -59,7 +56,6 @@ class VehicleSim2(Assembly):
         self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
         self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
         self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-        self.sim_EPA_highway.force_execute = True
         
 if __name__ == "__main__": 
 

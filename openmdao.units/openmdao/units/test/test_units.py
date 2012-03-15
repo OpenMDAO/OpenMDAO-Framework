@@ -189,20 +189,35 @@ class test__PhysicalQuantity(unittest.TestCase):
                                units.PhysicalQuantity('6.283185rad/min').value,
                                places=3)
         
-    def test_hour_unit(self):
-        # Added to test problem in Ticket 466
+    def test_new_units(self):
+        # Hour added to test problem in Ticket 466
+        # knot, rev, month added to test problem in Issue 804
         x = units.PhysicalQuantity('7200s')
         x.convert_to_unit('h')
         self.assertEqual(x, units.PhysicalQuantity('2h'))
+        x = units.PhysicalQuantity('5knot')
+        x.convert_to_unit('nm/h')
+        self.assertEqual(x, units.PhysicalQuantity('5nmi/h'))
+        x = units.PhysicalQuantity('33rev/min')
+        x.convert_to_unit('rpm')
+        self.assertEqual(x, units.PhysicalQuantity('33rpm'))
+        x = units.PhysicalQuantity('12month')
+        x.convert_to_unit('year')
+        self.assertEqual(x, units.PhysicalQuantity('1year'))
         
     def test_prefix_plus_math(self):
-        # From an issue: m**2 converts find, but cm**2 does not.
+        # From an issue: m**2 converts fine, but cm**2 does not.
         
         x1 = units.convert_units(1.0, 'm**2', 'cm**2')
         self.assertEqual(x1, 10000.0)
         
+        
         # Let's make sure we can dclare some complicated units
-        x = units.PhysicalQuantity('7200nm**3/kPa*dl')
+        x = units.PhysicalQuantity('7200nm**3/kPa*dL')
+        
+        #from issue 825, make sure you can handle single characters before a /
+        x = units.PhysicalQuantity('1 g/kW')
+
         
     def test_add_known_Values(self):
         """addition should give known result with known input. 

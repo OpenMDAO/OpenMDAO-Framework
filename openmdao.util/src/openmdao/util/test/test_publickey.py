@@ -18,20 +18,22 @@ from openmdao.util.testutil import assert_raises
 
 
 class TestCase(unittest.TestCase):
-    """ Test mp_util.py """
+    """ Test publickey.py """
 
     def test_keyfile(self):
         logging.debug('')
         logging.debug('test_keyfile')
 
-        # Force a key generation, but save exiting data.
+        # Force a key generation, but save existing data.
         prefix = os.path.expanduser(os.path.join('~', '.openmdao'))
         key_file = os.path.join(prefix, 'keys')
-        if os.path.exists(key_file):
-            os.rename(key_file, key_file+'.saved')
         id_file = os.path.join(prefix, 'id_rsa.pub')
-        if os.path.exists(id_file):
-            os.rename(id_file, id_file+'.saved')
+        for name in (key_file, id_file):
+            if os.path.exists(name):
+                saved = name+'.saved'
+                if os.path.exists(saved):
+                    os.remove(saved)
+                os.rename(name, saved)
 
         try:
             user = '%s@%s' % (getpass.getuser(), socket.gethostname())
@@ -66,15 +68,12 @@ class TestCase(unittest.TestCase):
 
         finally:
             # Restore key data.
-            if os.path.exists(key_file+'.saved'):
-                if os.path.exists(key_file):
-                    os.remove(key_file)
-                os.rename(key_file+'.saved', key_file)
-
-            if os.path.exists(id_file+'.saved'):
-                if os.path.exists(id_file):
-                    os.remove(id_file)
-                os.rename(id_file+'.saved', id_file)
+            for name in (key_file, id_file):
+                saved = name+'.saved'
+                if os.path.exists(saved):
+                    if os.path.exists(name):
+                        os.remove(name)
+                    os.rename(saved, name)
 
     def test_authorized_keys(self):
         logging.debug('')
