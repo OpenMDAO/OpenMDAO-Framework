@@ -1,7 +1,7 @@
 import cStringIO
 import logging
 import nose
-import os
+import os.path
 import shutil
 import sys
 import tempfile
@@ -177,8 +177,14 @@ class PluginsTestCase(unittest.TestCase):
                 out.write('y\n')
             stdin = open('pip.in', 'r')
             stdout = open('pip.out', 'w')
+            # On EC2 Windows, 'pip' genreates an absurdly long temp directory
+            # name, apparently to allow backing-out of the uninstall.
+            # The name is so long Windows can't handle it. So we try to
+            # avoid that by indirectly influencing mkdtemp().
+            env = os.environ.copy()
+            env['TMP'] = os.path.expanduser('~')
             try:
-                check_call(('pip', 'uninstall', 'foobar'),
+                check_call(('pip', 'uninstall', 'foobar'), env=env,
                            stdin=stdin, stdout=stdout, stderr=STDOUT)
             finally:
                 stdin.close()
