@@ -99,10 +99,10 @@ class ExprMapperTestCase(unittest.TestCase):
         self.assertTrue('B' not in self.dep)
         
     def test_list_connections(self):
-        self.assertEqual(set(self.dep.list_connections()), 
-                         set([('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b'), ('a','B.a'), ('D.c','c')]))
         self.assertEqual(set(self.dep.list_connections(show_passthrough=False)), 
                          set([('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b')]))
+        self.assertEqual(set(self.dep.list_connections()), 
+                         set([('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b'), ('a','B.a'), ('D.c','c')]))
     
     def test_get_connected_inputs(self):
         self.assertEqual(set(self.dep.get_connected_inputs()), set(['a','A.b']))

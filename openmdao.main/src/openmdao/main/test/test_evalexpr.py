@@ -4,7 +4,7 @@ import ast
 
 from openmdao.main.numpy_fallback import array
 from openmdao.main.datatypes.array import Array
-from openmdao.main.expreval import ExprEvaluator, ExprExaminer
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, ExprExaminer
 from openmdao.main.printexpr import ExprPrinter, transform_expression
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
@@ -446,6 +446,43 @@ class ExprEvalTestCase(unittest.TestCase):
         exp = ExprEvaluator('parent.var+abs(x)*parent.a.a1d[2]', self.top.comp)
         xformed = exp.scope_transform(self.top.comp, self.top)
         self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
+        
+    def test_connected_expr(self):
+        ConnectedExprEvaluator("var1+var2", self.top)._parse()
+        try:
+            ConnectedExprEvaluator("var1+var2", self.top, is_dest=True)._parse()
+        except Exception as err:
+            self.assertEqual(str(err), "bad destination expression 'var1+var2': must be a single variable name or an index or slice into an array variable")
+        else:
+            self.fail("Exception expected")
+            
+        ConnectedExprEvaluator("var1[x]", self.top)._parse()
+        try:
+            ConnectedExprEvaluator("var1[x]", self.top, is_dest=True)._parse()
+        except Exception as err:
+            self.assertEqual(str(err), "bad destination expression 'var1[x]': only constant indices are allowed for arrays and slices")
+        else:
+            self.fail("Exception expected")
+            
+        ConnectedExprEvaluator("var1(2.3)", self.top)._parse()
+        try:
+            ConnectedExprEvaluator("var1(2.3)", self.top, is_dest=True)._parse()
+        except Exception as err:
+            self.assertEqual(str(err), "bad destination expression 'var1(2.3)': not assignable")
+        else:
+            self.fail("Exception expected")
+        
+        ConnectedExprEvaluator("var1[1:5:2]", self.top)._parse()
+        ConnectedExprEvaluator("var1[1:5:2]", self.top, is_dest=True)._parse()
+        
+        ConnectedExprEvaluator("var1[1:x:2]", self.top)._parse()
+        try:
+            ConnectedExprEvaluator("var1[1:x:2]", self.top, is_dest=True)._parse()
+        except Exception as err:
+            self.assertEqual(str(err), "bad destination expression 'var1[1:x:2]': only constant indices are allowed for arrays and slices")
+        else:
+            self.fail("Exception expected")
+        
         
 class ExprExaminerTestCase(unittest.TestCase):
     def _examine(self, text, simplevar=True, assignable=True, const_indices=True, 

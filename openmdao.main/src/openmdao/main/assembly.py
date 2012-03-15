@@ -116,7 +116,13 @@ class ExprMapper(object):
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        return self._depgraph.list_connections(show_passthrough)
+        excludes = set([name for name, data in self._exprgraph.nodes(data=True) 
+                        if data['expr'].refs_parent()])
+        if show_passthrough:
+            return [(u,v) for u,v in self._exprgraph.edges() if not (u in excludes or v in excludes)]
+        else:
+            return [(u,v) for u,v in self._exprgraph.edges() 
+                       if '.' in u and '.' in v and not (u in excludes or v in excludes)]
     
     def get_source(self, dest_expr):
         """Returns the text of the source expression that is connected to the given 
@@ -229,7 +235,12 @@ class ExprMapper(object):
         """Disconnect the given expressions/variables/components."""
         graph = self._exprgraph
         
-        self._depgraph.disconnect(srcpath, destpath)
+        srcexprs = self.find_referring_exprs(srcpath)
+        for srcp in srcexprs:
+            srcexpr = ConnectedExprEvaluator(srcpath, self._scope)
+            srcrefs = srcexpr.refs()
+            for srcref in srcrefs:
+                self._depgraph.disconnect(srcref, destpath)
         if destpath is None:
             if srcpath in graph:
                 graph.remove_node(srcpath)

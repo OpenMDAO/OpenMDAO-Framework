@@ -185,13 +185,16 @@ class ExprPrinter(ast.NodeVisitor):
     def visit_Slice(self, node):
         self.write('[')
         if node.lower is not None:
-            self.visit(node.lower)
+            if not(isinstance(node.lower, ast.Name) and node.lower.id == 'None'):
+                self.visit(node.lower)
         self.write(':')
         if node.upper is not None:
-            self.visit(node.upper)
+            if not(isinstance(node.upper, ast.Name) and node.upper.id == 'None'):
+                self.visit(node.upper)
         self.write(':')
         if node.step is not None:
-            self.visit(node.step)
+            if not(isinstance(node.step, ast.Name) and node.step.id == 'None'):
+                self.visit(node.step)
         self.write(']')
         
     def visit_List(self, node):  

@@ -358,7 +358,7 @@ class Container(SafeHasTraits):
         """
         child_connections = []  # for undo
         srcexpr = ConnectedExprEvaluator(srcpath, self)
-        destexpr = ConnectedExprEvaluator(destpath, self)
+        destexpr = ConnectedExprEvaluator(destpath, self, is_dest=True)
         destvar = destexpr.get_referenced_varpaths().pop()
 
         # check for self connections
@@ -415,7 +415,7 @@ class Container(SafeHasTraits):
         """
         cname = cname2 = None
         srcexpr = ConnectedExprEvaluator(srcpath, self)
-        destexpr = ConnectedExprEvaluator(destpath, self)
+        destexpr = ConnectedExprEvaluator(destpath, self, is_dest=True)
         destvar = destexpr.get_referenced_varpaths().pop()
         destref = destexpr.refs().pop()
         if not 'parent' in srcexpr.get_referenced_compnames():
@@ -1098,7 +1098,7 @@ class Container(SafeHasTraits):
             elif idx[0] == ATTR:
                 setattr(obj, idx[1], value)
             elif idx[0] == SLICE:
-                obj.__setitem__(slice(idx[1],idx[2],idx[3]), value)
+                obj.__setitem__(slice(idx[1][0],idx[1][1],idx[1][2]), value)
         else:
             obj[idx] = value
                 

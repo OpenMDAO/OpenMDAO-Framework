@@ -266,7 +266,11 @@ class ExprExaminer(ast.NodeVisitor):
             self.visit(node.upper)
         if node.step is not None:
             if not isinstance(node.step, ast.Num):
-                self.const_indices = False
+                # for the step parameter, if it's None, that really means 1, which is constant,
+                # unlike lower and upper which can vary depending upon the size of the containing
+                # array at any given time
+                if not(isinstance(node.step, ast.Name) and node.step.id == 'None'):
+                    self.const_indices = False
             self.visit(node.step)
 
     def visit_Name(self, node):
@@ -724,7 +728,7 @@ class ConnectedExprEvaluator(ExprEvaluator):
                 raise RuntimeError("bad destination expression '%s': must be a single variable name or an index or slice into an array variable" %
                                    self.text)
             if not self._examiner.const_indices:
-                raise RuntimeError("bad destination expression '%s': only constant array indices are allowed" %
+                raise RuntimeError("bad destination expression '%s': only constant indices are allowed for arrays and slices" %
                                    self.text)
             if not self._examiner.assignable:
                 raise RuntimeError("bad destination expression '%s': not assignable" %
