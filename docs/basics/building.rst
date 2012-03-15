@@ -5,17 +5,18 @@
 Overview
 ==========
 
-In this section, you are going to learn a few of the most basic tools you need to build up analysis models 
-using the OpenMDAO script interface. To get the most out of this tutorial, you should be familiar (though you
-don't have to be proficient) with the Python language. If you don't have much experience with Python, we recommend
-trying `Dive into Python <http://www.diveintopython.net/>`_. It is an excellent introduction to Python
-that is licensed under the GNU Free Documentation License, so you can download and use it as you
+In this section, you are going to learn a few of the most basic tools you need to build analysis models 
+using the OpenMDAO script interface. To get the most out of this tutorial, you should be familiar (though
+you don't have to be proficient) with the Python language. If you don't have much experience with Python, we
+recommend trying `Dive into Python <http://www.diveintopython.net/>`_. It is an excellent introduction to
+Python that is licensed under the GNU Free Documentation License, so you can download and use it as you
 wish.
 
-We will build a component that models a paraboloid which is a function of two input variables. Then we will 
-set up an OpenMDAO model with the paraboloid component. Using that model, we will excersize some of the basic 
-features of the OpenMDAO framework like connecting inputs and outputs, and working with external files. 
-We will also use this same component in the later :ref:`tutorial on optimization <optimization_tutorial>`.
+We will build a component that models a paraboloid that is a function of two input variables. Then we will 
+set up an OpenMDAO model with the paraboloid component. Using that model, we will exercise some of the
+basic  features of the OpenMDAO framework, such as connecting inputs and outputs, and working with external
+files.  We will also use this same component in the later :ref:`tutorial on optimization
+<optimization_tutorial>`.
 
 .. index:: package
 
@@ -105,7 +106,7 @@ Type these two lines into that file:
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
-There are many other objects you could impoprt from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
+There are many other objects you could import from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
 only import the classes that you need for your particular component to keep things neater. In other words:
 
 .. testcode:: package
@@ -197,7 +198,7 @@ running OpenMDAO is to activate the environment. You need to do this anytime you
 to run code in OpenMDAO. If you can't remember how to activate your environment, then refer to the 
 instructions in the section on :ref:`installation <Installation>`.
 
-Once you have activated your environment, you can run the Python interperater by typing
+Once you have activated your environment, you can run the Python interpreter by typing
 ::
 
     python
