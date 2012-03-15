@@ -2,10 +2,11 @@
 
 import unittest
 import logging
+import math
 import nose
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Int, Array
+from openmdao.lib.datatypes.api import Float, Int, Array
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -22,10 +23,10 @@ class DumbDriver(Driver):
 
 
 class Simple(Component):
-    a = Int(iotype='in')
-    b = Int(iotype='in')
-    c = Int(iotype='out')
-    d = Int(iotype='out')
+    a = Float(iotype='in')
+    b = Float(iotype='in')
+    c = Float(iotype='out')
+    d = Float(iotype='out')
     
     def __init__(self):
         super(Simple, self).__init__()
@@ -357,10 +358,10 @@ class DependsTestCase(unittest.TestCase):
         sub.driver.add_objective('comp5.d')
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp6','comp5']))
-        sub.driver.add_parameter('comp1.a')
+        sub.driver.add_parameter('comp1.a', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp6','comp5','comp1','comp4']))
-        sub.driver.add_parameter('comp3.a')
+        sub.driver.add_parameter('comp3.a', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp6','comp5','comp1','comp4','comp3']))
 
@@ -630,6 +631,20 @@ class ExprDependsTestCase(unittest.TestCase):
         total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
         self.assertEqual(total, top.sub.comp4.a)
 
+    def test_float_exprs(self):
+        global exec_order
+        vnames = ['a','b','c','d']
+        top = _nested_model()
+        top.run()
+        
+        top.sub.connect('comp1.c+sin(3.14)', 'comp4.a')
+        total = top.sub.comp1.c + math.sin(3.14)
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        exec_order = []
+        top.run()
+        self.assertEqual(exec_order, ['comp4'])
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        self.assertEqual(total, top.sub.comp4.a)
 
 if __name__ == "__main__":
     

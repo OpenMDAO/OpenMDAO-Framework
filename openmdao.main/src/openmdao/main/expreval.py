@@ -74,16 +74,15 @@ class ExprTransformer(ast.NodeTransformer):
         if name is None:
             return super(ExprTransformer, self).generic_visit(node)
         
+        if self.expreval.is_local(name):
+            return node
+        
         scope = self.expreval.scope
         if scope:
             parts = name.split('.',1)
             names = ['scope']
-            if not hasattr(scope, name) and self.expreval._is_local(name):
-                return node
             self.expreval.var_names.add(name)
         else:
-            if self.expreval._is_local(name):
-                return node
             raise RuntimeError("expression has no scope")
 
         args = [ast.Str(s=name)]
@@ -155,7 +154,7 @@ class ExprTransformer(ast.NodeTransformer):
     def visit_Call(self, node, subs=None):
         name = _get_long_name(node.func)
         if name is not None:
-            if self.expreval._is_local(name) or '.' not in name:
+            if self.expreval.is_local(name) or '.' not in name:
                 return self.generic_visit(node)
         
         if subs is None:
@@ -217,13 +216,14 @@ class ExprTransformer(ast.NodeTransformer):
 
 class ExprExaminer(ast.NodeVisitor):
     """"Examines various properties of an expression for later analysis."""
-    def __init__(self, node):
+    def __init__(self, node, evaluator=None):
         super(ExprExaminer, self).__init__()
         self.const = True
         self.simplevar = True  # if true, it's just a simple variable name (possibly with dots)
         self.refs= set()  # variables and/or subscripted variables referenced in this expression
         self.const_indices = True
         self.assignable = True
+        self._evaluator = evaluator
         
         self.visit(node)
         
@@ -235,6 +235,12 @@ class ExprExaminer(ast.NodeVisitor):
                 if ref not in txt:
                     self.refs.remove(ref)
                 txt = txt.replace(ref, '')
+
+    def _maybe_add_ref(self, name):
+        """Will add a ref if it's not a name from the locals dict."""
+        if self._evaluator and self._evaluator.is_local(name):
+            return
+        self.refs.add(name)
 
     def visit_Index(self, node):
         self.simplevar = self.const = False
@@ -265,14 +271,14 @@ class ExprExaminer(ast.NodeVisitor):
 
     def visit_Name(self, node):
         self.const = False
-        self.refs.add(node.id)
+        self._maybe_add_ref(node.id)
         super(ExprExaminer, self).generic_visit(node)
         
     def visit_Attribute(self, node):
         self.const = False
         long_name = _get_long_name(node)
         if long_name:
-            self.refs.add(long_name)
+            self._maybe_add_ref(long_name)
         else:
             self.simplevar = False
             super(ExprExaminer, self).generic_visit(node)
@@ -281,7 +287,7 @@ class ExprExaminer(ast.NodeVisitor):
         self.const = False
         p = ExprPrinter()
         p.visit(node)
-        self.refs.add(p.get_text())
+        self._maybe_add_ref(p.get_text())
         super(ExprExaminer, self).generic_visit(node)
         
     def visit_Num(self, node):
@@ -442,13 +448,15 @@ class ExprEvaluator(object):
             self._scope = weakref.ref(self._scope)
         self._parse_needed = True  # force a reparse
 
-    def _is_local(self, name):
+    def is_local(self, name):
         """Return True if the given (dotted) name refers to something in our
         _expr_dict dict, e.g., math.sin.  Raises a KeyError if the name
         refers to something in _expr_dict that doesn't exist, e.g., math.foobar.
         Returns False if the name refers to nothing in _expr_dict, e.g., mycomp.x.
         """
         global _expr_dict
+        if hasattr(self.scope, name):
+            return False
         if hasattr(__builtin__, name) or name=='_local_setter_':
             return True
         parts = name.split('.')
@@ -710,7 +718,7 @@ class ConnectedExprEvaluator(ExprEvaluator):
         
     def _parse(self):
         super(ConnectedExprEvaluator, self)._parse()
-        self._examiner = ExprExaminer(ast.parse(self.text, mode='eval'))
+        self._examiner = ExprExaminer(ast.parse(self.text, mode='eval'), self)
         if self._is_dest:
             if len(self._examiner.refs) != 1:
                 raise RuntimeError("bad destination expression '%s': must be a single variable name or an index or slice into an array variable" %
