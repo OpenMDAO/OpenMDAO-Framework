@@ -733,7 +733,7 @@ class Component (Container):
         """
         super(Component, self).disconnect(srcpath, destpath)
         if destpath in self._valid_dict:
-            if '.' in destpath:
+            if '.' in destpath or '[' in destpath or ']' in destpath:
                 del self._valid_dict[destpath]
             else:
                 self._valid_dict[destpath] = True  # disconnected boundary outputs are always valid

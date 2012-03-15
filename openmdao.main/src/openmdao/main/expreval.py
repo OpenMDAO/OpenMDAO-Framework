@@ -74,21 +74,16 @@ class ExprTransformer(ast.NodeTransformer):
         if name is None:
             return super(ExprTransformer, self).generic_visit(node)
         
-        if self.expreval._is_local(name):
-            return node
-        
         scope = self.expreval.scope
         if scope:
             parts = name.split('.',1)
             names = ['scope']
-            #if scope.contains(parts[0]):
-                #self.expreval.var_names.add(name)
-                #if len(parts) == 1: # short name, so just do a simple attr lookup on scope
-                    #names.append(name)
-                    #return _get_attr_node(names)
-            #else:
+            if not hasattr(scope, name) and self.expreval._is_local(name):
+                return node
             self.expreval.var_names.add(name)
         else:
+            if self.expreval._is_local(name):
+                return node
             raise RuntimeError("expression has no scope")
 
         args = [ast.Str(s=name)]
