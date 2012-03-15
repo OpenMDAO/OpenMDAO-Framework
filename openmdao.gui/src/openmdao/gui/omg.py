@@ -83,7 +83,7 @@ class App(web.Application):
         self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
         
         super(App, self).__init__(handlers, **app_settings)
-        
+
     def exit(self):
         self.server_manager.cleanup()
         DEBUG('Exit requested, shutting down....\n')
@@ -100,8 +100,12 @@ class AppServer(object):
 
         # initialize django settings
         database = os.path.join(user_dir,'mdaoproj.db')
-        settings.configure(DATABASE_ENGINE='sqlite3',
-                           DATABASE_NAME=database,
+        settings.configure(DATABASES = { 
+                               'default': {
+                                   'NAME': database, 
+                                   'ENGINE': 'django.db.backends.sqlite3' 
+                                }
+                           },
                            MEDIA_ROOT=os.path.join(user_dir,'projects'),
                            INSTALLED_APPS=('projdb',
                                            'django.contrib.auth',

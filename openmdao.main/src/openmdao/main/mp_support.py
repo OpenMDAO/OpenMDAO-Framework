@@ -431,7 +431,7 @@ class OpenMDAO_Server(Server):
                                            credentials)
                 if methodname != 'echo':
                     # 'echo' is used for performance tests, keepalives, etc.
-                    self._logger.debug('Invoke %s %s %s',
+                    self._logger.debug("Invoke %s %s '%s'",
                                        methodname, role, credentials)
 #                    self._logger.debug('       %s %s', args, kwds)
 
@@ -884,9 +884,9 @@ class OpenMDAO_Manager(BaseManager):
             if sys.platform == 'win32' and not HAVE_PYWIN32:  #pragma no cover
                 timeout = 120
             else:
-                timeout = 5
+                timeout = 10
         else:
-            timeout = 5
+            timeout = 10
 
         writer.close()
         start = time.time()

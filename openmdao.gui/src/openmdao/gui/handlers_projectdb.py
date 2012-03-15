@@ -5,7 +5,12 @@ from time import strftime
 # tornado
 from tornado import web
 
+# for autodoc
 from django.conf import settings
+try:
+    settings.configure()
+except Exception, err:
+    pass
 
 from django import forms
 from django.core.files.base import ContentFile

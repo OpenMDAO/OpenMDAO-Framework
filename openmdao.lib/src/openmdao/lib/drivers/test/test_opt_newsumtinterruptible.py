@@ -44,6 +44,7 @@ import numpy
 # pylint: disable-msg=F0401,E0611
 
 from openmdao.main.api import Assembly, Component, set_as_top, ComponentWithDerivatives
+from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
 from openmdao.lib.drivers.api import NEWSUMTdriver
@@ -222,7 +223,7 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):
@@ -274,7 +275,7 @@ class NEWSUMTdriverParaboloidWithLinearConstraintTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         self.top.driver.ilin = numpy.array( [1], dtype=int )
         
@@ -310,7 +311,7 @@ class NEWSUMTdriverParaboloidWithNonLinearConstraintTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 300
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):
@@ -348,7 +349,7 @@ class NEWSUMTdriverConstrainedBettsTestCase(unittest.TestCase):
         # use finite differences for gradients for objective
         #      and constraint functions
         # use the default values for the step size = 0.01
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.epsrsf = 0.0000005
         
     def tearDown(self):
@@ -409,7 +410,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):
@@ -429,6 +430,8 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])        
+        self.top.driver.recorders = [ListCaseRecorder()]
+        self.top.driver.printvars = ['comp.opt_objective']        
         self.top.run()
 
         self.assertAlmostEqual(self.top.comp.opt_objective, 
@@ -441,6 +444,15 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
                                self.top.comp.x[2], places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
                                self.top.comp.x[3], places=1)
+        
+        cases = self.top.driver.recorders[0].get_iterator()
+        end_case = cases[-1]
+        
+        self.assertEqual(self.top.comp.x[1],
+                         end_case.get_input('comp.x[1]'))
+        self.assertEqual(self.top.comp.opt_objective,
+                         end_case.get_output('comp.opt_objective'))
+        
 
 class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
     """
@@ -454,7 +466,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 100
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 1
         self.top.driver.epsrsf = 0.0005
         self.top.driver.epsodm = 0.001
@@ -721,7 +733,7 @@ class NEWSUMTdriverRosenSuzukiTestCaseDeriv(unittest.TestCase):
         self.top.add('driver', NEWSUMTdriver())
         self.top.driver.workflow.add('comp')
         self.top.driver.itmax = 30
-        self.top.driver.jprint = -1
+        self.top.driver.iprint = 0
         self.top.driver.lobj = 0
         
     def tearDown(self):

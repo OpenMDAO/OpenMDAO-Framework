@@ -199,7 +199,8 @@ output.
         self.driver.iprint = 0
 
 Higher positive values of ``iprint`` turn on the display of more levels of output, as summarized
-below.
+below. To make it easier to swap drivers, and ``iprint`` of -1 also suppresses all
+output.
 
 ================  ========================================================
 Value             Result

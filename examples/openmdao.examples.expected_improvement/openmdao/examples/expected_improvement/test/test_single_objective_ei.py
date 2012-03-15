@@ -1,7 +1,7 @@
 """
 Test for single criteria EI example.
 """
-import os
+import os.path
 import unittest
 import random
 from math import sqrt
@@ -16,12 +16,16 @@ from pyevolve import Selectors
 from openmdao.main.api import set_as_top
 from openmdao.examples.expected_improvement.single_objective_ei import Analysis
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
-from openmdao.lib.casehandlers.db import case_db_to_dict
+from openmdao.lib.casehandlers.api import case_db_to_dict
 
 
 class SingleObjectiveEITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
     
+    def tearDown(self):
+        if os.path.exists('DOE_trainer.csv'):
+            os.remove('DOE_trainer.csv')
+
     def test_EI(self): 
                 
         # pyevolve does some caching that causes failures during our

@@ -138,7 +138,8 @@ def unpack_zipfile(filename, logger=None, textfiles=None):
             size = info.file_size
             logger.debug('unpacking %r (%d)...', filename, size)
             zipped.extract(info)
-            if info.create_system != local_system:
+            # Requires mismatched systems.
+            if info.create_system != local_system:  # pragma no cover
                 if textfiles is None:
                     with open(filename, 'rb') as inp:
                         data = inp.read(1 << 12)

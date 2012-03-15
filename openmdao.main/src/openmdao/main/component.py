@@ -20,7 +20,8 @@ from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import implements, IComponent, ICaseIterator, IDriver
+from openmdao.main.interfaces import implements, obj_has_interface, IAssembly, \
+                                     IComponent, ICaseIterator, IDriver
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -29,6 +30,9 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.publisher import Publisher
+
+import openmdao.util.log as tracing
+
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -45,13 +49,16 @@ class SimulationRoot (object):
             Path to move to.
         """
         os.chdir(path)
-        SimulationRoot.__root = os.path.realpath(os.getcwd())
+        SimulationRoot.__root = None
+        SimulationRoot.get_root()
 
     @staticmethod
     def get_root ():
         """Return this simulation's root directory path."""
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.path.realpath(os.getcwd())
+            if sys.platform == 'win32':  # pragma no cover
+                SimulationRoot.__root = SimulationRoot.__root.lower()
         return SimulationRoot.__root
 
     @staticmethod
@@ -61,9 +68,11 @@ class SimulationRoot (object):
         path: string
             Path to check.
         """
-        if SimulationRoot.__root is None:
-            SimulationRoot.__root = os.path.realpath(os.getcwd())
-        return os.path.realpath(path).startswith(SimulationRoot.__root)
+        root = SimulationRoot.get_root()
+        if sys.platform == 'win32':  # pragma no cover
+            return os.path.realpath(path).lower().startswith(root)
+        else:
+            return os.path.realpath(path).startswith(root)
     
 
 class DirectoryContext(object):
@@ -168,6 +177,7 @@ class Component (Container):
         
         self._publish_vars = {}  # dict of varname to subscriber count
         
+        self._itername = ''
 
     @property
     def dir_context(self):
@@ -183,6 +193,21 @@ class Component (Container):
             if pub:
                 pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
             
+    @rbac(('owner', 'user'))
+    def get_itername(self):
+        """Return current 'iteration coordinates'."""
+        return self._itername
+
+    @rbac(('owner', 'user'))
+    def set_itername(self, itername):
+        """Set current 'iteration coordinates'. Typically called by the
+        current workflow just before running the component.
+
+        itername: string
+            Iteration coordinates.
+        """
+        self._itername = itername
+
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
         #if name.endswith('_items'):
@@ -421,6 +446,8 @@ class Component (Container):
             
         case_id: str
             Identifier for the Case that is associated with this run. (Default is '')
+            If applied to the top-level assembly, this will be prepended to
+            all iteration coordinates.
         """
         if self.directory:
             self.push_dir()
@@ -452,8 +479,12 @@ class Component (Container):
                     
                 else:
                     # Component executes as normal
-                    self.execute()
                     self.exec_count += 1
+                    if tracing.TRACER is not None and \
+                        not obj_has_interface(self, IAssembly) and \
+                        not obj_has_interface(self, IDriver):
+                            tracing.TRACER.debug(self.get_itername())
+                    self.execute()
                     
                 self._post_execute()
             #else:
@@ -540,7 +571,7 @@ class Component (Container):
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
-            self.call_execute = True
+            self._call_execute = True
             return False
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]

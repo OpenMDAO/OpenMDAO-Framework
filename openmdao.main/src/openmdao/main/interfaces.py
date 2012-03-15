@@ -302,6 +302,13 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
+
+class IAssembly(IComponent):
+    """An interface for objects that contain a driver and its workflow components."""
+
+    driver = Attribute("object that manage's the iteration of a workflow")
+
+
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""
 
@@ -371,6 +378,24 @@ class ICaseIterator(Interface):
         """Returns an iterator of Cases"""
 
         
+class ICaseRecorder(Interface):
+    """A recorder of Cases."""
+    
+    def record(case):
+        """Record the given Case."""
+        
+    def get_iterator():
+        """Return an iterator that matches the format that this recorder uses."""
+        
+
+class ICaseFilter(Interface):
+    """Selects cases."""
+
+    def select(seqno, case):
+        """Returns True if `case` should be used, where `seqno` is the index
+        of `case` in the sequence of cases."""
+
+
 class IDOEgenerator(Interface):
     """An iterator that returns lists of normalized values that are mapped
     to design variables by a Driver.
@@ -406,15 +431,6 @@ class IUncertainVariable(Interface):
     def sample():
         """Generates a random number from an uncertain distribution."""
 
-class ICaseRecorder(Interface):
-    """A recorder of Cases."""
-    
-    def record(case):
-        """Record the given Case."""
-        
-    def get_iterator():
-        """Return an iterator that matches the format that this recorder uses."""
-        
 class IHasCouplingVars(Interface): 
     """An interface to support the declaration of coupling variables
     """

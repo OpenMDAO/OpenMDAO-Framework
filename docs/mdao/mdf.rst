@@ -23,7 +23,7 @@ you see represent both.
 .. index:: WorkFlow, BroydenSolver, FixedPointIterator
 
 The diagram also shows a solver that takes the output of the component dataflow
-and feeds it back into the input. OpenMDAO has two solvers: FixedPointIterator
+and feeds it back into the input. OpenMDAO has two solvers in the standard library: FixedPointIterator
 and BroydenSolver. The FixedPointIterator is a solver that performs fixed point iteration,
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
 other words, *y2* is passed from the output of ``SellarDiscipline2`` to the input of ``SellarDiscipline1``,
@@ -34,14 +34,14 @@ the output and calculates a new input each iteration. Convergence is achieved wh
 residual between the output and input is driven to zero.
 
 
-The major difference between the MDF problem and some of the previous examples is the
-presence of nested drivers. Drivers can be nested in OpenMDAO using WorkFlows
+An important thing to take note of in the problem setup for MDF is the presence of 
+nested driver and multiple workflows. Drivers can be nested in OpenMDAO using WorkFlows
 in the iteration hierarchy. A :term:`WorkFlow` is an object that determines execution
 order for a group of Components. Each driver contains a single WorkFlow. For
 each iteration, a Driver will execute one pass through the WorkFlow, executing
 the components contained therein in the order the WorkFlow prescribes.
 Although in many cases a WorkFlow contains just Components, it can also
-contain Drivers. This allows nested iterative processes to be created. The
+contain Drivers, which then have thier own workflows. This allows nested iterative processes to be created. The
 following diagram shows an iteration hierarchy for the MDF problem.
    
 .. figure:: Arch-MDF-OpenMDAO.png
@@ -61,7 +61,7 @@ assembly, so we can actually run it.
 .. testcode:: MDF_parts
                                                
         from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
+        from openmdao.lib.drivers.api import SLSQPdriver, FixedPointIterator
         
         from openmdao.lib.optproblems import sellar
         
@@ -78,15 +78,15 @@ assembly, so we can actually run it.
                 Optimal Objective = 3.18339"""
                 
                 # create Optimizer instance
-                self.add('driver', CONMINdriver())
+                self.add('driver', SLSQPdriver())
                 
                 # Outer Loop - Global Optimization
                 self.add('solver', FixedPointIterator())
                 self.driver.workflow.add(['solver'])
                 
 So far nothing is really new in terms of syntax. Note that the top level driver, in this case an 
-instance of CONMINdriver, is always named *'driver'*. However, all other drivers can be given any valid name. For this
-model, we've chosen to use the ``FixedPointIterator`` for our solver.
+instance of SLSQPdriver, is always named *'driver'*. However, all other drivers can be given any valid name. For this
+model, we've chosen to use the ``FixedPointIterator`` for our solver and we named it *'solver'* in the code.
 
 Next, we need to create the workflow for the solver. Add instances of ``SellarDiscipline1``
 and ``SellarDiscipline2`` to the assembly. Then add those instances to the workflow of ``'solver'``
@@ -104,7 +104,7 @@ and ``SellarDiscipline2`` to the assembly. Then add those instances to the workf
         self.solver.workflow.add(['dis1', 'dis2'])
         
 Now the iteration hierarchy pictured above is finished. To complete the MDF architecture though, 
-we still need to hook up the data connections and configure CONMIN optimization and the fixed point iteration.
+we still need to hook up the data connections and configure the optimization and the fixed point iteration.
 
 Recall that there are two global design variables, ``z1`` and ``z2``. In the model we constructed, 
 you find ``z1`` in two places: ``dis1.z1`` and ``dis2.z1``. The same is true for ``z2``: 
@@ -156,9 +156,8 @@ maximum number of iterations and a convergence tolerance.
         self.solver.max_iteration = 1000
         self.solver.tolerance = .0001     
 
-Finally, the CONIM optimization is set up. We add the objective function as well as the 
-constraints, from the problem formulation, to the driver. We also set some configuration 
-options which control the details of CONMIN's behavior. The objective function includes 
+Finally, the optimization is set up. We add the objective function as well as the 
+constraints, from the problem formulation, to the driver. The objective function includes 
 references to the global design variables. When this happens, you can pick any of the locations
 where that global design variable points to. In this case, we used ``dis1.z2``, but we could have
 just as easily picked ``dis2.z2``. 
@@ -176,30 +175,9 @@ just as easily picked ``dis2.z2``.
         
         self.driver.add_constraint('dis2.y2 < 24.0')
         
-        self.driver.cons_is_linear = [1, 1]
-        self.driver.iprint = 0
-        self.driver.itmax = 30
-        self.driver.fdch = .001
-        self.driver.fdchm = .001
-        self.driver.delfun = .0001
-        self.driver.dabfun = .000001
-        self.driver.ctlmin = 0.0001
-        
-The process of getting the optimizer to reach a value close enough to the
-correct optimum required the use of more of CONMIN's settings. The *fdchm*
-parameter is the minimum absolute step size that the finite difference uses,
-and *fdch* is the step size relative to the design variable. *Dabfun* is the
-absolute change in the objective function to indicate convergence (i.e., if
-the objective function changes by less than *dabfun,* then the problem is
-converged). Similarly, *delfun* is the relative change of the objective
-function with respect to the value at the previous step. Finally, *ctlmin* is
-the minimum constraint thickness for the linear constraints. We also use
-``cons_is_linear`` to let CONMIN know that both constraints are linear. This
-can speed up the algorithm, though it hardly matters here.
-
 As before, the ``add_constraint`` method is used to add our constraints. This
 time however, we used a more general expression for the first constraint. Commented 
-out below that are three more examples of the same exact constraint composed slightly 
+out below that are alternate examples of the same exact constraint composed slightly 
 differently. 
 
 Finally, putting it all together gives:
@@ -207,7 +185,7 @@ Finally, putting it all together gives:
 .. testcode:: MDF_full
 
         from openmdao.main.api import Assembly, set_as_top
-        from openmdao.lib.drivers.api import CONMINdriver, FixedPointIterator
+        from openmdao.lib.drivers.api import SLSQPdriver, FixedPointIterator
         
         from openmdao.lib.optproblems import sellar
         
@@ -224,7 +202,7 @@ Finally, putting it all together gives:
                 Optimal Objective = 3.18339"""
                 
                 # create Optimizer instance
-                self.add('driver', CONMINdriver())
+                self.add('driver', SLSQPdriver())
                 
                 # Outer Loop - Global Optimization
                 self.add('solver', FixedPointIterator())
@@ -258,16 +236,7 @@ Finally, putting it all together gives:
                 
                 self.driver.add_constraint('3.16 < dis1.y1')
                 self.driver.add_constraint('dis2.y2 < 24.0')
-                
-                self.driver.cons_is_linear = [1, 1]
-                self.driver.iprint = 0
-                self.driver.itmax = 30
-                self.driver.fdch = .001
-                self.driver.fdchm = .001
-                self.driver.delfun = .0001
-                self.driver.dabfun = .000001
-                self.driver.ctlmin = 0.0001
-        
+                        
         if __name__ == "__main__": # pragma: no cover         
         
             import time
@@ -283,7 +252,6 @@ Finally, putting it all together gives:
             tt = time.time()
             prob.run()
             print "\n"
-            print "CONMIN Iterations: ", prob.driver.iter_count
             print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                                      prob.dis1.z2, \
                                                      prob.dis1.x1)
@@ -303,14 +271,13 @@ output that resembles this:
 ::
 
         $ python sellar_MDF.py
-        CONMIN Iterations:  12
         Minimum found at (1.977657, 0.000000, 0.000000)
         Couping vars: 3.160068, 3.755315
         Minimum objective:  3.18346116811
         Elapsed time:  0.121051073074 seconds
 
         
-We initially chose to use *FixedPointIterator* for our solver, but you can replace that with a better one. Fixed point
+We initially chose to use *FixedPointIterator* for our solver, but you could replace that with a different one. Fixed point
 iteration works for some problems, including this one, but sometimes another type of solver might be preferred. 
 OpenMDAO also contains a Broyden solver called
 *BroydenSolver*. This solver is based on a quasi-Newton-Raphson algorithm found in 

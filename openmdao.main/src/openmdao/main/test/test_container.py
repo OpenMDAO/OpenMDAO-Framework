@@ -17,7 +17,7 @@ from openmdao.main.container import Container, get_default_name, \
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.api import Slot, Float, Int, Bool, List, Dict
-from openmdao.util.testutil import make_protected_dir
+from openmdao.util.testutil import make_protected_dir, assert_raises
 
 # Various Pickle issues arise only when this test runs as the main module.
 # This is used to detect when we're the main module or not.
@@ -394,6 +394,25 @@ class ContainerTestCase(unittest.TestCase):
         else:
             self.fail('Expected ValueError')
             
+    def test_recursion(self):
+        a = Container()  # No ancestors.
+        assert_raises(self, "a.add('a', a)",
+                      globals(), locals(), ValueError,
+                      ": add would cause container recursion")
+
+        b = a.add('b', Container())  # Have ancestors.
+        assert_raises(self, "b.add('a', a)",
+                      globals(), locals(), ValueError,
+                      "b: add would cause container recursion")
+
+    def test_set_output(self):
+        c = Container()
+        c.add_trait('inp', Float(iotype='in'))
+        c.add_trait('out', Float(iotype='out'))
+        c.set('inp', 42)
+        assert_raises(self, "c.set('out', 666)", globals(), locals(),
+                      RuntimeError, ": Cannot set output 'out'")
+
 
 if __name__ == "__main__":
     import nose

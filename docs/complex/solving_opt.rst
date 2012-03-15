@@ -57,7 +57,7 @@ You can run this same problem at the command prompt by typing:
     python engine_optimization.py
 
 This script prints out a little more information than we've shown in this
-example. See the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>` 
+example. See the :ref:`Optimization Tutorial <optimization_tutorial>` 
 for a refresher on how to set up a component to run at the command prompt.
 
 String expressions can be used to pose more sophisticated objective expressions
@@ -200,7 +200,6 @@ The code for this looks like this:
                 self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
-                self.sim_EPA_city.force_execute = True
                 
                 # EPA Highway MPG Sim Setup
                 self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
@@ -211,7 +210,6 @@ The code for this looks like this:
                 self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
                 self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
                 self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-                self.sim_EPA_highway.force_execute = True        
                 
         if __name__ == "__main__":
         

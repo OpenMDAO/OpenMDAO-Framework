@@ -130,9 +130,9 @@ class ZMQStreamServer(object):
     def spawn_process(zmq_url,ws_port,ws_url='/'):
         ''' run zmqstreamserver in it's own process, mapping a zmq stream to a websocket
             args:
-                zmq_url     the url of the ZMQStream
-                ws_port     the port to serve the WebSocket on
-                ws_url      the url to map to the WebSocket
+            zmq_url     the url of the ZMQStream
+            ws_port     the port to serve the WebSocket on
+            ws_url      the url to map to the WebSocket
         '''
         file_path = os.path.abspath(__file__)
         cmd = ['python',file_path,'-z',str(zmq_url),'-p',str(ws_port),'-u',str(ws_url)]        

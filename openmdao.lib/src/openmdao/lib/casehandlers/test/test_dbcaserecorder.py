@@ -13,9 +13,11 @@ import copy
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator
-from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder, case_db_to_dict 
-from openmdao.lib.drivers.api import SimpleCaseIterDriver, DOEdriver, CaseIteratorDriver
+from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator, \
+                                          DBCaseRecorder, DumpCaseRecorder, \
+                                          case_db_to_dict 
+from openmdao.lib.drivers.api import SimpleCaseIterDriver, DOEdriver, \
+                                     CaseIteratorDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 from openmdao.main.caseiter import caseiter_to_dict
@@ -165,6 +167,18 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             shutil.rmtree(tmpdir)
         except OSError:
             logging.error("problem removing directory %s" % tmpdir)
+
+    def test_string(self):
+        recorder = DBCaseRecorder()
+        case = Case(inputs=[('str', 'Normal String'),
+                            ('unicode', u'Unicode String'),
+                            ('list', ['Hello', 'world'])])  # Check pickling.
+        recorder.record(case)
+        for case in recorder.get_iterator():
+            self.assertEqual(case['str'], 'Normal String')
+            self.assertEqual(case['unicode'], u'Unicode String')
+            self.assertEqual(case['list'], ['Hello', 'world'])
+
 
 class NestedCaseTestCase(unittest.TestCase):
 

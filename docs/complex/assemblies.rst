@@ -179,10 +179,10 @@ Now these inputs are available to connect to the components, so we connect them 
 
 .. testcode:: Code7b
 
-        self.connect('velocity', 'chassis.velocity')
-        self.connect('velocity', 'transmission.velocity')
-        self.connect('tire_circumference', 'chassis.tire_circ')
-        self.connect('tire_circumference', 'transmission.tire_circ')
+        self.connect('velocity',
+                     ['chassis.velocity', 'transmission.velocity'])
+        self.connect('tire_circumference',
+                     ['chassis.tire_circ', 'transmission.tire_circ'])
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
 Transmission components. While this might seem redundant, it demonstrates
@@ -196,8 +196,9 @@ above. As inputs, the Vehicle takes a commanded velocity, throttle position, a g
 a set of vehicle design parameters, and outputs the vehicle's instantaneous acceleration and rate of fuel
 burn. 
 
+        >>> from openmdao.main.api import set_as_top
         >>> from openmdao.examples.enginedesign.vehicle import Vehicle
-        >>> my_car = Vehicle()
+        >>> my_car = set_as_top(Vehicle())
         >>> my_car.velocity = 25.0
         >>> my_car.current_gear = 3
         >>> my_car.throttle = .5

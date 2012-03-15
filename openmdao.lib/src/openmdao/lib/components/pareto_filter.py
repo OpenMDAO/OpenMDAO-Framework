@@ -6,7 +6,7 @@ from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
 
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.lib.casehandlers.listcaseiter import ListCaseIterator
+from openmdao.lib.casehandlers.api import ListCaseIterator
 
 class ParetoFilter(Component):
     """Takes a set of cases and filters out the subset of cases which are

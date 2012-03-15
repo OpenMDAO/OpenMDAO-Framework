@@ -77,12 +77,10 @@ class Analysis(Assembly):
         self.EI_opt.add_parameter("branin_meta_model.y",low=0.,high=15.)
         
         self.EI_opt.add_objective("EI.PI")
-        self.EI_opt.force_execute = True
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("branin_meta_model.train_next")
         self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
-        self.retrain.force_execute = True
         
         self.add("iter",IterateUntil())
         self.iter.max_iterations = 30
@@ -109,7 +107,7 @@ class Analysis(Assembly):
 
 if __name__ == "__main__": #pragma: no cover
     import sys
-    from openmdao.lib.casehandlers.db import case_db_to_dict
+    from openmdao.lib.casehandlers.api import case_db_to_dict
     
     seed = None
     backend = None

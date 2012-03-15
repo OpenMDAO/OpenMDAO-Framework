@@ -1621,8 +1621,8 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['setupdocs==1.0.5', 'docutils==0.6', 'pyevolve==0.6', 'newsumt==1.1.0', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'traits==3.3.0', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'sphinx==1.0.6', 'fabric==0.9.3', 'pygments==1.3.1', 'jinja2==2.4', 'virtualenv==1.6.4', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'nose==0.11.3', 'argparse==1.2.1']
-    guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'pyzmq-static==2.1.7.1', 'tornado==2.2', 'django==1.3']
+    reqs = ['SetupDocs==1.0.5', 'Pyevolve==0.6', 'networkx==1.3', 'slsqp==1.0.1', 'Traits==3.3.0', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Jinja2==2.4', 'Sphinx==1.0.6', 'decorator==3.2.0', 'docutils==0.6', 'newsumt==1.1.0', 'ordereddict==1.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'virtualenv==1.6.4', 'conmin==1.0.1', 'pycrypto==2.3']
+    guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'pyzmq-static==2.1.7.1', 'tornado==2.2', 'Django==1.3']
     
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'
