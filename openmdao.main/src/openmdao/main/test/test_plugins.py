@@ -6,7 +6,7 @@ import shutil
 import sys
 import tempfile
 import unittest
-from subprocess import check_call
+from subprocess import check_call, STDOUT
 
 from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, \
                                  plugin_build_docs, plugin_makedist, \
@@ -16,17 +16,27 @@ from openmdao.util.testutil import assert_raises
 
 
 class PluginsTestCase(unittest.TestCase):
+
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
 
     def tearDown(self):
         shutil.rmtree(self.tdir)
 
-    def test_quickstart(self):
+    def test_basic(self):
+        logging.debug('')
+        logging.debug('test_basic')
+
+        # Just run through a complete cycle.
         orig_dir = os.getcwd()
+        orig_stdout = sys.stdout
+        orig_stderr = sys.stderr
+
+        # Quickstart.
+        logging.debug('')
+        logging.debug('quickstart')
         os.chdir(self.tdir)
         try:
-            # Defaults.
             argv = ['quickstart', 'foobar']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
@@ -43,9 +53,162 @@ class PluginsTestCase(unittest.TestCase):
         finally:
             os.chdir(orig_dir)
 
-        shutil.rmtree(self.tdir)
-        os.mkdir(self.tdir)
+        # Makedist.
+        logging.debug('')
+        logging.debug('makedist')
+        sys.stdout = cStringIO.StringIO()
+        sys.stderr = cStringIO.StringIO()
+        logdata = ''
+        os.chdir(os.path.join(self.tdir, 'foobar'))
+        try:
+            argv = ['makedist', 'foobar']
+            parser = _get_plugin_parser()
+            options, args = parser.parse_known_args(argv)
+            retval = plugin_makedist(parser, options, args, capture='makedist.out')
+            with open('makedist.out', 'r') as inp:
+                logdata = inp.read()
+            self.assertEqual(retval, 0)
+            if sys.platform == 'win32':
+                self.assertTrue(os.path.exists('foobar-0.1.zip'))
+            else:
+                self.assertTrue(os.path.exists('foobar-0.1.tar.gz'))
+        finally:
+            captured_stdout = sys.stdout.getvalue()
+            captured_stderr = sys.stderr.getvalue()
+            sys.stdout = orig_stdout
+            sys.stderr = orig_stderr
+            os.chdir(orig_dir)
+            logging.debug('captured stdout:')
+            logging.debug(captured_stdout)
+            logging.debug('captured stderr:')
+            logging.debug(captured_stderr)
+            logging.debug('captured subprocess output:')
+            logging.debug(logdata)
 
+        # Existing distribution error.
+        logging.debug('')
+        logging.debug('makedist error')
+        sys.stdout = cStringIO.StringIO()
+        sys.stderr = cStringIO.StringIO()
+        os.chdir(os.path.join(self.tdir, 'foobar'))
+        try:
+            argv = ['makedist', 'foobar']
+            parser = _get_plugin_parser()
+            options, args = parser.parse_known_args(argv)
+            retval = plugin_makedist(parser, options, args, capture='makedist.out')
+            with open('makedist.out', 'r') as inp:
+                logdata = inp.read()
+            self.assertEqual(retval, -1)
+        finally:
+            captured_stdout = sys.stdout.getvalue()
+            captured_stderr = sys.stderr.getvalue()
+            sys.stdout = orig_stdout
+            sys.stderr = orig_stderr
+            os.chdir(orig_dir)
+            logging.debug('captured stdout:')
+            logging.debug(captured_stdout)
+            logging.debug('captured stderr:')
+            logging.debug(captured_stderr)
+            logging.debug('captured subprocess output:')
+            logging.debug(logdata)
+
+        # Install
+        logging.debug('')
+        logging.debug('install')
+        sys.stdout = cStringIO.StringIO()
+        sys.stderr = cStringIO.StringIO()
+        logdata = ''
+        os.chdir(self.tdir)
+        try:
+            argv = ['install', 'foobar']
+            parser = _get_plugin_parser()
+            options, args = parser.parse_known_args(argv)
+            retval = plugin_install(parser, options, args, capture='install.out')
+            with open('install.out', 'r') as inp:
+                logdata = inp.read()
+            self.assertEqual(retval, 0)
+        finally:
+            captured_stdout = sys.stdout.getvalue()
+            captured_stderr = sys.stderr.getvalue()
+            sys.stdout = orig_stdout
+            sys.stderr = orig_stderr
+            os.chdir(orig_dir)
+            logging.debug('captured stdout:')
+            logging.debug(captured_stdout)
+            logging.debug('captured stderr:')
+            logging.debug(captured_stderr)
+            logging.debug('captured subprocess output:')
+            logging.debug(logdata)
+
+        try:
+            # List in subprocess to grab updated package environment.
+            logging.debug('')
+            logging.debug('list')
+            os.chdir(self.tdir)
+            stdout = open('list.out', 'w')
+            try:
+                check_call(('plugin', 'list', '-g', 'driver', '-g', 'component',
+                            '--external'), stdout=stdout, stderr=STDOUT)
+            finally:
+                stdout.close()
+                with open('list.out', 'r') as inp:
+                    captured_stdout = inp.read()
+                os.remove('list.out')
+                os.chdir(orig_dir)
+                logging.debug('captured subprocess output:')
+                logging.debug(captured_stdout)
+            self.assertTrue('foobar.foobar.Foobar' in captured_stdout)
+
+            # Docs.
+            logging.debug('')
+            logging.debug('docs')
+            argv = ['docs', 'foobar']
+            parser = _get_plugin_parser()
+            options, args = parser.parse_known_args(argv)
+            url = _plugin_docs(options.plugin_dist_name)
+            expected = os.path.join(self.tdir, 'foobar', 'src', 'foobar',
+                                    'sphinx_build', 'html', 'index.html')
+            self.assertEqual(url, expected)
+        finally:
+            # Uninstall
+            logging.debug('')
+            logging.debug('uninstall')
+            with open('pip.in', 'w') as out:
+                out.write('y\n')
+            stdin = open('pip.in', 'r')
+            stdout = open('pip.out', 'w')
+            try:
+                check_call(('pip', 'uninstall', 'foobar'),
+                           stdin=stdin, stdout=stdout, stderr=STDOUT)
+            finally:
+                stdin.close()
+                stdout.close()
+                with open('pip.out', 'r') as inp:
+                    captured_stdout = inp.read()
+                os.remove('pip.in')
+                os.remove('pip.out')
+                logging.debug('captured stdout:')
+                logging.debug(captured_stdout)
+
+        # Show removed.
+        logging.debug('')
+        logging.debug('list removed')
+        os.chdir(self.tdir)
+        stdout = open('list.out', 'w')
+        try:
+            check_call(('plugin', 'list', '--external'),
+                       stdout=stdout, stderr=STDOUT)
+        finally:
+            stdout.close()
+            with open('list.out', 'r') as inp:
+                captured_stdout = inp.read()
+            os.remove('list.out')
+            os.chdir(orig_dir)
+            logging.debug('captured subprocess output:')
+            logging.debug(captured_stdout)
+        self.assertFalse('foobar.foobar.Foobar' in captured_stdout)
+
+    def test_quickstart(self):
         # All options.
         argv = ['quickstart', 'foobar', '-c', 'FooBar', '-g', 'component',
                 '-v', '1.1', '-d', self.tdir]
@@ -75,45 +238,6 @@ class PluginsTestCase(unittest.TestCase):
         self.assertEqual(retval, -1)
 
     def test_makedist(self):
-        logging.debug('')
-        logging.debug('test_makedist')
-        argv = ['quickstart', 'foobar', '-v', '1.1', '-d', self.tdir]
-        parser = _get_plugin_parser()
-        options, args = parser.parse_known_args(argv)
-        plugin_quickstart(parser, options, args)
-        
-        startdir = os.getcwd()
-        orig_stdout = sys.stdout
-        orig_stderr = sys.stderr
-        sys.stdout = cStringIO.StringIO()
-        sys.stderr = cStringIO.StringIO()
-        logdata = ''
-        os.chdir(os.path.join(self.tdir, 'foobar'))
-        try:
-            argv = ['makedist', 'foobar']
-            parser = _get_plugin_parser()
-            options, args = parser.parse_known_args(argv)
-            retval = plugin_makedist(parser, options, args, capture='makedist.out')
-            with open('makedist.out', 'r') as inp:
-                logdata = inp.read()
-            self.assertEqual(retval, 0)
-            if sys.platform == 'win32':
-                self.assertTrue(os.path.exists('foobar-1.1.zip'))
-            else:
-                self.assertTrue(os.path.exists('foobar-1.1.tar.gz'))
-        finally:
-            captured_stdout = sys.stdout.getvalue()
-            captured_stderr = sys.stderr.getvalue()
-            sys.stdout = orig_stdout
-            sys.stderr = orig_stderr
-            os.chdir(startdir)
-            logging.debug('captured stdout:')
-            logging.debug(captured_stdout)
-            logging.debug('captured stderr:')
-            logging.debug(captured_stderr)
-            logging.debug('captured subprocess data:')
-            logging.debug(logdata)
-
         # Errors.
         argv = ['makedist', 'foobar', 'distdir', 'stuff']
         parser = _get_plugin_parser()
@@ -129,24 +253,10 @@ class PluginsTestCase(unittest.TestCase):
         assert_raises(self, code, globals(), locals(), IOError,
                       "directory '%s' does not exist" % distdir)
 
-        # Existing distribution.
-        sys.stdout = cStringIO.StringIO()
-        sys.stderr = cStringIO.StringIO()
-        os.chdir(os.path.join(self.tdir, 'foobar'))
-        try:
-            argv = ['makedist', 'foobar']
-            parser = _get_plugin_parser()
-            options, args = parser.parse_known_args(argv)
-            retval = plugin_makedist(parser, options, args, capture='makedist.out')
-        finally:
-            captured_stdout = sys.stdout.getvalue()
-            captured_stderr = sys.stderr.getvalue()
-            sys.stdout = orig_stdout
-            sys.stderr = orig_stderr
-            os.chdir(startdir)
-        self.assertEqual(retval, -1)
-
     def test_list(self):
+        logging.debug('')
+        logging.debug('test_list')
+
         orig_stdout = sys.stdout
         orig_stderr = sys.stderr
         sys.stdout = cStringIO.StringIO()
@@ -155,13 +265,17 @@ class PluginsTestCase(unittest.TestCase):
             argv = ['list']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
-            retcode = plugin_list(parser, options, args)
+            retval = plugin_list(parser, options, args)
+            self.assertEqual(retval, 0)
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
-        self.assertEqual(retcode, 0)
+            logging.debug('captured stdout:')
+            logging.debug(captured_stdout)
+            logging.debug('captured stderr:')
+            logging.debug(captured_stderr)
         # Just a selection from each category.
         expected = ['openmdao.lib.architectures.bliss.BLISS',
                     'openmdao.lib.casehandlers.caseset.CaseArray',
@@ -181,40 +295,33 @@ class PluginsTestCase(unittest.TestCase):
             argv = ['list', '-g', 'driver', '--builtin']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
-            retcode = plugin_list(parser, options, args)
+            retval = plugin_list(parser, options, args)
+            self.assertEqual(retval, 0)
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
-        self.assertEqual(retcode, 0)
+            logging.debug('captured stdout:')
+            logging.debug(captured_stdout)
+            logging.debug('captured stderr:')
+            logging.debug(captured_stderr)
         if 'openmdao.lib.drivers.doedriver.DOEdriver' not in captured_stdout:
             self.fail('-g driver filter failed to include')
         if 'openmdao.main.assembly.Assembly' in captured_stdout:
             self.fail('-g driver filter failed to exclude')
 
-        sys.stdout = cStringIO.StringIO()
-        sys.stderr = cStringIO.StringIO()
-        try:
-            argv = ['list', '-g', 'driver', '-g', 'container', '--external']
-            parser = _get_plugin_parser()
-            options, args = parser.parse_known_args(argv)
-            retcode = plugin_list(parser, options, args)
-        finally:
-            captured_stdout = sys.stdout.getvalue()
-            captured_stderr = sys.stderr.getvalue()
-            sys.stdout = orig_stdout
-            sys.stderr = orig_stderr
-        self.assertEqual(retcode, 0)
-
         # Errors.
         argv = ['list', 'stuff']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
-        retcode = plugin_list(parser, options, args)
-        self.assertEqual(retcode, -1)
+        retval = plugin_list(parser, options, args)
+        self.assertEqual(retval, -1)
 
     def test_build_docs(self):
+        logging.debug('')
+        logging.debug('test_build_docs')
+
         argv = ['quickstart', 'foobar', '-v', '1.1', '-d', self.tdir]
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
@@ -230,20 +337,25 @@ class PluginsTestCase(unittest.TestCase):
             argv = ['build_docs', 'foobar']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
-            plugin_build_docs(parser, options, args)
+            retval = plugin_build_docs(parser, options, args)
+            self.assertEqual(retval, 0)
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
             sys.stdout = orig_stdout
             sys.stderr = orig_stderr
             os.chdir(orig_dir)
+            logging.debug('captured stdout:')
+            logging.debug(captured_stdout)
+            logging.debug('captured stderr:')
+            logging.debug(captured_stderr)
 
         # Errors.
         argv = ['build_docs', 'foobar', 'no-such-directory', 'stuff']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
-        retcode = plugin_build_docs(parser, options, args)
-        self.assertEqual(retcode, -1)
+        retval = plugin_build_docs(parser, options, args)
+        self.assertEqual(retval, -1)
 
         argv = ['build_docs', 'foobar', 'no-such-directory']
         parser = _get_plugin_parser()
@@ -279,11 +391,12 @@ class PluginsTestCase(unittest.TestCase):
         self.assertEqual(url, expected)
 
     def test_install(self):
+        # Errors.
         argv = ['install', 'no-such-plugin', 'stuff']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
-        retcode = plugin_install(parser, options, args)
-        self.assertEqual(retcode, -1)
+        retval = plugin_install(parser, options, args)
+        self.assertEqual(retval, -1)
 
 
 if __name__ == '__main__':

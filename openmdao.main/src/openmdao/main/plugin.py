@@ -658,7 +658,7 @@ def _plugin_docs(plugin_name):
     return url 
 
 
-def plugin_install(parser, options, args=None):
+def plugin_install(parser, options, args=None, capture=None):
     """A command line script (plugin install) points to this. It installs
     the specified plugin distribution into the current environment.
     
@@ -728,7 +728,17 @@ def plugin_install(parser, options, args=None):
             cmdargs = ['easy_install', '-f', options.findlinks, options.dist_name]
             
         cmd = ' '.join(cmdargs)
-        retcode = call(cmdargs)
+        if capture:
+            stdout = open(capture, 'w')
+            stderr = STDOUT
+        else:  # pragma no cover
+            stdout = None
+            stderr = None
+        try:
+            retcode = call(cmdargs, stdout=stdout, stderr=stderr)
+        finally:
+            if stdout is not None:
+                stdout.close()
         if retcode:
             sys.stderr.write("\nERROR: command '%s' returned error code: %s\n"
                              % (cmd,retcode))
@@ -979,7 +989,7 @@ def plugin_list(parser, options, args=None):
     if not groups:
         groups = None
     all_types = get_available_types(groups)
-      
+
     plugins = set()
     for type in all_types:
         if show_all:
