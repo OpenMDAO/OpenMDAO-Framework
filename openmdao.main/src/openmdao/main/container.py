@@ -299,7 +299,7 @@ class Container(SafeHasTraits):
                         child.connect(childsrc, restofpath)
                         child_connections.append((child, childsrc, restofpath)) 
                         
-            if not 'parent' in srcexpr.get_referenced_compnames():
+            if not srcexpr.refs_parent():
                 for src,srcref in srcexpr.vars_and_refs():
                     if not self.contains(src):
                         self.raise_exception("Can't find '%s'" % src, AttributeError)

@@ -514,7 +514,20 @@ class DependsTestCase2(unittest.TestCase):
         self.assertEqual(s.d2.x[0,1], 1)
         self.assertEqual(s.d2.x[1,1], 2)
 
+    def test_units(self):
+        top = self.top
+        top.c2.add("mass", Float(1.0, iotype='in', units='kg'))
+        try:
+            top.connect('c1.c', 'c2.mass')
+        except Exception as err:
+            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.mass': mass: units 'ft' are incompatible with assigning units of 'kg'")
+        else:
+            self.fail("Exception expected")
         
+        top.c1.add("time", Float(9.0, iotype='out', units='s'))
+        top.c2.add("velocity", Float(3.0, iotype='in', units='ft/s'))
+        top.connect('c1.c/c1.time', 'c2.velocity')
+
 class ArrayComp(Component):
     a = Array([1,2,3,4,5], iotype="in")
     b = Array([1,2,3,4,5], iotype='in')
@@ -735,9 +748,6 @@ class ExprDependsTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
                     
-    def test_units(self):
-        pass
-        
         
 if __name__ == "__main__":
     
