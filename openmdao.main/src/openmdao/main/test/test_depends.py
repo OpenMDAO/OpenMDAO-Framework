@@ -23,10 +23,10 @@ class DumbDriver(Driver):
 
 
 class Simple(Component):
-    a = Float(iotype='in')
-    b = Float(iotype='in')
-    c = Float(iotype='out')
-    d = Float(iotype='out')
+    a = Float(iotype='in', units='ft')
+    b = Float(iotype='in', units='ft')
+    c = Float(iotype='out', units='ft')
+    d = Float(iotype='out', units='ft')
     
     def __init__(self):
         super(Simple, self).__init__()
@@ -637,8 +637,8 @@ class ExprDependsTestCase(unittest.TestCase):
         top = _nested_model()
         top.run()
         
-        top.sub.connect('comp1.c+sin(3.14)', 'comp4.a')
-        total = top.sub.comp1.c + math.sin(3.14)
+        top.sub.connect('comp1.c+sin(3.14)*comp2.c', 'comp4.a')
+        total = top.sub.comp1.c + math.sin(3.14)*top.sub.comp2.c
         self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
         exec_order = []
         top.run()
@@ -728,7 +728,17 @@ class ExprDependsTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
             
-            
+        try:
+            top.sub.connect('comp1.c', 'comp4.a(5)')
+        except Exception as err:
+            self.assertEqual(str(err), "bad destination expression 'comp4.a(5)': not assignable")
+        else:
+            self.fail("Exception expected")
+                    
+    def test_units(self):
+        pass
+        
+        
 if __name__ == "__main__":
     
     #import cProfile

@@ -159,7 +159,6 @@ class ExprMapper(object):
         destvar = destexpr.get_referenced_varpaths().pop()
         
         destcompname, destcomp, destvarname = scope._split_varpath(destvar)
-        dest_io = 'out' if destcomp is scope else 'in'
         desttrait = None
         
         if not destvar.startswith('parent.'):
@@ -170,6 +169,7 @@ class ExprMapper(object):
                         src_io = 'in' if srccomp is scope else 'out'
                         srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
                         if desttrait is None:
+                            dest_io = 'out' if destcomp is scope else 'in'
                             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
                         
                 if not srcexpr.refs_parent() and desttrait is not None:
