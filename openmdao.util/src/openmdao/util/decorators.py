@@ -163,7 +163,7 @@ def add_delegate(*delegates):
 
 #def on_condition(cond, dec, *args, **kwargs):
     #"""This is actually a decorator of decorators.  It will cause the wrapped decorator
-    #to be applied only if the supplied value is True.
+    #to be applied only if the supplied value is True at declaration time.
     #"""
     #def _wrap_on_condition(fnc):
         #if cond:

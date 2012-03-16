@@ -92,7 +92,7 @@ class IContainer(Interface):
         path, which may contain '.' characters.  *index*, if not None,
         should be a list of container indices and/or tuples following
         the protocol described in the docs for the 
-        openmdao.main.container._process_index_entry() function.
+        openmdao.main.index.process_index_entry() function.
         """
 
     def get_pathname(rel_to_scope=None):

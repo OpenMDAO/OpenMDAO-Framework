@@ -159,37 +159,36 @@ class ExprMapper(object):
         destvar = destexpr.get_referenced_varpaths().pop()
         
         destcompname, destcomp, destvarname = scope._split_varpath(destvar)
+        dest_io = 'out' if destcomp is scope else 'in'
+        desttrait = None
         
         if not destvar.startswith('parent.'):
-            for srcvar in srcvars:
-                if not srcvar.startswith('parent.'):
-                    srccompname, srccomp, srcvarname = scope._split_varpath(srcvar)
-        
-                    dest_io = 'out' if destcomp is scope else 'in'
-                    src_io = 'in' if srccomp is scope else 'out'
-                    
-                    try:
+            try:
+                for srcvar in srcvars:
+                    if not srcvar.startswith('parent.'):
+                        srccompname, srccomp, srcvarname = scope._split_varpath(srcvar)
+                        src_io = 'in' if srccomp is scope else 'out'
                         srctrait = srccomp.get_dyn_trait(srcvarname, src_io)
-                        desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
+                        if desttrait is None:
+                            desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
                         
-                        if desttrait:
-                            ttype = desttrait.trait_type
-                            if not ttype:
-                                ttype = desttrait
-                            if ttype.get_val_wrapper:
-                                srcval = srccomp.get_wrapped_attr(srcvarname)
-                            else:
-                                srcval = srccomp.get(srcvarname)
-                            if ttype.validate:
-                                ttype.validate(destcomp, destvarname, srcval)
-                            else:
-                                pass  # no validate function on destination trait. Most likely
-                                      # it's a property trait.  No way to validate without
-                                      # unknown side effects.
+                if not srcexpr.refs_parent() and desttrait is not None:
+                    if destvar == destexpr.text: # FIXME: for now, just punting if dest is not just a simple var name
+                        ttype = desttrait.trait_type
+                        if not ttype:
+                            ttype = desttrait
+                        srcval = srcexpr.evaluate()
+                        if ttype.validate:
+                            ttype.validate(destcomp, destvarname, srcval)
+                        else:
+                            pass  # no validate function on destination trait. Most likely
+                                  # it's a property trait.  No way to validate without
+                                  # unknown side effects.
+            except Exception as err:
+                scope.raise_exception("can't connect '%s' to '%s': %s" %
+                                     (src, dest, str(err)), RuntimeError)
 
-                    except Exception as err:
-                        scope.raise_exception("can't connect '%s' to '%s': %s" %
-                                             (src, dest, str(err)), RuntimeError)
+
         srcrefs = srcexpr.refs()
         for srcref in srcrefs:
             try:

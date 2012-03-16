@@ -43,7 +43,8 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
-from openmdao.main.expreval import INDEX, ATTR, CALL, SLICE, ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.index import process_index_entry, get_indexed_value, INDEX, ATTR, CALL, SLICE
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -87,98 +88,7 @@ def build_container_hierarchy(dct):
         else:
             setattr(top, key, val)
     return top
-        
 
-def _process_index_entry(obj, idx):
-    """Return a new object based on a starting object and some operation
-    indicated by idx that can be either an index into a container, an 
-    attribute access, or a fuction call.  idx can be non-tuple hashable
-    object, which will be interpreted as an index to a container, or it can
-    be a tuple of the form (operation_id, stuff)
-        
-        where operation_id is as follows (the named constants are defined in expreval.py):
-          INDEX = 0
-          ATTR = 1
-          CALL = 2
-          SLICE = 3
-          
-    On the off chance that you want to use a tuple as a key into a dict, you'll have to
-    nest your key tuple inside of an INDEX tuple to avoid ambiguity, e.g., (INDEX, my_tuple)
-          
-    The forms of the various tuples are:
-          
-          INDEX:   (0, idx)  where idx is some hashable value
-          ATTR:    (1, name) where name is the attribute name
-          CALL:    (2, args, kwargs) where args is a list of values and kwargs
-                                     is a list of tuples of the form (keyword,value).
-                                     kwargs can be left out if empty.  args
-                                     can be left out if empty as long as kwargs
-                                     are also empty, for example, (2,) and 
-                                     (2,[],[('foo',1)]) are valid
-                                     but (2,[('foo',1)]) is not.
-          SLICE:   (3, lower, upper, step) All members must be present and should
-                                           have a value of None if not set.
-    """
-    if not isinstance(idx, tuple):
-        return obj[idx]
-    if idx[0] == INDEX:
-        return obj[idx[1]]
-    elif idx[0] == ATTR:
-        return getattr(obj, idx[1])
-    elif idx[0] == CALL:
-        if len(idx) == 1:
-            return obj.__call__()
-        else:
-            args = idx[1]
-            if len(idx) == 3:
-                kwargs = dict(idx[2])
-            else:
-                kwargs = {}
-            return obj.__call__(*args, **kwargs)
-    elif idx[0] == SLICE:
-        return obj.__getitem__(slice(*idx[1]))
-    
-    raise ValueError("invalid index: %s" % idx)
-
-
-def _index_retains_metadata(index):
-    fails = (CALL, ATTR)
-    for idx in index:
-        if idx[0] in fails:
-            return False
-    return True
-        
-
-def _get_indexed_value(obj, name, index):
-    if name:
-        obj = getattr(obj, name)
-    if index:
-        for idx in index:
-            obj = _process_index_entry(obj, idx)
-    return obj
-        
-def _index_to_text(index):
-    """Returns a string representation of the given index. Doesn't work for functions"""
-    if index:
-        parts = []
-        for idx in index:
-            if not isinstance(idx, tuple):
-                parts.append('[%s]' % idx)
-            elif idx[0] == INDEX:
-                parts.append('[%s]' % idx[1])
-            elif idx[0] == ATTR:
-                parts.append('.%s' % idx[1])
-            elif idx[0] == CALL:
-                if len(idx) == 1:
-                    parts.append('()')
-                else:
-                    raise NotImplementedError('conversion of function calls within an index to text is not supported yet')
-            elif idx[0] == SLICE:
-                s = '[%s:%s:%s]' % tuple(idx[1])
-                parts.append(s.replace('None', '').replace('::',':'))
-        return ''.join(parts)
-    else:
-        return ''
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -619,12 +529,10 @@ class Container(SafeHasTraits):
         """
         scopename, _, restofpath = name.partition('.')
         if restofpath:
-            #if scopename == 'parent':
-                #return self.parent.get_wrapped_attr(name[7:])
             obj = getattr(self, scopename)
             if is_instance(obj, Container):
                 return obj.get_wrapped_attr(restofpath, index)
-            return _get_indexed_value(obj, restofpath)
+            return get_indexed_value(obj, restofpath)
         
         trait = self.get_trait(name)
         if trait is None:
@@ -643,20 +551,17 @@ class Container(SafeHasTraits):
         # also valid to return the units metadata if we're indexing into the Array,
         # assuming that all entries in the Array have the same units.
         
+        val = getattr(self, name)
         if index is None:
-            val = getattr(self, name)
-        else:
-            val = _get_indexed_value(self, name, index)
-
-        # copy value if 'copy' found in metadata
-        if ttype.copy:
-            val = _copydict[ttype.copy](val)
+            # copy value if 'copy' found in metadata
+            if ttype.copy:
+                val = _copydict[ttype.copy](val)
+                
         if getwrapper is not None:
-            if index is None:
-                return getwrapper(val)
-            else:
-                if _index_retains_metadata(index):
-                    return getwrapper(val)
+            return getwrapper(val, index)
+        
+        if index is not None:
+            val = get_indexed_value(self, name, index)
         return val
         
     def add(self, name, obj):
@@ -943,7 +848,7 @@ class Container(SafeHasTraits):
                 obj = getattr(obj, name)
         except AttributeError as err:
             self.raise_exception(str(err), AttributeError)
-        return _get_indexed_value(obj, '', index)
+        return get_indexed_value(obj, '', index)
         
     @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
@@ -985,7 +890,7 @@ class Container(SafeHasTraits):
             obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
-            return _get_indexed_value(obj, '', index)
+            return get_indexed_value(obj, '', index)
      
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
@@ -1089,9 +994,9 @@ class Container(SafeHasTraits):
 
         
     def _index_set(self, name, value, index):
-        obj = _get_indexed_value(self, name, index[:-1])
+        obj = get_indexed_value(self, name, index[:-1])
         idx = index[-1]
-        old = _process_index_entry(obj, idx)
+        old = process_index_entry(obj, idx)
         if isinstance(idx, tuple):
             if idx[0] == INDEX:
                 obj[idx[1]] = value

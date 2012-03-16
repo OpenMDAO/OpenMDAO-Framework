@@ -155,10 +155,12 @@ class Float(Variable):
         except AttributeError:
             raise ValueError(msg)
 
-    def get_val_wrapper(self, value):
+    def get_val_wrapper(self, value, index=None):
         """Return a UnitsAttrWrapper object.  Its value attribute
         will be filled in by the caller.
         """
+        if index is not None:
+            raise ValueError("Float does not support indexing")
         # pylint: disable-msg=E1101
         if self.units is None:
             return value

@@ -10,6 +10,7 @@ import logging
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
+from openmdao.main.index import get_indexed_value
 
 # pylint: disable-msg=E0611,F0401
 try:
@@ -143,11 +144,13 @@ class Array(TraitArray):
         except AttributeError:
             raise ValueError(msg)
 
-    def get_val_wrapper(self, value):
+    def get_val_wrapper(self, value, index=None):
         """Return a UnitsAttrWrapper object.  Its value attribute
         will be filled in by the caller.
         """
         # pylint: disable-msg=E1101
+        if index is not None:
+            value = get_indexed_value(value, None, index)
         if self.units:
             return UnitsAttrWrapper(value, units=self.units)
         else:
