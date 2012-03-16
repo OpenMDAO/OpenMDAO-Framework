@@ -516,17 +516,30 @@ class DependsTestCase2(unittest.TestCase):
 
     def test_units(self):
         top = self.top
-        top.c2.add("mass", Float(1.0, iotype='in', units='kg'))
+        top.c2.add("velocity", Float(3.0, iotype='in', units='ft/s'))
+        top.c1.add("time", Float(9.0, iotype='out', units='s'))
+        
         try:
-            top.connect('c1.c', 'c2.mass')
+            top.connect('c1.c', 'c2.velocity')
         except Exception as err:
-            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.mass': mass: units 'ft' are incompatible with assigning units of 'kg'")
+            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'ft/s'")
         else:
             self.fail("Exception expected")
         
-        top.c1.add("time", Float(9.0, iotype='out', units='s'))
-        top.c2.add("velocity", Float(3.0, iotype='in', units='ft/s'))
+        top.c1.a = 1.
+        top.c1.b = 2.
+        top.c1.time = 2.
         top.connect('c1.c/c1.time', 'c2.velocity')
+        top.run()
+        self.assertEqual(top.c2.velocity, 1.5)
+        
+        try:
+            top.connect('c1.c+c1.time', 'c2.b')
+        except Exception as err:
+            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'ft/s'")
+        else:
+            self.fail("Exception expected")
+        
 
 class ArrayComp(Component):
     a = Array([1,2,3,4,5], iotype="in")

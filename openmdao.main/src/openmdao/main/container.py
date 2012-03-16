@@ -300,17 +300,19 @@ class Container(SafeHasTraits):
                         child_connections.append((child, childsrc, restofpath)) 
                         
             if not srcexpr.refs_parent():
-                for src,srcref in srcexpr.vars_and_refs():
-                    if not self.contains(src):
-                        self.raise_exception("Can't find '%s'" % src, AttributeError)
-                        
-                    cname, _, restofpath = srcref.partition('.')
-                    if restofpath:
-                        child = getattr(self, cname)
-                        if is_instance(child, Container):
-                                childdest = destexpr.scope_transform(self, child, parent=self)
-                                child.connect(restofpath, childdest)
-                                child_connections.append((child, restofpath, childdest)) 
+                srcvars = srcexpr.get_referenced_varpaths()
+                if len(srcvars) == 1:  # don't tell children about multi-source expressions for now...
+                    for src,srcref in srcexpr.vars_and_refs():
+                        if not self.contains(src):
+                            self.raise_exception("Can't find '%s'" % src, AttributeError)
+                            
+                        cname, _, restofpath = srcref.partition('.')
+                        if restofpath:
+                            child = getattr(self, cname)
+                            if is_instance(child, Container):
+                                    childdest = destexpr.scope_transform(self, child, parent=self)
+                                    child.connect(restofpath, childdest)
+                                    child_connections.append((child, restofpath, childdest)) 
 
             self._depgraph.connect(srcpath, destpath, self, expr=srcexpr)
         except Exception as err:
