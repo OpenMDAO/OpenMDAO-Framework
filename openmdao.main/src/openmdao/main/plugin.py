@@ -844,8 +844,8 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
                                % files)
         
         # build sphinx docs
-        check_call(['plugin', 'build_docs', files[0]])
         os.chdir(files[0]) # should be in distrib directory now
+        check_call(['plugin', 'build_docs', files[0]])
         
         # create an sdist so we can query metadata for distrib dependencies
         check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
