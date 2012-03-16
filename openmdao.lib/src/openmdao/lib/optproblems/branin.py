@@ -17,9 +17,7 @@ class BraninComponent(Component):
 class BraninProblem(OptProblem): 
     """Branin Test Problem Definition""" 
     
-    def __init__(self): 
-        super(OptProblem,self).__init__()
-        
+    def configure(self): 
         self.add("branin",BraninComponent())
         
         #Problem Formulation 
