@@ -1,3 +1,0 @@
-Using scalers and adders for driver parameters
-
-When adding a parameter to a driver, `scaler' and `adder' values may be specified for the purpose 
