@@ -150,6 +150,9 @@ class IterateUntil(Driver):
         self.iterations = 0
     
     def continue_iteration(self): 
+        
+        self.record_case()
+        
         if self.iteration<1 and self.run_at_least_once:
             self.iteration += 1
             return True

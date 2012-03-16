@@ -77,3 +77,35 @@ The chosen element becomes a column in the csv file. Some of the more complicate
 arrays, custom data objects -- are not yet supported by the CSVCaseRecorder, and it is not clear how some of these could best be
 represented in a comma-separated format. However, the other case recorders should support every type of variable, provided that
 it can be serialized.
+
+
+Case: 14
+   uuid: 409e0790-6f91-11e1-b85e-005056b50025
+   inputs:
+      paraboloid.x: 7.16666667003
+      paraboloid.y: -7.83333333577
+   outputs:
+      Constraint ( paraboloid.x-paraboloid.y>=15.0 ): 5.79672487788e-09
+      Objective: -27.0833333304
+
+Case: 14
+   uuid: c32f6c1c-6f91-11e1-bebc-005056b50025
+   inputs:
+      driver.accuracy: 1e-06
+      driver.differentiator: <openmdao.lib.differentiators.finite_difference.FiniteDifference object at 0x1cbad350>
+      driver.directory: 
+      driver.force_execute: True
+      driver.iout: 6
+      driver.iprint: 0
+      driver.maxiter: 50
+      driver.output_filename: slsqp.out
+      driver.printvars: ['*']
+      paraboloid.directory: 
+      paraboloid.force_execute: False
+      paraboloid.x: 7.16666667003
+      paraboloid.y: -7.83333333577
+   outputs:
+      Constraint ( paraboloid.x-paraboloid.y>=15.0 ): 5.79672487788e-09
+      Objective: -27.0833333304
+      driver.error_code: 0
+      paraboloid.f_xy: -27.0833333304
