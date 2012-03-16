@@ -285,8 +285,8 @@ class Driver(Component):
         the driver should call this function once per iteration, and may also
         need to call it at the conclusion.
         
-        All paramters, objectives, and constraints are included in the Case output,
-        along with all extra variables listed in self.printvars.
+        All paramters, objectives, and constraints are included in the Case
+        output, along with all extra variables listed in self.printvars.
         """
 
         if not self.recorders:
@@ -322,7 +322,7 @@ class Driver(Component):
                 val = con.evaluate(self.parent)
                 case_output.append(["Constraint ( %s )" % name, val[1]-val[0]])
             
-        # User-requested variables
+        # Additional user-requested variables
         for printvar in self.printvars:
             
             if  '*' in printvar:
@@ -331,6 +331,7 @@ class Driver(Component):
                 printvars = [printvar]
                 
             for var in printvars:
+                print var
                 iotype = self.parent.get_metadata(var, 'iotype')
                 if iotype == 'in':
                     val = ExprEvaluator(var, scope=self.parent).evaluate()
@@ -359,8 +360,14 @@ class Driver(Component):
         
         # assume we don't want this in driver's imports
         from openmdao.main.assembly import Assembly
-        
+
+        # Start with our driver's settings, if we aren't recursed.
         all_vars = []
+        if header == '':
+            for var in self.list_vars():
+                all_vars.append('%s.%s' % (self.name, var))
+        
+        
         for comp in self.workflow.__iter__():
             
             # All variables from components in workflow

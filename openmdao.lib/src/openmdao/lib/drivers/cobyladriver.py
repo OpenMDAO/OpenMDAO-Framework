@@ -20,7 +20,7 @@ except ImportError as err:
     
 from cobyla.cobyla import cobyla, closeunit
 
-from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
+from openmdao.main.datatypes.api import Enum, Float, Int, Str
 from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints

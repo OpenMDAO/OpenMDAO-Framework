@@ -74,8 +74,8 @@ class PassthroughProperty(Variable):
 
 class Assembly_Driver(Driver):
     """An assembly starts with a bare driver that just executes the workflow
-    a single time. The only differnece between this an a plain Driver is
-    the execution of record_case at the conclusion of the workflow execution.
+    a single time. The only difference between this an a plain Driver is
+    that record_case is called at the conclusion of the workflow execution.
     """
 
     def execute(self):
