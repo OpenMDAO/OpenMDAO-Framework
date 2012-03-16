@@ -714,8 +714,21 @@ class ExprDependsTestCase(unittest.TestCase):
 
     def test_bad_exprs(self):
         top = _nested_model()
-        
-
+        try:
+            top.sub.connect('comp1.c', 'comp4.a+comp4.b')
+        except Exception as err:
+            self.assertEqual(str(err), "bad destination expression 'comp4.a+comp4.b': must be a single variable name or an index or slice into an array variable")
+        else:
+            self.fail("Exception expected")
+            
+        try:
+            top.sub.connect('comp1.c', 'comp4.a[foo]')
+        except Exception as err:
+            self.assertEqual(str(err), "bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
+        else:
+            self.fail("Exception expected")
+            
+            
 if __name__ == "__main__":
     
     #import cProfile

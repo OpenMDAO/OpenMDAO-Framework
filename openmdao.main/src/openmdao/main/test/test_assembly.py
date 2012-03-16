@@ -774,7 +774,7 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
                 self.connect('x','d.z[0][0]')
                
                
-        t = TestA()
+        t = set_as_top(TestA())
 
 if __name__ == "__main__":
     unittest.main()
