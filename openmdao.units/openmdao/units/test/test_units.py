@@ -1,6 +1,7 @@
 import openmdao.units as units
 import unittest
 import math
+import cStringIO
 
 from pkg_resources import resource_string, resource_stream
 
@@ -14,30 +15,67 @@ from pkg_resources import resource_string, resource_stream
 # the following class test each method in the NumberDict class
 
 class test_moduleLevelFunctions(unittest.TestCase):
+
     def tearDown(self):
         unitLib = resource_stream(units.__name__, 'unitLibdefault.ini')
         units.import_library(unitLib)
         
     def test_importlib(self):
         
-        #check to make sure the import fucntion errors if not all required base_units are there
-        unitLib_test_bad = resource_stream(units.__name__, 'test//unitLib_test_badbaseunits.ini')
+        #check to make sure the import function errors if not all
+        # required base_units are there
+        unitLib_test_bad = resource_stream(units.__name__,
+                                           'test/unitLib_test_badbaseunits.ini')
         try:
             units.import_library(unitLib_test_bad)
-        except ValueError,err:
-            self.assertEqual(str(err),"Not all required base type were present in the config file. missing: ['mass', 'time'], at least ['length', 'mass', 'time', 'temperature', 'angle'] required")
-        except:
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "Not all required base type were present in the"
+                             " config file. missing: ['mass', 'time'], at least"
+                             " ['length', 'mass', 'time', 'temperature',"
+                             " 'angle'] required")
+        else:
             self.fail("ValueError expected")
+
         #check to make sure that bad units in the units list cause an error    
-        unitLib_test_bad = resource_stream(units.__name__, 'test//unitLib_test_badunit.ini')
+        unitLib_test_bad = resource_stream(units.__name__,
+                                           'test/unitLib_test_badunit.ini')
         try:
             units.import_library(unitLib_test_bad)
-        except ValueError,err:
-            self.assertEqual(str(err),"The following units were not defined because they could not be resolved as a function of any other defined units:['foo']")
-        except:
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "The following units were not defined because"
+                             " they could not be resolved as a function of any"
+                             " other defined units:['foo']")
+        else:
             self.fail("ValueError expected")
             
-        
+    def test_update_library(self):
+        # Show no existing support.
+        x = units.PhysicalQuantity('1m/s')
+        try:
+            x.convert_to_unit('furlong/fortnight')
+        except ValueError, exc:
+            self.assertEqual(str(exc), "no unit named 'furlong' is defined")
+        else:
+            self.fail("ValueError expected")
+
+        # Update.
+        update = cStringIO.StringIO("""
+[units]
+furlong: 201.168*m, Horse racing
+fortnight: 14*d, Two weeks
+""")
+        units.update_library(update)
+
+        # Show supported.
+        x = units.PhysicalQuantity('1m/s')
+        x.convert_to_unit('furlong/fortnight')
+        self.assertAlmostEqual(x.value,
+                               units.PhysicalQuantity(
+                               '6012.884753furlong/fortnight').value, places=5)
+
+
 class test_NumberDict(unittest.TestCase):
 
     def test__UknownKeyGives0(self):
