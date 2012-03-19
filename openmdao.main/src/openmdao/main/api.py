@@ -23,8 +23,6 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.variable import Variable
 
-from openmdao.main.datatypes.slot import Slot
-
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.filevar import FileMetadata, FileRef
@@ -38,3 +36,7 @@ from openmdao.util.eggsaver import SAVE_PICKLE, SAVE_CPICKLE #, SAVE_YAML, SAVE_
 from openmdao.units import convert_units
 
 from zope.interface import implements, Attribute, Interface
+
+# TODO: This probably shouldn't be here. Removing it will require edits to some
+# of our plugins
+from openmdao.main.datatypes.slot import Slot

@@ -10,7 +10,6 @@ The Basics
    building
    variables
    assembly
-   scaler_adder
    
    
 

@@ -20,8 +20,7 @@ except ImportError as err:
     
 from cobyla.cobyla import cobyla, closeunit
 
-from openmdao.main.api import Case, ExprEvaluator
-from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
+from openmdao.main.datatypes.api import Enum, Float, Int, Str
 from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
@@ -67,9 +66,6 @@ class COBYLAdriver(Driver):
     error_code = Int(0, iotype='out',
                   desc = 'Error code returned from COBYLA')
     
-    # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to '
-                               'output in the recorder.')
 
     def __init__(self, *args, **kwargs):
         
@@ -168,27 +164,7 @@ class COBYLAdriver(Driver):
         g = array(con_list)
         
         # Write out some relevant information to the recorder
-        if self.recorders:
-            
-            case_input = []
-            for var, val in zip(self.get_parameters().keys(), xnew):
-                case_name = var[0] if isinstance(var, tuple) else var
-                case_input.append([case_name, val])
-            if self.printvars:
-                case_output = [(name,
-                                ExprEvaluator(name, scope=self.parent).evaluate())
-                                       for name in self.printvars]
-            else:
-                case_output = []
-            case_output.append(["objective", f])
-        
-            for i, val in enumerate(g):
-                case_output.append(["Constraint%d" % i, val])
-            
-            case = Case(case_input, case_output, parent_uuid=self._case_id)
-            
-            for recorder in self.recorders:
-                recorder.record(case)
+        self.record_case()
             
         return f, g
         
