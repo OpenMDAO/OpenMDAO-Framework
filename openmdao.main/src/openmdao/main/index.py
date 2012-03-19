@@ -6,7 +6,10 @@ SLICE = 3
 
 
 def process_index_entry(obj, idx):
-    """Return a new object based on a starting object and some operation
+    """
+::
+    
+    Return a new object based on a starting object and some operation
     indicated by idx that can be either an index into a container, an 
     attribute access, or a fuction call.  idx can be non-tuple hashable
     object, which will be interpreted as an index to a container, or it can
