@@ -83,6 +83,8 @@ class VariableTree(Container):
                 v._iotype = new
         
     def _trait_modified(self, obj, name, old, new):
+        if name == 'trait_added':  # handle weird traits side-effect from hasattr call
+            return
         if isinstance(new, VariableTree):
             obj = getattr(self, name)
             obj.parent = self
