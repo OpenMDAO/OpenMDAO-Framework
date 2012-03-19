@@ -256,16 +256,16 @@ class ProtectedBox(Box):
         raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
 
     @rbac(('owner', 'user'))
-    def get_wrapped_attr(self, name):
+    def get_wrapped_attr(self, name, index=None):
         if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_wrapped_attr(name)
         raise RoleError("No get_wrapped_attr access to '%s' by role '%s'"
                         % (attr, role))
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, srcname=None, force=False):
+    def set(self, path, value, index=None, src=None, force=False):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).set(path, value, index, srcname, force)
+            return super(ProtectedBox, self).set(path, value, index, src, force)
         raise RoleError("No set access to '%s' by role '%s'"
                         % (attr, role))
 
@@ -706,7 +706,8 @@ class TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    sys.argv.append('--cover-package=openmdao.main')
-    sys.argv.append('--cover-erase')
-    nose.runmodule()
+    unittest.main()
+    #sys.argv.append('--cover-package=openmdao.main')
+    #sys.argv.append('--cover-erase')
+    #nose.runmodule()
 

@@ -73,7 +73,7 @@ class Dataflow(SequentialWorkflow):
         for comp in contents:
             graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
-        collapsed_graph = graph.copy()
+        collapsed_graph = nx.DiGraph(graph)  # this way avoids a deep copy of edge/node data
 
         # find all of the incoming and outgoing edges to/from all of the components
         # in each driver's iteration set so we can add edges to/from the driver
