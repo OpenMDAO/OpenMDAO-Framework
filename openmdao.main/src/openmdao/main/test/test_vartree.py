@@ -213,7 +213,7 @@ class NamespaceTestCase(unittest.TestCase):
             self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         except Exception as err:
             self.assertEqual(str(err), 
-                "'vt2.vt3.b' is already connected to source 'parent.parent.scomp1.cont_out.vt2.vt3.a'")
+                "cont_in.vt2.vt3.b is already connected to source parent.scomp1.cont_out.vt2.vt3.a")
         else:
             self.fail("exception expected")
         
