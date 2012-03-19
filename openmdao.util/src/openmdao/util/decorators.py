@@ -107,13 +107,11 @@ def add_delegate(*delegates):
         fnc = cls.__init__
         spec = getargspec(fnc)
         sig = formatargspec(*spec)
-        template = [
-            'old_init__(%s)' % ','.join(spec[0]),
-            ]
+        template = ["if not hasattr(self, '_delegates_'): self._delegates_ = {}"]
         for name, delegate in delegate_class_list:
             template.append('self.%s = %s(self)' % (name, delegate.__name__))
-            template.append("if not hasattr(self, '_delegates_'): self._delegates_ = {}")
             template.append("self._delegates_['%s'] = self.%s" % (name,name))
+        template.append('old_init__(%s)' % ','.join(spec[0]))
         f = FunctionMaker.create('__init__%s' % sig, '\n'.join(template), 
                                  dict([(c.__name__,c) for n,c in delegate_class_list]+
                                       [('old_init__',fnc)]),

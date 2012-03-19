@@ -70,11 +70,11 @@ OptimizationUnconstrained class is derived from Assembly.
             """function that sets up the architecture"""
         
 In the Paraboloid component, you created an ``execute`` function to tell it what to do when the
-component is run. Assemblies don't need an execute function, since they don't really do any 
-caluclations of their own. Instead the assembly uses a ``configure`` function defined 
-which manages the creation of all the components, drivers, and data connections. 
+component is run. Assemblies don't need an ``execute`` function, since they don't really do any 
+calculations of their own. Instead the assembly has a ``configure`` function defined 
+that manages the creation of all the components, drivers, and data connections. 
 
-When configuring you use the ``add`` function put things into the assembly:
+When configuring you use the ``add`` function to put things into the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -119,7 +119,7 @@ while assuring that you can still refer to each of them uniquely. Here, the
 minimization by specifying its full name, ``paraboloid.f_xy``.
 
 To find the minimum value of the objective function, we want to optimizer to 
-vary the ``x`` and ``y`` variables. The design variables are declared
+vary the `x` and `y` variables. The design variables are declared
 individually using the ``add_parameter`` method:
         
 .. testcode:: simple_model_Unconstrained_pieces
@@ -128,14 +128,14 @@ individually using the ``add_parameter`` method:
             self.driver.add_parameter('paraboloid.x', -50, 50)
             self.driver.add_parameter('paraboloid.y', -50, 50)
 
-Once again, you specify the parameters with the full name of each variable: ``parabolid.x``
+Once again, you specify the parameters with the full name of each variable: ``paraboloid.x``
 and ``paraboloid.y``. The ``add_parameter`` method also allows you to add a range of
-validity for these variables, so that the unconstrained optimization can be
+validity for these variables so that the unconstrained optimization can be
 performed on a bounded region. For this problem, you are constraining `x` and `y`
 to lie between ``[-50, 50]``.
         
 The problem is now essentially ready to execute. We're just going to set 
-the optimizer's verbosity to a minumum. You can turn it up if you want more
+the optimizer's verbosity to a minimum. You can turn it up if you want more
 information about whats going on. 
         
 .. testcode:: simple_model_Unconstrained_pieces
@@ -144,7 +144,7 @@ information about whats going on.
             self.driver.iprint = 0
 
 
-Congradulations! You just built your first model in OpenMDAO. Now let's run it. 
+Congratulations! You just built your first model in OpenMDAO. Now let's run it. 
 
 
 Executing the Simple Optimization Problem
@@ -152,11 +152,11 @@ Executing the Simple Optimization Problem
 
 To run your model, you need to create an instance of ``OptimizationUnconstrained`` and tell it to run.
 
-To do this, we're going to add some code to the end of the
-``optimization_unconstrained.py`` so that it can be executed in Python. 
-Using the conditional ``if __name__ == "__main__":`` you can include some Python code at the bottom 
-of ``optimization_unconstrained.py``. This makes it so you can run the file, but so that you could 
-also import your assembly into another model without running it. So the final lines in this file are:
+To do this, we're going to add some code to the end of the ``optimization_unconstrained.py`` so that
+it can be executed in Python.  Using the conditional ``if __name__ == "__main__":`` you can include
+some Python code at the bottom  of ``optimization_unconstrained.py``. This allows you to run the
+file but also lets you import your assembly into another model without running it. So the final
+lines in this file are:
 
 .. testsetup:: simple_model_Unconstrained_run
 

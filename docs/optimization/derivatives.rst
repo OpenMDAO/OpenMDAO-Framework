@@ -152,7 +152,7 @@ Sometimes it is useful to know how many times your component executes, and
 how many times it calculates its derivatives. OpenMDAO provides this
 information for every component through a pair of counters: ``exec_count``
 is incremented whenever a component executes, and ``derivative_exec_count``
-is incremeneted whenever the derivatives are calculated. The following
+is incremented whenever the derivatives are calculated. The following
 example shows how they can be accessed and used.
 
 .. doctest::

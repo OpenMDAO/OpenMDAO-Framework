@@ -55,7 +55,13 @@ the hierarchy. For example, when `component2` above is executing in the
 workflow for `driver3` for the first time its iteration coordinates would be
 ``1-3.1-1``. Which denotes the first execution of the top workflow, third
 component (`driver3`), first execution of that driver's workflow, first
-component in that workflow (`component2`).
+component in that workflow (`component2`). To have all components report their
+iteration coordinates to stderr (the default):
+
+.. testcode:: iteration_tracing
+
+    from openmdao.util.log import enable_trace
+    enable_trace()
    
 An :term:`Assembly` is a container for your analysis models.   When an
 Assembly executes, it will always look for a Driver named `driver` and  start there, then work its
@@ -114,8 +120,8 @@ Building a Basic Model
 ----------------------
 
 So a model is built from an assembly which contains components, drivers, and workflows. 
-Each assembly has it's own iteration hierachy, with `driver` at the root, that determines
-what and in which order components are run. 
+Each assembly has its own iteration hierarchy, with `driver` at the root, that determines
+which components are run and in what order. 
 
 .. testcode:: basic_model_1
 
@@ -135,8 +141,8 @@ what and in which order components are run.
             self.driver.workflow.add('paraboloid')
         
 
-We can see here that you use the `configure` method to add 
-things into an assembly. Within the `configure` method, you use the ``add`` method 
+We can see here that you use the ``configure`` method to add 
+things into an assembly. Within the ``configure`` method, you use the ``add`` method 
 which takes a valid OpenMDAO name and a corresponding component
 instance as its arguments. This adds the instance to the
 OpenMDAO model using the given name. In this case then, 
@@ -146,7 +152,7 @@ Notice that we never added any kind of driver, but we still
 referenced it to add `paraboloid` to the workflow. Assemblies 
 always have a default driver, which simply runs once through its 
 workflow. In later tutorials, we'll show you how to replace the 
-default driver with something else like an optimzier. For now though, 
+default driver with something else like an optimizer. For now though, 
 our models just run once through their workflows. 
 
 .. _`Connecting-Components`:
@@ -185,8 +191,8 @@ be connected to any given input.  On the other hand, it is fine to connect an ou
 inputs. When you connect one output to multiple inputs, we call that ``broadcasting`` the output. 
 
 In the above code, we created a chain of three paraboloid components. However, we could have
-configured them slightly differently, so that the output of the first paraboloid gets broadcast
-to the inputs for the next two. 
+configured them slightly differently so that the output of the first paraboloid gets broadcast
+to the inputs for the next to. 
 
 .. testcode:: broadcast_components
 
@@ -215,19 +221,19 @@ You can broadcast the output two ways. The above code shows them both. The first
 is just to issue two separate connections. Notice that both connection calls have ``par1.f_xt``
 as their source. The second way provides a shortcut, where you make one connect call, but specify
 a list of inputs to connect two. The two methods result in the exact same result, so use whichever 
-one your prefer. 
+one you prefer. 
 
-One last note: A variable is not required to be connected to anything. Typicaly 
+One last note: A variable is not required to be connected to anything. Typically 
 components will have numerous inputs, and many of these will contain values
-that are set by the user or are perfectly fine at their defaults. Thats fine, you 
+that are set by the user or are perfectly fine at their defaults. That's fine; you 
 only need to issue connections when you want to link up multiple codes. 
 
 Variables and Assemblies
 ------------------------
 
 Variables can be added directly to an assembly and used to *promote* internal variables,
-making them visible to components outside of the assembly. There is a convenience
-function called ``create_passthrough`` that creates a variable in the assembly and
+making them visible to components outside of the assembly. A convenience
+function called ``create_passthrough`` creates a variable in the assembly and
 connects it to an internal component variable in one step.
 
 Consider a similar assembly as shown above, except that we want to promote the
@@ -259,7 +265,7 @@ linked at that level.
 
 The ``create_passthrough`` function creates a variable in the assembly. This new variable has
 the same name, iotype, default value, units, description, and range characteristics as the
-original variable on the component that your passing through. If you would like to present a different interface
+original variable on the component that you're passing through. If you would like to present a different interface
 external to the assembly (perhaps you would like different units), then a passthrough
 cannot be used. Instead, the desired variables must be manually created and
 connected. You can find a more detailed example of this in the :ref:`complex tutorial

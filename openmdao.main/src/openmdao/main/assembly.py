@@ -13,7 +13,7 @@ import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
-from openmdao.main.interfaces import implements, IDriver
+from openmdao.main.interfaces import implements, IAssembly, IDriver
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
@@ -354,7 +354,9 @@ class Assembly (Component):
     and outputs between its children.  When executed, it runs the top level
     Driver called 'driver'.
     """
-    
+
+    implements(IAssembly)
+
     driver = Slot(IDriver, allow_none=True,
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
