@@ -536,7 +536,7 @@ class DependsTestCase2(unittest.TestCase):
         try:
             top.connect('c1.c+c1.time', 'c2.b')
         except Exception as err:
-            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'ft/s'")
+            self.assertEqual(str(err), ": can't connect 'c1.c+c1.time' to 'c2.b': can't evaluate expression 'c1.c+c1.time': Incompatible units")
         else:
             self.fail("Exception expected")
         
