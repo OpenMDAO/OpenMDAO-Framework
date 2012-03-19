@@ -331,7 +331,6 @@ class Driver(Component):
                 printvars = [printvar]
                 
             for var in printvars:
-                print var
                 iotype = self.parent.get_metadata(var, 'iotype')
                 if iotype == 'in':
                     val = ExprEvaluator(var, scope=self.parent).evaluate()
@@ -361,11 +360,10 @@ class Driver(Component):
         # assume we don't want this in driver's imports
         from openmdao.main.assembly import Assembly
 
-        # Start with our driver's settings, if we aren't recursed.
+        # Start with our driver's settings
         all_vars = []
-        if header == '':
-            for var in self.list_vars():
-                all_vars.append('%s.%s' % (self.name, var))
+        for var in self.list_vars():
+            all_vars.append('%s.%s' % (self.name, var))
         
         
         for comp in self.workflow.__iter__():

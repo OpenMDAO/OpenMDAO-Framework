@@ -72,16 +72,16 @@ class PassthroughProperty(Variable):
             self._vals[obj] = {}
         self._vals[obj][name] = self._trait.validate(obj, name, value)
 
-class Assembly_Driver(Driver):
+class Run_Once(Driver):
     """An assembly starts with a bare driver that just executes the workflow
-    a single time. The only difference between this an a plain Driver is
-    that record_case is called at the conclusion of the workflow execution.
+    a single time. The only difference between this and the Driver base class
+    is that record_case is called at the conclusion of the workflow execution.
     """
 
     def execute(self):
         ''' Call parent, then record cases.'''
         
-        super(Assembly_Driver, self).execute()
+        super(Run_Once, self).execute()
         self.record_case()
         
         
@@ -101,7 +101,7 @@ class Assembly (Component):
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
         # default Driver executes its workflow once
-        self.add('driver', Assembly_Driver())
+        self.add('driver', Run_Once())
         
         set_as_top(self, first_only=True) # we're the top Assembly only if we're the first instantiated
         
