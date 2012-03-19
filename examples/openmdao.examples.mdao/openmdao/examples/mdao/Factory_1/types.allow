@@ -1,0 +1,3 @@
+openmdao.main.test.test_distsim.HollowSphere
+openmdao.main.test.test_distsim.Box
+openmdao.main.test.test_distsim.ProtectedBox
