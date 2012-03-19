@@ -95,10 +95,10 @@ class CSVCaseIterator(object):
                     input_fields, output_fields = self._parse_fieldnames(row)
                         
                     self.label_field = 0
-                    retries_field = 2 + len(input_fields) + len(output_fields)
-                    max_retries_field = retries + 1
-                    parent_uuid_field = retries + 2
-                    msg_field = retries + 3
+                    retries_field = row.index('/METADATA') + 1
+                    max_retries_field = retries_field + 1
+                    parent_uuid_field = retries_field + 2
+                    msg_field = retries_field + 3
                     
                 # Read headers from file
                 elif self.headers is None:
@@ -119,6 +119,12 @@ class CSVCaseIterator(object):
                 max_retries = row[max_retries_field]
                 parent_uuid = row[parent_uuid_field]
                 msg = row[msg_field]
+                
+                # For some reason, default for these in a case is None
+                if not retries:
+                    retries = None
+                if not max_retries:
+                    max_retries = None
                 
             inputs = []
             for i, field in input_fields.iteritems():
@@ -257,6 +263,7 @@ class CSVCaseRecorder(object):
                     raise ValueError('CSV format does not support ' + \
                                'variables of type %s' % type(value))
             
+        data.append('')
         for item in (case.retries, case.max_retries, \
                      case.parent_uuid, case.msg):
             data.append(item)

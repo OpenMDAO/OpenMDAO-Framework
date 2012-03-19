@@ -33,13 +33,15 @@ state of the model includes the parameters, objective, constraints, and any othe
 the user chooses to include by listing them in the ``printvars`` variable.
 
 The ``CSVCaseRecorder`` outputs the selected variables into a file in the csv
-(Comma Separated Value) format. The ``DBCaseRecorder`` stores the selected variables in an
-SQLite database, which can be stored in memory or on disc as a binary file. The ``DumpCaseRecorder``
-is used to output the selected variables into a file-like object. The default object is sys.stdout,
-which redirects the output to STDOUT. Finally, the ``ListCaseRecorder`` stores the cases in a Python
-list. Of these recorders, the CSVCaseRecorder is the most useful for passing data to other applications
-such as an external post-processing tool. The DBCaseRecorder is the most useful for saving data
-for later use.
+(Comma Separated Value) format. The ``DBCaseRecorder`` stores the selected
+variables in an SQLite database, which can be stored in memory or on disc as
+a binary file. The ``DumpCaseRecorder`` is used to output the selected
+variables into a file-like object in a human-readable format. The default
+object is sys.stdout, which redirects the output to STDOUT. It can also take
+a filename as an argument. Finally, the ``ListCaseRecorder`` stores the cases
+in a Python list. Of these recorders, the CSVCaseRecorder is the most useful
+for passing data to other applications such as an external post-processing
+tool. The DBCaseRecorder is the most useful for saving data for later use.
 
 Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would
 like to print out the convergence history of the variables, objective, and constraint into a csv
@@ -58,16 +60,16 @@ as an input or output, and a number of other metadata fields. Run the above code
 
 ::
 
-"label","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","objective","Constraint0","/METADATA","retries","max_retries","parent_uuid","msg"
-"","",0.0,0.0,"",22.0,-15.0,"","","",""
-"","",-8.50000000486,6.50000000636,"",-25.7499999974,1.12260067908e-08,"","","",""
-"","",-6.7370023896,8.26299760727,"",-23.4775087306,-3.13171355515e-09,"","","",""
-"","",-7.83333333577,7.16666667003,"",-27.0833333304,5.79672487788e-09,"","","",""
+"label","/INPUTS","paraboloid.y","paraboloid.x","/OUTPUTS","Objective","Constraint ( paraboloid.x-paraboloid.y >= 15.0 )","/METADATA","retries","max_retries","parent_uuid","msg"
+"1","",0.0,0.0,"",22.0,-15.0,"","","",""
+"2","",-8.50000000486,6.50000000636,"",-25.7499999974,1.12260067908e-08,"","","","",""
+"3","",-6.7370023896,8.26299760727,"",-23.4775087306,-3.13171355515e-09,"","","","",""
+"4","",-7.83333333577,7.16666667003,"",-27.0833333304,5.79672487788e-09,"","","","",""
 
 
 This file should be readable into an application that accepts a csv input file. The first line is a header that contains
 the variable names for the values that are printed. Notice that the objective and constraints are printed for an optimizer
-driver. The first column is a case label, which is currently empty for cases generated from a driver. Columns with a
+driver. The first column is a case label, which contains the iteration count. Columns with a
 section header ("/INPUTS", "/OUTPUTS", "/METADATA") do not contain any data. The final columns in the file contain 
 some metadata associated with the case. None of these are set by ``SLSQPdriver.`` Note that in OpenMDAO's flavor of
 csv, all string data will always be enclosed in double quotes.
@@ -77,3 +79,82 @@ The chosen element becomes a column in the csv file. Some of the more complicate
 arrays, custom data objects -- are not yet supported by the CSVCaseRecorder, and it is not clear how some of these could best be
 represented in a comma-separated format. However, the other case recorders should support every type of variable, provided that
 it can be serialized.
+
+The ``DumpCaseRecorder`` is generally used to write readable text out to a
+file or to STDOUT. Let's try using a ``DumpCaseRecorder`` to output a history
+of our paramters, constraints, and objectives to a file named 'data.txt'.
+
+.. testcode :: dump_case
+
+    from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
+    from openmdao.lib.casehandlers.api import DumpCaseRecorder
+    
+    opt_problem = OptimizationConstrained()
+    
+    outfile = open('data.txt', 'w')
+    opt_problem.driver.recorders = [DumpCaseRecorder(outfile)]
+    opt_problem.run()
+
+.. testcode :: dump_case
+    :hide:
+    
+    import os
+    if os.path.exists('data.txt'):
+        os.remove('data.txt')
+            
+You should now have a file called 'data.txt' that contains output that looks
+like this:
+
+::
+
+   Case: 3
+      uuid: 409e0790-6f91-11e1-b85e-005056b50025
+      inputs:
+         paraboloid.x: 7.16666667003
+         paraboloid.y: -7.83333333577
+      outputs:
+         Constraint ( paraboloid.x-paraboloid.y>=15.0 ): 5.79672487788e-09
+         Objective: -27.0833333304
+
+We can also choose to print out all framework variables from components in
+this driver's workflow using a wildcard (*) in the printvars list, and
+rerunning the model. 
+
+::
+
+      opt_problem.driver.printvars = ['*']
+      opt_problem.run()
+
+The output produced is more detailed:
+
+::
+
+   Case: 14
+      uuid: c32f6c1c-6f91-11e1-bebc-005056b50025
+      inputs:
+         driver.accuracy: 1e-06
+         driver.differentiator: <openmdao.lib.differentiators.finite_difference.FiniteDifference object at 0x1cbad350>
+         driver.directory: 
+         driver.force_execute: True
+         driver.iout: 6
+         driver.iprint: 0
+         driver.maxiter: 50
+         driver.output_filename: slsqp.out
+         driver.printvars: ['*']
+         paraboloid.directory: 
+         paraboloid.force_execute: False
+         paraboloid.x: 7.16666667003
+         paraboloid.y: -7.83333333577
+      outputs:
+         Constraint ( paraboloid.x-paraboloid.y>=15.0 ): 5.79672487788e-09
+         Objective: -27.0833333304
+         driver.error_code: 0
+         paraboloid.f_xy: -27.0833333304
+         
+You can also use partial wildcard matches, and include multiple wildcards in the 
+``printvars`` list, so scenarios like this:
+
+      opt_problem.driver.printvars = ['comp1.*', 'comp2.*', *error*]
+
+are possible. This will return a set of cases with all variables from comp1,
+comp2 as well as any variable with "error" in its name.

@@ -4,7 +4,7 @@
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
-from openmdao.main.api import Component, Case, Slot
+from openmdao.main.api import Component, Case
 from openmdao.lib.datatypes.api import Slot, ListStr, Event, \
      List, Str, Dict, Bool
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
