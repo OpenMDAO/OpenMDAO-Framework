@@ -5,7 +5,8 @@ from enthought.traits.api import Str
 from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.variable import Variable
-from openmdao.main.container import Container, Slot
+from openmdao.main.container import Container
+from openmdao.main.datatypes.slot import Slot
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 
@@ -83,6 +84,8 @@ class VariableTree(Container):
                 v._iotype = new
         
     def _trait_modified(self, obj, name, old, new):
+        if name == 'trait_added':  # handle weird traits side-effect from hasattr call
+            return
         if isinstance(new, VariableTree):
             obj = getattr(self, name)
             obj.parent = self
