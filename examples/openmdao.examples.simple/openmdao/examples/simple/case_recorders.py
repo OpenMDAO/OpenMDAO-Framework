@@ -41,11 +41,15 @@ if __name__ == "__main__": # pragma: no cover
     #-----------------------------
     # Set up our CaseRecorders
     #-----------------------------
-
+    import os
+    if os.path.exists('converge.db'):
+        os.remove('converge.db')   
+        
     from openmdao.lib.casehandlers.api import CSVCaseRecorder, DBCaseRecorder
 
     opt_problem.driver.recorders = [CSVCaseRecorder(filename='converge.csv'),
                                     DBCaseRecorder(dbfile='converge.db', append=False)]
+    opt_problem.driver.printvars = ['*']
 
     #-----------------------------
     # Run problem
@@ -58,7 +62,7 @@ if __name__ == "__main__": # pragma: no cover
     #----------------------------------------------------
 
     for case in opt_problem.driver.recorders[0].get_iterator():
-        print case['objective']
+        print case
 
     print "\n"
     print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.x, \

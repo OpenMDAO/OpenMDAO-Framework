@@ -60,7 +60,7 @@ You can see that this code does not look a whole lot different from the code in 
 tutorials  on :ref:`unconstrained <using-CONMIN>` and :ref:`constrained <constrained-optimization>`
 optimizations. We're still using  the same Paraboloid component as before. Also, just like before,
 we use the ``add_parameter`` method to specify what inputs should be varied by the DOE. Since we
-specifed the low and high to be -50 and 50 respectively,  with 10 levels, the FullFactorial DOE
+specified the low and high to be -50 and 50 respectively,  with 10 levels, the FullFactorial DOE
 generator will divide each parameter into 10 evenly spaced bins and then generate the full set of
 combinations possible (100 cases in total).
 
@@ -73,7 +73,7 @@ case in some fashion. In this example  we used a :ref:`ListCaseRecorder
 that are more permanent, for example, the :ref:`DBcaseRecorder <openmdao.lib.casehandlers.dbcase.py>`, which 
 saves all your cases to a SQLite database to be reviewed later. 
 
-All CaseRecorders have the same interface and can be all be used interchangably. In fact, 
+All CaseRecorders have the same interface and can be all be used interchangeably. In fact, 
 if you notice, we specified a ListCaseRecorder as part of a list. 
 
 .. testsetup:: simple_model_doe_pieces
@@ -177,7 +177,7 @@ To run this analysis, you would do the following:
 The only new stuff here is the bit at the end where we loop over all the cases that were run. To keep
 things simple, we just spit out the data to the screen. But the key thing to recognize here is  how you
 work with cases. You can loop through each case by calling the ``get_iterator()``  method 
-on any case recorder. Then for each case you just adress the names of the variables like you would 
+on any case recorder. Then for each case you just address the names of the variables like you would 
 when working with a Python dictionary. You can put the data into any format you want from a loop like
 this one. 
 

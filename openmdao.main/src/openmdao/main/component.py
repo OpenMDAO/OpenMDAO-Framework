@@ -18,7 +18,9 @@ from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import implements, IComponent, ICaseIterator
+from openmdao.main.expreval import ConnectedExprEvaluator
+from openmdao.main.interfaces import implements, obj_has_interface, IAssembly, \
+                                     IComponent, ICaseIterator, IDriver
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -26,6 +28,9 @@ from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.datatypes.slot import Slot
+
+import openmdao.util.log as tracing
+
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -165,7 +170,7 @@ class Component (Container):
         
         self.ffd_order = 0
         self._case_id = ''
-
+        self._itername = ''
 
     @property
     def dir_context(self):
@@ -173,6 +178,21 @@ class Component (Container):
         if self._dir_context is None:
             self._dir_context = DirectoryContext(self)
         return self._dir_context
+
+    @rbac(('owner', 'user'))
+    def get_itername(self):
+        """Return current 'iteration coordinates'."""
+        return self._itername
+
+    @rbac(('owner', 'user'))
+    def set_itername(self, itername):
+        """Set current 'iteration coordinates'. Typically called by the
+        current workflow just before running the component.
+
+        itername: string
+            Iteration coordinates.
+        """
+        self._itername = itername
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
@@ -385,7 +405,7 @@ class Component (Container):
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
             valids[name] = True
-        # make sure our inputs are valid too
+        ## make sure our inputs are valid too
         for name in self.list_inputs(valid=False):
             valids[name] = True
         self._call_execute = False
@@ -410,6 +430,8 @@ class Component (Container):
             
         case_id: str
             Identifier for the Case that is associated with this run. (Default is '')
+            If applied to the top-level assembly, this will be prepended to
+            all iteration coordinates.
         """
         if self.directory:
             self.push_dir()
@@ -439,8 +461,12 @@ class Component (Container):
                     
                 else:
                     # Component executes as normal
-                    self.execute()
                     self.exec_count += 1
+                    if tracing.TRACER is not None and \
+                        not obj_has_interface(self, IAssembly) and \
+                        not obj_has_interface(self, IDriver):
+                            tracing.TRACER.debug(self.get_itername())
+                    self.execute()
                     
                 self._post_execute()
             #else:
@@ -524,11 +550,11 @@ class Component (Container):
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
-            self.call_execute = True
+            self._call_execute = True
             return False
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]
-            if len(srccomps):
+            if srccomps:
                 counts = self.parent.exec_counts(srccomps)
                 for count,tup in zip(counts, self._expr_sources):
                     if count != tup[1]:
@@ -689,17 +715,20 @@ class Component (Container):
         """
         valids_update = None
         
-        if srcpath.startswith('parent.'):  # internal destination
-            valids_update = (destpath, False)
-            self.config_changed(update_parent=False)
-        elif destpath.startswith('parent.'): # internal source
-            if srcpath not in self._valid_dict:
-                valids_update = (srcpath, True)
-            self._connected_outputs = None  # reset cached value of connected outputs
+        for ref in ConnectedExprEvaluator(srcpath, self).refs():
+            if ref.startswith('parent.'):  # internal destination
+                valids_update = (destpath, False)
+                self.config_changed(update_parent=False)
+                break
+        else:
+            if destpath.startswith('parent.'): # internal source
+                if srcpath not in self._valid_dict:
+                    valids_update = (srcpath, True)
+                self._connected_outputs = None  # reset cached value of connected outputs
                     
         super(Component, self).connect(srcpath, destpath)
         
-        # move this to after the super connect call so if there's a 
+        # this is after the super connect call so if there's a 
         # problem we don't have to undo it
         if valids_update is not None:
             self._valid_dict[valids_update[0]] = valids_update[1]
@@ -712,10 +741,10 @@ class Component (Container):
         """
         super(Component, self).disconnect(srcpath, destpath)
         if destpath in self._valid_dict:
-            if '.' in destpath:
+            if '.' in destpath or '[' in destpath or ']' in destpath:
                 del self._valid_dict[destpath]
             else:
-                self._valid_dict[destpath] = True  # disconnected inputs are always valid
+                self._valid_dict[destpath] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
     
     @rbac(('owner', 'user'))
@@ -1276,6 +1305,7 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
+    @rbac(('owner', 'user'))
     def get_valid(self, names):
         """Get the value of the validity flag for the specified variables.
         Returns a list of bools.
@@ -1316,9 +1346,10 @@ class Component (Container):
                 valids[var] = False
         else:
             conn = self.list_inputs(connected=True)
-            for var in varnames:
-                if var in conn:
-                    valids[var] = False
+            if conn:
+                for var in varnames:
+                    if var in conn:
+                        valids[var] = False
 
         # this assumes that all outputs are either valid or invalid
         if not force and outs and (valids[outs[0]] is False):

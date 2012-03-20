@@ -135,7 +135,7 @@ Now, the outputs of the MetaModel will be the predicted values as determined by 
 model. 
 
 The last thing we do is specify the workflows which controls the 
-execution order of this example. Remember that the top driver in any aseembly must be called 
+execution order of this example. Remember that the top driver in any assembly must be called 
 `driver`.  The type of workflow being executed is a sequential workflow, 
 meaning that is a simple sequence of components. 
         

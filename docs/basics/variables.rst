@@ -79,7 +79,7 @@ Built-in Variable Types
 +----------+--------------------------------------------------------------+
 
 
-When a variable isdeclared it gets passed a number of arguments, many of which are
+When a variable is declared, it gets passed a number of arguments, many of which are
 optional.
 
 But the *iotype* attribute is required for all variables regardless of type.
@@ -481,8 +481,8 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import Component, VariableTree
+    from openmdao.lib.datatypes.api import Float, Slot
 
     class FlightCondition(VariableTree):
         """Container of variables"""
@@ -541,8 +541,8 @@ another VariableTree, so any level of nesting is possible.  For example:
 
 .. testsetup:: nested_vartree
 
-    from openmdao.main.api import VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import VariableTree
+    from openmdao.lib.datatypes.api import Float, Slot
 
     
 .. testcode:: nested_vartree

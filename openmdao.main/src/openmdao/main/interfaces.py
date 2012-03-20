@@ -90,10 +90,9 @@ class IContainer(Interface):
     def get(path, index=None):
         """Return the object specified by the given 
         path, which may contain '.' characters.  *index*, if not None,
-        should be a list of container indices and/or single entry lists of attribute 
-        names.  For example, to get something like comp.x[2]['mykey'].child.value, 
-        *index* would look like:  [2,'mykey',['child'],['value']].  Attribute names
-        are placed in sublists because strings are valid container indices.
+        should be a list of container indices and/or tuples following
+        the protocol described in the docs for the 
+        openmdao.main.index.process_index_entry() function.
         """
 
     def get_pathname(rel_to_scope=None):
@@ -101,14 +100,15 @@ class IContainer(Interface):
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
         
-    def get_wrapped_attr(name):
+    def get_wrapped_attr(name, index=None):
         """If the named Variable can return an AttrWrapper, then this
         function will return that, with the value set to the current value of
         the variable. Otherwise, it functions like *getattr*, just
         returning the value of the variable. Raises an exception if the
         variable cannot be found. The value will be copied if the variable has
         a 'copy' metadata attribute that is not None. Possible values for
-        'copy' are 'shallow' and 'deep'.
+        'copy' are 'shallow' and 'deep'.  index, if not None, should be of
+        the same form as described in the get() function.
         """
         
     def items(recurse=False, **metadata):
@@ -301,6 +301,13 @@ class IDriver(IComponent):
         """Return a set of names (not pathnames) containing all Components
         in this Driver's workflow or any of its sub-workflows.
         """
+
+
+class IAssembly(IComponent):
+    """An interface for objects that contain a driver and its workflow components."""
+
+    driver = Attribute("object that manage's the iteration of a workflow")
+
 
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""
