@@ -138,13 +138,7 @@ def run_openmdao_suite(argv=None):
     if '--enable_console' in args:
         args.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
-
-    if '--plugin_install' in args:
-        args.remove('--plugin_install')
-        print "Running script to install and test each plugin in OpenMDAO-Plugins Github organization."
-        from openmdao.main.plugin_install import plugin_install
-        plugin_install()
-
+        
     if '--all' in args:
         args.remove('--all')
         args.extend(tlist)
