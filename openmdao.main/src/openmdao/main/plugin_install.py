@@ -20,20 +20,21 @@ def plugin_install():
 
     for plugin in github_plugins:
         try:
-            print "Installing plugin: ", plugin
-            if not call(['plugin', 'install', '--github', plugin]):
+            print "Installing plugin:", plugin
+            if call(['plugin', 'install', '--github', plugin]):
                 raise RuntimeError("Installation of plugin %s failed." % plugin)
             else:
-                print "Installation of ", plugin, " succeeded."
+                print "Installation of plugin", plugin, "succeeded."
             
-            print "Testing plugin: ", plugin    
-            if not call(['openmdao', 'test', plugin]):
-                raise RuntimeError("Testung of plugin %s failed." % plugin)
+            print "Testing plugin:", plugin    
+            if call(['openmdao', 'test', plugin]):
+                raise RuntimeError("Testing of plugin %s failed." % plugin)
+                
             else:
-                print "Testing of plugin ", plugin, "succeeded."
+                print "Testing of plugin", plugin, "succeeded."
                 
         finally:
-            print "Next plugin..."
+            print "_______________________________________________"
             
 
 if __name__ == '__main__':
