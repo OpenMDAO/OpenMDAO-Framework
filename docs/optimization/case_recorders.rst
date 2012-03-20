@@ -84,7 +84,7 @@ The ``DumpCaseRecorder`` is generally used to write readable text out to a
 file or to STDOUT. Let's try using a ``DumpCaseRecorder`` to output a history
 of our paramters, constraints, and objectives to a file named 'data.txt'.
 
-.. testcode :: dump_case
+::
 
     from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
     from openmdao.lib.casehandlers.api import DumpCaseRecorder
@@ -95,12 +95,6 @@ of our paramters, constraints, and objectives to a file named 'data.txt'.
     opt_problem.driver.recorders = [DumpCaseRecorder(outfile)]
     opt_problem.run()
 
-.. testcode :: dump_case
-    :hide:
-    
-    import os
-    if os.path.exists('data.txt'):
-        os.remove('data.txt')
             
 You should now have a file called 'data.txt' that contains output that looks
 like this:
@@ -117,7 +111,7 @@ like this:
          Objective: -27.0833333304
 
 We can also choose to print out all framework variables from components in
-this driver's workflow using a wildcard (*) in the printvars list, and
+this driver's workflow using the wildcard "*" in the printvars list, and
 rerunning the model. 
 
 ::
@@ -154,7 +148,17 @@ The output produced is more detailed:
 You can also use partial wildcard matches, and include multiple wildcards in the 
 ``printvars`` list, so scenarios like this:
 
+::
+
       opt_problem.driver.printvars = ['comp1.*', 'comp2.*', *error*]
 
 are possible. This will return a set of cases with all variables from comp1,
 comp2 as well as any variable with "error" in its name.
+
+The wildcard "?" is also supported for matching single characters, so you could
+rewrite the previous line like this:
+
+::
+
+      opt_problem.driver.printvars = ['comp?.*', *error*]
+

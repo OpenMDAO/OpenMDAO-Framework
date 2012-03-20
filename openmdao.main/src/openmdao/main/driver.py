@@ -3,7 +3,7 @@
 #public symbols
 __all__ = ["Driver"]
 
-from fnmatch import fnmatch
+import fnmatch
 
 from networkx.algorithms.shortest_paths.generic import shortest_path
 from enthought.traits.api import List
@@ -385,9 +385,7 @@ class Driver(Component):
         if pattern == '*':
             matched_vars = all_vars
         else:
-            for item in all_vars:
-                if fnmatch(item, pattern):
-                    matched_vars.append(item)
+            matched_vars = fnmatch.filter(all_vars, pattern)
         
         return matched_vars
                 
