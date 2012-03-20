@@ -10,7 +10,7 @@ from boto.ec2.connection import EC2Connection
 
 from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
                                     rm_remote_tree, make_git_archive, \
-                                    fabric_cleanup, ssh_test, fab_connect
+                                    fabric_cleanup, ssh_test, fab_connect, run
 
 from openmdao.util.debug import print_funct_call
 
@@ -46,6 +46,7 @@ def get_username():
         import pwd
         return pwd.getpwuid(os.getuid()).pw_name
 
+
 def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
                               stream=sys.stdout):
     """Starts up an EC2 instance having the specified 'short' name and
@@ -57,6 +58,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
     instance_type = config.get(name, 'instance_type')
     platform = config.get(name, 'platform')
     identity = config.get(name, 'identity')
+    py = config.get(name, 'py')
     key_name = os.path.splitext(os.path.basename(identity))[0]
     security_groups = [s.strip() for s in config.get(name, 'security_groups').split()
                        if len(s.strip())>0]
@@ -68,6 +70,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
     print "   identity: %s" % identity
     print "   key name: %s" % key_name
     print "   security_groups: %s" % security_groups
+    print "   python: %s" % py
         
     reservation = img.run(key_name=key_name, 
                           security_groups=security_groups,
@@ -230,6 +233,35 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
             if debug:
                 outf.write("<%s>: calling %s\n" % 
                                   (host, print_funct_call(funct, **kwargs)))
+                
+            py = config.get(host, 'py')
+            if platform.startswith('win') and '.' in py:
+                # convert pythonX.Y form over to C:/PythonXY/python.exe
+                ver = py[6:]
+                py = 'C:/Python%s/python.exe' % ver.replace('.','')
+        
+            max_tries = 25
+            sleep = 10
+            for i in range(max_tries):
+                time.sleep(sleep)
+                if debug: 
+                    print "testing python call over fabric connection (try #%d)" % (i+1)
+                # even though the instance is running, it takes a while (on Windows) before
+                # python actually works, so try some simple python command until it works.
+                try:
+                    retval = run('%s -c "dir()"' % py)
+                except:
+                    pass
+                else:
+                    if retval.failed or retval.return_code != 0:
+                        continue
+                    else:
+                        break
+            else:
+                stream.write("\nrunning python via fabric on %s failed after %d attempts.  terminating...\n" % (name, max_tries))
+                terminate_instance(inst, name, stream, debug)
+                raise RuntimeError("couldn't run python on %s via fabric" % name)
+
             retval = funct(**kwargs)
     except (SystemExit, Exception) as err:
         outf.write(str(err))

@@ -11,6 +11,7 @@ from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
+from openmdao.test.execcomp import ExecComp
 
 exec_order = []
 
@@ -663,8 +664,8 @@ class ExprDependsTestCase(unittest.TestCase):
         top = _nested_model()
         top.run()
         
-        top.sub.connect('comp1.c+sin(3.14)*comp2.c', 'comp4.a')
         total = top.sub.comp1.c + math.sin(3.14)*top.sub.comp2.c
+        top.sub.connect('comp1.c+sin(3.14)*comp2.c', 'comp4.a')
         self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
         exec_order = []
         top.run()
@@ -677,8 +678,8 @@ class ExprDependsTestCase(unittest.TestCase):
         vnames = ['a[0:2:]','a','b','c','d']
         top = self.top
         top.run()
-        top.connect('c1.c[3:]', 'c2.a[0:2]')
         total = top.c1.c[3:]
+        top.connect('c1.c[3:]', 'c2.a[0:2]')
         self.assertEqual(top.c2.get_valid(vnames), [False, True, True, False, False])
         exec_order = []
         top.run()
@@ -761,6 +762,33 @@ class ExprDependsTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
                     
+                    
+    def test_compare_models(self):
+        model1 = set_as_top(Assembly())
+        model1.add('comp1', ExecComp(exprs=['y=x**2']))
+        model1.add('comp2', ExecComp(exprs=['y=x+x**3']))
+        model1.add('comp3', ExecComp(exprs=['y=a+b']))
+        model1.driver.workflow.add(['comp1', 'comp2', 'comp3'])
+        model1.connect('comp1.y', 'comp3.a')
+        model1.connect('comp2.y', 'comp3.b')
+        model1.comp1.x = 1.5
+        model1.comp2.x = -2.1
+        model1.run()
+        model1_result = model1.comp3.y # 1.5**2+(-2.1)+(-2.1)**3
+        
+        model2 = set_as_top(Assembly())
+        model2.add('comp1', ExecComp(exprs=['y=x']))
+        model2.add('comp2', ExecComp(exprs=['y=x']))
+        model2.add('comp3', ExecComp(exprs=['y=x']))
+        model2.driver.workflow.add(['comp1', 'comp2', 'comp3'])
+        model2.connect('comp1.y**2+comp2.y+comp2.y**3', 'comp3.x')
+        model2.comp1.x = 1.5
+        model2.comp2.x = -2.1
+        model2.run()
+        model2_result = model2.comp3.y # 1.5**2+(-2.1)+(-2.1)**3
+        
+        self.assertEqual(model1_result, model2_result)
+        
         
 if __name__ == "__main__":
     
