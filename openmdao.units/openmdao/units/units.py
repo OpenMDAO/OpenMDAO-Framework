@@ -659,6 +659,7 @@ def import_library(libfilepointer):
     _UNIT_LIB.help = list()
   
     for prefix, factor in _UNIT_LIB.items('prefixes'):
+        factor, comma, comment = factor.partition(',')
         _UNIT_LIB.prefixes[prefix] = float(factor)
   
     base_list = [0] * len(_UNIT_LIB.items('base_units'))
@@ -709,35 +710,28 @@ def update_library(filename):
 def _update_library(cfg):
     """ Update library from :class:`ConfigParser` `cfg`. """
     retry1 = set()
-    retry2 = set()
-    retry_count = 0
-    last_retry_count = 99999
-  
     for name, unit in cfg.items('units'):
-        data = unit.split(',')
+        data = [item.strip() for item in unit.split(',')]
         if len(data) == 2:
+            unit, comment = data
             try:
-                comment = data[1]
-                unit = data[0]
                 add_unit(name, unit, comment)
             except NameError:
                 retry1.add((name, unit, comment))
         elif len(data) == 4: 
-            factor, baseunit, offset, comment = tuple(data)
+            factor, baseunit, offset, comment = data
             try:
                 add_offset_unit(name, baseunit, float(factor), float(offset),
                                 comment)
             except NameError:
                 retry1.add((name, baseunit, float(factor), float(offset), 
                             comment))
-  
-    for cruft in ['__builtins__', '__args__']:
-        try:
-            del _UNIT_LIB.unit_table[cruft]
-        except KeyError:
-            pass
-  
-    while (last_retry_count != retry_count and len(retry1)!=0):
+        else:
+            raise ValueError('Unit %r definition %r has invalid format',
+                             name, unit)
+    retry_count = 0
+    last_retry_count = -1
+    while last_retry_count != retry_count and retry1:
         last_retry_count = retry_count
         retry_count = 0
         retry2 = retry1.copy()
@@ -749,7 +743,7 @@ def _update_library(cfg):
                     retry1.remove(data)
                 except NameError:
                     retry_count += 1
-            if len(data) == 5:
+            else:
                 try:
                     name, factor, baseunit, offset, comment = data
                     add_offset_unit(name, factor, baseunit, offset, comment)

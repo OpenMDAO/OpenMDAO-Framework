@@ -239,9 +239,9 @@ class test__PhysicalQuantity(unittest.TestCase):
         x = units.PhysicalQuantity('33rev/min')
         x.convert_to_unit('rpm')
         self.assertEqual(x, units.PhysicalQuantity('33rpm'))
-        x = units.PhysicalQuantity('12month')
-        x.convert_to_unit('year')
-        self.assertEqual(x, units.PhysicalQuantity('1year'))
+        x = units.PhysicalQuantity('12mo')
+        x.convert_to_unit('yr')
+        self.assertEqual(x, units.PhysicalQuantity('1yr'))
         
     def test_prefix_plus_math(self):
         # From an issue: m**2 converts fine, but cm**2 does not.
