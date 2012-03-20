@@ -60,9 +60,15 @@ iteration coordinates to stderr (the default):
 
 .. testcode:: iteration_tracing
 
-    from openmdao.util.log import enable_trace
+    from openmdao.util.log import enable_trace, disable_trace
     enable_trace()
    
+Later, the tracing can be turned off:
+
+.. testcode:: iteration_tracing
+
+    disable_trace()
+
 An :term:`Assembly` is a container for your analysis models.   When an
 Assembly executes, it will always look for a Driver named `driver` and  start there, then work its
 way down the iteration hierarchy. 
