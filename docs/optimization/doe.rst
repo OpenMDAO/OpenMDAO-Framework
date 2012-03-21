@@ -238,8 +238,54 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
 If you would like to try this yourself, you can 
 download the whole file :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.    
 
+
+At times it's necessary to rerun an analysis. This can be a problem if the
+DOE generator used has a random component. To handle this DOEdriver records
+the normalized DOE values to a CSV file. This file can be read in later by
+a :ref:`CSVFile <openmdao.lib.doegenerators.csvfile.py>` DOE generator.
+The DOEdriver can then be configured to use this CSVFile generator to rerun
+the cases previously generated.
+
+.. testcode:: simple_model_doe_rerun
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.drivers.api import DOEdriver
+    from openmdao.lib.doegenerators.api import CSVFile, Uniform
+
+    from openmdao.examples.simple.paraboloid import Paraboloid
+    
+    
+    class Analysis(Assembly): 
+        
+        def configure(self):
+            self.add('paraboloid', Paraboloid())
+            self.add('driver', DOEdriver())
+            self.driver.DOEgenerator = Uniform(num_samples=1000)
+            self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+            self.driver.add_parameter('paraboloid.y', low=-50, high=50)
+            self.driver.case_outputs = ['paraboloid.f_xy']
+            self.driver.workflow.add('paraboloid')
+
+
+    if __name__ == '__main__':    
+
+        analysis = Analysis()
+
+        # Run original analysis.
+        analysis.run() 
+
+        # Reconfigure driver to rerun previously generated cases.
+        analysis.driver.DOEgenerator = CSVFile(analysis.driver.doe_filename)
+
+        # No need to re-record cases (and it avoids overwriting them).
+        analysis.driver.record_doe = False
+
+        # Rerun analysis.
+        analysis.run()
+
+
 ..
-  Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
+  Since DOEdriver is derived from :ref:`CaseIterDriverBase <caseiterdriver.py>`,
   it's possible to run the various cases concurrently.  If evaluating a case
   takes considerable time and you have a multiprocessor machine, setting
   ``analysis.driver.sequential`` to False will cause the cases to be evaluated
