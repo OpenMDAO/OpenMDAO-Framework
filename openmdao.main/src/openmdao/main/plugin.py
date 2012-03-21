@@ -663,60 +663,38 @@ def plugin_install(parser, options, args=None, capture=None):
     the specified plugin distribution into the current environment.
     
     """
+    print "ARGS: ", args
+    print "OPTIONS: ", options
+    
     if args:
         print_sub_help(parser, 'install')
         return -1
-    
-    # Interact with github (but not when testing).
-    if options.github:  # pragma no cover
-        # Get plugin from github.
-        
-        #FIXME: this should support all valid version syntax (>=, <=, etc.)
-        pieces = options.dist_name.split('==')
-        name = pieces[0]
-        
-        # User specified version using easy_install style ("plugin==version")
-        if len(pieces) > 1:
-            version = pieces[1]
-            
-        # Get most recent version from our tag list
-        else:
-            url = 'https://api.github.com/repos/OpenMDAO-Plugins/%s/tags' % name
-    
-            try:
-                resp = urllib2.urlopen(url)
-            except urllib2.HTTPError:
-                print "\nERROR: plugin named '%s' not found in OpenMDAO-Plugins" % name
-                return -1
-                
-            for line in resp.fp:
-                text = json.loads(line)
 
-                tags = []
-                for item in text:
-                    tags.append(item['name'])
-            try:
-                tags.sort(key=lambda s: map(int, s.split('.')))
-            except ValueError:
-                print "\nERROR: the releases for the plugin named '%s' have" \
-                      " not been tagged correctly for installation." % name
-                print "You may want to contact the repository owner"
-                return -1
-                
-            if not tags:
-                print "\nERROR: plugin named '%s' has no tagged releases." % name
-                print "You may want to contact the repository owner to create a tag"
-                return -1
-                
-            version = tags[-1]
-            
-        url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
-        print url
+    # Interact with github (but not when testing).
+    if options.github or options.all:  # pragma no cover
+        plugin_url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
+        github_plugins = []
+        if options.all:
+            #go get names of all the plugins
+            plugin_page = urllib2.urlopen(plugin_url)
+            for line in plugin_page.fp:
+                text = json.loads(line)
+                for item in sorted(text):
+                    github_plugins.append(item['name'])
+           
+         
+        else:
+            #just use the name of the specific plugin requested
+            github_plugins.append(options.dist_name)
         
-        build_docs_and_install(name, version, findlinks=options.findlinks)
+        for plugin in github_plugins:
+            try:
+                print "Installing plugin:", plugin
+                _github_install(plugin, options.findlinks)
+            finally:
+                pass
         
     else: # Install plugin from local file or directory
-    
         develop = False
         if not options.dist_name:
             print "installing distribution from current directory as a 'develop' egg"
@@ -749,6 +727,50 @@ def plugin_install(parser, options, args=None, capture=None):
         update_libpath(options)
     
     return 0
+
+def _github_install(dist_name, findLinks):
+    # Get plugin from github.
+    #FIXME: this should support all valid version syntax (>=, <=, etc.)
+    pieces = dist_name.split('==')
+    name = pieces[0]
+    
+    # User specified version using easy_install style ("plugin==version")
+    if len(pieces) > 1:
+        version = pieces[1]
+        
+    # Get most recent version from our tag list
+    else:
+        url = 'https://api.github.com/repos/OpenMDAO-Plugins/%s/tags' % name
+        try:
+            resp = urllib2.urlopen(url)
+        except urllib2.HTTPError:
+            print "\nERROR: plugin named '%s' not found in OpenMDAO-Plugins" % name
+            return -1
+            
+        for line in resp.fp:
+            text = json.loads(line)
+
+            tags = []
+            for item in text:
+                tags.append(item['name'])
+        try:
+            tags.sort(key=lambda s: map(int, s.split('.')))
+        except ValueError:
+            print "\nERROR: the releases for the plugin named '%s' have" \
+                  " not been tagged correctly for installation." % name
+            print "You may want to contact the repository owner"
+            return -1
+            
+        if not tags:
+            print "\nERROR: plugin named '%s' has no tagged releases." % name
+            print "You may want to contact the repository owner to create a tag"
+            return -1
+            
+        version = tags[-1]
+        
+    url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
+    print url
+    build_docs_and_install(name, version, findLinks)
 
         
 def update_libpath(options=None):
@@ -1084,6 +1106,7 @@ def _get_plugin_parser():
     parser.add_argument("-f", "--find-links", action="store", type=str, 
                         dest='findlinks', default='http://openmdao.org/dists',
                         help="URL of find-links server")
+    parser.add_argument("--all", help='Install all plugins from Github organization OpenMDAO-Plugins', action='store_true')
     parser.set_defaults(func=plugin_install)
     
     
