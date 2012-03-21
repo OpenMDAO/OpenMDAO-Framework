@@ -1227,6 +1227,7 @@ class Container(SafeHasTraits):
         Returns the root object.
         """
         top = eggloader.load(instream, fmt, package, logger)
+        top.cpath_updated()
         if name:
             top.name = name
         if call_post_load:
