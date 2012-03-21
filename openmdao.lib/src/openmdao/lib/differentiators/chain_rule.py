@@ -190,7 +190,7 @@ class ChainRule(HasTraits):
                     full_name = '.'.join([node_name, input_name])
                     
                     # Only look at connected local_inputs or parameters
-                    if full_name in node.parent._depgraph._allsrcs or \
+                    if full_name in node.parent._depgraph._depgraph._allsrcs or \
                        full_name in self.param_names:
                 
                         source = node.parent._depgraph.get_source(full_name)

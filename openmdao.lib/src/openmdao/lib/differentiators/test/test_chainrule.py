@@ -201,45 +201,21 @@ class ChainRuleTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp4.y1>0')
         assert_rel_error(self, grad[0], -313.0+25.0, .001)
     
-    def test_Hessian(self):
+    
+    #def test_reset_state(self):
         
-        raise SkipTest("Hessians not supported yet.")
+        #raise SkipTest("Test not needed yet.")
         
-        self.model.comp.x = 1.0
-        self.model.comp.u = 1.0
-        self.model.run()
-        self.model.driver.differentiator.default_stepsize = .001
-        self.model.driver.differentiator.calc_hessian()
-        assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('comp.y',wrt=('comp.x', 'comp.x')),
-                               2.0, .001)
-        assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('comp.y',wrt=('comp.u', 'comp.u')),
-                               18.0, .001)
-        assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('comp.y',wrt=('comp.x', 'comp.u')),
-                               4.0, .001)
-        assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('comp.y',wrt=('comp.u', 'comp.x')),
-                               4.0, .001)
-        assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('ConE',wrt=('comp.x', 'comp.x')),
-                               2.0, .001)        
-        assert_rel_error(self, self.model.driver.differentiator.get_2nd_derivative('ConE',wrt=('comp.u', 'comp.x')),
-                               4.0, .001)        
-        
-        hess = self.model.driver.differentiator.get_Hessian('comp.y')
-        
-        
-    def test_reset_state(self):
-        
-        raise SkipTest("Test not needed yet.")
-        
-        self.model.driver.form = 'central'
-        self.model.comp.x = 1.0
-        self.model.comp.u = 1.0
-        self.model.run()
-        self.model.driver.differentiator.calc_gradient()
-        assert_rel_error(self, self.model.comp.u,
-                              0.99, .0001)
-        self.model.driver.differentiator.reset_state()
-        assert_rel_error(self, self.model.comp.u,
-                              1.0, .0001)
+        #self.model.driver.form = 'central'
+        #self.model.comp.x = 1.0
+        #self.model.comp.u = 1.0
+        #self.model.run()
+        #self.model.driver.differentiator.calc_gradient()
+        #assert_rel_error(self, self.model.comp.u,
+                              #0.99, .0001)
+        #self.model.driver.differentiator.reset_state()
+        #assert_rel_error(self, self.model.comp.u,
+                              #1.0, .0001)
 
 if __name__ == '__main__':
     unittest.main()
