@@ -11,7 +11,7 @@ parameters to a driver. To demonstrate this, let's define a paraboloid
 function `f`, and minimize it with respect to two input variables, `x` and
 `y`. This function is given by
 
-f(x,y) = (1000*x-3)^2 + (1000*x)*(0.01*y) + (0.01*y+4)^2 - 3,
+.. math:: f(x,y) = (1000x-3)^2 + (1000x)*(0.01y) + (0.01y+4)^2 - 3
 
 and is implemented as the following openMDAO component:
 
@@ -126,7 +126,7 @@ quickly and using fewer iterations with scaling than without scaling.
 Next, let's look at a problem well-suited for both scalers and adders; a
 shifted and scaled paraboloid given by
 
-f(x,y) = (1000*x-3)^2 + (1000*x)*(0.01*(y+1000)) + (0.01*(y+1000)+4)^2 - 3,
+.. math:: f(x,y) = (1000x-3)^2 + (1000x)*(0.01*(y+1000)) + (0.01*(y+1000)+4)^2 - 3
 
 which has the minimum (0.006667, -1733.334333). This is implemented using the component:
 
