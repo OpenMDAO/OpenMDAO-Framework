@@ -17,9 +17,7 @@ function minimization problems may also be solved. The conjugate direction
 method of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
-<http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_. (In the :ref:`simple
-tutorial <A-Simple-Tutorial-Problem>`, CONMIN is used for an
-unconstrained and a constrained optimization.)
+<http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_. 
 
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
@@ -33,9 +31,7 @@ those that are more likely to be used by an expert user.
 
 For the simplest possible unconstrained optimization problem, CONMIN just needs
 an objective function and one or more decision variables (parameters.) The
-basic interface conforms to OpenMDAO's driver API, which is discussed in 
-:ref:`Driver-API`, and covers how to assign design variables, constraints, and
-objectives.
+basic interface conforms to OpenMDAO's driver API.
 
 The OpenMDAO CONMIN driver can be imported from ``openmdao.lib.drivers.api``.
 
@@ -84,9 +80,7 @@ This assembly contains a DrivingSim component and a CONMINdriver, both of
 which are created and added inside the ``__init__`` function with ``add``. The
 DrivingSim component is also added to the driver's workflow. The objective
 function, design variables, constraints, and any CONMIN parameters are also
-assigned in the ``__init__`` function. The specific syntax for all of these is
-discussed in :ref:`Driver-API`.
-
+assigned in the ``__init__`` function. 
 
 **Controlling the Optimization**
 
@@ -157,7 +151,7 @@ step size relative to the design variable.
 
 You can also replace CONMIN's finite difference with OpenMDAO's built-in
 capability by inserting a differentiator into the Differentiator slot in the
-driver, as shown in :ref:`Calculating-Derivatives-with-Finite-Difference`.
+driver.
 
 For certain problems, it is desirable to scale the inputs.
 Several scaling options are available, as summarized here:
