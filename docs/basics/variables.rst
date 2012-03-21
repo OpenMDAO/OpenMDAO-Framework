@@ -10,8 +10,7 @@ model must use variables to declare the inputs and outputs for each
 component.
 
 You can create a variable for a component in two ways. The first is to
-declare it in the component's class definition as shown in the example 
-given in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`. A simple component that takes
+declare it in the component's class definition. A simple component that takes
 a floating point number as an input and provides a floating point number as an
 output would look like this:
 
@@ -332,8 +331,7 @@ by `FileMetadata`, which supports arbitrary user metadata.
     binary_file = File(path='source.bin', iotype='out', binary=True,
                             extra_stuff='Hello world!')
 
-The *path* must be a descendant of the parent component's path, as
-explained in :ref:`Files-and-Directories`. The *binary* flag can be used to
+The *path* must be a descendant of the parent component's path. The *binary* flag can be used to
 mark a file as binary. 
 
 .. todo::

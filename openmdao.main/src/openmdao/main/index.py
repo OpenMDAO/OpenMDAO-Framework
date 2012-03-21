@@ -7,16 +7,15 @@ SLICE = 3
 
 def process_index_entry(obj, idx):
     """
-::
     
     Return a new object based on a starting object and some operation
     indicated by idx that can be either an index into a container, an 
     attribute access, or a fuction call.  idx can be non-tuple hashable
     object, which will be interpreted as an index to a container, or it can
-    be a tuple of the form (operation_id, stuff)
-        
-        where operation_id is as follows (the named constants are defined in expreval.py):
-          INDEX = 0
+    be a tuple of the form (operation_id, stuff) where operation_id is 
+    as follows (the named constants are defined in expreval.py)::
+          
+	  INDEX = 0
           ATTR = 1
           CALL = 2
           SLICE = 3
@@ -24,19 +23,18 @@ def process_index_entry(obj, idx):
     On the off chance that you want to use a tuple as a key into a dict, you'll have to
     nest your key tuple inside of an INDEX tuple to avoid ambiguity, e.g., (INDEX, my_tuple)
           
-    The forms of the various tuples are:
+    The forms of the various tuples are::
           
           INDEX:   (0, idx)  where idx is some hashable value
           ATTR:    (1, name) where name is the attribute name
-          CALL:    (2, args, kwargs) where args is a list of values and kwargs
-                                     is a list of tuples of the form (keyword,value).
-                                     kwargs can be left out if empty.  args
-                                     can be left out if empty as long as kwargs
-                                     are also empty, for example, (2,) and 
-                                     (2,[],[('foo',1)]) are valid
-                                     but (2,[('foo',1)]) is not.
-          SLICE:   (3, lower, upper, step) All members must be present and should
-                                           have a value of None if not set.
+	  CALL:    (2, args, kwargs) where args is a list of values, and kwargs is a list
+		   of tuples of the form (keyword,value). kwargs can be left out if
+		   empty.  args can be left out if empty as long as kwargs are also
+		   empty, for example, (2,) and  (2,[],[('foo',1)]) are valid but
+		   (2,[('foo',1)]) is not.
+	  SLICE:   (3, lower, upper, step) All members must be present and should have a
+		   value of None if not set.
+
     """
     if not isinstance(idx, tuple):
         return obj[idx]
