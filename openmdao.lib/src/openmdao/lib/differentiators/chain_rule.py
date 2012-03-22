@@ -175,6 +175,7 @@ class ChainRule(HasTraits):
             node_name = node.name
     
             incoming_deriv_names = {}
+            incoming_derivs = {}
             
             # This component can determine its derivatives.
             if hasattr(node, 'calculate_first_derivatives'):
@@ -188,6 +189,7 @@ class ChainRule(HasTraits):
                 for input_name in local_inputs:
                     
                     full_name = '.'.join([node_name, input_name])
+                    print node.parent._depgraph._depgraph.in_links(node_name)
                     
                     # Only look at connected local_inputs or parameters
                     if full_name in node.parent._depgraph._depgraph._allsrcs or \
@@ -199,9 +201,12 @@ class ChainRule(HasTraits):
                         # with derivatives in the chain
                         if source in derivs:
                             incoming_deriv_names[input_name] = source
+                            incoming_derivs[source] = derivs[source]
+                            
                         # or who are connected to one of the parameters
                         elif full_name in derivs:
                             incoming_deriv_names[input_name] = full_name
+                            incoming_derivs[full_name] = derivs[full_name]
                             
                             
             # This component must be finite differenced.
@@ -219,7 +224,7 @@ class ChainRule(HasTraits):
                 for input_name, full_input_name in incoming_deriv_names.iteritems():
                     derivs[full_output_name] += \
                         local_derivs[output_name][input_name] * \
-                        derivs[full_input_name]
+                        incoming_derivs[full_input_name]
                         
 
     def calc_hessian(self, reuse_first=False):
