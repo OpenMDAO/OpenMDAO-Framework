@@ -662,10 +662,7 @@ def plugin_install(parser, options, args=None, capture=None):
     """A command line script (plugin install) points to this. It installs
     the specified plugin distribution into the current environment.
     
-    """
-    print "ARGS: ", args
-    print "OPTIONS: ", options
-    
+    """ 
     if args:
         print_sub_help(parser, 'install')
         return -1
@@ -674,15 +671,15 @@ def plugin_install(parser, options, args=None, capture=None):
     if options.github or options.all:  # pragma no cover
         plugin_url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
         github_plugins = []
+        
         if options.all:
-            #go get names of all the plugins
+            #go get names of all the github plugins
             plugin_page = urllib2.urlopen(plugin_url)
             for line in plugin_page.fp:
                 text = json.loads(line)
                 for item in sorted(text):
                     github_plugins.append(item['name'])
            
-         
         else:
             #just use the name of the specific plugin requested
             github_plugins.append(options.dist_name)
@@ -691,7 +688,7 @@ def plugin_install(parser, options, args=None, capture=None):
             try:
                 print "Installing plugin:", plugin
                 _github_install(plugin, options.findlinks)
-            finally:
+            except:
                 pass
         
     else: # Install plugin from local file or directory
@@ -1100,13 +1097,14 @@ def _get_plugin_parser():
                              ' (defaults to distrib found in current dir)', 
                         nargs='?')
     parser.add_argument("--github", 
-                        help='Find plugin in the official Openmdao-Plugins'
+                        help='Find plugin in the official OpenMDAO-Plugins'
                              ' repository on github', 
                         action='store_true')
     parser.add_argument("-f", "--find-links", action="store", type=str, 
                         dest='findlinks', default='http://openmdao.org/dists',
                         help="URL of find-links server")
-    parser.add_argument("--all", help='Install all plugins from Github organization OpenMDAO-Plugins', action='store_true')
+    parser.add_argument("--all", help='Install all plugins in the official OpenMDAO-Plugins'
+                        ' repository on github', action='store_true')
     parser.set_defaults(func=plugin_install)
     
     

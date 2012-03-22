@@ -142,6 +142,15 @@ def run_openmdao_suite(argv=None):
     if '--all' in args:
         args.remove('--all')
         args.extend(tlist)
+    
+    if '--plugins' in args:
+        args.remove('--plugins')
+        from openmdao.main.plugin import plugin_install, _get_plugin_parser
+        argv = ['install', '--all']
+        parser = _get_plugin_parser()
+        options, argz = parser.parse_known_args(argv) 
+        plugin_install(parser, options, argz)
+        
         
     # some libs we use call multiprocessing.cpu_count() on import, which can
     # raise NotImplementedError, so try to monkeypatch it here to return 1 if
