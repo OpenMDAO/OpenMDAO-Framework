@@ -11,7 +11,6 @@ Simple Optimization
    overview
    unconstrained
    constrained
-   scaler_adder
    doe
    case_recorders
    derivatives

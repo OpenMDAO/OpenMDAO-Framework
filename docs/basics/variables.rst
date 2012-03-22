@@ -481,8 +481,8 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, VariableTree
-    from openmdao.lib.datatypes.api import Float, Slot
+    from openmdao.main.api import Component, VariableTree, Slot
+    from openmdao.lib.datatypes.api import Float
 
     class FlightCondition(VariableTree):
         """Container of variables"""
@@ -541,8 +541,8 @@ another VariableTree, so any level of nesting is possible.  For example:
 
 .. testsetup:: nested_vartree
 
-    from openmdao.main.api import VariableTree
-    from openmdao.lib.datatypes.api import Float, Slot
+    from openmdao.main.api import VariableTree, Slot
+    from openmdao.lib.datatypes.api import Float
 
     
 .. testcode:: nested_vartree
