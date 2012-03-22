@@ -14,7 +14,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.hasstopcond import HasStopConditions
 
 from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
-     ParetoFilter, Mux
+     ParetoFilter
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 from openmdao.lib.casehandlers.api import DBCaseIterator
 from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
@@ -62,7 +62,7 @@ class Analysis(Assembly):
         self.spiral_meta_model.recorder = DBCaseRecorder(':memory:')
         self.spiral_meta_model.force_execute = True
         
-        self.add("MOEI",MultiObjExpectedImprovement())
+        self.add("MOEI",MultiObjExpectedImprovement(2))
         self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
         
         self.add("filter",ParetoFilter())
@@ -88,7 +88,7 @@ class Analysis(Assembly):
         #self.MOEI_opt.selection_method = "tournament"
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
-        self.MOEI_opt.add_objective("MOEI.PI")
+        self.MOEI_opt.add_objective("MOEI.EI")
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("spiral_meta_model.train_next")
@@ -98,7 +98,6 @@ class Analysis(Assembly):
         self.iter.iterations = 30
         self.iter.add_stop_condition('MOEI.EI <= .0001')
         
-        self.add("EI_mux",Mux(2))
         
         #Iteration Heirarchy
         self.driver.workflow.add(['DOE_trainer', 'iter'])
@@ -108,14 +107,13 @@ class Analysis(Assembly):
         self.iter.workflow = SequentialWorkflow()
         self.iter.workflow.add(['filter', 'MOEI_opt', 'retrain'])
         
-        self.MOEI_opt.workflow.add(['spiral_meta_model', 'EI_mux', 'MOEI'])
+        self.MOEI_opt.workflow.add(['spiral_meta_model', 'MOEI'])
         self.retrain.workflow.add('spiral_meta_model')
         
         #Data Connections
         self.connect("filter.pareto_set","MOEI.best_cases")
-        self.connect("spiral_meta_model.f1_xy","EI_mux.input_1")
-        self.connect("spiral_meta_model.f2_xy","EI_mux.input_2")
-        self.connect("EI_mux.output","MOEI.predicted_values")
+        self.connect("spiral_meta_model.f1_xy","MOEI.predicted_values[0]")
+        self.connect("spiral_meta_model.f2_xy","MOEI.predicted_values[1]")
         
     def cleanup(self):
         """cleans up any files left in the temp directory from execution"""
