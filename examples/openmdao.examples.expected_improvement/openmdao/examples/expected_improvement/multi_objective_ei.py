@@ -62,7 +62,7 @@ class Analysis(Assembly):
         self.spiral_meta_model.recorder = DBCaseRecorder(':memory:')
         self.spiral_meta_model.force_execute = True
         
-        self.add("MOEI",MultiObjExpectedImprovement(2))
+        self.add("MOEI",MultiObjExpectedImprovement())
         self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
         
         self.add("filter",ParetoFilter())
@@ -88,7 +88,7 @@ class Analysis(Assembly):
         #self.MOEI_opt.selection_method = "tournament"
         self.MOEI_opt.add_parameter("spiral_meta_model.x")
         self.MOEI_opt.add_parameter("spiral_meta_model.y")
-        self.MOEI_opt.add_objective("MOEI.EI")
+        self.MOEI_opt.add_objective("MOEI.PI")
         
         self.add("retrain",MyDriver())
         self.retrain.add_event("spiral_meta_model.train_next")
@@ -96,7 +96,7 @@ class Analysis(Assembly):
         
         self.add("iter",IterateUntil())
         self.iter.iterations = 30
-        self.iter.add_stop_condition('MOEI.EI <= .0001')
+        self.iter.add_stop_condition('MOEI.PI <= .0001')
         
         
         #Iteration Heirarchy
