@@ -17,7 +17,8 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
             bests.record(case)
         ei.best_cases = bests
         ei.criteria = ["y1","y2"]
-        ei.predicted_values = [NormalDistribution(mu=1,sigma=1),NormalDistribution(mu=0,sigma=1)]
+        ei.predicted_values = [NormalDistribution(mu=1,sigma=1),
+                               NormalDistribution(mu=0,sigma=1)]
         ei.calc_switch = "EI"
         ei.execute()
         self.assertAlmostEqual([5.0],ei.EI,1)
@@ -32,8 +33,8 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         ei.best_cases = bests
         ei.criteria = ['y1','y2','y3']
         ei.predicted_values = [NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1)]
+                               NormalDistribution(mu=1,sigma=1),
+                               NormalDistribution(mu=1,sigma=1)]
         ei.execute()
         self.assertAlmostEqual(0.875,ei.PI,1)
 
@@ -46,8 +47,8 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         ei.best_cases = bests
         ei.criteria = ['y1','y2','y3']
         ei.predicted_values = [NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1)]
+                               NormalDistribution(mu=1,sigma=1),
+                               NormalDistribution(mu=1,sigma=1)]
         ei.calc_switch = 'EI'
         try:
             ei.execute()
