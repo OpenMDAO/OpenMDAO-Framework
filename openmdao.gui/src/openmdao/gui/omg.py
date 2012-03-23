@@ -107,7 +107,7 @@ class AppServer(object):
                                 }
                            },
                            MEDIA_ROOT=os.path.join(user_dir,'projects'),
-                           INSTALLED_APPS=('projdb',
+                           INSTALLED_APPS=('openmdao.gui.projdb',
                                            'django.contrib.auth',
                                            'django.contrib.contenttypes',))
 
