@@ -178,9 +178,10 @@ class CSVCaseRecorder(object):
         self.delimiter = delimiter
         self.quotechar = quotechar
         self.append = append
+        self._header_size = 0
         
         #Open output file
-        self.write_headers = False
+        self._write_headers = False
         self.filename = filename
         
     @property
@@ -203,7 +204,7 @@ class CSVCaseRecorder(object):
             # Whenever we start a new CSV file, we need to insert a line
             # of headers. These won't be available until the first
             # case is passed to self.record.
-            self.write_headers = True
+            self._write_headers = True
             
         self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
                                      quotechar=self.quotechar,
@@ -230,7 +231,7 @@ class CSVCaseRecorder(object):
         Field i+j+9 - msg
         """
         
-        if self.write_headers:
+        if self._write_headers:
             
             headers = ['label', '/INPUTS']
             
@@ -244,7 +245,8 @@ class CSVCaseRecorder(object):
                             'msg'])
                     
             self.csv_writer.writerow(headers)
-            self.write_headers = False
+            self._write_headers = False
+            self._header_size = len(headers)
             
         data = [case.label]
                 
@@ -254,6 +256,9 @@ class CSVCaseRecorder(object):
             
         data.extend(['', case.retries, case.max_retries, 
                      case.parent_uuid, case.msg])
+        
+        if self._header_size != len(data):
+            raise RuntimeError("number of data points doesn't match header size in CSV recorder")
         
         self.csv_writer.writerow(data)
 

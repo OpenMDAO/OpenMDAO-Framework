@@ -266,21 +266,33 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             self.fail("couldn't find the expected Case")
             
     def test_CSVCaseRecorder_messages(self):
+        rec = CSVCaseRecorder(filename=self.filename)
+        rec.record(Case(inputs=[('comp1.x',2.0),('comp1.y',4.3),('comp2.x',1.9)]))
+        try:
+            rec.record(Case(inputs=[('comp1.x',2.0),('comp2.x',1.9)]))
+        except Exception as err:
+            self.assertEqual(str(err), "number of data points doesn't match header size in CSV recorder")
+        else:
+            self.fail("Exception expected")
         
         self.top.comp2.add('a_slot', Slot(object, iotype='in'))
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
 
         case = Case(inputs=[('comp2.a_slot', None)])
 
-        try:
-            self.top.driver.recorders[0].record(case)
-        except ValueError, err:
-            msg = "CSV format does not support variables of type <type 'NoneType'>"
-            self.top.driver.recorders[0].outfile.close()
-            self.assertEqual(msg, str(err))
-        else:
-            self.top.driver.recorders[0].outfile.close()
-            self.fail('ValueError Expected')
+        ## BAN - took this test out because only types with a flattener function
+        ##       will be returned by the Case, so incompatible types just won't
+        ##       be seen by the CSVCaseRecorder at all.  Need to discuss with
+        ##       users (and Ken) to see if this is reasonable.
+        #try:
+            #self.top.driver.recorders[0].record(case)
+        #except ValueError, err:
+            #msg = "CSV format does not support variables of type <type 'NoneType'>"
+            #self.top.driver.recorders[0].outfile.close()
+            #self.assertEqual(msg, str(err))
+        #else:
+            #self.top.driver.recorders[0].outfile.close()
+            #self.fail('ValueError Expected')
         
 
 if __name__ == '__main__':
