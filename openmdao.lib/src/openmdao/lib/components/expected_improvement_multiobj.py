@@ -36,7 +36,7 @@ class MultiObjExpectedImprovement(Component):
                     desc="Names of responses to maximize expected improvement around. \
                     Must be NormalDistribution type.")
     
-    predicted_values = Array([0,0],shape=(2,),iotype="in",dtype=NormalDistribution,
+    predicted_values = Array([0,0],iotype="in",dtype=NormalDistribution,
                         desc="CaseIterator which contains NormalDistributions for each \
                         response at a location where you wish to calculate EI.")
     
