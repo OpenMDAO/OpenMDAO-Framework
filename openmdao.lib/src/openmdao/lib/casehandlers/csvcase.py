@@ -172,7 +172,7 @@ class CSVCaseRecorder(object):
     
     implements(ICaseRecorder)
     
-    def __init__(self, filename='cases.csv', append=False, delimiter=',', \
+    def __init__(self, filename='cases.csv', append=False, delimiter=',',
                  quotechar = '"'):
         
         self.delimiter = delimiter
@@ -205,8 +205,8 @@ class CSVCaseRecorder(object):
             # case is passed to self.record.
             self.write_headers = True
             
-        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter, \
-                                     quotechar=self.quotechar, \
+        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
+                                     quotechar=self.quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
 
 
@@ -241,7 +241,7 @@ class CSVCaseRecorder(object):
             for name in case.keys(iotype='out'):
                 headers.append(name)
                 
-            for item in ['/METADATA', 'retries', 'max_retries', 'parent_uuid', \
+            for item in ['/METADATA', 'retries', 'max_retries', 'parent_uuid',
                            'msg']:
                 headers.append(item)
                     
@@ -260,11 +260,11 @@ class CSVCaseRecorder(object):
                 if isinstance(value, (int, float, str)):
                     data.append(value)
                 else:
-                    raise ValueError('CSV format does not support ' + \
+                    raise ValueError('CSV format does not support ' + 
                                'variables of type %s' % type(value))
             
         data.append('')
-        for item in (case.retries, case.max_retries, \
+        for item in (case.retries, case.max_retries, 
                      case.parent_uuid, case.msg):
             data.append(item)
         

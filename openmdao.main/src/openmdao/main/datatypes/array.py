@@ -185,3 +185,25 @@ class Array(TraitArray):
             return super(Array, self).validate(obj, name, value)
         except Exception:
             self.error(obj, name, value)
+
+            
+# register a flattener for Cases
+from openmdao.main.case import flatteners
+
+def _flatten_array(name, arr):
+    ret = []
+    
+    def _recurse_flatten(ret, name, idx, arr):
+        for i,entry in enumerate(arr):
+            new_idx = idx+[i]
+            if isinstance(entry, (ndarray, list)):
+                _recurse_flatten(ret, name, new_idx, entry)
+            else:
+                idxstr = ''.join(["[%d]" % j for j in new_idx])
+                ret.append("%s%s" % (name, idxstr), entry)
+    
+    _recurse_flatten(ret, name, [], arr)
+    return ret
+        
+flatteners[ndarray] = _flatten_array
+flatteners[array] = _flatten_array

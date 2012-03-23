@@ -7,12 +7,20 @@ from StringIO import StringIO
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import TracedError
 
+__all__ = ["Case"]
+
 class _Missing(object):
     pass
 
 # regex to check for simple names
 _namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
+
+def _noflatten(name, obj):
+    return [(name, obj)]
+
+flatteners = { # dict of functions that know how to 'flatten' a given object instance
+    } 
 
 class Case(object):
     """Contains all information necessary to specify an input *case*, i.e., a
@@ -131,26 +139,50 @@ class Case(object):
     def get_output(self, name):
         if self._outputs:
             return self._outputs[name]
-        raise KeyError("'%s' not found" % name)        
+        raise KeyError("'%s' not found" % name)
     
-    def items(self, iotype=None):
+    def get_inputs(self, flatten=False):
+        if flatten:
+            ret = []
+            for k,v in self._inputs.items():
+                flattener = flatteners.get(type(v), _noflatten)
+                ret.extend(flattener(k, v))
+            return ret
+        else:
+            return self._inputs.items()
+        
+    def get_outputs(self, flatten=False):
+        if flatten:
+            ret = []
+            for k,v in self._outputs.items():
+                flattener = flatteners.get(type(v), _noflatten)
+                ret.extend(flattener(k, v))
+            return ret
+        else:
+            return self._outputs.items()
+        
+    def items(self, iotype=None, flatten=False):
         """Return a list of (name,value) tuples for variables/expressions in this Case.
         
         iotype: str or None
             If 'in', only inputs are returned.
             If 'out', only outputs are returned
             If None (the default), inputs and outputs are returned
+            
+        flatten: bool
+            If True, split multi-part Variables (like VariableTrees and Arrays) into
+            their constituents.
         """
         if iotype is None:
             if self._outputs:
-                return self._inputs.items() + self._outputs.items()
+                return self.get_inputs(flatten) + self.get_outputs(flatten)
             else:
-                return self._inputs.items()
+                return self.get_inputs(flatten)
         elif iotype == 'in':
-            return self._inputs.items()
+            return self.get_inputs(flatten)
         elif iotype == 'out':
             if self._outputs:
-                return self._outputs.items()
+                return self.get_outputs(flatten)
             else:
                 return []
         else:
