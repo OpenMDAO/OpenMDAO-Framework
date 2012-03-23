@@ -189,25 +189,34 @@ class ChainRule(HasTraits):
                 for input_name in local_inputs:
                     
                     full_name = '.'.join([node_name, input_name])
-                    print node.parent._depgraph._depgraph.in_links(node_name)
                     
-                    # Only look at connected local_inputs or parameters
-                    if full_name in node.parent._depgraph._depgraph._allsrcs or \
-                       full_name in self.param_names:
+                    # Inputs who are connected in this assembly
+                    if full_name in node.parent._depgraph._depgraph._allsrcs:
                 
-                        source = node.parent._depgraph.get_source(full_name)
+                        sources = node.parent._depgraph._depgraph.connections_to(full_name)
+                        source_expression = node.parent._depgraph.connections_to(full_name)
                         
-                        # Only process inputs who are connected to outputs
-                        # with derivatives in the chain
-                        if source in derivs:
-                            incoming_deriv_names[input_name] = source
-                            incoming_derivs[source] = derivs[source]
+                        expression_derivative = False
+                        if source_expression != sources:
+                            expression_derivative = True
+                        
+                        for source_tuple in sources:
                             
-                        # or who are connected to one of the parameters
-                        elif full_name in derivs:
-                            incoming_deriv_names[input_name] = full_name
-                            incoming_derivs[full_name] = derivs[full_name]
+                            source = source_tuple[0]
                             
+                            # Only process inputs who are connected to outputs
+                            # with derivatives in the chain
+                            if source in derivs:
+                                incoming_deriv_names[input_name] = source
+                                incoming_derivs[source] = derivs[source]
+                            
+                    # Inputs who are hooked directly to the parameters
+                    elif full_name in self.param_names and \
+                            full_name in derivs:
+                            
+                        incoming_deriv_names[input_name] = full_name
+                        incoming_derivs[full_name] = derivs[full_name]
+                        
                             
             # This component must be finite differenced.
             else:

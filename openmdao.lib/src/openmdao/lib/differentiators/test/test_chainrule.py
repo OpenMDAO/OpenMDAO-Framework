@@ -189,7 +189,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.connect('comp3.y1', 'comp4.x2')
         self.top.connect('comp4.y1', 'comp5.x1')
         self.top.connect('comp4.y2', 'comp5.x2')
-        self.top.connect('comp4.y3', 'comp5.x3')
+        self.top.connect('comp4.y3 + 0.0*comp4.y2', 'comp5.x3')
     
         self.top.comp1.x1 = 2.0
         self.top.run()
