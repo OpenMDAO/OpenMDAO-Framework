@@ -146,10 +146,12 @@ class VariableTree(Container):
 
 
 # register a flattener for Cases
-from openmdao.main.case import flatteners
+from openmdao.main.case import flatteners, flatten_obj
 
 def _flatten_vartree(name, vt):
-    return [('.'.join([name, n]), v) for n,v in vt._items(set(), recurse=True)
-            if not isinstance(v, VariableTree)]
-        
+    ret = []
+    for n,v in vt._items(set()):
+        ret.extend([('.'.join([name,k]),v) for k,v in flatten_obj(n,v)])
+    return ret
+
 flatteners[VariableTree] = _flatten_vartree

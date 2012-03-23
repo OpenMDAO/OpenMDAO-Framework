@@ -130,7 +130,7 @@ class Array(TraitArray):
         info = "an array-like object"
         
         # pylint: disable-msg=E1101
-        if self.shape and value.shape:
+        if self.shape and hasattr(value, 'shape') and value.shape:
             if self.shape != value.shape:
                 info += " of shape %s" % str(self.shape)
                 wtype = "shape"
@@ -200,7 +200,7 @@ def _flatten_array(name, arr):
                 _recurse_flatten(ret, name, new_idx, entry)
             else:
                 idxstr = ''.join(["[%d]" % j for j in new_idx])
-                ret.append("%s%s" % (name, idxstr), entry)
+                ret.append(("%s%s" % (name, idxstr), entry))
     
     _recurse_flatten(ret, name, [], arr)
     return ret

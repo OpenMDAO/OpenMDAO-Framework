@@ -234,39 +234,26 @@ class CSVCaseRecorder(object):
             
             headers = ['label', '/INPUTS']
             
-            for name in case.keys(iotype='in'):
-                headers.append(name)
+            headers.extend(case.keys(iotype='in', flatten=True))
                 
             headers.append('/OUTPUTS')
-            for name in case.keys(iotype='out'):
-                headers.append(name)
+            
+            headers.extend(case.keys(iotype='out', flatten=True))
                 
-            for item in ['/METADATA', 'retries', 'max_retries', 'parent_uuid',
-                           'msg']:
-                headers.append(item)
+            headers.extend(['/METADATA', 'retries', 'max_retries', 'parent_uuid',
+                            'msg'])
                     
             self.csv_writer.writerow(headers)
             self.write_headers = False
             
-        data = []
-        
-        data.append(case.label)
-        #data.append(case.uuid)
-        
+        data = [case.label]
+                
         for iotype in ['in', 'out']:
             data.append('')
-            for value in case.values(iotype=iotype):
-                
-                if isinstance(value, (int, float, str)):
-                    data.append(value)
-                else:
-                    raise ValueError('CSV format does not support ' + 
-                               'variables of type %s' % type(value))
+            data.extend(case.values(iotype=iotype, flatten=True))
             
-        data.append('')
-        for item in (case.retries, case.max_retries, 
-                     case.parent_uuid, case.msg):
-            data.append(item)
+        data.extend(['', case.retries, case.max_retries, 
+                     case.parent_uuid, case.msg])
         
         self.csv_writer.writerow(data)
 

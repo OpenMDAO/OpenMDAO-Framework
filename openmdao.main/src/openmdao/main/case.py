@@ -3,6 +3,7 @@ from uuid import uuid1
 import re
 import traceback
 from StringIO import StringIO
+from inspect import getmro
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import TracedError
@@ -16,11 +17,24 @@ class _Missing(object):
 _namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
-def _noflatten(name, obj):
+def _simpleflatten(name, obj):
     return [(name, obj)]
 
 flatteners = { # dict of functions that know how to 'flatten' a given object instance
+       int: _simpleflatten,
+       float: _simpleflatten,
+       str: _simpleflatten,
+       unicode: _simpleflatten,
     } 
+
+def flatten_obj(name, obj):
+    f = flatteners.get(type(obj))
+    if f:
+        return f(name, obj)
+    for klass in getmro(type(obj))[1:]:
+        if klass in flatteners:
+            return flatteners[klass](name, obj)
+    return []
 
 class Case(object):
     """Contains all information necessary to specify an input *case*, i.e., a
@@ -145,8 +159,7 @@ class Case(object):
         if flatten:
             ret = []
             for k,v in self._inputs.items():
-                flattener = flatteners.get(type(v), _noflatten)
-                ret.extend(flattener(k, v))
+                ret.extend(flatten_obj(k, v))
             return ret
         else:
             return self._inputs.items()
@@ -155,8 +168,7 @@ class Case(object):
         if flatten:
             ret = []
             for k,v in self._outputs.items():
-                flattener = flatteners.get(type(v), _noflatten)
-                ret.extend(flattener(k, v))
+                ret.extend(flatten_obj(k, v))
             return ret
         else:
             return self._outputs.items()
@@ -188,7 +200,7 @@ class Case(object):
         else:
             raise NameError("invalid iotype arg (%s). Must be 'in','out',or None" % str(iotype))
         
-    def keys(self, iotype=None):
+    def keys(self, iotype=None, flatten=False):
         """Return a list of name/expression strings for this Case.
         
         iotype: str or None
@@ -196,9 +208,9 @@ class Case(object):
             If 'out', only outputs are returned
             If None (the default), inputs and outputs are returned
         """
-        return [k for k,v in self.items(iotype)]
+        return [k for k,v in self.items(iotype, flatten=flatten)]
         
-    def values(self, iotype=None):
+    def values(self, iotype=None, flatten=False):
         """Return a list of values for this Case.
         
         iotype: str or None
@@ -206,7 +218,7 @@ class Case(object):
             If 'out', only outputs are returned
             If None (the default), inputs and outputs are returned
         """
-        return [v for k,v in self.items(iotype)]
+        return [v for k,v in self.items(iotype, flatten=flatten)]
     
     def reset(self):
         """Remove any saved output values, set retries to None, get a new uuid
