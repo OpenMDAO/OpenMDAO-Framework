@@ -204,7 +204,7 @@ class ExprMapper(object):
         srcrefs = srcexpr.refs()
         for srcref in srcrefs:
             try:
-                self._depgraph.connect(srcref, destexpr.text, self, expr=srcexpr)
+                self._depgraph.connect(srcref, destexpr.text, scope, expr=srcexpr)
             except Exception as err:
                 scope.raise_exception("Can't connect '%s' to '%s': %s" % 
                                       (srcref, destexpr.text, str(err)), RuntimeError)
