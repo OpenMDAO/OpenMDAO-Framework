@@ -88,28 +88,6 @@ class DependencyGraph(object):
     
     def get_source(self, destpath):
         return self._allsrcs.get(destpath)
-        #cname, _, vname = destpath.partition('.')
-        #if vname: # internal dest
-            #for srccomp, link in self.in_links(cname):
-                #src = link._dests.get(vname)
-                #if src:
-                    #if srccomp[0] == '@':
-                        #return src
-                    #else:
-                        #return '.'.join([srccomp,src])
-        #else: # boundary dest
-            #try:
-                #dests = self._graph['@xin']['@bin']['link']._dests
-            #except KeyError:
-                #dests = {}
-            #srclst = dests.get(destpath)
-            #if srclst:
-                #return srclst
-            #for u,v,data in self._graph.in_edges('@bout', data=True):
-                #srclst = data['link']._dests.get(destpath)
-                #if srclst:
-                    #return ['.'.join([u, src]) for src in srclst]
-        #return None
 
     def add(self, name):
         """Add the name of a Component to the graph."""

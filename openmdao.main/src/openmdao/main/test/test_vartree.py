@@ -7,7 +7,7 @@ from enthought.traits.trait_base import not_none
 from openmdao.main.api import Container, Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
 from openmdao.main.datatypes.api import Float, Slot, File
-from openmdao.main.case import flatten
+from openmdao.main.case import flatten_obj
 
 class DumbVT3(VariableTree):
     def __init__(self):
@@ -295,7 +295,7 @@ class NamespaceTestCase(unittest.TestCase):
         
     def test_flatten(self):
         dvt = DumbVT()
-        self.assertEqual(set(flatten('foo', dvt)), 
+        self.assertEqual(set(flatten_obj('foo', dvt)), 
                          set([('foo.vt2.vt3.a',1.),('foo.vt2.vt3.b',12.),
                               ('foo.vt2.x',-1.),('foo.vt2.y',-2.),
                               ('foo.v1',1.),('foo.v2',2.)]))
