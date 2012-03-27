@@ -14,7 +14,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.hasstopcond import HasStopConditions
 
 from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
-     ParetoFilter, Mux
+     ParetoFilter
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 from openmdao.lib.casehandlers.api import DBCaseIterator
 from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
@@ -96,9 +96,8 @@ class Analysis(Assembly):
         
         self.add("iter",IterateUntil())
         self.iter.iterations = 30
-        self.iter.add_stop_condition('MOEI.EI <= .0001')
+        self.iter.add_stop_condition('MOEI.PI <= .0001')
         
-        self.add("EI_mux",Mux(2))
         
         #Iteration Heirarchy
         self.driver.workflow.add(['DOE_trainer', 'iter'])
@@ -108,14 +107,13 @@ class Analysis(Assembly):
         self.iter.workflow = SequentialWorkflow()
         self.iter.workflow.add(['filter', 'MOEI_opt', 'retrain'])
         
-        self.MOEI_opt.workflow.add(['spiral_meta_model', 'EI_mux', 'MOEI'])
+        self.MOEI_opt.workflow.add(['spiral_meta_model', 'MOEI'])
         self.retrain.workflow.add('spiral_meta_model')
         
         #Data Connections
         self.connect("filter.pareto_set","MOEI.best_cases")
-        self.connect("spiral_meta_model.f1_xy","EI_mux.input_1")
-        self.connect("spiral_meta_model.f2_xy","EI_mux.input_2")
-        self.connect("EI_mux.output","MOEI.predicted_values")
+        self.connect("spiral_meta_model.f1_xy","MOEI.predicted_values[0]")
+        self.connect("spiral_meta_model.f2_xy","MOEI.predicted_values[1]")
         
     def cleanup(self):
         """cleans up any files left in the temp directory from execution"""
