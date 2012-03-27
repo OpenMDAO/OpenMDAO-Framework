@@ -240,7 +240,7 @@ openmdao.Model=function() {
         })
     }
     
-    /** add an object of the specified type & name to the model (at x,y) */
+    /** add an object of the specified type & name to the specified parent */
     this.addComponent = function(typepath,name,parent,callback) {
         if (!parent) {
             parent = '';
@@ -261,6 +261,17 @@ openmdao.Model=function() {
         });
     }
 
+    /** remove the component with the given pathname */
+    this.removeComponent = function(pathname) {
+        var parent = openmdao.Util.getPath(pathname);
+        if (parent.length > 0 ) {
+            self.issueCommand(parent+'.remove("'+openmdao.Util.getName(pathname)+'")');
+        }
+        else {
+            self.issueCommand('del('+openmdao.Util.getName(pathname)+')');
+        }
+    }
+    
     /** issue the specified command against the model */
     this.issueCommand = function(cmd, callback, errorHandler) {
         jQuery.ajax({

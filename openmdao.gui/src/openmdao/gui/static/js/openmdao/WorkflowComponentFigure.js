@@ -30,8 +30,9 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
         this.setContent('<center><i>'+type+''+'</i></center>');
     }
 
-    // do not allow moving
+    // do not allow moving or resizing
     this.setCanDrag(false);
+    this.setResizeable(false);
     
     // change color based on execution status
     topic = pathname+'.exec_state'

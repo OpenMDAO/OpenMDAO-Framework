@@ -208,15 +208,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         };
         menu.remove = {
             "label"  : 'Remove',
-            "action" :  function(node) { 
-                            var parent = openmdao.Util.getPath(path);
-                            if (parent.length > 0 ) {
-                                model.issueCommand(parent+'.remove("'+openmdao.Util.getName(path)+'")');
-                            }
-                            else {
-                                model.issueCommand('del('+openmdao.Util.getName(path)+')');
-                            }
-                            
+            "action" :  function(node) {
+                            model.removeComponent(path);
                         }
         };        
         return menu;

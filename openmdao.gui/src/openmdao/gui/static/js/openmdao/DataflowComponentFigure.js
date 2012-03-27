@@ -26,8 +26,9 @@ openmdao.DataflowComponentFigure=function(myModel,pathname,type){
         this.setContent('<center><i>'+type+''+'</i></center>');
     }
 
-    // do not allow moving (TODO: allow moving)
+    // do not allow moving or resizing (TODO: allow moving)
     this.setCanDrag(false);
+    this.setResizeable(false);
     
     // change color based on execution status
     topic = pathname+'.exec_state'
@@ -249,6 +250,9 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
                 + asm + '.config_changed(update_parent=True);';
         oThis.myModel.issueCommand(cmd);
     }));
+    menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
+        oThis.myModel.removeComponent(oThis.pathname);
+    }));    
     menu.setZOrder(999999);
     return menu;
 };
