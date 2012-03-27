@@ -14,8 +14,8 @@ from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.numpy_fallback import array
 from openmdao.test.execcomp import ExecComp
-
-
+from openmdao.main.test.test_vartree import DumbVT
+    
 class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -27,6 +27,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         top.comp1.add('a_string', Str("Hello',;','", iotype='out'))
         top.comp1.add('a_array', Array(array([1.0, 3.0, 5.5]), iotype='out'))
         top.comp1.add('x_array', Array(array([1.0, 1.0, 1.0]), iotype='in'))
+        top.comp1.add('vt', Slot(DumbVT, iotype='out'))
+        top.comp1.vt = DumbVT()
         driver.workflow.add(['comp1', 'comp2'])
         
         # now create some Cases
@@ -231,9 +233,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         outputs = ['comp1.z']
         cases = []
         for i in range(10):
-            inputs = []
-            cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
-            self.top.driver.iterator = ListCaseIterator(cases)
+            cases.append(Case(inputs=[], outputs=outputs, label='case%s'%i))
+        self.top.driver.iterator = ListCaseIterator(cases)
             
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.run()
@@ -265,12 +266,49 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             
     def test_flatten(self):
         # create some Cases
-        outputs = ['comp1.a_array']
-        cases = []
-        for i in range(10):
-            inputs = [('comp1.x', i+0.1), ('comp1.y', i*2 + .1), ('comp1.x_array[1]', 99.88)]
-            cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
-        self.top.driver.iterator = ListCaseIterator(cases)
+        outputs = ['comp1.a_array', 'comp1.vt']
+        inputs = [('comp1.x_array', array([2.0, 2.0, 2.0]))]
+        self.top.driver.iterator = ListCaseIterator([Case(inputs=inputs, outputs=outputs, label='case1')])
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.run()
+        self.top.driver.recorders[0].outfile.close()
+        
+        # now use the CSV recorder as source of Cases
+        self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
+        
+        sout = StringIO.StringIO()
+        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.run()
+        expected = [
+            'Case: case1',
+            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   inputs:',
+            '      comp1.x_array[0]: 2.0',
+            '      comp1.x_array[1]: 2.0',
+            '      comp1.x_array[2]: 2.0',
+            '   outputs:',
+            "      comp1.a_array[0]: 1.0",
+            "      comp1.a_array[1]: 3.0",
+            "      comp1.a_array[2]: 5.5",
+            "      comp1.vt.v1: 1.0",
+            "      comp1.vt.v2: 2.0",
+            "      comp1.vt.vt2.vt3.a: 1.0",
+            "      comp1.vt.vt2.vt3.b: 12.0",
+            "      comp1.vt.vt2.x: -1.0",
+            "      comp1.vt.vt2.y: -2.0",
+            ]
+        lines = sout.getvalue().split('\n')
+        for index, line in enumerate(lines):
+            if line.startswith('Case: case1'):
+                for i in range(len(expected)):
+                    if expected[i].startswith('   uuid:'):
+                        self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    else:
+                        self.assertEqual(lines[index+i], expected[i])
+                break
+        else:
+            self.fail("couldn't find the expected Case")
+        
 
     def test_CSVCaseRecorder_messages(self):
         rec = CSVCaseRecorder(filename=self.filename)
