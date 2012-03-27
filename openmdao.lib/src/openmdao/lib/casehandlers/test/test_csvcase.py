@@ -40,10 +40,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.filename = "openmdao_test_csv_case_iterator.csv"
         
     def tearDown(self):
-        
         if os.path.exists(self.filename):
-            os.remove(self.filename)        
-        pass
+            os.remove(self.filename)
 
     def test_inoutCSV(self):
         
@@ -265,6 +263,15 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         else:
             self.fail("couldn't find the expected Case")
             
+    def test_flatten(self):
+        # create some Cases
+        outputs = ['comp1.a_array']
+        cases = []
+        for i in range(10):
+            inputs = [('comp1.x', i+0.1), ('comp1.y', i*2 + .1), ('comp1.x_array[1]', 99.88)]
+            cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
+        self.top.driver.iterator = ListCaseIterator(cases)
+
     def test_CSVCaseRecorder_messages(self):
         rec = CSVCaseRecorder(filename=self.filename)
         rec.record(Case(inputs=[('comp1.x',2.0),('comp1.y',4.3),('comp2.x',1.9)]))

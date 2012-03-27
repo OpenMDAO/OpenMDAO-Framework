@@ -1,8 +1,10 @@
 import unittest
 import copy
+import array
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.lib.datatypes.api import Int, List
+from openmdao.main.numpy_fallback import array as nparray
 
 class Simple(Component):
     a = Int(iotype='in')
@@ -123,6 +125,28 @@ class CaseTestCase(unittest.TestCase):
             self.assertTrue(name in both)
             self.assertEqual(val, both[name])
         
+    def test_flatten(self):
+        inputs = [('comp1.a_lst', [1,2,3,[7,8,9]]),
+                  ('comp1.a_arr', array.array('d',[4,5,6])),
+                  ('comp1.np_arr', nparray([[1,2],[3,4],[5,6]])),
+                  ]
+        case = Case(inputs=inputs)
+        self.assertEqual(set(case.items(flatten=True)), set([('comp1.a_lst[0]', 1), 
+                                                             ('comp1.a_lst[1]', 2), 
+                                                             ('comp1.a_lst[2]', 3), 
+                                                             ('comp1.a_lst[3][0]', 7), 
+                                                             ('comp1.a_lst[3][1]', 8), 
+                                                             ('comp1.a_lst[3][2]', 9), 
+                                                             ('comp1.a_arr[0]', 4.0), 
+                                                             ('comp1.a_arr[1]', 5.0), 
+                                                             ('comp1.a_arr[2]', 6.0),
+                                                             ('comp1.np_arr[0][0]', 1),
+                                                             ('comp1.np_arr[0][1]', 2),
+                                                             ('comp1.np_arr[1][0]', 3),
+                                                             ('comp1.np_arr[1][1]', 4),
+                                                             ('comp1.np_arr[2][0]', 5),
+                                                             ('comp1.np_arr[2][1]', 6),
+                                                             ]))
 
 if __name__ == "__main__":
     unittest.main()

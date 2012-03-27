@@ -1,6 +1,7 @@
 
 from uuid import uuid1
 import re
+from array import array
 import traceback
 from StringIO import StringIO
 from inspect import getmro
@@ -20,11 +21,29 @@ _namecheck_rgx = re.compile(
 def _simpleflatten(name, obj):
     return [(name, obj)]
 
+def _flatten_lst(name, lst):
+    ret = []
+    
+    def _recurse_flatten(ret, name, idx, lst):
+        for i,entry in enumerate(lst):
+            new_idx = idx+[i]
+            if isinstance(entry, (tuple, list, array)):
+                _recurse_flatten(ret, name, new_idx, entry)
+            else:
+                idxstr = ''.join(["[%d]" % j for j in new_idx])
+                ret.append(("%s%s" % (name, idxstr), entry))
+    
+    _recurse_flatten(ret, name, [], lst)
+    return ret
+        
 flatteners = { # dict of functions that know how to 'flatten' a given object instance
        int: _simpleflatten,
        float: _simpleflatten,
        str: _simpleflatten,
        unicode: _simpleflatten,
+       list: _flatten_lst,
+       tuple: _flatten_lst,
+       array: _flatten_lst,
     } 
 
 def flatten_obj(name, obj):
