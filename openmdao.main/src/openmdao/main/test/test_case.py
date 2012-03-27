@@ -6,6 +6,8 @@ from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.lib.datatypes.api import Int, List
 from openmdao.main.numpy_fallback import array as nparray
 
+from openmdao.main.test.test_vartree import DumbVT
+
 class Simple(Component):
     a = Int(iotype='in')
     b = Int(iotype='in')
@@ -126,9 +128,11 @@ class CaseTestCase(unittest.TestCase):
             self.assertEqual(val, both[name])
         
     def test_flatten(self):
+        dvt = DumbVT()
         inputs = [('comp1.a_lst', [1,2,3,[7,8,9]]),
                   ('comp1.a_arr', array.array('d',[4,5,6])),
                   ('comp1.np_arr', nparray([[1,2],[3,4],[5,6]])),
+                  ('comp1.vt', dvt),
                   ]
         case = Case(inputs=inputs)
         self.assertEqual(set(case.items(flatten=True)), set([('comp1.a_lst[0]', 1), 
@@ -146,6 +150,12 @@ class CaseTestCase(unittest.TestCase):
                                                              ('comp1.np_arr[1][1]', 4),
                                                              ('comp1.np_arr[2][0]', 5),
                                                              ('comp1.np_arr[2][1]', 6),
+                                                             ('comp1.vt.vt2.vt3.a',1.), 
+                                                             ('comp1.vt.vt2.vt3.b',12.),
+                                                             ('comp1.vt.vt2.x',-1.),
+                                                             ('comp1.vt.vt2.y',-2.),
+                                                             ('comp1.vt.v1',1.),
+                                                             ('comp1.vt.v2',2.)
                                                              ]))
 
 if __name__ == "__main__":
