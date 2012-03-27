@@ -30,11 +30,11 @@ def run_simple():
     mgr = ZMQServerManager(classpath)
     srv = mgr.server(server_id)
     if srv is not None:
-        out_url = mgr.get_out_url(server_id)
+        out_url = mgr.get_out_socket_url(server_id)
         out_rdr = OutStreamRedirector('OPT OUT',out_url,'OptimizationUnconstrained.out')
         out_rdr.start()
             
-        pub_url = mgr.get_pub_url(server_id)
+        pub_url = mgr.get_pub_socket_url(server_id)
         pub_rdr = OutStreamRedirector('OPT PUB',pub_url,'OptimizationUnconstrained.pub')
         pub_rdr.start()
         
@@ -73,11 +73,11 @@ def run_cserver():
         print '================= redirecting streams ========================'
         print '=============================================================='
         # subscriber to the cserver output & print to stdout
-        out_url = mgr.get_out_url(server_id)
+        out_url = mgr.get_out_socket_url(server_id)
         out_rdr = OutStreamRedirector('CSERVER OUT',out_url,'cserver.out')
         out_rdr.start()
         
-        pub_url = mgr.get_pub_url(server_id)
+        pub_url = mgr.get_pub_socket_url(server_id)
         pub_rdr = OutStreamRedirector('CSERVER PUB',pub_url,'cserver.pub')
         pub_rdr.start()
         

@@ -9,11 +9,11 @@ class test_cserver(unittest.TestCase):
         self.server_mgr = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
         self.cserver = self.server_mgr.server('test')
         
-        out_url = self.server_mgr.get_out_url('test')
+        out_url = self.server_mgr.get_out_socket_url('test')
         self.out_rdr = OutStreamRedirector('OUT',out_url,'test.out')
         self.out_rdr.start()
             
-        pub_url = self.server_mgr.get_pub_url('test')
+        pub_url = self.server_mgr.get_pub_socket_url('test')
         self.pub_rdr = OutStreamRedirector('PUB',pub_url,'test.pub')
         self.pub_rdr.start()
         
@@ -21,6 +21,10 @@ class test_cserver(unittest.TestCase):
 
     def test_conmin(self):
         div = '-'*70
+        
+        print div
+        print 'dir()'
+        print self.cserver.onecmd('dir()')
         
         print div
         print 'LOAD PROJECT'

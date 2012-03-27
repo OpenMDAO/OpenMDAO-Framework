@@ -22,7 +22,6 @@ class AddOnsHandler(BaseHandler):
     ''' addon installation utility
     '''
     addons_url = 'http://openmdao.org/dists'
-    addons_url = 'http://torpedo.grc.nasa.gov:31005/'
     
     @web.authenticated
     def post(self):

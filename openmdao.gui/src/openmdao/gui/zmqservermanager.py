@@ -93,7 +93,7 @@ class ZMQServerManager(object):
         '''
         server_info = self.server_dict[server_id]
         if 'pub_server' in server_info:
-            return server_info['pub_server']
+            return server_info['pub_server_url']
         else:
             ws_port = get_unused_ip_port()
             ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
@@ -108,7 +108,7 @@ class ZMQServerManager(object):
         '''
         server_info = self.server_dict[server_id]
         if 'out_server' in server_info:
-            return server_info['out_server']
+            return server_info['out_server_url']
         else:
             ws_port = get_unused_ip_port()
             ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
