@@ -150,8 +150,7 @@ class SellarProblem(OptProblem):
     """ Sellar test problem definition."""
     
     def configure(self):
-        """ Creates a new Assembly with this problem
-        
+        """ 
         Optimal Design at (1.9776, 0, 0)
         
         Optimal Objective = 3.18339"""
