@@ -11,3 +11,4 @@ MDAO Architectures
    mdf
    idf
    co
+   optproblem
