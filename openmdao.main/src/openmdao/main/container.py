@@ -120,7 +120,7 @@ class _ContainerDepends(object):
         else:
             self._srcs[destpath] = srcpath
         
-    def disconnect(self, srcpath, destpath):
+    def disconnect(self, srcpath, destpath, expr=None):
         try:
             del self._srcs[destpath]
         except KeyError:
@@ -355,7 +355,7 @@ class Container(SafeHasTraits):
                                  "Both variables are on the same component" %
                                  (srcpath,destpath), RuntimeError)
 
-        self._depgraph.disconnect(srcpath, destpath)
+        self._depgraph.disconnect(srcpath, destpath, expr=srcexpr)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
     # no execute, they can have no inputs/outputs, which means that validity should have

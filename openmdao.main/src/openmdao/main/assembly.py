@@ -200,14 +200,11 @@ class ExprMapper(object):
                 scope.raise_exception("can't connect '%s' to '%s': %s" %
                                      (src, dest, str(err)), RuntimeError)
 
-
-        srcrefs = srcexpr.refs()
-        for srcref in srcrefs:
-            try:
-                self._depgraph.connect(srcref, destexpr.text, scope, expr=srcexpr)
-            except Exception as err:
-                scope.raise_exception("Can't connect '%s' to '%s': %s" % 
-                                      (srcref, destexpr.text, str(err)), RuntimeError)
+        try:
+            self._depgraph.connect(src, destexpr.text, scope, expr=srcexpr)
+        except Exception as err:
+            scope.raise_exception("Can't connect '%s' to '%s': %s" % 
+                                  (src, dest, str(err)), RuntimeError)
             
         if src not in self._exprgraph:
             self._exprgraph.add_node(src, expr=srcexpr)
@@ -242,7 +239,7 @@ class ExprMapper(object):
         for expr in to_remove:
             graph.remove_node(expr)
 
-    def disconnect(self, srcpath, destpath=None):
+    def disconnect(self, srcpath, destpath=None, expr=None):
         """Disconnect the given expressions/variables/components."""
         graph = self._exprgraph
         

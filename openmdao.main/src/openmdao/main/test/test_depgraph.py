@@ -2,6 +2,7 @@ import unittest
 import StringIO
 
 from openmdao.main.depgraph import DependencyGraph
+from openmdao.main.expreval import ConnectedExprEvaluator
 
 class DumbClass(object):
     def contains(self, name):
@@ -19,7 +20,7 @@ class DepGraphTestCase(unittest.TestCase):
         for name in nodes:
             dep.add(name)
         for src,dest in connections:
-            dep.connect(src, dest, scope)
+            dep.connect(src, dest, scope, expr=ConnectedExprEvaluator(src, scope))
         return dep, scope
 
     def setUp(self):
@@ -86,7 +87,7 @@ class DepGraphTestCase(unittest.TestCase):
     def test_already_connected(self):
         # internal connection
         try:
-            self.dep.connect('A.d', 'B.a', self.scope)
+            self.dep.connect('A.d', 'B.a', self.scope, expr=ConnectedExprEvaluator('B.a', self.scope))
         except Exception as err:
             self.assertEqual(str(err), 'B.a is already connected to source a')
         else:
@@ -94,7 +95,8 @@ class DepGraphTestCase(unittest.TestCase):
             
         # input boundary connection
         try:
-            self.dep.connect('parent.foo.bar', 'a', self.scope)
+            self.dep.connect('parent.foo.bar', 'a', self.scope, 
+                             expr=ConnectedExprEvaluator('parent.foo.bar', self.scope))
         except Exception as err:
             self.assertEqual(str(err), 'a is already connected to source parent.X.c')
         else:
@@ -102,7 +104,8 @@ class DepGraphTestCase(unittest.TestCase):
 
         # internal to boundary output connection
         try:
-            self.dep.connect('B.d', 'c', self.scope)
+            self.dep.connect('B.d', 'c', self.scope, 
+                             expr=ConnectedExprEvaluator('B.d', self.scope))
         except Exception as err:
             self.assertEqual(str(err), 'c is already connected to source D.c')
         else:

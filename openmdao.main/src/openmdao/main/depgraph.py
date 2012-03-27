@@ -250,21 +250,28 @@ class DependencyGraph(object):
         *srccompname* to *destcompname*.  If expr is defined, it's
         the actual ExprEvaluator object for the source.
         """
+        if expr is not None:
+            if destpath in self._allsrcs:
+                raise AlreadyConnectedError("%s is already connected to source %s" %
+                                            (destpath, self._allsrcs[destpath]))
+            self._allsrcs[destpath] = expr.text
+            try:
+                for ref in expr.refs():
+                    self.connect(ref, destpath, scope)
+                return
+            except:
+                del self._allsrcs[destpath]
+                raise
+            
         graph = self._graph
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
         
-        if not (expr and self._allsrcs.get(destpath) == expr.text):
-            if not _exprset.intersection(srcpath):
-                dpdot = destpath+'.'
-                for dst,src in self._allsrcs.items():
-                    if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
-                        raise AlreadyConnectedError("%s is already connected to source %s" %
-                                                    (dst, src))
-        #oldsrc = self.get_source('.'.join([destcompname,destvarname]))
-        #if oldsrc:
-            #raise AlreadyConnectedError("%s is already connected to source %s" %
-                                        #(destpath, oldsrc))
+        dpdot = destpath+'.'
+        for dst,src in self._allsrcs.items():
+            if destpath.startswith(dst+'.') or dst.startswith(dpdot):
+                raise AlreadyConnectedError("%s is already connected to source %s" %
+                                                (dst, src))
                 
         if srccompname == '@xin' and destcompname != '@bin':
             # this is an auto-passthrough input so we need 2 links
@@ -315,10 +322,6 @@ class DependencyGraph(object):
                                      (str(strcon), 
                                       '.'.join([srccompname,srcvarname]), 
                                       '.'.join([destcompname,destvarname])))
-        if expr is not None:
-            self._allsrcs[destpath] = expr.text
-        else:
-            self._allsrcs[destpath] = srcpath
         
     def _comp_connections(self, cname):
         """Returns a list of tuples of the form (srcpath, destpath) for all
@@ -361,11 +364,16 @@ class DependencyGraph(object):
         else:
             return self._var_connections(path)
 
-    def disconnect(self, srcpath, destpath=None):
+    def disconnect(self, srcpath, destpath=None, expr=None):
         """Disconnect the given variables."""
         if destpath is None:
             for src,dest in self.connections_to(srcpath):
-                self.disconnect(src, dest)
+                self.disconnect(src, dest, expr)
+            return
+        
+        if expr is not None:
+            for ref in expr.refs():
+                self.disconnect(ref, destpath)
             return
 
         graph = self._graph
