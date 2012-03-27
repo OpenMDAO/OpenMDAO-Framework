@@ -238,8 +238,168 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
 If you would like to try this yourself, you can 
 download the whole file :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.    
 
+
+At times it's necessary to rerun an analysis. This can be a problem if the
+DOE generator used has a random component. To handle this DOEdriver records
+the normalized DOE values to a CSV file. This file can be read in later by
+a :ref:`CSVFile <openmdao.lib.doegenerators.csvfile.py>` DOE generator.
+The DOEdriver can then be configured to use this CSVFile generator to rerun
+the cases previously generated.
+
+.. testcode:: simple_model_doe_rerun
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.drivers.api import DOEdriver
+    from openmdao.lib.doegenerators.api import CSVFile, Uniform
+
+    from openmdao.examples.simple.paraboloid import Paraboloid
+    
+    
+    class Analysis(Assembly): 
+        
+        def configure(self):
+            self.add('paraboloid', Paraboloid())
+            self.add('driver', DOEdriver())
+            self.driver.DOEgenerator = Uniform(num_samples=1000)
+            self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+            self.driver.add_parameter('paraboloid.y', low=-50, high=50)
+            self.driver.case_outputs = ['paraboloid.f_xy']
+            self.driver.workflow.add('paraboloid')
+
+
+    if __name__ == '__main__':    
+
+        analysis = Analysis()
+
+        # Run original analysis.
+        analysis.run() 
+
+        # Reconfigure driver to rerun previously generated cases.
+        analysis.driver.DOEgenerator = CSVFile(analysis.driver.doe_filename)
+
+        # No need to re-record cases (and it avoids overwriting them).
+        analysis.driver.record_doe = False
+
+        # Rerun analysis.
+        analysis.run()
+
+
+Re-running the full experiment is often not of interest. Instead, only certain
+cases need to be rerun. OpenMDAO provides case filters to select cases, and
+DOEdriver's ``case_filter`` attribute is used to configure what filter to use.
+Note that filters are applied *after* the normalized parameter values have
+been converted to actual values.
+
+.. testcode:: simple_model_doe_filter
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.drivers.api import DOEdriver
+    from openmdao.lib.doegenerators.api import CSVFile, Uniform
+    from openmdao.lib.casehandlers.api import ExprCaseFilter, SequenceCaseFilter, SliceCaseFilter
+
+    from openmdao.examples.simple.paraboloid import Paraboloid
+    
+    
+    class Analysis(Assembly): 
+        
+        def configure(self):
+            self.add('paraboloid', Paraboloid())
+            doe = self.add('driver', DOEdriver())
+            doe.DOEgenerator = Uniform(num_samples=1000)
+            doe.add_parameter('paraboloid.x', low=-50, high=50)
+            doe.add_parameter('paraboloid.y', low=-50, high=50)
+            doe.case_outputs = ['paraboloid.f_xy']
+            doe.workflow.add('paraboloid')
+
+
+    if __name__ == '__main__':    
+
+        analysis = Analysis()
+        doe = analysis.driver
+
+        # Run full experiment.
+        analysis.run() 
+
+        # Don't record reruns.
+        doe.record_doe = False
+
+        # Rerun just 5th and 7th cases.
+        doe.DOEgenerator = CSVFile('driver.csv')
+        doe.case_filter = SequenceCaseFilter((5, 7))
+        analysis.run()
+
+        # Rerun every third case starting at 100 through case 200.
+        doe.DOEgenerator = CSVFile('driver.csv')
+        doe.case_filter = SliceCaseFilter(100, 200, 3)
+        analysis.run()
+ 
+        # Rerun every case where x > 0 and y < 0.
+        doe.DOEgenerator = CSVFile('driver.csv')
+        doe.case_filter = ExprCaseFilter("case['paraboloid.x'] > 0 and case['paraboloid.y'] < 0")
+        analysis.run()
+
+
+In the above example we were able to filter cases on input values, or their
+location in the sequence of cases run. If instead you need to rerun cases
+based on output values, or if they failed, the filtering has to be applied to
+cases after they have been run.
+:ref:`CaseIteratorDriver <caseiterdriver.py>` is a driver which will run an
+arbitrary set of cases given to it, such as those recorded by DOEdriver.
+CaseIteratorDriver has a ``filter`` attribute that can be used in the same
+way we used filters with DOEdriver above, but now the filter can operate on
+outputs as well as inputs.
+
+.. testcode:: simple_model_cid_filter
+
+    from openmdao.main.api import Assembly
+    from openmdao.lib.drivers.api import CaseIteratorDriver, DOEdriver
+    from openmdao.lib.doegenerators.api import Uniform
+    from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, ExprCaseFilter
+
+    from openmdao.examples.simple.paraboloid import Paraboloid
+    
+    
+    class Analysis(Assembly): 
+        
+        def configure(self):
+            self.add('paraboloid', Paraboloid())
+            doe = self.add('driver', DOEdriver())
+            doe.DOEgenerator = Uniform(num_samples=1000)
+            doe.add_parameter('paraboloid.x', low=-50, high=50)
+            doe.add_parameter('paraboloid.y', low=-50, high=50)
+            doe.case_outputs = ['paraboloid.f_xy']
+            doe.workflow.add('paraboloid')
+
+
+    if __name__ == '__main__':    
+
+        analysis = Analysis()
+
+        # Run full experiment and record results.
+        recorder = ListCaseRecorder()
+        analysis.driver.recorders = [recorder]
+        analysis.run() 
+
+        # Reconfigure driver.
+        workflow = analysis.driver.workflow
+        cid = analysis.add('driver', CaseIteratorDriver())
+        for comp in workflow:
+            cid.workflow.add(comp)
+
+        # Rerun cases where paraboloid.f_xy <= 0.
+        cid.iterator = recorder.get_iterator()
+        cid.filter = ExprCaseFilter("case['paraboloid.f_xy'] <= 0")
+        analysis.run() 
+
+        # Rerun cases which failed.
+        cid.iterator = recorder.get_iterator()
+        cid.filter = ExprCaseFilter("case.msg")
+        analysis.run() 
+
+
 ..
-  Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
+  Since DOEdriver and CaseIteratorDriver are derived from
+  :ref:`CaseIterDriverBase <caseiterdriver.py>`,
   it's possible to run the various cases concurrently.  If evaluating a case
   takes considerable time and you have a multiprocessor machine, setting
   ``analysis.driver.sequential`` to False will cause the cases to be evaluated

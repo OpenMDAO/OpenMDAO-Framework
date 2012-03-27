@@ -130,7 +130,7 @@ class Array(TraitArray):
         info = "an array-like object"
         
         # pylint: disable-msg=E1101
-        if self.shape and value.shape:
+        if self.shape and hasattr(value, 'shape') and value.shape:
             if self.shape != value.shape:
                 info += " of shape %s" % str(self.shape)
                 wtype = "shape"

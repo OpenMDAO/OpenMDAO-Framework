@@ -32,9 +32,7 @@ those that are more likely to be used by an expert user.
 
 For the simplest possible unconstrained optimization problem, NEWSUMT just needs
 an objective function and one or more decision variables (parameters.) The
-basic interface conforms to OpenMDAO's driver API, which is discussed in 
-:ref:`Driver-API`. This document covers how to assign design variables, constraints, and
-objectives.
+basic interface conforms to OpenMDAO's driver API.
 
 The OpenMDAO NEWSUMT driver can be imported from ``openmdao.lib.drivers.api``.
 
@@ -84,8 +82,7 @@ This assembly contains a DrivingSim component and a NEWSUMTdriver, both of
 which are created and added inside the ``__init__`` function with ``add``. The
 DrivingSim component is also added to the driver's workflow. The objective
 function, design variables, constraints, and any NEWSUMT parameters are also
-assigned in the ``__init__`` function. The specific syntax for all of these is
-discussed in :ref:`Driver-API`.
+assigned in the ``__init__`` function.
 
 .. index:: gradients, Hessians
 
@@ -97,8 +94,7 @@ The default behavior for NEWSUMT is to calculate its own gradients and Hessians
 of the objective and constraints using a first-order forward finite difference.
 The second derivatives are approximated from the first order differences. You
 can replace NEWSUMT's finite difference with OpenMDAO's built-in capability by
-inserting a differentiator into the Differentiator slot in the driver, as shown
-in :ref:`Calculating-Derivatives-with-Finite-Difference`.
+inserting a differentiator into the Differentiator slot in the driver.
 
 If you want to use NEWSUMT for the finite difference calculation and want the
 same finite difference step size in all your variables, you can set the ``default_fd_stepsize``

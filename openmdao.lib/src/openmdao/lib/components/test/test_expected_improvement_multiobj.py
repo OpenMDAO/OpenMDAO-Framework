@@ -10,21 +10,22 @@ from openmdao.main.case import Case
 class MultiObjExpectedImprovementTests(unittest.TestCase):
     
     def test_ei_2obj(self):
-        ei = MultiObjExpectedImprovement()
+        ei = MultiObjExpectedImprovement(2)
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",10)]),Case(outputs=[("y1",1),("y2",-10)])]
         for case in list_of_cases:
             bests.record(case)
         ei.best_cases = bests
         ei.criteria = ["y1","y2"]
-        ei.predicted_values = [NormalDistribution(mu=1,sigma=1),NormalDistribution(mu=0,sigma=1)]
+        ei.predicted_values = [NormalDistribution(mu=1,sigma=1),
+                               NormalDistribution(mu=0,sigma=1)]
         ei.calc_switch = "EI"
         ei.execute()
         self.assertAlmostEqual([5.0],ei.EI,1)
         self.assertEqual(0.5,ei.PI,6)
 
     def test_ei_nobj(self):
-        ei = MultiObjExpectedImprovement()
+        ei = MultiObjExpectedImprovement(3)
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1),("y3",1)])]
         for case in list_of_cases:
@@ -32,13 +33,13 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         ei.best_cases = bests
         ei.criteria = ['y1','y2','y3']
         ei.predicted_values = [NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1)]
+                               NormalDistribution(mu=1,sigma=1),
+                               NormalDistribution(mu=1,sigma=1)]
         ei.execute()
         self.assertAlmostEqual(0.875,ei.PI,1)
 
     def test_ei_calc_switch(self):
-        ei = MultiObjExpectedImprovement()
+        ei = MultiObjExpectedImprovement(3)
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1),("y3",1)])]
         for case in list_of_cases:
@@ -46,8 +47,8 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         ei.best_cases = bests
         ei.criteria = ['y1','y2','y3']
         ei.predicted_values = [NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1),
-                                                    NormalDistribution(mu=1,sigma=1)]
+                               NormalDistribution(mu=1,sigma=1),
+                               NormalDistribution(mu=1,sigma=1)]
         ei.calc_switch = 'EI'
         try:
             ei.execute()
@@ -56,7 +57,7 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
                                             ' for more than 2 objectives')
 
     def test_reset_y_star_event(self):
-        ei = MultiObjExpectedImprovement()
+        ei = MultiObjExpectedImprovement(3)
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1),("y3",1)])]
         for case in list_of_cases:
@@ -77,7 +78,7 @@ class MultiObjExpectedImprovementTests(unittest.TestCase):
         self.assertEqual(ei.y_star.all(),array([2,2,2]).all())
         
     def test_bad_criteria(self):
-        ei = MultiObjExpectedImprovement()
+        ei = MultiObjExpectedImprovement(2)
         bests = CaseSet()
         list_of_cases = [Case(outputs=[("y1",1),("y2",1)])]
         for case in list_of_cases:
