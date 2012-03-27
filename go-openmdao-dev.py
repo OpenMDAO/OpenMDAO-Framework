@@ -1622,7 +1622,7 @@ def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
     reqs = ['setupdocs==1.0.5', 'networkx==1.3', 'jinja2==2.4', 'traits==3.3.0', 'slsqp==1.0.1', 'fabric==0.9.3', 'pyparsing==1.5.2', 'pyevolve==0.6', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'pygments==1.3.1', 'decorator==3.2.0', 'docutils==0.6', 'newsumt==1.1.0', 'ordereddict==1.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'sphinx==1.0.6', 'virtualenv==1.6.4', 'conmin==1.0.1', 'pycrypto==2.3']
-    guireqs = ['jsonpickle==0.4.0', 'tornado==2.2', 'pyzmq-static==2.1.11', 'django==1.3.1']
+    guireqs = ['jsonpickle==0.4.0', 'tornado==2.2', 'pyzmq-static==2.1.11.1', 'django==1.3.1']
     
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'

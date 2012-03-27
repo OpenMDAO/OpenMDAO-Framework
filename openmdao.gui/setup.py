@@ -27,7 +27,7 @@ setup(name='openmdao.gui',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'pyzmq-static>=2.1.11',
+          'pyzmq-static>=2.1.11.1',
           'tornado>=2.2',
           'jsonpickle', 
           'django'
