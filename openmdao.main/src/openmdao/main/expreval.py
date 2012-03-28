@@ -559,6 +559,13 @@ class ExprEvaluator(object):
         
         if not wrt:
             wrt = list(self.get_referenced_varpaths())
+        else:
+            # A "fake" boundary connection in an assembly has a special
+            # format. All exrpeval derivatives from inside the assembly are
+            # handled outside the assembly.
+            if wrt[0:4] == '@bin':
+                return { wrt: 1.0 }
+                
             
         if self._parse_needed:
             self._parse()
@@ -568,6 +575,7 @@ class ExprEvaluator(object):
         trans_dict = {}
         var_dict = {}
         for name in  list(self.get_referenced_varpaths()):
+            
             if name in wrt:
                 new_name = name.replace('.', '_')
                 new_name = name.replace('[', '__')

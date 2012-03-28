@@ -175,6 +175,7 @@ class ChainRule(HasTraits):
         for node in scope.workflow.__iter__():
             
             node_name = node.name
+            print "processing ", node_name
     
             incoming_deriv_names = {}
             incoming_derivs = {}
@@ -189,9 +190,8 @@ class ChainRule(HasTraits):
                 if not isinstance(node.driver, Run_Once):
                     raise NotImplementedError('Nested drivers')
                 
-                local_outputs, local_derivs = self._recurse_assy(node, \
-                                     incoming_derivs, incoming_deriv_names)
-            
+                self._recurse_assy(node, derivs)
+                                     
             # This component can determine its derivatives.
             elif hasattr(node, 'calculate_first_derivatives'):
                 
@@ -210,47 +210,30 @@ class ChainRule(HasTraits):
                 
                         sources = node.parent._depgraph._depgraph.connections_to(full_name)
                         source_expression = node.parent._depgraph.connections_to(full_name)
-                        print sources, source_expression
+                        print full_name, sources, source_expression
                         for item in sources:
                             print scope._parent._depgraph.get_source(item[1])
                             
-                        # Simple input-output connection                        
-                        if source_expression == sources:
-                            source = sources[0][0]
+                        for source_tuple in sources:
+                            
+                            source = source_tuple[0]
                             
                             # Only process inputs who are connected to outputs
                             # with derivatives in the chain
                             if source in derivs:
+                                
+                                # Need derivative of the expression
+                                expr = node.parent._depgraph.get_expr(source_expression[0][0])
+                                expr_deriv = expr.evaluate_gradient(scope=node.parent,
+                                                                    wrt=source)
+                                print "derive wrt ", source, " = ", expr_deriv
                                 incoming_deriv_names[input_name] = full_name
-                                
                                 if full_name in incoming_derivs:
-                                    incoming_derivs[full_name] += derivs[source]
+                                    incoming_derivs[full_name] += derivs[source] * \
+                                        expr_deriv[source]
                                 else:
-                                    incoming_derivs[full_name] = derivs[source]
-                        
-                        # Connection via an expression
-                        else:
-                        
-                            for source_tuple in sources:
-                                
-                                source = source_tuple[0]
-                                
-                                # Only process inputs who are connected to outputs
-                                # with derivatives in the chain
-                                if source in derivs:
-                                    
-                                    # Need derivative of the expression
-                                    expr = node.parent._depgraph.get_expr(source_expression[0][0])
-                                    expr_deriv = expr.evaluate_gradient(scope=node.parent,
-                                                                        wrt=source)
-                                    
-                                    incoming_deriv_names[input_name] = full_name
-                                    if full_name in incoming_derivs:
-                                        incoming_derivs[full_name] += derivs[source] * \
-                                            expr_deriv[source]
-                                    else:
-                                        incoming_derivs[full_name] = derivs[source] * \
-                                            expr_deriv[source]
+                                    incoming_derivs[full_name] = derivs[source] * \
+                                        expr_deriv[source]
                                         
                             
                     # Inputs who are hooked directly to the parameters
@@ -261,33 +244,47 @@ class ChainRule(HasTraits):
                         incoming_derivs[full_name] = derivs[full_name]
                         
                             
+                # CHAIN RULE
+                # Propagate derivatives wrt parameter through current component
+                for output_name in local_outputs:
+                    
+                    full_output_name = '.'.join([node_name, output_name])
+                    derivs[full_output_name] = 0.0
+                    
+                    for input_name, full_input_name in incoming_deriv_names.iteritems():
+                        derivs[full_output_name] += \
+                            local_derivs[output_name][input_name] * \
+                            incoming_derivs[full_input_name]
+                            
             # This component must be finite differenced.
             else:
-                raise NotImplementedError('Finite Difference in CRND')
+                raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
             
             
-            # CHAIN RULE
-            # Propagate derivatives wrt parameter through current component
-            for output_name in local_outputs:
-                
-                full_output_name = '.'.join([node_name, output_name])
-                derivs[full_output_name] = 0.0
-                
-                for input_name, full_input_name in incoming_deriv_names.iteritems():
-                    derivs[full_output_name] += \
-                        local_derivs[output_name][input_name] * \
-                        incoming_derivs[full_input_name]
-                        
 
-    def _recurse_assy(self, scope, upscope_derivs, upscope_names):
+    def _recurse_assy(self, scope, upscope_derivs):
         """Enables assembly recursion by scope translation."""
         
-        # Figure out what is connected through the assembly boundary
+        # Find all assembly boundary connections, and propagate
+        # derivatives through the expressions.
         local_derivs = {}
-        for item in scope._depgraph.get_connected_inputs():
-            source = scope._depgraph.get_source(item)
-            local_derivs[source] = 1.0
         
+        for item in scope._depgraph._depgraph.var_edges('@xin'):
+            src = item[0].replace('parent.','')
+            src = src.replace('@xin.','')
+            dest = item[1]
+            
+            # Real connections on boundary
+            if dest.count('.') < 2:
+                dest = dest.split('.')[1]
+            
+            if dest in local_derivs:    
+                local_derivs[dest] += upscope_derivs[src]
+            else:
+                local_derivs[dest] = upscope_derivs[src]
+            
+        print scope._depgraph._depgraph.var_edges('@xin')
+        print local_derivs
         # Find derivatives for this assemblies workflow
         self._chain_workflow(local_derivs, scope.driver)
         
