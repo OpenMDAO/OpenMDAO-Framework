@@ -43,7 +43,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
     def tearDown(self):
         try:
-            self.top.driver.iterator.close()
+            self.top.driver.recorders[0].outfile.close()
         except:
             pass
         if os.path.exists(self.filename):
@@ -323,16 +323,17 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             self.assertEqual(str(err), "number of data points doesn't match header size in CSV recorder")
         else:
             self.fail("Exception expected")
+        finally:
+            rec.outfile.close()
         
-        self.top.comp2.add('a_slot', Slot(object, iotype='in'))
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
-
-        case = Case(inputs=[('comp2.a_slot', None)])
-
         ## BAN - took this test out because only types with a flattener function
         ##       will be returned by the Case, so incompatible types just won't
         ##       be seen by the CSVCaseRecorder at all.  Need to discuss with
         ##       users (and Ken) to see if this is reasonable.
+        #self.top.comp2.add('a_slot', Slot(object, iotype='in'))
+        #self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+
+        #case = Case(inputs=[('comp2.a_slot', None)])
         #try:
             #self.top.driver.recorders[0].record(case)
         #except ValueError, err:

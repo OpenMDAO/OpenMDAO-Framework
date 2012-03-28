@@ -30,7 +30,6 @@ class CSVCaseIterator(object):
         
         #Open Input file
         self.filename = filename
-        self._infile = None
         
     @property
     def filename(self):
@@ -44,29 +43,27 @@ class CSVCaseIterator(object):
         
         self._filename = name
         
-        infile = open(self.filename, 'r')
-        self._infile = infile
-        
-        # Sniff out the dialect
-        #infile.seek(1)
-        dialect = csv.Sniffer().sniff(infile.readline())
-        infile.seek(0)
-        reader = csv.reader(infile, dialect, quoting=csv.QUOTE_NONNUMERIC)
-        
-        self.data = []
-        for row in reader:
-            self.data.append(row)
-       
-        if self.headers is None:
-            self.need_fieldnames = True
-        else:
-            self.need_fieldnames = False
-            if 'label' in self.headers.values():
-                for key, value in self.headers.iteritems():
-                    if value == 'label':
-                        self.label_field = key
-                        del self.headers[key]
-                        break
+        with open(self.filename, 'r') as infile:
+            # Sniff out the dialect
+            #infile.seek(1)
+            dialect = csv.Sniffer().sniff(infile.readline())
+            infile.seek(0)
+            reader = csv.reader(infile, dialect, quoting=csv.QUOTE_NONNUMERIC)
+            
+            self.data = []
+            for row in reader:
+                self.data.append(row)
+           
+            if self.headers is None:
+                self.need_fieldnames = True
+            else:
+                self.need_fieldnames = False
+                if 'label' in self.headers.values():
+                    for key, value in self.headers.iteritems():
+                        if value == 'label':
+                            self.label_field = key
+                            del self.headers[key]
+                            break
             
     def __iter__(self):
         return self._next_case()
@@ -165,7 +162,7 @@ class CSVCaseIterator(object):
         # This file was generated externally
         else:
             pass
-                    
+
         return input_fields, output_fields
 
 
