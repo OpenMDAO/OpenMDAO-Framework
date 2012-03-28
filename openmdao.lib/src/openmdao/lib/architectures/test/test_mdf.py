@@ -1,13 +1,13 @@
 import unittest
 
-from openmdao.lib.optproblems.api import SellarProblem
+from openmdao.lib.optproblems.api import SellarProblemWithDeriv
 
 from openmdao.lib.architectures.mdf import MDF
 
 class TestMDF(unittest.TestCase): 
     
     def test_mdf_arch(self): 
-        prob = SellarProblem()
+        prob = SellarProblemWithDeriv()
         prob.architecture = MDF()
 
         prob.run()

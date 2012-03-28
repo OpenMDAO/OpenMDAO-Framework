@@ -673,6 +673,12 @@ class ExprDependsTestCase(unittest.TestCase):
         self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
         self.assertEqual(total, top.sub.comp4.a)
         
+        top.sub.disconnect('comp1.c+sin(3.14)*comp2.c', 'comp4.a')
+        total = 3.0*top.sub.comp1.c
+        top.sub.connect('3.0*comp1.c', 'comp4.a')
+        top.run()
+        self.assertEqual(total, top.sub.comp4.a)
+        
     def test_slice_exprs(self):
         global exec_order
         vnames = ['a[0:2:]','a','b','c','d']
