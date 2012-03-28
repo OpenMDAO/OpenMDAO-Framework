@@ -13,14 +13,8 @@ from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.zmqservermanager import ZMQServerManager
 from openmdao.gui.outstream import OutStreamRedirector
-from openmdao.gui.util import print_dict, print_list, RepeatTimer
+from openmdao.gui.util import print_dict, print_list, print_json, RepeatTimer
 
-
-
-def print_json(data):
-    ''' pretty print json data
-    '''
-    print json.dumps(json.loads(str(data)),indent=2)
 
 def run_simple():
     ''' create a ZMQServer for simple model, run & query it

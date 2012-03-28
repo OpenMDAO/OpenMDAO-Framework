@@ -3,6 +3,7 @@
 import sys, os, os.path
 import webbrowser
 from xml.dom.minidom import Document
+import json
 
 def singleton(cls):
     ''' a decorator to make a class a singleton
@@ -32,6 +33,11 @@ def print_dict (dict):
     for item in dict.items():
         key, value = item
         print str(key)+' = '+str(value)
+
+def print_json(data):
+    ''' pretty print json data
+    '''
+    print json.dumps(json.loads(str(data)),indent=2)        
 
 def makenode(doc,path):
     ''' modified version of:
