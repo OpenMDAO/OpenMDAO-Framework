@@ -50,6 +50,8 @@ variable. Create a file called ``doe.py`` and copy the following into it:
             
             self.driver.workflow.add('paraboloid')
             
+Or download our version of the file 
+:download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.            
             
 To run a DOE we use the :ref:`DOEdriver <DOEdriver.py>`, which serves as the 
 driver any time you want to run any kind of DOE. To specify the particular type of DOE, you set the ``DOEgenerator`` 
@@ -62,7 +64,9 @@ optimizations. We're still using  the same Paraboloid component as before. Also,
 we use the ``add_parameter`` method to specify what inputs should be varied by the DOE. Since we
 specified the low and high to be -50 and 50 respectively,  with 10 levels, the FullFactorial DOE
 generator will divide each parameter into 10 evenly spaced bins and then generate the full set of
-combinations possible (100 cases in total).
+combinations possible (100 cases in total). Note that a full factorial DOE can get very expensive, very quickly. 
+The total number of cases you run will be :math:`l^n` where :math:`l` is the number of levels and :math:`n` is the number of
+parameters. 
 
 One new thing in this example is the use of a case recorder. Each case in a given DOE results in a set of
 inputs being set into your model; then the model gets run, and some outputs are calculated. Obviously you
@@ -234,9 +238,7 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
  
    A Graph of the Output from the Execution of the DOE 
 
-   
-If you would like to try this yourself, you can 
-download the whole file :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.    
+    
 
 
 At times it's necessary to rerun an analysis. This can be a problem if the
@@ -276,6 +278,8 @@ the cases previously generated.
 
         # Reconfigure driver to rerun previously generated cases.
         analysis.driver.DOEgenerator = CSVFile(analysis.driver.doe_filename)
+        # Note that analysis.driver.doe_filename will give you the name of  
+        #   the csv file saved by the DOE driver. 
 
         # No need to re-record cases (and it avoids overwriting them).
         analysis.driver.record_doe = False
@@ -382,18 +386,17 @@ outputs as well as inputs.
 
         # Reconfigure driver.
         workflow = analysis.driver.workflow
-        cid = analysis.add('driver', CaseIteratorDriver())
-        for comp in workflow:
-            cid.workflow.add(comp)
+        analysis.add('driver', CaseIteratorDriver())
+        analysis.driver.workflow = workflow
 
         # Rerun cases where paraboloid.f_xy <= 0.
-        cid.iterator = recorder.get_iterator()
-        cid.filter = ExprCaseFilter("case['paraboloid.f_xy'] <= 0")
+        analysis.driver.iterator = recorder.get_iterator()
+        analysis.driver.filter = ExprCaseFilter("case['paraboloid.f_xy'] <= 0")
         analysis.run() 
 
         # Rerun cases which failed.
-        cid.iterator = recorder.get_iterator()
-        cid.filter = ExprCaseFilter("case.msg")
+        analysis.driver.iterator = recorder.get_iterator()
+        analysis.driver.filter = ExprCaseFilter("case.msg")
         analysis.run() 
 
 

@@ -259,10 +259,9 @@ the same syntax as loading any other Python module:
 Here, the fundamental OpenMDAO component classes *Component* and *Assembly* are
 loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.drivers.api``.
 
-To simplify the imports, a selection of the most commonly used imports was
-placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete
-listing of what is available in this module by using looking at the 
-:ref:`Source Documentation<source_documentation>` 
+To simplify the imports, a selection of the most commonly used imports was placed in the
+pseudo-package ``openmdao.main.api``. You can obtain a complete list of what is available in this
+module by looking at the  :ref:`Source Documentation<source_documentation>`. 
 
 Importing more objects into the namespace of your module increases the
 likelihood of name collision, so you should import only the objects that you need.
