@@ -1621,8 +1621,13 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['setupdocs==1.0.5', 'networkx==1.3', 'jinja2==2.4', 'traits==3.3.0', 'slsqp==1.0.1', 'fabric==0.9.3', 'pyparsing==1.5.2', 'pyevolve==0.6', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'pygments==1.3.1', 'decorator==3.2.0', 'docutils==0.6', 'newsumt==1.1.0', 'ordereddict==1.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'sphinx==1.0.6', 'virtualenv==1.6.4', 'conmin==1.0.1', 'pycrypto==2.3']
-    guireqs = ['jsonpickle==0.4.0', 'tornado==2.2', 'pyzmq-static==2.1.11.1', 'django==1.3.1']
+    reqs = ['SetupDocs==1.0.5', 'docutils==0.8.1', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Sphinx==1.1.3', 'Fabric==0.9.3', 'Jinja2==2.4', 'Traits==3.3.0', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4', 'argparse==1.2.1', 'cobyla==1.0.1', 'slsqp==1.0.1']
+    # Only linux needs the modules for doing the GUI unit testing at this time
+    if sys.platform.startswith( "linux" ):
+        guireqs = ['jsonpickle==0.4.0', 'tornado==2.2', 'pyzmq-static==2.1.11.1', 'django==1.3.1',  'easyprocess==0.1.3',
+                   'path.py==2.2.2', 'pyvirtualdisplay==0.0.9', 'lazr.testing==0.1.2a', 'mocker==1.1', 'zope.testrunner==4.0.4', 'zope.exceptions==3.6.1' ]
+    else:
+        guireqs = ['jsonpickle==0.4.0', 'tornado==2.2', 'pyzmq-static==2.1.11.1', 'django==1.3.1']
     
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'

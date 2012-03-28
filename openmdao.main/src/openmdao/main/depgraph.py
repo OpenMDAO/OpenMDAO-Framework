@@ -7,6 +7,8 @@ import networkx as nx
 from networkx.algorithms.dag import topological_sort_recursive,is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
+from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.printexpr import eliminate_expr_ws
 
 class AlreadyConnectedError(RuntimeError):
     pass
@@ -39,8 +41,10 @@ def _cvt_names_to_graph(srcpath, destpath):
         
     return (srccompname, srcvarname, destcompname, destvarname)
 
-#fake nodes for boundary  and passthrough connections
+#fake nodes for boundary and passthrough connections
 _fakes = ['@xin', '@xout', '@bin', '@bout']
+
+_exprset = set('+-/*[]()&| %<>!') # to use as a quick check for exprs to avoid overhead of constructing an ExprEvaluator
 
 class DependencyGraph(object):
     """
@@ -83,28 +87,7 @@ class DependencyGraph(object):
         return graph
     
     def get_source(self, destpath):
-        cname, _, vname = destpath.partition('.')
-        if vname: # internal dest
-            for srccomp, link in self.in_links(cname):
-                src = link._dests.get(vname)
-                if src:
-                    if srccomp[0] == '@':
-                        return src
-                    else:
-                        return '.'.join([srccomp,src])
-        else: # boundary dest
-            try:
-                dests = self._graph['@xin']['@bin']['link']._dests
-            except KeyError:
-                dests = {}
-            src = dests.get(destpath)
-            if src:
-                return src
-            for u,v,data in self._graph.in_edges('@bout', data=True):
-                src = data['link']._dests.get(destpath)
-                if src:
-                    return '.'.join([u, src])
-        return None
+        return self._allsrcs.get(destpath)
 
     def add(self, name):
         """Add the name of a Component to the graph."""
@@ -144,7 +127,9 @@ class DependencyGraph(object):
                 else:
                     srcvars = varset
                 if dest == '@bout':
-                    outset.update(link.get_dests(varset))
+                    bouts = link.get_dests(varset)
+                    outset.update(bouts)
+                    scope.set_valid(bouts, False)
                 else:
                     dests = link.get_dests(varset)
                     if dests:
@@ -164,14 +149,20 @@ class DependencyGraph(object):
                 continue
             elif u == '@bin':
                 if show_passthrough:
-                    conns.extend([(src, '.'.join([v,dest])) 
-                                  for dest,src in link._dests.items() if not '.' in src])
+                    for dest,srclst in link._dests.items():
+                        for src in srclst:
+                            if '.' not in src:
+                                conns.append((src, '.'.join([v,dest])))
             elif v == '@bout':
                 if show_passthrough:
-                    conns.extend([('.'.join([u,src]), dest) 
-                                  for dest,src in link._dests.items() if not '.' in dest])
+                    for dest,srclst in link._dests.items():
+                        for src in srclst:
+                            if '.' not in dest:
+                                conns.append(('.'.join([u,src]), dest))
             else:
-                conns.extend([('.'.join([u,src]), '.'.join([v,dest])) for dest,src in link._dests.items()])
+                for dest,srclst in link._dests.items():
+                    for src in srclst:
+                        conns.append(('.'.join([u,src]), '.'.join([v,dest])))
         return conns
     
     def in_map(self, cname, varset):
@@ -223,8 +214,9 @@ class DependencyGraph(object):
         edges = []
         for name in names:
             for u,v,data in self._graph.edges(name, data=True):
-                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                    for dest,src in data['link']._dests.items()])
+                for dest, srclst in data['link']._dests.items():
+                    for src in srclst:
+                        edges.extend([('.'.join([u,src]), '.'.join([v,dest]))])
         return edges
     
     def var_in_edges(self, name=None):
@@ -236,8 +228,9 @@ class DependencyGraph(object):
         edges = []
         for name in names:
             for u,v,data in self._graph.in_edges(name, data=True):
-                edges.extend([('.'.join([u,src]), '.'.join([v,dest])) 
-                                     for dest,src in data['link']._dests.items()])
+                for dest, srclst in data['link']._dests.items():
+                    for src in srclst:
+                        edges.extend([('.'.join([u,src]), '.'.join([v,dest]))])
         return edges
     
     def get_connected_inputs(self):
@@ -252,23 +245,33 @@ class DependencyGraph(object):
         except KeyError:
             return []
     
-    def connect(self, srcpath, destpath):
+    def connect(self, srcpath, destpath, scope, expr=None):
         """Add an edge to our Component graph from 
-        *srccompname* to *destcompname*.
+        *srccompname* to *destcompname*.  If expr is defined, it's
+        the actual ExprEvaluator object for the source.
         """
+        if expr is not None:
+            if destpath in self._allsrcs:
+                raise AlreadyConnectedError("%s is already connected to source %s" %
+                                            (destpath, self._allsrcs[destpath]))
+            self._allsrcs[destpath] = expr.text
+            try:
+                for ref in expr.refs():
+                    self.connect(ref, destpath, scope)
+                return
+            except:
+                del self._allsrcs[destpath]
+                raise
+            
         graph = self._graph
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
         
         dpdot = destpath+'.'
         for dst,src in self._allsrcs.items():
-            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or destpath==dst:
+            if destpath.startswith(dst+'.') or dst.startswith(dpdot):
                 raise AlreadyConnectedError("%s is already connected to source %s" %
-                                            (dst, src))
-        #oldsrc = self.get_source('.'.join([destcompname,destvarname]))
-        #if oldsrc:
-            #raise AlreadyConnectedError("%s is already connected to source %s" %
-                                        #(destpath, oldsrc))
+                                                (dst, src))
                 
         if srccompname == '@xin' and destcompname != '@bin':
             # this is an auto-passthrough input so we need 2 links
@@ -319,7 +322,6 @@ class DependencyGraph(object):
                                      (str(strcon), 
                                       '.'.join([srccompname,srcvarname]), 
                                       '.'.join([destcompname,destvarname])))
-        self._allsrcs[destpath] = srcpath
         
     def _comp_connections(self, cname):
         """Returns a list of tuples of the form (srcpath, destpath) for all
@@ -362,11 +364,16 @@ class DependencyGraph(object):
         else:
             return self._var_connections(path)
 
-    def disconnect(self, srcpath, destpath=None):
+    def disconnect(self, srcpath, destpath=None, expr=None):
         """Disconnect the given variables."""
         if destpath is None:
             for src,dest in self.connections_to(srcpath):
-                self.disconnect(src, dest)
+                self.disconnect(src, dest, expr)
+            return
+        
+        if expr is not None:
+            for ref in expr.refs():
+                self.disconnect(ref, destpath)
             return
 
         graph = self._graph
@@ -387,14 +394,16 @@ class DependencyGraph(object):
         elif destcompname == '@xout' and srccompname != '@bout':
             # this is an auto-passthrough output, so there are two connections
             # that must be removed (@bout to @xout and some internal component to @bout)
-            link = graph['@bout']['@xout']['link']
-            link.disconnect('.'.join([srccompname,srcvarname]), destvarname)
-            if len(link) == 0:
-                self._graph.remove_edge('@bout', '@xout')
-            link = graph[srccompname]['@bout']['link']
-            link.disconnect(srcvarname,'.'.join([srccompname,srcvarname]))
-            if len(link) == 0:
-                self._graph.remove_edge(srccompname, '@bout')
+            if graph['@bout'].get('@xout'):
+                link = graph['@bout']['@xout']['link']
+                link.disconnect('.'.join([srccompname,srcvarname]), destvarname)
+                if len(link) == 0:
+                    self._graph.remove_edge('@bout', '@xout')
+            if graph[srccompname].get('@bout'):
+                link = graph[srccompname]['@bout']['link']
+                link.disconnect(srcvarname,'.'.join([srccompname,srcvarname]))
+                if len(link) == 0:
+                    self._graph.remove_edge(srccompname, '@bout')
         else:
             link = self.get_link(srccompname, destcompname)
             if link:
@@ -411,10 +420,18 @@ class DependencyGraph(object):
             del self._allsrcs[d]
 
     def dump(self, stream=sys.stdout):
-        """Prints out a simple text representation of the graph."""
+        """Prints out a simple sorted text representation of the graph."""
+        tupdict = {}
+        tuplst = []
         for u,v,data in self._graph.edges(data=True):
-            stream.write('%s -> %s\n' % (u,v))
-            for src,dests in data['link']._srcs.items():
+            tupdict[(u,v)] = data['link']
+            tuplst.append((u,v))
+            
+        tuplst.sort()
+        for tup in tuplst:
+            link = tupdict[tup]
+            stream.write('%s -> %s\n' % tup)
+            for src, dests in link._srcs.items():
                 stream.write('   %s : %s\n' % (src, dests))
 
     def find_all_connecting(self, start, end):
@@ -459,8 +476,10 @@ class _Link(object):
     def connect(self, src, dest):
         if src not in self._srcs:
             self._srcs[src] = []
+        if dest not in self._dests:
+            self._dests[dest] = []
         self._srcs[src].append(dest)
-        self._dests[dest] = src
+        self._dests[dest].append(src)
         
     def disconnect(self, src, dest):
         if dest in self._dests:
@@ -494,9 +513,8 @@ class _Link(object):
         else:
             srcs = []
             for name in dests:
-                src = self._dests.get(name)
-                if src:
-                    srcs.append(src)
+                srclst = self._dests.get(name, ())
+                srcs.extend(srclst)
             return srcs
 
 

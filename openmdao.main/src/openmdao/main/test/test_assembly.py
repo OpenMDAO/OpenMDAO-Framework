@@ -8,7 +8,7 @@ import sys
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
                               set_as_top, SimulationRoot
-from openmdao.main.datatypes.api import Float, Str, Slot, List
+from openmdao.main.datatypes.api import Float, Int, Str, Slot, List, Array
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
 from openmdao.util.log import enable_trace, disable_trace
@@ -46,6 +46,25 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
+
+
+class SimpleListComp(Component):
+    
+    a = List(Int, iotype='in')
+    b = List(Int, iotype='in')
+    c = List(Int, iotype='out')
+    d = List(Int, iotype='out')
+    
+    def __init__(self):
+        super(SimpleListComp, self).__init__()
+        self.a = [1,2,3]
+        self.b = [4,5,6]
+        self.c = [5,7,9]
+        self.d = [-3,-3,-3]
+
+    def execute(self):
+        self.c = [a+b for a,b in zip(self.a, self.b)]
+        self.d = [a-b for a,b in zip(self.a, self.b)]
 
 
 class DummyComp(Component):
@@ -253,7 +272,6 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.s, 'once upon a time')
         
         # also, test that we can't do a direct set of a connected input
-        # This tests Requirement Ticket #274
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
@@ -391,14 +409,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('comp2: rout must be an input variable',
+            self.assertEqual(": can't connect 'comp1.rout' to 'comp2.rout': comp2: rout must be an input variable",
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('comp1: r must be an output variable',
+            self.assertEqual(": can't connect 'comp1.r' to 'comp2.rout': comp1: r must be an output variable",
                              str(err))
         else:
             self.fail('RuntimeError expected')
@@ -407,7 +425,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp1.r')
         except Exception, err:
-            self.assertEqual(': Cannot connect comp1.rout to comp1.r. Both are on same component.',
+            self.assertEqual(": Cannot connect 'comp1.rout' to 'comp1.r'. Both refer to the same component.",
                              str(err))
         else:
             self.fail('exception expected')
@@ -417,7 +435,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units','comp2.s')
         except AttributeError, err:
             self.assertEqual(str(err), 
-                    "comp1: Cannot locate variable named 'rout.units'")
+                    ": Can't find 'comp1.rout.units'")
         else:
             self.fail('NameError expected')
             
@@ -447,7 +465,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except Exception, err:
-            self.assertEqual("circular dependency (['comp2', 'comp1']) would be created by"+
+            self.assertEqual(": Can't connect 'comp2.rout' to 'comp1.r': circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('Exception expected')
@@ -746,6 +764,26 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         self.assertEqual(errors, 0)
         self.assertEqual(len(trace_buf), len(expected))
 
+    def test_expr(self):
+        class Dummy(Component): 
+        
+            z = Array([[0],[0],[0]],iotype="in",shape=(3,1))
+            
+            def execute(self): 
+                pass
+            
+              
+        class TestA(Assembly): 
+           
+            x = Float(0.0,iotype="in")
+           
+            def configure(self): 
+                self.add('d',Dummy())
+                self.connect('x','d.z[0][0]')
+               
+               
+        t = set_as_top(TestA())
+
     def test_tracing(self):
         # Check tracing of iteration coordinates.
         top = Assembly()
@@ -782,7 +820,6 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         disable_trace()
         top.run()
         self.assertEqual(trace_out.getvalue(), expected)
-
 
 if __name__ == "__main__":
     unittest.main()

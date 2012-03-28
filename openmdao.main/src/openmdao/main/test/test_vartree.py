@@ -7,6 +7,7 @@ from enthought.traits.trait_base import not_none
 from openmdao.main.api import Container, Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
 from openmdao.main.datatypes.api import Float, Slot, File
+from openmdao.main.case import flatten_obj
 
 class DumbVT3(VariableTree):
     def __init__(self):
@@ -213,7 +214,7 @@ class NamespaceTestCase(unittest.TestCase):
             self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         except Exception as err:
             self.assertEqual(str(err), 
-                "'vt2.vt3.b' is already connected to source 'parent.parent.scomp1.cont_out.vt2.vt3.a'")
+                "cont_in.vt2.vt3.b is already connected to source parent.scomp1.cont_out.vt2.vt3.a")
         else:
             self.fail("exception expected")
         
@@ -291,6 +292,13 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(set(result.keys()), set(vtvars+vt2vars+vt3vars))
         result = dict(self.asm.scomp1.cont_in.items(iotype='out'))
         self.assertEqual(set(result.keys()), set([]))
+        
+    def test_flatten(self):
+        dvt = DumbVT()
+        self.assertEqual(set(flatten_obj('foo', dvt)), 
+                         set([('foo.vt2.vt3.a',1.),('foo.vt2.vt3.b',12.),
+                              ('foo.vt2.x',-1.),('foo.vt2.y',-2.),
+                              ('foo.v1',1.),('foo.v2',2.)]))
     
     
 if __name__ == "__main__":

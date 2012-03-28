@@ -43,6 +43,18 @@ except ImportError as err:
                 dtype = _guess_dtype(lst)
             self.dtype = dtype
 
+        @property
+        def shape(self):
+            stack = [self]
+            shp = []
+            while stack:
+                obj = stack.pop()
+                size = len(obj)
+                shp.append(size)
+                if size > 0 and isinstance(obj[0], (list, tuple)):
+                    stack.append(obj[0])
+            return tuple(shp)
+
         def __eq__(self, other):
             try:
                 if len(self) != len(other):

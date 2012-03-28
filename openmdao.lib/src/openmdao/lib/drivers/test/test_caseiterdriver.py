@@ -14,13 +14,13 @@ import nose
 import random
 import numpy.random as numpy_random
 
-from openmdao.main.api import Assembly, Component, Case, Slot, set_as_top
+from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
-from openmdao.lib.datatypes.api import Float, Bool, Array, Int, Str
+from openmdao.lib.datatypes.api import Float, Bool, Array, Int, Slot, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
@@ -462,7 +462,7 @@ class TestCase(unittest.TestCase):
         top.run()
         self.verify_itername(top.driver.evaluated)
 
-    def verify_itername(self, cases):
+    def verify_itername(self, cases, subassembly=False):
         # These iternames will have the case's uuid prepended.
         expected = (('1-1', '1-2'),
                     ('2-1', '2-2'),
@@ -472,12 +472,43 @@ class TestCase(unittest.TestCase):
             logging.debug('%s: %r %r', case.label,
                           case['comp1.itername'], case['comp2.itername'])
             i = int(case.label)
-            uuid1, dot, iter1 = case['comp1.itername'].partition('.')
-            uuid2, dot, iter2 = case['comp2.itername'].partition('.')
-            self.assertEqual(uuid1, case.uuid)
+            prefix1, dot, iter1 = case['comp1.itername'].partition('.')
+            prefix2, dot, iter2 = case['comp2.itername'].partition('.')
+            prefix = '1-1' if subassembly else case.uuid
+            self.assertEqual(prefix1, prefix)
             self.assertEqual(iter1, expected[i][0])
-            self.assertEqual(uuid2, case.uuid)
+            self.assertEqual(prefix2, prefix)
             self.assertEqual(iter2, expected[i][1])
+
+    def test_subassembly(self):
+        logging.debug('')
+        logging.debug('test_subassembly')
+
+        top = set_as_top(Assembly())
+        sub = top.add('sub', Assembly())
+        sub.force_execute = True
+        top.driver.workflow.add('sub')
+
+        sub.add('driver', CaseIteratorDriver())
+        sub.add('comp1', TracedComponent())
+        sub.add('comp2', TracedComponent())
+        sub.driver.workflow.add(('comp1', 'comp2'))
+
+        cases = []
+        for i in range(3):
+            cases.append(Case(label=str(i),
+                              inputs=(('comp1.inp', i), ('comp2.inp', i)),
+                              outputs=(('comp1.itername', 'comp2.itername'))))
+        # Sequential.
+        sub.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(sub.driver.evaluated, subassembly=True)
+
+        # Concurrent.
+        sub.driver.sequential = False
+        sub.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(sub.driver.evaluated, subassembly=True)
 
 
 if __name__ == '__main__':

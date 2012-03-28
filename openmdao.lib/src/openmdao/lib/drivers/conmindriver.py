@@ -37,10 +37,9 @@ except ImportError as err:
     zeros = lambda *args, **kwargs: None 
     numpy_int = int
 
-from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int, Str, List
+from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int, Str
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
@@ -241,9 +240,6 @@ class CONMINdriver(DriverUsesDerivatives):
     itrm = Int(3, iotype='in', desc='Number of consecutive iterations to '
                       'indicate convergence (relative or absolute).')
         
-    # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to '
-                               'output in the recorder.')
     
     def __init__(self, *args, **kwargs):
         super(CONMINdriver, self).__init__(*args, **kwargs)
@@ -445,31 +441,8 @@ class CONMINdriver(DriverUsesDerivatives):
             
             self.iter_count = self.cnmn1.iter 
             
-            if self.recorders:
-                # Write out some relevant information to the recorder
-                
-                dvals = [float(val) for val in self.design_vals[:-2]]
-                
-                case_input = []
-                for var, val in zip(self.get_parameters().keys(), dvals):
-                    case_name = var[0] if isinstance(var, tuple) else var
-                    case_input.append([case_name, val])
-                if self.printvars:
-                    case_output = [(name,
-                                    ExprEvaluator(name, scope=self.parent).evaluate())
-                                           for name in self.printvars]
-                else:
-                    case_output = []
-                case_output.append(["objective", self.cnmn1.obj])
-            
-                for i, val in enumerate(self.constraint_vals):
-                    case_output.append(["Constraint%d" % i, val])
-                
-                case = Case(case_input, case_output, parent_uuid=self._case_id)
-                
-                for recorder in self.recorders:
-                    recorder.record(case)
-        
+            self.record_case()
+
 
     def _config_conmin(self):
         """Set up arrays for the Fortran conmin routine, perform some
