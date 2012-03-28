@@ -2,6 +2,7 @@
 """
 
 import csv
+import cStringIO, StringIO
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
@@ -178,6 +179,8 @@ class CSVCaseRecorder(object):
         self.delimiter = delimiter
         self.quotechar = quotechar
         self.append = append
+        self.outfile = None
+        self.csv_writer = None
         
         #Open output file
         self.write_headers = False
@@ -230,6 +233,9 @@ class CSVCaseRecorder(object):
         Field i+j+9 - msg
         """
         
+        if self.outfile is None:
+            raise RuntimeError('Attempt to record on closed recorder')
+
         if self.write_headers:
             
             headers = ['label', '/INPUTS']
@@ -270,11 +276,22 @@ class CSVCaseRecorder(object):
         
         self.csv_writer.writerow(data)
 
+    def close(self):
+        """Closes the file."""
+
+        if self.csv_writer is not None:
+            if not isinstance(self.outfile,
+                              (StringIO.StringIO, cStringIO.OutputType)):
+                # Closing a StringIO deletes its contents.
+                self.outfile.close()
+            self.outfile = None
+            self.csv_writer = None
+
     def get_iterator(self):
         '''Return CSVCaseIterator that points to our current file'''
         
         # I think we can safely close the oufile if someone is
         # requesting the iterator
-        self.outfile.close()
+        self.close()
         
         return CSVCaseIterator(self.filename)

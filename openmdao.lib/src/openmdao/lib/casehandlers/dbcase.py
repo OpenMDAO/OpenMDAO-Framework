@@ -160,9 +160,13 @@ class DBCaseRecorder(object):
         """Set the DB file and connect to it."""
         self._dbfile = value
         self._connection = sqlite3.connect(value)
+        self._iter_conn = sqlite3.connect(value)
     
     def record(self, case):
         """Record the given Case."""
+        if self._connection is None:
+            raise RuntimeError('Attempt to record on closed recorder')
+
         cur = self._connection.cursor()
         
         cur.execute("""insert into cases(id,uuid,parent,label,msg,retries,model_id,timeEnter) 
@@ -190,6 +194,13 @@ class DBCaseRecorder(object):
                         v)
         self._connection.commit()
     
+    def close(self):
+        """Commit and close DB connection if not using ``:memory:``."""
+        if self._connection is not None and self._dbfile != ':memory:':
+            self._connection.commit()
+            self._connection.close()
+            self._connection = None
+
     def get_iterator(self):
         """Return a DBCaseIterator that points to our current DB."""
         return DBCaseIterator(dbfile=self._dbfile, connection=self._connection)
