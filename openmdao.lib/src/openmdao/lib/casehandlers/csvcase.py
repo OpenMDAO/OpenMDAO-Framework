@@ -30,6 +30,7 @@ class CSVCaseIterator(object):
         
         #Open Input file
         self.filename = filename
+        self._infile = None
         
     @property
     def filename(self):
@@ -44,6 +45,7 @@ class CSVCaseIterator(object):
         self._filename = name
         
         infile = open(self.filename, 'r')
+        self._infile = infile
         
         # Sniff out the dialect
         #infile.seek(1)

@@ -42,6 +42,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.filename = "openmdao_test_csv_case_iterator.csv"
         
     def tearDown(self):
+        try:
+            self.top.driver.iterator.close()
+        except:
+            pass
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
