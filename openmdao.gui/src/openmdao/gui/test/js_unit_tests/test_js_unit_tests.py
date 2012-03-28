@@ -1,21 +1,21 @@
-import os
 import sys
-import tempfile
-
-from distutils.spawn import find_executable
-
-from nose.plugins.skip import SkipTest
 
 # Because Xvfb does not exist on Windows, it is difficult
 #   to do headless testing on Windows. So for now
-#   we just do skip tests on Windows. Therefor, no need to install
-#   and import the following modules.
+#   we just test on Linux
 if sys.platform.startswith( "linux" ):
-    # for running Xvfb. So we can run our tests headlessly. Xvfb does not
+
+    import os
+    import tempfile
+    from distutils.spawn import find_executable
+
+    # for running Xvfb, so we can run our tests headlessly. Xvfb does not
     #    exist on Windows
     from pyvirtualdisplay import Display
     # For running tests using the JsTestDriver test runner
     from lazr.testing.jstestdriver import JsTestDriverTestCase
+
+    from nose.plugins.skip import SkipTest
 
     from openmdao.util.network import get_unused_ip_port
     
@@ -25,11 +25,12 @@ if sys.platform.startswith( "linux" ):
     from nose.proxy import ResultProxy
     ResultProxy.assertMyTest = lambda s, test: None
     
+    import openmdao.gui
+    gui_directory = os.path.abspath( openmdao.gui.__path__[0] )
+
     def create_jstestdriver_config_file( port_num ):
         '''Create the configuration file needed by jsTestDriver'''
     
-        import openmdao.gui
-        gui_directory = os.path.abspath( openmdao.gui.__path__[0] )
         config_file_temp = tempfile.NamedTemporaryFile(delete=False)
         print >> config_file_temp, '''
     server: http://localhost:%(port_num)s
@@ -50,7 +51,9 @@ if sys.platform.startswith( "linux" ):
     
     port_number = get_unused_ip_port()
     config_file = create_jstestdriver_config_file( port_number )
-    jstestdriver_path = "JsTestDriver-1.3.3c.jar"
+    jstestdriver_path = os.path.join( gui_directory,
+                                      "test/js_unit_tests",
+                                      "JsTestDriver-1.3.3c.jar" )
     
     class BrowserJsUnitTestCase(JsTestDriverTestCase):
         """base class for testing GUI JavaScript"""
@@ -67,14 +70,8 @@ if sys.platform.startswith( "linux" ):
                 self.display = Display()
                 self.display.start()
     
-            #self.config_filename = config_file.name
             super(BrowserJsUnitTestCase, self).setUp()
             
-            # Really only tested on Linux so far
-            if not sys.platform.startswith( "linux" ):
-                raise SkipTest( "Linux is needed to do the "
-                                "GUI JavaScript unit testing" )
-    
             # If java not available, skip the test since it is needed
             #    by jsTestDriver
             if not find_executable( "java" ):

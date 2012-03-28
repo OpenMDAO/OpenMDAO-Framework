@@ -52,8 +52,8 @@ Each component can report its location in the iteration hierarchy by its
 :term:`iteration coordinates`.  The coordinates are of the form
 ``<workflow execution count>-<component index in workflow>`` for each level in
 the hierarchy. For example, when `component2` above is executing in the
-workflow for `driver3` for the first time its iteration coordinates would be
-``1-3.1-1``. Which denotes the first execution of the top workflow, third
+workflow for `driver3` for the first time, its iteration coordinates would be
+``1-3.1-1``. These coordinates denote the first execution of the top workflow, third
 component (`driver3`), first execution of that driver's workflow, first
 component in that workflow (`component2`). To have all components report their
 iteration coordinates to stderr (the default):
@@ -69,22 +69,12 @@ Later, the tracing can be turned off:
 
     disable_trace()
 
-An :term:`Assembly` is a container for your analysis models.   When an
-Assembly executes, it will always look for a Driver named `driver` and  start there, then work its
-way down the iteration hierarchy. 
-
-Besides being a container for all the other objects, an Assembly has two other main functions. 
-It is responsible for managing all of the data connections between components in the framework. 
-Whenever data needs to move from one component to another, this action is specified via the `connect`
-method of the assembly. 
-
-
 Assembly
 --------
 
 An :term:`Assembly` is a container for all of your components, drivers, and workflows. When an
-Assembly executes, it will always look for a Driver named `driver` and  start there, then work its
-way down the iteration hierarchy. 
+Assembly executes, it will always look for a Driver named `driver` and  start there; then it will 
+work its way down the iteration hierarchy. 
 
 Besides being a container for all the other objects, an Assembly has two other main functions. 
 It is responsible for managing all of the data connections between components in the framework. 
@@ -119,7 +109,6 @@ containing two other components, resulting in the following:
 
 So assemblies allow us to organize our model into a hierarchy of submodels, and within each
 submodel, drivers and workflows give us a flexible way to define an iteration scheme.
-
 
 
 Building a Basic Model

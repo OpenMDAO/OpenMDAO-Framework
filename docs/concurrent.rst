@@ -2,10 +2,10 @@ Working with Parallel Computational Resources
 ======================================================
 
 
-Warning: This is a very advanced topic, for dealing with parallel compute resources 
-in OpenMDAO. If you have not gone through at least our :ref:`Basic Tutorial <basic-tutorial>`
-and our :ref:`Optimization Tutorial <optimization_tutorial>` then you should go and get more 
-familiar with the foundations of OpenMDAO first. 
+Warning: This is a very advanced topic for dealing with parallel compute resources 
+in OpenMDAO. If you have not gone through at least our :ref:`basic tutorial <basic-tutorial>`
+and our :ref:`optimization tutorial <optimization_tutorial>`, then you should become more 
+familiar with the foundations of OpenMDAO before delving into this section. 
 
 .. _Specifying-Computational-Resources:
 
@@ -159,9 +159,9 @@ Queuing Key                    Value     Description
 ``native_specification``       list      Queuing system specific options
 =============================  ========  ==============================================
 
-Use of ``native_specification`` is discouraged since that makes the submitting
-application less portable. At times its use is necessary in order to access specific
-features of a queueing system.
+Using ``native_specification`` is discouraged since that makes the submitting
+application less portable. However, at times its use is necessary in order to access specific
+features of a queuing system.
 
 DRMAA derived job categories:
 

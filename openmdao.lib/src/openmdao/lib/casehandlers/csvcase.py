@@ -44,28 +44,27 @@ class CSVCaseIterator(object):
         
         self._filename = name
         
-        infile = open(self.filename, 'r')
-        
-        # Sniff out the dialect
-        #infile.seek(1)
-        dialect = csv.Sniffer().sniff(infile.readline())
-        infile.seek(0)
-        reader = csv.reader(infile, dialect, quoting=csv.QUOTE_NONNUMERIC)
-        
-        self.data = []
-        for row in reader:
-            self.data.append(row)
-       
-        if self.headers is None:
-            self.need_fieldnames = True
-        else:
-            self.need_fieldnames = False
-            if 'label' in self.headers.values():
-                for key, value in self.headers.iteritems():
-                    if value == 'label':
-                        self.label_field = key
-                        del self.headers[key]
-                        break
+        with open(self.filename, 'r') as infile:
+            # Sniff out the dialect
+            #infile.seek(1)
+            dialect = csv.Sniffer().sniff(infile.readline())
+            infile.seek(0)
+            reader = csv.reader(infile, dialect, quoting=csv.QUOTE_NONNUMERIC)
+            
+            self.data = []
+            for row in reader:
+                self.data.append(row)
+           
+            if self.headers is None:
+                self.need_fieldnames = True
+            else:
+                self.need_fieldnames = False
+                if 'label' in self.headers.values():
+                    for key, value in self.headers.iteritems():
+                        if value == 'label':
+                            self.label_field = key
+                            del self.headers[key]
+                            break
             
     def __iter__(self):
         return self._next_case()
@@ -164,7 +163,7 @@ class CSVCaseIterator(object):
         # This file was generated externally
         else:
             pass
-                    
+
         return input_fields, output_fields
 
 
@@ -173,7 +172,7 @@ class CSVCaseRecorder(object):
     
     implements(ICaseRecorder)
     
-    def __init__(self, filename='cases.csv', append=False, delimiter=',', \
+    def __init__(self, filename='cases.csv', append=False, delimiter=',',
                  quotechar = '"'):
         
         self.delimiter = delimiter
@@ -181,9 +180,10 @@ class CSVCaseRecorder(object):
         self.append = append
         self.outfile = None
         self.csv_writer = None
+        self._header_size = 0
         
         #Open output file
-        self.write_headers = False
+        self._write_headers = False
         self.filename = filename
         
     @property
@@ -206,10 +206,10 @@ class CSVCaseRecorder(object):
             # Whenever we start a new CSV file, we need to insert a line
             # of headers. These won't be available until the first
             # case is passed to self.record.
-            self.write_headers = True
+            self._write_headers = True
             
-        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter, \
-                                     quotechar=self.quotechar, \
+        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
+                                     quotechar=self.quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
 
 
@@ -236,43 +236,34 @@ class CSVCaseRecorder(object):
         if self.outfile is None:
             raise RuntimeError('Attempt to record on closed recorder')
 
-        if self.write_headers:
+        if self._write_headers:
             
             headers = ['label', '/INPUTS']
             
-            for name in case.keys(iotype='in'):
-                headers.append(name)
+            headers.extend(case.keys(iotype='in', flatten=True))
                 
             headers.append('/OUTPUTS')
-            for name in case.keys(iotype='out'):
-                headers.append(name)
+            
+            headers.extend(case.keys(iotype='out', flatten=True))
                 
-            for item in ['/METADATA', 'retries', 'max_retries', 'parent_uuid', \
-                           'msg']:
-                headers.append(item)
+            headers.extend(['/METADATA', 'retries', 'max_retries', 'parent_uuid',
+                            'msg'])
                     
             self.csv_writer.writerow(headers)
-            self.write_headers = False
+            self._write_headers = False
+            self._header_size = len(headers)
             
-        data = []
-        
-        data.append(case.label)
-        #data.append(case.uuid)
-        
+        data = [case.label]
+                
         for iotype in ['in', 'out']:
             data.append('')
-            for value in case.values(iotype=iotype):
-                
-                if isinstance(value, (int, float, str)):
-                    data.append(value)
-                else:
-                    raise ValueError('CSV format does not support ' + \
-                               'variables of type %s' % type(value))
+            data.extend(case.values(iotype=iotype, flatten=True))
             
-        data.append('')
-        for item in (case.retries, case.max_retries, \
-                     case.parent_uuid, case.msg):
-            data.append(item)
+        data.extend(['', case.retries, case.max_retries, 
+                     case.parent_uuid, case.msg])
+        
+        if self._header_size != len(data):
+            raise RuntimeError("number of data points doesn't match header size in CSV recorder")
         
         self.csv_writer.writerow(data)
 
