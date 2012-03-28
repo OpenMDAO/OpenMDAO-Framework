@@ -1,11 +1,11 @@
 Using Scalers and Adders
-========================================
+============================
 
-An example problem requiring scaling
+An Example Problem Requiring Scaling
 -------------------------------------
 
-Some systems may not be well suited for numerical solution or optimization,
-due to differences in magnitudes of its parameters. This problem can be
+Some systems may not be well-suited for numerical solution or optimization
+due to differences in magnitudes of their parameters. This problem can be
 addressed in OpenMDAO by setting scaler and adder values when adding
 parameters to a driver. To demonstrate this, let's define a paraboloid
 function `f`, and minimize it with respect to two input variables, `x` and
@@ -44,11 +44,11 @@ and is implemented as the following openMDAO component:
             self.f_xy = (1000.*x-3.)**2 + (1000.*x)*(0.01*y) + (0.01*y+4.)**2 - 3.
 
             
-It can be shown that `f` has a global minimum at `x` = 1/150 = 0.00666667 and
-`y` = -2200/3 = -733.333333. But it can also be shown that `f` is far more
-sensitive to variation in `x` than variation in `y` . Numerical optimization
+It can be shown that `f` has a global minimum at ```x` = 1/150 = 0.00666667 and
+`y` = -2200/3 = -733.333333``. But it can also be shown that `f` is far more
+sensitive to variation in `x` than variation in `y`. Numerical optimization
 of `f` may not converge to the true minimum due to this difference in
-sensitivity, or may require a large number of iterations to reach the true
+sensitivity, or it may require a large number of iterations to reach the true
 minimum compared to a well-scaled problem. Let's show this using the
 following assembly:
 
@@ -80,7 +80,7 @@ following assembly:
             self.driver.add_parameter('paraboloid.x', low=-1000., high=1000.)
             self.driver.add_parameter('paraboloid.y', low=-1000., high=1000.)
             
-Running the optimization gives :
+Running the optimization results in:
 
 ::
 
@@ -94,7 +94,6 @@ Running the optimization gives :
     Elapsed time:  0.0150000334249 seconds
     >>> print "Execution count: ", opt_problem.paraboloid.exec_count
     Execution count:  53
-    
     
     
 Now, consider modifying the assembly so that `x` and `y` have scalers
@@ -121,14 +120,14 @@ Running the assembly with these specifications for `x` and `y` gives:
     
 So, the computed minimizers of `f` are closer to the true minimizers of `f`
 when scaling is used. Furthermore, this optimization was computed more
-quickly and using fewer iterations with scaling than without scaling.
+quickly and used fewer iterations with scaling than without scaling.
 
-Next, let's look at a problem well-suited for both scalers and adders; a
+Next, let's look at a problem well-suited for both scalers and adders: a
 shifted and scaled paraboloid given by
 
 .. math:: f(x,y) = (1000x-3)^2 + (1000x)*(0.01*(y+1000)) + (0.01*(y+1000)+4)^2 - 3
 
-which has the minimum (0.006667, -1733.334333). This is implemented using the component:
+which has the minimum (``0.006667, -1733.334333``). This is implemented using the component:
 
 
 .. testcode:: simple_component_Paraboloid_scale
@@ -187,7 +186,7 @@ As before, a direct optimization can be performed using the assembly:
             self.driver.add_parameter('paraboloid.x', low=-1000000., high=1000000.)
             self.driver.add_parameter('paraboloid.y', low=-1000000., high=1000000.) 
 
-Running this gives:
+Running this produces:
 
 ::
 
@@ -202,7 +201,7 @@ Running this gives:
     Execution count:  52
 
     
-So, consider specifying both scaler and adder values for `x` and `y` when adding them to `driver` :     
+So, consider specifying both scaler and adder values for `x` and `y` when adding them to `driver`:     
     
 ::
 
