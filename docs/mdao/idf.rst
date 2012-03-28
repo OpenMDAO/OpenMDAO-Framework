@@ -37,7 +37,7 @@ are instantiated and the workflow is defined.
         
         from openmdao.lib.optproblems import sellar
         
-        class SellarIDF(Assembly): #TEST
+        class SellarIDF(Assembly):
             """ Optimization of the Sellar problem using IDF"""
             
             def configure(self):

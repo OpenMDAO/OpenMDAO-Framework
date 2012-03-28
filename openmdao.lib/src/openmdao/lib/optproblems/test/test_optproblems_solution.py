@@ -83,8 +83,6 @@ class TestOptProblems(unittest.TestCase):
                 
             prob.architecture = OptProblemSolutionCheck()
             
-            
-            prob.configure()
             prob.run()
             
             error = prob.check_solution(strict=True)

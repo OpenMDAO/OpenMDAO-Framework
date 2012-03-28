@@ -14,7 +14,7 @@ from enthought.traits.api import Float as TraitFloat
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.variable import Variable
-from openmdao.main.attrwrapper import AttrWrapper
+from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 
 from openmdao.main.uncertain_distributions import UncertainDistribution
 
@@ -108,11 +108,13 @@ class Float(Variable):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, AttrWrapper) and 'units' in value.metadata:
-            if self.units and value.metadata['units']:
-                return self._validate_with_metadata(obj, name, 
-                                                    value.value, 
-                                                    value.metadata)
+        if isinstance(value, AttrWrapper):
+            if self.units:
+                valunits = value.metadata.get('units')
+                if valunits and isinstance(valunits, basestring) and self.units != valunits:
+                    return self._validate_with_metadata(obj, name, 
+                                                        value.value, 
+                                                        valunits)
             
             value = value.value
         elif isinstance(value, UncertainDistribution):
@@ -153,21 +155,24 @@ class Float(Variable):
         except AttributeError:
             raise ValueError(msg)
 
-    def get_val_wrapper(self, value):
-        """Return an AttrWrapper object.  Its value attribute
+    def get_val_wrapper(self, value, index=None):
+        """Return a UnitsAttrWrapper object.  Its value attribute
         will be filled in by the caller.
         """
+        if index is not None:
+            raise ValueError("Float does not support indexing")
         # pylint: disable-msg=E1101
-        return AttrWrapper(value, units=self.units)
+        if self.units is None:
+            return value
+        return UnitsAttrWrapper(value, units=self.units)
             
-    def _validate_with_metadata(self, obj, name, value, srcmeta):
+    def _validate_with_metadata(self, obj, name, value, src_units):
         """Perform validation and unit conversion using metadata from
         the source trait.
         """
         
         # pylint: disable-msg=E1101
         dst_units = self.units
-        src_units = srcmeta['units']
         
         if isinstance(value, UncertainDistribution):
             value = value.getvalue()

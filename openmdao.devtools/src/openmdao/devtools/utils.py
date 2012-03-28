@@ -16,6 +16,7 @@ try:
     from fabric.state import connections
     from fabric.network import connect
 except ImportError as err:
+    run = None
     connections = {}
     logging.warn("In %s: %r" % (__file__, err))
 
