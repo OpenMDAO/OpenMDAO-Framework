@@ -3,6 +3,9 @@ import unittest
 from inspect import getmembers, ismethod, isfunction
 
 from enthought.traits.api import HasTraits, Float
+from zope.interface import Interface, implements, implementedBy
+
+from openmdao.main.interfaces import obj_has_interface
 
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
@@ -44,6 +47,38 @@ class BadDelegate2(object):
     def amethod(self):
         return self.inst_y
     
+class I(Interface):
+    def i(a):
+        pass
+
+class J(I):
+    def j(a):
+        pass
+
+class DelegateI(object):
+    implements(I)
+
+    def __init__(self, parent):
+        pass
+
+    def i(self, a):
+        return a + 1
+
+class DelegateJ(object):
+    implements(J)
+
+    def __init__(self, parent):
+        pass
+
+    def i(self, a):
+        return a + 1
+
+    def j(self, a):
+        return a + 2
+
+class InheritedDelegateI(DelegateI):
+    def __init__(self, parent):
+        super(InheritedDelegateI, self).__init__(parent)
 
 class DelegateTestCase(unittest.TestCase):
 
@@ -130,6 +165,51 @@ class DelegateTestCase(unittest.TestCase):
         f = Foo4()
         self.assertEqual(f.amethod(1,2), -54.3)
 
+    def test_add_delegatei(self):
+        @add_delegate(DelegateI)
+        class Delegator(object):
+            def __init__(self):
+                self.x = 1
+        
+        mems = set([n for n,v in getmembers(Delegator, ismethod) if not n.startswith('_')])
+        self.assertEqual(mems, set(['i']))
+        interfaces = list(implementedBy(Delegator))
+        self.assertEqual(interfaces, list(implementedBy(DelegateI)))
+        delegator = Delegator()
+        for interface in interfaces:
+            self.assertTrue(obj_has_interface(delegator, interface))
+        self.assertEqual(delegator.i(delegator.x), 2)
+
+    def test_add_delegatej(self):
+        @add_delegate(DelegateJ)
+        class Delegator1(object):
+            def __init__(self):
+                self.x = 1
+        
+        mems = set([n for n,v in getmembers(Delegator1, ismethod) if not n.startswith('_')])
+        self.assertEqual(mems, set(['i', 'j']))
+        interfaces = list(implementedBy(Delegator1))
+        self.assertEqual(interfaces, list(implementedBy(DelegateJ)))
+        delegator = Delegator1()
+        for interface in interfaces:
+            self.assertTrue(obj_has_interface(delegator, interface))
+        self.assertEqual(delegator.i(delegator.x), 2)
+        self.assertEqual(delegator.j(delegator.x), 3)
+
+    def test_add_inheriteddelegatei(self):
+        @add_delegate(InheritedDelegateI)
+        class Delegator2(object):
+            def __init__(self):
+                self.x = 1
+        
+        mems = set([n for n,v in getmembers(Delegator2, ismethod) if not n.startswith('_')])
+        self.assertEqual(mems, set(['i']))
+        interfaces = list(implementedBy(Delegator2))
+        self.assertEqual(interfaces, list(implementedBy(InheritedDelegateI)))
+        delegator = Delegator2()
+        for interface in interfaces:
+            self.assertTrue(obj_has_interface(delegator, interface))
+        self.assertEqual(delegator.i(delegator.x), 2)
         
 class StubIfMissingTestCase(unittest.TestCase):
     def test_stub_class(self):
