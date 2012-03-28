@@ -149,7 +149,7 @@ def add_delegate(*delegates):
             alldict = {}
 
             for interface in implementedBy(delegate):
-                classImplements(delegate, interface)
+                classImplements(cls, interface)
 
             for klass in getmro(delegate):
                 if hasattr(klass, '_do_not_promote'):
