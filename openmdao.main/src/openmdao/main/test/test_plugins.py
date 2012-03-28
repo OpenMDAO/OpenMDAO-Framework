@@ -165,9 +165,9 @@ class PluginsTestCase(unittest.TestCase):
             argv = ['docs', 'foobar']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
-            url = _plugin_docs(options.plugin_dist_name)
-            expected = os.path.join(self.tdir, 'foobar', 'src', 'foobar',
-                                    'sphinx_build', 'html', 'index.html')
+            url = os.path.realpath(_plugin_docs(options.plugin_dist_name))
+            expected = os.path.realpath(os.path.join(self.tdir, 'foobar', 'src', 'foobar',
+                                                     'sphinx_build', 'html', 'index.html'))
             self.assertEqual(url, expected)
         finally:
             # Uninstall
