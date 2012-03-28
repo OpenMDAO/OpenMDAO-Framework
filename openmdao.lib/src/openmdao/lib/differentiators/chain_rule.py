@@ -8,6 +8,8 @@ from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.interfaces import implements, IDifferentiator
+from openmdao.main.api import Driver, Assembly
+from openmdao.main.assembly import Run_Once
 from openmdao.main.numpy_fallback import array
 
 
@@ -177,8 +179,21 @@ class ChainRule(HasTraits):
             incoming_deriv_names = {}
             incoming_derivs = {}
             
+            # We don't handle nested drivers yet.
+            if isinstance(node, Driver):
+                raise NotImplementedError('Nested drivers')
+            
+            # Recurse into assemblies.
+            elif isinstance(node, Assembly):
+                
+                if not isinstance(node.driver, Run_Once):
+                    raise NotImplementedError('Nested drivers')
+                
+                local_outputs, local_derivs = self._recurse_assy(node, \
+                                     incoming_derivs, incoming_deriv_names)
+            
             # This component can determine its derivatives.
-            if hasattr(node, 'calculate_first_derivatives'):
+            elif hasattr(node, 'calculate_first_derivatives'):
                 
                 node.calc_derivatives(first=True)
                 
@@ -189,26 +204,54 @@ class ChainRule(HasTraits):
                 for input_name in local_inputs:
                     
                     full_name = '.'.join([node_name, input_name])
-                    
+                    print full_name
                     # Inputs who are connected in this assembly
                     if full_name in node.parent._depgraph._depgraph._allsrcs:
                 
                         sources = node.parent._depgraph._depgraph.connections_to(full_name)
                         source_expression = node.parent._depgraph.connections_to(full_name)
-                        
-                        expression_derivative = False
-                        if source_expression != sources:
-                            expression_derivative = True
-                        
-                        for source_tuple in sources:
+                        print sources, source_expression
+                        for item in sources:
+                            print scope._parent._depgraph.get_source(item[1])
                             
-                            source = source_tuple[0]
+                        # Simple input-output connection                        
+                        if source_expression == sources:
+                            source = sources[0][0]
                             
                             # Only process inputs who are connected to outputs
                             # with derivatives in the chain
                             if source in derivs:
-                                incoming_deriv_names[input_name] = source
-                                incoming_derivs[source] = derivs[source]
+                                incoming_deriv_names[input_name] = full_name
+                                
+                                if full_name in incoming_derivs:
+                                    incoming_derivs[full_name] += derivs[source]
+                                else:
+                                    incoming_derivs[full_name] = derivs[source]
+                        
+                        # Connection via an expression
+                        else:
+                        
+                            for source_tuple in sources:
+                                
+                                source = source_tuple[0]
+                                
+                                # Only process inputs who are connected to outputs
+                                # with derivatives in the chain
+                                if source in derivs:
+                                    
+                                    # Need derivative of the expression
+                                    expr = node.parent._depgraph.get_expr(source_expression[0][0])
+                                    expr_deriv = expr.evaluate_gradient(scope=node.parent,
+                                                                        wrt=source)
+                                    
+                                    incoming_deriv_names[input_name] = full_name
+                                    if full_name in incoming_derivs:
+                                        incoming_derivs[full_name] += derivs[source] * \
+                                            expr_deriv[source]
+                                    else:
+                                        incoming_derivs[full_name] = derivs[source] * \
+                                            expr_deriv[source]
+                                        
                             
                     # Inputs who are hooked directly to the parameters
                     elif full_name in self.param_names and \
@@ -235,6 +278,21 @@ class ChainRule(HasTraits):
                         local_derivs[output_name][input_name] * \
                         incoming_derivs[full_input_name]
                         
+
+    def _recurse_assy(self, scope, upscope_derivs, upscope_names):
+        """Enables assembly recursion by scope translation."""
+        
+        # Figure out what is connected through the assembly boundary
+        local_derivs = {}
+        for item in scope._depgraph.get_connected_inputs():
+            source = scope._depgraph.get_source(item)
+            local_derivs[source] = 1.0
+        
+        # Find derivatives for this assemblies workflow
+        self._chain_workflow(local_derivs, scope.driver)
+        
+        # Convert scope and return only what we need.
+        local_outputs = scope._depgraph.get_connected_outputs()
 
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for all outputs in the Driver's
