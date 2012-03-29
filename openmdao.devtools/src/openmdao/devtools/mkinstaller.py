@@ -203,7 +203,7 @@ def after_install(options, home_dir):
     
     reqs = %(reqs)s
     guireqs = %(guireqs)s
-    guitestreqs %(guitestreqs)s
+    guitestreqs = %(guitestreqs)s
     
     if options.findlinks is None:
         url = '%(url)s'
