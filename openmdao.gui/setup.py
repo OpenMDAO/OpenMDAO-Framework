@@ -32,6 +32,16 @@ setup(name='openmdao.gui',
           'jsonpickle', 
           'django'
       ],
+      extras_require = {
+          'jsTest':  [
+              'path.py==2.2.2', 
+              'pyvirtualdisplay==0.0.9',
+              'lazr.testing==0.1.2a',
+              'mocker==1.1',
+              'zope.testrunner==4.0.4',
+              'zope.exceptions==3.6.1' 
+          ]
+      },   
       entry_points="""
       # -*- Entry points: -*-
       """,
