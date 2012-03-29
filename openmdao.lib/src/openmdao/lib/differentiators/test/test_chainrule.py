@@ -254,14 +254,16 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.nest1.add('real_c4_y2', Float(iotype='out', desc='I am really here'))
     
         self.top.connect('comp1.y1+0*comp1.y2', 'nest1.comp2.x1')
+        #self.top.connect('comp1.y1', 'nest1.comp2.x1')
         self.top.connect('comp1.y2', 'nest1.real_c3_x1')
         self.top.nest1.connect('real_c3_x1', 'comp3.x1')
         self.top.nest1.connect('comp2.y1', 'comp4.x1')
         self.top.nest1.connect('comp3.y1', 'comp4.x2')
-        #self.top.nest1.connect('comp4.y2', 'real_c4_y2')
+        self.top.nest1.connect('comp4.y2', 'real_c4_y2')
+        self.top.connect('nest1.real_c4_y2', 'comp5.x2')
         self.top.connect('nest1.comp4.y1', 'comp5.x1')
-        #self.top.connect('nest1.real_c4_y2', 'comp5.x2')
-        self.top.connect('nest1.comp4.y2 + 0*nest1.comp4.y3', 'comp5.x3')
+        self.top.connect('nest1.comp4.y3', 'comp5.x3')
+        #self.top.connect('nest1.comp4.y2 + 1.0*nest1.comp4.y3', 'comp5.x3')
     
         self.top.comp1.x1 = 2.0
         self.top.run()

@@ -204,29 +204,35 @@ class ChainRule(HasTraits):
                 for input_name in local_inputs:
                     
                     full_name = '.'.join([node_name, input_name])
-                    print full_name
+
                     # Inputs who are connected in this assembly
                     if full_name in node.parent._depgraph._depgraph._allsrcs:
                 
                         sources = node.parent._depgraph._depgraph.connections_to(full_name)
                         source_expression = node.parent._depgraph.connections_to(full_name)
-                        print full_name, sources, source_expression
-                        for item in sources:
-                            print scope._parent._depgraph.get_source(item[1])
-                            
+                        
+                        # This list keeps track of duplicated sources, which
+                        # are a biproduct of a connection to multiple inputs
+                        # across a fake boundary node.
+                        used_sources = []
+                        
                         for source_tuple in sources:
                             
                             source = source_tuple[0]
                             
+                            # Variables on an assembly boundary
+                            if source[0:4] == '@bin' and source.count('.') < 2:
+                                source = source.replace('@bin.', '')
+                            
                             # Only process inputs who are connected to outputs
                             # with derivatives in the chain
-                            if source in derivs:
+                            if source in derivs and source not in used_sources:
                                 
                                 # Need derivative of the expression
                                 expr = node.parent._depgraph.get_expr(source_expression[0][0])
                                 expr_deriv = expr.evaluate_gradient(scope=node.parent,
                                                                     wrt=source)
-                                print "derive wrt ", source, " = ", expr_deriv
+
                                 incoming_deriv_names[input_name] = full_name
                                 if full_name in incoming_derivs:
                                     incoming_derivs[full_name] += derivs[source] * \
@@ -234,6 +240,8 @@ class ChainRule(HasTraits):
                                 else:
                                     incoming_derivs[full_name] = derivs[source] * \
                                         expr_deriv[source]
+                                    
+                                used_sources.append(source)
                                         
                             
                     # Inputs who are hooked directly to the parameters
@@ -270,26 +278,53 @@ class ChainRule(HasTraits):
         local_derivs = {}
         
         for item in scope._depgraph._depgraph.var_edges('@xin'):
-            src = item[0].replace('parent.','')
-            src = src.replace('@xin.','')
+            src = item[0].replace('@xin.','')
+            upscope_src = src.replace('parent.','')
             dest = item[1]
             
             # Real connections on boundary
             if dest.count('.') < 2:
                 dest = dest.split('.')[1]
-            
+                
+            # Differentiate all expressions
+            expr_txt = scope._depgraph.get_source(dest.replace('@bin.',''))
+            expr = scope._depgraph.get_expr(expr_txt)
+            expr_deriv = expr.evaluate_gradient(scope=scope,
+                                                wrt=src)
             if dest in local_derivs:    
-                local_derivs[dest] += upscope_derivs[src]
+                local_derivs[dest] += upscope_derivs[upscope_src]*expr_deriv[src]
             else:
-                local_derivs[dest] = upscope_derivs[src]
+                local_derivs[dest] = upscope_derivs[upscope_src]*expr_deriv[src]
             
-        print scope._depgraph._depgraph.var_edges('@xin')
-        print local_derivs
-        # Find derivatives for this assemblies workflow
+        # Find derivatives for this assembly's workflow
         self._chain_workflow(local_derivs, scope.driver)
         
         # Convert scope and return only what we need.
-        local_outputs = scope._depgraph.get_connected_outputs()
+        name = scope.name
+        for item in scope._depgraph._depgraph.var_in_edges('@bout'):
+            src = item[0]
+            upscope_src = '%s.%s' % (name, src)
+            dest = item[1]
+            
+            # Real connections on boundary need expressions differentiated
+            if dest.count('.') < 2:
+                
+                upscope_dest = dest.replace('@bout', name)
+                dest = dest.replace('@bout.','')
+                
+                expr_txt = scope._depgraph.get_source(dest)
+                expr = scope._depgraph.get_expr(expr_txt)
+                expr_deriv = expr.evaluate_gradient(scope=scope,
+                                                    wrt=src)
+                
+                upscope_derivs[upscope_dest] = local_derivs[src]*expr_deriv[src]
+                
+            # Fake connection, so just add source
+            else:
+                upscope_derivs[upscope_src] = local_derivs[src]
+                
+        print local_derivs
+        print upscope_derivs
 
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for all outputs in the Driver's
