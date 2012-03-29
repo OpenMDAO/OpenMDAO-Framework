@@ -2,16 +2,15 @@
 
 {% block title %}
     OpenMDAO: Addons
-{% endblock %}
+{% end %}
 
 {% block content %}
     <div>
         Enter the name of the distribution (without the extension) from the list below:
         <p>
         <form action="addons" method="POST">
-            {% csrf_token %}
             <table>
-            {{ addon_form.as_table }}
+            {% raw addon_form.as_table() %}
             </table>
         <input type="submit" value="Install" />
         </form>        
@@ -23,4 +22,4 @@
         <iframe src={{addons_url}} width="500" height="400" marginwidth="0" marginheight="0" frameborder="no" scrolling="yes" style="border-width:2px; border-color:#333; background:#FFF; border-style:solid;">
         </iframe>
     </div>
-{% endblock %}
+{% end %}

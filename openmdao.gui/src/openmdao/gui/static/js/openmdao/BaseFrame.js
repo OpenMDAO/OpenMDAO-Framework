@@ -78,6 +78,10 @@ openmdao.BaseFrame.prototype.setTitle = function (title) {
     }
 }
 
+openmdao.BaseFrame.prototype.handleMessage = function (json) {
+    debug.info(this.title,'received message',json)
+}
+
 openmdao.BaseFrame.prototype.close = function () {
     // assuming I'm a dialog: if I have a parent then re-dock with it, else self-destruct
     if (this.par) {

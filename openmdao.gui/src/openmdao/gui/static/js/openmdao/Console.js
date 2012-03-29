@@ -12,7 +12,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         historyBox = history.parent(),
         contextMenu = jQuery("<ul id="+historyID+"-menu class='context-menu'>"),
         interval = 0,  // ms
-        timer = null                   
+        timer = null,
+        sck = null
 
     // create context menu for history    
     contextMenu.append(jQuery('<li>Clear</li>').click(function(ev) {
@@ -21,31 +22,35 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
-    contextMenu.append(jQuery('<li>Update</li>').click(function(ev) {
-        update();
-    }));
-    contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
-        promptForRefresh();
-    }));
+    //contextMenu.append(jQuery('<li>Update</li>').click(function(ev) {
+    //    update();
+    //}));
+    // contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
+        // promptForRefresh();
+    // }));
     historyBox.append(contextMenu)
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
     // submit a command
     jQuery('#'+formID).submit(function() {
         var cmd = command.val();
-        model.issueCommand(command.val(),
-            // success, record any response in the history & clear the command
-            function(responseText) {
-                if (responseText.length > 0) {
-                    updateHistory(responseText);
+        if (cmd.length > 0) {
+            command.val("");
+            updateHistory('\n>>> '+cmd+'\n');
+            model.issueCommand(cmd,
+                // success, record any response in the history & clear the command
+                function(responseText) {
+                    debug.info('cmd:',cmd,'response:',responseText)
+                    if (responseText.length > 0) {
+                        updateHistory(responseText);
+                    }
+                },
+                // failure
+                function(jqXHR, textStatus, errorThrown) {
+                    alert('Error issuing command: '+jqXHR.statusText)
                 }
-            },
-            // failure
-            function(jqXHR, textStatus, errorThrown) {
-                alert("Error issuing command: "+jqXHR.statusText)
-            }
-        );
-        command.val("");
+            );
+        }
         return false;
     })
     
@@ -120,13 +125,8 @@ openmdao.Console = function(formID,commandID,historyID,model) {
             scrollToBottom();
         }
     }
-    
-    /** update the history with any new output from the model */
-    function update() {
-        model.getOutput(updateHistory)
-    }
-    
+
     // ask model for an update whenever something changes
-    model.addListener(update)
- 
+    model.addListener('outstream',updateHistory)
+
 }

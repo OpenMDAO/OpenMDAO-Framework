@@ -13,7 +13,7 @@ openmdao.ComponentEditor = function(model,pathname) {
     var self = this,
         panes = {};
         
-    model.addListener(update)
+    model.addListener('',update)
           
     /** load the table with the given properties */
     function loadTabs(properties) {
