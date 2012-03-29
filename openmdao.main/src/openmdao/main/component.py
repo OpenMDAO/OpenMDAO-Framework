@@ -13,6 +13,8 @@ import pkg_resources
 import sys
 import weakref
 
+import cPickle as pickle
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
@@ -27,8 +29,9 @@ from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
-from openmdao.main.mp_support import is_instance
+from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.publisher import Publisher
 
 import openmdao.util.log as tracing
 
@@ -127,6 +130,8 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        self._exec_state = 'INVALID' # possible values: VALID, INVALID, RUNNING
+
         # register callbacks for all of our 'in' traits
         for name,trait in self.class_traits().items():
             if trait.iotype == 'in':
@@ -171,6 +176,9 @@ class Component (Container):
         
         self.ffd_order = 0
         self._case_id = ''
+        
+        self._publish_vars = {}  # dict of varname to subscriber count
+        
         self._itername = ''
 
     @property
@@ -180,6 +188,13 @@ class Component (Container):
             self._dir_context = DirectoryContext(self)
         return self._dir_context
 
+    def _set_exec_state(self, state):
+        if self._exec_state != state:
+            self._exec_state = state
+            pub = Publisher.get_instance()
+            if pub:
+                pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
+            
     @rbac(('owner', 'user'))
     def get_itername(self):
         """Return current 'iteration coordinates'."""
@@ -410,6 +425,8 @@ class Component (Container):
         for name in self.list_inputs(valid=False):
             valids[name] = True
         self._call_execute = False
+        self._set_exec_state('VALID')
+        self.publish_vars()
         
     def _post_run (self):
         """"Runs at the end of the run function, whether execute() ran or not."""
@@ -445,6 +462,8 @@ class Component (Container):
         self._case_id = case_id
         try:
             self._pre_execute(force)
+            self._set_exec_state('RUNNING')
+
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
                 
@@ -473,6 +492,9 @@ class Component (Container):
             #else:
                 #print 'skipping: %s' % self.get_pathname()
             self._post_run()
+        except:
+            self._set_exec_state('INVALID')
+            raise
         finally:
             # If this is the top-level component, perform run termination.
             if self.parent is None:
@@ -1363,6 +1385,7 @@ class Component (Container):
         valids = self._valid_dict
         
         self._call_execute = True
+        self._set_exec_state('INVALID')
 
         # only invalidate connected inputs. inputs that are not connected
         # should never be invalidated
@@ -1400,7 +1423,39 @@ class Component (Container):
         """Set logging message level."""
         self._logger.level = level
 
-
+    def register_published_vars(self, names, publish=True):
+        if isinstance(names, basestring):
+            names = [names]
+        for name in names:
+            # TODO: allow wildcard naming at lowest level
+            parts = name.split('.')
+            if len(parts) == 1:
+                if not hasattr(self, name):
+                    self.raise_exception("this component has no attribute named '%s'" % name, 
+                                         NameError)
+                if publish:
+                    if name in self._publish_vars:
+                        self._publish_vars += 1
+                    else:
+                        self._publish_vars[name] = 1
+                else:
+                    if name in self._publish_vars:
+                        self._publish_vars[name] -= 1
+                        if self._publish_vars[name] < 1:
+                            del self._publish_vars[name]
+            else:
+                obj = getattr(self, parts[0])
+                obj.register_published_vars('.'.join(parts[1:]), publish)
+            
+    def publish_vars(self):
+        pub = Publisher.get_instance()
+        if pub:
+            pname = self.get_pathname()
+            lst = [('.'.join([pname, var]), getattr(self, var))
+                   for var in self._publish_vars.keys()]
+            pub.publish_list(lst)
+            
+    
 def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no cover
     """prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its

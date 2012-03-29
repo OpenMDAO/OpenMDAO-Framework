@@ -8,27 +8,111 @@ openmdao.Model=function() {
      ***********************************************************************/
      
     var self = this,
-        callbacks = [];
-        
+        outstream_topic = 'outstream',
+        outstream_socket = false,
+        publisher_socket = false,
+        subscribers = {};
+ 
+     /** initialize a websocket
+            url:        the URL of the address on which to open the websocket
+            handler:    the message handler for the websocket
+     */
+    open_websocket = function(url,handler) {
+        // make ajax call to get outstream websocket
+        jQuery.ajax({
+            type: 'GET',
+            url:  url,
+            success: function(addr) {
+                socket = new WebSocket(addr);
+                debug.info('websocket at',addr,socket);
+                socket.onopen = function (e) {
+                    debug.info('websocket opened',e);
+                };
+                socket.onclose = function (e) {
+                    debug.info('websocket closed',e);
+                };
+                socket.onmessage = function(e) {
+                    handler(e.data);
+                };            
+                socket.onerror = function (e) {
+                    debug.info('websocket error',e);
+                };
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                debug.error("Error getting websocket (status="+jqXHR.status+"): "+jqXHR.statusText)
+                debug.error(jqXHR,textStatus,errorThrown)
+           }
+        })   
+    }
+    
+    
+    /** initialize the outstream websocket */
+    open_outstream_socket = function(topic) {
+        open_websocket('outstream', function(data) {
+            var callbacks = subscribers[topic];
+            for (i = 0; i < callbacks.length; i++) {
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](data);
+                }
+                else {
+                    debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                };
+            };
+        });
+    }
+
+    /** initialize the publisher websocket */
+    open_publisher_socket = function() {
+        open_websocket('pubstream', function(message) {
+            message = jQuery.parseJSON(message);
+            var callbacks = subscribers[message[0]];
+            if (callbacks) {
+                for (i = 0; i < callbacks.length; i++) {
+                    if (typeof callbacks[i] === 'function') {
+                        callbacks[i](message);
+                    }
+                    else {
+                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                    };
+                };
+            };
+        });
+    }
+    
     /***********************************************************************
      *  privileged
      ***********************************************************************/
     
-    /** add a listener, i.e. a function that will be called when something changes */
-    this.addListener = function(callback) {
-        callbacks.push(callback)
+    /** add a subscriber (i.e. a function to be called) for messgages with the given topic */
+    this.addListener = function(topic, callback) {
+        if (topic in subscribers) {
+            subscribers[topic].push(callback);
+        }
+        else {
+            subscribers[topic] = [ callback ]
+            if (topic === outstream_topic && !outstream_socket) {
+                outstream_socket = true;
+                open_outstream_socket(outstream_topic);
+            }
+            else if (!publisher_socket) {
+                publisher_socket = true;
+                open_publisher_socket();
+            }
+        }
     }
-
-    /** notify all listeners that something has changed (by calling all callbacks) */
-    this.updateListeners = function() {
-        for ( var i = 0; i < callbacks.length; i++ ) {
-            if (typeof callbacks[i] == 'function') {
+    
+   /** notify all generic listeners that something may have changed  */
+    this.updateListeners = function() {        
+        var callbacks = subscribers[''];
+        for (i = 0; i < callbacks.length; i++) {
+            //debug.info('updating',callbacks[i])
+            if (typeof callbacks[i] === 'function') {
                 callbacks[i]();
             }
             else {
-                debug.error('Model: listener did not provide a valid callback function!',callback[i])
+                debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
             }
-        }
+        }        
     }
 
     /** get the list of object types that are available for creation */
@@ -156,7 +240,7 @@ openmdao.Model=function() {
         })
     }
     
-    /** add an object of the specified type & name to the model (at x,y) */
+    /** add an object of the specified type & name to the specified parent */
     this.addComponent = function(typepath,name,parent,callback) {
         if (!parent) {
             parent = '';
@@ -177,6 +261,17 @@ openmdao.Model=function() {
         });
     }
 
+    /** remove the component with the given pathname */
+    this.removeComponent = function(pathname) {
+        var parent = openmdao.Util.getPath(pathname);
+        if (parent.length > 0 ) {
+            self.issueCommand(parent+'.remove("'+openmdao.Util.getName(pathname)+'")');
+        }
+        else {
+            self.issueCommand('del('+openmdao.Util.getName(pathname)+')');
+        }
+    }
+    
     /** issue the specified command against the model */
     this.issueCommand = function(cmd, callback, errorHandler) {
         jQuery.ajax({
@@ -322,8 +417,7 @@ openmdao.Model=function() {
                          self.issueCommand('print "'+data.replace('\n','\\n') +'"')
                      },
             error: function(jqXHR, textStatus, errorThrown) {
-                       alert("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
-                       openmdao.Util.htmlWindow(jqXHR.responseText,'Error Running Model',600,400)
+                       debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
                        debug.error(jqXHR,textStatus,errorThrown)
                    }
         })

@@ -1,0 +1,34 @@
+<html>
+<head>
+<script type="text/javascript">
+
+var ws = new WebSocket("ws://localhost:8888/websocket");
+   ws.onopen = function() {
+      ws.send("Hello, world");
+   };
+   ws.onmessage = function (evt) {
+      alert(evt.data);
+   };
+   
+function sendCmd()
+{
+   var command = document.getElementById("cmd").value
+   alert("sending "+command)
+   ws.send(['\x01', command])
+}
+
+function close_it()
+{
+   ws.close()
+}
+
+</script>
+</head>
+<body>
+Command: <input type="text" id="cmd" value="" /><br />
+<button onclick="sendCmd()">Execute Command</button>
+<br /><br .>
+<button onclick="close_it()">Close</button>
+</body>
+</html>
+

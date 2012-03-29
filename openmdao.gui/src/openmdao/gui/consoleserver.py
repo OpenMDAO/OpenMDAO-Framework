@@ -1,6 +1,4 @@
-import logging
 import os, os.path, sys, traceback
-import platform
 import shutil
 import cmd
 import jsonpickle
@@ -9,18 +7,14 @@ import zipfile
 
 from setuptools.command import easy_install
 
-from cStringIO import StringIO
-
 from enthought.traits.api import HasTraits
 from openmdao.main.variable import Variable
-
-from multiprocessing.managers import BaseManager
-from openmdao.main.factory import Factory
-from openmdao.main.factorymanager import create
+from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
+from openmdao.main.assembly import Assembly
 from openmdao.main.driver import Driver
-from openmdao.main.factorymanager import get_available_types
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.publisher import Publisher
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
@@ -32,72 +26,23 @@ from zope.interface import implementedBy
 
 import networkx as nx
 
+from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.util import *
 
-class ConsoleServerFactory(Factory):
-    ''' creates and keeps track of :class:`ConsoleServer`
+def modifies_model(target):
+    ''' decorator for methods that modify the model
+        performs maintenance on root level containers/assemblies
     '''
+    def wrapper(self, *args, **kwargs):
+        result = target(self, *args, **kwargs)
+        self._update_roots()
+        return result
+    return wrapper
 
-    def __init__(self):
-        super(ConsoleServerFactory, self).__init__()
-        self.cserver_dict = {}
-        self.temp_files = {}
 
-    def __del__(self):
-        ''' make sure we clean up on exit
-        '''
-        #self.cleanup()
-
-    def create(self, name, **ctor_args):
-        ''' Create a :class:`ConsoleServer` and return a proxy for it. 
-        '''
-        manager = BaseManager()
-        manager.register('ConsoleServer', ConsoleServer)
-        manager.start()
-        return manager.ConsoleServer()
-        
-    def console_server(self,server_id):
-        ''' create a new :class:`ConsoleServer` associated with an id
-        '''
-        if not self.cserver_dict.has_key(server_id):
-            cserver = self.create('mdao-'+server_id)
-            self.cserver_dict[server_id] = cserver;
-        else:
-            cserver = self.cserver_dict[server_id]
-        return cserver
-        
-    def delete_server(self,server_id):
-        ''' delete the :class:`ConsoleServer` associated with an id
-        '''
-        if self.cserver_dict.has_key(server_id):
-            cserver = self.cserver_dict[server_id]
-            del self.cserver_dict[server_id]
-            cserver.cleanup()
-            del cserver
-        
-    def get_tempdir(self,name):
-        ''' create a temporary directory prefixed with the given name
-        '''
-        if not name in self.temp_files:
-            self.temp_files[name] = tempfile.mkdtemp(prefix='mdao-'+name+'.')
-        return self.temp_files[name]
-        
-    def cleanup(self):        
-        ''' clean up temporary files, etc
-        '''
-        for server_id, cserver in self.cserver_dict.items():
-            del self.cserver_dict[server_id]
-            cserver.cleanup()
-            del cserver            
-        for name in self.temp_files:
-            f = self.temp_files[name]
-            if os.path.exists(f):
-                rmtree(f)
-                
 class ConsoleServer(cmd.Cmd):
-    ''' Object which knows how to load a model.
-    Executes in a subdirectory of the startup directory.
-    All remote file accesses must be within the tree rooted there.
+    ''' Object which knows how to load a model and provides a command line interface
+        and various methods to access and modify that model.
     '''
 
     def __init__(self, name='', host=''):
@@ -105,13 +50,6 @@ class ConsoleServer(cmd.Cmd):
 
         print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
         
-        #intercept stdout & stderr
-        self.sysout = sys.stdout
-        self.syserr = sys.stderr
-        self.cout = StringIO()
-        sys.stdout = self.cout
-        sys.stderr = self.cout
-
         self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
         self.prompt = 'OpenMDAO>> '
         
@@ -124,8 +62,6 @@ class ConsoleServer(cmd.Cmd):
         self.orig_dir = os.getcwd()
         self.root_dir = tempfile.mkdtemp(self.name)
         if os.path.exists(self.root_dir):
-            logging.warning('%s: Removing existing directory %s',
-                            self.name, self.root_dir)
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
@@ -136,7 +72,19 @@ class ConsoleServer(cmd.Cmd):
         self.proj = None
         self.exc_info = None
 
-    def error(self,err,exc_info):
+    def _update_roots(self):
+        ''' Ensure that all root containers in the project dictionary know
+            their own name and that all root assemblies are set as top
+        '''
+        g = self.proj.__dict__.items()
+        for k,v in g:
+            if has_interface(v,IContainer):
+                if v.name != k:
+                    v.name = k
+            if is_instance(v,Assembly):
+                set_as_top(v)
+                    
+    def _error(self,err,exc_info):
         ''' print error message and save stack trace in case it's requested
         '''
         self.exc_info = exc_info
@@ -169,18 +117,20 @@ class ConsoleServer(cmd.Cmd):
         self._hist += [ line.strip() ]
         return line
 
+    @modifies_model
     def onecmd(self, line):
         self._hist += [ line.strip() ]
         # Override the onecmd() method so we can trap error returns
         try:
             cmd.Cmd.onecmd(self, line)
         except Exception, err:
-            self.error(err,sys.exc_info())
+            self._error(err,sys.exc_info())
 
     def emptyline(self):
         # Default for empty line is to repeat last command - yuck
         pass
-
+        
+    @modifies_model
     def default(self, line):       
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
@@ -195,24 +145,16 @@ class ConsoleServer(cmd.Cmd):
             try:
                 exec(line) in self.proj.__dict__
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             try:
                 result = eval(line, self.proj.__dict__)
                 if result is not None:
                     print result
             except Exception, err:
-                self.error(err,sys.exc_info())
-
-    #def set_top(self,pathname):
-        #print 'setting top to:',pathname
-        #cont, root = self.get_container(pathname)
-        #if cont:
-            #self.proj.__dict__['top'] = cont
-            #set_as_top(cont)
-        #else:
-            #print pathname,'not found.'
-
+                self._error(err,sys.exc_info())
+            
+    @modifies_model
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
@@ -223,10 +165,10 @@ class ConsoleServer(cmd.Cmd):
                 top.run(*args, **kwargs)
                 print "Execution complete."
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             print "Execution failed: No 'top' assembly was found."
-        
+
     def execfile(self, filename):
         ''' execfile in server's globals. 
         '''
@@ -246,15 +188,8 @@ class ConsoleServer(cmd.Cmd):
                 contents = 'if True:\n' + contents[idx:]
                 self.default(contents)
         except Exception, err:
-            self.error(err,sys.exc_info())
+            self._error(err,sys.exc_info())
 
-    def get_output(self):
-        ''' get any pending output and clear the outputput buffer
-        '''
-        output = self.cout.getvalue()     
-        self.cout.truncate(0)
-        return output
-        
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 
         '''
@@ -281,7 +216,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         cont = None
         root = pathname.split('.')[0]
-        if root in self.proj.__dict__:
+        if self.proj and root in self.proj.__dict__:
             if root == pathname:
                 cont = self.proj.__dict__[root]
             else:
@@ -289,7 +224,7 @@ class ConsoleServer(cmd.Cmd):
                 try:
                     cont = self.proj.__dict__[root].get(rest)
                 except Exception, err:
-                    self.error(err,sys.exc_info())
+                    self._error(err,sys.exc_info())
         return cont, root
         
     def _get_components(self,cont,pathname=None):
@@ -373,7 +308,7 @@ class ConsoleServer(cmd.Cmd):
                         connections.append([src, dst])
                 conns['connections'] = connections;
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         return jsonpickle.encode(conns)
 
     def set_connections(self,pathname,src_name,dst_name,connections):
@@ -396,7 +331,7 @@ class ConsoleServer(cmd.Cmd):
                         asm.connect(src,dst)
                 conns['connections'] = connections;
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
 
     def _get_structure(self,asm,pathname):
         ''' get the list of components and connections between them
@@ -431,7 +366,7 @@ class ConsoleServer(cmd.Cmd):
                 asm, root = self.get_container(pathname)
                 structure = self._get_structure(asm, pathname)
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             components = []
             g = self.proj.__dict__.items()
@@ -453,10 +388,10 @@ class ConsoleServer(cmd.Cmd):
         ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__ 
         ret['workflow'] = []
         for comp in drvr.workflow:
-            pathname = root+'.'+comp.get_pathname() if root else comp.get_pathname()
+            pathname = comp.get_pathname()
             if is_instance(comp,Assembly) and comp.driver:
                 ret['workflow'].append({ 
-                    'pathname': root+'.'+comp.get_pathname() if root else comp.get_pathname(),
+                    'pathname': pathname,
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
                     'driver':   self._get_workflow(comp.driver,pathname+'.driver',root)
                 })
@@ -480,7 +415,7 @@ class ConsoleServer(cmd.Cmd):
             try:
                 flow = self._get_workflow(drvr,pathname,root)
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         return jsonpickle.encode(flow)
 
     def _get_attributes(self,comp,pathname,root):
@@ -496,7 +431,7 @@ class ConsoleServer(cmd.Cmd):
                 if not is_instance(v,Component):
                     attr['name'] = vname
                     attr['type'] = type(v).__name__
-                    attr['value'] = v
+                    attr['value'] = str(v)
                     attr['valid'] = comp.get_valid([vname])[0]
                     meta = comp.get_metadata(vname);
                     if meta:
@@ -515,7 +450,7 @@ class ConsoleServer(cmd.Cmd):
                 if not is_instance(v,Component):
                     attr['name'] = vname
                     attr['type'] = type(v).__name__
-                    attr['value'] = v
+                    attr['value'] = str(v)
                     attr['valid'] = comp.get_valid([vname])[0]
                     meta = comp.get_metadata(vname);
                     if meta:
@@ -629,7 +564,7 @@ class ConsoleServer(cmd.Cmd):
                 attr = self._get_attributes(comp,pathname,root)
                 attr['type'] = type(comp).__name__
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         return jsonpickle.encode(attr)
     
     def get_available_types(self):
@@ -648,15 +583,17 @@ class ConsoleServer(cmd.Cmd):
                         self.known_types.append( ( k , 'n/a') )
                 except Exception, err:
                     # print 'Class',k,'not included in working types'
-                    # self.error(err,sys.exc_info())
+                    # self._error(err,sys.exc_info())
                     pass
         return packagedict(self.known_types)
 
+    @modifies_model
     def load_project(self,filename):
         print 'loading project from:',filename
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
         self.proj.activate()
+        Publisher.get_instance()
         
     def save_project(self):
         ''' save the cuurent project state & export it whence it came
@@ -673,10 +610,11 @@ class ConsoleServer(cmd.Cmd):
                 else:
                     print 'Export failed, directory not known'
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         else:
             print 'No Project to save'
 
+    @modifies_model
     def add_component(self,name,classname,parentname):
         ''' add a new component of the given type to the specified parent. 
         '''
@@ -689,12 +627,13 @@ class ConsoleServer(cmd.Cmd):
                     else:
                         parent.add(name,create(classname))
                 except Exception, err:
-                    self.error(err,sys.exc_info())
+                    self._error(err,sys.exc_info())
             else:
                 print "Error adding component: parent",parentname,"not found."
         else:
             self.create(classname,name)
-            
+
+    @modifies_model
     def create(self,typname,name):
         ''' create a new object of the given type. 
         '''
@@ -704,23 +643,22 @@ class ConsoleServer(cmd.Cmd):
             else:
                 self.proj.__dict__[name]=create(typname)
         except Exception, err:
-            self.error(err,sys.exc_info())
-            
-        return self.proj.__dict__
+            self._error(err,sys.exc_info())
+
+        return self.proj.__dict__            
 
     def cleanup(self):
         ''' Cleanup this server's directory. 
         '''
         self.stdout = self.sysout
         self.stderr = self.syserr
-        logging.shutdown()
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:
                 print "trying to rmtree ",self.root_dir
                 shutil.rmtree(self.root_dir)
             except Exception, err:
-                self.error(err,sys.exc_info())
+                self._error(err,sys.exc_info())
         
     def get_files(self):
         ''' get a nested dictionary of files in the working directory
@@ -734,7 +672,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         filepath = os.getcwd()+'/'+str(filename)
         if os.path.exists(filepath):
-            contents=open(filepath, 'r').read()
+            contents=open(filepath, 'rb').read()
             return contents
         else:
             return None
@@ -750,10 +688,14 @@ class ConsoleServer(cmd.Cmd):
     def write_file(self,filename,contents):
         ''' write contents to file in working directory
         '''
-        filepath = os.getcwd()+'/'+str(filename)
-        fout = open(filepath,'wb')
-        fout.write(contents)
-        fout.close()
+        try:
+            filepath = os.getcwd()+'/'+str(filename)
+            fout = open(filepath,'wb')
+            fout.write(contents)
+            fout.close()
+            return True
+        except Exception, err:
+            return err
 
     def add_file(self,filename,contents):
         ''' add file to working directory
@@ -798,3 +740,11 @@ class ConsoleServer(cmd.Cmd):
         print "Installing",distribution,"from",url
         easy_install.main( ["-U","-f",url,distribution] )
             
+    def get_value(self,pathname):
+        ''' get the value of the object with the given pathname
+        '''
+        try:
+            val, root = self.get_container(pathname)            
+            return val
+        except Exception, err:
+            print "error getting value:",err
