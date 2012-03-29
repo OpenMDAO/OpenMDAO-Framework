@@ -43,6 +43,13 @@ in a Python list. Of these recorders, the ``CSVCaseRecorder`` is the most useful
 for passing data to other applications, such as an external post-processing
 tool. The ``DBCaseRecorder`` is the most useful for saving data for later use.
 
+At the end of the top-level assembly's ``run()`` all case recorders are closed.
+Each type of recorder defines its own implementation of ``close()``,
+but the general idea is to specify that the recording process is complete.
+For example, the ``CSVCaseRecorder`` will close the file being written so that
+other applications can use it. Note that in some cases you cannot record to
+a closed recorder.
+
 Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would
 like to print out the convergence history of the variables, objective, and constraint into a csv
 file, which we can read into Excel for some post processing. Additionally, we'd like to save an
