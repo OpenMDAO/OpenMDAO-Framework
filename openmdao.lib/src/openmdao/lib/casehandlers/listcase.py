@@ -32,6 +32,10 @@ class ListCaseRecorder(object):
         """Store the case in our internal list."""
         self.cases.append(case)
 
+    def close(self):
+        """Does nothing."""
+        return
+
     def get_iterator(self):
         '''Return ListCaseIterator that uses our current list.'''
         return ListCaseIterator(self.cases)

@@ -19,8 +19,9 @@ from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.interfaces import implements, obj_has_interface, IAssembly, \
-                                     IComponent, ICaseIterator, IDriver
+from openmdao.main.interfaces import implements, obj_has_interface, \
+                                     IAssembly, IComponent, IDriver, \
+                                     ICaseIterator, ICaseRecorder
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -473,9 +474,33 @@ class Component (Container):
                 #print 'skipping: %s' % self.get_pathname()
             self._post_run()
         finally:
+            # If this is the top-level component, perform run termination.
+            if self.parent is None:
+                self._run_terminated()
             if self.directory:
                 self.pop_dir()
  
+    def _run_terminated(self):
+        """ Executed at end of top-level run. """
+        def _recursive_close(container, visited):
+            """ Close all case recorders. """
+            # Using ._alltraits() since .items() won't pickle.
+            # and we may be traversing a distributed tree.
+            for name in container._alltraits():
+                obj = getattr(container, name)
+                if id(obj) in visited:
+                    continue
+                visited.add(id(obj))
+                if obj_has_interface(obj, IDriver):
+                    for recorder in obj.recorders:
+                        recorder.close()
+                elif obj_has_interface(obj, ICaseRecorder):
+                    obj.close()
+                if isinstance(obj, Container):
+                    _recursive_close(obj, visited)
+        visited = set((id(self),))
+        _recursive_close(self, visited)
+
     def add(self, name, obj):
         """Override of base class version to force call to *check_config*
         after any child containers are added. The base class version is still
