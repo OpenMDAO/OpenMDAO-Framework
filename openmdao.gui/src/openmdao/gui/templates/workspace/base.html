@@ -5,10 +5,10 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>{% block title %}{% endblock %}</title>
+    <title>{% block title %}{% end %}</title>
 </head>
 
-<body id="{% block body_id %}{% endblock %}" bgcolor="Grey">
+<body id="{% block body_id %}{% end %}" bgcolor="Grey">
 	<!----------------------------------------->
 	<!-- load all the scripts & style sheets -->
 	<!----------------------------------------->
@@ -18,24 +18,16 @@
     <div id="body">
     {% block body %}
         <div>
-        {% block content_title %}{% endblock %}
+        {% block content_title %}{% end %}
         </div>
-        <div class="content">
-        {% if messages %}
-        <ul>
-            {% for message in messages %}
-            <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        
-        {% block content %}{% endblock %}
+        <div class="content">        
+        {% block content %}{% end %}
         </div>
-    {% endblock %}
+    {% end %}
     </div>
 
     {% block footer %}
-    {% endblock %}
+    {% end %}
     
 </body>
 

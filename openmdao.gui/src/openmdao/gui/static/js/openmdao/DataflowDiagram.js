@@ -14,14 +14,13 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
                            pane.loadData, 
                            function(jqXHR, textStatus, errorThrown) {
                                pane.pathname = ''
-                               alert("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                               openmdao.Util.htmlWindow(jqXHR.responseText,'Error getting dataflow',600,400)
-                               debug.error(jqXHR)
+                               debug.error("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                               debug.error('jqXHR:',jqXHR)
                            })
     };
     
     // ask model for an update whenever something changes
-    model.addListener(update);
+    model.addListener('',update)
     
     /** set the pathname for which to display the dataflow */
     this.showDataflow = function(path) {        

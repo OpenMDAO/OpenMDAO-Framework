@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Projects
+{% end %}
+
+{% block content %}
+    <h2>Your OpenMDAO Projects:</h2>
+
+    {% if project_list %}
+        <ul>
+        {% for project in project_list %}
+            <li><a href="/projects/{{ project.id }}/">{{ project.projectname }}</a></li>
+        {% end %}
+        </ul>
+    {% else %}
+        <p>No projects are available.</p>
+    {% end %}
+
+    <p>
+    <a href='/projects/new/'>Add new project</a> &nbsp &nbsp <a href='/projects/add/'>Add existing project</a>
+{% end %}
