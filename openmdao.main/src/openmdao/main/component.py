@@ -481,9 +481,10 @@ class Component (Container):
                 self.pop_dir()
  
     def _run_terminated(self):
-        """Close all recorders in all drivers."""
-        def _recursive_terminate(container, visited):
-            # Using ._alltraits().items() since .items() won't pickle.
+        """ Executed at end of top-level run. """
+        def _recursive_close(container, visited):
+            """ Close all case recorders. """
+            # Using ._alltraits() since .items() won't pickle.
             # and we may be traversing a distributed tree.
             for name in container._alltraits():
                 obj = getattr(container, name)
@@ -493,10 +494,12 @@ class Component (Container):
                 if obj_has_interface(obj, IDriver):
                     for recorder in obj.recorders:
                         recorder.close()
+                elif obj_has_interface(obj, ICaseRecorder):
+                    obj.close()
                 if isinstance(obj, Container):
-                    _recursive_terminate(obj, visited)
+                    _recursive_close(obj, visited)
         visited = set((id(self),))
-        _recursive_terminate(self, visited)
+        _recursive_close(self, visited)
 
     def add(self, name, obj):
         """Override of base class version to force call to *check_config*
