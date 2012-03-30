@@ -89,7 +89,8 @@ class ChainRule(HasTraits):
             Name of the output in the local OpenMDAO hierarchy.
         """
         
-        return array([self.gradient[wrt][output_name] for wrt in self.param_names])
+        return array([self.gradient[wrt][output_name] \
+                      for wrt in self.param_names])
         
         
     def get_Hessian(self, output_name=None):
@@ -100,7 +101,8 @@ class ChainRule(HasTraits):
             Name of the output in the local OpenMDAO hierarchy.
         """
         
-        return array([self.hessian[in1][in2][output_name] for (in1,in2) in product(self.param_names, self.param_names)])
+        return array([self.hessian[in1][in2][output_name] \
+                      for (in1,in2) in product(self.param_names, self.param_names)])
 
 
     def calc_gradient(self):
@@ -119,9 +121,10 @@ class ChainRule(HasTraits):
                     
             derivs = { wrt: 1.0 }
             
+            # Find derivatives for all component outputs in the workflow
             self._chain_workflow(derivs, self._parent)
 
-            # Finite difference on the objectives.
+            # Calculate derivative of the objectives.
             for obj_name, expr in self._parent.get_objectives().iteritems():
             
                 obj_grad = expr.evaluate_gradient(scope=self._parent.parent,
@@ -132,8 +135,9 @@ class ChainRule(HasTraits):
                     
                 self.gradient[wrt][obj_name] = obj_deriv
                 
-            # Finite difference on the constraints.
-            for con_name, constraint in self._parent.get_constraints().iteritems():
+            # Calculate derivatives of the constraints.
+            for con_name, constraint in \
+                self._parent.get_constraints().iteritems():
                 
                 lhs, rhs, comparator, _ = \
                     constraint.evaluate_gradient(scope=self._parent.parent,
@@ -175,7 +179,7 @@ class ChainRule(HasTraits):
         for node in scope.workflow.__iter__():
             
             node_name = node.name
-            print "processing ", node_name
+            #print "processing ", node_name
     
             incoming_deriv_names = {}
             incoming_derivs = {}
@@ -205,11 +209,17 @@ class ChainRule(HasTraits):
                     
                     full_name = '.'.join([node_name, input_name])
 
-                    # Inputs who are connected in this assembly
-                    if full_name in node.parent._depgraph._depgraph._allsrcs:
+                    # Inputs who are hooked directly to the parameters
+                    if full_name in self.param_names and \
+                            full_name in derivs:
+                            
+                        incoming_deriv_names[input_name] = full_name
+                        incoming_derivs[full_name] = derivs[full_name]
+                        
+                    # Inputs who are connected to something with a derivative
+                    else:
                 
                         sources = node.parent._depgraph._depgraph.connections_to(full_name)
-                        source_expression = node.parent._depgraph.connections_to(full_name)
                         
                         # This list keeps track of duplicated sources, which
                         # are a biproduct of a connection to multiple inputs
@@ -219,6 +229,7 @@ class ChainRule(HasTraits):
                         for source_tuple in sources:
                             
                             source = source_tuple[0]
+                            expr_txt = node.parent._depgraph.get_source(source_tuple[1])
                             
                             # Variables on an assembly boundary
                             if source[0:4] == '@bin' and source.count('.') < 2:
@@ -226,10 +237,11 @@ class ChainRule(HasTraits):
                             
                             # Only process inputs who are connected to outputs
                             # with derivatives in the chain
-                            if source in derivs and source not in used_sources:
+                            if expr_txt and source in derivs and \
+                               source not in used_sources:
                                 
                                 # Need derivative of the expression
-                                expr = node.parent._depgraph.get_expr(source_expression[0][0])
+                                expr = node.parent._depgraph.get_expr(expr_txt)
                                 expr_deriv = expr.evaluate_gradient(scope=node.parent,
                                                                     wrt=source)
 
@@ -242,14 +254,6 @@ class ChainRule(HasTraits):
                                         expr_deriv[source]
                                     
                                 used_sources.append(source)
-                                        
-                            
-                    # Inputs who are hooked directly to the parameters
-                    elif full_name in self.param_names and \
-                            full_name in derivs:
-                            
-                        incoming_deriv_names[input_name] = full_name
-                        incoming_derivs[full_name] = derivs[full_name]
                         
                             
                 # CHAIN RULE
@@ -267,7 +271,6 @@ class ChainRule(HasTraits):
             # This component must be finite differenced.
             else:
                 raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
-            
             
 
     def _recurse_assy(self, scope, upscope_derivs):
@@ -299,7 +302,7 @@ class ChainRule(HasTraits):
         # Find derivatives for this assembly's workflow
         self._chain_workflow(local_derivs, scope.driver)
         
-        # Convert scope and return only what we need.
+        # Convert scope and return gradient of connected components.
         name = scope.name
         for item in scope._depgraph._depgraph.var_in_edges('@bout'):
             src = item[0]
@@ -323,8 +326,17 @@ class ChainRule(HasTraits):
             else:
                 upscope_derivs[upscope_src] = local_derivs[src]
                 
-        print local_derivs
-        print upscope_derivs
+        # Finally, stuff in all our extra unconnected outputs because they may
+        # be referenced by an objective or constraint at the outer scope.
+        for key, value in local_derivs.iteritems():
+            
+            if key[0] == '@':
+                continue
+            
+            target = '%s.%s' % (name, key)
+            if target not in upscope_derivs:
+                upscope_derivs[target] = value
+            
 
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for all outputs in the Driver's

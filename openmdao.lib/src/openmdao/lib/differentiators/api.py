@@ -2,4 +2,6 @@
 OpenMDAO differentiators in the standard library."""
 
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
+from openmdao.lib.differentiators.chain_rule import ChainRule
+
 

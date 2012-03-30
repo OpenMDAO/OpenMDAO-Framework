@@ -178,7 +178,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.driver.differentiator = ChainRule()
         
         obj = 'comp5.y1'
-        con = 'comp5.y1-comp4.y1 > 0'
+        con = 'comp5.y1-comp3.y1 > 0'
         self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
         self.top.driver.add_objective(obj)
         self.top.driver.add_constraint(con)
@@ -198,8 +198,8 @@ class ChainRuleTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient(obj)
         assert_rel_error(self, grad[0], 313.0, .001)
         
-        grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp4.y1>0')
-        assert_rel_error(self, grad[0], -313.0+25.0, .001)
+        grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp3.y1>0')
+        assert_rel_error(self, grad[0], -313.0+10.5, .001)
     
     def test_large_dataflow_nested_assys(self):
         
@@ -245,7 +245,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.driver.differentiator = ChainRule()
         
         obj = 'comp5.y1'
-        con = 'comp5.y1-nest1.comp4.y1 > 0'
+        con = 'comp5.y1-nest1.comp3.y1 > 0'
         self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
         self.top.driver.add_objective(obj)
         self.top.driver.add_constraint(con)
@@ -272,8 +272,8 @@ class ChainRuleTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient(obj)
         assert_rel_error(self, grad[0], 313.0, .001)
         
-        grad = self.top.driver.differentiator.get_gradient('comp5.y1-nest1.comp4.y1>0')
-        assert_rel_error(self, grad[0], -313.0+25.0, .001)
+        grad = self.top.driver.differentiator.get_gradient('comp5.y1-nest1.comp3.y1>0')
+        assert_rel_error(self, grad[0], -313.0+10.5, .001)
     
     def test_expr_connect(self):
         
