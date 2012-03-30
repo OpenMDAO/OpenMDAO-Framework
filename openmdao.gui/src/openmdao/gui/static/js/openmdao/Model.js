@@ -50,14 +50,16 @@ openmdao.Model=function() {
     open_outstream_socket = function(topic) {
         open_websocket('outstream', function(data) {
             var callbacks = subscribers[topic];
-            for (i = 0; i < callbacks.length; i++) {
-                if (typeof callbacks[i] === 'function') {
-                    callbacks[i](data);
-                }
-                else {
-                    debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+            if (callbacks) {
+                for (i = 0; i < callbacks.length; i++) {
+                    if (typeof callbacks[i] === 'function') {
+                        callbacks[i](data);
+                    }
+                    else {
+                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                    };
                 };
-            };
+            }
         });
     }
 
@@ -104,15 +106,17 @@ openmdao.Model=function() {
    /** notify all generic listeners that something may have changed  */
     this.updateListeners = function() {        
         var callbacks = subscribers[''];
-        for (i = 0; i < callbacks.length; i++) {
-            //debug.info('updating',callbacks[i])
-            if (typeof callbacks[i] === 'function') {
-                callbacks[i]();
+        if (callbacks) {
+            for (i = 0; i < callbacks.length; i++) {
+                //debug.info('updating',callbacks[i])
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i]();
+                }
+                else {
+                    debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                }
             }
-            else {
-                debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
-            }
-        }        
+        };
     }
 
     /** get the list of object types that are available for creation */

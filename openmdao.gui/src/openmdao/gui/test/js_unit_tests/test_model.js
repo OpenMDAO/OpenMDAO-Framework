@@ -44,11 +44,11 @@ TestCase("ModelTest", {
       openmdao.model.updateListeners() ;
       sinon.assert.notCalled( callback1 );
 
-      openmdao.model.addListener( callback1 ) ;
+      openmdao.model.addListener( '', callback1 ) ;
       openmdao.model.updateListeners() ;
       sinon.assert.calledOnce( callback1 ) ;
 
-      openmdao.model.addListener( callback2 ) ;
+      openmdao.model.addListener( '', callback2 ) ;
       openmdao.model.updateListeners() ;
       sinon.assert.calledOnce( callback2 ) ;
       assertEquals(callback1.callCount, 2 ) ;

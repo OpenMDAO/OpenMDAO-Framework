@@ -123,7 +123,7 @@ if sys.platform.startswith( "linux" ):
     
             browser_name = "chrome"
             browser_exe_filepath = self.get_browser_exe_filepath(
-                [ "google-chrome", "chrome" ] )
+                [ "chromium-browser", "google-chrome", "chrome" ] )
             return browser_name, browser_exe_filepath
             
     # class FirefoxJsUnitTestCase(BrowserJsUnitTestCase):
