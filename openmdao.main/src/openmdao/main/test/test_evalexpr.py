@@ -8,6 +8,7 @@ from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, ExprEx
 from openmdao.main.printexpr import ExprPrinter, transform_expression
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
+from openmdao.util.testutil import assert_rel_error
 
 
 class A(Component):
@@ -437,6 +438,40 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(exp.get_required_compnames(top),
                          set())
         
+    def test_eval_gradient(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', Simple())
+        
+        exp = ExprEvaluator('3.0*comp1.c', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        self.assertEqual(top.comp1.c, 7.0)
+        assert_rel_error(self, grad['comp1.c'], 3.0, 0.00001)
+        
+        # interface test: step size
+        # (for linear slope, larger stepsize more accurate because of
+        # python's rounding)
+        grad2 = exp.evaluate_gradient(scope=top, stepsize=0.1)
+        assert( abs(grad['comp1.c'] - 3.0) > abs(grad2['comp1.c'] - 3.0) )
+        
+        # More complicated, multiple comps
+        top.add('comp2', Simple())
+
+        exp = ExprEvaluator('comp2.b*comp1.c**2', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        self.assertEqual(len(grad), 2)
+        assert_rel_error(self, grad['comp1.c'], 70.0, 0.00001)
+        assert_rel_error(self, grad['comp2.b'], 49.0, 0.00001)
+
+        # test limited varset
+        grad = exp.evaluate_gradient(scope=top, wrt=['comp2.b'])
+        self.assertEqual(len(grad), 1)
+        
+        
+        #self.a = 4.
+        #self.b = 5.
+        #self.c = 7.
+        #self.d = 1.5
+
     def test_scope_transform(self):
         exp = ExprEvaluator('var+abs(comp.x)*a.a1d[2]', self.top)
         self.assertEqual(exp.new_text, "scope.get('var')+abs(scope.get('comp.x'))*scope.get('a.a1d',[(0,2)])")

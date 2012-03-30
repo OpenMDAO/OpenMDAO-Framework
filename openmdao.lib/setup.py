@@ -81,6 +81,7 @@ Component, Driver, and Variable plugins for OpenMDAO
 
       [openmdao.differentiator]
       openmdao.lib.differentiators.finite_difference.FiniteDifference = openmdao.lib.differentiators.finite_difference:FiniteDifference
+      openmdao.lib.differentiators.chain_rule.ChainRule = openmdao.lib.differentiators.chain_rule:ChainRule
       
       [openmdao.variable]
       openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
