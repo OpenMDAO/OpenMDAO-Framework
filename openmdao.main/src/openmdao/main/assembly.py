@@ -763,6 +763,8 @@ class Assembly (Component):
             if not invalidated_ins:  # no newly invalidated inputs, so no outputs change status
                 return []
 
+        self._set_exec_state('INVALID')
+        
         if varnames is None:
             self.set_valid(invalidated_ins, False)
         else: # only invalidate *connected* inputs, because unconnected inputs
