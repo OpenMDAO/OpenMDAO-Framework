@@ -108,7 +108,7 @@ class _ContainerDepends(object):
     def __init__(self):
         self._srcs = {}
         
-    def connect(self, srcpath, destpath, scope, expr=None):
+    def connect(self, srcpath, destpath, scope):
         if not (expr and expr.text == srcpath):
             dpdot = destpath+'.'
             for dst,src in self._srcs.items():
@@ -120,7 +120,7 @@ class _ContainerDepends(object):
         else:
             self._srcs[destpath] = srcpath
         
-    def disconnect(self, srcpath, destpath, expr=None):
+    def disconnect(self, srcpath, destpath):
         try:
             del self._srcs[destpath]
         except KeyError:
@@ -255,33 +255,35 @@ class Container(SafeHasTraits):
         return '.'.join(path[::-1])
             
     @rbac(('owner', 'user'))
-    def connect(self, srcpath, destpath):
-        """Connects one source variable to one destination variable. 
-        When a pathname begins with 'parent.', that indicates
+    def connect(self, srcexpr, destexpr):
+        """Connects one source expression to one destination expression. 
+        When a name begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
         
-        srcpath: str
-            Pathname of source variable.
+        srcexpr: str or ExprEvaluator
+            Source expression object or expression string.
             
-        destpath: str
-            Pathname of destination variable.
+        destexpr: str or ExprEvaluator
+            Destination expression object or expression string.
         """
         child_connections = []  # for undo
-        srcexpr = ConnectedExprEvaluator(srcpath, self)
-        destexpr = ConnectedExprEvaluator(destpath, self, is_dest=True)
-        destvar = destexpr.get_referenced_varpaths().pop()
-
+        if isinstance(srcexpr, basestring):
+            srcexpr = ConnectedExprEvaluator(srcexpr, self)
+        if isinstance(destexpr, basestring):
+            destexpr = ConnectedExprEvaluator(destexpr, self, is_dest=True)
+        
+        destpath = destexpr.text
+        
         # check for self connections
-        if not destvar.startswith('parent.'):
-            dpart = destvar.split('.',1)[0]
-            for src in srcexpr.get_referenced_varpaths():
-                if dpart == src.split('.',1)[0]:
-                    self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
-                                         (srcpath, destpath), RuntimeError)
+        if not destpath.startswith('parent.'):
+            cname2, _, destvar = destpath.partition('.')
+            if cname2 in srcexpr.get_referenced_compnames():
+                self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
+                                     (srcpath, destpath), RuntimeError)
         try:
             if not destpath.startswith('parent.'):
-                if not destexpr.check_resolve():
-                    self.raise_exception("Can't find '%s'" % destvar, AttributeError)
+                if not self.contains(destpath.split('[',1)[0]):
+                    self.raise_exception("Can't find '%s'" % destpath, AttributeError)
                 parts = destpath.split('.')
                 for i in range(len(parts)):
                     dname = '.'.join(parts[:i+1])
@@ -291,30 +293,28 @@ class Container(SafeHasTraits):
                             "'%s' is already connected to source '%s'" % 
                             (dname, sname), RuntimeError)
                         
-                cname2, _, restofpath = destpath.partition('.')
-                if restofpath:
+                if destvar:
                     child = getattr(self, cname2)
                     if is_instance(child, Container):
                         childsrc = srcexpr.scope_transform(self, child, parent=self)
-                        child.connect(childsrc, restofpath)
-                        child_connections.append((child, childsrc, restofpath)) 
+                        child.connect(childsrc, destvar)
+                        child_connections.append((child, childsrc, destvar)) 
                         
-            if not srcexpr.refs_parent():
-                srcvars = srcexpr.get_referenced_varpaths()
-                if len(srcvars) == 1:  # don't tell children about multi-source expressions for now...
-                    for src,srcref in srcexpr.vars_and_refs():
-                        if not self.contains(src):
-                            self.raise_exception("Can't find '%s'" % src, AttributeError)
-                            
-                        cname, _, restofpath = srcref.partition('.')
-                        if restofpath:
-                            child = getattr(self, cname)
-                            if is_instance(child, Container):
-                                    childdest = destexpr.scope_transform(self, child, parent=self)
-                                    child.connect(restofpath, childdest)
-                                    child_connections.append((child, restofpath, childdest)) 
+            for srcvar in srcexpr.get_referenced_varpaths():
+                if not srcvar.startswith('parent.'):
+                    if not self.contains(srcvar):
+                        self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
+                        
+            childdest = 'parent.'+destpath
+            for srccomp in srcexpr.get_referenced_compnames():
+                #cname, _, restofpath = srcpath.partition('.')
+                if srccomp != 'parent':
+                    child = getattr(self, srccomp)
+                    if is_instance(child, Container):
+                        child.connect(srcexpr, childdest)
+                        child_connections.append((child, srcexpr, childdest)) 
 
-            self._depgraph.connect(srcpath, destpath, self, expr=srcexpr)
+            self._depgraph.connect_expr(srcexpr, destpath, self)
         except Exception as err:
             for child, childsrc, childdest in child_connections:
                 child.disconnect(childsrc, childdest)
@@ -326,28 +326,33 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        srcexpr = ConnectedExprEvaluator(srcpath, self)
-        destexpr = ConnectedExprEvaluator(destpath, self, is_dest=True)
-        destvar = destexpr.get_referenced_varpaths().pop()
-        destref = destexpr.refs().pop()
-        if not 'parent' in srcexpr.get_referenced_compnames():
-            for src,srcref in srcexpr.vars_and_refs():
-                if not self.contains(src):
-                    self.raise_exception("Can't find '%s'" % src, AttributeError)
-                cname, _, restofpath = srcref.partition('.')
-                if restofpath:
-                    child = getattr(self, cname)
-                    if is_instance(child, Container):
-                            childdest = destexpr.scope_transform(self, child, parent=self)
-                            child.disconnect(restofpath, childdest)
-        if not destvar.startswith('parent.'):
+        #srcexpr = ConnectedExprEvaluator(srcpath, self)
+        #destexpr = ConnectedExprEvaluator(destpath, self, is_dest=True)
+        #destvar = destexpr.get_referenced_varpaths().pop()
+        destvar = destpath.split('[',1)[0]
+        #destref = destexpr.refs().pop()
+        #if not 'parent' in srcexpr.get_referenced_compnames():
+        if not srcpath.startswith('parent.'):
+            #for src,srcref in srcexpr.vars_and_refs():
+            srcvar = srcpath.split('[',1)[0]
+            if not self.contains(srcvar):
+                self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
+            cname, _, restofpath = srcpath.partition('.')
+            if restofpath:
+                child = getattr(self, cname)
+                if is_instance(child, Container):
+                    #childdest = destexpr.scope_transform(self, child, parent=self)
+                    childdest = 'parent.'+destpath
+                    child.disconnect(restofpath, childdest)
+        if not destpath.startswith('parent.'):
             if not self.contains(destvar):
                 self.raise_exception("Can't find '%s'" % destvar, AttributeError)
-            cname2, _, restofpath = destref.partition('.')
+            cname2, _, restofpath = destpath.partition('.')
             if restofpath:
                 child = getattr(self, cname2)
                 if is_instance(child, Container):
-                    childsrc = srcexpr.scope_transform(self, child, parent=self)
+                    #childsrc = srcexpr.scope_transform(self, child, parent=self)
+                    childsrc = 'parent.'+srcpath
                     child.disconnect(childsrc, restofpath)
         
         if cname == cname2 and cname is not None:
@@ -355,7 +360,7 @@ class Container(SafeHasTraits):
                                  "Both variables are on the same component" %
                                  (srcpath,destpath), RuntimeError)
 
-        self._depgraph.disconnect(srcpath, destpath, expr=srcexpr)
+        self._depgraph.disconnect(srcpath, destpath)
 
     #TODO: get rid of any notion of valid/invalid from Containers.  If they have
     # no execute, they can have no inputs/outputs, which means that validity should have

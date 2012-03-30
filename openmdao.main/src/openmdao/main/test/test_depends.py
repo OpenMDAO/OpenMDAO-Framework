@@ -170,7 +170,7 @@ class DependsTestCase(unittest.TestCase):
         self.top.disconnect('comp8')
         self.assertEqual(self.top.sub.list_outputs(connected=True),
                          [])
-        self.assertEqual(self.top.sub._depgraph.get_source('c4'), 'comp4.c')
+        self.assertEqual(self.top.sub._exprmapper.get_source('c4'), 'comp4.c')
         
     def test_lazy1(self):
         self.top.run()
@@ -704,8 +704,8 @@ class ExprDependsTestCase(unittest.TestCase):
                 visited.add(obj)
                 if isinstance(obj, Assembly):
                     connection_set.update(obj.list_connections())
+                    connection_set.update(obj._exprmapper.list_connections())
                     connection_set.update(obj._depgraph.list_connections())
-                    connection_set.update(obj._depgraph._depgraph.list_connections())
                     for name in obj.list_containers():
                         comp = getattr(obj, name)
                         if isinstance(comp, Component):

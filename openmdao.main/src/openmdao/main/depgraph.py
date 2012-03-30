@@ -245,24 +245,23 @@ class DependencyGraph(object):
         except KeyError:
             return []
     
-    def connect(self, srcpath, destpath, scope, expr=None):
+    def connect_expr(self, expr, destpath, scope):
+        if destpath in self._allsrcs:
+            raise AlreadyConnectedError("%s is already connected to source %s" %
+                                        (destpath, self._allsrcs[destpath]))
+        self._allsrcs[destpath] = expr.text
+        try:
+            for ref in expr.refs():
+                self.connect(ref, destpath, scope)
+            return
+        except:
+            del self._allsrcs[destpath]
+            raise
+        
+    def connect(self, srcpath, destpath, scope):
         """Add an edge to our Component graph from 
-        *srccompname* to *destcompname*.  If expr is defined, it's
-        the actual ExprEvaluator object for the source.
+        *srccompname* to *destcompname*. 
         """
-        if expr is not None:
-            if destpath in self._allsrcs:
-                raise AlreadyConnectedError("%s is already connected to source %s" %
-                                            (destpath, self._allsrcs[destpath]))
-            self._allsrcs[destpath] = expr.text
-            try:
-                for ref in expr.refs():
-                    self.connect(ref, destpath, scope)
-                return
-            except:
-                del self._allsrcs[destpath]
-                raise
-            
         graph = self._graph
         srccompname, srcvarname, destcompname, destvarname = \
                            _cvt_names_to_graph(srcpath, destpath)
@@ -364,17 +363,17 @@ class DependencyGraph(object):
         else:
             return self._var_connections(path)
 
-    def disconnect(self, srcpath, destpath=None, expr=None):
+    def disconnect(self, srcpath, destpath=None):
         """Disconnect the given variables."""
         if destpath is None:
             for src,dest in self.connections_to(srcpath):
                 self.disconnect(src, dest, expr)
             return
         
-        if expr is not None:
-            for ref in expr.refs():
-                self.disconnect(ref, destpath)
-            return
+        #if expr is not None:
+            #for ref in expr.refs():
+                #self.disconnect(ref, destpath)
+            #return
 
         graph = self._graph
         srccompname, srcvarname, destcompname, destvarname = \

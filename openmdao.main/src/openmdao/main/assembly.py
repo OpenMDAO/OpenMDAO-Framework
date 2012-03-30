@@ -98,14 +98,6 @@ class ExprMapper(object):
     def __init__(self, scope):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
         self._scope = scope
-        self._depgraph = DependencyGraph()
-    
-    def copy_graph(self):
-        return self._depgraph.copy_graph()
-
-    def get_connected_inputs(self):
-        """Return a list of connected variables on the input boundary"""
-        return self._depgraph.get_connected_inputs()
     
     def get_output_exprs(self):
         """Return all destination expressions at the output boundary"""
@@ -119,11 +111,10 @@ class ExprMapper(object):
         return exprs
         
     def get_expr(self, text):
-        return self._exprgraph.node[text]['expr']
-    
-    def get_connected_outputs(self):
-        """Return a list of connected variables on the output boundary"""
-        return self._depgraph.get_connected_outputs()
+        node = self._exprgraph.node.get(text)
+        if node:
+            return node['expr']
+        return None
     
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
@@ -153,20 +144,17 @@ class ExprMapper(object):
         graph = self._exprgraph
         return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
 
-    def add(self, compname):
-        self._depgraph.add(compname)
-        
     def remove(self, compname):
         """Remove any connections referring to the given component"""
-        self._depgraph.remove(compname)
-        
         refs = self.find_referring_exprs(compname)
         if refs:
             self._exprgraph.remove_nodes_from(refs)
             self._remove_disconnected_exprs()
         
-    def connect(self, src, dest, scope, expr=None):
-        srcexpr, destexpr = self.check_connect(src, dest, scope)
+    def connect(self, srcexpr, destexpr, scope):
+        #srcexpr, destexpr = self.check_connect(src, dest, scope)
+        src = srcexpr.text
+        dest = destexpr.text
         srcvars = srcexpr.get_referenced_varpaths()
         destvar = destexpr.get_referenced_varpaths().pop()
         
@@ -195,16 +183,17 @@ class ExprMapper(object):
                         else:
                             pass  # no validate function on destination trait. Most likely
                                   # it's a property trait.  No way to validate without
-                                  # unknown side effects.
+                                  # unknown side effects. Have to wait until later when data actually
+                                  # gets passed via the connection.
             except Exception as err:
                 scope.raise_exception("can't connect '%s' to '%s': %s" %
                                      (src, dest, str(err)), RuntimeError)
 
-        try:
-            self._depgraph.connect(src, destexpr.text, scope, expr=srcexpr)
-        except Exception as err:
-            scope.raise_exception("Can't connect '%s' to '%s': %s" % 
-                                  (src, dest, str(err)), RuntimeError)
+        #try:
+            #self._depgraph.connect_expr(srcexpr, destexpr.text, scope)
+        #except Exception as err:
+            #scope.raise_exception("Can't connect '%s' to '%s': %s" % 
+                                  #(src, dest, str(err)), RuntimeError)
             
         if src not in self._exprgraph:
             self._exprgraph.add_node(src, expr=srcexpr)
@@ -239,16 +228,16 @@ class ExprMapper(object):
         for expr in to_remove:
             graph.remove_node(expr)
 
-    def disconnect(self, srcpath, destpath=None, expr=None):
+    def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components."""
         graph = self._exprgraph
         
-        srcexprs = self.find_referring_exprs(srcpath)
-        for srcp in srcexprs:
-            srcexpr = ConnectedExprEvaluator(srcpath, self._scope)
-            srcrefs = srcexpr.refs()
-            for srcref in srcrefs:
-                self._depgraph.disconnect(srcref, destpath)
+        #srcexprs = self.find_referring_exprs(srcpath)
+        #for srcp in srcexprs:
+            #srcexpr = ConnectedExprEvaluator(srcpath, self._scope)
+            #srcrefs = srcexpr.refs()
+            #for srcref in srcrefs:
+                #self._depgraph.disconnect(srcref, destpath)
         if destpath is None:
             if srcpath in graph:
                 graph.remove_node(srcpath)
@@ -272,8 +261,8 @@ class ExprMapper(object):
         
         # make sure we don't have any whitespace buried within the expression that would cause
         # two versions of the same expression (one with ws and one without) to appear different
-        src = eliminate_expr_ws(src)
-        dest = eliminate_expr_ws(dest)
+        #src = eliminate_expr_ws(src)
+        #dest = eliminate_expr_ws(dest)
         
         if self.get_source(dest) is not None:
             scope.raise_exception("'%s' is already connected to source '%s'" % (dest, self.get_source(dest)),
@@ -317,32 +306,6 @@ class ExprMapper(object):
                 invalids.extend([self.get_expr(dest) for dest in dct.keys()])
         return invalids
         
-    def invalidate_deps(self, scope, compnames, varsets, force=False):
-        """Walk through all dependent nodes in the graph, invalidating all
-        variables that depend on the given variable names.
-        
-        scope: Component
-            Scoping object containing this dependency graph.
-            
-        compnames: list of str
-            List of component names corresponding to varsets
-        
-        varsets: list of set of str
-            Sets of names of outputs from each starting node.
-            
-        force: bool (optional)
-            If True, force invalidation to continue even if a component in
-            the dependency chain was already invalid.
-        """
-        return self._depgraph.invalidate_deps(scope, compnames, varsets, force)
-
-    def find_all_connecting(self, start, end):
-        """Return the set of all components along all paths between 
-        start and end.  The start and end nodes are included
-        in the set if they're connected.
-        """
-        return self._depgraph.find_all_connecting(start, end)
-
     def __contains__(self, compname):
         """Return True if this graph contains the given component."""
         return self._depgraph.__contains__(compname)
@@ -374,7 +337,7 @@ class Assembly (Component):
         
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
-        self._depgraph = ExprMapper(self)
+        self._exprmapper = ExprMapper(self)
         
         # default Driver executes its workflow once
         self.add('driver', Run_Once())
@@ -416,6 +379,7 @@ class Assembly (Component):
         it from its workflow (if any)."""
         cont = getattr(self, name)
         self._depgraph.remove(name)
+        self._exprmapper.remove(name)
         for obj in self.__dict__.values():
             if obj is not cont and is_instance(obj, Driver):
                 obj.workflow.remove(name)
@@ -527,19 +491,29 @@ class Assembly (Component):
             self._connect(src, dst)
 
     def _connect(self, src, dest):
-        """Handle one connection destination."""
-        super(Assembly, self).connect(src, dest)
+        """Handle one connection destination. This should only be called via the connect()
+        function, never directly.
+        """
+        srcexpr, destexpr = self._exprmapper.check_connect(src, dest, self)
         
-        srcexpr = self._depgraph.get_expr(src)
+        for ref in srcexpr.refs():
+            super(Assembly, self).connect(ref, dest)
+
+        self._exprmapper.connect(srcexpr, destexpr, self)
+        self._depgraph.connect_expr(srcexpr, destexpr.text, self)
+        
+        #super(Assembly, self).connect(src, dest)
+        
+        #srcexpr = self._depgraph.get_expr(src)
         if not srcexpr.refs_parent():
-            destexpr = self._depgraph.get_expr(dest)
+            #destexpr = self._depgraph.get_expr(dest)
             if not destexpr.refs_parent():
                 # if it's an internal connection, could change dependencies, so we have
                 # to call config_changed to notify our driver
                 self.config_changed(update_parent=False)
     
-                destref = destexpr.refs().pop()
-                destcompname, destcomp, destvarname = self._split_varpath(destref)
+                #destref = destexpr.refs().pop()
+                destcompname, destcomp, destvarname = self._split_varpath(dest)
                 
                 outs = destcomp.invalidate_deps(varnames=set([destvarname]), force=True)
                 if (outs is None) or outs:
@@ -554,18 +528,25 @@ class Assembly (Component):
         name of a Component, remove all connections from all of its inputs
         and outputs. 
         """
+        to_remove = []
         if varpath2 is None:
-            graph = self._depgraph._exprgraph
+            graph = self._exprmapper._exprgraph
             to_remove = set()
-            for expr in self._depgraph.find_referring_exprs(varpath):
+            for expr in self._exprmapper.find_referring_exprs(varpath):
                 for u,v in graph.edges(expr):
                     to_remove.add((u,v))
                 for u,v in graph.in_edges(expr):
                     to_remove.add((u,v))
-            for u,v in to_remove:
-                super(Assembly, self).disconnect(u, v)
         else:
-            super(Assembly, self).disconnect(varpath, varpath2)
+            to_remove = [(varpath, varpath2)]
+            
+        for u,v in to_remove:
+            srcexpr = self._exprmapper.get_expr(u)
+            if srcexpr:
+                for ref in srcexpr.refs():
+                    super(Assembly, self).disconnect(ref, v)
+                
+        self._exprmapper.disconnect(varpath, varpath2)
             
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -585,10 +566,10 @@ class Assembly (Component):
         valids = self._valid_dict
         
         # now update boundary outputs
-        for expr in self._depgraph.get_output_exprs():
+        for expr in self._exprmapper.get_output_exprs():
             if valids[expr.text] is False:
-                srctxt = self._depgraph.get_source(expr.text)
-                srcexpr = self._depgraph.get_expr(srctxt)
+                srctxt = self._exprmapper.get_source(expr.text)
+                srcexpr = self._exprmapper.get_expr(srctxt)
                 expr.set(srcexpr.evaluate(), src=srctxt)
                 # setattr(self, dest, srccomp.get_wrapped_attr(src))
             else:
@@ -599,8 +580,8 @@ class Assembly (Component):
                     pass
                 else:
                     if isinstance(dst_type, PassthroughProperty):
-                        srctxt = self._depgraph.get_source(expr.text)
-                        srcexpr = self._depgraph.get_expr(srctxt)
+                        srctxt = self._exprmapper.get_source(expr.text)
+                        srcexpr = self._exprmapper.get_expr(srctxt)
                         expr.set(srcexpr.evaluate(), src=srctxt)
     
     def step(self):
@@ -614,7 +595,7 @@ class Assembly (Component):
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        return self._depgraph.list_connections(show_passthrough)
+        return self._exprmapper.list_connections(show_passthrough)
 
     #def _cvt_input_srcs(self, sources):
         #link = self._depgraph.get_link('@xin', '@bin')
@@ -654,11 +635,11 @@ class Assembly (Component):
         if compname is not None:
             exprs = ['.'.join([compname, n]) for n in exprs]
         for expr in exprs:
-            srctxt = self._depgraph.get_source(expr)
+            srctxt = self._exprmapper.get_source(expr)
             if srctxt:
-                srcexpr = self._depgraph.get_expr(srctxt)
+                srcexpr = self._exprmapper.get_expr(srctxt)
                 invalids.extend(srcexpr.invalid_refs())
-                expr_info.append((srcexpr, self._depgraph.get_expr(expr)))
+                expr_info.append((srcexpr, self._exprmapper.get_expr(expr)))
             
         # if source exprs reference invalid vars, request an update
         if invalids:
