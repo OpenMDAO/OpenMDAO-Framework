@@ -14,8 +14,8 @@ class Foo(Assembly):
     
     def configure(self):
         self.add('d',Dummy())
-        e=ExprEvaluator("d.x**2+d.y[1]**2",self)
-        print e.evaluate_gradient()
+        e=ExprEvaluator("d.x**2+d.y[1]**2",self) 
+        print e.evaluate_gradient() #numerical gradient should evaluate to [2, 6] for d.x and d.y[1] (respectively)
         #print e.get_compvar_dict()
         
 bar=Foo()
