@@ -99,7 +99,7 @@ class ZMQServerManager(object):
             ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
             server_info['pub_server'] = ZMQStreamServer.spawn_process(server_info['pub_url'],ws_port,ws_url)
             server_info['pub_server_url'] = ws_addr
-            time.sleep(1)  # give server a chance to spool up
+            time.sleep(2)  # give server a chance to spool up
             return ws_addr
     
     def get_out_server_url(self,server_id,ws_url):
@@ -114,7 +114,7 @@ class ZMQServerManager(object):
             ws_addr = 'ws://localhost:%d%s' % (ws_port, ws_url)
             server_info['out_server'] = ZMQStreamServer.spawn_process(server_info['out_url'],ws_port,ws_url)
             server_info['out_server_url'] = ws_addr
-            time.sleep(1)  # give server a chance to spool up
+            time.sleep(2)  # give server a chance to spool up
             return ws_addr
             
     def cleanup(self):

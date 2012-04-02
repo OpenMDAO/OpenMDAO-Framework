@@ -277,7 +277,24 @@ openmdao.Util = {
                       + ' -ms-transform: rotate('+x+'deg); -ms-transform-origin: 50% 50%;'
                       + ' transform: rotate('+x+'deg); transform-origin: 50% 50%;';
         document.body.setAttribute('style',rotateCSS);
-    },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;}
+    },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;},
+
+    openWebSocket: function(addr,handler) {
+       socket = new WebSocket(addr);
+       debug.info('websocket at',addr,socket);
+       socket.onopen = function (e) {
+           debug.info('websocket opened',e);
+       };
+       socket.onclose = function (e) {
+           debug.info('websocket closed',e);
+       };
+       socket.onmessage = function(e) {
+           handler(e.data);
+       };            
+       socket.onerror = function (e) {
+           debug.info('websocket error',e);
+       };
+    }
 
 
 }

@@ -9,9 +9,10 @@ if sys.platform.startswith( "linux" ):
     import tempfile
     from distutils.spawn import find_executable
 
-    # for running Xvfb, so we can run our tests headlessly. Xvfb does not
-    #    exist on Windows
+    # for running Xvfb, so we can run our tests headlessly. 
+    #    (Xvfb does not exist on Windows)
     from pyvirtualdisplay import Display
+    
     # For running tests using the JsTestDriver test runner
     from lazr.testing.jstestdriver import JsTestDriverTestCase
 
@@ -37,7 +38,7 @@ if sys.platform.startswith( "linux" ):
         
     load:
       - %(gd)s/static/js/require-jquery*
-    
+      - %(gd)s/static/js/ba-debug.min.js    
       - %(gd)s/static/js/openmdao/Util.js
       - %(gd)s/static/js/openmdao/Model.js
     
@@ -133,7 +134,7 @@ if sys.platform.startswith( "linux" ):
     #     config_filename = config_file.name
     
     #     def get_browser_info( self ):
-    #         '''Return the name and possible exes for chrome'''
+    #         '''Return the name and possible exes for firefox'''
     
     #         browser_name = "firefox"
     #         browser_exe_filepath = self.get_browser_exe_filepath( [ "firefox" ] )
