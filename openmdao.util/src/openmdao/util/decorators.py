@@ -5,6 +5,8 @@ import sys
 import types
 import time
 
+from zope.interface import implementedBy, classImplements
+
 from decorator import FunctionMaker
 from inspect import getmembers, ismethod, isfunction, isclass, getargspec, formatargspec, getmro
 
@@ -145,6 +147,10 @@ def add_delegate(*delegates):
             listofdels.append((delegatename, delegate))
             
             alldict = {}
+
+            for interface in implementedBy(delegate):
+                classImplements(cls, interface)
+
             for klass in getmro(delegate):
                 if hasattr(klass, '_do_not_promote'):
                     skip = klass._do_not_promote
