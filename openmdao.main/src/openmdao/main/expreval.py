@@ -554,7 +554,6 @@ class ExprEvaluator(object):
         wrt: list of varpaths
             Varpaths for which we want to calculate the gradient
         """
-        global _expr_dict
         scope = self._get_updated_scope(scope)
         
         if not wrt:
@@ -566,41 +565,35 @@ class ExprEvaluator(object):
             if wrt[0:4] == '@bin':
                 return { wrt: 1.0 }
                 
-            
         if self._parse_needed:
             self._parse()
         
-        # TODO - This should be saved/cached
+        # TODO - Would be nice to cache the expression, but it's probably
+        # not possible due to the non-differentiated variables
         grad_text = self.text
-        trans_dict = {}
         var_dict = {}
         for name in  list(self.get_referenced_varpaths()):
             
             if name in wrt:
-                new_name = name.replace('.', '_')
-                new_name = name.replace('[', '__')
-                new_name = name.replace(']', '__')
-                trans_dict[name] = new_name
-                new_name = "var_dict['%s']" % new_name
-                grad_text = grad_text.replace(name, new_name)
                 var_dict[name] = scope.get(name)
+                new_name = "var_dict['%s']" % name
+                grad_text = grad_text.replace(name, new_name)
             else:
                 # If we don't need derivative of a var, replace with its value
                 grad_text = grad_text.replace(name, str(scope.get(name)))
-                
         
         grad_root = ast.parse(grad_text, mode='eval')
         grad_code = compile(grad_root, '<string>', 'eval')
 
         # Finite difference (1st order central)
         gradient = {}
-        for name, new_name in trans_dict.iteritems():
+        for name in var_dict:
             
-            var_dict[new_name] += 0.5*stepsize
+            var_dict[name] += 0.5*stepsize
             yp = eval(grad_code)
-            var_dict[new_name] -= stepsize
+            var_dict[name] -= stepsize
             ym = eval(grad_code)
-            var_dict[new_name] += 0.5*stepsize
+            var_dict[name] += 0.5*stepsize
             
             gradient[name] = (yp-ym)/stepsize
             
