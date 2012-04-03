@@ -122,7 +122,7 @@ class ChainRule(HasTraits):
             derivs = { wrt: 1.0 }
             
             # Find derivatives for all component outputs in the workflow
-            self._chain_workflow(derivs, self._parent)
+            self._chain_workflow(derivs, self._parent, wrt)
 
             # Calculate derivative of the objectives.
             for obj_name, expr in self._parent.get_objectives().iteritems():
@@ -170,7 +170,7 @@ class ChainRule(HasTraits):
                     
                 self.gradient[wrt][con_name] = con_deriv
 
-    def _chain_workflow(self, derivs, scope):
+    def _chain_workflow(self, derivs, scope, param):
         """Process a workflow, calculating all intermediate derivatives
         using the chain rule. This can be called recursively to handle
         nested assemblies."""
@@ -194,7 +194,7 @@ class ChainRule(HasTraits):
                 if not isinstance(node.driver, Run_Once):
                     raise NotImplementedError('Nested drivers')
                 
-                self._recurse_assy(node, derivs)
+                self._recurse_assy(node, derivs, param)
                                      
             # This component can determine its derivatives.
             elif hasattr(node, 'calculate_first_derivatives'):
@@ -210,7 +210,7 @@ class ChainRule(HasTraits):
                     full_name = '.'.join([node_name, input_name])
 
                     # Inputs who are hooked directly to the parameters
-                    if full_name in self.param_names and \
+                    if full_name == param and \
                             full_name in derivs:
                             
                         incoming_deriv_names[input_name] = full_name
@@ -273,12 +273,13 @@ class ChainRule(HasTraits):
                 raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
             
 
-    def _recurse_assy(self, scope, upscope_derivs):
+    def _recurse_assy(self, scope, upscope_derivs, upscope_param):
         """Enables assembly recursion by scope translation."""
         
         # Find all assembly boundary connections, and propagate
         # derivatives through the expressions.
         local_derivs = {}
+        name = scope.name
         
         for item in scope._depgraph._depgraph.var_edges('@xin'):
             src = item[0].replace('@xin.','')
@@ -298,12 +299,17 @@ class ChainRule(HasTraits):
                 local_derivs[dest] += upscope_derivs[upscope_src]*expr_deriv[src]
             else:
                 local_derivs[dest] = upscope_derivs[upscope_src]*expr_deriv[src]
-            
+        
+        param = upscope_param.split('.')
+        if param[0] == name:
+            param = param[1:].join('.')
+        else:
+            param = ''
+        
         # Find derivatives for this assembly's workflow
-        self._chain_workflow(local_derivs, scope.driver)
+        self._chain_workflow(local_derivs, scope.driver, param)
         
         # Convert scope and return gradient of connected components.
-        name = scope.name
         for item in scope._depgraph._depgraph.var_in_edges('@bout'):
             src = item[0]
             upscope_src = '%s.%s' % (name, src)
