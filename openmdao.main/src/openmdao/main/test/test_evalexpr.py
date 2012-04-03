@@ -52,7 +52,7 @@ class Simple(Component):
     b = Float(iotype='in')
     c = Float(iotype='out')
     d = Float(iotype='out')
-    
+    x_array = Array([0,0,0], iotype='in')
     def __init__(self):
         super(Simple, self).__init__()
         self.a = 4.
@@ -63,6 +63,8 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
+        
+        self.x_array[1] = self.a*self.b
         
         
 class ExprEvalTestCase(unittest.TestCase):
@@ -441,11 +443,18 @@ class ExprEvalTestCase(unittest.TestCase):
     def test_eval_gradient(self):
         top = set_as_top(Assembly())
         top.add('comp1', Simple())
+        top.run()
         
         exp = ExprEvaluator('3.0*comp1.c', top.driver)
         grad = exp.evaluate_gradient(scope=top)
         self.assertEqual(top.comp1.c, 7.0)
         assert_rel_error(self, grad['comp1.c'], 3.0, 0.00001)
+        
+        # Uncomment these when arrays work
+        #exp = ExprEvaluator('4.0*comp1.x_array[1]', top.driver)
+        #grad = exp.evaluate_gradient(scope=top)
+        #print grad
+        #assert_rel_error(self, grad['comp1.x_array[1]'], 4.0, 0.00001)
         
         # interface test: step size
         # (for linear slope, larger stepsize more accurate because of
