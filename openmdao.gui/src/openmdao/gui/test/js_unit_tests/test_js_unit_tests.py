@@ -11,7 +11,7 @@ if sys.platform.startswith( "linux" ):
 
     # for running Xvfb, so we can run our tests headlessly. 
     #    (Xvfb does not exist on Windows)
-    from pyvirtualdisplay import Display
+    #from pyvirtualdisplay import Display
     
     # For running tests using the JsTestDriver test runner
     from lazr.testing.jstestdriver import JsTestDriverTestCase
@@ -67,9 +67,9 @@ if sys.platform.startswith( "linux" ):
     
         def setUp(self):
     
-            if find_executable( "Xvfb" ):
-                self.display = Display()
-                self.display.start()
+            #if find_executable( "Xvfb" ):
+            #    self.display = Display()
+            #    self.display.start()
     
             super(BrowserJsUnitTestCase, self).setUp()
             
@@ -86,7 +86,7 @@ if sys.platform.startswith( "linux" ):
                                "GUI JavaScript unit testing"  % browser_name)
             
             # Set some env vars used by jsTestDriver
-            os.environ[ 'JSTESTDRIVER' ] = """java -jar %(jstd_path)s
+            os.environ[ 'JSTESTDRIVER' ] = """xvfb-run java -jar %(jstd_path)s
                                                --port %(port_num)d
                                                --captureConsole
                                                --browser %(browser)s""" % \
@@ -101,8 +101,8 @@ if sys.platform.startswith( "linux" ):
         def tearDown(self):
             #os.unlink(self.config_filename)
             super(BrowserJsUnitTestCase, self).tearDown()
-            if find_executable( "Xvfb" ):
-                self.display.stop()
+            #if find_executable( "Xvfb" ):
+            #    self.display.stop()
     
         def get_browser_exe_filepath( self, browser_exes ):
             '''Look for an executable for the browser,
