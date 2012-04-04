@@ -76,8 +76,6 @@ if sys.platform.startswith( "linux" ):
             else:
             	 java_cmd = "java"
 
-            print "java_cmd:",java_cmd
-            
             # What is the path to the exe of this browser, if any
             browser_name, browser_exe_filepath = self.get_browser_info()
             if not browser_exe_filepath:
@@ -101,8 +99,6 @@ if sys.platform.startswith( "linux" ):
         def tearDown(self):
             #os.unlink(self.config_filename)
             super(BrowserJsUnitTestCase, self).tearDown()
-            #if find_executable( "Xvfb" ):
-            #    self.display.stop()
     
         def get_browser_exe_filepath( self, browser_exes ):
             '''Look for an executable for the browser,
@@ -149,4 +145,4 @@ if sys.platform.startswith( "linux" ):
     ChromeJsUnitTestCase.__test__ = True
     #FirefoxJsUnitTestCase.__test__ = True
     BrowserJsUnitTestCase.__test__ = False
-    
+  
