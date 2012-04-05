@@ -1,4 +1,4 @@
-from sympy import Symbol,diff
+from sympy import Symbol, diff
 from sympy.core.function import Derivative
 from sympy.functions import *
 
@@ -17,12 +17,12 @@ def SymGrad(ex,vars):
 
     newex=ex
     for i in xrange(len(vars)):
-        newex=newex.replace(vars[i],"s["+str(i)+"]") 
+        newex = newex.replace(vars[i],"s["+str(i)+"]") 
     exec "newex="+newex
         
     grad=[]
     for i in xrange(len(vars)):
-        d=diff(newex,s[i])
+        d = diff(newex,s[i])
         diff_str=d.__str__()
         if isinstance(d, Derivative) or 'Derivative' in diff_str:
             raise SymbolicDerivativeError('Could not symbolically differentiate expression')

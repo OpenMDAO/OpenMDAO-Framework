@@ -372,6 +372,8 @@ class ExprEvaluator(object):
         self.var_names = set()
         self.getters = getters
         self.default_getter = default_getter
+        
+        self.cached_grad_eq = {}
     
     @property
     def text(self):
@@ -556,64 +558,84 @@ class ExprEvaluator(object):
         wrt: list of varpaths
             Varpaths for which we want to calculate the gradient
         """
-        scope = self._get_updated_scope(scope)
         
-        if not wrt:
-            wrt = list(self.get_referenced_varpaths())
-        else:
-            # A "fake" boundary connection in an assembly has a special
-            # format. All exrpeval derivatives from inside the assembly are
-            # handled outside the assembly.
-            if wrt[0:4] == '@bin':
-                return { wrt: 1.0 }
+        scope = self._get_updated_scope(scope)
+        inputs = list(self.get_referenced_varpaths())
+        
+        if wrt==None:
+            wrt = inputs
+        elif isinstance(wrt, str):
+            wrt = [wrt]
                 
         if self._parse_needed:
             self._parse()
-        
-        # TODO - Would be nice to cache the expression, but it's probably
-        # not possible due to the non-differentiated variables
-        grad_text = self.text
-        var_dict = {}
-        numerical_grad=False
-        new_names=[]
-        for name in  list(self.get_referenced_varpaths()):
+
+        gradient = {}
+        for var in wrt:
+
+            # A "fake" boundary connection in an assembly has a special
+            # format. All expresion derivatives from inside the assembly are
+            # handled outside the assembly.
+            if var[0:4] == '@bin':
+                gradient[var] = 1.0
+                continue
             
-            if name in wrt:
-                var_dict[name] = scope.get(name)
-                new_name = "var_dict['%s']" % name
-                new_names.append(new_name)
-                grad_text = grad_text.replace(name, new_name)
+            # Don't take derivative with respect to a variable that is not in
+            # the expression
+            if var not in inputs:
+                gradient[var] = 0.0
+                continue
+                
+            # Try to differentiate symbolically
+            if var not in self.cached_grad_eq:
+                
+                #Take symbolic gradient of all inputs using sympy
+                try:
+                    grad_text = self.text
+                    all_gradients = SymGrad(grad_text, inputs)
+                    
+                    for varname, expression in zip(inputs, all_gradients):
+                        grad_txt = expression
+                        grad_root = ast.parse(grad_txt, mode='eval')
+                        self.cached_grad_eq[varname] = \
+                            compile(grad_root, '<string>', 'eval')
+                    
+                except SymbolicDerivativeError, NameError:
+                    self.cached_grad_eq[var] = False
+
+            # If we have a cached gradient expression:
+            if self.cached_grad_eq[var]:
+                gradient[var] = eval(self.cached_grad_eq[var])
+                
+                
+            # Otherwise resort to finite difference (1st order central)
             else:
-                # If we don't need derivative of a var, replace with its value
-                grad_text = grad_text.replace(name, str(scope.get(name)))
-        
-        try:#attempt computing of a symbolic gradient using sympy
-            symb_grad= SymGrad(grad_text,new_names)
-            gradient = {}
-            for symb_deriv,name in zip(symb_grad,var_dict):
-                grad_root = ast.parse(symb_deriv, mode='eval')
+                # Always need to assemble list of constant inputs, and
+                # to replace
+                var_dict = {}
+                grad_text = self.text
+                for name in inputs:
+                    
+                    if name==var:
+                        var_dict[name] = scope.get(name)
+                        grad_text = grad_text.replace(name, new_name)
+                    else:
+                        # If we don't need derivative of a var, replace with its value
+                        grad_text = grad_text.replace(name, str(scope.get(name)))
+
+                grad_root = ast.parse(grad_text, mode='eval')
                 grad_code = compile(grad_root, '<string>', 'eval')
+
+                # Finite difference
+                var_dict[var] += 0.5*stepsize
                 yp = eval(grad_code)
-                gradient[name]=yp
-            return gradient
-            
-        except SymbolicDerivativeError,NameError: #default to finite difference approximation
-            grad_root = ast.parse(grad_text, mode='eval')
-            grad_code = compile(grad_root, '<string>', 'eval')
-            
-            # Finite difference (1st order central)
-            gradient = {}
-            for name in var_dict:
-                
-                var_dict[name] += 0.5*stepsize
-                yp = eval(grad_code)
-                var_dict[name] -= stepsize
+                var_dict[var] -= stepsize
                 ym = eval(grad_code)
-                var_dict[name] += 0.5*stepsize
-                
-                gradient[name] = (yp-ym)/stepsize
-                
-            return gradient
+                var_dict[var] += 0.5*stepsize
+                    
+                gradient[var] = (yp-ym)/stepsize
+
+        return gradient
     
     def set(self, val, scope=None, src=None):
         """Set the value of the referenced object to the specified value."""
