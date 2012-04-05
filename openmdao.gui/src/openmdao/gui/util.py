@@ -159,6 +159,11 @@ def launch_browser(port,preferred_browser=None):
             CHROMEPATH = '/usr/bin/chromium-browser'
        	    if os.path.isfile(CHROMEPATH):
                 preferred_browser = CHROMEPATH+' --app=%s &'
+    else:
+        print '######################################################################'
+        print ' WARNING: The Chrome browser is currently required!!'
+        print ' You may try another browser but you will not have full functionality'
+        print '######################################################################'
     
     # try to get preferred browser, fall back to default
     if preferred_browser:
