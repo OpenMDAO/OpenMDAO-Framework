@@ -59,6 +59,9 @@ openmdao.Menu = function(id, json) {
         if ('onclick' in menu) {
             menuHTML += 'onclick="'+menu.onclick+'" '
         }
+        if ('id' in menu) {
+            menuHTML += 'id="'+menu.id+'" '
+        }
         menuHTML += '>'+menu.text+'</a>'
         
         if ('items' in menu) {

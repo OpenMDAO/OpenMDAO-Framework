@@ -23,6 +23,10 @@ openmdao.CodeEditor = function(id,model) {
             parserConfig: {'pythonVersion': 2, 'strictErrors': true},
             saveFunction: function() { saveFile() }
         });
+
+        // Giving it an id makes it easier to find in testing code
+        editor.frame.id = "code-editor" ;
+
     
     // make the parent element (tabbed pane) a drop target for file objects
     editorArea.parent().droppable ({

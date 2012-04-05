@@ -1,25 +1,25 @@
 [
     { "text": "Project", 
       "items": [
-        { "text": "Save",          "onclick": "openmdao.model.saveProject();" },
+        { "text": "Save",          "id": "mainmenu-save", "onclick": "openmdao.model.saveProject();" },
         { "text": "Run",           "onclick": "openmdao.model.runModel();" },
         { "text": "Reload",        "url": "/workspace/project" },
-        { "text": "Close",         "url": "/workspace/close" }        
+        { "text": "Close",         "id": "mainmenu-close", "url": "/workspace/close" }        
       ]
     },
-    { "text": "View", 
+    { "text": "View", "id": "mainmenu-view",
       "items": [
-        { "text": "Code Editor",   "onclick": "jQuery('#code_tab').click();" },
+        { "text": "Code Editor",   "id": "mainmenu-code-editor", "onclick": "jQuery('#code_tab').click();" },
         { "text": "Command Line",  "onclick": "openmdao.Util.toggle_visibility('cmdform');" },
         { "text": "Console",       "onclick": "layout.open('south');" },
         { "text": "Files",         "onclick": "layout.open('west'); jQuery('#ftree_tab').click();" },
         { "text": "Libraries",     "onclick": "layout.open('east'); jQuery('#palette_tab').click();" },
         { "text": "Objects",       "onclick": "layout.open('west'); jQuery('#otree_tab').click();" },
         { "text": "Properties",    "onclick": "layout.open('east'); jQuery('#properties_tab').click();" },
-        { "text": "Workflow",      "onclick": "jQuery('#workflow_tab').click();" },
-        { "text": "Structure",     "onclick": "jQuery('#structure_tab').click();" },
+        { "text": "Workflow",      "id": "mainmenu-workflow", "onclick": "jQuery('#workflow_tab').click();" },
+        { "text": "Structure",     "id": "mainmenu-structure", "onclick": "jQuery('#structure_tab').click();" },
         { "text": "--------"       },
-        { "text": "Refresh",       "onclick": "openmdao.model.updateListeners();" }
+        { "text": "Refresh",       "id": "mainmenu-refresh", "onclick": "openmdao.model.updateListeners();" }
       ]
     },
     { "text": "Tools", 

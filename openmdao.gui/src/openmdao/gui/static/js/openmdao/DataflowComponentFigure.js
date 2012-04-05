@@ -49,6 +49,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     item.style.padding="0px";
     item.style.outline="none";
     item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
+    item.className="DataflowComponentFigure" ;
     
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
@@ -94,6 +95,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
     this.disableTextSelection(this.header);
+    this.header.className="DataflowComponentFigureHeader" ;
     
     this.footer=document.createElement("div");
     this.footer.style.position="absolute";
