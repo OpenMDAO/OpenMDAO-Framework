@@ -35,7 +35,6 @@ setup(name='openmdao.gui',
       extras_require = {
           'jsTest':  [
               'path.py==2.2.2', 
-              'pyvirtualdisplay==0.0.9',
               'lazr.testing==0.1.2a',
               'mocker==1.1',
               'zope.testrunner==4.0.4',
