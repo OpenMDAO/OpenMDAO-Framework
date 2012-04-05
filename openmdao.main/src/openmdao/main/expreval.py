@@ -558,6 +558,7 @@ class ExprEvaluator(object):
         wrt: list of varpaths
             Varpaths for which we want to calculate the gradient
         """
+        global _expr_dict
         
         scope = self._get_updated_scope(scope)
         inputs = list(self.get_referenced_varpaths())
@@ -567,9 +568,6 @@ class ExprEvaluator(object):
         elif isinstance(wrt, str):
             wrt = [wrt]
                 
-        if self._parse_needed:
-            self._parse()
-
         gradient = {}
         for var in wrt:
 
@@ -592,18 +590,25 @@ class ExprEvaluator(object):
                 #Take symbolic gradient of all inputs using sympy
                 try:
                     all_gradients = SymGrad(self.text, inputs)
-                    
+
                     for varname, expression in zip(inputs, all_gradients):
-                        grad_root = ast.parse(expression, mode='eval')
-                        self.cached_grad_eq[varname] = \
-                            compile(grad_root, '<string>', 'eval')
+                        self.cached_grad_eq[varname] = expression
 
                 except SymbolicDerivativeError, NameError:
                     self.cached_grad_eq[var] = False
 
             # If we have a cached gradient expression:
             if self.cached_grad_eq[var]:
-                gradient[var] = eval(self.cached_grad_eq[var])
+                
+                # This is not the way I wanted to do it, but I didn't want
+                # to mess with everything that's is in self._parse
+                grad_text = self.cached_grad_eq[var]
+                for name in inputs:
+                    grad_text = grad_text.replace(name, str(scope.get(name)))
+                
+                grad_root = ast.parse(grad_text, mode='eval')
+                grad_code = compile(grad_root, '<string>', 'eval')
+                gradient[var] = eval(grad_code, _expr_dict, locals())
                 
             # Otherwise resort to finite difference (1st order central)
             else:
@@ -625,9 +630,9 @@ class ExprEvaluator(object):
 
                 # Finite difference (Central difference)
                 var_dict[var] += 0.5*stepsize
-                yp = eval(grad_code)
+                yp = eval(grad_code, _expr_dict, locals())
                 var_dict[var] -= stepsize
-                ym = eval(grad_code)
+                ym = eval(grad_code, _expr_dict, locals())
                     
                 gradient[var] = (yp-ym)/stepsize
                 

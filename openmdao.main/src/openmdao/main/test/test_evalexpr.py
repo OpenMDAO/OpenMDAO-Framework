@@ -477,6 +477,13 @@ class ExprEvalTestCase(unittest.TestCase):
         grad = exp.evaluate_gradient(scope=top, wrt=['comp2.b'])
         self.assertEqual(len(grad), 1)
         
+        exp = ExprEvaluator('pow(comp2.b,2)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.b'], 10.0, 0.00001)
+        
+        exp = ExprEvaluator('pow(comp2.b,3)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.b'], 75.0, 0.00001)
         
         #self.a = 4.
         #self.b = 5.
