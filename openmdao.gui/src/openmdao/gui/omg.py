@@ -11,7 +11,7 @@ import os, sys
 import os.path
 import time
 
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 # zmq
 import zmq
@@ -141,45 +141,51 @@ class AppServer(object):
         if not self.options.serveronly:
             launch_browser(self.options.port, self.options.browser)
             
+        DEBUG('Serving on port %d' % self.options.port)
         try:
             ioloop.IOLoop.instance().start()
         except KeyboardInterrupt:
             DEBUG('interrupt received, shutting down.')
 
     @staticmethod
-    def get_options_parser():
+    def get_argument_parser():
         ''' create a parser for command line arguments
         '''
-        parser = OptionParser()
-        parser.add_option("-p", "--port", type="int", dest="port", default=0,
+        parser = ArgumentParser(description = "launch the graphical user interface")
+        parser.add_argument("-p","--port", type=int, dest="port", default=0,
                           help="port to run server on (defaults to any available port)")
-        parser.add_option("-b", "--browser", dest="browser", default="chrome",
+        parser.add_argument("-b","--browser", dest="browser", default="chrome",
                           help="preferred browser")
-        parser.add_option("-s", "--server", action="store_true", dest="serveronly",
+        parser.add_argument("-s","--server", action="store_true", dest="serveronly",
                           help="don't launch browser, just run server")
-        parser.add_option("-r", "--reset", action="store_true", dest="reset",
+        parser.add_argument("-r","--reset", action="store_true", dest="reset",
                           help="reset project database")
-        parser.add_option("-d", "--dev", action="store_true", dest="development",
-                          help="enable development options")
-                          
+        parser.add_argument("-d","--dev", action="store_true", dest="development",
+                          help="enable development options")                          
         return parser
 
-def main():
-    ''' process command line arguments and do as commanded
+def get_argument_parser():
+    ''' shortcut to AppServer argument parser
+    '''
+    return AppServer.get_argument_parser()
+
+def run(parser=None, options=None, args=None):
+    ''' launch the gui with specified options
     '''
     
     # install zmq ioloop before creating any tornado objects
     ioloop.install()
     
     # create the server and kick it off
-    parser = AppServer.get_options_parser()
-    (options, args) = parser.parse_args()
     server = AppServer(options)
-    
-    DEBUG('starting server...')
     server.serve()
+    
+def main():
+    ''' process command line arguments and run
+    '''
+    parser = AppServer.get_argument_parser()
+    options, args = parser.parse_known_args()
+    run(parser, options, args)
         
 if __name__ == '__main__':
-    # dont run main() if this is a forked windows process
-    if sys.modules['__main__'].__file__ == __file__:
-        main()
+    main()
