@@ -1,7 +1,6 @@
 from sympy import Symbol,diff
 from sympy.core.function import Derivative
 from sympy.functions import *
-import numpy
 
 class SymbolicDerivativeError(Exception):
     def __init__(self, value):
@@ -53,14 +52,5 @@ def SymHess(ex,vars):
         hess.append(row)
     return hess
 
-    
-#ex="x.c1[0]**2+sqrt(y.c2**3)+exp(y.c2)+x.c1[0]*exp(-abs((y.c2)))"
-#vars=["x.c1[0]","y.c2"]
-ex='x+factorial(x)**2'
-vars=['x']
-print
-#print ex
-print
-print SymGrad(ex,vars)
-#print
-#print SymHess(ex,vars)
+if __name__ == '__main__':
+    pass

@@ -14,6 +14,8 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_ex
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
+from openmdao.main.sym import SymGrad,SymbolicDerivativeError
+
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
     'math': math,
@@ -572,32 +574,46 @@ class ExprEvaluator(object):
         # not possible due to the non-differentiated variables
         grad_text = self.text
         var_dict = {}
+        numerical_grad=False
+        new_names=[]
         for name in  list(self.get_referenced_varpaths()):
             
             if name in wrt:
                 var_dict[name] = scope.get(name)
                 new_name = "var_dict['%s']" % name
+                new_names.append(new_name)
                 grad_text = grad_text.replace(name, new_name)
             else:
                 # If we don't need derivative of a var, replace with its value
                 grad_text = grad_text.replace(name, str(scope.get(name)))
         
-        grad_root = ast.parse(grad_text, mode='eval')
-        grad_code = compile(grad_root, '<string>', 'eval')
-
-        # Finite difference (1st order central)
-        gradient = {}
-        for name in var_dict:
+        try:#attempt computing of a symbolic gradient using sympy
+            symb_grad= SymGrad(grad_text,new_names)
+            gradient = {}
+            for symb_deriv,name in zip(symb_grad,var_dict):
+                grad_root = ast.parse(symb_deriv, mode='eval')
+                grad_code = compile(grad_root, '<string>', 'eval')
+                yp = eval(grad_code)
+                gradient[name]=yp
+            return gradient
             
-            var_dict[name] += 0.5*stepsize
-            yp = eval(grad_code)
-            var_dict[name] -= stepsize
-            ym = eval(grad_code)
-            var_dict[name] += 0.5*stepsize
+        except SymbolicDerivativeError,NameError: #default to finite difference approximation
+            grad_root = ast.parse(grad_text, mode='eval')
+            grad_code = compile(grad_root, '<string>', 'eval')
             
-            gradient[name] = (yp-ym)/stepsize
-            
-        return gradient
+            # Finite difference (1st order central)
+            gradient = {}
+            for name in var_dict:
+                
+                var_dict[name] += 0.5*stepsize
+                yp = eval(grad_code)
+                var_dict[name] -= stepsize
+                ym = eval(grad_code)
+                var_dict[name] += 0.5*stepsize
+                
+                gradient[name] = (yp-ym)/stepsize
+                
+            return gradient
     
     def set(self, val, scope=None, src=None):
         """Set the value of the referenced object to the specified value."""
