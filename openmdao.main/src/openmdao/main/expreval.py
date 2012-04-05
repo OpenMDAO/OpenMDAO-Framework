@@ -586,20 +586,18 @@ class ExprEvaluator(object):
                 gradient[var] = 0.0
                 continue
                 
-            # Try to differentiate symbolically
+            # First time, try to differentiate symbolically
             if var not in self.cached_grad_eq:
                 
                 #Take symbolic gradient of all inputs using sympy
                 try:
-                    grad_text = self.text
-                    all_gradients = SymGrad(grad_text, inputs)
+                    all_gradients = SymGrad(self.text, inputs)
                     
                     for varname, expression in zip(inputs, all_gradients):
-                        grad_txt = expression
-                        grad_root = ast.parse(grad_txt, mode='eval')
+                        grad_root = ast.parse(expression, mode='eval')
                         self.cached_grad_eq[varname] = \
                             compile(grad_root, '<string>', 'eval')
-                    
+
                 except SymbolicDerivativeError, NameError:
                     self.cached_grad_eq[var] = False
 
@@ -607,17 +605,16 @@ class ExprEvaluator(object):
             if self.cached_grad_eq[var]:
                 gradient[var] = eval(self.cached_grad_eq[var])
                 
-                
             # Otherwise resort to finite difference (1st order central)
             else:
-                # Always need to assemble list of constant inputs, and
-                # to replace
+                # Always need to assemble list of constant inputs, for
+                # replacement in the gradient expression text
                 var_dict = {}
                 grad_text = self.text
                 for name in inputs:
-                    
                     if name==var:
                         var_dict[name] = scope.get(name)
+                        new_name = "var_dict['%s']" % name
                         grad_text = grad_text.replace(name, new_name)
                     else:
                         # If we don't need derivative of a var, replace with its value
@@ -626,15 +623,14 @@ class ExprEvaluator(object):
                 grad_root = ast.parse(grad_text, mode='eval')
                 grad_code = compile(grad_root, '<string>', 'eval')
 
-                # Finite difference
+                # Finite difference (Central difference)
                 var_dict[var] += 0.5*stepsize
                 yp = eval(grad_code)
                 var_dict[var] -= stepsize
                 ym = eval(grad_code)
-                var_dict[var] += 0.5*stepsize
                     
                 gradient[var] = (yp-ym)/stepsize
-
+                
         return gradient
     
     def set(self, val, scope=None, src=None):

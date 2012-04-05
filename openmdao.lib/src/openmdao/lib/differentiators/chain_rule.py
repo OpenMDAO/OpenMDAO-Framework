@@ -123,7 +123,6 @@ class ChainRule(HasTraits):
             
             # Find derivatives for all component outputs in the workflow
             self._chain_workflow(derivs, self._parent, wrt)
-            print derivs
 
             # Calculate derivative of the objectives.
             for obj_name, expr in self._parent.get_objectives().iteritems():
