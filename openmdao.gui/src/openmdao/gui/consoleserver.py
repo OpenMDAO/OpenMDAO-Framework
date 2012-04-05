@@ -341,7 +341,7 @@ class ConsoleServer(cmd.Cmd):
         connections = []
         if is_instance(asm,Assembly):
             # list of components (name & type) in the assembly
-            g = asm._depgraph._graph
+            g = asm._depgraph._depgraph._graph
             for name in nx.algorithms.dag.topological_sort(g):
                 if not name.startswith('@'):
                     comp = asm.get(name)
