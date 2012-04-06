@@ -562,7 +562,7 @@ class ExprEvaluator(object):
         
         scope = self._get_updated_scope(scope)
         inputs = list(self.get_referenced_varpaths())
-        
+        print inputs
         if wrt==None:
             wrt = inputs
         elif isinstance(wrt, str):
@@ -583,7 +583,7 @@ class ExprEvaluator(object):
             if var not in inputs:
                 gradient[var] = 0.0
                 continue
-                
+            
             # First time, try to differentiate symbolically
             if var not in self.cached_grad_eq:
                 

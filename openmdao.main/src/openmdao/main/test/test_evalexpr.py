@@ -10,6 +10,10 @@ from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
 from openmdao.util.testutil import assert_rel_error
 
+from numpy import sin,cos
+from math import log,sqrt
+
+from scipy.special import gamma,polygamma
 
 class A(Component):
     f = Float(iotype='in')
@@ -484,6 +488,27 @@ class ExprEvalTestCase(unittest.TestCase):
         exp = ExprEvaluator('pow(comp2.b,3)', top.driver)
         grad = exp.evaluate_gradient(scope=top)
         assert_rel_error(self, grad['comp2.b'], 75.0, 0.00001)
+        
+        
+        exp = ExprEvaluator('log(comp2.a)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.a'], 1./top.comp2.a, 0.00001)
+                
+        exp = ExprEvaluator('sin(cos(comp2.b))+sqrt(comp2.a)/comp1.c', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        g1=-sin(top.comp2.b)*cos(cos(top.comp2.b)) #true gradient components
+        g2=(2*sqrt(top.comp2.a)*top.comp1.c)**-1
+        g3=-sqrt(top.comp2.a)/top.comp1.c**2
+        
+        assert_rel_error(self, grad['comp2.b'], g1, 0.00001)
+        assert_rel_error(self, grad['comp2.a'], g2, 0.00001)
+        assert_rel_error(self, grad['comp1.c'], g3, 0.00001)
+        
+        exp = ExprEvaluator('gamma(comp2.a)', top.driver) #sympy fails; requires finite difference
+        grad = exp.evaluate_gradient(scope=top)
+        g1=gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
+        assert_rel_error(self, grad['comp2.a'], g1, 0.001)
+        
         
         #self.a = 4.
         #self.b = 5.
