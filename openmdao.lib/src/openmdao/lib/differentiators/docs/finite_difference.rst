@@ -4,7 +4,7 @@
 A `differentiator` is a special object that can be used by a driver to calculate
 the first or second derivatives of a workflow. The derivatives are calculated
 from the parameter inputs to the objective and constraint outputs. Any driver
-that has been derived from the DriverUsesDerivatives base class contains a slot (i.e., Instance trait)
+that has been derived from the DriverUsesDerivatives base class contains a Slot
 called `Differentiator`. This slot can take a Differentiator object.
 
 .. _FiniteDifference:
@@ -18,7 +18,12 @@ you have a choice of forward, backward, or central differencing. Second
 derivatives are calculated using the standard three-point difference for both
 on-diagonal and off-diagonal terms.
 
-The ``FiniteDifference`` differentiator can be used with the CONMIN or NEWSUMT
+The ``FiniteDifference`` differentiator also supports Finite Difference with
+Analytical Derivatives (FDAD), wherein a component's analytical derivatives can
+be used to speed up that component under finite difference.
+
+The ``FiniteDifference`` differentiator can be used with any optimizer that can
+usegradients, including the CONMIN, NEWSUMT, and SLSQP drivers.
 optimizer by plugging it into the differentiator socket.
 
 .. testcode:: FD
@@ -66,7 +71,6 @@ for each parameter in the call to ``add_parameter``. Here, the finite difference
 ``'x'`` to paraboloid is set to .01. If you don't specify ``fd_step`` for a parameter, then the default
 step size is used.
 
-Fake Finite Difference is fully supported by the finite difference generator.
 
 *Source Documentation for finite_difference.py*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

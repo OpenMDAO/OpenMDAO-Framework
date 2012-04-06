@@ -456,11 +456,13 @@ class ExprEvalTestCase(unittest.TestCase):
         #print grad
         #assert_rel_error(self, grad['comp1.x_array[1]'], 4.0, 0.00001)
         
+        # Commented out this test, until we find a case that can't be
+        # handled analytically
         # interface test: step size
         # (for linear slope, larger stepsize more accurate because of
         # python's rounding)
-        grad2 = exp.evaluate_gradient(scope=top, stepsize=0.1)
-        assert( abs(grad['comp1.c'] - 3.0) > abs(grad2['comp1.c'] - 3.0) )
+        #grad2 = exp.evaluate_gradient(scope=top, stepsize=0.1)
+        #assert( abs(grad['comp1.c'] - 3.0) > abs(grad2['comp1.c'] - 3.0) )
         
         # More complicated, multiple comps
         top.add('comp2', Simple())
@@ -475,6 +477,13 @@ class ExprEvalTestCase(unittest.TestCase):
         grad = exp.evaluate_gradient(scope=top, wrt=['comp2.b'])
         self.assertEqual(len(grad), 1)
         
+        exp = ExprEvaluator('pow(comp2.b,2)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.b'], 10.0, 0.00001)
+        
+        exp = ExprEvaluator('pow(comp2.b,3)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.b'], 75.0, 0.00001)
         
         #self.a = 4.
         #self.b = 5.
