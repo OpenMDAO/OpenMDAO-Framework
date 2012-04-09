@@ -14,7 +14,7 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_ex
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
-from openmdao.main.sym import SymGrad,SymbolicDerivativeError
+from openmdao.main.sym import SymGrad, SymbolicDerivativeError
 
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
@@ -547,10 +547,9 @@ class ExprEvaluator(object):
                             "'%s': %s" %(self.text,str(err)))
         
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
-        """Return the gradient of the expression with respect to all of the
-        referenced varpaths. The gradient is calculated by 1st order central
-        difference for now. More options including symbolic differentiation
-        may be added in the future.
+        """Return a dict containing the gradient of the expression with respect to 
+        each of the referenced varpaths. The gradient is calculated by 1st order central
+        difference for now. 
         
         stepsize: float
             Step size for finite difference.
@@ -562,7 +561,7 @@ class ExprEvaluator(object):
         
         scope = self._get_updated_scope(scope)
         inputs = list(self.get_referenced_varpaths())
-        print inputs
+        
         if wrt==None:
             wrt = inputs
         elif isinstance(wrt, str):
@@ -589,9 +588,7 @@ class ExprEvaluator(object):
                 
                 #Take symbolic gradient of all inputs using sympy
                 try:
-                    all_gradients = SymGrad(self.text, inputs)
-
-                    for varname, expression in zip(inputs, all_gradients):
+                    for varname, expression in zip(inputs, SymGrad(self.text, inputs)):
                         self.cached_grad_eq[varname] = expression
 
                 except SymbolicDerivativeError, NameError:

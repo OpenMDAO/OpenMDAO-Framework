@@ -10,10 +10,20 @@ from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
 from openmdao.util.testutil import assert_rel_error
 
-from numpy import sin,cos
-from math import log,sqrt
+#from numpy import sin,cos
+from math import log, sqrt, sin, cos
 
-from scipy.special import gamma,polygamma
+try:
+    # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
+    from math import gamma
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r" % (__file__, err))
+    try:
+        from scipy.special import gamma
+    except ImportError as err:
+        logging.warn("In %s: %r" % (__file__, err))
+from scipy.special import polygamma
 
 class A(Component):
     f = Float(iotype='in')
@@ -489,7 +499,6 @@ class ExprEvalTestCase(unittest.TestCase):
         grad = exp.evaluate_gradient(scope=top)
         assert_rel_error(self, grad['comp2.b'], 75.0, 0.00001)
         
-        
         exp = ExprEvaluator('log(comp2.a)', top.driver)
         grad = exp.evaluate_gradient(scope=top)
         assert_rel_error(self, grad['comp2.a'], 1./top.comp2.a, 0.00001)
@@ -508,12 +517,6 @@ class ExprEvalTestCase(unittest.TestCase):
         grad = exp.evaluate_gradient(scope=top)
         g1=gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
         assert_rel_error(self, grad['comp2.a'], g1, 0.001)
-        
-        
-        #self.a = 4.
-        #self.b = 5.
-        #self.c = 7.
-        #self.d = 1.5
 
     def test_scope_transform(self):
         exp = ExprEvaluator('var+abs(comp.x)*a.a1d[2]', self.top)
