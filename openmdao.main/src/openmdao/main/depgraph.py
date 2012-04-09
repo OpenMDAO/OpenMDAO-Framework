@@ -249,7 +249,6 @@ class DependencyGraph(object):
         if destpath in self._allsrcs:
             raise AlreadyConnectedError("%s is already connected to source %s" %
                                         (destpath, self._allsrcs[destpath]))
-        self._allsrcs[destpath] = expr.text
         try:
             for ref in expr.refs():
                 self.connect(ref, destpath, scope)
@@ -257,6 +256,7 @@ class DependencyGraph(object):
         except:
             del self._allsrcs[destpath]
             raise
+        self._allsrcs[destpath] = expr.text
         
     def connect(self, srcpath, destpath, scope):
         """Add an edge to our Component graph from 

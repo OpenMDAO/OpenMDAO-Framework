@@ -306,13 +306,13 @@ class Container(SafeHasTraits):
                         self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
                         
             childdest = 'parent.'+destpath
-            for srccomp in srcexpr.get_referenced_compnames():
-                #cname, _, restofpath = srcpath.partition('.')
-                if srccomp != 'parent':
-                    child = getattr(self, srccomp)
+            for srcref in srcexpr.refs():
+                cname, _, restofpath = srcref.partition('.')
+                if cname != 'parent':
+                    child = getattr(self, cname)
                     if is_instance(child, Container):
-                        child.connect(srcexpr, childdest)
-                        child_connections.append((child, srcexpr, childdest)) 
+                        child.connect(restofpath, childdest)
+                        child_connections.append((child, restofpath, childdest)) 
 
             self._depgraph.connect_expr(srcexpr, destpath, self)
         except Exception as err:

@@ -500,7 +500,7 @@ class Assembly (Component):
             super(Assembly, self).connect(ref, dest)
 
         self._exprmapper.connect(srcexpr, destexpr, self)
-        self._depgraph.connect_expr(srcexpr, destexpr.text, self)
+        #self._depgraph.connect_expr(srcexpr, destexpr.text, self)
         
         #super(Assembly, self).connect(src, dest)
         
