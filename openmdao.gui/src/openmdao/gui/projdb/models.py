@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 def get_upload_path(instance,filename):
     print instance.user
-    return 'projects/'+str(instance.user)+'/'+filename
+    return str(instance.user)+'/'+filename
 
 # Project
 class Project(models.Model):

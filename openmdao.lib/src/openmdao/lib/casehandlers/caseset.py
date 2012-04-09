@@ -115,6 +115,10 @@ class CaseArray(object):
         else:
             self._add_values(self._get_case_data(case))
     
+    def close(self):
+        """Does nothing."""
+        return
+
     def __iter__(self):
         return self._next_case()
 

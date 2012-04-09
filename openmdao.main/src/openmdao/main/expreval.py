@@ -14,15 +14,22 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_ex
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
+from openmdao.main.sym import SymGrad, SymbolicDerivativeError
+
+def _import_functs(mod, dct, names=None):
+    if names is None:
+        names = dir(mod)
+    for name in names:
+        if not name.startswith('_'):
+            dct[name] = getattr(mod, name)
+
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
     'math': math,
     }
 # add stuff from math lib directly to our locals dict so users won't have to 
 # put 'math.' in front of all of their calls to standard math functions 
-for name in dir(math):
-    if not name.startswith('_'):
-        _expr_dict[name] = getattr(math, name)
+_import_functs(math, _expr_dict)
         
 # make numpy functions available if possible
 try:
@@ -31,6 +38,15 @@ except ImportError:
     pass
 else:
     _expr_dict['numpy'] = numpy
+    #_import_functs(numpy, _expr_dict, names=[])
+    
+# if scipy is available, add some functions
+try:
+    import scipy.special
+except ImportError:
+    pass
+else:
+    _import_functs(scipy.special, _expr_dict, names=['polygamma'])
 
 _Missing = object()
 
@@ -370,6 +386,8 @@ class ExprEvaluator(object):
         self.var_names = set()
         self.getters = getters
         self.default_getter = default_getter
+        
+        self.cached_grad_eq = {}
     
     @property
     def text(self):
@@ -541,7 +559,96 @@ class ExprEvaluator(object):
         except Exception, err:
             raise type(err)("can't evaluate expression "+
                             "'%s': %s" %(self.text,str(err)))
+        
+    def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
+        """Return a dict containing the gradient of the expression with respect to 
+        each of the referenced varpaths. The gradient is calculated by 1st order central
+        difference for now. 
+        
+        stepsize: float
+            Step size for finite difference.
+            
+        wrt: list of varpaths
+            Varpaths for which we want to calculate the gradient
+        """
+        global _expr_dict
+        
+        scope = self._get_updated_scope(scope)
+        inputs = list(self.get_referenced_varpaths())
+        
+        if wrt==None:
+            wrt = inputs
+        elif isinstance(wrt, str):
+            wrt = [wrt]
+                
+        gradient = {}
+        for var in wrt:
 
+            # A "fake" boundary connection in an assembly has a special
+            # format. All expresion derivatives from inside the assembly are
+            # handled outside the assembly.
+            if var[0:4] == '@bin':
+                gradient[var] = 1.0
+                continue
+            
+            # Don't take derivative with respect to a variable that is not in
+            # the expression
+            if var not in inputs:
+                gradient[var] = 0.0
+                continue
+            
+            # First time, try to differentiate symbolically
+            if var not in self.cached_grad_eq:
+                
+                #Take symbolic gradient of all inputs using sympy
+                try:
+                    for varname, expression in zip(inputs, SymGrad(self.text, inputs)):
+                        self.cached_grad_eq[varname] = expression
+
+                except SymbolicDerivativeError, NameError:
+                    self.cached_grad_eq[var] = False
+
+            # If we have a cached gradient expression:
+            if self.cached_grad_eq[var]:
+                
+                # This is not the way I wanted to do it, but I didn't want
+                # to mess with everything that's is in self._parse
+                grad_text = self.cached_grad_eq[var]
+                for name in inputs:
+                    grad_text = grad_text.replace(name, str(scope.get(name)))
+                
+                grad_root = ast.parse(grad_text, mode='eval')
+                grad_code = compile(grad_root, '<string>', 'eval')
+                gradient[var] = eval(grad_code, _expr_dict, locals())
+                
+            # Otherwise resort to finite difference (1st order central)
+            else:
+                # Always need to assemble list of constant inputs, for
+                # replacement in the gradient expression text
+                var_dict = {}
+                grad_text = self.text
+                for name in inputs:
+                    if name==var:
+                        var_dict[name] = scope.get(name)
+                        new_name = "var_dict['%s']" % name
+                        grad_text = grad_text.replace(name, new_name)
+                    else:
+                        # If we don't need derivative of a var, replace with its value
+                        grad_text = grad_text.replace(name, str(scope.get(name)))
+
+                grad_root = ast.parse(grad_text, mode='eval')
+                grad_code = compile(grad_root, '<string>', 'eval')
+
+                # Finite difference (Central difference)
+                var_dict[var] += 0.5*stepsize
+                yp = eval(grad_code, _expr_dict, locals())
+                var_dict[var] -= stepsize
+                ym = eval(grad_code, _expr_dict, locals())
+                    
+                gradient[var] = (yp-ym)/stepsize
+                
+        return gradient
+    
     def set(self, val, scope=None, src=None):
         """Set the value of the referenced object to the specified value."""
         global _expr_dict

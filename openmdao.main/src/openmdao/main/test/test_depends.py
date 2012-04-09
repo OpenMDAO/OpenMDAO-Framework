@@ -12,6 +12,7 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.test.execcomp import ExecComp
+from openmdao.util.testutil import assert_rel_error
 
 exec_order = []
 
@@ -517,22 +518,23 @@ class DependsTestCase2(unittest.TestCase):
 
     def test_units(self):
         top = self.top
-        top.c2.add("velocity", Float(3.0, iotype='in', units='ft/s'))
+        top.c2.add("velocity", Float(3.0, iotype='in', units='inch/s'))
         top.c1.add("time", Float(9.0, iotype='out', units='s'))
         
         try:
             top.connect('c1.c', 'c2.velocity')
         except Exception as err:
-            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'ft/s'")
+            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'inch/s'")
         else:
             self.fail("Exception expected")
         
         top.c1.a = 1.
         top.c1.b = 2.
+        # so c1.c will be 3
         top.c1.time = 2.
         top.connect('c1.c/c1.time', 'c2.velocity')
         top.run()
-        self.assertEqual(top.c2.velocity, 1.5)
+        assert_rel_error(self, top.c2.velocity, 18., 0.0001)
         
         try:
             top.connect('c1.c+c1.time', 'c2.b')
