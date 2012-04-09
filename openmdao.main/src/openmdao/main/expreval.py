@@ -46,7 +46,7 @@ try:
 except ImportError:
     pass
 else:
-    _import_functs(scipy.special, _expr_dict, names=['polygamma'])
+    _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 _Missing = object()
 
