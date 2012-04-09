@@ -16,15 +16,20 @@ from openmdao.main.index import INDEX, ATTR, CALL, SLICE
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
 
+def _import_functs(mod, dct, names=None):
+    if names is None:
+        names = dir(mod)
+    for name in names:
+        if not name.startswith('_'):
+            dct[name] = getattr(mod, name)
+
 # this dict will act as the local scope when we eval our expressions
 _expr_dict = {
     'math': math,
     }
 # add stuff from math lib directly to our locals dict so users won't have to 
 # put 'math.' in front of all of their calls to standard math functions 
-for name in dir(math):
-    if not name.startswith('_'):
-        _expr_dict[name] = getattr(math, name)
+_import_functs(math, _expr_dict)
         
 # make numpy functions available if possible
 try:
@@ -33,6 +38,15 @@ except ImportError:
     pass
 else:
     _expr_dict['numpy'] = numpy
+    #_import_functs(numpy, _expr_dict, names=[])
+    
+# if scipy is available, add some functions
+try:
+    import scipy.special
+except ImportError:
+    pass
+else:
+    _import_functs(scipy.special, _expr_dict, names=['polygamma'])
 
 _Missing = object()
 
