@@ -30,46 +30,46 @@ class UnitsAttrWrapper(AttrWrapper):
         
     def __add__(self, other):
         pq = self.pq + _get_PQ(other) 
-        return UnitsAttrWrapper(pq.value, units=pq.unit)
+        return UnitsAttrWrapper(pq.value, units=pq.get_unit_name())
   
     __radd__ = __add__
     
     def __sub__(self, other):
         pq = self.pq - _get_PQ(other) 
-        return UnitsAttrWrapper(pq.value, units=pq.unit)
+        return UnitsAttrWrapper(pq.value, units=pq.get_unit_name())
     
     def __rsub__(self, other):
         pq = _get_PQ(other) - self.pq
-        return UnitsAttrWrapper(pq.value, units=pq.unit)
+        return UnitsAttrWrapper(pq.value, units=pq.get_unit_name())
     
     def __mul__(self, other):
         pq = self.pq * _get_PQ(other) 
-        return UnitsAttrWrapper(pq.value, units=pq.unit)
+        return UnitsAttrWrapper(pq.value, units=pq.get_unit_name())
 
     __rmul__ = __mul__
 
     def __div__(self, other):
         pq = self.pq / _get_PQ(other) 
-        return UnitsAttrWrapper(pq.value, units=pq.unit)
+        return UnitsAttrWrapper(pq.value, units=pq.get_unit_name())
 
     def __rdiv__(self, other):
         pq = _get_PQ(other) / self.pq
-        return UnitsAttrWrapper(pq.value, units=pq.unit)
+        return UnitsAttrWrapper(pq.value, units=pq.get_unit_name())
 
     def __pow__(self, other):
         pq = self.pq / _get_PQ(other) 
-        return UnitsAttrWrapper(pq.value, units=pq.unit)
+        return UnitsAttrWrapper(pq.value, units=pq.get_unit_name())
 
     def __rpow__(self, other):
-        raise TypeError('Exponents must be dimensionless but this one has units of %s' % self.pq.unit)
+        raise TypeError('Exponents must be dimensionless but this one has units of %s' % self.pq.get_unit_name())
   
     def __abs__(self):
-        return UnitsAttrWrapper(abs(self.value), units=self.pq.unit)
+        return UnitsAttrWrapper(abs(self.value), units=self.pq.get_unit_name())
   
     def __pos__(self):
         return self
     
     def __neg__(self):
-        return UnitsAttrWrapper(-self.value, units=self.pq.unit)
+        return UnitsAttrWrapper(-self.value, units=self.pq.get_unit_name())
 
     
