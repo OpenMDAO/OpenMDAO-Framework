@@ -1,3 +1,4 @@
+
 from sympy import Symbol, diff
 from sympy.core.function import Derivative
 from sympy.functions import *
@@ -28,28 +29,24 @@ def SymGrad(ex,vars):
         grad.append(diff_str)
     return grad
     
-def SymHess(ex,vars):
+def SymHess(ex, vars):
     """ symbolic hessian"""
-    s=[]
-    for var in vars:
-        s.append(Symbol(var))
+    s = [Symbol(v) for v in vars]
 
     newex=ex
-    for i in xrange(len(vars)):
-        newex=newex.replace(vars[i],"s["+str(i)+"]") 
+    for i,v in enumerate(vars):
+        newex = newex.replace(v, "s["+str(i)+"]") 
     exec "newex="+newex
 
     hess=[]
     for i in xrange(len(vars)):
-        row=[]
+        row = []
         for k in xrange(len(vars)):
-            d=diff(newex,s[i],s[k])
-            diff_str=d.__str__()
+            d=diff(newex, s[i], s[k])
+            diff_str = d.__str__()
             if isinstance(d, Derivative) or 'Derivative' in diff_str:
                 raise SymbolicDerivativeError('Could not symbolically differentiate expression')
             row.append(d.__str__())
         hess.append(row)
     return hess
 
-if __name__ == '__main__':
-    pass
