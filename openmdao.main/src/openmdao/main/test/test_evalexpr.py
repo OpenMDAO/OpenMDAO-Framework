@@ -454,12 +454,6 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(top.comp1.c, 7.0)
         assert_rel_error(self, grad['comp1.c'], 3.0, 0.00001)
         
-        # Uncomment these when arrays work
-        #exp = ExprEvaluator('4.0*comp1.x_array[1]', top.driver)
-        #grad = exp.evaluate_gradient(scope=top)
-        #print grad
-        #assert_rel_error(self, grad['comp1.x_array[1]'], 4.0, 0.00001)
-        
         # Commented out this test, until we find a case that can't be
         # handled analytically
         # interface test: step size
@@ -509,11 +503,16 @@ class ExprEvalTestCase(unittest.TestCase):
         g1=gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
         assert_rel_error(self, grad['comp2.a'], g1, 0.001)
         
+    def test_eval_gradient_array(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', A())
+        top.run()
         
-        #self.a = 4.
-        #self.b = 5.
-        #self.c = 7.
-        #self.d = 1.5
+        # Uncomment these when arrays work
+        exp = ExprEvaluator('4.0*comp1.b2d[0][1]*comp1.b2d[1][1]', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp1.b2d[0][1]'], 12.0, 0.00001)
+        assert_rel_error(self, grad['comp1.b2d[1][1]'], 4.0, 0.00001)
 
     def test_scope_transform(self):
         exp = ExprEvaluator('var+abs(comp.x)*a.a1d[2]', self.top)

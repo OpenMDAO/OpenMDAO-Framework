@@ -373,6 +373,7 @@ class ExprEvaluator(object):
         self.getters = getters
         self.default_getter = default_getter
         
+        self._examiner = None
         self.cached_grad_eq = {}
     
     @property
@@ -546,6 +547,11 @@ class ExprEvaluator(object):
             raise type(err)("can't evaluate expression "+
                             "'%s': %s" %(self.text,str(err)))
         
+    def refs(self):
+        """ Used by evaluate_gradient. Returns a list of all connections
+        including their array indices."""
+        return self._examiner.refs.copy()
+    
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return the gradient of the expression with respect to all of the
         referenced varpaths. The gradient is calculated by 1st order central
@@ -561,8 +567,11 @@ class ExprEvaluator(object):
         global _expr_dict
         
         scope = self._get_updated_scope(scope)
-        inputs = list(self.get_referenced_varpaths())
-        print inputs
+        if self._parse_needed or self._examiner is None:
+            self._examiner = ExprExaminer(ast.parse(self.text, 
+                                                    mode='eval'), self)
+        inputs = list(self.refs())
+
         if wrt==None:
             wrt = inputs
         elif isinstance(wrt, str):
@@ -585,7 +594,7 @@ class ExprEvaluator(object):
                 continue
             
             # First time, try to differentiate symbolically
-            if var not in self.cached_grad_eq:
+            if (var not in self.cached_grad_eq) or self._parse_needed:
                 
                 #Take symbolic gradient of all inputs using sympy
                 try:
@@ -604,7 +613,12 @@ class ExprEvaluator(object):
                 # to mess with everything that's is in self._parse
                 grad_text = self.cached_grad_eq[var]
                 for name in inputs:
-                    grad_text = grad_text.replace(name, str(scope.get(name)))
+                    if '[' in name:
+                        new_expr = ExprEvaluator(name, scope)
+                        replace_val = new_expr.evaluate()
+                    else:
+                        replace_val = scope.get(name)
+                    grad_text = grad_text.replace(name, str(replace_val))
                 
                 grad_root = ast.parse(grad_text, mode='eval')
                 grad_code = compile(grad_root, '<string>', 'eval')
@@ -617,13 +631,19 @@ class ExprEvaluator(object):
                 var_dict = {}
                 grad_text = self.text
                 for name in inputs:
+                    if '[' in name:
+                        new_expr = ExprEvaluator(name, scope)
+                        replace_val = new_expr.evaluate()
+                    else:
+                        replace_val = scope.get(name)
+                        
                     if name==var:
-                        var_dict[name] = scope.get(name)
+                        var_dict[name] = replace_val
                         new_name = "var_dict['%s']" % name
                         grad_text = grad_text.replace(name, new_name)
                     else:
                         # If we don't need derivative of a var, replace with its value
-                        grad_text = grad_text.replace(name, str(scope.get(name)))
+                        grad_text = grad_text.replace(name, str(replace_val))
 
                 grad_root = ast.parse(grad_text, mode='eval')
                 grad_code = compile(grad_root, '<string>', 'eval')
