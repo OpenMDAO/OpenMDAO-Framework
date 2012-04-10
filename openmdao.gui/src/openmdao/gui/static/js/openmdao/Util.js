@@ -281,18 +281,17 @@ openmdao.Util = {
 
     openWebSocket: function(addr,handler) {
        socket = new WebSocket(addr);
-       debug.info('websocket at',addr,socket);
        socket.onopen = function (e) {
-           debug.info('websocket opened',e);
+           debug.info('websocket opened',socket,e);
        };
        socket.onclose = function (e) {
-           debug.info('websocket closed',e);
+           debug.info('websocket closed',socket,e);
        };
        socket.onmessage = function(e) {
            handler(e.data);
        };            
        socket.onerror = function (e) {
-           debug.info('websocket error',e);
+           debug.info('websocket error',socket,e);
        };
     }
 

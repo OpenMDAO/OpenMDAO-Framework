@@ -18,18 +18,23 @@ openmdao.Model=function() {
            handler:    the message handler for the websocket
     */
     function open_websocket(url,handler) {
-        // make ajax call to get outstream websocket
-        jQuery.ajax({
-            type: 'GET',
-            url:  url,
-            success: function(addr) {
-                openmdao.Util.openWebSocket(addr,handler);
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                debug.error("Error getting websocket (status="+jqXHR.status+"): "+jqXHR.statusText);
-                debug.error(jqXHR,textStatus,errorThrown);
-            }
-        });
+        // try every 2 secs until successful
+        var tid = setInterval(connect, 2000),
+            count = 0;
+        function connect() {
+            // make ajax call to get outstream websocket
+            jQuery.ajax({
+                type: 'GET',
+                url:  url,
+                success: function(addr) {
+                    clearInterval(tid);
+                    openmdao.Util.openWebSocket(addr,handler);
+                },
+                error: function(jqXHR, textStatus, err) {
+                    debug.error('Attempt #',count++,'failed to get websocket url',jqXHR,textStatus,err);
+                }
+            });
+        }
     };
     
     
@@ -97,7 +102,6 @@ openmdao.Model=function() {
         //debug.info('updateListeners',callbacks)
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
-                debug.info('updating',callbacks[i])
                 if (typeof callbacks[i] === 'function') {
                     callbacks[i]();
                 }
