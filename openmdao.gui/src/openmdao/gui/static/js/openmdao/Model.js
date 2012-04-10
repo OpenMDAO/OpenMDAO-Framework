@@ -17,13 +17,13 @@ openmdao.Model=function() {
            url:        the URL of the address on which to open the websocket
            handler:    the message handler for the websocket
     */
-    function open_websocket(url,handler,errHandler) {
+    function open_websocket(url,handler) {
         // make ajax call to get outstream websocket
         jQuery.ajax({
             type: 'GET',
             url:  url,
             success: function(addr) {
-                openmdao.Util.openWebSocket(addr,handler,errHandler,true);
+                openmdao.Util.openWebSocket(addr,handler);
             },
             error: function(jqXHR, textStatus, err) {
                 debug.error('Error getting websocket url',jqXHR,textStatus,err);
@@ -46,9 +46,6 @@ openmdao.Model=function() {
                         };
                     };
                 };
-            },
-            function(e) {
-                debug.error('Error connecting to output stream',e)
             }
         );
     };
@@ -69,9 +66,6 @@ openmdao.Model=function() {
                         };
                     };
                 };
-            },
-            function(e) {
-                debug.error('Error connecting to publisher stream',e)
             }
         );
     };

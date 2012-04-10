@@ -280,48 +280,44 @@ openmdao.Util = {
     },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;},
 
     /** connect to websocket at specified address */
-    openWebSocket: function(addr,handler,errhandler,retry,delay) {
-        // if retry is true, keep trying until you connect
+    openWebSocket: function(addr,handler,errHandler,retry,delay) {
+        // if retry is true and connection fails, try again to connect after delay
         retry = typeof retry !== 'undefined' ? retry : true;
         delay = typeof delay !== 'undefined' ? delay : 2000;
         
-        var tid = null;
-        if (retry == true) {
+        var socket = null;
+        
+        function connect_after_delay() {
             tid = setTimeout(connect, delay);
-        }
-        else {
-            connect();
         };
         
         function connect() {
-            socket = new WebSocket(addr);
-            socket.onopen = function (e) {
-                debug.info('websocket opened',socket,e);
-                if (tid != null) {
-                    clearTimeout(tid);
-                }
-            };
-            socket.onclose = function (e) {
-                debug.info('websocket closed',socket,e);
-            };
-            socket.onmessage = function(e) {
-                handler(e.data);
-            };            
-            socket.onerror = function (e) {
-                if (typeof errHandler === 'function') {
-                    errHandler(e);
-                }
-                else {
-                    if (typeof errHandler === 'function') {
-                        errHandler(e);
-                    }
-                    else {
-                        debug.error('websocket error',socket,e);
-                    };
-                };
-            };        
-        }
+        	if (socket == null || socket.readyState > 0) {
+	        	socket = new WebSocket(addr);
+	            socket.onopen = function (e) {
+	                debug.info('websocket opened',socket,e);
+	            };
+	            socket.onclose = function (e) {
+	                debug.info('websocket closed',socket,e);
+	                if (!e.wasClean && retry == true) {
+	                	connect_after_delay();
+	                };                
+	            };
+	            socket.onmessage = function(e) {
+	                handler(e.data);
+	            };            
+	            socket.onerror = function (e) {
+	                if (typeof errHandler === 'function') {
+	                    errHandler(e);
+	                }
+	                else {
+	                    debug.error('websocket error',socket,e);
+	                };                
+	            };
+        	};
+        };
+        
+        connect();
     }
 
-
-}
+};
