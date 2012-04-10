@@ -46,7 +46,7 @@ try:
 except ImportError:
     pass
 else:
-    _import_functs(scipy.special, _expr_dict, names=['polygamma'])
+    _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 _Missing = object()
 
@@ -88,13 +88,13 @@ class ExprTransformer(ast.NodeTransformer):
         if self.expreval.is_local(name):
             return node
         
-        scope = self.expreval.scope
-        if scope:
-            parts = name.split('.',1)
-            names = ['scope']
-            self.expreval.var_names.add(name)
-        else:
-            raise RuntimeError("expression has no scope")
+        #scope = self.expreval.scope
+        #if scope:
+        parts = name.split('.',1)
+        names = ['scope']
+        self.expreval.var_names.add(name)
+        #else:
+            #raise RuntimeError("expression has no scope")
 
         args = [ast.Str(s=name)]
         if self.rhs and len(self._stack) == 0:
@@ -830,10 +830,10 @@ class ConnectedExprEvaluator(ExprEvaluator):
     def _parse(self):
         super(ConnectedExprEvaluator, self)._parse()
         self._examiner = ExprExaminer(ast.parse(self.text, mode='eval'), self)
+        if len(self._examiner.refs) != 1:
+            raise RuntimeError("bad connected expression '%s' must reference exactly one variable" %
+                               self.text)
         if self._is_dest:
-            if len(self._examiner.refs) != 1:
-                raise RuntimeError("bad destination expression '%s': must be a single variable name or an index or slice into an array variable" %
-                                   self.text)
             if not self._examiner.const_indices:
                 raise RuntimeError("bad destination expression '%s': only constant indices are allowed for arrays and slices" %
                                    self.text)

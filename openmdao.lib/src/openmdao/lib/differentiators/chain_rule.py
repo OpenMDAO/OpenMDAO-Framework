@@ -219,7 +219,7 @@ class ChainRule(HasTraits):
                     # Inputs who are connected to something with a derivative
                     else:
                 
-                        sources = node.parent._depgraph._depgraph.connections_to(full_name)
+                        sources = node.parent._depgraph.connections_to(full_name)
                         
                         # This list keeps track of duplicated sources, which
                         # are a biproduct of a connection to multiple inputs

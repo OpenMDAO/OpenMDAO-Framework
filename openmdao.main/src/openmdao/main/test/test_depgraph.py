@@ -20,7 +20,7 @@ class DepGraphTestCase(unittest.TestCase):
         for name in nodes:
             dep.add(name)
         for src,dest in connections:
-            dep.connect(src, dest, scope, expr=ConnectedExprEvaluator(src, scope))
+            dep.connect(src, dest)
         return dep, scope
 
     def setUp(self):
@@ -46,15 +46,10 @@ class DepGraphTestCase(unittest.TestCase):
 
 
     def test_get_source(self):
-        dep, scope = self.make_graph(nodes, 
-                                     self.internal_conns+
-                                     self.boundary_conns+
-                                     self.cross_conns)
-        
-        self.assertEqual(dep.get_source('B.a'), 'a')
-        self.assertEqual(dep.get_source('A.a'), None)
-        self.assertEqual(dep.get_source('a'), 'parent.X.c')
-        self.assertEqual(dep.get_source('c'), 'D.c')
+        self.assertEqual(self.dep.get_source('B.a'), 'a')
+        self.assertEqual(self.dep.get_source('A.a'), None)
+        self.assertEqual(self.dep.get_source('a'), 'parent.X.c')
+        self.assertEqual(self.dep.get_source('c'), 'D.c')
 
     def test_add(self):
         for name in nodes:
@@ -87,27 +82,25 @@ class DepGraphTestCase(unittest.TestCase):
     def test_already_connected(self):
         # internal connection
         try:
-            self.dep.connect('A.d', 'B.a', self.scope, expr=ConnectedExprEvaluator('B.a', self.scope))
+            self.dep.check_connect('A.d', 'B.a')
         except Exception as err:
-            self.assertEqual(str(err), 'B.a is already connected to source a')
+            self.assertEqual(str(err), "'B.a' is already connected to source 'a'")
         else:
             self.fail('Exception expected')
             
         # input boundary connection
         try:
-            self.dep.connect('parent.foo.bar', 'a', self.scope, 
-                             expr=ConnectedExprEvaluator('parent.foo.bar', self.scope))
+            self.dep.check_connect('parent.foo.bar', 'a')
         except Exception as err:
-            self.assertEqual(str(err), 'a is already connected to source parent.X.c')
+            self.assertEqual(str(err), "'a' is already connected to source 'parent.X.c'")
         else:
             self.fail('Exception expected')
 
         # internal to boundary output connection
         try:
-            self.dep.connect('B.d', 'c', self.scope, 
-                             expr=ConnectedExprEvaluator('B.d', self.scope))
+            self.dep.check_connect('B.d', 'c')
         except Exception as err:
-            self.assertEqual(str(err), 'c is already connected to source D.c')
+            self.assertEqual(str(err), "'c' is already connected to source 'D.c'")
         else:
             self.fail('Exception expected')
 
@@ -119,8 +112,8 @@ class DepGraphTestCase(unittest.TestCase):
                          set([('@xin.parent.X.c','@bin.a'),
                               ('@bin.a','B.a')]))
         
-        self.dep.connect('A.c', 'C.b', self.scope)
-        self.dep.connect('A.c', 'C.a', self.scope)
+        self.dep.connect('A.c', 'C.b')
+        self.dep.connect('A.c', 'C.a')
         self.assertEqual(set(self.dep.connections_to('A.c')),
                          set([('A.c','C.b'),('A.c','C.a'),('A.c','B.b')]))
         
@@ -205,8 +198,8 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(link, None)
         
     def test_link(self):
-        self.dep.connect('B.d', 'C.b', self.scope)
-        self.dep.connect('B.c', 'C.a', self.scope)
+        self.dep.connect('B.d', 'C.b')
+        self.dep.connect('B.c', 'C.a')
         link = self.dep.get_link('B', 'C')
         self.assertEqual(set(link.get_srcs()), set(['c','d']))
         self.assertEqual(set(link.get_srcs('b')), set(['d']))
@@ -221,15 +214,21 @@ class DepGraphTestCase(unittest.TestCase):
         for node in ['A','B','C','D','E','F']:
             dep.add(node)
         self.assertEqual(dep.find_all_connecting('A','F'), set())
-        dep.connect('A.c', 'B.a', self.scope)
-        dep.connect('B.c', 'C.a', self.scope)
-        dep.connect('C.d', 'D.a', self.scope)
-        dep.connect('A.d', 'D.b', self.scope)
-        dep.connect('A.d', 'F.b', self.scope)
+        dep.connect('A.c', 'B.a')
+        dep.connect('B.c', 'C.a')
+        dep.connect('C.d', 'D.a')
+        dep.connect('A.d', 'D.b')
+        dep.connect('A.d', 'F.b')
         self.assertEqual(dep.find_all_connecting('A','F'), set(['A','F']))
         self.assertEqual(dep.find_all_connecting('A','D'), set(['A','B','C','D']))
-        dep.connect('C.d', 'F.a', self.scope)
+        dep.connect('C.d', 'F.a')
         self.assertEqual(dep.find_all_connecting('A','F'), set(['A','B','C','F']))
+        
+    def test_expr(self):
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
+        self.assertEqual(dep.list_connections(), [('B.d','C.b')])
+        dep.disconnect('3.4*B.d+2.3', 'C.b')
+        self.assertEqual(dep.list_connections(), [])
         
     def test_dump(self):
         s = StringIO.StringIO()

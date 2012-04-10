@@ -4,6 +4,7 @@ import StringIO
 from openmdao.main.assembly import ExprMapper, Assembly, set_as_top
 from openmdao.main.component import Component
 from openmdao.main.datatypes.api import Int
+from openmdao.main.expreval import ExprEvaluator
 
 _fakes = ['@xin', '@bin', '@bout', '@xout']
 nodes = ['A', 'B', 'C', 'D', 'parent.X', 'parent.Y']
@@ -35,7 +36,7 @@ def make_graph(nodes=(), connections=()):
             scope.add(name.split('.',1)[1], Simple())
         else:
             sub.add(name, Simple())
-            dep.add(name)
+            #dep.add(name)
     for src,dest in connections:
         if '.' not in src and not sub.contains(src):
             if dest.startswith('parent.'):
@@ -49,7 +50,7 @@ def make_graph(nodes=(), connections=()):
             else:
                 iotype='out'
             sub.add(dest, Int(1, iotype=iotype))
-        dep.connect(src, dest, sub)
+        dep.connect(ExprEvaluator(src,sub), ExprEvaluator(dest,sub), sub)
     return dep, sub
 
 class ExprMapperTestCase(unittest.TestCase):
@@ -87,28 +88,11 @@ class ExprMapperTestCase(unittest.TestCase):
         self.assertEqual(dep.get_source('a'), 'parent.X.c')
         self.assertEqual(dep.get_source('c'), 'D.c')
 
-    def test_add(self):
-        for name in nodes:
-            if not name.startswith('parent.'):
-                self.assertTrue(name in self.dep)
-        #for name in _fakes:
-            #self.assertTrue(name in self.dep)
-        
-    def test_remove(self):
-        self.dep.remove('B')
-        self.assertTrue('B' not in self.dep)
-        
     def test_list_connections(self):
         self.assertEqual(set(self.dep.list_connections(show_passthrough=False)), 
                          set([('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b')]))
         self.assertEqual(set(self.dep.list_connections()), 
                          set([('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b'), ('a','B.a'), ('D.c','c')]))
-    
-    def test_get_connected_inputs(self):
-        self.assertEqual(set(self.dep.get_connected_inputs()), set(['a','A.b']))
-    
-    def test_get_connected_outputs(self):
-        self.assertEqual(set(self.dep.get_connected_outputs()), set(['c', 'C.d']))
     
     def test_already_connected(self):
         # internal connection
@@ -143,8 +127,8 @@ class ExprMapperTestCase(unittest.TestCase):
                          set([('parent.X.c','a'),
                               ('a','B.a')]))
         
-        self.dep.connect('A.c', 'C.b', self.scope)
-        self.dep.connect('A.c', 'C.a', self.scope)
+        self.dep.connect(ExprEvaluator('A.c',self.scope), ExprEvaluator('C.b',self.scope), self.scope)
+        self.dep.connect(ExprEvaluator('A.c',self.scope), ExprEvaluator('C.a',self.scope), self.scope)
         self.assertEqual(set(self.dep.connections_to('A.c')),
                          set([('A.c','C.b'),('A.c','C.a'),('A.c','B.b')]))
         
@@ -178,30 +162,6 @@ class ExprMapperTestCase(unittest.TestCase):
         
         self.dep.disconnect('C.d', 'parent.Y.b')
         
-    def test_find_all_connecting(self):
-        dep = ExprMapper(self.scope)
-        for node in ['A','B','C','D','E','F']:
-            dep.add(node)
-            if not self.scope.contains(node):
-                self.scope.add('F', Simple())
-        self.assertEqual(dep.find_all_connecting('A','F'), set())
-        dep.check_connect('A.c', 'B.a', self.scope)
-        dep.check_connect('B.c', 'C.a', self.scope)
-        dep.check_connect('C.d', 'D.a', self.scope)
-        dep.check_connect('A.d', 'D.b', self.scope)
-        dep.check_connect('A.d', 'F.b', self.scope)
-        
-        dep.connect('A.c', 'B.a', self.scope)
-        dep.connect('B.c', 'C.a', self.scope)
-        dep.connect('C.d', 'D.a', self.scope)
-        dep.connect('A.d', 'D.b', self.scope)
-        dep.connect('A.d', 'F.b', self.scope)
-        self.assertEqual(dep.find_all_connecting('A','F'), set(['A','F']))
-        self.assertEqual(dep.find_all_connecting('A','D'), set(['A','B','C','D']))
-        dep.check_connect('C.d', 'F.a', self.scope)
-        dep.connect('C.d', 'F.a', self.scope)
-        self.assertEqual(dep.find_all_connecting('A','F'), set(['A','B','C','F']))
-        
     def test_find_referring_exprs(self):
         self.assertEqual(set(self.dep.find_referring_exprs('A')),
                          set(['A.c','A.b']))
@@ -226,17 +186,6 @@ class ExprMapperTestCase(unittest.TestCase):
         self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'parent', ['X.d'])]),
                          set(['A.b']))
     
-    def test_expressions(self):
-        dep, scope = make_graph(['E', 'A', 'B','parent.X'], [('parent.X.c','a')])
-        dep.connect('parent.X.d+a', 'E.a[3]', scope)
-        dep.connect('A.c', 'E.a[4]', scope)
-        dep.connect('B.c', 'E.b', scope)
-        self.assertEqual(set(dep._depgraph.var_in_edges('E')),
-                         set([('@bin.E.a[3]','E.a[3]'),
-                              ('@bin.a','E.a[3]'),
-                              ('A.c', 'E.a[4]'),
-                              ('B.c', 'E.b')]))
-
 
 if __name__ == "__main__":
     unittest.main()

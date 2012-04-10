@@ -275,7 +275,7 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ex.evaluate()
         except Exception, err:
-            self.assertEqual(str(err), "can't evaluate expression 'comp.x': expression has no scope")
+            self.assertEqual(str(err), "can't evaluate expression 'comp.x': 'NoneType' object has no attribute 'get'")
         else:
             self.fail("Exception expected")
             
@@ -529,11 +529,10 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
         
     def test_connected_expr(self):
-        ConnectedExprEvaluator("var1+var2", self.top)._parse()
         try:
-            ConnectedExprEvaluator("var1+var2", self.top, is_dest=True)._parse()
+            ConnectedExprEvaluator("var1+var2", self.top)._parse()
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'var1+var2': must be a single variable name or an index or slice into an array variable")
+            self.assertEqual(str(err), "bad connected expression 'var1+var2' must reference exactly one variable")
         else:
             self.fail("Exception expected")
             

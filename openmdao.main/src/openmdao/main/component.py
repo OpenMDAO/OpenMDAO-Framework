@@ -760,8 +760,6 @@ class Component (Container):
         destexpr: str or ExprEvaluator
             Destination expression object or expression string.
         """
-        valids_update = None
-        
         if isinstance(srcexpr, basestring):
             srcexpr = ConnectedExprEvaluator(srcexpr, self)
         if isinstance(destexpr, basestring):
@@ -770,11 +768,10 @@ class Component (Container):
         destpath = destexpr.text
         
         valid_updates = []
-        for srcref in srcexpr.refs():
-            if not srcref.startswith('parent.'): 
-                if srcref not in self._valid_dict:
-                    valid_updates.append((srcref, True))
-                self._connected_outputs = None  # reset cached value of connected outputs
+        if not srcexpr.refs_parent(): 
+            if srcexpr.text not in self._valid_dict:
+                valid_updates.append((srcexpr.text, True))
+            self._connected_outputs = None  # reset cached value of connected outputs
         if not destpath.startswith('parent.'): 
             valid_updates.append((destpath, False))
             self.config_changed(update_parent=False)

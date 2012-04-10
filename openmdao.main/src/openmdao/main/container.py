@@ -37,7 +37,7 @@ from enthought.traits.trait_base import not_none, not_event
 
 from multiprocessing import connection
 
-from openmdao.main.variable import Variable
+from openmdao.main.variable import Variable, is_legal_name
 from openmdao.main.filevar import FileRef
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
@@ -98,27 +98,20 @@ push_exception_handler(handler = lambda o, t, ov, nv: None,
                        main = True,
                        locked = True )
 
-# regex to check for valid names.  Added '.' as allowed because
-# npsscomponent uses it...
-_namecheck_rgx = re.compile(
-    '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
-            
 class _ContainerDepends(object):
     """An object that bookkeeps connections to/from Container variables."""
     def __init__(self):
         self._srcs = {}
         
-    def connect(self, srcpath, destpath, scope):
-        if not (expr and expr.text == srcpath):
-            dpdot = destpath+'.'
-            for dst,src in self._srcs.items():
-                if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
-                    raise RuntimeError("'%s' is already connected to source '%s'" %
-                                       (dst, src))
-        if expr is not None:
-            self._srcs[destpath] = expr.text
-        else:
-            self._srcs[destpath] = srcpath
+    def check_connect(self, srcpath, destpath):
+        dpdot = destpath+'.'
+        for dst,src in self._srcs.items():
+            if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
+                raise RuntimeError("'%s' is already connected to source '%s'" %
+                                   (dst, src))
+        
+    def connect(self, srcpath, destpath):
+        self._srcs[destpath] = srcpath
         
     def disconnect(self, srcpath, destpath):
         try:
@@ -232,8 +225,7 @@ class Container(SafeHasTraits):
     @name.setter
     def name(self, name):
         """Sets the name of this Container."""
-        match = _namecheck_rgx.search(name)
-        if match is None or match.group() != name:
+        if not is_legal_name(name):
             raise NameError("name '%s' contains illegal characters" % name)
         self._name = name
         self._logger.rename(self._name)
@@ -273,6 +265,7 @@ class Container(SafeHasTraits):
             destexpr = ConnectedExprEvaluator(destexpr, self, is_dest=True)
         
         destpath = destexpr.text
+        srcpath = srcexpr.text
         
         # check for self connections
         if not destpath.startswith('parent.'):
@@ -281,6 +274,8 @@ class Container(SafeHasTraits):
                 self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
                                      (srcpath, destpath), RuntimeError)
         try:
+            self._depgraph.check_connect(srcpath, destpath)
+        
             if not destpath.startswith('parent.'):
                 if not self.contains(destpath.split('[',1)[0]):
                     self.raise_exception("Can't find '%s'" % destpath, AttributeError)
@@ -306,19 +301,25 @@ class Container(SafeHasTraits):
                         self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
                         
             childdest = 'parent.'+destpath
-            for srcref in srcexpr.refs():
-                cname, _, restofpath = srcref.partition('.')
+            srccomps = srcexpr.get_referenced_compnames()
+            if srccomps:
+                cname = srccomps.pop()
                 if cname != 'parent':
                     child = getattr(self, cname)
                     if is_instance(child, Container):
+                        restofpath = srcexpr.scope_transform(self, child, parent=self)
                         child.connect(restofpath, childdest)
                         child_connections.append((child, restofpath, childdest)) 
 
-            self._depgraph.connect_expr(srcexpr, destpath, self)
+            self._depgraph.connect(srcpath, destpath)
         except Exception as err:
-            for child, childsrc, childdest in child_connections:
-                child.disconnect(childsrc, childdest)
-            raise
+            try:
+                for child, childsrc, childdest in child_connections:
+                    child.disconnect(childsrc, childdest)
+            except:
+                pass
+            self.raise_exception("Can't connect '%s' to '%s': %s" % (srcpath, destpath, str(err)),
+                                 RuntimeError)
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -326,14 +327,8 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        #srcexpr = ConnectedExprEvaluator(srcpath, self)
-        #destexpr = ConnectedExprEvaluator(destpath, self, is_dest=True)
-        #destvar = destexpr.get_referenced_varpaths().pop()
         destvar = destpath.split('[',1)[0]
-        #destref = destexpr.refs().pop()
-        #if not 'parent' in srcexpr.get_referenced_compnames():
         if not srcpath.startswith('parent.'):
-            #for src,srcref in srcexpr.vars_and_refs():
             srcvar = srcpath.split('[',1)[0]
             if not self.contains(srcvar):
                 self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
@@ -341,7 +336,6 @@ class Container(SafeHasTraits):
             if restofpath:
                 child = getattr(self, cname)
                 if is_instance(child, Container):
-                    #childdest = destexpr.scope_transform(self, child, parent=self)
                     childdest = 'parent.'+destpath
                     child.disconnect(restofpath, childdest)
         if not destpath.startswith('parent.'):
@@ -351,7 +345,6 @@ class Container(SafeHasTraits):
             if restofpath:
                 child = getattr(self, cname2)
                 if is_instance(child, Container):
-                    #childsrc = srcexpr.scope_transform(self, child, parent=self)
                     childsrc = 'parent.'+srcpath
                     child.disconnect(childsrc, restofpath)
         
