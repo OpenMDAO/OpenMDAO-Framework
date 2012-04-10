@@ -279,20 +279,48 @@ openmdao.Util = {
         document.body.setAttribute('style',rotateCSS);
     },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;},
 
-    openWebSocket: function(addr,handler) {
-       socket = new WebSocket(addr);
-       socket.onopen = function (e) {
-           debug.info('websocket opened',socket,e);
-       };
-       socket.onclose = function (e) {
-           debug.info('websocket closed',socket,e);
-       };
-       socket.onmessage = function(e) {
-           handler(e.data);
-       };            
-       socket.onerror = function (e) {
-           debug.info('websocket error',socket,e);
-       };
+    /** connect to websocket at specified address */
+    openWebSocket: function(addr,handler,errhandler,retry,delay) {
+        // if retry is true, keep trying until you connect
+        retry = typeof retry !== 'undefined' ? retry : true;
+        delay = typeof delay !== 'undefined' ? delay : 2000;
+        
+        var tid = null;
+        if (retry == true) {
+            tid = setTimeout(connect, delay);
+        }
+        else {
+            connect();
+        };
+        
+        function connect() {
+            socket = new WebSocket(addr);
+            socket.onopen = function (e) {
+                debug.info('websocket opened',socket,e);
+                if (tid != null) {
+                    clearTimeout(tid);
+                }
+            };
+            socket.onclose = function (e) {
+                debug.info('websocket closed',socket,e);
+            };
+            socket.onmessage = function(e) {
+                handler(e.data);
+            };            
+            socket.onerror = function (e) {
+                if (typeof errHandler === 'function') {
+                    errHandler(e);
+                }
+                else {
+                    if (typeof errHandler === 'function') {
+                        errHandler(e);
+                    }
+                    else {
+                        debug.error('websocket error',socket,e);
+                    };
+                };
+            };        
+        }
     }
 
 

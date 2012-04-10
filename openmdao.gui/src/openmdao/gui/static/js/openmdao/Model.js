@@ -17,60 +17,63 @@ openmdao.Model=function() {
            url:        the URL of the address on which to open the websocket
            handler:    the message handler for the websocket
     */
-    function open_websocket(url,handler) {
-        // try every 2 secs until successful
-        var tid = setInterval(connect, 2000),
-            count = 0;
-        function connect() {
-            // make ajax call to get outstream websocket
-            jQuery.ajax({
-                type: 'GET',
-                url:  url,
-                success: function(addr) {
-                    clearInterval(tid);
-                    openmdao.Util.openWebSocket(addr,handler);
-                },
-                error: function(jqXHR, textStatus, err) {
-                    debug.error('Attempt #',count++,'failed to get websocket url',jqXHR,textStatus,err);
-                }
-            });
-        }
+    function open_websocket(url,handler,errHandler) {
+        // make ajax call to get outstream websocket
+        jQuery.ajax({
+            type: 'GET',
+            url:  url,
+            success: function(addr) {
+                openmdao.Util.openWebSocket(addr,handler,errHandler,true);
+            },
+            error: function(jqXHR, textStatus, err) {
+                debug.error('Error getting websocket url',jqXHR,textStatus,err);
+            }
+        });
     };
-    
-    
+
     /** initialize the outstream websocket */
     function open_outstream_socket(topic) {
-        open_websocket('outstream', function(data) {
-            var callbacks = subscribers[topic];
-            if (callbacks) {
-                for (i = 0; i < callbacks.length; i++) {
-                    if (typeof callbacks[i] === 'function') {
-                        callbacks[i](data);
-                    }
-                    else {
-                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+        open_websocket('outstream', 
+            function(data) {
+                var callbacks = subscribers[topic];
+                if (callbacks) {
+                    for (i = 0; i < callbacks.length; i++) {
+                        if (typeof callbacks[i] === 'function') {
+                            callbacks[i](data);
+                        }
+                        else {
+                            debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                        };
                     };
                 };
-            };
-        });
+            },
+            function(e) {
+                debug.error('Error connecting to output stream',e)
+            }
+        );
     };
 
     /** initialize the publisher websocket */
     function open_publisher_socket() {
-        open_websocket('pubstream', function(message) {
-            message = jQuery.parseJSON(message);
-            var callbacks = subscribers[message[0]];
-            if (callbacks) {
-                for (i = 0; i < callbacks.length; i++) {
-                    if (typeof callbacks[i] === 'function') {
-                        callbacks[i](message);
-                    }
-                    else {
-                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+        open_websocket('pubstream',
+            function(message) {
+                message = jQuery.parseJSON(message);
+                var callbacks = subscribers[message[0]];
+                if (callbacks) {
+                    for (i = 0; i < callbacks.length; i++) {
+                        if (typeof callbacks[i] === 'function') {
+                            callbacks[i](message);
+                        }
+                        else {
+                            debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                        };
                     };
                 };
-            };
-        });
+            },
+            function(e) {
+                debug.error('Error connecting to publisher stream',e)
+            }
+        );
     };
     
     /***********************************************************************
