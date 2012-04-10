@@ -241,7 +241,7 @@ class ChainRule(HasTraits):
                                source not in used_sources:
                                 
                                 # Need derivative of the expression
-                                expr = node.parent._depgraph.get_expr(expr_txt)
+                                expr = node.parent._exprmapper.get_expr(expr_txt)
                                 expr_deriv = expr.evaluate_gradient(scope=node.parent,
                                                                     wrt=source)
                                 
@@ -250,7 +250,7 @@ class ChainRule(HasTraits):
                                 metadata = expr.get_metadata('units')
                                 source_unit = [x[1] for x in metadata if x[0]==source]
                                 if source_unit and source_unit[0]:
-                                    dest_expr = node.parent._depgraph.get_expr(source_tuple[1])
+                                    dest_expr = node.parent._exprmapper.get_expr(source_tuple[1])
                                     metadata = dest_expr.get_metadata('units')
                                     target_unit = [x[1] for x in metadata if x[0]==source_tuple[1]]
 
@@ -293,7 +293,7 @@ class ChainRule(HasTraits):
         local_derivs = {}
         name = scope.name
         
-        for item in scope._depgraph._depgraph.var_edges('@xin'):
+        for item in scope._depgraph.var_edges('@xin'):
             src = item[0].replace('@xin.','')
             upscope_src = src.replace('parent.','')
             dest = item[1]
@@ -305,7 +305,7 @@ class ChainRule(HasTraits):
             # Differentiate all expressions
             dest_txt = dest.replace('@bin.','')
             expr_txt = scope._depgraph.get_source(dest_txt)
-            expr = scope._depgraph.get_expr(expr_txt)
+            expr = scope._exprmapper.get_expr(expr_txt)
             expr_deriv = expr.evaluate_gradient(scope=scope,
                                                 wrt=src)
             # We also need the derivative of the unit
@@ -313,7 +313,7 @@ class ChainRule(HasTraits):
             metadata = expr.get_metadata('units')
             source_unit = [x[1] for x in metadata if x[0]==src]
             if source_unit and source_unit[0]:
-                dest_expr = scope._depgraph.get_expr(dest_txt)
+                dest_expr = scope._exprmapper.get_expr(dest_txt)
                 metadata = dest_expr.get_metadata('units')
                 target_unit = [x[1] for x in metadata if x[0]==dest_txt]
 
@@ -335,7 +335,7 @@ class ChainRule(HasTraits):
         self._chain_workflow(local_derivs, scope.driver, param)
         
         # Convert scope and return gradient of connected components.
-        for item in scope._depgraph._depgraph.var_in_edges('@bout'):
+        for item in scope._depgraph.var_in_edges('@bout'):
             src = item[0]
             upscope_src = '%s.%s' % (name, src)
             dest = item[1]
