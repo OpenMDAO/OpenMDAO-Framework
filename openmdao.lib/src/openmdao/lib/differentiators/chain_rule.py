@@ -11,7 +11,7 @@ from openmdao.main.interfaces import implements, IDifferentiator
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
 from openmdao.main.numpy_fallback import array
-
+from openmdao.units import convert_units
 
 class ChainRule(HasTraits):
     """ Differentiates a driver's workflow using the Chain Rule with Numerical
@@ -244,6 +244,18 @@ class ChainRule(HasTraits):
                                 expr = node.parent._depgraph.get_expr(expr_txt)
                                 expr_deriv = expr.evaluate_gradient(scope=node.parent,
                                                                     wrt=source)
+                                
+                                # We also need the derivative of the unit
+                                # conversion factor if there is one
+                                metadata = expr.get_metadata('units')
+                                source_unit = [x[1] for x in metadata if x[0]==source]
+                                if source_unit and source_unit[0]:
+                                    dest_expr = node.parent._depgraph.get_expr(source_tuple[1])
+                                    metadata = dest_expr.get_metadata('units')
+                                    target_unit = [x[1] for x in metadata if x[0]==source_tuple[1]]
+
+                                    expr_deriv[source] = expr_deriv[source] * \
+                                        convert_units(1.0, source_unit[0], target_unit[0])
 
                                 incoming_deriv_names[input_name] = full_name
                                 if full_name in incoming_derivs:
@@ -291,10 +303,23 @@ class ChainRule(HasTraits):
                 dest = dest.split('.')[1]
                 
             # Differentiate all expressions
-            expr_txt = scope._depgraph.get_source(dest.replace('@bin.',''))
+            dest_txt = dest.replace('@bin.','')
+            expr_txt = scope._depgraph.get_source(dest_txt)
             expr = scope._depgraph.get_expr(expr_txt)
             expr_deriv = expr.evaluate_gradient(scope=scope,
                                                 wrt=src)
+            # We also need the derivative of the unit
+            # conversion factor if there is one
+            metadata = expr.get_metadata('units')
+            source_unit = [x[1] for x in metadata if x[0]==src]
+            if source_unit and source_unit[0]:
+                dest_expr = scope._depgraph.get_expr(dest_txt)
+                metadata = dest_expr.get_metadata('units')
+                target_unit = [x[1] for x in metadata if x[0]==dest_txt]
+
+                expr_deriv[src] = expr_deriv[src] * \
+                    convert_units(1.0, source_unit[0], target_unit[0])
+
             if dest in local_derivs:    
                 local_derivs[dest] += upscope_derivs[upscope_src]*expr_deriv[src]
             else:

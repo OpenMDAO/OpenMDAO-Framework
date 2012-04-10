@@ -63,8 +63,8 @@ class CompFoot(ComponentWithDerivatives):
     
     # set up interface to the framework  
     # pylint: disable-msg=E1101
-    x = Float(0.0, iotype='in', units='ft')
-    y = Float(0.0, iotype='out', units='ft')
+    x = Float(1.0, iotype='in', units='ft')
+    y = Float(1.0, iotype='out', units='ft')
 
     def __init__(self):
         """ declare what derivatives that we can provide"""
@@ -89,8 +89,8 @@ class CompInch(ComponentWithDerivatives):
     
     # set up interface to the framework  
     # pylint: disable-msg=E1101
-    x = Float(0.0, iotype='in', units='inch')
-    y = Float(0.0, iotype='out', units='inch')
+    x = Float(1.0, iotype='in', units='inch')
+    y = Float(1.0, iotype='out', units='inch')
 
     def __init__(self):
         """ declare what derivatives that we can provide"""
@@ -368,30 +368,63 @@ class ChainRuleTestCase(unittest.TestCase):
         assert_rel_error(self, grad[0], 17.0, .001)
         
         
-    #def test_simple_units(self):
+    def test_simple_units(self):
         
-        #self.top = set_as_top(Assembly())
+        self.top = set_as_top(Assembly())
         
-        #self.top.add('comp1', CompFoot())
-        #self.top.add('comp2', CompInch())
+        self.top.add('comp1', CompFoot())
+        self.top.add('comp2', CompInch())
         
-        #self.top.connect('comp1.y', 'comp2.x')
+        self.top.connect('comp1.y', 'comp2.x')
         
-        #self.top.add('driver', Driv())
-        #self.top.driver.workflow.add(['comp1', 'comp2'])
+        self.top.add('driver', Driv())
+        self.top.driver.workflow.add(['comp1', 'comp2'])
         
-        #self.top.driver.differentiator = ChainRule()
+        self.top.driver.differentiator = ChainRule()
         
-        #obj = 'comp2.y'
-        #self.top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
-        #self.top.driver.add_objective(obj)
+        obj = 'comp2.y'
+        self.top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
+        self.top.driver.add_objective(obj)
         
-        #self.top.comp1.x = 2.0
-        #self.top.run()
-        #self.top.driver.differentiator.calc_gradient()
+        self.top.comp1.x = 2.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
         
-        #grad = self.top.driver.differentiator.get_gradient(obj)
-        #assert_rel_error(self, grad[0], 48.0, .001)
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 48.0, .001)
+        
+    def test_subassy_units(self):
+        
+        self.top = set_as_top(Assembly())
+        
+        self.top.add('nest1', Assembly())
+        self.top.add('comp1', CompFoot())
+        self.top.nest1.add('comp2', CompInch())
+        self.top.add('comp3', CompFoot())
+        
+        self.top.connect('comp1.y', 'nest1.comp2.x')
+        self.top.connect('nest1.comp2.y', 'comp3.x')
+        
+        self.top.add('driver', Driv())
+        self.top.driver.workflow.add(['comp1', 'nest1', 'comp3'])
+        self.top.nest1.driver.workflow.add(['comp2'])
+        
+        self.top.driver.differentiator = ChainRule()
+        
+        obj = 'comp3.y'
+        con = 'nest1.comp2.y>0'
+        self.top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
+        self.top.driver.add_objective(obj)
+        self.top.driver.add_constraint(con)
+        
+        self.top.comp1.x = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 8.0, .001)
+        grad = self.top.driver.differentiator.get_gradient(con)
+        assert_rel_error(self, grad[0], -48.0, .001)
         
     #def test_reset_state(self):
         
