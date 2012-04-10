@@ -371,6 +371,23 @@ class TestCase(unittest.TestCase):
             expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
         expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
 
+        if len(OBSERVATIONS) != len(expected):
+            logging.debug('Observed, Expected')
+            for i in range(max(len(OBSERVATIONS), len(expected))):
+                if i < len(OBSERVATIONS):
+                    ob_state, ob_string, ffract, bfract = OBSERVATIONS[i]
+                else:
+                    ob_state = '---'
+                    ob_string= '---'
+                if i < len(expected):
+                    ex_state = expected[i][0]
+                    ex_string = expected[i][1]
+                else:
+                    ex_state = '---'
+                    ex_string= '---'
+                logging.debug('%s:%s\t%s:%s',
+                              ob_state, ob_string, ex_state, ex_string)
+
         self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
             state, string, file_fraction, byte_fraction = observation
