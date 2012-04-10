@@ -347,7 +347,7 @@ class ChainRule(HasTraits):
                 dest = dest.replace('@bout.','')
                 
                 expr_txt = scope._depgraph.get_source(dest)
-                expr = scope._depgraph.get_expr(expr_txt)
+                expr = scope._exprmapper.get_expr(expr_txt)
                 expr_deriv = expr.evaluate_gradient(scope=scope,
                                                     wrt=src)
                 
