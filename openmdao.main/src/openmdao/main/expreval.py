@@ -59,14 +59,11 @@ class ExprTransformer(ast.NodeTransformer):
     executed there. For example, abc.d[xyz](1, pdq-10).value would translate
     to, e.g., scope.get('abc.d', [(0,xyz), (0,[1,pdq-10]), (1,'value')]).
     """
-    def __init__(self, expreval, rhs=None, getters=None, default_getter='get'):
+    def __init__(self, expreval, rhs=None, default_getter='get'):
         self.expreval = expreval
         self.rhs = rhs
         self._stack = []  # use this to see if we're inside of parens or brackets so
                           # that we always translate to 'get' even if we're on the lhs
-        if getters is None:
-            getters = {}
-        self.getters = getters
         self.default_getter = default_getter
         super(ExprTransformer, self).__init__()
         
@@ -106,7 +103,7 @@ class ExprTransformer(ast.NodeTransformer):
                                                     col_offset=1,
                                                     ctx=ast.Load()))]
         else:
-            fname = self.getters.get(name, self.default_getter)
+            fname = self.default_getter
             keywords = []
         names.append(fname)
 
@@ -219,8 +216,7 @@ class ExprTransformer(ast.NodeTransformer):
         if len(node.targets) > 1:
             raise RuntimeError("only one expression is allowed on left hand side of assignment")
         rhs=self.visit(node.value)
-        lhs = ExprTransformer(self.expreval, rhs=rhs, 
-                              getters=self.getters).visit(node.targets[0])
+        lhs = ExprTransformer(self.expreval, rhs=rhs).visit(node.targets[0])
         if isinstance(lhs, (ast.Name,ast.Subscript,ast.Attribute)):
             lhs.ctx = ast.Store()
             return ast.Assign(targets=[lhs], value=rhs)
@@ -378,13 +374,12 @@ class ExprEvaluator(object):
     see the doc string for the ``openmdao.main.index.process_index_entry`` function.
     """
     
-    def __init__(self, text, scope=None, getters=None, default_getter='get'):
+    def __init__(self, text, scope=None, default_getter='get'):
         self._scope = None
         self.scope = scope
         self._allow_set = False
         self.text = text
         self.var_names = set()
-        self.getters = getters
         self.default_getter = default_getter
         self._code = self._assignment_code = None
         
@@ -506,7 +501,7 @@ class ExprEvaluator(object):
         return root
         
     def _parse_get(self):
-        new_ast = ExprTransformer(self, getters=self.getters, 
+        new_ast = ExprTransformer(self, 
                                   default_getter=self.default_getter).visit(self._pre_parse())
         
         # compile the transformed AST
@@ -517,7 +512,7 @@ class ExprEvaluator(object):
     def _parse_set(self):
         root = ast.parse("%s=_local_setter_" % self.text, mode='exec')
         ## transform into a 'set' call to set the specified variable
-        assign_ast = ExprTransformer(self, getters=self.getters,
+        assign_ast = ExprTransformer(self, 
                                      default_getter=self.default_getter).visit(root)
         ast.fix_missing_locations(assign_ast)
         code = compile(assign_ast,'<string>','exec')
