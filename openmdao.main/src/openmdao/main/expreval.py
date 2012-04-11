@@ -59,12 +59,12 @@ class ExprTransformer(ast.NodeTransformer):
     executed there. For example, abc.d[xyz](1, pdq-10).value would translate
     to, e.g., scope.get('abc.d', [(0,xyz), (0,[1,pdq-10]), (1,'value')]).
     """
-    def __init__(self, expreval, rhs=None, default_getter='get'):
+    def __init__(self, expreval, rhs=None, getter='get'):
         self.expreval = expreval
         self.rhs = rhs
         self._stack = []  # use this to see if we're inside of parens or brackets so
                           # that we always translate to 'get' even if we're on the lhs
-        self.default_getter = default_getter
+        self.getter = getter
         super(ExprTransformer, self).__init__()
         
     def visit(self, node, subs=None):
@@ -103,7 +103,7 @@ class ExprTransformer(ast.NodeTransformer):
                                                     col_offset=1,
                                                     ctx=ast.Load()))]
         else:
-            fname = self.default_getter
+            fname = self.getter
             keywords = []
         names.append(fname)
 
@@ -374,13 +374,13 @@ class ExprEvaluator(object):
     see the doc string for the ``openmdao.main.index.process_index_entry`` function.
     """
     
-    def __init__(self, text, scope=None, default_getter='get'):
+    def __init__(self, text, scope=None, getter='get'):
         self._scope = None
         self.scope = scope
         self._allow_set = False
         self.text = text
         self.var_names = set()
-        self.default_getter = default_getter
+        self.getter = getter
         self._code = self._assignment_code = None
         
         self._examiner = None
@@ -501,8 +501,7 @@ class ExprEvaluator(object):
         return root
         
     def _parse_get(self):
-        new_ast = ExprTransformer(self, 
-                                  default_getter=self.default_getter).visit(self._pre_parse())
+        new_ast = ExprTransformer(self, getter=self.getter).visit(self._pre_parse())
         
         # compile the transformed AST
         ast.fix_missing_locations(new_ast)
@@ -512,8 +511,7 @@ class ExprEvaluator(object):
     def _parse_set(self):
         root = ast.parse("%s=_local_setter_" % self.text, mode='exec')
         ## transform into a 'set' call to set the specified variable
-        assign_ast = ExprTransformer(self, 
-                                     default_getter=self.default_getter).visit(root)
+        assign_ast = ExprTransformer(self, getter=self.getter).visit(root)
         ast.fix_missing_locations(assign_ast)
         code = compile(assign_ast,'<string>','exec')
         return (assign_ast, code)

@@ -247,9 +247,9 @@ class ExprMapper(object):
             scope.raise_exception("'%s' is already connected to source '%s'" % (dest, self.get_source(dest)),
                                   RuntimeError)
         
-        destexpr = ConnectedExprEvaluator(dest, scope, default_getter='get_wrapped_attr', 
+        destexpr = ConnectedExprEvaluator(dest, scope, getter='get_wrapped_attr', 
                                           is_dest=True)
-        srcexpr = ConnectedExprEvaluator(src, scope, default_getter='get_wrapped_attr')
+        srcexpr = ConnectedExprEvaluator(src, scope, getter='get_wrapped_attr')
         
         srccomps = srcexpr.get_referenced_compnames()
         destcomps = destexpr.get_referenced_compnames()
