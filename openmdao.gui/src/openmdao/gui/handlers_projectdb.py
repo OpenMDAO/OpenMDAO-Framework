@@ -72,6 +72,8 @@ class DetailHandler(BaseHandler):
         for field in ['projectname', 'description', 'version', 'shared']:
             if field in self.request.arguments.keys():
                 form_data[field]=self.request.arguments[field][0]
+        print self.request.arguments
+        print form_data
         form = ProjectForm(form_data)
         if form.is_valid():
             p = get_object_or_404(Project, pk=project_id)

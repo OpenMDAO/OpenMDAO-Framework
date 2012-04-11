@@ -7,19 +7,19 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
-from django import forms
-
 from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import *
 from openmdao.gui.handlers import BaseHandler
 
 
-class AddonForm(forms.Form):
-    distribution = forms.CharField(label='Distribution')
+#class AddonForm(forms.Form):
+#    distribution = forms.CharField(label='Distribution')
     
 class AddOnsHandler(BaseHandler):
     ''' addon installation utility
+    Eventually we will probably wrap the OpenMDAO plugin
+    functions to work through here.
     '''
     addons_url = 'http://openmdao.org/dists'
     
@@ -27,24 +27,13 @@ class AddOnsHandler(BaseHandler):
     def post(self):
         ''' easy_install the POST'd addon
         '''
-        form_data = {}
-        for field in ['distribution']:
-            if field in self.request.arguments.keys():
-                form_data[field]=self.request.arguments[field][0]
-        form = AddonForm(form_data)
-        if form.is_valid():
-            distribution = form.cleaned_data['distribution']
-            cserver = self.get_server()
-            cserver.install_addon(self.addons_url, distribution)
-            self.render('closewindow.html')
-            
+        pass
+    
     @web.authenticated
     def get(self):
-        ''' show available addons, prompt for addon to be installed
+        ''' show available plugins, prompt for plugin to be installed
         '''
-        form = AddonForm()
-        self.render('workspace/addons.html', 
-                     addons_url=self.addons_url, addon_form=form)
+        self.render('workspace/addons.html')
         
 class GeometryHandler(BaseHandler):
     @web.authenticated
