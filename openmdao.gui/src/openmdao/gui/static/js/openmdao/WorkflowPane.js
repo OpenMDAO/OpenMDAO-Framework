@@ -96,8 +96,6 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             comp_key = flow_name+':'+path,
             comp_fig, flow_fig, flowpath, newflow_fig, count, x, y;
             
-        debug.info(comp_key)
-        
         if (flow) {
             // add driver figure
             if (comp_key in comp_figs) {

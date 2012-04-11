@@ -40,7 +40,6 @@ openmdao.Console = function(formID,commandID,historyID,model) {
             model.issueCommand(cmd,
                 // success, record any response in the history & clear the command
                 function(responseText) {
-                    debug.info('cmd:',cmd,'response:',responseText)
                     if (responseText.length > 0) {
                         updateHistory(responseText);
                     }
