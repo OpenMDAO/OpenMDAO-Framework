@@ -25,47 +25,49 @@ openmdao.Model=function() {
             success: function(addr) {
                 openmdao.Util.openWebSocket(addr,handler);
             },
-            error: function(jqXHR, textStatus, errorThrown) {
-                debug.error("Error getting websocket (status="+jqXHR.status+"): "+jqXHR.statusText);
-                debug.error(jqXHR,textStatus,errorThrown);
+            error: function(jqXHR, textStatus, err) {
+                debug.error('Error getting websocket url',jqXHR,textStatus,err);
             }
         });
     };
-    
-    
+
     /** initialize the outstream websocket */
     function open_outstream_socket(topic) {
-        open_websocket('outstream', function(data) {
-            var callbacks = subscribers[topic];
-            if (callbacks) {
-                for (i = 0; i < callbacks.length; i++) {
-                    if (typeof callbacks[i] === 'function') {
-                        callbacks[i](data);
-                    }
-                    else {
-                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+        open_websocket('outstream', 
+            function(data) {
+                var callbacks = subscribers[topic];
+                if (callbacks) {
+                    for (i = 0; i < callbacks.length; i++) {
+                        if (typeof callbacks[i] === 'function') {
+                            callbacks[i](data);
+                        }
+                        else {
+                            debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                        };
                     };
                 };
-            };
-        });
+            }
+        );
     };
 
     /** initialize the publisher websocket */
     function open_publisher_socket() {
-        open_websocket('pubstream', function(message) {
-            message = jQuery.parseJSON(message);
-            var callbacks = subscribers[message[0]];
-            if (callbacks) {
-                for (i = 0; i < callbacks.length; i++) {
-                    if (typeof callbacks[i] === 'function') {
-                        callbacks[i](message);
-                    }
-                    else {
-                        debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+        open_websocket('pubstream',
+            function(message) {
+                message = jQuery.parseJSON(message);
+                var callbacks = subscribers[message[0]];
+                if (callbacks) {
+                    for (i = 0; i < callbacks.length; i++) {
+                        if (typeof callbacks[i] === 'function') {
+                            callbacks[i](message);
+                        }
+                        else {
+                            debug.error('Model: invalid callback function for topic:',topic,callbacks[i]);
+                        };
                     };
                 };
-            };
-        });
+            }
+        );
     };
     
     /***********************************************************************
@@ -97,7 +99,6 @@ openmdao.Model=function() {
         //debug.info('updateListeners',callbacks)
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
-                debug.info('updating',callbacks[i])
                 if (typeof callbacks[i] === 'function') {
                     callbacks[i]();
                 }
