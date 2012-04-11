@@ -8,15 +8,12 @@ from inspect import getmro
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import TracedError
+from openmdao.main.variable import is_legal_name
 
 __all__ = ["Case"]
 
 class _Missing(object):
     pass
-
-# regex to check for simple names
-_namecheck_rgx = re.compile(
-    '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
 def _simpleflatten(name, obj):
     return [(name, obj)]
@@ -370,8 +367,7 @@ class Case(object):
         """If the given string contains an expression, create an ExprEvaluator and
         store it in self._exprs
         """
-        match = _namecheck_rgx.match(s)
-        if match is None or match.group() != s:
+        if not is_legal_name(s):
             expr =  ExprEvaluator(s)
             if self._exprs is None:
                 self._exprs = {}

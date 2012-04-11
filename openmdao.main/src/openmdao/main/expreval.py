@@ -448,7 +448,7 @@ class ExprEvaluator(object):
         if name == self.text:
             return True
         elif name in self.text:
-            if name in self.get_referenced_varpaths():
+            if name in self.get_referenced_varpaths(copy=False):
                 return True
             if name in self.get_referenced_compnames():
                 return True
@@ -561,10 +561,15 @@ class ExprEvaluator(object):
             raise type(err)("can't evaluate expression "+
                             "'%s': %s" %(self.text,str(err)))
         
-    def refs(self):
-        """ Used by evaluate_gradient. Returns a list of all connections
-        including their array indices."""
-        return self._examiner.refs.copy()
+    def refs(self, copy=True):
+        """Returns a list of all variables referenced, 
+        including any array indices."""
+        if self._parse_needed:
+            self._parse()
+        if copy:
+            return self._examiner.refs.copy()
+        else:
+            return self._examiner.refs
     
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return a dict containing the gradient of the expression with respect to 
@@ -583,7 +588,7 @@ class ExprEvaluator(object):
         if self._parse_needed or self._examiner is None:
             self._examiner = ExprExaminer(ast.parse(self.text, 
                                                     mode='eval'), self)
-        inputs = list(self.refs())
+        inputs = list(self.refs(copy=False))
 
         if wrt==None:
             wrt = inputs
@@ -697,25 +702,22 @@ class ExprEvaluator(object):
         Returns a list of tuples containing (varname, metadata) 
         corresponding to each variable referenced by this expression.
         """
-        varnames = self.get_referenced_varpaths()
         scope = self._get_updated_scope(scope)
-        lst = []
-        for name in varnames:
-            if scope.contains(name):
-                lst.append((name, scope.get_metadata(name, metaname)))
-            else:
-                raise AttributeError("'%s' not found" % name)
-        return lst
+        return [(name, scope.get_metadata(name, metaname)) 
+                  for name in self.get_referenced_varpaths(copy=False)]
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, copy=True):
         """Return a set of source or dest Variable pathnames relative to
         *scope.parent* and based on the names of Variables referenced in our 
         expression string. 
         """
         if self._parse_needed:
             self._parse()
-        return self.var_names.copy()
-    
+        if copy:
+            return self.var_names.copy()
+        else:
+            return self.var_names
+        
     def get_compvar_dict(self, dct=None):
         """Return a dict of compname vs. set of vars for that comp. Simple
         names (no '.') will have a compname of None
@@ -812,7 +814,7 @@ class ExprEvaluator(object):
             newname = 'parent.'
             
         mapping = {}
-        for var in self.get_referenced_varpaths():
+        for var in self.get_referenced_varpaths(copy=False):
             if var.startswith(newname):
                 mapping[var] = var[len(newname):]
             else:
@@ -860,14 +862,10 @@ class ConnectedExprEvaluator(ExprEvaluator):
             if not self._examiner.assignable:
                 raise RuntimeError("bad destination expression '%s': not assignable" %
                                    self.text)
-    def refs(self):
-        if self._parse_needed:
-            self._parse()
-        return self._examiner.refs.copy()
-    
+
     def vars_and_refs(self):
-        refs = self.refs()
-        varpaths = self.get_referenced_varpaths()
+        refs = self.refs(copy=False)
+        varpaths = self.get_referenced_varpaths(copy=False)
         if len(refs) != len(varpaths):
             raise RuntimeError("# of refs != # of vars in expression '%s'" % self.text)
         return zip(varpaths, refs)
@@ -876,7 +874,7 @@ class ConnectedExprEvaluator(ExprEvaluator):
         """Returns True if this expression refers to the given variable or component"""
         if super(ConnectedExprEvaluator, self).refers_to(name):
             return True
-        return name in self.refs()
+        return name in self.refs(copy=False)
 
 if __name__ == '__main__':
     import sys
@@ -913,7 +911,7 @@ if __name__ == '__main__':
     ep.visit(root)
     print ep.get_text()
     
-    print '\nvars referenced: %s' % expreval.get_referenced_varpaths()
+    print '\nvars referenced: %s' % expreval.get_referenced_varpaths(copy=False)
     
     print '\nattempting to compile the transformed AST...'
     ast.fix_missing_locations(root)

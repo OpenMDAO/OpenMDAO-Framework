@@ -119,34 +119,6 @@ class ExprMapperTestCase(unittest.TestCase):
         else:
             self.fail('Exception expected')
 
-    def test_connections_to(self):
-        self.assertEqual(set(self.dep.connections_to('c')),
-                         set([('c','parent.Y.a'),
-                              ('D.c', 'c')]))
-        self.assertEqual(set(self.dep.connections_to('a')),
-                         set([('parent.X.c','a'),
-                              ('a','B.a')]))
-        
-        self.dep.connect(ExprEvaluator('A.c',self.scope), ExprEvaluator('C.b',self.scope), self.scope)
-        self.dep.connect(ExprEvaluator('A.c',self.scope), ExprEvaluator('C.a',self.scope), self.scope)
-        self.assertEqual(set(self.dep.connections_to('A.c')),
-                         set([('A.c','C.b'),('A.c','C.a'),('A.c','B.b')]))
-        
-        # unconnected var should return an empty list
-        self.assertEqual(self.dep.connections_to('A.a'),[])
-
-        # now test component connections
-        self.assertEqual(set(self.dep.connections_to('A')),
-                         set([('parent.X.d','A.b'),
-                              ('A.c','B.b'),
-                              ('A.c','C.a'),
-                              ('A.c','C.b')]))
-
-        self.assertEqual(set(self.dep.connections_to('D')),
-                         set([('B.c','D.a'),
-                              ('C.c','D.b'),
-                              ('D.c','c')]))
-
     def test_disconnect(self):
         self.dep.disconnect('a') # this should disconnect extern to a and 
                                  # a to B.a, completely removing the
@@ -168,25 +140,6 @@ class ExprMapperTestCase(unittest.TestCase):
         self.assertEqual(set(self.dep.find_referring_exprs('parent')),
                          set(['parent.X.c','parent.X.d','parent.Y.a','parent.Y.b']))
     
-    def test_get_invalidated_destexprs(self):
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, None, ['a','c'])]),
-                         set(['B.a','parent.Y.a']))
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'A', None)]),
-                         set(['B.b']))
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'C', None)]),
-                         set(['D.b','parent.Y.b']))
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'C', ['c'])]),
-                         set(['D.b']))
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'C', ['d'])]),
-                         set(['parent.Y.b']))
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'D', ['d'])]),
-                         set())
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'parent', ['X.c'])]),
-                         set(['a']))
-        self.assertEqual(set([e.text for e in self.dep._get_invalidated_destexprs(self.scope, 'parent', ['X.d'])]),
-                         set(['A.b']))
-    
-
 if __name__ == "__main__":
     unittest.main()
 

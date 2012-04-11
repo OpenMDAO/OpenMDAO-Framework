@@ -187,7 +187,7 @@ class Parameter(object):
 
     def get_referenced_varpaths(self):
         """Return a set of Variable names referenced in our target string."""
-        return self._expreval.get_referenced_varpaths()
+        return self._expreval.get_referenced_varpaths(copy=False)
 
     
 class ParameterGroup(object):
@@ -282,7 +282,7 @@ class ParameterGroup(object):
         """Return a set of Variable names referenced in our target strings."""
         result = set()
         for param in self._params:
-            result.update(param.get_referenced_varpaths())
+            result.update(param.get_referenced_varpaths(copy=False))
         return result
 
 class HasParameters(object): 
@@ -501,7 +501,7 @@ class HasParameters(object):
         """
         result = set()
         for param in self._parameters.values():
-            result.update(param.get_referenced_varpaths())
+            result.update(param.get_referenced_varpaths(copy=False))
         return result
     
     def _get_scope(self, scope=None):

@@ -4,13 +4,12 @@ from enthought.traits.api import TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from openmdao.main.interfaces import implements, IVariable
 
-# regex to check for valid names.  Added '.' as allowed because
-# npsscomponent uses it...
+# regex to check for valid names. 
 _namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
             
 def is_legal_name(name):
-    match = _namecheck_rgx.search(name)
+    match = _namecheck_rgx.match(name)
     return not (match is None or match.group() != name)
 
 class Variable(TraitType):

@@ -295,7 +295,7 @@ class Container(SafeHasTraits):
                         child.connect(childsrc, destvar)
                         child_connections.append((child, childsrc, destvar)) 
                         
-            for srcvar in srcexpr.get_referenced_varpaths():
+            for srcvar in srcexpr.get_referenced_varpaths(copy=False):
                 if not srcvar.startswith('parent.'):
                     if not self.contains(srcvar):
                         self.raise_exception("Can't find '%s'" % srcvar, AttributeError)

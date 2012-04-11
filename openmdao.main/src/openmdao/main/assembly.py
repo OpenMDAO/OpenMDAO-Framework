@@ -152,10 +152,9 @@ class ExprMapper(object):
             self._remove_disconnected_exprs()
         
     def connect(self, srcexpr, destexpr, scope):
-        #srcexpr, destexpr = self.check_connect(src, dest, scope)
         src = srcexpr.text
         dest = destexpr.text
-        srcvars = srcexpr.get_referenced_varpaths()
+        srcvars = srcexpr.get_referenced_varpaths(copy=False)
         destvar = destexpr.get_referenced_varpaths().pop()
         
         destcompname, destcomp, destvarname = scope._split_varpath(destvar)
@@ -172,7 +171,9 @@ class ExprMapper(object):
                         desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
                     
             if not srcexpr.refs_parent() and desttrait is not None:
-                if destvar == destexpr.text: # FIXME: for now, just punting if dest is not just a simple var name
+                # punt if dest is not just a simple var name. 
+                # validity will still be checked at execution time
+                if destvar == destexpr.text: 
                     ttype = desttrait.trait_type
                     if not ttype:
                         ttype = desttrait
@@ -198,15 +199,15 @@ class ExprMapper(object):
         """
         return [node for node, data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
     
-    def connections_to(self, path):
-        """Returns a list of tuples of the form (srcpath, destpath) for
-        all connections between the variable or component specified
-        by *path*.
-        """
-        exprs = self.find_referring_exprs(path)
-        edges = [(src, dest) for src,dest in self._exprgraph.edges(exprs)]
-        edges.extend([(src, dest) for src,dest in self._exprgraph.in_edges(exprs)])
-        return edges
+    #def connections_to(self, path):
+        #"""Returns a list of tuples of the form (srcpath, destpath) for
+        #all connections between the variable or component specified
+        #by *path*.
+        #"""
+        #exprs = self.find_referring_exprs(path)
+        #edges = [(src, dest) for src,dest in self._exprgraph.edges(exprs)]
+        #edges.extend([(src, dest) for src,dest in self._exprgraph.in_edges(exprs)])
+        #return edges
     
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
@@ -222,18 +223,11 @@ class ExprMapper(object):
         """Disconnect the given expressions/variables/components."""
         graph = self._exprgraph
         
-        #srcexprs = self.find_referring_exprs(srcpath)
-        #for srcp in srcexprs:
-            #srcexpr = ConnectedExprEvaluator(srcpath, self._scope)
-            #srcrefs = srcexpr.refs()
-            #for srcref in srcrefs:
-                #self._depgraph.disconnect(srcref, destpath)
         if destpath is None:
             if srcpath in graph:
                 graph.remove_node(srcpath)
             else:
-                for expr in self.find_referring_exprs(srcpath):
-                    graph.remove_node(expr)
+                graph.remove_nodes_from(self.find_referring_exprs(srcpath))
             self._remove_disconnected_exprs()
             return
 
@@ -264,41 +258,41 @@ class ExprMapper(object):
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src,dest))
         return srcexpr, destexpr
 
-    def _get_invalidated_destexprs(self, scope, compname, varset):
-        """For a given set of variable names that has changed (or None),
-        return a list of all destination expressions that are invalidated. A
-        varset value of None indicates that ALL variables in the given
-        component are invalidated.
-        """
-        exprs = set()
-        graph = self._exprgraph
+    #def _get_invalidated_destexprs(self, scope, compname, varset):
+        #"""For a given set of variable names that has changed (or None),
+        #return a list of all destination expressions that are invalidated. A
+        #varset value of None indicates that ALL variables in the given
+        #component are invalidated.
+        #"""
+        #exprs = set()
+        #graph = self._exprgraph
         
-        if varset is None:
-            exprs.update(self.find_referring_exprs(compname))
-        else:
-            if compname:
-                for varpath in ['.'.join([compname, v]) for v in varset]:
-                    exprs.update(self.find_referring_exprs(varpath))
-            else:
-                for varpath in varset:
-                    exprs.update(self.find_referring_exprs(varpath))
+        #if varset is None:
+            #exprs.update(self.find_referring_exprs(compname))
+        #else:
+            #if compname:
+                #for varpath in ['.'.join([compname, v]) for v in varset]:
+                    #exprs.update(self.find_referring_exprs(varpath))
+            #else:
+                #for varpath in varset:
+                    #exprs.update(self.find_referring_exprs(varpath))
                     
-        invalids = []
-        for expr in exprs:
-            dct = graph.succ.get(expr)
-            if dct:
-                invalids.extend([self.get_expr(dest) for dest in dct.keys()])
-        return invalids
+        #invalids = []
+        #for expr in exprs:
+            #dct = graph.succ.get(expr)
+            #if dct:
+                #invalids.extend([self.get_expr(dest) for dest in dct.keys()])
+        #return invalids
         
-    def __eq__(self, other):
-        if isinstance(other, DependencyGraph):
-            if self._exprgraph.nodes() == other._exprgraph.nodes():
-                if self._exprgraph.edges() == other._exprgraph.edges():
-                    return True
-        return False
+    #def __eq__(self, other):
+        #if isinstance(other, DependencyGraph):
+            #if self._exprgraph.nodes() == other._exprgraph.nodes():
+                #if self._exprgraph.edges() == other._exprgraph.edges():
+                    #return True
+        #return False
     
-    def __ne__(self, other):
-        return not self.__eq__(other)
+    #def __ne__(self, other):
+        #return not self.__eq__(other)
             
 
 class Assembly (Component):
@@ -525,7 +519,7 @@ class Assembly (Component):
         for u,v in to_remove:
             srcexpr = self._exprmapper.get_expr(u)
             if srcexpr:
-                for ref in srcexpr.refs():
+                for ref in srcexpr.refs(copy=False):
                     super(Assembly, self).disconnect(ref, v)
                 
         self._exprmapper.disconnect(varpath, varpath2)
@@ -578,20 +572,6 @@ class Assembly (Component):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         return self._exprmapper.list_connections(show_passthrough)
-
-    #def _cvt_input_srcs(self, sources):
-        #link = self._depgraph.get_link('@xin', '@bin')
-        #if link is None:
-            #return sources
-        #else:
-            #newsrcs = []
-            #dests = link._dests
-            #for s in sources:
-                #if '.' in s:
-                    #newsrcs.append(dests[s])
-                #else:
-                    #newsrcs.append(s)
-            #return newsrcs
         
     @rbac(('owner', 'user'))
     def update_inputs(self, compname, exprs):
@@ -601,16 +581,6 @@ class Assembly (Component):
         than 'comp1.abc[3][1]'.
         """
         parent = self.parent
-        #if compname is None: # update boundary outputs (which are inputs in this scope)
-            #invalids = [e for e in exprs if not self._valid_dict[e]]
-            #if len(invalids) > 0:
-                #if parent:
-                    #parent.update_inputs(self.name, invalids)
-                ## invalid inputs have been updated, so mark them as valid
-                #for name in invalids:
-                    #self._valid_dict[name] = True
-            #return
-        
         expr_info = []
         invalids = []
         
