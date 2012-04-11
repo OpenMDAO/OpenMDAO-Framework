@@ -13,6 +13,7 @@ import __builtin__
 from openmdao.main.printexpr import _get_attr_node, _get_long_name, transform_expression, ExprPrinter
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE
+from openmdao.main.variable import is_legal_name
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
 
@@ -378,7 +379,6 @@ class ExprEvaluator(object):
     """
     
     def __init__(self, text, scope=None, getters=None, default_getter='get'):
-        self._parse_needed = True
         self._scope = None
         self.scope = scope
         self._allow_set = False
@@ -386,6 +386,7 @@ class ExprEvaluator(object):
         self.var_names = set()
         self.getters = getters
         self.default_getter = default_getter
+        self._code = self._assignment_code = None
         
         self._examiner = None
         self.cached_grad_eq = {}
@@ -397,7 +398,7 @@ class ExprEvaluator(object):
     
     @text.setter
     def text(self, value):
-        self._parse_needed = True
+        self._code = self._assignment_code = None
         self._text = value
 
     @property
@@ -427,7 +428,7 @@ class ExprEvaluator(object):
     @scope.setter
     def scope(self, value):
         if value is not self.scope:
-            self._parse_needed = True
+            self._code = self._assignment_code = None
             if value is not None:
                 self._scope = weakref.ref(value)
             else:
@@ -439,7 +440,7 @@ class ExprEvaluator(object):
         performed to see if the variable(s) in the expression actually
         exist.
         """
-        if self._parse_needed:
+        if self._code is None:
             self._pre_parse()
         return self._allow_set
     
@@ -469,7 +470,6 @@ class ExprEvaluator(object):
         self.__dict__.update(state)
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
-        self._parse_needed = True  # force a reparse
 
     def is_local(self, name):
         """Return True if the given (dotted) name refers to something in our
@@ -532,29 +532,22 @@ class ExprEvaluator(object):
         except SyntaxError as err:
             raise SyntaxError("failed to parse expression '%s': %s" % (self.text, str(err)))
         
-        if self._allow_set: # set up a compiled assignment statement
-            _, self._assignment_code = self._parse_set()
-            
-        self._parse_needed = False
         return new_ast
     
     def _get_updated_scope(self, scope):
-        oldscope = self.scope
-        if scope is None:
-            scope = oldscope
-        elif scope is not oldscope:
-            self._parse_needed = True
+        if scope is not None:
             self.scope = scope
-        return scope
+            return scope
+        return self.scope
 
-    def evaluate(self, scope=None, wrapped=False):
+    def evaluate(self, scope=None):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
         """
         global _expr_dict
         scope = self._get_updated_scope(scope)
         try:
-            if self._parse_needed:
+            if self._code is None:
                 self._parse()
             return eval(self._code, _expr_dict, locals())
         except Exception, err:
@@ -564,8 +557,11 @@ class ExprEvaluator(object):
     def refs(self, copy=True):
         """Returns a list of all variables referenced, 
         including any array indices."""
-        if self._parse_needed:
+        if self._code is None:
             self._parse()
+        if self._examiner is None:
+            self._examiner = ExprExaminer(ast.parse(self.text, 
+                                                    mode='eval'), self)
         if copy:
             return self._examiner.refs.copy()
         else:
@@ -585,9 +581,6 @@ class ExprEvaluator(object):
         global _expr_dict
         
         scope = self._get_updated_scope(scope)
-        if self._parse_needed or self._examiner is None:
-            self._examiner = ExprExaminer(ast.parse(self.text, 
-                                                    mode='eval'), self)
         inputs = list(self.refs(copy=False))
 
         if wrt==None:
@@ -612,7 +605,7 @@ class ExprEvaluator(object):
                 continue
             
             # First time, try to differentiate symbolically
-            if (var not in self.cached_grad_eq) or self._parse_needed:
+            if (var not in self.cached_grad_eq) or self._code is None:
                 
                 #Take symbolic gradient of all inputs using sympy
                 try:
@@ -678,7 +671,7 @@ class ExprEvaluator(object):
         """Set the value of the referenced object to the specified value."""
         global _expr_dict
         scope = self._get_updated_scope(scope)
-        
+
         if self.is_valid_assignee():
             # self.assignment_code is a compiled version of an assignment statement
             # of the form  'somevar = _local_setter_', so we set _local_setter_ here
@@ -688,10 +681,12 @@ class ExprEvaluator(object):
             # connected to.
             _local_setter_ = val 
             _local_src_ = src
-            if self._parse_needed:
-                self._parse()
+            #if self._code is None:
+                #self._parse()
+            if self._assignment_code is None:
+                _, self._assignment_code = self._parse_set()
             exec(self._assignment_code, _expr_dict, locals())
-        else: # self._allow_set is False
+        else:
             raise ValueError("expression '%s' can't be set to a value" % self.text)
         
     def get_metadata(self, metaname=None, scope=None):
@@ -711,27 +706,19 @@ class ExprEvaluator(object):
         *scope.parent* and based on the names of Variables referenced in our 
         expression string. 
         """
-        if self._parse_needed:
+        if self._code is None:
             self._parse()
         if copy:
             return self.var_names.copy()
         else:
             return self.var_names
         
-    def get_compvar_dict(self, dct=None):
-        """Return a dict of compname vs. set of vars for that comp. Simple
-        names (no '.') will have a compname of None
-        """
-        if self._parse_needed:
-            self._parse()
-        return partition_names_by_comp(self.var_names, dct)
-
     def get_referenced_compnames(self):
         """Return a set of source or dest Component names based on the 
         pathnames of Variables referenced in our expression string. No checking
         is performed to verify that a given name refers to an actual Component.
         """
-        if self._parse_needed:
+        if self._code is None:
             self._parse()
         nameset = set()
         for name in self.var_names:
@@ -760,7 +747,7 @@ class ExprEvaluator(object):
         are valid.
         """
         if self.scope:
-            if self._parse_needed:
+            if self._code is None:
                 self._parse()
             if not all(self.scope.get_valid(self.var_names)):
                 return False
@@ -768,7 +755,7 @@ class ExprEvaluator(object):
     
     def refs_parent(self):
         """Return True if this expression references a variable in parent."""
-        if self._parse_needed:
+        if self._code is None:
             self._parse()
         for name in self.var_names:
             if name.startswith('parent.'):
@@ -777,7 +764,7 @@ class ExprEvaluator(object):
 
     def invalid_refs(self):
         """Return a list of invalid variables referenced by this expression."""
-        if self._parse_needed:
+        if self._code is None:
             self._parse()
         valids = self.scope.get_valid(self.var_names)
         return [n for n,v in zip(self.var_names, valids) if v is False]
@@ -790,7 +777,7 @@ class ExprEvaluator(object):
     
     def get_unresolved(self):
         """Return a list of all variables that cannot be resolved"""
-        if self._parse_needed:
+        if self._code is None:
             self._parse()
         if len(self.var_names) > 0:
             scope = self.scope
@@ -803,7 +790,7 @@ class ExprEvaluator(object):
         """Return a transformed version of our text string where the attribute names are
         changed based on a change in scope to the given object.
         """
-        if self._parse_needed:
+        if self._code is None:
             self._parse()
         
         oldname = scope.name + '.' if scope.name else ''
@@ -846,7 +833,6 @@ class ConnectedExprEvaluator(ExprEvaluator):
         self._is_dest = kwargs.get('is_dest', False)
         if 'is_dest' in kwargs:
             del kwargs['is_dest']
-        self._examiner = None
         super(ConnectedExprEvaluator, self).__init__(*args, **kwargs)
         
     def _parse(self):
@@ -862,13 +848,6 @@ class ConnectedExprEvaluator(ExprEvaluator):
             if not self._examiner.assignable:
                 raise RuntimeError("bad destination expression '%s': not assignable" %
                                    self.text)
-
-    def vars_and_refs(self):
-        refs = self.refs(copy=False)
-        varpaths = self.get_referenced_varpaths(copy=False)
-        if len(refs) != len(varpaths):
-            raise RuntimeError("# of refs != # of vars in expression '%s'" % self.text)
-        return zip(varpaths, refs)
     
     def refers_to(self, name):
         """Returns True if this expression refers to the given variable or component"""
