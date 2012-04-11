@@ -377,14 +377,9 @@ class ExprEvaluator(object):
     def __init__(self, text, scope=None, getter='get'):
         self._scope = None
         self.scope = scope
-        self._allow_set = False
         self.text = text
-        self.var_names = set()
         self.getter = getter
-        self._code = self._assignment_code = None
-        
-        self._examiner = None
-        self.cached_grad_eq = {}
+        self.var_names = set()
     
     @property
     def text(self):
@@ -394,22 +389,9 @@ class ExprEvaluator(object):
     @text.setter
     def text(self, value):
         self._code = self._assignment_code = None
+        self._examiner = self.cached_grad_eq = None
         self._text = value
 
-    @property
-    def new_text(self):
-        ep = ExprPrinter()
-        ep.visit(self._parse_get()[0])
-        return ep.get_text()
-        
-    def set_text(self):
-        self._pre_parse()
-        if self._allow_set:
-            ep = ExprPrinter()
-            ep.visit(self._parse_set())
-            return ep.get_text()
-        return ''
-        
     @property
     def scope(self):
         """The scoping object used to evaluate the expression"""
@@ -424,6 +406,7 @@ class ExprEvaluator(object):
     def scope(self, value):
         if value is not self.scope:
             self._code = self._assignment_code = None
+            self._examiner = self.cached_grad_eq = None
             if value is not None:
                 self._scope = weakref.ref(value)
             else:
@@ -517,9 +500,7 @@ class ExprEvaluator(object):
         return (assign_ast, code)
     
     def _parse(self):
-        self._allow_set = True
         self.var_names = set()
-        
         try:
             new_ast, self._code = self._parse_get()
         except SyntaxError as err:
@@ -582,6 +563,9 @@ class ExprEvaluator(object):
             wrt = [wrt]
                 
         gradient = {}
+        if self.cached_grad_eq is None:
+            self.cached_grad_eq = {}
+
         for var in wrt:
 
             # A "fake" boundary connection in an assembly has a special
@@ -674,8 +658,6 @@ class ExprEvaluator(object):
             # connected to.
             _local_setter_ = val 
             _local_src_ = src
-            #if self._code is None:
-                #self._parse()
             if self._assignment_code is None:
                 _, self._assignment_code = self._parse_set()
             exec(self._assignment_code, _expr_dict, locals())

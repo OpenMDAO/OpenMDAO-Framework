@@ -23,7 +23,6 @@ except ImportError as err:
         from scipy.special import gamma
     except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
-from scipy.special import polygamma
 
 class A(Component):
     f = Float(iotype='in')
@@ -80,7 +79,13 @@ class Simple(Component):
         
         self.x_array[1] = self.a*self.b
         
+
+def new_text(expr):
+    ep = ExprPrinter()
+    ep.visit(expr._parse_get()[0])
+    return ep.get_text()
         
+
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
@@ -94,7 +99,7 @@ class ExprEvalTestCase(unittest.TestCase):
         # each test is a tuple of the form (input, expected output)
         for tst in tests:
             ex = ExprEvaluator(tst[0], top)
-            self.assertEqual(ex.new_text, tst[1])
+            self.assertEqual(new_text(ex), tst[1])
             
     def test_eq(self): 
         ex1 = ExprEvaluator('comp.x', self.top)
@@ -242,7 +247,7 @@ class ExprEvalTestCase(unittest.TestCase):
         
         ex = ExprEvaluator('comp.x', self.top)
         self.assertEqual(99.5, ex.evaluate())
-        self.assertEqual(ex.new_text, "scope.get('comp.x')")
+        self.assertEqual(new_text(ex), "scope.get('comp.x')")
         
         ex.scope = self.top.a
         try:
@@ -251,9 +256,9 @@ class ExprEvalTestCase(unittest.TestCase):
             self.assertEqual(str(err), "a: object has no attribute 'comp.x'")
         else:
             self.fail("AttributeError expected")
-        self.assertEqual(ex.new_text, "scope.get('comp.x')")
+        self.assertEqual(new_text(ex), "scope.get('comp.x')")
         self.assertEqual(99.5, ex.evaluate(self.top)) # set scope back to self.top
-        self.assertEqual(ex.new_text, "scope.get('comp.x')")
+        self.assertEqual(new_text(ex), "scope.get('comp.x')")
         
         ex.text = 'comp.y'
         try:
@@ -265,7 +270,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ex.scope = self.top
         ex.set(11.1)
         self.assertEqual(11.1, self.top.comp.y)
-        self.assertEqual(ex.new_text, "scope.get('comp.y')")
+        self.assertEqual(new_text(ex), "scope.get('comp.y')")
         
     def test_no_scope(self):
         ex = ExprEvaluator('abs(-3)+int(2.3)+math.floor(5.4)')
@@ -525,7 +530,7 @@ class ExprEvalTestCase(unittest.TestCase):
 
     def test_scope_transform(self):
         exp = ExprEvaluator('myvar+abs(comp.x)*a.a1d[2]', self.top)
-        self.assertEqual(exp.new_text, "scope.get('myvar')+abs(scope.get('comp.x'))*scope.get('a.a1d',[(0,2)])")
+        self.assertEqual(new_text(exp), "scope.get('myvar')+abs(scope.get('comp.x'))*scope.get('a.a1d',[(0,2)])")
         xformed = exp.scope_transform(self.top, self.top.comp)
         self.assertEqual(xformed, 'parent.myvar+abs(x)*parent.a.a1d[2]')
         
