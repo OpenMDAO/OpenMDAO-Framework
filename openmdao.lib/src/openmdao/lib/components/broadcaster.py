@@ -1,6 +1,6 @@
 from openmdao.lib.datatypes.api import ListStr, Dict, Float
 
-from openmdao.main.api import Component,ExprEvaluator
+from openmdao.main.api import Component
 from openmdao.main.interfaces import IComponent
                         
 class Broadcaster(Component): 
