@@ -10,7 +10,7 @@
     {% if project_list %}
         <ul>
         {% for project in project_list %}
-            <li><a href="/projects/{{ project.id }}/">{{ project.projectname }}</a></li>
+            <li><a href="/projects/{{ project['id'] }}/">{{ project['projectname'] }}</a></li>
         {% end %}
         </ul>
     {% else %}
@@ -18,5 +18,5 @@
     {% end %}
 
     <p>
-    <a href='/projects/new/'>Add new project</a> &nbsp &nbsp <a href='/projects/add/'>Add existing project</a>
+    <a href='/projects/new/'>Start new project</a> &nbsp &nbsp <a href='/projects/add/'>Add existing project</a>
 {% end %}

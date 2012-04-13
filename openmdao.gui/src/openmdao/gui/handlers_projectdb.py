@@ -1,33 +1,13 @@
 import os, sys
 import os.path
 from time import strftime
+import datetime
 
 # tornado
 from tornado import web
 
-# for autodoc
-from django.conf import settings
-try:
-    settings.configure()
-except Exception, err:
-    pass
-
-from django import forms
-from django.core.files.base import ContentFile
-from django.contrib.auth.models import User
-from openmdao.gui.projdb.models import Project
-from django.shortcuts import get_object_or_404
-
 from openmdao.gui.handlers import BaseHandler
-
-class ProjectForm(forms.Form):
-    projectname = forms.CharField(label='Project Name')
-    description = forms.CharField(label='Description', required=False)
-    version     = forms.CharField(label='Version',     required=False, max_length=5)
-    shared      = forms.BooleanField(label='Shared',   required=False)
-
-class ProjectFileForm(forms.Form):
-    filename    = forms.HiddenInput()
+from openmdao.gui.projectdb import Projects
 
     
 class IndexHandler(BaseHandler):
@@ -35,28 +15,28 @@ class IndexHandler(BaseHandler):
     '''
     @web.authenticated
     def get(self):
-        try:
-            dbuser = User.objects.get(username__exact=self.current_user)
-        except User.DoesNotExist:
-            # just add new user to database (not really using authentication for now)
-            dbuser = User.objects.create_user(self.current_user, 'email', 'password')
-            dbuser.save()
             
-        project_list = Project.objects.filter(user=dbuser)
+        projects = Projects()
+        project_list = projects.for_user()
+        print project_list
         self.render('projdb/project_list.html', 
-                     project_list=project_list, user=self.current_user)
+                     project_list=project_list)
 
 class DeleteHandler(BaseHandler):
     ''' delete a project
     '''
     @web.authenticated
     def post(self, project_id):
-        p = get_object_or_404(Project, pk=project_id)
-        if p.filename:
-            filename = os.path.join(self.get_project_dir(),str(p.filename))
+
+        projects = Projects()
+        pfields = projects.get(project_id)
+        
+        if pfields['filename']:
+            filename = os.path.join(self.get_project_dir(), 
+                                    str(pfields['filename']))
             if os.path.exists(filename):
                 os.remove(filename)
-        p.delete()
+        projects.remove(project_id)
         self.redirect('/')
 
     @web.authenticated
@@ -68,55 +48,83 @@ class DetailHandler(BaseHandler):
     '''
     @web.authenticated
     def post(self, project_id):
+
         form_data = {}
-        for field in ['projectname', 'description', 'version', 'shared']:
+        for field in ['projectname', 'description', 'version']:
             if field in self.request.arguments.keys():
-                form_data[field]=self.request.arguments[field][0]
-        print self.request.arguments
-        print form_data
-        form = ProjectForm(form_data)
-        if form.is_valid():
-            p = get_object_or_404(Project, pk=project_id)
-            p.projectname   = form.cleaned_data['projectname'].strip()
-            p.description   = form.cleaned_data['description'].strip()
-            p.version       = form.cleaned_data['version'].strip()
-            p.shared        = form.cleaned_data['shared']
-            
-            # if there's no proj file yet, create en empty one
-            if not p.filename:
-                if len(p.version):
-                    filename = p.projectname+'-'+p.version+'.proj'
-                else:
-                    filename = p.projectname+'.proj'  
-                dir = self.get_project_dir()
-                i=1
-                while os.path.exists(os.path.join(dir,filename)):
-                    filename = filename+str(i)
-                    i = i+1
-                file_content = ContentFile('')
-                p.filename.save(filename, file_content)
-                print 'created file:',p.filename,filename
-            p.save()
-            self.redirect(self.request.uri)
+                form_data[field] = self.request.arguments[field][0]
+                
+        project = Projects()
+        
+        # Existing project.
+        if int(project_id) != project.predict_next_rowid():
+            project_fields = project.get(project_id)
+            project_is_new = False
+        # New project
         else:
-            print 'FORM NOT VALID'  # TODO: better error handling
-            self.redirect(self.request.uri)
+            project_fields = {}
+            project_fields['active'] = 0
+            project_fields['filename'] = None
+            project_is_new = True
+        
+        # TODO: better error handling
+        if 'projectname' in form_data:
+            
+            if len(form_data['projectname']) == 0:
+                print 'ERROR: Project Name is Required'  
+                self.redirect(self.request.uri)
+                return
+            
+            project_fields['projectname'] = \
+                form_data['projectname'].strip()
+            
+        if 'description' in form_data:
+            project_fields['description'] = \
+                form_data['description'].strip()
+            
+        if 'version' in form_data:
+            project_fields['version'] = \
+                form_data['version'].strip()
+        
+        # if there's no proj file yet, create en empty one
+        if not project_fields['filename']:
+            
+            version = project_fields['version']
+            pname = project_fields['projectname']
+            
+            if len(version):
+                filename = '%s-%s.proj' % (pname, version)
+            else:
+                filename = '%s.proj' % pname
+
+            dir = self.get_project_dir()
+            i = 1
+            while os.path.exists(os.path.join(dir, filename)):
+                filename = filename + str(i)
+                i = i+1
+                
+            with open(filename, 'w') as out:
+                out.write('')
+                out.close()
+            
+            print 'created file:', pname, filename
+
+        project_fields['modified'] = str(datetime.datetime.now())
+        
+        if project_is_new:
+            project.new(project_fields)
+        else:
+            for key, value in project_fields.iteritems():
+                project.set(project_id, key, value)
+
+        self.redirect(self.request.uri)
 
     @web.authenticated
     def get(self, project_id):
-        p = get_object_or_404(Project, pk=project_id)
-        # not a POST or validation failed
-        proj_form = ProjectForm({
-            'projectname': p.projectname,
-            'description': p.description,
-            'version':     p.version,
-            'shared':      p.shared,
-        })
-        file_form = ProjectFileForm({
-            'filename':    p.filename
-        })
-        self.render('projdb/project_detail.html',
-                    project=p, project_form=proj_form, file_form=file_form)
+        
+        project = Projects()
+        project_fields = project.get(project_id)
+        self.render('projdb/project_detail.html', project=project_fields)
 
 # FIXME: returns an error even though it works
 class DownloadHandler(BaseHandler):
@@ -124,44 +132,43 @@ class DownloadHandler(BaseHandler):
     '''
     @web.authenticated
     def get(self, project_id):
-        p = get_object_or_404(Project, pk=project_id)
-        if p.filename:
-            filename = os.path.join(self.get_project_dir(),str(p.filename))
-            if os.path.exists(filename):
-                proj_file = file(filename,'rb')
-                from django.core.servers.basehttp import FileWrapper
-                self.set_header('content_type','application/octet-stream')
-                self.set_header('Content-Length',str(os.path.getsize(filename)))
-                self.set_header('Content-Disposition','attachment; filename='+p.projectname+strftime(' %Y-%m-%d %H%M%S')+'.proj')
-                try:
-                    self.write(proj_file.read())
-                finally:
-                    proj_file.close()
-            else:
-                raise HTTPError(403, "%s is not a file", filename)
-        else:
-            raise HTTPError(403, "no file found for %s", p.projectname)
+        pass
+        #p = get_object_or_404(Project, pk=project_id)
+        #if p.filename:
+            #filename = os.path.join(self.get_project_dir(),str(p.filename))
+            #if os.path.exists(filename):
+                #proj_file = file(filename,'rb')
+                #from django.core.servers.basehttp import FileWrapper
+                #self.set_header('content_type','application/octet-stream')
+                #self.set_header('Content-Length',str(os.path.getsize(filename)))
+                #self.set_header('Content-Disposition','attachment; filename='+p.projectname+strftime(' %Y-%m-%d %H%M%S')+'.proj')
+                #try:
+                    #self.write(proj_file.read())
+                #finally:
+                    #proj_file.close()
+            #else:
+                #raise HTTPError(403, "%s is not a file", filename)
+        #else:
+            #raise HTTPError(403, "no file found for %s", p.projectname)
 
 class NewHandler(BaseHandler):
     ''' create a new (empty) project
     '''
     @web.authenticated
     def get(self):
-        dbuser = User.objects.get(username__exact=self.current_user)
-        p = Project(user=dbuser)
-        p.projectname   = 'New Project '+strftime("%Y-%m-%d %H%M%S")
-        p.save()
-        proj_form = ProjectForm({
-            'projectname': p.projectname,
-            'description': p.description,
-            'version':     p.version,
-            'shared':      p.shared,
-        })
-        file_form = ProjectFileForm({
-            'filename':    p.filename
-        })
-        self.render('projdb/project_detail.html',
-                    project=p, project_form=proj_form, file_form=file_form)
+        
+        project = Projects()
+        
+        p = {}
+        p['id'] = project.predict_next_rowid()
+        p['projectname']   = 'New Project '+strftime("%Y-%m-%d %H%M%S")
+        p['version'] = ''
+        p['description'] = ''
+        p['modified'] = str(datetime.datetime.now())
+        p['filename'] = ''
+        p['active'] = ''
+        
+        self.render('projdb/project_detail.html', project=p)
 
 class AddHandler(BaseHandler):
     ''' upload a file and add it to the project database
@@ -169,21 +176,30 @@ class AddHandler(BaseHandler):
     @web.authenticated
     def post(self):
         file = self.request.files['myfile'][0]
+        
         if file:
             filename = file['filename']
             if len(filename) > 0:
-                dbuser = User.objects.get(username__exact=self.current_user)
-                p = Project(user=dbuser)
-                p.projectname   = 'Added ' + filename + strftime(" %Y-%m-%d %H%M%S")
-                p.save()
-            
-                dir = 'projects/'+self.current_user
-                if not os.path.isdir(dir):
-                    os.makedirs(dir)
-                file_content = ContentFile(file['body'])
-                p.filename.save(filename, file_content)
                 
-                self.redirect('/projects/'+str(p.id))
+                project = Projects()
+                
+                project_fields = {}
+                project_fields['id'] = project.predict_next_rowid()
+                project_fields['projectname']   = 'Added ' + filename + strftime(" %Y-%m-%d %H%M%S")
+                project_fields['version'] = ''
+                project_fields['description'] = ''
+                project_fields['modified'] = str(datetime.datetime.now())
+                project_fields['filename'] = filename
+                project_fields['active'] = 1
+
+                with open(filename, 'w') as out:
+                    out.write(file['body'])
+                    out.close()
+                    
+                project.new(project_fields)
+                
+                self.redirect('/projects/'+str(project_fields.id))
+                
         self.redirect('')
 
     @web.authenticated

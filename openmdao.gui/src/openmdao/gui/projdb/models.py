@@ -13,7 +13,6 @@ class Project(models.Model):
     description = models.CharField(max_length=200)
     modified    = models.DateTimeField('date modified', auto_now=True)
     filename    = models.FileField(max_length=200,upload_to=get_upload_path)
-    shared      = models.BooleanField()
     active      = models.BooleanField()
 
     def __unicode__(self):
