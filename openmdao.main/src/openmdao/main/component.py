@@ -749,35 +749,38 @@ class Component (Container):
         return self._container_names
     
     @rbac(('owner', 'user'))
-    def connect(self, srcpath, destpath):
-        """Connects one source variable to one destination variable. 
-        When a pathname begins with 'parent.', that indicates
+    def connect(self, srcexpr, destexpr):
+        """Connects one source expression to one destination expression. 
+        When a name begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
         
-        srcpath: str
-            Pathname of source variable.
+        srcexpr: str or ExprEvaluator
+            Source expression object or expression string.
             
-        destpath: str
-            Pathname of destination variable.
+        destexpr: str or ExprEvaluator
+            Destination expression object or expression string.
         """
-        valids_update = None
+        if isinstance(srcexpr, basestring):
+            srcexpr = ConnectedExprEvaluator(srcexpr, self)
+        if isinstance(destexpr, basestring):
+            destexpr = ConnectedExprEvaluator(destexpr, self, is_dest=True)
         
-        for ref in ConnectedExprEvaluator(srcpath, self).refs():
-            if ref.startswith('parent.'):  # internal destination
-                valids_update = (destpath, False)
-                self.config_changed(update_parent=False)
-                break
-        else:
-            if destpath.startswith('parent.'): # internal source
-                if srcpath not in self._valid_dict:
-                    valids_update = (srcpath, True)
-                self._connected_outputs = None  # reset cached value of connected outputs
+        destpath = destexpr.text
+        
+        valid_updates = []
+        if not srcexpr.refs_parent(): 
+            if srcexpr.text not in self._valid_dict:
+                valid_updates.append((srcexpr.text, True))
+            self._connected_outputs = None  # reset cached value of connected outputs
+        if not destpath.startswith('parent.'): 
+            valid_updates.append((destpath, False))
+            self.config_changed(update_parent=False)
                     
-        super(Component, self).connect(srcpath, destpath)
+        super(Component, self).connect(srcexpr, destexpr)
         
         # this is after the super connect call so if there's a 
         # problem we don't have to undo it
-        if valids_update is not None:
+        for valids_update in valid_updates:
             self._valid_dict[valids_update[0]] = valids_update[1]
             
         

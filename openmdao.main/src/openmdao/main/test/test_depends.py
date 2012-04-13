@@ -171,7 +171,7 @@ class DependsTestCase(unittest.TestCase):
         self.top.disconnect('comp8')
         self.assertEqual(self.top.sub.list_outputs(connected=True),
                          [])
-        self.assertEqual(self.top.sub._depgraph.get_source('c4'), 'comp4.c')
+        self.assertEqual(self.top.sub._exprmapper.get_source('c4'), 'comp4.c')
         
     def test_lazy1(self):
         self.top.run()
@@ -519,29 +519,21 @@ class DependsTestCase2(unittest.TestCase):
     def test_units(self):
         top = self.top
         top.c2.add("velocity", Float(3.0, iotype='in', units='inch/s'))
-        top.c1.add("time", Float(9.0, iotype='out', units='s'))
+        top.c1.add("length", Float(9.0, iotype='out', units='inch'))
         
         try:
             top.connect('c1.c', 'c2.velocity')
         except Exception as err:
-            self.assertEqual(str(err), ": can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'inch/s'")
+            self.assertEqual(str(err), ": Can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'inch/s'")
         else:
             self.fail("Exception expected")
         
         top.c1.a = 1.
         top.c1.b = 2.
-        # so c1.c will be 3
-        top.c1.time = 2.
-        top.connect('c1.c/c1.time', 'c2.velocity')
+        top.c1.length = 24.
+        top.connect('c1.length', 'c2.a')
         top.run()
-        assert_rel_error(self, top.c2.velocity, 18., 0.0001)
-        
-        try:
-            top.connect('c1.c+c1.time', 'c2.b')
-        except Exception as err:
-            self.assertEqual(str(err), ": can't connect 'c1.c+c1.time' to 'c2.b': can't evaluate expression 'c1.c+c1.time': Incompatible units")
-        else:
-            self.fail("Exception expected")
+        assert_rel_error(self, top.c2.a, 2., 0.0001)
         
 
 class ArrayComp(Component):
@@ -601,7 +593,7 @@ class ExprDependsTestCase(unittest.TestCase):
         try:
             self.top.connect('c1.d[1]', 'c2.a[1]')
         except Exception as err:
-            self.assertEqual(str(err), ": 'c2.a[1]' is already connected to source 'c1.d[2]'")
+            self.assertEqual(str(err), ": Can't connect 'c1.d[1]' to 'c2.a[1]': : 'c2.a[1]' is already connected to source 'c1.d[2]'")
             
         # let's disconnect one entry and check the valid dict
         self.top.disconnect('c2.a[1]')
@@ -628,37 +620,37 @@ class ExprDependsTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         self.assertEqual(list(self.top.c2.a), [1,2,3,12,5])
         
-    def test_src_exprs(self):
-        global exec_order
-        vnames = ['a','b','c','d']
-        top = _nested_model()
-        top.run()
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+    #def test_src_exprs(self):
+        #global exec_order
+        #vnames = ['a','b','c','d']
+        #top = _nested_model()
+        #top.run()
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
         
-        total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
-        top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
-        exec_order = []
-        top.run()
-        self.assertEqual(exec_order, ['comp4'])
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
-        self.assertEqual(total, top.sub.comp4.a)
+        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        #top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        #exec_order = []
+        #top.run()
+        #self.assertEqual(exec_order, ['comp4'])
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        #self.assertEqual(total, top.sub.comp4.a)
         
-        top.sub.comp2.a = 99
-        self.assertEqual(top.sub.comp2.get_valid(vnames), [True, True, False, False])
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
-        exec_order = []
-        top.sub.run()
-        total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
-        self.assertEqual(total, top.sub.comp4.a)
-        self.assertEqual(exec_order, ['comp2','comp4'])
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
-        top.sub.comp2.a = 88
-        top.sub.comp3.a = 33
-        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
-        top.sub.run()
-        total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
-        self.assertEqual(total, top.sub.comp4.a)
+        #top.sub.comp2.a = 99
+        #self.assertEqual(top.sub.comp2.get_valid(vnames), [True, True, False, False])
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        #exec_order = []
+        #top.sub.run()
+        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        #self.assertEqual(total, top.sub.comp4.a)
+        #self.assertEqual(exec_order, ['comp2','comp4'])
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        #top.sub.comp2.a = 88
+        #top.sub.comp3.a = 33
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        #top.sub.run()
+        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        #self.assertEqual(total, top.sub.comp4.a)
 
     def test_float_exprs(self):
         global exec_order
@@ -666,8 +658,8 @@ class ExprDependsTestCase(unittest.TestCase):
         top = _nested_model()
         top.run()
         
-        total = top.sub.comp1.c + math.sin(3.14)*top.sub.comp2.c
-        top.sub.connect('comp1.c+sin(3.14)*comp2.c', 'comp4.a')
+        total = math.sin(3.14)*top.sub.comp2.c
+        top.sub.connect('sin(3.14)*comp2.c', 'comp4.a')
         self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
         exec_order = []
         top.run()
@@ -675,7 +667,7 @@ class ExprDependsTestCase(unittest.TestCase):
         self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
         self.assertEqual(total, top.sub.comp4.a)
         
-        top.sub.disconnect('comp1.c+sin(3.14)*comp2.c', 'comp4.a')
+        top.sub.disconnect('sin(3.14)*comp2.c', 'comp4.a')
         total = 3.0*top.sub.comp1.c
         top.sub.connect('3.0*comp1.c', 'comp4.a')
         top.run()
@@ -706,8 +698,8 @@ class ExprDependsTestCase(unittest.TestCase):
                 visited.add(obj)
                 if isinstance(obj, Assembly):
                     connection_set.update(obj.list_connections())
+                    connection_set.update(obj._exprmapper.list_connections())
                     connection_set.update(obj._depgraph.list_connections())
-                    connection_set.update(obj._depgraph._depgraph.list_connections())
                     for name in obj.list_containers():
                         comp = getattr(obj, name)
                         if isinstance(comp, Component):
@@ -722,12 +714,9 @@ class ExprDependsTestCase(unittest.TestCase):
         top = _nested_model()
         initial_connections = set(top.sub.list_connections())
         top.run()
-        top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
-        self.assertEqual(set(top.sub.list_connections())-initial_connections, 
-                         set([('comp1.c+comp2.c+comp3.c', 'comp4.a')]))
         top.sub.connect('comp1.c', 'comp3.b')
         self.assertEqual(set(top.sub.list_connections())-initial_connections, 
-                         set([('comp1.c+comp2.c+comp3.c', 'comp4.a'),('comp1.c','comp3.b')]))
+                         set([('comp1.c','comp3.b')]))
         top.sub.disconnect('comp1')
         self.assertEqual(set(top.sub.list_connections())-initial_connections, set())
         for u,v in self._all_nested_connections(top.sub):
@@ -737,11 +726,11 @@ class ExprDependsTestCase(unittest.TestCase):
         top = _nested_model()
         initial_connections = set(top.sub.list_connections())
         top.run()
-        top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
+        top.sub.connect('comp1.c*3.0', 'comp4.a')
         top.sub.connect('comp1.c', 'comp3.b')
         top.sub.disconnect('comp1.c','comp3.b')
         self.assertEqual(set(top.sub.list_connections())-initial_connections, 
-                         set([('comp1.c+comp2.c+comp3.c', 'comp4.a')]))
+                         set([('comp1.c*3.0', 'comp4.a')]))
         self.assertEqual(initial_connections-set(top.sub.list_connections()), 
                          set())
         for u,v in self._all_nested_connections(top.sub):
@@ -752,51 +741,25 @@ class ExprDependsTestCase(unittest.TestCase):
         try:
             top.sub.connect('comp1.c', 'comp4.a+comp4.b')
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'comp4.a+comp4.b': must be a single variable name or an index or slice into an array variable")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a+comp4.b': bad connected expression 'comp4.a+comp4.b' must reference exactly one variable")
         else:
             self.fail("Exception expected")
             
         try:
             top.sub.connect('comp1.c', 'comp4.a[foo]')
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a[foo]': bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
         else:
             self.fail("Exception expected")
             
         try:
             top.sub.connect('comp1.c', 'comp4.a(5)')
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'comp4.a(5)': not assignable")
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a(5)': bad destination expression 'comp4.a(5)': not assignable")
         else:
             self.fail("Exception expected")
                     
-                    
-    def test_compare_models(self):
-        model1 = set_as_top(Assembly())
-        model1.add('comp1', ExecComp(exprs=['y=x**2']))
-        model1.add('comp2', ExecComp(exprs=['y=x+x**3']))
-        model1.add('comp3', ExecComp(exprs=['y=a+b']))
-        model1.driver.workflow.add(['comp1', 'comp2', 'comp3'])
-        model1.connect('comp1.y', 'comp3.a')
-        model1.connect('comp2.y', 'comp3.b')
-        model1.comp1.x = 1.5
-        model1.comp2.x = -2.1
-        model1.run()
-        model1_result = model1.comp3.y # 1.5**2+(-2.1)+(-2.1)**3
-        
-        model2 = set_as_top(Assembly())
-        model2.add('comp1', ExecComp(exprs=['y=x']))
-        model2.add('comp2', ExecComp(exprs=['y=x']))
-        model2.add('comp3', ExecComp(exprs=['y=x']))
-        model2.driver.workflow.add(['comp1', 'comp2', 'comp3'])
-        model2.connect('comp1.y**2+comp2.y+comp2.y**3', 'comp3.x')
-        model2.comp1.x = 1.5
-        model2.comp2.x = -2.1
-        model2.run()
-        model2_result = model2.comp3.y # 1.5**2+(-2.1)+(-2.1)**3
-        
-        self.assertEqual(model1_result, model2_result)
-        
+                           
         
 if __name__ == "__main__":
     

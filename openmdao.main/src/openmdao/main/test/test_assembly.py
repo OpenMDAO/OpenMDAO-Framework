@@ -387,7 +387,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.create_passthrough('comp2.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), ": 'comp2.r' is already connected to source 'comp1.rout'")
+            self.assertEqual(str(err), ": Can't connect 'r' to 'comp2.r': : 'comp2.r' is already connected to source 'comp1.rout'")
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
@@ -409,14 +409,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(": can't connect 'comp1.rout' to 'comp2.rout': comp2: rout must be an input variable",
+            self.assertEqual(": Can't connect 'comp1.rout' to 'comp2.rout': comp2: rout must be an input variable",
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(": can't connect 'comp1.r' to 'comp2.rout': comp1: r must be an output variable",
+            self.assertEqual(": Can't connect 'comp1.r' to 'comp2.rout': comp1: r must be an output variable",
                              str(err))
         else:
             self.fail('RuntimeError expected')
@@ -425,7 +425,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp1.r')
         except Exception, err:
-            self.assertEqual(": Cannot connect 'comp1.rout' to 'comp1.r'. Both refer to the same component.",
+            self.assertEqual(": Can't connect 'comp1.rout' to 'comp1.r': 'comp1.rout' and 'comp1.r' refer to the same component.",
                              str(err))
         else:
             self.fail('exception expected')
@@ -433,11 +433,11 @@ class AssemblyTestCase(unittest.TestCase):
     def test_metadata_link(self):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
-        except AttributeError, err:
+        except Exception, err:
             self.assertEqual(str(err), 
-                    ": Can't find 'comp1.rout.units'")
+                    ": Can't connect 'comp1.rout.units' to 'comp2.s': : Can't find 'comp1.rout.units'")
         else:
-            self.fail('NameError expected')
+            self.fail('Exception expected')
             
     def test_get_metadata(self):
         units = self.asm.comp1.get_metadata('rout', 'units')
@@ -491,6 +491,10 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(comp2.r, 9.0)
         
+        self.asm.disconnect('comp2.r')
+        self.asm.connect('3.0*comp1.rout', 'comp2.r')
+        self.asm.disconnect('3.0*comp1.rout', 'comp2.r')
+        
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
         asm.add('nested', Assembly())
@@ -533,7 +537,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             asm.nested.connect('comp2.d', 'c')
         except RuntimeError, err:
-            self.assertEqual(str(err), "nested: 'c' is already connected to source 'comp1.c'")
+            self.assertEqual(str(err), "nested: Can't connect 'comp2.d' to 'c': nested: 'c' is already connected to source 'comp1.c'")
         else:
             self.fail('RuntimeError expected')
         

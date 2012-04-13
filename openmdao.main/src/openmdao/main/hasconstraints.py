@@ -159,8 +159,8 @@ class _HasConstraintsBase(object):
         """
         names = set()
         for constraint in self._constraints.values():
-            names.update(constraint.lhs.get_referenced_varpaths())
-            names.update(constraint.rhs.get_referenced_varpaths())
+            names.update(constraint.lhs.get_referenced_varpaths(copy=False))
+            names.update(constraint.rhs.get_referenced_varpaths(copy=False))
         return names
     
     
