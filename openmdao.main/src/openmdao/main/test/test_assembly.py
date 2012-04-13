@@ -491,6 +491,10 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(comp2.r, 9.0)
         
+        self.asm.disconnect('comp2.r')
+        self.asm.connect('3.0*comp1.rout', 'comp2.r')
+        self.asm.disconnect('3.0*comp1.rout', 'comp2.r')
+        
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
         asm.add('nested', Assembly())

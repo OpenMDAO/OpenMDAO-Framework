@@ -318,7 +318,7 @@ class ChainRule(HasTraits):
                 target_unit = [x[1] for x in metadata if x[0]==dest_txt]
 
                 expr_deriv[src] = expr_deriv[src] * \
-                    convert_units(1.0, source_unit[0], target_unit[0])
+                              convert_units(1.0, source_unit[0], target_unit[0])
 
             if dest in local_derivs:    
                 local_derivs[dest] += upscope_derivs[upscope_src]*expr_deriv[src]

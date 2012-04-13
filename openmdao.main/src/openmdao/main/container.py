@@ -300,13 +300,13 @@ class Container(SafeHasTraits):
                     if not self.contains(srcvar):
                         self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
                         
-            childdest = 'parent.'+destpath
             srccomps = srcexpr.get_referenced_compnames()
             if srccomps:
                 cname = srccomps.pop()
                 if cname != 'parent':
                     child = getattr(self, cname)
                     if is_instance(child, Container):
+                        childdest = 'parent.'+destpath
                         restofpath = srcexpr.scope_transform(self, child, parent=self)
                         child.connect(restofpath, childdest)
                         child_connections.append((child, restofpath, childdest)) 
@@ -328,16 +328,20 @@ class Container(SafeHasTraits):
         """
         cname = cname2 = None
         destvar = destpath.split('[',1)[0]
-        if not srcpath.startswith('parent.'):
-            srcvar = srcpath.split('[',1)[0]
+        srcexpr = ExprEvaluator(srcpath, self)
+        if not srcexpr.refs_parent():
+            srcvar = srcexpr.get_referenced_varpaths().pop()
             if not self.contains(srcvar):
                 self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
-            cname, _, restofpath = srcpath.partition('.')
-            if restofpath:
-                child = getattr(self, cname)
-                if is_instance(child, Container):
-                    childdest = 'parent.'+destpath
-                    child.disconnect(restofpath, childdest)
+            srccomps = srcexpr.get_referenced_compnames()
+            if srccomps:
+                cname = srccomps.pop()
+                if cname != 'parent':
+                    child = getattr(self, cname)
+                    if is_instance(child, Container):
+                        childdest = 'parent.'+destpath
+                        restofpath = srcexpr.scope_transform(self, child, parent=self)
+                        child.disconnect(restofpath, childdest)
         if not destpath.startswith('parent.'):
             if not self.contains(destvar):
                 self.raise_exception("Can't find '%s'" % destvar, AttributeError)
@@ -345,7 +349,7 @@ class Container(SafeHasTraits):
             if restofpath:
                 child = getattr(self, cname2)
                 if is_instance(child, Container):
-                    childsrc = 'parent.'+srcpath
+                    childsrc = srcexpr.scope_transform(self, child, parent=self)
                     child.disconnect(childsrc, restofpath)
         
         if cname == cname2 and cname is not None:

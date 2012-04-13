@@ -517,10 +517,11 @@ class Assembly (Component):
             to_remove = [(varpath, varpath2)]
             
         for u,v in to_remove:
-            srcexpr = self._exprmapper.get_expr(u)
-            if srcexpr:
-                for ref in srcexpr.refs(copy=False):
-                    super(Assembly, self).disconnect(ref, v)
+            #srcexpr = self._exprmapper.get_expr(u)
+            #if srcexpr:
+                #for ref in srcexpr.refs(copy=False):
+                    #super(Assembly, self).disconnect(ref, v)
+            super(Assembly, self).disconnect(u, v)
                 
         self._exprmapper.disconnect(varpath, varpath2)
             

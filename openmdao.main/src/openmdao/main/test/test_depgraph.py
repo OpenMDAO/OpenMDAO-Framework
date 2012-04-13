@@ -226,8 +226,18 @@ class DepGraphTestCase(unittest.TestCase):
         
     def test_expr(self):
         dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
-        self.assertEqual(dep.list_connections(), [('B.d','C.b')])
+        self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.b')])
         dep.disconnect('3.4*B.d+2.3', 'C.b')
+        self.assertEqual(dep.list_connections(), [])
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                                   ('3.4*B.d+2.3', 'C.a')])
+        self.assertEqual(set(dep.list_connections()), set([('3.4*B.d+2.3','C.b'),('3.4*B.d+2.3','C.a')]))
+        dep.disconnect('3.4*B.d+2.3', 'C.b')
+        self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.a')])
+        
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                                   ('3.4*B.d+2.3', 'C.a')])
+        dep.disconnect('3.4*B.d+2.3')
         self.assertEqual(dep.list_connections(), [])
         
     def test_dump(self):
