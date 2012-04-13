@@ -299,7 +299,7 @@ openmdao.Util = {
 	            };
 	            socket.onclose = function (e) {
 	                debug.info('websocket closed',socket,e);
-	                if (!e.wasClean && retry == true) {
+	                if (retry == true) {
 	                	connect_after_delay();
 	                };                
 	            };

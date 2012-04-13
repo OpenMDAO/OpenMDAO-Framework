@@ -1,33 +1,33 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
+openmdao.StructurePane = function(elm,model,pathname,name,editable) {
     // initialize private variables
     var self = this,
         figures = {},
-        dataflowID = pathname.replace(/\./g,'-')+"-dataflow",
-        dataflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
-        dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">').appendTo(elm),
-        dataflow = new draw2d.Workflow(dataflowID);
+        structureID = pathname.replace(/\./g,'-')+"-structure",
+        structureCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
+        structureDiv = jQuery('<div id='+structureID+' style="'+structureCSS+'">').appendTo(elm),
+        structure = new draw2d.Workflow(structureID);
         
     self.pathname = pathname;
     
-    dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
+    structure.setBackgroundImage( "/static/images/grid_10.png", true);
         
-    // make the dataflow pane droppable
-    dataflowDiv.droppable ({
+    // make the structure pane droppable
+    structureDiv.droppable ({
         accept: '.objtype',
         drop: function(ev,ui) { 
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("path"),
-                off = dataflowDiv.parent().offset(),
+                off = structureDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top);
-            var elem = dataflowDiv[0];
+            var elem = structureDiv[0];
             var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");            
-            debug.info(droppedName,'(path=',droppedPath,') dropped on dataflow:',self.pathname,'z-index',dataflowDiv.css('z-index'),'zIndex',dataflowDiv.css('zIndex'));
+            debug.info(droppedName,'(path=',droppedPath,') dropped on structure:',self.pathname,'z-index',structureDiv.css('z-index'),'zIndex',structureDiv.css('zIndex'));
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname)
@@ -36,7 +36,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
         }
     });
     
-    /** update dataflow by recreating figures from JSON dataflow data
+    /** update structure by recreating figures from JSON structure data
      *  TODO: prob just want to iterate through & update existing figures
      */
     function updateFigures(json) {
@@ -47,10 +47,10 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 
             if (!fig) {
                 if (self.pathname) {
-                    var fig = new openmdao.DataflowComponentFigure(model,self.pathname+'.'+name,type);
+                    var fig = new openmdao.StructureComponentFigure(model,self.pathname+'.'+name,type);
                 }
                 else {
-                    var fig = new openmdao.DataflowComponentFigure(model,name,type);
+                    var fig = new openmdao.StructureComponentFigure(model,name,type);
                 }
                 fig.setTitle(name);
                 figures[name] = fig;
@@ -61,7 +61,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
             var count = Object.keys(figures).length,
                 x = (count-1)*(fig.getWidth()+20)  + 20,
                 y = (count-1)*(fig.getHeight()+20) + 20;
-            dataflow.addFigure(fig,x,y);
+            structure.addFigure(fig,x,y);
         })
         
         jQuery.each(json['connections'],function(idx,conn) {
@@ -79,7 +79,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 c.onDoubleClick = function() {
                     new openmdao.DataConnectionEditor(model,self.pathname,src_name,dst_name);
                 };
-                dataflow.addFigure(c);
+                structure.addFigure(c);
             }
         })
         
@@ -104,7 +104,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
         // unconnected components are layed out in rows
         var row = 0,
             row_start = 0,
-            max_width = dataflow.getWidth();
+            max_width = structure.getWidth();
         
         jQuery.each(unconnected,function(idx,fig) {
             x = (idx-row_start)*(fig.getWidth()+20) + 20;
@@ -127,9 +127,9 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
         });
     };
 
-    /** update dataflow diagram */
+    /** update structure diagram */
     this.loadData = function(json) {
-        dataflow.clear()
+        structure.clear()
         if (Object.keys(json).length > 0) {
             updateFigures(json,false)
         }

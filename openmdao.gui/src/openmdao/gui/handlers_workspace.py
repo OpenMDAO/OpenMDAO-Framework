@@ -45,7 +45,14 @@ class AddOnsHandler(BaseHandler):
         form = AddonForm()
         self.render('workspace/addons.html', 
                      addons_url=self.addons_url, addon_form=form)
-        
+    
+class BaseHandler(BaseHandler):
+    ''' just renders the base template
+    '''
+    @web.authenticated
+    def get(self):
+        self.render('workspace/base.html')
+
 class GeometryHandler(BaseHandler):
     @web.authenticated
     def get(self):
@@ -372,13 +379,13 @@ class TestHandler(BaseHandler):
 
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
+    web.url(r'/workspace/addons/?',         AddOnsHandler),
+    web.url(r'/workspace/base/?',           BaseHandler),
+    web.url(r'/workspace/close/?',          CloseHandler),
+    web.url(r'/workspace/command',          CommandHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
-    web.url(r'/workspace/addons/?',         AddOnsHandler),
-    web.url(r'/workspace/close/?',          CloseHandler),
-    web.url(r'/workspace/command',          CommandHandler),
-    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
     web.url(r'/workspace/files/?',          FilesHandler),
@@ -388,9 +395,11 @@ handlers = [
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
+    
     web.url(r'/workspace/test/?',           TestHandler),
 ]
 

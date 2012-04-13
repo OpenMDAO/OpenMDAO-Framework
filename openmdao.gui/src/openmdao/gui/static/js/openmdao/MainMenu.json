@@ -32,8 +32,8 @@
     },
     { "text": "Help", 
       "items": [
-        { "text": "Documentation", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs',800,600);"}
+        { "text": "Documentation", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','',768,1024);"}
       ]
     },
-    { "text": "About",             "onclick": "openmdao.Util.popupWindow('http://openmdao.org/',800,600);"}
+    { "text": "About",             "onclick": "openmdao.Util.popupWindow('http://openmdao.org/','',768,1024);"}
 ]
