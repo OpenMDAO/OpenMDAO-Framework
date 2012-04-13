@@ -93,7 +93,8 @@
 
 </head>
 
-<body id="{% block body_id %}{% end %}" bgcolor="Grey">
+
+<body id="{% block body_id %}{% end %}" bgcolor="Grey" {% if 'onload' in globals() %} onload={% raw onload %}  {% end %} >
 
     {% block body %}
     {% end %}

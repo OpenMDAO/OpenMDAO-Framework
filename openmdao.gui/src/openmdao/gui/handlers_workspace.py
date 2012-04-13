@@ -47,11 +47,30 @@ class AddOnsHandler(BaseHandler):
                      addons_url=self.addons_url, addon_form=form)
     
 class BaseHandler(BaseHandler):
-    ''' just renders the base template
+    ''' render the base template
     '''
     @web.authenticated
+    def post(self):
+        ''' render the base template with the posted content
+        '''
+        attributes = {}
+        for field in ['onload']:
+            if field in self.request.arguments.keys():
+                attributes[field]=self.request.arguments[field][0]                
+            else:
+                attributes[field]=False
+        self.render('workspace/base.html', **attributes)
+                     
+    @web.authenticated
     def get(self):
-        self.render('workspace/base.html')
+        attributes = {}
+        print 'self.request.arguments:',self.request.arguments
+        for field in ['onload']:
+            if field in self.request.arguments.keys():
+                attributes[field]=self.request.arguments[field][0]                
+            else:
+                attributes[field]=False
+        self.render('workspace/base.html', **attributes)
 
 class GeometryHandler(BaseHandler):
     @web.authenticated
