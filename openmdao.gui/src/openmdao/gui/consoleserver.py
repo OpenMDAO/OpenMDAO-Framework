@@ -173,20 +173,9 @@ class ConsoleServer(cmd.Cmd):
         ''' execfile in server's globals. 
         '''
         try:
-            # first import all definitions
-            basename = os.path.splitext(filename)[0]
-            cmd = 'from '+basename+' import *'
-            self.default(cmd)
-            # then execute anything after "if __name__ == __main__:"
-            with open(filename) as file:
-                contents = file.read()
-            main_str = 'if __name__ == "__main__":'
-            contents.replace("if __name__ == '__main__':'",main_str)
-            idx = contents.find(main_str)
-            if idx >= 0:
-                idx = idx + len(main_str)
-                contents = 'if True:\n' + contents[idx:]
-                self.default(contents)
+            self.proj.__dict__['__name__'] = '__main__'
+            execfile(filename,self.proj.__dict__)
+            del self.proj.__dict__['__name__']
         except Exception, err:
             self._error(err,sys.exc_info())
 

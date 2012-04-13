@@ -16,6 +16,9 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         sck = null
 
     // create context menu for history    
+    contextMenu.append(jQuery('<li>Trace</li>').click(function(ev) {
+        model.issueCommand('trace');
+    }));
     contextMenu.append(jQuery('<li>Clear</li>').click(function(ev) {
         history.html('');
     }));
