@@ -5,14 +5,34 @@
 {% end %}
 
 {% block content %}
+    <h1>Welcome to OpenMDAO ver. {{version}}</h1>
     <h2>Your OpenMDAO Projects:</h2>
 
     {% if project_list %}
-        <ul>
+        <table>
+        <tr>
+        <td  width="20" style="padding-right: 6px;"></td>
+        <td style="padding-right: 6px;">Project Name</td>
+        <td style="padding-right: 6px;">Version</td>
+        <td style="padding-right: 6px;">Description</td>
+        <td style="padding-right: 6px;">Last Modified</td>
+        </tr>
         {% for project in project_list %}
-            <li><a href="/projects/{{ project['id'] }}/">{{ project['projectname'] }}</a></li>
+            <tr><td width="20" style="padding-right: 6px;">
+            <form action="/projects/{{ project['id'] }}" method="GET">
+                <input type="submit" value="Edit" style="font-size: 8px"/>
+            </form>
+            </td><td style="padding-right: 6px;">
+            <a href="/workspace/project?filename={{ project['filename'] }}">{{ project['projectname'] }}</a>
+            </td><td style="padding-right: 6px;">
+            {{ project['version'] }}
+            </td><td style="padding-right: 6px;">
+            {{ project['description'] }}
+            </td><td style="padding-right: 6px;">
+            {{ project['modified'] }}
+            </td></tr>
         {% end %}
-        </ul>
+        </table>
     {% else %}
         <p>No projects are available.</p>
     {% end %}

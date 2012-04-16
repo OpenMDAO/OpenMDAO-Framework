@@ -6,6 +6,7 @@ from urllib2 import HTTPError
 # tornado
 from tornado import web
 
+from openmdao.main import __version__
 from openmdao.gui.handlers import BaseHandler
 from openmdao.gui.projectdb import Projects
 
@@ -19,7 +20,8 @@ class IndexHandler(BaseHandler):
         pdb = Projects()
         project_list = pdb.list_projects()
         self.render('projdb/project_list.html', 
-                     project_list=project_list)
+                     project_list=project_list,
+                     version=__version__)
 
 class DeleteHandler(BaseHandler):
     ''' delete a project
@@ -94,16 +96,16 @@ class DetailHandler(BaseHandler):
                 filename = '%s-%s.proj' % (pname, version)
             else:
                 filename = '%s.proj' % pname
-
-            filename = os.path.join(self.get_project_dir(), filename)
+            filename = filename.replace(' ', '_')
             
             unique = filename
             i = 1
-            while os.path.exists(unique):
+            while os.path.exists(os.path.join(self.get_project_dir(), 
+                                              unique)):
                 unique = filename + '_' + str(i)
                 i = i+1
                 
-            with open(unique, 'w') as out:
+            with open(os.path.join(self.get_project_dir(), unique), 'w') as out:
                 out.write('')
                 out.close()
                 
@@ -123,7 +125,8 @@ class DetailHandler(BaseHandler):
         
         pdb = Projects()
         project = pdb.get(project_id)
-        self.render('projdb/project_detail.html', project=project)
+        self.render('projdb/project_detail.html', project=project,
+        delete=True)
 
 # FIXME: returns an error even though it works
 class DownloadHandler(BaseHandler):
@@ -137,16 +140,18 @@ class DownloadHandler(BaseHandler):
         project = pdb.get(project_id)
         if project['filename']:
             filename = os.path.join(self.get_project_dir(), project['filename'])
-            print self.get_project_dir()
-            print project['filename']
+
             if os.path.exists(filename):
                 proj_file = file(filename,'rb')
                 self.set_header('content_type', 'application/octet-stream')
                 self.set_header('Content-Length', str(os.path.getsize(filename)))
-                self.set_header('Content-Disposition', 'attachment; filename=' + \
-                                 project['projectname'] + \
-                                 strftime(' %Y-%m-%d %H%M%S') + \
-                                 '.proj')
+                form_proj = project['projectname'].replace(' ', '_')
+                form_ver = project['version'].replace(' ', '_')
+                form_date = strftime('%Y-%m-%d_%H%M%S')
+                self.set_header('Content-Disposition', 
+                                'attachment; filename=%s-%s-%s.proj' % 
+                                (form_proj, form_ver, form_date))
+                
                 try:
                     self.write(proj_file.read())
                 finally:
@@ -168,14 +173,15 @@ class NewHandler(BaseHandler):
         
         project = {}
         project['id'] = pdb.predict_next_rowid()
-        project['projectname']   = 'New Project '+strftime("%Y-%m-%d %H%M%S")
+        project['projectname']   = 'New Project '+strftime("%Y-%m-%d_%H%M%S")
         project['version'] = ''
         project['description'] = ''
         project['modified'] = str(datetime.datetime.now())
         project['filename'] = ''
         project['active'] = ''
         
-        self.render('projdb/project_detail.html', project=project)
+        self.render('projdb/project_detail.html', project=project, 
+                    delete=False)
 
 class AddHandler(BaseHandler):
     ''' upload a file and add it to the project database
@@ -190,22 +196,30 @@ class AddHandler(BaseHandler):
                 
                 pdb = Projects()
                 
+                # Don't need an extension in the middle of a new name
+                if filename[-5:] == '.proj':
+                    filename = filename[:-5]
+                
+                timestring = strftime("%Y-%m-%d_%H%M%S")
+                
                 project = {}
                 project['id'] = pdb.predict_next_rowid()
-                project['projectname']   = 'Added ' + filename + strftime(" %Y-%m-%d %H%M%S")
+                project['projectname']   = 'Added_%s_%s' % (filename, 
+                                                            timestring)
                 project['version'] = ''
                 project['description'] = ''
                 project['modified'] = str(datetime.datetime.now())
                 project['active'] = 1
 
-                filename = os.path.join(self.get_project_dir(), filename)
                 unique = filename
                 i = 1
-                while os.path.exists(unique):
+                while os.path.exists(os.path.join(self.get_project_dir(), \
+                                                  unique)):
                     unique = filename + '_' + str(i)
                     i = i+1
                     
-                with open(unique, 'w') as out:
+                with open(os.path.join(self.get_project_dir(), 
+                                       unique), 'w') as out:
                     out.write(sourcefile['body'])
                     out.close()
                     
