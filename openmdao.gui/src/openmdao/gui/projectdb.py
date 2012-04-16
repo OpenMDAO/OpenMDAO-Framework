@@ -57,6 +57,33 @@ class Projects(object):
             if con:
                 con.close()
 
+    def new(self, data):
+        ''' Insert a new row into the project database.
+        
+        data: dict
+            Dictionary containing all fields for the new entry.
+        '''
+        
+        data['modified'] = str(datetime.datetime.now())
+        
+        con = self._get_connection()
+        cur = con.cursor()
+        sql = '''INSERT INTO projects
+                 (projectname,version,description,modified,filename,active)
+                 VALUES ("%s","%s","%s","%s","%s",%d)
+              ''' % (data['projectname'], 
+                     data['version'], 
+                     data['description'], 
+                     data['modified'], 
+                     data['filename'],
+                     data['active'])
+
+        cur.execute(sql)
+        project_id = cur.lastrowid
+        con.commit()
+        cur.close()
+        return project_id
+
     def get(self, project_id):
         ''' Get a dictionary containing the fields for a project id.
         
@@ -94,32 +121,43 @@ class Projects(object):
         else:
             return matched_projects[0]
 
-    def new(self, data):
-        ''' Insert a new row into the project database.
+    def get_by_filename(self, filename):
+        ''' Get a dictionary containing the fields that belong to
+        a project with a specific filename.
         
-        data: dict
-            Dictionary containing all fields for the new entry.
+        filename: str (valid path)
+            filename for requested project
         '''
         
-        data['modified'] = str(datetime.datetime.now())
-        
         con = self._get_connection()
-        cur = con.cursor()
-        sql = '''INSERT INTO projects
-                 (projectname,version,description,modified,filename,active)
-                 VALUES ("%s","%s","%s","%s","%s",%d)
-              ''' % (data['projectname'], 
-                     data['version'], 
-                     data['description'], 
-                     data['modified'], 
-                     data['filename'],
-                     data['active'])
+        con.row_factory = sqlite3.Row
+        cur = con.cursor()  
+        sql = 'SELECT * from projects WHERE filename=?'
 
-        cur.execute(sql)
-        project_id = cur.lastrowid
-        con.commit()
+        cur.execute(sql, (filename,))
+        matched_projects = []
+        for row in cur:
+            matched_projects.append({
+                'id': row['id'],
+                'projectname': row['projectname'],
+                'version':     row['version'],
+                'description': row['description'],
+                'modified':    row['modified'],
+                'filename':    row['filename'],
+                'active':      row['active']
+            })
+            
         cur.close()
-        return project_id
+        
+        if len(matched_projects) < 1:
+            print "Error project ID not found:", id
+            
+        # This should never happen!
+        elif len(matched_projects) > 1:
+            print "Error: Non-unique project ID:"
+            print_dict(matched_projects)
+        else:
+            return matched_projects[0]
 
     def predict_next_rowid(self):
         ''' Predict what the next auto-inserted rowid will be.
@@ -186,6 +224,17 @@ class Projects(object):
         cur.execute(sql, ([value, int(project_id)]))
         con.commit()
         cur.close()
+        
+    def modified(self, project_id):
+        ''' Update time-stamp for project_id, setting 'modified' to the
+        current time/date.
+        
+        project_id: int
+            unique id for requested project.
+        '''
+        
+        modified = str(datetime.datetime.now())
+        self.set(project_id, 'modified', modified)
         
     def remove(self, project_id):
         ''' Remove a project from the database

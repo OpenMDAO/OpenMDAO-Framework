@@ -11,6 +11,7 @@ from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import *
 from openmdao.gui.handlers import BaseHandler
+from openmdao.gui.projectdb import Projects
 
 
 #class AddonForm(forms.Form):
@@ -258,6 +259,13 @@ class ProjectHandler(BaseHandler):
     def post(self):
         cserver = self.get_server()
         cserver.save_project()
+
+        filename = self.get_secure_cookie('filename')
+        if filename:
+            pdb = Projects()
+            project = pdb.get_by_filename(filename)
+            pdb.modified(project['id'])
+            
         self.write('Saved.')
         
     @web.authenticated
