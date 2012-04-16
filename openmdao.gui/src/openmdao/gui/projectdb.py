@@ -1,6 +1,9 @@
+''' The Projects object provides a basic interface for interacting with the
+project database used by the GUI. '''
+
 import sqlite3
 import os.path
-import getpass
+import datetime
 
 from openmdao.gui.util import ensure_dir, print_dict
 
@@ -24,11 +27,13 @@ class Projects(object):
         return self._connection
 
     def exists(self):
+        ''' Does the database exist? '''
+        
         return os.path.exists(self._pathname)
         
     def create(self):
-        ''' Create a new database for the GUI user. '''
-        print "in create"
+        ''' Create a new clean database for the GUI user. '''
+
         try:
             con = self._get_connection()
             cur = con.cursor()  
@@ -52,13 +57,17 @@ class Projects(object):
             if con:
                 con.close()
 
-    def get(self, id):
-        ''' Get a dictionary containing the fields for project id'''
+    def get(self, project_id):
+        ''' Get a dictionary containing the fields for a project id.
+        
+        project_id: int
+            unique id for requested project.
+        '''
         
         con = self._get_connection()
         con.row_factory = sqlite3.Row
         cur = con.cursor()  
-        sql = 'SELECT * from projects WHERE id=%d' % int(id)
+        sql = 'SELECT * from projects WHERE id=%d' % int(project_id)
 
         cur.execute(sql)
         matched_projects = []
@@ -86,7 +95,13 @@ class Projects(object):
             return matched_projects[0]
 
     def new(self, data):
-        ''' Create a new row in the project database.'''
+        ''' Insert a new row into the project database.
+        
+        data: dict
+            Dictionary containing all fields for the new entry.
+        '''
+        
+        data['modified'] = str(datetime.datetime.now())
         
         con = self._get_connection()
         cur = con.cursor()
@@ -101,13 +116,15 @@ class Projects(object):
                      data['active'])
 
         cur.execute(sql)
-        id = cur.lastrowid
+        project_id = cur.lastrowid
         con.commit()
         cur.close()
-        return id
+        return project_id
 
     def predict_next_rowid(self):
-        ''' Predict what the next auto-inserted rowid will be'''
+        ''' Predict what the next auto-inserted rowid will be.
+        This is here because the GUI handlers need to know the
+        project_id even before the row is inserted.'''
         
         con = self._get_connection()
         con.row_factory = sqlite3.Row
@@ -115,15 +132,15 @@ class Projects(object):
         sql = "SELECT * FROM SQLITE_SEQUENCE WHERE name='projects'"
         cur.execute(sql)
         row = cur.fetchone()
-        if 'seq' in row.keys():
+        try:
             next_id = row['seq'] + 1
-        else:
+        except TypeError:
             next_id = 1
         cur.close()
         return next_id
         
-    def for_user(self):
-        ''' Return a list of dictionaries for all projects owned by a
+    def list_projects(self):
+        ''' Return a list of dictionaries for all projects owned by the
         user. Each dictionary contains all fields for that project id.'''
         
         con = self._get_connection()
@@ -150,7 +167,17 @@ class Projects(object):
     
     
     def set(self, project_id, field, value):
-        ''' Set a single field in the project db'''
+        ''' Set a single field in the project db
+        
+        project_id: int
+            unique id for requested project.
+            
+        field: str
+            Name of field to set
+            
+        value: various
+            Value of field to set
+        '''
 
         con = self._get_connection()
         cur = con.cursor()
@@ -161,7 +188,11 @@ class Projects(object):
         cur.close()
         
     def remove(self, project_id):
-        ''' Remove a project from the database'''
+        ''' Remove a project from the database
+        
+        project_id: int
+            unique id for requested project.
+        '''
         
         con = self._get_connection()
         cur = con.cursor()
@@ -173,26 +204,5 @@ class Projects(object):
         
         
 if __name__ == "__main__":
-    projects = Projects()
-    projects.predict_next_rowid()
-    if not projects.exists():
-        print "creating new projects database..."
-        #projects.create()
-    else:
-        print "Project #1"
-        print "=========="
-        print_dict(projects.get(1))
-        
-        print "Projects for User: 1"
-        print "===================="
-        #username = getpass.getuser()
-        user_projects = projects.for_user()
-        for project in user_projects:  
-            print project
-            
-        print "New Project"
-        print "==========="
-        import datetime
-        datestr = str(datetime.datetime.now())
-        print datestr 
-        projects.new(1,"test new proj","version 1","new description",datestr,"filename",1)
+    
+    pass

@@ -32,6 +32,10 @@
     <p>
     
     {% if project['filename'] %}
+    <p>
+    <b>Project Filename: </b> {{ project['filename'] }}
+    <p>
+    
     <form action="/workspace/project/" method="GET">
         <input type="hidden" name="filename" value="{{ project['filename'] }}" />
         <input type="submit" value="Load this project into Workspace" />

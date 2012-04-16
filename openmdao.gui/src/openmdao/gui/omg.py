@@ -8,7 +8,6 @@ for WebSockets is required.
 """
 
 import os, sys
-import os.path
 import time
 
 from argparse import ArgumentParser
@@ -107,8 +106,8 @@ class AppServer(object):
                 print "Deleting existing project database..."
                 os.remove(database)
                 
-            project = Projects(database)
-            project.create()
+            pdb = Projects(database)
+            pdb.create()
         
         if (options.port < 1):
             options.port = get_unused_ip_port()

@@ -1,7 +1,7 @@
 import os, sys
-import os.path
 from time import strftime
 import datetime
+from urllib2 import HTTPError
 
 # tornado
 from tornado import web
@@ -16,9 +16,8 @@ class IndexHandler(BaseHandler):
     @web.authenticated
     def get(self):
             
-        projects = Projects()
-        project_list = projects.for_user()
-        print project_list
+        pdb = Projects()
+        project_list = pdb.list_projects()
         self.render('projdb/project_list.html', 
                      project_list=project_list)
 
@@ -28,15 +27,16 @@ class DeleteHandler(BaseHandler):
     @web.authenticated
     def post(self, project_id):
 
-        projects = Projects()
-        pfields = projects.get(project_id)
+        pdb = Projects()
+        project = pdb.get(project_id)
         
-        if pfields['filename']:
+        if project['filename']:
             filename = os.path.join(self.get_project_dir(), 
-                                    str(pfields['filename']))
+                                    str(project['filename']))
             if os.path.exists(filename):
                 os.remove(filename)
-        projects.remove(project_id)
+                
+        pdb.remove(project_id)
         self.redirect('/')
 
     @web.authenticated
@@ -46,85 +46,84 @@ class DeleteHandler(BaseHandler):
 class DetailHandler(BaseHandler):
     ''' get/set project details
     '''
+    
     @web.authenticated
     def post(self, project_id):
 
-        form_data = {}
+        forms = {}
         for field in ['projectname', 'description', 'version']:
             if field in self.request.arguments.keys():
-                form_data[field] = self.request.arguments[field][0]
+                forms[field] = self.request.arguments[field][0]
                 
-        project = Projects()
+        pdb = Projects()
         
         # Existing project.
-        if int(project_id) != project.predict_next_rowid():
-            project_fields = project.get(project_id)
+        if int(project_id) != pdb.predict_next_rowid():
+            project = pdb.get(project_id)
             project_is_new = False
         # New project
         else:
-            project_fields = {}
-            project_fields['active'] = 0
-            project_fields['filename'] = None
+            project = {}
+            project['active'] = 0
+            project['filename'] = None
             project_is_new = True
         
-        # TODO: better error handling
-        if 'projectname' in form_data:
+        if 'projectname' not in forms or \
+           len(forms['projectname']) == 0:
+            project['projectname'] = "Unnamed Project"
+        else:
+            project['projectname'] = forms['projectname'].strip()
             
-            if len(form_data['projectname']) == 0:
-                print 'ERROR: Project Name is Required'  
-                self.redirect(self.request.uri)
-                return
+        if 'description' in forms:
+            project['description'] = forms['description'].strip()
+        else:
+            project['description'] =  ''
             
-            project_fields['projectname'] = \
-                form_data['projectname'].strip()
-            
-        if 'description' in form_data:
-            project_fields['description'] = \
-                form_data['description'].strip()
-            
-        if 'version' in form_data:
-            project_fields['version'] = \
-                form_data['version'].strip()
+        if 'version' in forms:
+            project['version'] = forms['version'].strip()
+        else:
+            project['version'] =  ''
         
         # if there's no proj file yet, create en empty one
-        if not project_fields['filename']:
+        if not project['filename']:
             
-            version = project_fields['version']
-            pname = project_fields['projectname']
+            version = project['version']
+            pname = project['projectname']
             
             if len(version):
                 filename = '%s-%s.proj' % (pname, version)
             else:
                 filename = '%s.proj' % pname
 
-            dir = self.get_project_dir()
+            filename = os.path.join(self.get_project_dir(), filename)
+            
+            unique = filename
             i = 1
-            while os.path.exists(os.path.join(dir, filename)):
-                filename = filename + str(i)
+            while os.path.exists(unique):
+                unique = filename + '_' + str(i)
                 i = i+1
                 
-            with open(filename, 'w') as out:
+            with open(unique, 'w') as out:
                 out.write('')
                 out.close()
-            
-            print 'created file:', pname, filename
+                
+            project['filename'] = unique
+            print 'created file:', pname, unique
 
-        project_fields['modified'] = str(datetime.datetime.now())
-        
         if project_is_new:
-            project.new(project_fields)
+            pdb.new(project)
         else:
-            for key, value in project_fields.iteritems():
-                project.set(project_id, key, value)
-
+            for key, value in project.iteritems():
+                pdb.set(project_id, key, value)
+        
         self.redirect(self.request.uri)
 
     @web.authenticated
     def get(self, project_id):
         
-        project = Projects()
-        project_fields = project.get(project_id)
-        self.render('projdb/project_detail.html', project=project_fields)
+        pdb = Projects()
+        project = pdb.get(project_id)
+        self.render('projdb/project_detail.html', project=project)
 
 # FIXME: returns an error even though it works
 class DownloadHandler(BaseHandler):
@@ -132,24 +131,32 @@ class DownloadHandler(BaseHandler):
     '''
     @web.authenticated
     def get(self, project_id):
-        pass
-        #p = get_object_or_404(Project, pk=project_id)
-        #if p.filename:
-            #filename = os.path.join(self.get_project_dir(),str(p.filename))
-            #if os.path.exists(filename):
-                #proj_file = file(filename,'rb')
-                #from django.core.servers.basehttp import FileWrapper
-                #self.set_header('content_type','application/octet-stream')
-                #self.set_header('Content-Length',str(os.path.getsize(filename)))
-                #self.set_header('Content-Disposition','attachment; filename='+p.projectname+strftime(' %Y-%m-%d %H%M%S')+'.proj')
-                #try:
-                    #self.write(proj_file.read())
-                #finally:
-                    #proj_file.close()
-            #else:
-                #raise HTTPError(403, "%s is not a file", filename)
-        #else:
-            #raise HTTPError(403, "no file found for %s", p.projectname)
+        ''' Browser download of a project file '''
+        
+        pdb = Projects()
+        project = pdb.get(project_id)
+        if project['filename']:
+            filename = os.path.join(self.get_project_dir(), project['filename'])
+            print self.get_project_dir()
+            print project['filename']
+            if os.path.exists(filename):
+                proj_file = file(filename,'rb')
+                self.set_header('content_type', 'application/octet-stream')
+                self.set_header('Content-Length', str(os.path.getsize(filename)))
+                self.set_header('Content-Disposition', 'attachment; filename=' + \
+                                 project['projectname'] + \
+                                 strftime(' %Y-%m-%d %H%M%S') + \
+                                 '.proj')
+                try:
+                    self.write(proj_file.read())
+                finally:
+                    proj_file.close()
+            else:
+                raise HTTPError(filename, 403, "%s is not a file" % filename, 
+                                None, None)
+        else:
+            raise HTTPError(filename, 403, "no file found for %s" % \
+                                            project['projectname'], None, None)
 
 class NewHandler(BaseHandler):
     ''' create a new (empty) project
@@ -157,48 +164,55 @@ class NewHandler(BaseHandler):
     @web.authenticated
     def get(self):
         
-        project = Projects()
+        pdb = Projects()
         
-        p = {}
-        p['id'] = project.predict_next_rowid()
-        p['projectname']   = 'New Project '+strftime("%Y-%m-%d %H%M%S")
-        p['version'] = ''
-        p['description'] = ''
-        p['modified'] = str(datetime.datetime.now())
-        p['filename'] = ''
-        p['active'] = ''
+        project = {}
+        project['id'] = pdb.predict_next_rowid()
+        project['projectname']   = 'New Project '+strftime("%Y-%m-%d %H%M%S")
+        project['version'] = ''
+        project['description'] = ''
+        project['modified'] = str(datetime.datetime.now())
+        project['filename'] = ''
+        project['active'] = ''
         
-        self.render('projdb/project_detail.html', project=p)
+        self.render('projdb/project_detail.html', project=project)
 
 class AddHandler(BaseHandler):
     ''' upload a file and add it to the project database
     '''
     @web.authenticated
     def post(self):
-        file = self.request.files['myfile'][0]
         
-        if file:
-            filename = file['filename']
+        sourcefile = self.request.files['myfile'][0]
+        if sourcefile:
+            filename = sourcefile['filename']
             if len(filename) > 0:
                 
-                project = Projects()
+                pdb = Projects()
                 
-                project_fields = {}
-                project_fields['id'] = project.predict_next_rowid()
-                project_fields['projectname']   = 'Added ' + filename + strftime(" %Y-%m-%d %H%M%S")
-                project_fields['version'] = ''
-                project_fields['description'] = ''
-                project_fields['modified'] = str(datetime.datetime.now())
-                project_fields['filename'] = filename
-                project_fields['active'] = 1
+                project = {}
+                project['id'] = pdb.predict_next_rowid()
+                project['projectname']   = 'Added ' + filename + strftime(" %Y-%m-%d %H%M%S")
+                project['version'] = ''
+                project['description'] = ''
+                project['modified'] = str(datetime.datetime.now())
+                project['active'] = 1
 
-                with open(filename, 'w') as out:
-                    out.write(file['body'])
+                filename = os.path.join(self.get_project_dir(), filename)
+                unique = filename
+                i = 1
+                while os.path.exists(unique):
+                    unique = filename + '_' + str(i)
+                    i = i+1
+                    
+                with open(unique, 'w') as out:
+                    out.write(sourcefile['body'])
                     out.close()
                     
-                project.new(project_fields)
+                project['filename'] = unique
+                pdb.new(project)
                 
-                self.redirect('/projects/'+str(project_fields.id))
+                self.redirect('/projects/'+str(project['id']))
                 
         self.redirect('')
 
