@@ -71,13 +71,6 @@ openmdao.BaseFrame.prototype.popup = function (title) {
     })
 }
 
-    
-openmdao.BaseFrame.prototype.popout = function (title) {
-    debug.info('window.URL:',window.URL)
-    var load_fn = "alert('hello world!')";
-    var new_win = openmdao.Util.popupWindow('/workspace/base?onload="'+load_fn+'"',title,600,800)
-}
-
 openmdao.BaseFrame.prototype.setTitle = function (title) {
     if (title) {
         this.title = title
@@ -100,4 +93,18 @@ openmdao.BaseFrame.prototype.close = function () {
         this.elm.dialog('destroy')
         this.elm.remove(); 
     }
+}
+
+openmdao.BaseFrame.prototype.popout = function (title) {
+    debug.info('BaseFrame.popout()',this)
+    var init_fn = "jQuery(function(){opener.openmdao.PopoutFrame()})";
+    var new_win = openmdao.Util.popupWindow("/workspace/base?head_script='"+init_fn+"'",title,600,800)
+    debug.info('new_win',new_win)
+}
+
+openmdao.PopoutFrame = function() {
+    //jQuery('body').append('<div></div>');
+    debug.info('divs',jQuery('div'));
+    debug.info('opener',opener);
+    debug.info('window',window);
 }

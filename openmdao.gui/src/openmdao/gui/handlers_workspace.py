@@ -1,4 +1,5 @@
 import sys, os, traceback
+import re
 import time
 import jsonpickle
 
@@ -54,7 +55,7 @@ class BaseHandler(BaseHandler):
         ''' render the base template with the posted content
         '''
         attributes = {}
-        for field in ['onload']:
+        for field in ['head']:
             if field in self.request.arguments.keys():
                 attributes[field]=self.request.arguments[field][0]                
             else:
@@ -65,9 +66,12 @@ class BaseHandler(BaseHandler):
     def get(self):
         attributes = {}
         print 'self.request.arguments:',self.request.arguments
-        for field in ['onload']:
+        for field in ['head_script']:
             if field in self.request.arguments.keys():
-                attributes[field]=self.request.arguments[field][0]                
+                s = self.request.arguments[field][0]
+                s = re.sub(r'^"|"$', '', s)  # strip leading/trailing quotes
+                s = re.sub(r"^'|'$", "", s)  # strip leading/trailing quotes
+                attributes[field]=s                
             else:
                 attributes[field]=False
         self.render('workspace/base.html', **attributes)

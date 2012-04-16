@@ -89,12 +89,13 @@
     <script src="/static/js/openmdao/ContextMenuConnection.js"   type="text/javascript"></script>
 
     {% block head %}
+    {% if 'head_script' in globals() %} <script> {% raw head_script %} </script>  {% end %}
     {% end %}
 
 </head>
 
 
-<body id="{% block body_id %}{% end %}" bgcolor="Grey" {% if 'onload' in globals() %} onload={% raw onload %}  {% end %} >
+<body id="body" bgcolor="Grey">
 
     {% block body %}
     {% end %}
