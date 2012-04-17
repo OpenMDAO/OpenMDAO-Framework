@@ -9,8 +9,8 @@ from tornado import web
 from openmdao.main import __version__
 from openmdao.gui.handlers import BaseHandler
 from openmdao.gui.projectdb import Projects
+from openmdao.util.fileutil import clean_filename
 
-    
 class IndexHandler(BaseHandler):
     ''' get project list
     '''
@@ -93,16 +93,16 @@ class DetailHandler(BaseHandler):
             pname = project['projectname']
             
             if len(version):
-                filename = '%s-%s.proj' % (pname, version)
+                filename = '%s-%s' % (pname, version)
             else:
-                filename = '%s.proj' % pname
-            filename = filename.replace(' ', '_')
+                filename = '%s' % pname
+            filename = clean_filename(filename)
             
-            unique = filename
+            unique = '%s.proj' % filename
             i = 1
-            while os.path.exists(os.path.join(self.get_project_dir(), 
+            while os.path.exists(os.path.join(self.get_project_dir(), \
                                               unique)):
-                unique = filename + '_' + str(i)
+                unique = '%s_%s.proj' % (filename, str(i))
                 i = i+1
                 
             with open(os.path.join(self.get_project_dir(), unique), 'w') as out:
@@ -117,6 +117,7 @@ class DetailHandler(BaseHandler):
         else:
             for key, value in project.iteritems():
                 pdb.set(project_id, key, value)
+            pdb.modified(project_id)
         
         self.redirect(self.request.uri)
 
@@ -145,8 +146,8 @@ class DownloadHandler(BaseHandler):
                 proj_file = file(filename,'rb')
                 self.set_header('content_type', 'application/octet-stream')
                 self.set_header('Content-Length', str(os.path.getsize(filename)))
-                form_proj = project['projectname'].replace(' ', '_')
-                form_ver = project['version'].replace(' ', '_')
+                form_proj = clean_filename(project['projectname'])
+                form_ver = clean_filename(project['version'])
                 form_date = strftime('%Y-%m-%d_%H%M%S')
                 self.set_header('Content-Disposition', 
                                 'attachment; filename=%s-%s-%s.proj' % 
@@ -176,7 +177,8 @@ class NewHandler(BaseHandler):
         project['projectname']   = 'New Project '+strftime("%Y-%m-%d_%H%M%S")
         project['version'] = ''
         project['description'] = ''
-        project['modified'] = str(datetime.datetime.now())
+        project['created'] = 'New Project'
+        project['modified'] = 'New Project'
         project['filename'] = ''
         project['active'] = ''
         
@@ -196,26 +198,23 @@ class AddHandler(BaseHandler):
                 
                 pdb = Projects()
                 
-                # Don't need an extension in the middle of a new name
-                if filename[-5:] == '.proj':
-                    filename = filename[:-5]
-                
                 timestring = strftime("%Y-%m-%d_%H%M%S")
                 
                 project = {}
                 project['id'] = pdb.predict_next_rowid()
-                project['projectname']   = 'Added_%s_%s' % (filename, 
-                                                            timestring)
                 project['version'] = ''
                 project['description'] = ''
-                project['modified'] = str(datetime.datetime.now())
                 project['active'] = 1
 
-                unique = filename
+                if filename[-5:] == '.proj':
+                    filename = filename[:-5]
+                project['projectname']   = 'Added_%s' % (filename)
+                    
+                unique = '%s.proj' % filename
                 i = 1
                 while os.path.exists(os.path.join(self.get_project_dir(), \
                                                   unique)):
-                    unique = filename + '_' + str(i)
+                    unique = '%s_%s.proj' % (filename, str(i))
                     i = i+1
                     
                 with open(os.path.join(self.get_project_dir(), 

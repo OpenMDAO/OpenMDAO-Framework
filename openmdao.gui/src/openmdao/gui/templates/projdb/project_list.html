@@ -15,7 +15,8 @@
         <td style="padding-right: 6px;">Project Name</td>
         <td style="padding-right: 6px;">Version</td>
         <td style="padding-right: 6px;">Description</td>
-        <td style="padding-right: 6px;">Last Modified</td>
+        <td style="padding-right: 6px;">Project Created</td>
+        <td style="padding-right: 6px;">Last Saved</td>
         </tr>
         {% for project in project_list %}
             <tr><td width="20" style="padding-right: 6px;">
@@ -29,7 +30,9 @@
             </td><td style="padding-right: 6px;">
             {{ project['description'] }}
             </td><td style="padding-right: 6px;">
-            {{ project['modified'] }}
+            {{ project['created'][:-7] }}
+            </td><td style="padding-right: 6px;">
+            {{ project['file_modified'] }}
             </td></tr>
         {% end %}
         </table>

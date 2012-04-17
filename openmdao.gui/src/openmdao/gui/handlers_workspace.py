@@ -259,12 +259,13 @@ class ProjectHandler(BaseHandler):
     def post(self):
         cserver = self.get_server()
         cserver.save_project()
-
-        filename = self.get_secure_cookie('filename')
-        if filename:
-            pdb = Projects()
-            project = pdb.get_by_filename(filename)
-            pdb.modified(project['id'])
+        
+        # Sadly, this probably won't work because of client/server
+        #filename = self.get_secure_cookie('filename')
+        #if filename:
+        #    pdb = Projects()
+        #    project = pdb.get_by_filename(filename)
+        #    pdb.modified(project['id'])
             
         self.write('Saved.')
         

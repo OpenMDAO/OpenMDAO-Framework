@@ -3,7 +3,8 @@ project database used by the GUI. '''
 
 import sqlite3
 import os.path
-import datetime
+from datetime import datetime
+import time
 
 from openmdao.gui.util import ensure_dir, print_dict
 
@@ -20,6 +21,8 @@ class Projects(object):
         else:
             self._pathname = os.path.join(get_user_dir(), 'mdaoproj.db')
         self._connection = None
+        
+        self.time_format = "%Y-%m-%d %H:%M:%S"
             
     def _get_connection(self):
         if self._connection is None:
@@ -43,6 +46,7 @@ class Projects(object):
                     "projectname" varchar(40) NOT NULL,
                     "version" varchar(40) NOT NULL,
                     "description" varchar(200) NOT NULL,
+                    "created" datetime NOT NULL,
                     "modified" datetime NOT NULL,
                     "filename" varchar(200) NOT NULL,
                     "active" bool NOT NULL
@@ -64,16 +68,18 @@ class Projects(object):
             Dictionary containing all fields for the new entry.
         '''
         
-        data['modified'] = str(datetime.datetime.now())
+        data['created'] = str(datetime.now())
+        data['modified'] = str(datetime.now())
         
         con = self._get_connection()
         cur = con.cursor()
         sql = '''INSERT INTO projects
-                 (projectname,version,description,modified,filename,active)
-                 VALUES ("%s","%s","%s","%s","%s",%d)
+                 (projectname,version,description,created,modified,filename,active)
+                 VALUES ("%s","%s","%s","%s","%s","%s",%d)
               ''' % (data['projectname'], 
                      data['version'], 
                      data['description'], 
+                     data['created'], 
                      data['modified'], 
                      data['filename'],
                      data['active'])
@@ -105,6 +111,7 @@ class Projects(object):
                 'version':     row['version'],
                 'description': row['description'],
                 'modified':    row['modified'],
+                'created':     row['created'],
                 'filename':    row['filename'],
                 'active':      row['active']
             })
@@ -184,7 +191,7 @@ class Projects(object):
         con = self._get_connection()
         con.row_factory = sqlite3.Row
         cur = con.cursor()  
-        sql = 'SELECT * from projects'
+        sql = 'SELECT * from projects ORDER BY projectname'
         
         cur.execute(sql)
         
@@ -195,12 +202,25 @@ class Projects(object):
                 'projectname': row['projectname'],
                 'version':     row['version'],
                 'description': row['description'],
+                'created':     row['created'],
                 'modified':    row['modified'],
                 'filename':    row['filename'],
                 'active':      row['active']
             })
             
         cur.close()
+
+        # Return last file modification dates too.
+        for project in matched_projects:
+            
+            fullpath = os.path.join(get_user_dir(), 'projects',
+                                    project['filename'])
+            
+            stamp = os.path.getmtime(fullpath)
+            project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
+
+            
+        
         return matched_projects
     
     
@@ -226,14 +246,14 @@ class Projects(object):
         cur.close()
         
     def modified(self, project_id):
-        ''' Update time-stamp for project_id, setting 'modified' to the
-        current time/date.
+        ''' Update metadate modification time-stamp for project_id, setting
+        'modified' to the current time/date.
         
         project_id: int
             unique id for requested project.
         '''
         
-        modified = str(datetime.datetime.now())
+        modified = str(datetime.now())
         self.set(project_id, 'modified', modified)
         
     def remove(self, project_id):
