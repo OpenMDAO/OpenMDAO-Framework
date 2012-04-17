@@ -30,7 +30,6 @@ setup(name='openmdao.gui',
           'pyzmq-static>=2.1.11.1',
           'tornado>=2.2',
           'jsonpickle', 
-          'django'
       ],
       extras_require = {
           'jsTest':  [
