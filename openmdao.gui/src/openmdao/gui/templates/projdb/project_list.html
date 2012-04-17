@@ -21,7 +21,7 @@
         {% for project in project_list %}
             <tr><td width="20" style="padding-right: 6px;">
             <form action="/projects/{{ project['id'] }}" method="GET">
-                <input type="submit" value="Edit" style="font-size: 8px"/>
+                <input type="submit" value="Edit" style="font-size: 10px"/>
             </form>
             </td><td style="padding-right: 6px;">
             <a href="/workspace/project?filename={{ project['filename'] }}">{{ project['projectname'] }}</a>
