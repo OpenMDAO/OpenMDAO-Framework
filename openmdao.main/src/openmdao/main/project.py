@@ -25,7 +25,10 @@ def _parse_archive_name(pathname):
     """Return the name of the project given the pathname of a project
     archive file.
     """
-    return os.path.basename(pathname).split('.')[0]
+    if '.' in pathname:
+        return '.'.join(os.path.basename(pathname).split('.')[:-1])
+    else:
+        return os.path.basename(pathname)
 
 
 def project_from_archive(archive_name, proj_name=None, dest_dir=None):
