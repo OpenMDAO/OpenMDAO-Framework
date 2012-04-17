@@ -9,6 +9,8 @@ import sys
 import shutil
 import warnings
 import itertools
+import string
+
 from fnmatch import fnmatch
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
@@ -273,3 +275,10 @@ def get_cfg_file():
     if os.path.isfile(cfgfile):
         return cfgfile
     else: return altcfg  
+    
+def clean_filename(name):
+    ''' Removes special characters from a proposed filename and replaces them
+    with underscores. To be safest, we allow only a limited set of chars.'''
+    
+    valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
+    return ''.join(c if c in valid_chars else '_' for c in name)
