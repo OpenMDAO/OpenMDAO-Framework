@@ -97,14 +97,18 @@ openmdao.BaseFrame.prototype.close = function () {
 
 openmdao.BaseFrame.prototype.popout = function (title) {
     debug.info('BaseFrame.popout()',this)
-    var init_fn = "jQuery(function(){opener.openmdao.PopoutFrame()})";
+    var init_fn = "jQuery(function(){openmdao.PopoutFrame()})";
     var new_win = openmdao.Util.popupWindow("/workspace/base?head_script='"+init_fn+"'",title,600,800)
     debug.info('new_win',new_win)
 }
 
 openmdao.PopoutFrame = function() {
-    //jQuery('body').append('<div></div>');
-    debug.info('divs',jQuery('div'));
-    debug.info('opener',opener);
     debug.info('window',window);
+    debug.info('opener',opener);
+	openmdao.model = opener.openmdao.model;
+    debug.info('openmdao.model',openmdao.model);
+	openmdao.model.issueCommand('print "hello from another world"')
+    jQuery('body').append('<div id="palette"></div>');
+    debug.info('divs',jQuery('div'));
+	new openmdao.Palette("palette",  openmdao.model) 
 }
