@@ -2,19 +2,19 @@ Setting Up Problems for Automatic Architectures
 ===============================================
 
 In all the previous examples, first you defined an assembly and then added the ``Discipline 1`` and ``Discipline 2``
-components into that assembly. You also added at least one driver (e.g. optimizer) into the assembly. This let you 
-set up a specific version of the Sellar Problem that matched up with the structure of how to solve a problem using 
+components to that assembly. You also added at least one driver (e.g., optimizer) to the assembly. This let you 
+set up a specific version of the Sellar Problem that matched up with the structure for solving a problem using 
 IDF, MDF, or CO. Each example had a different set of optimizers, parameters, constraints, and objectives. 
 
-In OpenMDAO there is a way you can automatically build configure the SellarProblem to be solved with IDF, MDF, or CO. 
-Using this automatic formulation will result in a lot less effort on your part. But, before you can use the 
-automatic architectures you need to make a small change to how you define the Sellar Problem. You need to create a 
-more general description of the Sellar Problem that is independent of how you would solve it with any given 
+In OpenMDAO you can automatically configure the Sellar Problem to be solved with IDF, MDF, or CO. Using this
+automatic formulation will result in a lot less effort on your part. But, before you can use the  automatic
+architectures you need to make a small change to how you define the Sellar Problem. You need to create a more
+general description of the Sellar Problem that is independent of how you would solve it with any given 
 architecture. 
 
-In OpenMDAO you do this with a special kind of assembly called an *ArchitectureAssembly*. When you define an 
-your *ArchitectureAssembly*, in addition to adding the specific discipline analyses you also specify the 
-parameters, objectives, constraints, and coupling variables of the fundamental problem formulation. 
+In OpenMDAO you do this with a special kind of assembly called an *ArchitectureAssembly*. When you define your
+*ArchitectureAssembly*, in addition to adding the specific discipline analyses, you also specify the  parameters,
+objectives, constraints, and coupling variables of the fundamental problem formulation. For example:
 
 .. testcode:: sellar_architecture_assembly
 
@@ -107,11 +107,11 @@ For the Sellar Problem, the problem formulation is specified as follows:
                 self.add_constraint('3.16 < dis1.y1')
                 self.add_constraint('dis2.y2 < 24.0')
                 
-Notice that nowhere in the problem formulation is any information about optimizers, 
+Notice that nowhere in the problem formulation is there any information about optimizers, 
 solvers, or any other drivers and their associated workflows.  A good way to think 
 about it is that the problem formulation contains all of the information that you 
 actually care about to solve the problem. The specifics of what happens when you try 
-to solve it with a given architecture are a secondary concern, and don't show up in your 
+to solve it with a given architecture are a secondary concern and don't show up in your 
 problem definition. Any problem that you want to solve using one of the automatic 
 architectures has to be defined in the manner we showed you above. 
 
@@ -119,7 +119,7 @@ In the OpenMDAO standard library we have a number of optimization test problems 
 for you to try out. These are located in the :ref:`openmdao.lib.optproblems <openmdao.lib.optproblems.api.py>` 
 section of the standard library. 
 
-So once you have you problem defined, you can solve it using any of the architectures in the 
+So once you have defined your problem, you can solve it using any of the architectures in the 
 OpenMDAO standard library (or you can define your own architecture to test out). 
 We currently have five architectures implemented: 
 
@@ -184,9 +184,9 @@ the following code to the bottom of the file where you defined the SellarProblem
                     display_results()
         
     
-Running that file you should get results something like the following. The function counts 
+If you run that file, you should get results something like the following. The function counts 
 for the results with BLISS2000 may not match exactly. BLISS2000 uses a stochastic process 
-in part of it's optimization process and so if you run the optimization a few times you will 
+in part of its optimization process, so if you run the optimization a few times, you will 
 see the function counts vary a bit. 
 
 ::
