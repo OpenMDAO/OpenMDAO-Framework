@@ -387,6 +387,9 @@ class ICaseRecorder(Interface):
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""
         
+    def close():
+        """Perform any operations required to shut-down this recorder."""
+
 
 class ICaseFilter(Interface):
     """Selects cases."""

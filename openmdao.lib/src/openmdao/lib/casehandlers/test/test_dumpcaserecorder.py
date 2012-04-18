@@ -14,6 +14,7 @@ from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator
 from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.util.testutil import assert_raises
     
 class DumpCaseRecorderTestCase(unittest.TestCase):
 
@@ -69,6 +70,14 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
                 else:
                     self.assertEqual(lines[index+i], expected[i])
         
+    def test_close(self):
+        sout1 = StringIO.StringIO()
+        self.top.driver.recorders = [DumpCaseRecorder(sout1)]
+        self.top.driver.recorders[0].close()
+        self.top.run()
+        self.assertEqual(sout1.getvalue(), '')
+
+
 if __name__ == '__main__':
     unittest.main()
 
