@@ -1,40 +1,39 @@
 [
-    { "text": "Project", 
+    { "text": "Project", "id": "project-menu", 
       "items": [
-        { "text": "Save",          "id": "mainmenu-save", "onclick": "openmdao.model.saveProject();" },
-        { "text": "Run",           "onclick": "openmdao.model.runModel();" },
-        { "text": "Reload",        "url": "/workspace/project" },
-        { "text": "Close",         "id": "mainmenu-close", "url": "/workspace/close" },
-        { "text": "Exit",          "url": "/exit" }
+        { "text": "Save",          "id": "project-save", "onclick": "openmdao.model.saveProject();" },
+        { "text": "Run",           "id": "project-run", "onclick": "openmdao.model.runModel();" },
+        { "text": "Reload",        "id": "project-reload", "url": "/workspace/project" },
+        { "text": "Close",         "id": "project-close", "url": "/workspace/close" },
+        { "text": "Exit",          "id": "project-exit", "url": "/exit" }
       ]
     },
-    { "text": "View", "id": "mainmenu-view",
+    { "text": "View", "id": "view-menu",
       "items": [
-        { "text": "Code Editor",   "id": "mainmenu-code-editor", "onclick": "jQuery('#code_tab').click();" },
-        { "text": "Command Line",  "onclick": "openmdao.Util.toggle_visibility('cmdform');" },
-        { "text": "Console",       "onclick": "layout.open('south');" },
-        { "text": "Files",         "onclick": "layout.open('west'); jQuery('#ftree_tab').click();" },
-        { "text": "Libraries",     "onclick": "layout.open('east'); jQuery('#palette_tab').click();" },
-        { "text": "Objects",       "onclick": "layout.open('west'); jQuery('#otree_tab').click();" },
-        { "text": "Properties",    "onclick": "layout.open('east'); jQuery('#properties_tab').click();" },
-        { "text": "Workflow",      "id": "mainmenu-workflow", "onclick": "jQuery('#workflow_tab').click();" },
-        { "text": "Structure",     "onclick": "jQuery('#structure_tab').click();" },
-        { "text": "Structure",     "id": "mainmenu-structure", "onclick": "jQuery('#structure_tab').click();" },
+        { "text": "Code Editor",   "id": "view-code", "onclick": "jQuery('#code_tab').click();" },
+        { "text": "Command Line",  "id": "view-cmdline", "onclick": "openmdao.Util.toggle_visibility('cmdform');" },
+        { "text": "Console",       "id": "view-console", "onclick": "layout.open('south');" },
+        { "text": "Files",         "id": "view-files", "onclick": "layout.open('west'); jQuery('#ftree_tab').click();" },
+        { "text": "Libraries",     "id": "view-libraries", "onclick": "layout.open('east'); jQuery('#palette_tab').click();" },
+        { "text": "Objects",       "id": "view-objects", "onclick": "layout.open('west'); jQuery('#otree_tab').click();" },
+        { "text": "Properties",    "id": "view-properties", "onclick": "layout.open('east'); jQuery('#properties_tab').click();" },
+        { "text": "Workflow",      "id": "view-workflow", "onclick": "jQuery('#workflow_tab').click();" },
+        { "text": "Structure",     "id": "view-structure", "onclick": "jQuery('#structure_tab').click();" },
         { "text": "--------"       },
-        { "text": "Refresh",       "id": "mainmenu-refresh", "onclick": "openmdao.model.updateListeners();" }
+        { "text": "Refresh",       "id": "view-refresh", "onclick": "openmdao.model.updateListeners();" }
       ]
     },
-    { "text": "Tools", 
+    { "text": "Tools", "id": "tools-menu",
       "items": [
-        { "text": "Plotter",       "onclick": "new openmdao.Plotter()"},
-        { "text": "Addons",        "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"},
-        { "text": "3DTin",         "onclick": "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"}
+        { "text": "Plotter",       "id": "tools-plotter", "onclick": "new openmdao.Plotter()"},
+        { "text": "Addons",        "id": "tools-addons", "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"},
+        { "text": "3DTin",         "id": "tools-3dtin", "onclick": "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"}
       ]
     },
-    { "text": "Help", 
+    { "text": "Help", "id": "help-menu",
       "items": [
-        { "text": "Documentation", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs',800,600);"}
+        { "text": "Documentation", "id": "help-doc", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs',800,600);"}
       ]
     },
-    { "text": "About",             "onclick": "openmdao.Util.popupWindow('http://openmdao.org/',800,600);"}
+    { "text": "About",             "id": "about-item", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/',800,600);"}
 ]

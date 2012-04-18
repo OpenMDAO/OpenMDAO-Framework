@@ -357,7 +357,7 @@ openmdao.Model=function() {
             if (/.json$/.test(name))
                 contents = '[]'                
             self.setFile(name,contents)
-        })
+        }, 'filename-prompt')
     }
 
     /** prompt for name & create a new folder */
@@ -367,7 +367,7 @@ openmdao.Model=function() {
                 name = folderpath+'/'+name;
             }
             self.createFolder(name);
-        })
+        }, 'folder-prompt')
     }
 
     /** upload a file to the model working directory */

@@ -31,7 +31,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname)
-                })
+                }, 'component-prompt')
             }
         }
     });

@@ -1,36 +1,42 @@
-from pageobjects import locators, selenium_server_connection
-from pageobjects.basepageobject import BasePageObject
-from pageobjects.basepageelement import BasePageElement
- 	
-class UsernameElement(BasePageElement):
-    #
-    def __init__(self):
-        self.locator = locators["login.username"]
-        #
-    def __set__(self, obj, val):
-        se = selenium_server_connection.connection
-        se.type(self.locator, val)
-        #
-class PasswordElement(BasePageElement):
-    #
-    def __init__(self):
-        self.locator = locators["login.password"]
-        #
-    def __set__(self, obj, val):
-        se = selenium_server_connection.connection
-        se.type(self.locator, val)
-        #
-class LoginPageObject(BasePageObject):
-    #
-    username = UsernameElement()
-    password = PasswordElement()
-    #
-    def __init__(self, se):
-        self.se = se
-        self.se.open("/login")
-        self.assertEqual("My Application - Login", self.se.get_title())
-        #
+from selenium.webdriver.common.by import By
+
+from basepageobject import BasePageObject
+from elements import ButtonElement, InputElement
+
+
+class LoginPage(BasePageObject):
+    """ There doesn't seem to be a 'login' page anymore... """
+
+    username = InputElement((By.ID, 'id_username'))
+    password = InputElement((By.ID, 'id_password'))
+    submit_button = ButtonElement((By.XPATH, '/html/body/div/div[2]/form/input'))
+
+    def __init__(self, browser, port):
+        super(LoginPage, self).__init__(browser, port)
+#        self._page_url = "http://localhost:%d/accounts/login/?next=/" % self.port
+        self._page_url = "http://localhost:%d/" % self.port
+
+    def login_successfully(self, username, password):
+        """ Login using valid parameters. """
+        self.username = username
+        self.password = password
+        self.submit()
+        from project import ProjectsListPage
+        return ProjectsListPage(self.browser, self.port)
+
+    def login_unsuccessfully(self, username, password):
+        """ Login using invalid parameters. """
+        self.username = username
+        self.password = password
+        self.submit()
+        return LoginPage(self.browser, self.port)
+
+    def magic_login(self, username, password):
+        '''Need a way to login to the app directly,
+        not manually via the GUI'''
+        pass
+    
     def submit(self):
-        wait_for = "selenium.browserbot.getCurrentWindow().document.getElementById('LogoutButton')"
-        self.se.click(locators["login.submit"])
-        self.se.wait_for_condition(wait_for, "30000")
+        """ Clicks the login button. """
+        self('submit_button').click()
+

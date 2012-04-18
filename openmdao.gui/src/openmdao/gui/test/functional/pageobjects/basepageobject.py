@@ -1,70 +1,64 @@
-import sys
-import unittest
- 	
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import ElementNotVisibleException
 
 
-class BasePageObject(unittest.TestCase):
+class BasePageObject(object):
+    """
+    PageObject abstracts the details of page element layout and low-level
+    operations so that tests can be higher level and more robust.
 
-    def __init__(self, browser, port):
+    browser:
+        Browser-appropriate WebDriver.
 
+    port: int
+        Port on ``localhost`` to use.
+
+    title: string
+        Expected page title.
+
+    url: string
+        URL for page.
+
+    Elements on this page should be subclasses of :class:`BaseElement` which
+    implements the Python descriptor protocol.
+
+    An example page declaration::
+
+        class ProjectPage(BasePageObject):
+
+            project_name = InputElement((By.ID, 'id_projectname'))
+            description = InputElement((By.ID, 'id_description'))
+            version = InputElement((By.ID, 'id_version'))
+            shared = CheckboxElement((By.ID, 'id_shared'))
+
+    """
+
+    def __init__(self, browser, port, url=None):
         self.browser = browser
         self.port = port
+        self._page_url = url
 
-        self._page_title = None
-        self._page_url = None
-
-        print >>sys.stderr, "**** Creating new page object %s" % self.__class__.__name__
-
-        #import pdb; pdb.set_trace()
-        print >>sys.stderr, "    port", port
-        
+    def __call__(self, element_name):
+        """
+        Return the page element corresponding to `element_name`.
+        Just doing ``self.element_name`` will get/set the value of the element.
+        Using ``self('element_name')`` returns the element object, so
+        something other than its value can be accessed.
+        """
+        descriptor = getattr(self.__class__, element_name)
+        return descriptor.get(self)
 
     @property
     def page_title(self):
-        WebDriverWait(self.browser, 10).until(lambda s: self.browser.title)
-        return self.browser.title
-
+        """ Current browser title. """
+        return WebDriverWait(self.browser, 10).until(
+                                                  lambda browser: browser.title)
     @property
     def page_url(self):
+        """ Current browser URL. """
         return self.browser.current_url
 
     def go_to(self):
-        print >>sys.stderr, "go_to", self._page_url
+        """ Go to this page's URL. """
         self.browser.get(self._page_url)
-        print >>sys.stderr, "    done"
-        
-    def is_the_current_page(self):
-        if self._page_title:
-            #import pdb; pdb.set_trace()
-            return self.page_title.startswith( self._page_title )
-        else:
-            return True # TODO: Not really sure what to do yet here
-
-    def assert_on_correct_page(self):
-        if self._page_title:
-            if not self.page_title.startswith( self._page_title ) :
-                raise self.failureException(
-                    "Expected page title to start with '%s' but found '%s'" \
-                    % ( self._page_title, self.page_title))
-        
-    def is_element_present(self, *locator):
-        #self.browser.implicitly_wait(0)
-        try:
-            self.browser.find_element(*locator)
-            return True
-        except NoSuchElementException:
-            return False
-        #finally:
-            # set back to where you once belonged
-            #self.browser.implicitly_wait(self.testsetup.default_implicit_wait)
-
-    def is_element_visible(self, *locator):
-        try:
-            return self.browser.find_element(*locator).is_displayed()
-        except NoSuchElementException, ElementNotVisibleException:
-            return False
-
+        self.browser.execute_script("var openmdao_test_mode = true;")
 

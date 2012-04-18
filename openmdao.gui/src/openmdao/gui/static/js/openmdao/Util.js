@@ -137,16 +137,22 @@ openmdao.Util = {
      * prompt for a value
      *
      * callback:    the function to call with the provided value
+     * id:	    id used for locating by test scripts
      */
-    promptForValue: function(prompt,callback) {
+    promptForValue: function(prompt,callback,id) {
         // if the user didn't specify a callback, just return
         if (typeof callback != 'function') {
             return;
         }
 
+        // default for test script id
+        if (!id) {
+            id = 'prompt-for-value';
+        }
+
         // Build dialog markup
         var win = jQuery('<div><p>'+prompt+':</p></div>');
-        var userInput = jQuery('<input type="text" style="width:100%"></input>').keypress(function(e) {
+        var userInput = jQuery('<input type="text" id="'+id+'" style="width:100%"></input>').keypress(function(e) {
             if (e.which == 13) {
                 jQuery(win).dialog('close');
                 callback(jQuery(userInput).val());

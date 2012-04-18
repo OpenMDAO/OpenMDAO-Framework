@@ -1,5 +1,6 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao_test_mode = true;
 
 openmdao.Menu = function(id, json) {
     /***********************************************************************
@@ -34,18 +35,22 @@ openmdao.Menu = function(id, json) {
                     out: hideMenu
                 };
 
-            // toggle this menu and hide all the others on click
-            //header.click(function() { 
-            //    menu.toggle();
-            //    header.parent().siblings().find("ul").hide();
-            //});
+            if (typeof openmdao_test_mode != "undefined") {
+                // toggle this menu and hide all the others on click
+                header.click(function() { 
+                    menu.toggle();
+                    header.parent().siblings().find("ul").hide();
+                });
+            }
 
             if (menu.length > 0) {
                 jQuery("<span>").text("^").appendTo(header);
                 
-                jQuery(this).hoverIntent( settings );
+                if (typeof openmdao_test_mode == "undefined") {
+                    jQuery(this).hoverIntent( settings );
+                }
                 
-                menu.find("li").click(function() { menu.toggle(); });                
+                menu.find("li").click(function() { menu.toggle(); });
             }
         });
     }
