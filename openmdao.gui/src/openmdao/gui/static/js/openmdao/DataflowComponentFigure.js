@@ -26,8 +26,13 @@ openmdao.DataflowComponentFigure=function(myModel,pathname,type){
         this.setContent('<center><i>'+type+''+'</i></center>');
     }
 
-    // do not allow moving (TODO: allow moving)
+    // do not allow moving or resizing (TODO: allow moving)
     this.setCanDrag(false);
+    this.setResizeable(false);
+    
+    // change color based on execution status
+    topic = pathname+'.exec_state'
+    myModel.addListener(topic,this.setExecState.bind(this));    
 };
 
 openmdao.DataflowComponentFigure.prototype=new draw2d.Node();
@@ -239,12 +244,17 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
         var cmd = oThis.pathname + '.run();';
         oThis.myModel.issueCommand(cmd);
     }));
-    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-        var asm = openmdao.Util.getPath(oThis.pathname),
-            cmd = asm + '.disconnect("'+oThis.name+'");'
-                + asm + '.config_changed(update_parent=True);';
-        oThis.myModel.issueCommand(cmd);
-    }));
+    var asm = openmdao.Util.getPath(oThis.pathname);
+    if (asm.length > 0) {
+        menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+            var cmd = asm + '.disconnect("'+oThis.name+'");'
+                    + asm + '.config_changed(update_parent=True);';
+            oThis.myModel.issueCommand(cmd);
+        }));
+    }
+    menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
+        oThis.myModel.removeComponent(oThis.pathname);
+    }));    
     menu.setZOrder(999999);
     return menu;
 };
@@ -253,6 +263,7 @@ openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
+/**
 openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
     //this.getWorkflow().showTooltip(new openmdao.Tooltip(this.pathname),true);
@@ -261,3 +272,18 @@ openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
 openmdao.DataflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };
+**/
+
+openmdao.DataflowComponentFigure.prototype.setExecState=function(message){
+    var state = message[1];
+    //debug.info('DataflowComponentFigure',this.pathname,state);
+    if (state === "VALID") {
+        this.setColor(new draw2d.Color(0,255,0));
+    }
+    else if (state === "INVALID") {
+        this.setColor(new draw2d.Color(255,0,0));
+    }
+    else if (state === "RUNNING") {
+        this.setColor(new draw2d.Color(0,0,255));
+    }
+}

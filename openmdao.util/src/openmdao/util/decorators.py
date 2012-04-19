@@ -5,6 +5,8 @@ import sys
 import types
 import time
 
+from zope.interface import implementedBy, classImplements
+
 from decorator import FunctionMaker
 from inspect import getmembers, ismethod, isfunction, isclass, getargspec, formatargspec, getmro
 
@@ -107,13 +109,11 @@ def add_delegate(*delegates):
         fnc = cls.__init__
         spec = getargspec(fnc)
         sig = formatargspec(*spec)
-        template = [
-            'old_init__(%s)' % ','.join(spec[0]),
-            ]
+        template = ["if not hasattr(self, '_delegates_'): self._delegates_ = {}"]
         for name, delegate in delegate_class_list:
             template.append('self.%s = %s(self)' % (name, delegate.__name__))
-            template.append("if not hasattr(self, '_delegates_'): self._delegates_ = {}")
             template.append("self._delegates_['%s'] = self.%s" % (name,name))
+        template.append('old_init__(%s)' % ','.join(spec[0]))
         f = FunctionMaker.create('__init__%s' % sig, '\n'.join(template), 
                                  dict([(c.__name__,c) for n,c in delegate_class_list]+
                                       [('old_init__',fnc)]),
@@ -147,6 +147,10 @@ def add_delegate(*delegates):
             listofdels.append((delegatename, delegate))
             
             alldict = {}
+
+            for interface in implementedBy(delegate):
+                classImplements(cls, interface)
+
             for klass in getmro(delegate):
                 if hasattr(klass, '_do_not_promote'):
                     skip = klass._do_not_promote
@@ -163,7 +167,7 @@ def add_delegate(*delegates):
 
 #def on_condition(cond, dec, *args, **kwargs):
     #"""This is actually a decorator of decorators.  It will cause the wrapped decorator
-    #to be applied only if the supplied value is True.
+    #to be applied only if the supplied value is True at declaration time.
     #"""
     #def _wrap_on_condition(fnc):
         #if cond:

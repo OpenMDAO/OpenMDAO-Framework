@@ -18,9 +18,8 @@ class Discipline(Component):
                     desc="coefficient for the output variables")
     
     def __init__(self,prob_size=1): 
-        
         super(Discipline,self).__init__()        
-        
+
         self.add_trait("z",Array(zeros((prob_size,1)),iotype="in",
                                  desc="global varaibles",
                                  shape=(prob_size,1)))
@@ -63,11 +62,19 @@ class Discipline(Component):
         
 class UnitScalableProblem(OptProblem):         
     def __init__(self,n_disciplines=3,prob_size=3): 
-        super(UnitScalableProblem,self).__init__()
-        
         self.solution = {}
         
         self.disciplines = []
+        
+        self.n_disciplines = n_disciplines
+        self.prob_size = prob_size
+        
+        super(UnitScalableProblem,self).__init__()
+        
+    def configure(self):
+        n_disciplines = self.n_disciplines
+        prob_size = self.prob_size
+        
         for i in range(0,n_disciplines): 
             name = 'd%d'%i
             #each discipline as n_discipline-1 coupling vars

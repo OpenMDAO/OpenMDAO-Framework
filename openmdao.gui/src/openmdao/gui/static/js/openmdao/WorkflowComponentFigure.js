@@ -30,8 +30,13 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
         this.setContent('<center><i>'+type+''+'</i></center>');
     }
 
-    // do not allow moving
+    // do not allow moving or resizing
     this.setCanDrag(false);
+    this.setResizeable(false);
+    
+    // change color based on execution status
+    topic = pathname+'.exec_state'
+    myModel.addListener(topic, this.setExecState.bind(this));    
 };
 
 openmdao.WorkflowComponentFigure.prototype=new draw2d.Node();
@@ -246,6 +251,7 @@ openmdao.WorkflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
+/**
 openmdao.WorkflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
     // this.getWorkflow().showTooltip(new openmdao.Tooltip(this.name),true);
@@ -254,3 +260,18 @@ openmdao.WorkflowComponentFigure.prototype.onMouseEnter=function(){
 openmdao.WorkflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };
+**/
+
+openmdao.WorkflowComponentFigure.prototype.setExecState=function(message){
+    var state = message[1];
+    //debug.info('WorkflowComponentFigure',this.pathname,state);
+    if (state === "VALID") {
+        this.setColor(new draw2d.Color(0,255,0));
+    }
+    else if (state === "INVALID") {
+        this.setColor(new draw2d.Color(255,0,0));
+    }
+    else if (state === "RUNNING") {
+        this.setColor(new draw2d.Color(0,0,255));
+    }
+}

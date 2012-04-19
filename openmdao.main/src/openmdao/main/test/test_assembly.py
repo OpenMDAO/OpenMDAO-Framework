@@ -1,14 +1,17 @@
 # pylint: disable-msg=C0111,C0103
 
+import cStringIO
 import os
 import shutil
 import unittest
 import sys
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top, SimulationRoot
-from openmdao.main.datatypes.api import Float, Str, Slot, List
+from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
+                              set_as_top, SimulationRoot
+from openmdao.main.datatypes.api import Float, Int, Str, Slot, List, Array
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasobjective import HasObjective
+from openmdao.util.log import enable_trace, disable_trace
 
 
 class Multiplier(Component):
@@ -43,6 +46,25 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
+
+
+class SimpleListComp(Component):
+    
+    a = List(Int, iotype='in')
+    b = List(Int, iotype='in')
+    c = List(Int, iotype='out')
+    d = List(Int, iotype='out')
+    
+    def __init__(self):
+        super(SimpleListComp, self).__init__()
+        self.a = [1,2,3]
+        self.b = [4,5,6]
+        self.c = [5,7,9]
+        self.d = [-3,-3,-3]
+
+    def execute(self):
+        self.c = [a+b for a,b in zip(self.a, self.b)]
+        self.d = [a-b for a,b in zip(self.a, self.b)]
 
 
 class DummyComp(Component):
@@ -138,6 +160,54 @@ class Comp(Component):
         self._logger.debug('    done')
 
 
+class TracedAssembly(Assembly):
+    """ Records `itername` in trace buffer. """
+
+    def __init__(self, trace_buf):
+        super(TracedAssembly, self).__init__()
+        self.force_execute = True
+        self.trace_buf = trace_buf
+
+    def execute(self):
+        msg = '%s: %s' % (self.get_pathname(), self.get_itername())
+        self.trace_buf.append(msg)
+        super(TracedAssembly, self).execute()
+
+
+class TracedIterator(Driver):
+    """ Records `itername` in trace buffer. """
+
+    def __init__(self, trace_buf, count):
+        super(TracedIterator, self).__init__()
+        self.trace_buf = trace_buf
+        self.max_iterations = count
+
+    def execute(self):
+        msg = '%s: %s' % (self.get_pathname(), self.get_itername())
+        self.trace_buf.append(msg)
+        for i in range(self.max_iterations):
+            super(TracedIterator, self).execute()
+
+
+class TracedComponent(Component):
+    """ Records `itername` in trace buffer. """
+
+    def __init__(self, trace_buf):
+        super(TracedComponent, self).__init__()
+        self.force_execute = True
+        self.trace_buf = trace_buf
+
+    def execute(self):
+        msg = '%s: %s' % (self.get_pathname(), self.get_itername())
+        self.trace_buf.append(msg)
+
+
+class Dummy(Component):
+    """ Just defines an empty execute. """
+    def execute(self):
+        pass
+
+
 class AssemblyTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -202,7 +272,6 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.s, 'once upon a time')
         
         # also, test that we can't do a direct set of a connected input
-        # This tests Requirement Ticket #274
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
@@ -318,7 +387,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.create_passthrough('comp2.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), ": 'comp2.r' is already connected to source 'comp1.rout'")
+            self.assertEqual(str(err), ": Can't connect 'r' to 'comp2.r': : 'comp2.r' is already connected to source 'comp1.rout'")
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
@@ -340,14 +409,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('comp2: rout must be an input variable',
+            self.assertEqual(": Can't connect 'comp1.rout' to 'comp2.rout': comp2: rout must be an input variable",
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('comp1: r must be an output variable',
+            self.assertEqual(": Can't connect 'comp1.r' to 'comp2.rout': comp1: r must be an output variable",
                              str(err))
         else:
             self.fail('RuntimeError expected')
@@ -356,7 +425,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp1.r')
         except Exception, err:
-            self.assertEqual(': Cannot connect comp1.rout to comp1.r. Both are on same component.',
+            self.assertEqual(": Can't connect 'comp1.rout' to 'comp1.r': 'comp1.rout' and 'comp1.r' refer to the same component.",
                              str(err))
         else:
             self.fail('exception expected')
@@ -364,11 +433,11 @@ class AssemblyTestCase(unittest.TestCase):
     def test_metadata_link(self):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
-        except AttributeError, err:
+        except Exception, err:
             self.assertEqual(str(err), 
-                    "comp1: Cannot locate variable named 'rout.units'")
+                    ": Can't connect 'comp1.rout.units' to 'comp2.s': : Can't find 'comp1.rout.units'")
         else:
-            self.fail('NameError expected')
+            self.fail('Exception expected')
             
     def test_get_metadata(self):
         units = self.asm.comp1.get_metadata('rout', 'units')
@@ -396,7 +465,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except Exception, err:
-            self.assertEqual("circular dependency (['comp2', 'comp1']) would be created by"+
+            self.assertEqual(": Can't connect 'comp2.rout' to 'comp1.r': circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('Exception expected')
@@ -421,6 +490,10 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout','comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 9.0)
+        
+        self.asm.disconnect('comp2.r')
+        self.asm.connect('3.0*comp1.rout', 'comp2.r')
+        self.asm.disconnect('3.0*comp1.rout', 'comp2.r')
         
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
@@ -464,7 +537,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             asm.nested.connect('comp2.d', 'c')
         except RuntimeError, err:
-            self.assertEqual(str(err), "nested: 'c' is already connected to source 'comp1.c'")
+            self.assertEqual(str(err), "nested: Can't connect 'comp2.d' to 'c': nested: 'c' is already connected to source 'comp1.c'")
         else:
             self.fail('RuntimeError expected')
         
@@ -573,6 +646,184 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.m2.rval_out, 4.5)
         self.assertEqual(top.m3.rval_out, 6.)
 
+    def test_itername(self):
+        # top
+        #     comp1
+        #     driverA
+        #         comp1
+        #         comp2
+        #     driverB
+        #         comp2
+        #         subassy
+        #             comp3
+        trace_buf = []
+        top = TracedAssembly(trace_buf)
+        top.add('driver', TracedIterator(trace_buf, 2))
+        top.add('comp1', TracedComponent(trace_buf))
+        top.add('driverA', TracedIterator(trace_buf, 3))
+        top.add('comp2', TracedComponent(trace_buf))
+        top.add('driverB', TracedIterator(trace_buf, 2))
+
+        sub = top.add('subassy', TracedAssembly(trace_buf))
+        sub.add('driver', TracedIterator(trace_buf, 2))
+        sub.add('comp3', TracedComponent(trace_buf))
+        sub.driver.workflow.add('comp3')
+
+        # Default didn't execute comp1 first.
+        top.driver.workflow = SequentialWorkflow()
+        top.driver.workflow.add(('comp1', 'driverA', 'driverB'))
+        top.driverA.workflow.add(('comp1', 'comp2'))
+        top.driverB.workflow.add(('comp2', 'subassy'))
+
+        top.run()
+        top.run(case_id='ReRun')
+
+        expected = """\
+: 
+driver: 
+comp1: 1-1
+driverA: 1-2
+comp1: 1-2.1-1
+comp2: 1-2.1-2
+comp1: 1-2.2-1
+comp2: 1-2.2-2
+comp1: 1-2.3-1
+comp2: 1-2.3-2
+driverB: 1-3
+comp2: 1-3.1-1
+subassy: 1-3.1-2
+subassy.driver: 1-3.1-2
+subassy.comp3: 1-3.1-2.1-1
+subassy.comp3: 1-3.1-2.2-1
+comp2: 1-3.2-1
+subassy: 1-3.2-2
+subassy.driver: 1-3.2-2
+subassy.comp3: 1-3.2-2.1-1
+subassy.comp3: 1-3.2-2.2-1
+comp1: 2-1
+driverA: 2-2
+comp1: 2-2.1-1
+comp2: 2-2.1-2
+comp1: 2-2.2-1
+comp2: 2-2.2-2
+comp1: 2-2.3-1
+comp2: 2-2.3-2
+driverB: 2-3
+comp2: 2-3.1-1
+subassy: 2-3.1-2
+subassy.driver: 2-3.1-2
+subassy.comp3: 2-3.1-2.1-1
+subassy.comp3: 2-3.1-2.2-1
+comp2: 2-3.2-1
+subassy: 2-3.2-2
+subassy.driver: 2-3.2-2
+subassy.comp3: 2-3.2-2.1-1
+subassy.comp3: 2-3.2-2.2-1
+: 
+driver: 
+comp1: ReRun.1-1
+driverA: ReRun.1-2
+comp1: ReRun.1-2.1-1
+comp2: ReRun.1-2.1-2
+comp1: ReRun.1-2.2-1
+comp2: ReRun.1-2.2-2
+comp1: ReRun.1-2.3-1
+comp2: ReRun.1-2.3-2
+driverB: ReRun.1-3
+comp2: ReRun.1-3.1-1
+subassy: ReRun.1-3.1-2
+subassy.driver: ReRun.1-3.1-2
+subassy.comp3: ReRun.1-3.1-2.1-1
+subassy.comp3: ReRun.1-3.1-2.2-1
+comp2: ReRun.1-3.2-1
+subassy: ReRun.1-3.2-2
+subassy.driver: ReRun.1-3.2-2
+subassy.comp3: ReRun.1-3.2-2.1-1
+subassy.comp3: ReRun.1-3.2-2.2-1
+comp1: ReRun.2-1
+driverA: ReRun.2-2
+comp1: ReRun.2-2.1-1
+comp2: ReRun.2-2.1-2
+comp1: ReRun.2-2.2-1
+comp2: ReRun.2-2.2-2
+comp1: ReRun.2-2.3-1
+comp2: ReRun.2-2.3-2
+driverB: ReRun.2-3
+comp2: ReRun.2-3.1-1
+subassy: ReRun.2-3.1-2
+subassy.driver: ReRun.2-3.1-2
+subassy.comp3: ReRun.2-3.1-2.1-1
+subassy.comp3: ReRun.2-3.1-2.2-1
+comp2: ReRun.2-3.2-1
+subassy: ReRun.2-3.2-2
+subassy.driver: ReRun.2-3.2-2
+subassy.comp3: ReRun.2-3.2-2.1-1
+subassy.comp3: ReRun.2-3.2-2.2-1"""
+        expected = expected.split('\n')
+        errors = 0
+        for i, line in enumerate(trace_buf):
+            if line != expected[i]:
+                logging.error('%d: expected %r, got %r', i, expoected[i], line)
+                errors += 1
+        self.assertEqual(errors, 0)
+        self.assertEqual(len(trace_buf), len(expected))
+
+    def test_expr(self):
+        class Dummy(Component): 
+        
+            z = Array([[0],[0],[0]],iotype="in",shape=(3,1))
+            
+            def execute(self): 
+                pass
+            
+              
+        class TestA(Assembly): 
+           
+            x = Float(0.0,iotype="in")
+           
+            def configure(self): 
+                self.add('d',Dummy())
+                self.connect('x','d.z[0][0]')
+               
+               
+        t = set_as_top(TestA())
+
+    def test_tracing(self):
+        # Check tracing of iteration coordinates.
+        top = Assembly()
+        comp = top.add('comp1', Dummy())
+        comp.force_execute = True
+        top.add('driverA', Driver())
+        comp = top.add('comp2', Dummy())
+        comp.force_execute = True
+        top.add('driverB', Driver())
+
+        sub = top.add('subassy', Assembly())
+        sub.force_execute = True
+        comp = sub.add('comp3', Dummy())
+        comp.force_execute = True
+        sub.driver.workflow.add('comp3')
+
+        top.driver.workflow = SequentialWorkflow()
+        top.driver.workflow.add(('comp1', 'driverA', 'driverB'))
+        top.driverA.workflow.add(('comp1', 'comp2'))
+        top.driverB.workflow.add(('comp2', 'subassy'))
+
+        trace_out = cStringIO.StringIO()
+        enable_trace(trace_out)
+        top.run()
+        expected = """\
+1-1
+1-2.1-1
+1-2.1-2
+1-3.1-1
+1-3.1-2.1-1
+"""
+        self.assertEqual(trace_out.getvalue(), expected)
+
+        disable_trace()
+        top.run()
+        self.assertEqual(trace_out.getvalue(), expected)
 
 if __name__ == "__main__":
     unittest.main()

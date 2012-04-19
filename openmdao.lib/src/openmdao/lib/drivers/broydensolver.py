@@ -152,6 +152,8 @@ class BroydenSolver(Driver):
                 term = val.evaluate(self.parent)
                 self.F[i] = term[0] - term[1]
             
+            self.record_case()
+    
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
                 return
@@ -216,6 +218,8 @@ class BroydenSolver(Driver):
             for i, val in enumerate(self.get_eq_constraints().values()):
                 term = val.evaluate(self.parent)
                 self.F[i] = term[0] - term[1]
+                
+            self.record_case()
 
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
@@ -273,6 +277,8 @@ class BroydenSolver(Driver):
                 term = val.evaluate(self.parent)
                 self.F[i] = term[0] - term[1]
 
+            self.record_case()
+    
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
                 return

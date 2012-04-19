@@ -2,6 +2,11 @@ import unittest
 import StringIO
 
 from openmdao.main.depgraph import DependencyGraph
+from openmdao.main.expreval import ConnectedExprEvaluator
+
+class DumbClass(object):
+    def contains(self, name):
+        return hasattr(self, name)
 
 _fakes = ['@xin', '@bin', '@bout', '@xout']
 nodes = ['A', 'B', 'C', 'D']
@@ -9,28 +14,42 @@ nodes = ['A', 'B', 'C', 'D']
 
 class DepGraphTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.dep = dep = DependencyGraph()
+    def make_graph(self, nodes=(), connections=()):
+        scope = DumbClass()
+        dep = DependencyGraph()
         for name in nodes:
             dep.add(name)
+        for src,dest in connections:
+            dep.connect(src, dest)
+        return dep, scope
 
-        # an internal connection
-        dep.connect('A.c', 'B.a')
-        
-        # boundary connections
-        dep.connect('parent.X.c', 'bound_a')
-        dep.connect('B.c', 'bound_c')
-        dep.connect('bound_c', 'parent.Y.a')
-        
-        # auto-passthroughs
-        dep.connect('parent.X.d', 'B.b')
-        dep.connect('B.d', 'parent.Y.b')
+    def setUp(self):
+        self.internal_conns = [
+            ('A.c', 'B.b'),
+            ('B.c', 'D.a'),
+            ('C.c', 'D.b'),
+            ]
+        self.boundary_conns = [
+            ('parent.X.c', 'a'),
+            ('a', 'B.a'),
+            ('D.c', 'c'),
+            ('c', 'parent.Y.a'),
+            ]
+        self.cross_conns = [
+            ('parent.X.d', 'A.b'),
+            ('C.d', 'parent.Y.b'),
+            ]
+        self.dep, self.scope = self.make_graph(nodes, 
+                                               self.internal_conns+
+                                               self.boundary_conns+
+                                               self.cross_conns)
+
 
     def test_get_source(self):
-        self.assertEqual(self.dep.get_source('B.a'), 'A.c')
-        self.assertEqual(self.dep.get_source('A.b'), None)
-        self.assertEqual(self.dep.get_source('bound_a'), 'parent.X.c')
-        self.assertEqual(self.dep.get_source('bound_c'), 'B.c')
+        self.assertEqual(self.dep.get_source('B.a'), 'a')
+        self.assertEqual(self.dep.get_source('A.a'), None)
+        self.assertEqual(self.dep.get_source('a'), 'parent.X.c')
+        self.assertEqual(self.dep.get_source('c'), 'D.c')
 
     def test_add(self):
         for name in nodes:
@@ -44,136 +63,138 @@ class DepGraphTestCase(unittest.TestCase):
         
     def test_list_connections(self):
         self.assertEqual(set(self.dep.list_connections()), 
-                         set([('A.c','B.a'), ('B.c','bound_c')]))
+                         set([('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b'), ('a','B.a'), ('D.c','c')]))
         self.assertEqual(set(self.dep.list_connections(show_passthrough=False)), 
-                         set([('A.c','B.a')]))
+                         set([('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b')]))
     
     def test_get_link(self):
-        link = self.dep.get_link('A', 'D')
+        link = self.dep.get_link('C', 'B')
         self.assertEqual(link, None)
         link = self.dep.get_link('A', 'B')
         self.assertEqual(link._srcs.keys(), ['c'])
 
     def test_get_connected_inputs(self):
-        self.assertEqual(set(self.dep.get_connected_inputs()), set(['bound_a','B.b']))
+        self.assertEqual(set(self.dep.get_connected_inputs()), set(['a','A.b']))
     
     def test_get_connected_outputs(self):
-        self.assertEqual(set(self.dep.get_connected_outputs()), set(['bound_c', 'B.d']))
+        self.assertEqual(set(self.dep.get_connected_outputs()), set(['c', 'C.d']))
     
     def test_already_connected(self):
         # internal connection
         try:
-            self.dep.connect('A.d', 'B.a')
+            self.dep.check_connect('A.d', 'B.a')
         except Exception as err:
-            self.assertEqual(str(err), 'B.a is already connected to source A.c')
+            self.assertEqual(str(err), "'B.a' is already connected to source 'a'")
         else:
             self.fail('Exception expected')
             
         # input boundary connection
         try:
-            self.dep.connect('parent.foo.bar', 'bound_a')
+            self.dep.check_connect('parent.foo.bar', 'a')
         except Exception as err:
-            self.assertEqual(str(err), 'bound_a is already connected to source parent.X.c')
+            self.assertEqual(str(err), "'a' is already connected to source 'parent.X.c'")
         else:
             self.fail('Exception expected')
 
         # internal to boundary output connection
         try:
-            self.dep.connect('B.d', 'bound_c')
+            self.dep.check_connect('B.d', 'c')
         except Exception as err:
-            self.assertEqual(str(err), 'bound_c is already connected to source B.c')
+            self.assertEqual(str(err), "'c' is already connected to source 'D.c'")
         else:
             self.fail('Exception expected')
 
     def test_connections_to(self):
-        self.dep.connect('bound_a', 'A.a')
-
-        self.assertEqual(set(self.dep.connections_to('bound_c')),
-                         set([('@bout.bound_c','@xout.parent.Y.a'),
-                              ('B.c', '@bout.bound_c')]))
-        self.assertEqual(set(self.dep.connections_to('bound_a')),
-                         set([('@xin.parent.X.c','@bin.bound_a'),
-                              ('@bin.bound_a','A.a')]))
+        self.assertEqual(set(self.dep.connections_to('c')),
+                         set([('@bout.c','@xout.parent.Y.a'),
+                              ('D.c', '@bout.c')]))
+        self.assertEqual(set(self.dep.connections_to('a')),
+                         set([('@xin.parent.X.c','@bin.a'),
+                              ('@bin.a','B.a')]))
         
         self.dep.connect('A.c', 'C.b')
+        self.dep.connect('A.c', 'C.a')
         self.assertEqual(set(self.dep.connections_to('A.c')),
-                         set([('A.c','C.b'),('A.c','B.a')]))
+                         set([('A.c','C.b'),('A.c','C.a'),('A.c','B.b')]))
         
         # unconnected var should return an empty list
-        self.assertEqual(self.dep.connections_to('D.b'),[])
+        self.assertEqual(self.dep.connections_to('A.a'),[])
 
         # now test component connections
-        self.assertEqual(set(self.dep.connections_to('B')),
-                         set([('@bin.B.b','B.b'),
-                              ('A.c','B.a'),
-                              ('B.c','@bout.bound_c'),
-                              ('B.d','@bout.B.d')]))
+        self.assertEqual(set(self.dep.connections_to('A')),
+                         set([('@bin.A.b','A.b'),
+                              ('A.c','B.b'),
+                              ('A.c','C.a'),
+                              ('A.c','C.b')]))
+
+        self.assertEqual(set(self.dep.connections_to('D')),
+                         set([('B.c','D.a'),
+                              ('C.c','D.b'),
+                              ('D.c','@bout.c')]))
 
     def test_var_edges(self):
         self.assertEqual(set(self.dep.var_edges()),
-                         set([('@bout.B.d','@xout.parent.Y.b'),
-                              ('@bout.bound_c','@xout.parent.Y.a'),
-                              ('A.c','B.a'),
-                              ('B.c','@bout.bound_c'),
-                              ('B.d','@bout.B.d'),
-                              ('@xin.parent.X.d','@bin.B.b'),
-                              ('@xin.parent.X.c','@bin.bound_a'),
-                              ('@bin.B.b','B.b')]))
-        self.assertEqual(set(self.dep.var_edges('B')),
-                         set([('B.c','@bout.bound_c'),
-                              ('B.d','@bout.B.d')]))
+                         set([('@bout.C.d','@xout.parent.Y.b'),
+                              ('@bout.c','@xout.parent.Y.a'),
+                              ('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b'),
+                              ('D.c','@bout.c'),
+                              ('C.d','@bout.C.d'),
+                              ('@xin.parent.X.d','@bin.A.b'),
+                              ('@xin.parent.X.c','@bin.a'),
+                              ('@bin.a', 'B.a'), ('@bin.A.b', 'A.b')]))
+        self.assertEqual(set(self.dep.var_edges('C')),
+                         set([('C.c','D.b'), ('C.d','@bout.C.d')]))
         self.assertEqual(set(self.dep.var_edges('@xin')),
-                         set([('@xin.parent.X.c','@bin.bound_a'),
-                              ('@xin.parent.X.d','@bin.B.b')]))
+                         set([('@xin.parent.X.c','@bin.a'),
+                              ('@xin.parent.X.d','@bin.A.b')]))
         self.assertEqual(self.dep.var_edges('@xout'),[])
         self.assertEqual(self.dep.var_edges('blah'),[])
 
     def test_var_in_edges(self):
         self.assertEqual(set(self.dep.var_in_edges()),
-                         set([('@bout.B.d','@xout.parent.Y.b'),
-                              ('@bout.bound_c','@xout.parent.Y.a'),
-                              ('A.c','B.a'),
-                              ('B.c','@bout.bound_c'),
-                              ('B.d','@bout.B.d'),
-                              ('@xin.parent.X.d','@bin.B.b'),
-                              ('@xin.parent.X.c','@bin.bound_a'),
-                              ('@bin.B.b','B.b')]))
+                         set([('@bout.C.d','@xout.parent.Y.b'),
+                              ('@bout.c','@xout.parent.Y.a'),
+                              ('A.c','B.b'), ('B.c','D.a'), ('C.c','D.b'),
+                              ('D.c','@bout.c'),
+                              ('C.d','@bout.C.d'),
+                              ('@xin.parent.X.d','@bin.A.b'),
+                              ('@xin.parent.X.c','@bin.a'),
+                              ('@bin.a', 'B.a'), ('@bin.A.b', 'A.b')]))
         self.assertEqual(set(self.dep.var_in_edges('B')),
-                         set([('A.c','B.a'),('@bin.B.b','B.b')]))
+                         set([('A.c','B.b'),('@bin.a','B.a')]))
         self.assertEqual(set(self.dep.var_in_edges('@xout')),
-                         set([('@bout.B.d','@xout.parent.Y.b'),
-                              ('@bout.bound_c','@xout.parent.Y.a')]))
+                         set([('@bout.C.d','@xout.parent.Y.b'),
+                              ('@bout.c','@xout.parent.Y.a')]))
         self.assertEqual(self.dep.var_in_edges('@xin'),[])
         self.assertEqual(self.dep.var_in_edges('blah'),[])
 
     def test_disconnect(self):
-        self.dep.connect('bound_a', 'A.a')
-        self.dep.disconnect('bound_a') # this should disconnect extern to bound_a and 
-                                       # bound_a to A.a, completely removing the
-                                       # link between @bin and A.
+        self.dep.disconnect('a') # this should disconnect extern to a and 
+                                 # a to B.a, completely removing the
+                                 # link between @bin and B.
         link = self.dep.get_link('@xin', '@bin')
-        self.assertTrue('bound_a' not in link._dests)
-        link = self.dep.get_link('@bin', 'A')
-        self.assertEqual(link, None)
-        
-        # now if we delete the auto passthrough from parent.X.d to B.b,
-        # there should be no link at all between @xin and @bin, or between
-        # @bin and B.
-        self.dep.disconnect('parent.X.d', 'B.b')
-        link = self.dep.get_link('@xin', '@bin')
-        self.assertEqual(link, None)
+        self.assertTrue('a' not in link._dests)
         link = self.dep.get_link('@bin', 'B')
         self.assertEqual(link, None)
         
-        # now test a similar situation on the output side
-        self.dep.disconnect('bound_c')
-        link = self.dep.get_link('@bout', '@xout')
-        self.assertTrue('bound_c' not in link._srcs)
+        # now if we delete the auto passthrough from parent.X.d to A.b,
+        # there should be no link at all between @xin and @bin, or between
+        # @bin and A.
+        self.dep.disconnect('parent.X.d', 'A.b')
+        link = self.dep.get_link('@xin', '@bin')
+        self.assertEqual(link, None)
+        link = self.dep.get_link('@bin', 'A')
+        self.assertEqual(link, None)
         
-        self.dep.disconnect('B.d', 'parent.Y.b')
+        # now test a similar situation on the output side
+        self.dep.disconnect('c')
+        link = self.dep.get_link('@bout', '@xout')
+        self.assertTrue('c' not in link._srcs)
+        
+        self.dep.disconnect('C.d', 'parent.Y.b')
         link = self.dep.get_link('@bout', '@xout')
         self.assertEqual(link, None)
-        link = self.dep.get_link('B', '@bout')
+        link = self.dep.get_link('C', '@bout')
         self.assertEqual(link, None)
         
     def test_link(self):
@@ -203,25 +224,50 @@ class DepGraphTestCase(unittest.TestCase):
         dep.connect('C.d', 'F.a')
         self.assertEqual(dep.find_all_connecting('A','F'), set(['A','B','C','F']))
         
+    def test_expr(self):
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b')])
+        self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.b')])
+        dep.disconnect('3.4*B.d+2.3', 'C.b')
+        self.assertEqual(dep.list_connections(), [])
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                                   ('3.4*B.d+2.3', 'C.a')])
+        self.assertEqual(set(dep.list_connections()), set([('3.4*B.d+2.3','C.b'),('3.4*B.d+2.3','C.a')]))
+        dep.disconnect('3.4*B.d+2.3', 'C.b')
+        self.assertEqual(dep.list_connections(), [('3.4*B.d+2.3','C.a')])
+        
+        dep, scope = self.make_graph(nodes=['B','C'], connections=[('3.4*B.d+2.3', 'C.b'),
+                                                                   ('3.4*B.d+2.3', 'C.a')])
+        dep.disconnect('3.4*B.d+2.3')
+        self.assertEqual(dep.list_connections(), [])
+        
     def test_dump(self):
         s = StringIO.StringIO()
         self.dep.dump(s)
         lines = s.getvalue().split('\n')
-        expected = ["A -> B",
-                    "   c : ['a']",
-                    "B -> @bout",
-                    "   c : ['bound_c']",
-                    "   d : ['B.d']",
+        expected = ["@bin -> A",
+                    "   A.b : ['b']",
                     "@bin -> B",
-                    "   B.b : ['b']",
-                    "@xin -> @bin",
-                    "   parent.X.c : ['bound_a']",
-                    "   parent.X.d : ['B.b']",
+                    "   a : ['a']",
                     "@bout -> @xout",
-                    "   bound_c : ['parent.Y.a']",
-                    "   B.d : ['parent.Y.b']"]
+                    "   c : ['parent.Y.a']",
+                    "   C.d : ['parent.Y.b']",
+                    "@xin -> @bin",
+                    "   parent.X.c : ['a']",
+                    "   parent.X.d : ['A.b']",
+                    "A -> B",
+                    "   c : ['b']",
+                    "B -> D",
+                    "   c : ['a']",
+                    "C -> @bout",
+                    "   d : ['C.d']",
+                    "C -> D",
+                    "   c : ['b']",
+                    "D -> @bout",
+                    "   c : ['c']"]
+
         for line, expect in zip(lines, expected):
             self.assertEqual(line, expect)
+            
 
 if __name__ == "__main__":
     unittest.main()

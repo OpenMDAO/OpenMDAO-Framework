@@ -5,6 +5,7 @@ Test CaseIteratorDriver.
 import logging
 import os
 import pkg_resources
+import re
 import sys
 import time
 import unittest
@@ -13,13 +14,13 @@ import nose
 import random
 import numpy.random as numpy_random
 
-from openmdao.main.api import Assembly, Component, Case, Slot, set_as_top
+from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 
-from openmdao.lib.datatypes.api import Float, Bool, Array
+from openmdao.lib.datatypes.api import Float, Bool, Array, Int, Slot, Str
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
@@ -33,6 +34,11 @@ from openmdao.util.testutil import assert_raises
 ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
+
+def replace_uuid(msg):
+    """ Replace UUID in `msg` with ``UUID``. """
+    pattern = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    return re.sub(pattern, 'UUID', msg)
 
 
 def rosen_suzuki(x):
@@ -113,6 +119,17 @@ class Verifier(Component):
             assert case.msg is None
             assert case['driven.rosen_suzuki'] == rosen_suzuki(case['driven.x'])
             assert case['driven.sum_y'] == sum(case['driven.y'])
+
+
+class TracedComponent(Component):
+    """ Used to check iteration coordinates. """
+
+    inp = Int(iotype='in')
+    itername = Str(iotype='out')
+
+    def execute(self):
+        """ Record iteration coordinate. """
+        self.itername = self.get_itername()
 
 
 class TestCase(unittest.TestCase):
@@ -256,8 +273,9 @@ class TestCase(unittest.TestCase):
             try:
                 self.model.run()
             except Exception as err:
+                err = replace_uuid(str(err))
                 startmsg = 'driver: Run aborted: Traceback '
-                endmsg = 'driven: Forced error'
+                endmsg = 'driven (UUID.4-1): Forced error'
                 self.assertEqual(str(err)[:len(startmsg)], startmsg)
                 self.assertEqual(str(err)[-len(endmsg):], endmsg)
             else:
@@ -269,7 +287,9 @@ class TestCase(unittest.TestCase):
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                self.assertEqual(case.msg, 'driven: Forced error')
+                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                msg = replace_uuid(case.msg)
+                self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
@@ -338,10 +358,12 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "driver: Exception getting case outputs: " \
-            "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
-            self.assertEqual(case.msg, msg)
+            expected = "driver: Exception getting case outputs: " \
+                       "driven \(UUID.[0-9]+-1\): " \
+                       "'DrivenComponent' object has no attribute 'sum_z'"
+            msg = replace_uuid(case.msg)
+            self.assertTrue(re.match(expected, msg))
 
     def test_noiterator(self):
         logging.debug('')
@@ -413,6 +435,80 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(rerun.cases), len(rerun_seq))
         for i, case in enumerate(rerun.cases):
             self.assertEqual(case, orig_cases[rerun_seq[i]])
+
+    def test_itername(self):
+        logging.debug('')
+        logging.debug('test_itername')
+
+        top = set_as_top(Assembly())
+        top.add('driver', CaseIteratorDriver())
+        top.add('comp1', TracedComponent())
+        top.add('comp2', TracedComponent())
+        top.driver.workflow.add(('comp1', 'comp2'))
+
+        cases = []
+        for i in range(3):
+            cases.append(Case(label=str(i),
+                              inputs=(('comp1.inp', i), ('comp2.inp', i)),
+                              outputs=(('comp1.itername', 'comp2.itername'))))
+        # Sequential.
+        top.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(top.driver.evaluated)
+
+        # Concurrent.
+        top.driver.sequential = False
+        top.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(top.driver.evaluated)
+
+    def verify_itername(self, cases, subassembly=False):
+        # These iternames will have the case's uuid prepended.
+        expected = (('1-1', '1-2'),
+                    ('2-1', '2-2'),
+                    ('3-1', '3-2'))
+
+        for case in cases:
+            logging.debug('%s: %r %r', case.label,
+                          case['comp1.itername'], case['comp2.itername'])
+            i = int(case.label)
+            prefix1, dot, iter1 = case['comp1.itername'].partition('.')
+            prefix2, dot, iter2 = case['comp2.itername'].partition('.')
+            prefix = '1-1' if subassembly else case.uuid
+            self.assertEqual(prefix1, prefix)
+            self.assertEqual(iter1, expected[i][0])
+            self.assertEqual(prefix2, prefix)
+            self.assertEqual(iter2, expected[i][1])
+
+    def test_subassembly(self):
+        logging.debug('')
+        logging.debug('test_subassembly')
+
+        top = set_as_top(Assembly())
+        sub = top.add('sub', Assembly())
+        sub.force_execute = True
+        top.driver.workflow.add('sub')
+
+        sub.add('driver', CaseIteratorDriver())
+        sub.add('comp1', TracedComponent())
+        sub.add('comp2', TracedComponent())
+        sub.driver.workflow.add(('comp1', 'comp2'))
+
+        cases = []
+        for i in range(3):
+            cases.append(Case(label=str(i),
+                              inputs=(('comp1.inp', i), ('comp2.inp', i)),
+                              outputs=(('comp1.itername', 'comp2.itername'))))
+        # Sequential.
+        sub.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(sub.driver.evaluated, subassembly=True)
+
+        # Concurrent.
+        sub.driver.sequential = False
+        sub.driver.iterator = ListCaseIterator(cases)
+        top.run()
+        self.verify_itername(sub.driver.evaluated, subassembly=True)
 
 
 if __name__ == '__main__':

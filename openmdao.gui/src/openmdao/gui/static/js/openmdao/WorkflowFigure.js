@@ -21,7 +21,9 @@ openmdao.WorkflowFigure=function(myModel,flowpath,pathname,driver){
     this.setBackgroundColor(this.defaultBackgroundColor);
     this.setDimension(110,60);    
 
+    // do not allow moving or resizing
     this.setCanDrag(false);
+    this.setResizeable(false);    
 };
 openmdao.WorkflowFigure.prototype=new draw2d.CompartmentFigure();
 openmdao.WorkflowFigure.prototype.createHTMLElement=function(){

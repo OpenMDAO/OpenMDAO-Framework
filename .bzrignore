@@ -19,10 +19,7 @@ docs/readme.html
 wingproj.wpr
 _build
 doctrees
-generated_images
 repo_lock
-docs/srcdocs/packages/*.rst
-nosetests.xml
 devenv
 
 

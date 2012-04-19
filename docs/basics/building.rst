@@ -5,74 +5,20 @@
 Overview
 ==========
 
-In this section, you are going to learn a few of the most basic tools you need to build up analysis models 
-using the OpenMDAO script interface. To get the most out of this tutorial, you should be familiar (though you
-don't have to be proficient) with the Python language. If you don't have much experience with Python, we recommend
-trying `Dive into Python <http://www.diveintopython.net/>`_. It is an excellent introduction to Python
-that is licensed under the GNU Free Documentation License, so you can download and use it as you
+In this section, you are going to learn a few of the most basic tools you need to build analysis models 
+using the OpenMDAO script interface. To get the most out of this tutorial, you should be familiar (though
+you don't have to be proficient) with the Python language. If you don't have much experience with Python, we
+recommend trying `Dive into Python <http://www.diveintopython.net/>`_. It is an excellent introduction to
+Python that is licensed under the GNU Free Documentation License, so you can download and use it as you
 wish.
 
-We will build a component that models a paraboloid which is a function of two input variables. Then we will 
-set up an OpenMDAO model with the paraboloid component. Using that model, we will excersize some of the basic 
-features of the OpenMDAO framework like connecting inputs and outputs, and working with external files. 
-We will also use this same component in the later :ref:`tutorial on optimization <optimization_tutorial>`.
+We will build a component that models a paraboloid that is a function of two input variables. Then we will 
+set up an OpenMDAO model with the paraboloid component. Using that model, we will exercise some of the
+basic  features of the OpenMDAO framework, such as connecting inputs and outputs, and working with external
+files.  We will also use this same component in the later :ref:`tutorial on optimization
+<optimization_tutorial>`.
 
 .. index:: package
-
-OpenMDAO Package Hierarchy
----------------------------
-
-*Package* is a Python concept that provides a structure for organizing
-variables and functions in a logical hierarchical fashion. Packages allow you
-to import needed functions and class definitions into the Python environment
-using dotted module names, where the branch levels are separated by a period
-(".").
-
-The OpenMDAO package hierarchy includes several subpackages, all of which are prefixed by 
-``openmdao.``:
-
-- ``openmdao.main`` -- core infrastructure for the framework
-- ``openmdao.lib`` -- OpenMDAO's standard library, containing some important plugins (drivers, traits, etc.) that are available to users of the framework
-- ``openmdao.units`` -- unit definition and conversion
-- ``openmdao.examples`` -- tutorials and example problems for learning OpenMDAO
-- ``openmdao.util`` -- utilities used by OpenMDAO but can also be used standalone
-- ``openmdao.test`` -- functions and classes used strictly for unit testing
-
-OpenMDAO users and component developers will likely need only the first three of these (``main,
-lib,`` and ``units``). Importing classes and functions from OpenMDAO's libraries is performed with
-the same syntax as loading any other Python module:
-
-.. testcode:: package
-
-    from openmdao.main.api import Component, Assembly
-    from openmdao.lib.drivers.api import CONMINdriver
-
-Here, the fundamental OpenMDAO component classes *Component* and *Assembly* are
-loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.drivers.api``.
-
-To simplify the imports, a selection of the most commonly used imports was
-placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete
-listing of what is available in this module by using the ``dir()`` command in
-Python. Likewise, a pseudo-package was also created to house some of the most
-commonly used imports from the standard library. In general, it contains
-variables and drivers. Most of these items are also explained elsewhere
-in the documentation.
-
-Importing more objects into the namespace of your module increases the
-likelihood of name collision, so you should import only the objects that you need.
-You should avoid using ``from <modname> import *`` because it puts every object
-from the given module into the current namespace. 
-
-.. testcode:: package
-
-    # BAD
-    from openmdao.main.api import *
-    
-    # INCONVENIENT
-    import openmdao.main.api
-    
-    # GOOD
-    from openmdao.main.api import Component, Assembly, Driver
 
 
 Naming Conventions
@@ -160,7 +106,7 @@ Type these two lines into that file:
     from openmdao.main.api import Component
     from openmdao.lib.datatypes.api import Float
     
-There are many other objects you could impoprt from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
+There are many other objects you could import from ``openmdao.main.api`` and ``openmdao.lib.datatypes.api``, but you
 only import the classes that you need for your particular component to keep things neater. In other words:
 
 .. testcode:: package
@@ -252,7 +198,7 @@ running OpenMDAO is to activate the environment. You need to do this anytime you
 to run code in OpenMDAO. If you can't remember how to activate your environment, then refer to the 
 instructions in the section on :ref:`installation <Installation>`.
 
-Once you have activated your environment, you can run the Python interperater by typing
+Once you have activated your environment, you can run the Python interpreter by typing
 ::
 
     python
@@ -275,6 +221,63 @@ If you have done everything correctly, you should also get ``-17.0`` as the solu
 The Paraboloid component is now built and ready for inclusion in a larger model. If you want to download
 our version of this file, you can find it 
 :download:`here <../../examples/openmdao.examples.simple/openmdao/examples/simple/paraboloid.py>`
+
+OpenMDAO Package Hierarchy
+---------------------------
+
+*Package* is a Python concept that provides a structure for organizing
+variables and functions in a logical hierarchical fashion. Packages allow you
+to import needed functions and class definitions into the Python environment
+using dotted module names, where the branch levels are separated by a period
+("."). OpenMDAO is made up of several packages. You've already imported class
+definition from one of them in your Paraboloid definition. 
+
+:: 
+    
+    from openmdao.main.api import Component
+
+    
+The OpenMDAO package hierarchy includes several subpackages, all of which are prefixed by 
+``openmdao.``:
+
+- ``openmdao.main`` -- core infrastructure for the framework
+- ``openmdao.lib`` -- OpenMDAO's standard library, containing some important plugins (drivers, traits, etc.) that are available to users of the framework
+- ``openmdao.units`` -- unit definition and conversion
+- ``openmdao.examples`` -- tutorials and example problems for learning OpenMDAO
+- ``openmdao.util`` -- utilities used by OpenMDAO but can also be used standalone
+- ``openmdao.test`` -- functions and classes used strictly for unit testing
+
+OpenMDAO users and component developers will likely need only the first three of these (``main,
+lib,`` and ``units``). Importing classes and functions from OpenMDAO's libraries is performed with
+the same syntax as loading any other Python module:
+
+.. testcode:: package
+
+    from openmdao.main.api import Component, Assembly
+    from openmdao.lib.drivers.api import CONMINdriver
+
+Here, the fundamental OpenMDAO component classes *Component* and *Assembly* are
+loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.drivers.api``.
+
+To simplify the imports, a selection of the most commonly used imports was placed in the
+pseudo-package ``openmdao.main.api``. You can obtain a complete list of what is available in this
+module by looking at the  :ref:`Source Documentation<source_documentation>`. 
+
+Importing more objects into the namespace of your module increases the
+likelihood of name collision, so you should import only the objects that you need.
+You should avoid using ``from <modname> import *`` because it puts every object
+from the given module into the current namespace. 
+
+.. testcode:: package
+
+    # BAD
+    from openmdao.main.api import *
+    
+    # INCONVENIENT
+    import openmdao.main.api
+    
+    # GOOD
+    from openmdao.main.api import Component, Assembly, Driver
 
 
 

@@ -5,6 +5,7 @@ from openmdao.main.exceptions import RunStopped
 
 __all__ = ['Workflow']
 
+
 class Workflow(object):
     """
     A Workflow consists of a collection of Components which are to be executed
@@ -32,6 +33,9 @@ class Workflow(object):
         self._stop = False
         self._parent = parent
         self._scope = scope
+        self._exec_count = 0     # Workflow executions since reset.
+        self._initial_count = 0  # Value to reset to (typically zero).
+        self._comp_count = 0     # Component index in workflow.
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -53,25 +57,61 @@ class Workflow(object):
     def scope(self, scope):
         self._scope = scope
         self.config_changed()
-    
+
+    def set_initial_count(self, count):
+        """
+        Set initial value for execution count.  Only needed if the iteration
+        coordinates must be initialized, such as for CaseIterDriverBase.
+
+        count: int
+            Initial value for workflow execution count.
+        """
+        self._initial_count = count -1  # run() and step() will increment.
+
+    def reset(self):
+        """ Reset execution count. """
+        self._exec_count = self._initial_count
+
     def run(self, ffd_order=0, case_id=''):
         """ Run the Components in this Workflow. """
         self._stop = False
         self._iterator = self.__iter__()
-        for node in self._iterator:
-            node.run(ffd_order=ffd_order, case_id=case_id)
+        self._exec_count += 1
+        self._comp_count = 0
+        iterbase = self._iterbase(case_id)
+        for comp in self._iterator:
+            self._comp_count += 1
+            comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+            comp.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
-            
+
+    def _iterbase(self, case_id):
+        """ Return base for 'iteration coordinates'. """
+        if self._parent is None:
+            return str(self._exec_count)  # An unusual case.
+        else:
+            prefix = self._parent.get_itername()
+            if not prefix:
+                prefix = case_id
+            if prefix:
+                prefix += '.'
+            return '%s%d' % (prefix, self._exec_count)
+
     def step(self, ffd_order=0, case_id=''):
         """Run a single component in this Workflow."""
         if self._iterator is None:
             self._iterator = self.__iter__()
-            
+            self._exec_count += 1
+            self._comp_count = 0
+
         comp = self._iterator.next()
+        self._comp_count += 1
+        iterbase = self._iterbase(case_id)
+        comp.set_itername('%s-%d' % (iterbase, self._comp_count))
         try:
-            comp.run(ffd_order=ffd_order, case_id='')
+            comp.run(ffd_order=ffd_order, case_id=case_id)
         except StopIteration, err:
             self._iterator = None
             raise err

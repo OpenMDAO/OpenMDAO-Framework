@@ -10,8 +10,7 @@ model must use variables to declare the inputs and outputs for each
 component.
 
 You can create a variable for a component in two ways. The first is to
-declare it in the component's class definition as shown in the example 
-given in the :ref:`simple tutorial problem <A-Simple-Tutorial-Problem>`. A simple component that takes
+declare it in the component's class definition. A simple component that takes
 a floating point number as an input and provides a floating point number as an
 output would look like this:
 
@@ -42,9 +41,9 @@ Built-in Variable Types
 **Summary of Variable Types**
 
 +----------+--------------------------------------------------------------+
-| Nam      | Callable Signature                                           |
+| Name     | Callable Signature                                           |
 +==========+==============================================================+
-| Arr      | ``Array( [default_value = None, shape = None, value = None,  |
+| Array    | ``Array( [default_value = None, shape = None, value = None,  |
 |          | dtype = None, units = None, iotype = None, desc = None,      |
 |          | units = None] )``                                            |
 +----------+--------------------------------------------------------------+
@@ -79,7 +78,7 @@ Built-in Variable Types
 +----------+--------------------------------------------------------------+
 
 
-When a variable isdeclared it gets passed a number of arguments, many of which are
+When a variable is declared, it gets passed a number of arguments, many of which are
 optional.
 
 But the *iotype* attribute is required for all variables regardless of type.
@@ -332,8 +331,7 @@ by `FileMetadata`, which supports arbitrary user metadata.
     binary_file = File(path='source.bin', iotype='out', binary=True,
                             extra_stuff='Hello world!')
 
-The *path* must be a descendant of the parent component's path, as
-explained in :ref:`Files-and-Directories`. The *binary* flag can be used to
+The *path* must be a descendant of the parent component's path. The *binary* flag can be used to
 mark a file as binary. 
 
 .. todo::
@@ -403,9 +401,9 @@ units to the existing ones in PhysicalQuantities (in particular, a currency unit
 Units package was derived and is included in OpenMDAO as ``openmdao.units``. This package has
 the same basic function as that of PhysicalQuantities, but to make it more extensible, the unit
 definitions were moved from the internal dictionary into an externally readable text file called
-``unitLibdefault.ini``. See the source documentation for more information on the OpenMDAO
-:ref:`units package<openmdao.units.units.py>`, including how to add units.
-
+``unitLibdefault.ini``. For more information on the OpenMDAO units package, including how to add units, see the 
+:ref:`source documentation<openmdao.units.units.py>`.
+
 As an example, consider a component that calculates a pressure (in Pascals) given
 a known force (in Newtons) applied to a known area (in square meters). Such a
 component would look like this:
@@ -529,11 +527,10 @@ three variables that define two flight conditions:
     VariableTree is not necessary.
     
     
-Here, the class ``FlightCondition`` was defined, containing three variables.
+Here, we defined the class ``FlightCondition``, containing three variables.
 The component ``AircraftSim`` is also defined with a variable *weight*, the
 input FlightCondition *fcc1* and the output FlightCondition *fcc2*. We can 
-access weight through
-``self.weight``; likewise, we can access the airspeed of the output flight
+access weight through ``self.weight``; likewise, we can access the airspeed of the output flight
 condition through ``self.fcc2.airspeed``. In this example we had only one
 level of nesting in our FlightCondition class, but a VariableTree can be added to
 another VariableTree, so any level of nesting is possible.  For example:

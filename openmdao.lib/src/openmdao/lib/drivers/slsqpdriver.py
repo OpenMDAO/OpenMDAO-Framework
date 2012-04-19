@@ -21,7 +21,6 @@ except ImportError as err:
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasparameters import HasParameters
@@ -66,9 +65,6 @@ class SLSQPdriver(DriverUsesDerivatives):
     error_code = Int(0, iotype='out',
                   desc = 'Error code returned from SLSQP')
     
-    # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to '
-                               'output in the recorder.')
     
     def __init__(self, *args, **kwargs):
         
@@ -204,29 +200,8 @@ class SLSQPdriver(DriverUsesDerivatives):
             pyflush(self.iout)
             
         # Write out some relevant information to the recorder
-        if self.recorders:
-            
-            case_input = []
-            for var, val in zip(self.get_parameters().keys(), xnew):
-                case_name = var[0] if isinstance(var, tuple) else var
-                case_input.append([case_name, val])
-            if self.printvars:
-                case_output = [(name,
-                                ExprEvaluator(name, scope=self.parent).evaluate())
-                                       for name in self.printvars]
-            else:
-                case_output = []
-            case_output.append(["objective", f])
-        
-            for i, val in enumerate(g):
-                case_output.append(["Constraint%d" % i, val])
-            
-            case = Case(case_input, case_output, parent_uuid=self._case_id)
-            
-            for recorder in self.recorders:
-                recorder.record(case)
+        self.record_case()
 
-            
         return f, g
     
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):

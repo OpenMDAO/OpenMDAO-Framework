@@ -6,6 +6,7 @@ import logging
 import nose
 import os.path
 import pkg_resources
+import re
 import sys
 import unittest
 
@@ -23,6 +24,11 @@ from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial, \
 ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
+
+def replace_uuid(msg):
+    """ Replace UUID in `msg` with ``UUID``. """
+    pattern = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    return re.sub(pattern, 'UUID', msg)
 
 
 def rosen_suzuki(x0, x1, x2, x3):
@@ -159,10 +165,12 @@ class TestCaseDOE(unittest.TestCase):
 
         self.assertEqual(len(results),
                          self.model.driver.DOEgenerator.num_samples)
-        msg = "driver: Exception getting case outputs: " \
-              "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
-            self.assertEqual(case.msg, msg)
+            expected = "driver: Exception getting case outputs: " \
+                       "driven \(UUID.[0-9]+-1\): " \
+                       "'DrivenComponent' object has no attribute 'sum_z'"
+            msg = replace_uuid(case.msg)
+            self.assertTrue(re.match(expected, msg))
 
     def test_noiterator(self):
         logging.debug('')
@@ -210,8 +218,9 @@ class TestCaseDOE(unittest.TestCase):
         try:
             a.run()
         except Exception as err:
-            self.assertTrue(str(err).startswith('driver: Run aborted: Traceback '))
-            self.assertTrue(str(err).endswith("d: 'Dummy' object has no attribute 'bad'"))
+            err = replace_uuid(str(err))
+            self.assertTrue(err.startswith('driver: Run aborted: Traceback '))
+            self.assertTrue(err.endswith("d (UUID.1-1): 'Dummy' object has no attribute 'bad'"))
         else:
             self.fail("Exception expected")
 
@@ -246,7 +255,9 @@ class TestCaseDOE(unittest.TestCase):
         
         for case in self.model.driver.recorders[0].cases:
             if forced_errors:
-                self.assertEqual(case.msg, 'driven: Forced error')
+                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                msg = replace_uuid(case.msg)
+                self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
@@ -372,10 +383,12 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), 1+self.model.driver.DOEgenerator.num_samples)
-        msg = "driver: Exception getting case outputs: " \
-              "driven: 'DrivenComponent' object has no attribute 'sum_z'"
         for case in results.cases:
-            self.assertEqual(case.msg, msg)
+            expected = "driver: Exception getting case outputs: " \
+                       "driven \(UUID.[0-9]+-1\): " \
+                       "'DrivenComponent' object has no attribute 'sum_z'"
+            msg = replace_uuid(case.msg)
+            self.assertTrue(re.match(expected, msg))
 
     def test_noiterator(self):
         logging.debug('')
@@ -423,8 +436,9 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         try:
             a.run()
         except Exception as err:
-            self.assertTrue(str(err).startswith('driver: Run aborted: Traceback '))
-            self.assertTrue(str(err).endswith("d: 'Dummy' object has no attribute 'bad'"))
+            err = replace_uuid(str(err))
+            self.assertTrue(err.startswith('driver: Run aborted: Traceback '))
+            self.assertTrue(err.endswith("d (UUID.1-1): 'Dummy' object has no attribute 'bad'"))
         else:
             self.fail("Exception expected")
 
@@ -459,7 +473,9 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         
         for case in self.model.driver.recorders[0].cases:
             if forced_errors:
-                self.assertEqual(case.msg, 'driven: Forced error')
+                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                msg = replace_uuid(case.msg)
+                self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
