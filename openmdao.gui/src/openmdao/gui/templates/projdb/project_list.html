@@ -9,15 +9,15 @@
     <h2>Your OpenMDAO Projects:</h2>
 
     {% if project_list %}
-        <table>
+        <table  border="5">
         <tr>
-        <td  width="20" style="padding-right: 6px;"></td>
-        <td style="padding-right: 6px;">Project Name</td>
-        <td style="padding-right: 6px;">Version</td>
-        <td style="padding-right: 6px;">Description</td>
-        <td style="padding-right: 6px;">Project Created</td>
-        <td style="padding-right: 6px;">Last Saved</td>
-        </tr>
+        <td width="20" style="padding-right: 6px;"></td>
+        <td style="padding-right: 6px; font-weight: bold;">Project Name</td>
+        <td style="padding-right: 6px; font-weight: bold;">Version</td>
+        <td style="padding-right: 6px; font-weight: bold;">Description</td>
+        <td style="padding-right: 6px; font-weight: bold;">Project Created</td>
+        <td style="padding-right: 6px; font-weight: bold;">Last Saved</td>
+		</tr>
         {% for project in project_list %}
             <tr><td width="20" style="padding-right: 6px;">
             <form action="/projects/{{ project['id'] }}" method="GET">
