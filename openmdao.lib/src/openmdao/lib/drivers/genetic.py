@@ -27,7 +27,7 @@ from openmdao.util.typegroups import real_types, int_types, iterable_types
 
 array_test = re.compile("(\[[0-9]+\])+$")
 
-@add_delegate(HasParameters, HasObjective,HasEvents)
+@add_delegate(HasParameters, HasObjective, HasEvents)
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve
     Genetic algorithm module. 
@@ -159,6 +159,11 @@ class Genetic(Driver):
         
         #run it once to get the model into the optimal state
         self._run_model(self.best_individual) 
+        
+        # TODO - We really need to be able to record the best candidate from each
+        # generation, but that will only be possible if we let OpenMDAO drive
+        # the optimization. For now, just print out the final best individual state.
+        self.record_case()
         
     def _run_model(self, chromosome):
         self.set_parameters([val for val in chromosome])

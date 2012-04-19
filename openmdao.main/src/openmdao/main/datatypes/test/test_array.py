@@ -7,6 +7,7 @@ from openmdao.main.numpy_fallback import array
 from openmdao.main.api import Component
 from openmdao.main.datatypes.array import Array
 from openmdao.units import convert_units
+from openmdao.main.case import flatten_obj
 
 class ArrayTestCase(unittest.TestCase):
 
@@ -140,6 +141,15 @@ class ArrayTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
             
+    def test_flatten(self):
+        a = array([[1,2],[3,4],[5,6]])
+        self.assertEqual(flatten_obj('foo',a), 
+                         [('foo[0][0]',1),
+                          ('foo[0][1]',2),
+                          ('foo[1][0]',3),
+                          ('foo[1][1]',4),
+                          ('foo[2][0]',5),
+                          ('foo[2][1]',6),])
         
 if __name__ == "__main__":
     unittest.main()

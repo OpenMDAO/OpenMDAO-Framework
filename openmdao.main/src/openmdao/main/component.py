@@ -13,19 +13,28 @@ import pkg_resources
 import sys
 import weakref
 
+import cPickle as pickle
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
 from openmdao.main.container import Container
-from openmdao.main.interfaces import implements, IComponent, ICaseIterator
+from openmdao.main.expreval import ConnectedExprEvaluator
+from openmdao.main.interfaces import implements, obj_has_interface, \
+                                     IAssembly, IComponent, IDriver, \
+                                     ICaseIterator, ICaseRecorder
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
-from openmdao.main.mp_support import is_instance
+from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.publisher import Publisher
+
+import openmdao.util.log as tracing
+
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -121,6 +130,8 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        self._exec_state = 'INVALID' # possible values: VALID, INVALID, RUNNING
+
         # register callbacks for all of our 'in' traits
         for name,trait in self.class_traits().items():
             if trait.iotype == 'in':
@@ -165,7 +176,10 @@ class Component (Container):
         
         self.ffd_order = 0
         self._case_id = ''
-
+        
+        self._publish_vars = {}  # dict of varname to subscriber count
+        
+        self._itername = ''
 
     @property
     def dir_context(self):
@@ -173,6 +187,28 @@ class Component (Container):
         if self._dir_context is None:
             self._dir_context = DirectoryContext(self)
         return self._dir_context
+
+    def _set_exec_state(self, state):
+        if self._exec_state != state:
+            self._exec_state = state
+            pub = Publisher.get_instance()
+            if pub:
+                pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
+            
+    @rbac(('owner', 'user'))
+    def get_itername(self):
+        """Return current 'iteration coordinates'."""
+        return self._itername
+
+    @rbac(('owner', 'user'))
+    def set_itername(self, itername):
+        """Set current 'iteration coordinates'. Typically called by the
+        current workflow just before running the component.
+
+        itername: string
+            Iteration coordinates.
+        """
+        self._itername = itername
 
     # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
@@ -385,10 +421,12 @@ class Component (Container):
         valids = self._valid_dict
         for name in self.list_outputs(valid=False):
             valids[name] = True
-        # make sure our inputs are valid too
+        ## make sure our inputs are valid too
         for name in self.list_inputs(valid=False):
             valids[name] = True
         self._call_execute = False
+        self._set_exec_state('VALID')
+        self.publish_vars()
         
     def _post_run (self):
         """"Runs at the end of the run function, whether execute() ran or not."""
@@ -410,6 +448,8 @@ class Component (Container):
             
         case_id: str
             Identifier for the Case that is associated with this run. (Default is '')
+            If applied to the top-level assembly, this will be prepended to
+            all iteration coordinates.
         """
         if self.directory:
             self.push_dir()
@@ -422,6 +462,8 @@ class Component (Container):
         self._case_id = case_id
         try:
             self._pre_execute(force)
+            self._set_exec_state('RUNNING')
+
             if self._call_execute or force:
                 #print 'execute: %s' % self.get_pathname()
                 
@@ -439,17 +481,48 @@ class Component (Container):
                     
                 else:
                     # Component executes as normal
-                    self.execute()
                     self.exec_count += 1
+                    if tracing.TRACER is not None and \
+                        not obj_has_interface(self, IAssembly) and \
+                        not obj_has_interface(self, IDriver):
+                            tracing.TRACER.debug(self.get_itername())
+                    self.execute()
                     
                 self._post_execute()
             #else:
                 #print 'skipping: %s' % self.get_pathname()
             self._post_run()
+        except:
+            self._set_exec_state('INVALID')
+            raise
         finally:
+            # If this is the top-level component, perform run termination.
+            if self.parent is None:
+                self._run_terminated()
             if self.directory:
                 self.pop_dir()
  
+    def _run_terminated(self):
+        """ Executed at end of top-level run. """
+        def _recursive_close(container, visited):
+            """ Close all case recorders. """
+            # Using ._alltraits() since .items() won't pickle.
+            # and we may be traversing a distributed tree.
+            for name in container._alltraits():
+                obj = getattr(container, name)
+                if id(obj) in visited:
+                    continue
+                visited.add(id(obj))
+                if obj_has_interface(obj, IDriver):
+                    for recorder in obj.recorders:
+                        recorder.close()
+                elif obj_has_interface(obj, ICaseRecorder):
+                    obj.close()
+                if isinstance(obj, Container):
+                    _recursive_close(obj, visited)
+        visited = set((id(self),))
+        _recursive_close(self, visited)
+
     def add(self, name, obj):
         """Override of base class version to force call to *check_config*
         after any child containers are added. The base class version is still
@@ -524,11 +597,11 @@ class Component (Container):
         if self._call_execute:
             return False
         if False in self._valid_dict.values():
-            self.call_execute = True
+            self._call_execute = True
             return False
         if self.parent is not None:
             srccomps = [n for n,v in self.get_expr_sources()]
-            if len(srccomps):
+            if srccomps:
                 counts = self.parent.exec_counts(srccomps)
                 for count,tup in zip(counts, self._expr_sources):
                     if count != tup[1]:
@@ -676,32 +749,38 @@ class Component (Container):
         return self._container_names
     
     @rbac(('owner', 'user'))
-    def connect(self, srcpath, destpath):
-        """Connects one source variable to one destination variable. 
-        When a pathname begins with 'parent.', that indicates
+    def connect(self, srcexpr, destexpr):
+        """Connects one source expression to one destination expression. 
+        When a name begins with 'parent.', that indicates
         that it is referring to a variable outside of this object's scope.
         
-        srcpath: str
-            Pathname of source variable.
+        srcexpr: str or ExprEvaluator
+            Source expression object or expression string.
             
-        destpath: str
-            Pathname of destination variable.
+        destexpr: str or ExprEvaluator
+            Destination expression object or expression string.
         """
-        valids_update = None
+        if isinstance(srcexpr, basestring):
+            srcexpr = ConnectedExprEvaluator(srcexpr, self)
+        if isinstance(destexpr, basestring):
+            destexpr = ConnectedExprEvaluator(destexpr, self, is_dest=True)
         
-        if srcpath.startswith('parent.'):  # internal destination
-            valids_update = (destpath, False)
-            self.config_changed(update_parent=False)
-        elif destpath.startswith('parent.'): # internal source
-            if srcpath not in self._valid_dict:
-                valids_update = (srcpath, True)
+        destpath = destexpr.text
+        
+        valid_updates = []
+        if not srcexpr.refs_parent(): 
+            if srcexpr.text not in self._valid_dict:
+                valid_updates.append((srcexpr.text, True))
             self._connected_outputs = None  # reset cached value of connected outputs
+        if not destpath.startswith('parent.'): 
+            valid_updates.append((destpath, False))
+            self.config_changed(update_parent=False)
                     
-        super(Component, self).connect(srcpath, destpath)
+        super(Component, self).connect(srcexpr, destexpr)
         
-        # move this to after the super connect call so if there's a 
+        # this is after the super connect call so if there's a 
         # problem we don't have to undo it
-        if valids_update is not None:
+        for valids_update in valid_updates:
             self._valid_dict[valids_update[0]] = valids_update[1]
             
         
@@ -712,10 +791,10 @@ class Component (Container):
         """
         super(Component, self).disconnect(srcpath, destpath)
         if destpath in self._valid_dict:
-            if '.' in destpath:
+            if '.' in destpath or '[' in destpath or ']' in destpath:
                 del self._valid_dict[destpath]
             else:
-                self._valid_dict[destpath] = True  # disconnected inputs are always valid
+                self._valid_dict[destpath] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
     
     @rbac(('owner', 'user'))
@@ -1276,6 +1355,7 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
+    @rbac(('owner', 'user'))
     def get_valid(self, names):
         """Get the value of the validity flag for the specified variables.
         Returns a list of bools.
@@ -1308,6 +1388,7 @@ class Component (Container):
         valids = self._valid_dict
         
         self._call_execute = True
+        self._set_exec_state('INVALID')
 
         # only invalidate connected inputs. inputs that are not connected
         # should never be invalidated
@@ -1316,9 +1397,10 @@ class Component (Container):
                 valids[var] = False
         else:
             conn = self.list_inputs(connected=True)
-            for var in varnames:
-                if var in conn:
-                    valids[var] = False
+            if conn:
+                for var in varnames:
+                    if var in conn:
+                        valids[var] = False
 
         # this assumes that all outputs are either valid or invalid
         if not force and outs and (valids[outs[0]] is False):
@@ -1344,7 +1426,39 @@ class Component (Container):
         """Set logging message level."""
         self._logger.level = level
 
-
+    def register_published_vars(self, names, publish=True):
+        if isinstance(names, basestring):
+            names = [names]
+        for name in names:
+            # TODO: allow wildcard naming at lowest level
+            parts = name.split('.')
+            if len(parts) == 1:
+                if not hasattr(self, name):
+                    self.raise_exception("this component has no attribute named '%s'" % name, 
+                                         NameError)
+                if publish:
+                    if name in self._publish_vars:
+                        self._publish_vars += 1
+                    else:
+                        self._publish_vars[name] = 1
+                else:
+                    if name in self._publish_vars:
+                        self._publish_vars[name] -= 1
+                        if self._publish_vars[name] < 1:
+                            del self._publish_vars[name]
+            else:
+                obj = getattr(self, parts[0])
+                obj.register_published_vars('.'.join(parts[1:]), publish)
+            
+    def publish_vars(self):
+        pub = Publisher.get_instance()
+        if pub:
+            pname = self.get_pathname()
+            lst = [('.'.join([pname, var]), getattr(self, var))
+                   for var in self._publish_vars.keys()]
+            pub.publish_list(lst)
+            
+    
 def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no cover
     """prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its

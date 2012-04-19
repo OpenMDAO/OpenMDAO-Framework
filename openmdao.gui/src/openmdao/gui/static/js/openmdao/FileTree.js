@@ -25,7 +25,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         filter_active = true;
         
     // ask model for an update whenever something changes
-    model.addListener(update);
+    model.addListener('',update)
         
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
@@ -50,6 +50,9 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                 html += " class='file' path='"+path+"'>"+name+"</a>";
             }
             html += "</li>";
+        }
+        else {
+            html = '';
         }
         return html;
     }

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Project: {{ project['projectname'] }}
+{% end %}
+
+{% block content %}
+
+    <h2>{{ project['projectname'] }}</h2>
+    
+    <form action="/projects/{{ project['id'] }}/" method="POST">
+        <table>
+            <tr><th><label for="id_projectname">Project Name:</label></th><td><input type="text" name="projectname" value="{{ project['projectname'] }}" id="id_projectname" /></td></tr>
+            <tr><th><label for="id_description">Description:</label></th><td><input type="text" name="description" value="{{ project['description'] }}" id="id_description" /></td></tr>
+            <tr><th><label for="id_version">Version:</label></th><td><input id="id_version" type="text" name="version" value="{{ project['version'] }}" maxlength="5" /></td></tr>
+        </table>
+    <br>
+    {% if project['filename'] %}
+    <input type="submit" value="Update Project Details" />
+    {% else %}
+    <input type="submit" value="Create Project" />
+    {% end %}
+    </form>
+    
+    {% if delete %}
+    <form action="/projects/delete/{{ project['id'] }}/" method="POST">
+        <input type="hidden" name="filename" value="{{ project['filename'] }}" />
+        <input type="submit" value="Delete this project" />
+    </form>
+    {% end %}
+
+    <p>
+    <b>Project Created: </b> {{ project['created'] }}
+    <p>
+    <b>Metadata Last Modified: </b> {{ project['modified'] }}
+    <p>
+    
+    {% if project['filename'] %}
+    <form action="/workspace/project/" method="GET">
+        <input type="hidden" name="filename" value="{{ project['filename'] }}" />
+        <input type="submit" value="Load this project into Workspace" />
+    </form>
+    
+    <form action="/projects/download/{{ project['id'] }}/" method="GET">
+        <input type="submit" value="Save a copy of this project" />
+    </form>
+    {% end %}        
+    <br>
+    
+    <p>
+    <a href="/projects/">Back to Projects</a>
+    
+{% end %}
+
+

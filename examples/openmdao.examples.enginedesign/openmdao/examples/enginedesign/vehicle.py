@@ -136,13 +136,13 @@ if __name__ == "__main__": # pragma: no cover
     from openmdao.main.api import set_as_top
     
     top = set_as_top(Assembly())
-    our_vehicle = top.add('Testing', Vehicle())
+    top.add('car', Vehicle())
     top.driver.workflow.add('Testing')
     
-    our_vehicle.current_gear = 1
-    our_vehicle.velocity = 20.0*(26.8224/60.0)
-    our_vehicle.throttle = 1.0
-    our_vehicle.run()
+    top.car.current_gear = 1
+    top.car.velocity = 20.0*(26.8224/60.0)
+    top.car.throttle = 1.0
+    top.car.run()
     
     def prz(vehicle):
         """ Printing the results"""
@@ -151,6 +151,6 @@ if __name__ == "__main__": # pragma: no cover
         print "(power, torque) ", vehicle.power, vehicle.torque
         print "RPM = ", vehicle.engine.RPM
         
-    prz(our_vehicle)
+    prz(top.car)
 
 # End vehicle.py 

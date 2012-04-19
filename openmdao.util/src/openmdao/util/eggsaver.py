@@ -587,6 +587,10 @@ def _get_distributions(objs, py_dir, logger, observer):
                 # Just being defensive.
                 except Exception:  #pragma no cover
                     logger.exception("ModuleFinder for '%s'" % path)
+                    # Note dependency, even if for some reason ModuleFinder
+                    # can't handle it.
+                    name, dot, ext = os.path.basename(path).partition('.')
+                    finder_info = [(name, path)]
                 else:
                     finder_info = []
                     for name, module in finder.modules.items():

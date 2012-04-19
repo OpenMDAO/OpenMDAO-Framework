@@ -30,7 +30,7 @@ class BLISS(Architecture):
         coupling = self.parent.get_coupling_vars()
         
         self.parent.add('driver',FixedPointIterator())
-        self.parent.driver.max_iteration = 50
+        self.parent.driver.max_iteration = 15
         self.parent.driver.tolerance = .005
         
         

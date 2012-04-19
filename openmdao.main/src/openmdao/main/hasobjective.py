@@ -111,7 +111,7 @@ class HasObjectives(object):
         """Returns the names of variables referenced by the objectives."""
         lst = []
         for obj in self._objectives.values():
-            lst.extend(obj.get_referenced_varpaths())
+            lst.extend(obj.get_referenced_varpaths(copy=False))
         return lst
     
     def _get_scope(self, scope=None):

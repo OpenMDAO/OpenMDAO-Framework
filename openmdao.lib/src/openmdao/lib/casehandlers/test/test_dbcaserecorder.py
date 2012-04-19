@@ -19,6 +19,7 @@ from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator, \
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, DOEdriver, \
                                      CaseIteratorDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.util.testutil import assert_raises
 
 from openmdao.main.caseiter import caseiter_to_dict
 
@@ -113,12 +114,12 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         dbname = os.path.join(dbdir,'junk_dbfile')
         
         recorder = DBCaseRecorder(dbname)
-        recorder._connection.close()
+        recorder.close()
         recorder = DBCaseRecorder(dbname, append=True)
-        recorder._connection.close()
+        recorder.close()
         try:
             recorder = DBCaseRecorder(dbname)
-            recorder._connection.close()
+            recorder.close()
         except Exception as err:
             self.assertEqual('table cases already exists', str(err))
         else:
@@ -178,6 +179,32 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             self.assertEqual(case['str'], 'Normal String')
             self.assertEqual(case['unicode'], u'Unicode String')
             self.assertEqual(case['list'], ['Hello', 'world'])
+
+    def test_close(self):
+        # :memory: can be used after close.
+        recorder = DBCaseRecorder()
+        case = Case(inputs=[('str', 'Normal String'),
+                            ('unicode', u'Unicode String'),
+                            ('list', ['Hello', 'world'])])  # Check pickling.
+        recorder.record(case)
+        recorder.close()
+        recorder.record(case)
+
+        # File-based DB recorder can not be used after close.
+        tmpdir = tempfile.mkdtemp()
+        try:
+            dfile = os.path.join(tmpdir, 'junk.db')
+            recorder = DBCaseRecorder(dfile)
+            recorder.record(case)
+            recorder.close()
+            assert_raises(self, 'recorder.record(case)',
+                          globals(), locals(), RuntimeError,
+                          'Attempt to record on closed recorder')
+        finally:
+            try:
+                shutil.rmtree(tmpdir)
+            except OSError:
+                logging.error("problem removing directory %s" % tmpdir)
 
 
 class NestedCaseTestCase(unittest.TestCase):

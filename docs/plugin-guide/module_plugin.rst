@@ -8,9 +8,8 @@
 Building a Component Plugin
 ===========================
 
-For this example we'll build a plugin for the component shown in the figure
-:ref:`Conceptual-View-of-a-Simple-Component` in the introduction to the framework. This component
-simply computes the value of its single output by adding its two inputs.
+For this example we'll build a plugin for a simple component. This component
+merely computes the value of its single output by adding its two inputs.
 
 These instructions apply to any plugin component distribution that is pure
 Python, i.e., not containing any Python extensions.  They will also work with file

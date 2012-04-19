@@ -220,6 +220,12 @@ Glossary
         Driver node are determined by the contents of the Driver's workflow.
 
         
+      **iteration coordinates**
+        A dotted string in the form
+        ``<workflow execution count>-<component index in workflow>``
+        for each level in the iteration hierarchy.
+
+
       **Jinja**
         A small but fast and easy-to-use stand-alone template engine written in pure
         Python. 

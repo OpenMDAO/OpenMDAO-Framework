@@ -36,7 +36,7 @@ class MultiObjExpectedImprovement(Component):
                     desc="Names of responses to maximize expected improvement around. \
                     Must be NormalDistribution type.")
     
-    predicted_values = Array(iotype="in",dtype=NormalDistribution,
+    predicted_values = Array([0,0],iotype="in",dtype=NormalDistribution,
                         desc="CaseIterator which contains NormalDistributions for each \
                         response at a location where you wish to calculate EI.")
     
@@ -52,9 +52,10 @@ class MultiObjExpectedImprovement(Component):
 
     reset_y_star = Event()
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self ,*args, **kwargs):
         super(MultiObjExpectedImprovement, self).__init__(*args, **kwargs)
         self.y_star = None
+        
         
     def _reset_y_star_fired(self):
         self.y_star = None

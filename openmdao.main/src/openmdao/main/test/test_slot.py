@@ -4,7 +4,8 @@ import pickle
 
 from enthought.traits.api import Int
 
-from openmdao.main.api import Assembly, Component, Container, Case, Slot
+from openmdao.main.api import Assembly, Component, Container, Case
+from openmdao.main.datatypes.api import Slot
 from openmdao.main.interfaces import implements, ICaseIterator
 
 import zope.interface
