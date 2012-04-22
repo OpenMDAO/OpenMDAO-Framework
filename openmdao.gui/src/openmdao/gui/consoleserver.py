@@ -48,8 +48,6 @@ class ConsoleServer(cmd.Cmd):
     def __init__(self, name='', host=''):
         cmd.Cmd.__init__(self)
 
-        print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
-        
         self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
         self.prompt = 'OpenMDAO>> '
         
@@ -639,12 +637,9 @@ class ConsoleServer(cmd.Cmd):
     def cleanup(self):
         ''' Cleanup this server's directory. 
         '''
-        self.stdout = self.sysout
-        self.stderr = self.syserr
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:
-                print "trying to rmtree ",self.root_dir
                 shutil.rmtree(self.root_dir)
             except Exception, err:
                 self._error(err,sys.exc_info())

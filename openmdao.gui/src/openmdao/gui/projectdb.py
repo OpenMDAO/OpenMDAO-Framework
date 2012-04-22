@@ -19,7 +19,7 @@ class Projects(object):
         if pathname:
             self._pathname = pathname
         else:
-            self._pathname = os.path.join(get_user_dir(), 'mdaoproj.db')
+            self._pathname = os.path.join(get_user_dir(), 'projects.db')
         self._connection = None
         
         self.time_format = "%Y-%m-%d %H:%M:%S"
