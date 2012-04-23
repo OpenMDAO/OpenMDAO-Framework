@@ -48,8 +48,6 @@ class ConsoleServer(cmd.Cmd):
     def __init__(self, name='', host=''):
         cmd.Cmd.__init__(self)
 
-        print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
-        
         self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
         self.prompt = 'OpenMDAO>> '
         
@@ -173,20 +171,9 @@ class ConsoleServer(cmd.Cmd):
         ''' execfile in server's globals. 
         '''
         try:
-            # first import all definitions
-            basename = os.path.splitext(filename)[0]
-            cmd = 'from '+basename+' import *'
-            self.default(cmd)
-            # then execute anything after "if __name__ == __main__:"
-            with open(filename) as file:
-                contents = file.read()
-            main_str = 'if __name__ == "__main__":'
-            contents.replace("if __name__ == '__main__':'",main_str)
-            idx = contents.find(main_str)
-            if idx >= 0:
-                idx = idx + len(main_str)
-                contents = 'if True:\n' + contents[idx:]
-                self.default(contents)
+            self.proj.__dict__['__name__'] = '__main__'
+            execfile(filename,self.proj.__dict__)
+            del self.proj.__dict__['__name__']
         except Exception, err:
             self._error(err,sys.exc_info())
 
@@ -341,7 +328,7 @@ class ConsoleServer(cmd.Cmd):
         connections = []
         if is_instance(asm,Assembly):
             # list of components (name & type) in the assembly
-            g = asm._depgraph._depgraph._graph
+            g = asm._depgraph._graph
             for name in nx.algorithms.dag.topological_sort(g):
                 if not name.startswith('@'):
                     comp = asm.get(name)
@@ -650,12 +637,9 @@ class ConsoleServer(cmd.Cmd):
     def cleanup(self):
         ''' Cleanup this server's directory. 
         '''
-        self.stdout = self.sysout
-        self.stderr = self.syserr
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:
-                print "trying to rmtree ",self.root_dir
                 shutil.rmtree(self.root_dir)
             except Exception, err:
                 self._error(err,sys.exc_info())

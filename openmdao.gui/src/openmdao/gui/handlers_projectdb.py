@@ -218,7 +218,7 @@ class AddHandler(BaseHandler):
                     i = i+1
                     
                 with open(os.path.join(self.get_project_dir(), 
-                                       unique), 'w') as out:
+                                       unique), 'wb') as out:
                     out.write(sourcefile['body'])
                     out.close()
                     
