@@ -98,7 +98,7 @@ class AppServer(object):
         user_dir = get_user_dir()
 
         # initialize some settings
-        database = os.path.join(user_dir,'mdaoproj.db')
+        database = os.path.join(user_dir,'projects.db')
 
         if options.reset or not os.path.exists(database):
             print "Resetting project database..."

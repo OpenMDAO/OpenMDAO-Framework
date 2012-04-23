@@ -7,8 +7,6 @@ import zmq
 from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
-from openmdao.util.network import get_unused_ip_port
-
 from random import randrange
 
 class OutStream(object):
