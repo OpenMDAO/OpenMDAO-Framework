@@ -197,7 +197,9 @@ class Project(object):
         os.chdir(self.path)
         try:
             try:
-                tf = tarfile.open(os.path.join(ddir,projname+PROJ_FILE_EXT), 
+                fname = os.path.join(ddir,projname+PROJ_FILE_EXT)
+                f = open(fname, 'wb')
+                tf = tarfile.open(fileobj=f,
                                   mode='w:gz')
                 for entry in os.listdir(self.path):
                     tf.add(entry)
