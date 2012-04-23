@@ -211,15 +211,13 @@ class Projects(object):
         cur.close()
 
         # Return last file modification dates too.
-        for project in matched_projects:
-            
-            fullpath = os.path.join(get_user_dir(), 'projects',
-                                    project['filename'])
-            
-            stamp = os.path.getmtime(fullpath)
-            project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
-
-            
+        for project in matched_projects:            
+            fullpath = os.path.join(get_user_dir(), 'projects', project['filename'])            
+            try:
+                stamp = os.path.getmtime(fullpath)            
+                project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
+            except Exception,err:
+                project['file_modified'] = err
         
         return matched_projects
     
