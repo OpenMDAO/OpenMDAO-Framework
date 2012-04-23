@@ -50,7 +50,7 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         var menuID = this.id+"-menu",
             menuDiv = this.elm.append("<nav2 id='"+menuID+"'>"),
             popButton = jQuery("<div title='Pop Out' style='position:absolute;top:5px;right:5px;z-index:1001'>*</div>")
-                .click( function() { this.popout(this.title) }.bind(this)
+                .click( function() { this.popup(this.title) }.bind(this)
             )
         new openmdao.Menu(menuID,this.menu)
         // FIXME: HACK, add button to make window pop out (TODO: alternately open in new browser window?)
@@ -93,22 +93,4 @@ openmdao.BaseFrame.prototype.close = function () {
         this.elm.dialog('destroy')
         this.elm.remove(); 
     }
-}
-
-openmdao.BaseFrame.prototype.popout = function (title) {
-    debug.info('BaseFrame.popout()',this)
-    var init_fn = "jQuery(function(){openmdao.PopoutFrame()})";
-    var new_win = openmdao.Util.popupWindow("/workspace/base?head_script='"+init_fn+"'",title,600,800)
-    debug.info('new_win',new_win)
-}
-
-openmdao.PopoutFrame = function() {
-    debug.info('window',window);
-    debug.info('opener',opener);
-	openmdao.model = opener.openmdao.model;
-    debug.info('openmdao.model',openmdao.model);
-	openmdao.model.issueCommand('print "hello from another world"')
-    jQuery('body').append('<div id="palette"></div>');
-    debug.info('divs',jQuery('div'));
-	new openmdao.Palette("palette",  openmdao.model) 
 }

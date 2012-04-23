@@ -57,7 +57,7 @@ jQuery(function() {
         new openmdao.ObjectTree("otree", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTree("ftree",   model, code_fn, geom_fn);        
         new openmdao.Palette("palette",  model)        
-        new openmdao.Console("cmdform", "command", "history", model);
+        new openmdao.Console("console",  model);
         
         // initialize views
         model.updateListeners();

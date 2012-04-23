@@ -102,6 +102,20 @@ openmdao.Util = {
         win.document.close();
     },
 
+    /**
+     * open a popup window initialized by the given script
+     *
+     * title:   the title of the window
+     * script:  script to initialize the window
+     * h:       the height of the window
+     * w:       the width of the window
+     */
+    popupScript: function (title,init_script,h,w) {
+        h = h || 600;
+        w = w || 800;
+        return openmdao.Util.popupWindow("/workspace/base?head_script='"+init_script+"'",title,h,w);
+    },
+    
     
     /**
      *  escape anything in the text that might look like HTML, etc. 

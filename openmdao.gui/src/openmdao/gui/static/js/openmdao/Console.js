@@ -1,18 +1,23 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.Console = function(formID,commandID,historyID,model) {    
+openmdao.Console = function(id,model) {  
+    openmdao.Console.prototype.init.call(this,id,'Console');
+  
     /***********************************************************************
      *  private
      ***********************************************************************/
      
+    // note: there is CSS that maps to these specific IDs, so don't change them :/
     var self = this,
-        command = jQuery('#'+commandID),
-        history = jQuery('#'+historyID),
-        historyBox = history.parent(),
-        contextMenu = jQuery("<ul id="+historyID+"-menu class='context-menu'>"),
-        sck = null
-
+        historyBox = jQuery('<div id="historybox">').appendTo(this.elm),
+        history    = jQuery('<div id="history">').appendTo(historyBox),
+        cmdform    = jQuery('<form id="cmdform" nostyle="display:none;"  method="post">'
+                          + '  <input type="text" id="command" />'
+                          + '  <input type="submit" value="Submit" class="button" id="command-button"/>'
+                          + '</form>').appendTo(this.elm),
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>").appendTo(historyBox)
+    
     // create context menu for history    
     contextMenu.append(jQuery('<li>Trace</li>').click(function(ev) {
         model.issueCommand('trace');
@@ -23,11 +28,17 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
-    historyBox.append(contextMenu)
+    
+    contextMenu.append(jQuery('<li>Pop Out</li>').click(function(ev) {
+        var init_fn = "jQuery(function(){openmdao.PopoutConsole()})";
+        openmdao.Util.popupScript('Console',init_fn);
+    }));
+    
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
     // submit a command
-    jQuery('#'+formID).submit(function() {
+    cmdform.submit(function() {
+        var command = cmdform.children('#command');
         var cmd = command.val();
         if (cmd.length > 0) {
             command.val("");
@@ -67,4 +78,15 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     // ask model for an update whenever something changes
     model.addListener('outstream',updateHistory)
 
+}
+
+/** set prototype */
+openmdao.Console.prototype = new openmdao.BaseFrame();
+openmdao.Console.prototype.constructor = openmdao.Console;
+
+/** initialize a console in a child window */
+openmdao.PopoutConsole = function() {
+	openmdao.model = opener.openmdao.model;
+    jQuery('body').append('<div id="console"></div>');
+	new openmdao.Console("console",  openmdao.model) 
 }
