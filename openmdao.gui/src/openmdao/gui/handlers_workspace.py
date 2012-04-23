@@ -1,4 +1,5 @@
 import sys, os, traceback
+import re
 import time
 import jsonpickle
 
@@ -35,7 +36,36 @@ class AddOnsHandler(BaseHandler):
         ''' show available plugins, prompt for plugin to be installed
         '''
         self.render('workspace/addons.html')
-        
+    
+class BaseHandler(BaseHandler):
+    ''' render the base template
+    '''
+    @web.authenticated
+    def post(self):
+        ''' render the base template with the posted content
+        '''
+        attributes = {}
+        for field in ['head']:
+            if field in self.request.arguments.keys():
+                attributes[field]=self.request.arguments[field][0]                
+            else:
+                attributes[field]=False
+        self.render('workspace/base.html', **attributes)
+                     
+    @web.authenticated
+    def get(self):
+        attributes = {}
+        print 'self.request.arguments:',self.request.arguments
+        for field in ['head_script']:
+            if field in self.request.arguments.keys():
+                s = self.request.arguments[field][0]
+                s = re.sub(r'^"|"$', '', s)  # strip leading/trailing quotes
+                s = re.sub(r"^'|'$", "", s)  # strip leading/trailing quotes
+                attributes[field]=s                
+            else:
+                attributes[field]=False
+        self.render('workspace/base.html', **attributes)
+
 class GeometryHandler(BaseHandler):
     @web.authenticated
     def get(self):
@@ -259,14 +289,6 @@ class ProjectHandler(BaseHandler):
     def post(self):
         cserver = self.get_server()
         cserver.save_project()
-        
-        # Sadly, this probably won't work because of client/server
-        #filename = self.get_secure_cookie('filename')
-        #if filename:
-        #    pdb = Projects()
-        #    project = pdb.get_by_filename(filename)
-        #    pdb.modified(project['id'])
-            
         self.write('Saved.')
         
     @web.authenticated
@@ -370,13 +392,13 @@ class TestHandler(BaseHandler):
 
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
+    web.url(r'/workspace/addons/?',         AddOnsHandler),
+    web.url(r'/workspace/base/?',           BaseHandler),
+    web.url(r'/workspace/close/?',          CloseHandler),
+    web.url(r'/workspace/command',          CommandHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
-    web.url(r'/workspace/addons/?',         AddOnsHandler),
-    web.url(r'/workspace/close/?',          CloseHandler),
-    web.url(r'/workspace/command',          CommandHandler),
-    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
     web.url(r'/workspace/files/?',          FilesHandler),
@@ -386,9 +408,11 @@ handlers = [
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
+    
     web.url(r'/workspace/test/?',           TestHandler),
 ]
 

@@ -65,9 +65,12 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     os.mkdir(projpath)
     startdir = os.getcwd()
     if os.path.getsize(archive_name) > 0:
-        tf = tarfile.open(archive_name)
         try:
+            f = open(archive_name, 'rb')
+            tf = tarfile.open(fileobj=f,mode='r')
             tf.extractall(projpath)
+        except Exception, err:
+            print "Error expanding project archive:",err
         finally:
             tf.close()
     proj = Project(projpath)
@@ -105,14 +108,6 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     #cfg.save_as_class(stream, classname)
 
 
-def _is_valid_project_dir(dpath):
-    if not os.path.isdir(dpath):
-        return False
-    for path in ['model','_project_state']:
-        if not os.path.exists(os.path.join(dpath,path)):
-            return False
-    return True
-    
 class Project(object):
     def __init__(self, projpath):
         """Initializes a Project containing the project found in the 
@@ -125,11 +120,6 @@ class Project(object):
         modeldir = os.path.join(self.path, 'model')
         self.activate()
         if os.path.isdir(projpath):
-            # I don't think model dir and state should be manadatory
-            # e.g. when creating a project from an existing non-Project directory
-            # if not _is_valid_project_dir(projpath):
-                # raise RuntimeError("Directory '%s' is not a valid OpenMDAO project directory")
-
             # locate file containing state, create it if it doesn't exist
             statefile = os.path.join(projpath, '_project_state')
             if os.path.exists(statefile):
@@ -179,7 +169,7 @@ class Project(object):
         for k in self.__dict__:
             if is_instance(self.__dict__[k],Container):
                 save_state[k] = self.__dict__[k]
-        with open(fname, 'w') as f:
+        with open(fname, 'wb') as f:
             pickle.dump(save_state, f)
         
     def export(self, projname=None, destdir='.'):
@@ -208,10 +198,13 @@ class Project(object):
         os.chdir(self.path)
         try:
             try:
-                tf = tarfile.open(os.path.join(ddir,projname+PROJ_FILE_EXT), 
-                                  mode='w:gz')
+                fname = os.path.join(ddir,projname+PROJ_FILE_EXT)
+                f = open(fname, 'wb')
+                tf = tarfile.open(fileobj=f,mode='w:gz')
                 for entry in os.listdir(self.path):
                     tf.add(entry)
+            except Exception, err:
+                print "Error creating project archive:",err
             finally:
                 tf.close()
         finally:
