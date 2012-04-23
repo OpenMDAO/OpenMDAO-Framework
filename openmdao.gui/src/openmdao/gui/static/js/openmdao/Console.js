@@ -11,8 +11,6 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         history = jQuery('#'+historyID),
         historyBox = history.parent(),
         contextMenu = jQuery("<ul id="+historyID+"-menu class='context-menu'>"),
-        interval = 0,  // ms
-        timer = null,
         sck = null
 
     // create context menu for history    
@@ -25,12 +23,6 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
-    //contextMenu.append(jQuery('<li>Update</li>').click(function(ev) {
-    //    update();
-    //}));
-    // contextMenu.append(jQuery('<li>Polling...</li>').click(function(ev) {
-        // promptForRefresh();
-    // }));
     historyBox.append(contextMenu)
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
@@ -56,62 +48,6 @@ openmdao.Console = function(formID,commandID,historyID,model) {
         return false;
     })
     
-    // if an interval is specified, continuously update
-    if (interval > 0) {
-        setRefresh(interval)
-    }
-
-    /** set the history to continuously update after specified ms */
-    function setRefresh(interval) {
-        self.interval = interval;
-        if (timer != 'undefined') {
-            clearInterval(timer);
-        }
-        if (interval > 0) {
-            timer = setInterval(update,interval);
-        }
-    }
-    
-    /** prompt user for refresh rate */
-    promptForRefresh = function() {
-        openmdao.Util.promptForValue('Specify a polling delay (in seconds)',function(val) {
-            if (val === '0') {
-                setRefresh(0);
-            }
-            else {
-                var rate = parseInt(val);
-                if (! isNaN(rate)) {
-                    setRefresh(rate*1000);
-                }
-                else {
-                    alert('Invalid polling rate, polling is disabled.');
-                    setRefresh(0);
-                }
-            }
-        })
-    }
-        
-    /** escape anything in the text that might look like HTML, etc. */
-    function escapeHTML(text) {
-        var result = "";
-        for(var i = 0; i < text.length; i++){
-            if(text.charAt(i) == "&" 
-                  && text.length-i-1 >= 4 
-                  && text.substr(i, 4) != "&amp;"){
-                result = result + "&amp;";
-            } else if(text.charAt(i)== "<"){
-                result = result + "&lt;";
-            } else if(text.charAt(i)== ">"){
-                result = result + "&gt;";
-            } else if(text.charAt(i)== " "){
-                result = result + "&nbsp;";
-            } else {
-                result = result + text.charAt(i);
-            }
-        }
-        return result
-    };
-
     /** scroll to bottom */
     function scrollToBottom() {
         var h = history.height(),
@@ -123,7 +59,7 @@ openmdao.Console = function(formID,commandID,historyID,model) {
     /** update the history */
     function updateHistory(text) {
         if (text.length > 0) {
-            history.append(escapeHTML(text).replace(/\n\r?/g, '<br />'))
+            history.append(openmdao.Util.escapeHTML(text).replace(/\n\r?/g, '<br />'))
             scrollToBottom();
         }
     }

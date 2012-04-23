@@ -101,7 +101,31 @@ openmdao.Util = {
         win.document.write(html);
         win.document.close();
     },
+
     
+    /**
+     *  escape anything in the text that might look like HTML, etc. 
+     */
+    escapeHTML: function(text) {
+        var result = "";
+        for(var i = 0; i < text.length; i++){
+            if(text.charAt(i) == "&" 
+                  && text.length-i-1 >= 4 
+                  && text.substr(i, 4) != "&amp;"){
+                result = result + "&amp;";
+            } else if(text.charAt(i)== "<"){
+                result = result + "&lt;";
+            } else if(text.charAt(i)== ">"){
+                result = result + "&gt;";
+            } else if(text.charAt(i)== " "){
+                result = result + "&nbsp;";
+            } else {
+                result = result + text.charAt(i);
+            }
+        }
+        return result
+    },
+
     /**
      * add a handler to the onload event
      * ref: http://simonwillison.net/2004/May/26/addLoadEvent/

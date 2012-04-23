@@ -30,9 +30,9 @@ openmdao.StructurePane = function(elm,model,pathname,name,editable) {
             debug.info(droppedName,'(path=',droppedPath,') dropped on structure:',self.pathname,'z-index',structureDiv.css('z-index'),'zIndex',structureDiv.css('zIndex'));
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
-                    model.addComponent(droppedPath,name,self.pathname)
+                    model.addComponent(droppedPath,name,self.pathname);
                 })
-            }
+            };
         }
     });
     
@@ -101,7 +101,7 @@ openmdao.StructurePane = function(elm,model,pathname,name,editable) {
             }
         });
 
-        // unconnected components are layed out in rows
+        // unconnected components are laid out in rows
         var row = 0,
             row_start = 0,
             max_width = structure.getWidth();
@@ -117,7 +117,7 @@ openmdao.StructurePane = function(elm,model,pathname,name,editable) {
             fig.setPosition(x,y);
         });
 
-        // connected components are layed out diagonally 
+        // connected components are laid out diagonally 
         // (top left to bottom right)
         x = 0;
         jQuery.each(connected,function(idx,fig) {
@@ -129,10 +129,11 @@ openmdao.StructurePane = function(elm,model,pathname,name,editable) {
 
     /** update structure diagram */
     this.loadData = function(json) {
-        structure.clear()
+        structure.clear();
+        figures = {};
         if (Object.keys(json).length > 0) {
-            updateFigures(json,false)
-        }
+            updateFigures(json,false);
+        };
     }
   
 }

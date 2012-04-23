@@ -66,7 +66,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     startdir = os.getcwd()
     if os.path.getsize(archive_name) > 0:
         try:
-            tf = tarfile.open(archive_name,mode='rb')
+            tf = tarfile.open(archive_name,mode='r')
             tf.extractall(projpath)
         except Exception, err:
             print "Error expanding project archive:",err
@@ -201,6 +201,8 @@ class Project(object):
                                   mode='w:gz')
                 for entry in os.listdir(self.path):
                     tf.add(entry)
+            except Exception, err:
+                print "Error creating project archive:",err
             finally:
                 tf.close()
         finally:
