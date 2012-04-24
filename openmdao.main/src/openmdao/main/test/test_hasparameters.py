@@ -375,14 +375,14 @@ class ParametersTestCase(unittest.TestCase):
         try:
             self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler="bad", adder=1.0)
         except ValueError, err:
-            self.assertEqual(str(err), "driver: Bad value given for parameter's 'scaler' attribute")
+            self.assertEqual(str(err), "driver: Bad value given for parameter's 'scaler' attribute.")
         else: 
             self.fail("Exception Expected")
             
         try:
             self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler=1.0, adder="wolf")
         except ValueError, err:
-            self.assertEqual(str(err), "driver: Bad value given for parameter's 'adder' attribute")
+            self.assertEqual(str(err), "driver: Bad value given for parameter's 'adder' attribute.")
         else: 
             self.fail("Exception Expected")
             

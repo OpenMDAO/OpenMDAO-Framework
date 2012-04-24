@@ -66,7 +66,7 @@ class Architecture(HasTraits):
         self.__constraint_types = list(values)
         
     def configure(self): 
-        """setup the architecture inside of the assembly"""
+        """Setup the architecture inside of the assembly."""
         raise NotImplementedError("configure")
         
     def _get_param_types(self):

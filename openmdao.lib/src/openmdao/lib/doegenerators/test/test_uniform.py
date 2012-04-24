@@ -29,7 +29,7 @@ class TestCase(unittest.TestCase):
             for case in uni: 
                 pass
         except ValueError as err: 
-            self.assertEqual(str(err),"Uniform distributions must have at least 2 samples. num_samples is set to less than 2")
+            self.assertEqual(str(err),"Uniform distributions must have at least 2 samples. num_samples is set to less than 2.")
 
 if __name__ == "__main__":
     unittest.main()

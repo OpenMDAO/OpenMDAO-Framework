@@ -1,5 +1,5 @@
 """
-Routines for handling 'projects' in python.
+Routines for handling 'Projects' in Python.
 """
 
 import os
@@ -37,7 +37,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     expanded project.
     
     archive_name: str
-        Path to the project archive to be expanded
+        Path to the project archive to be expanded.
         
     proj_name: str (optional)
         Name of the new project. Defaults to the name of the project contained
@@ -114,7 +114,7 @@ class Project(object):
         specified directory or creates a new project if one doesn't exist.
         
         projpath: str
-            Path to the project's directory
+            Path to the project's directory.
         """
         self.path = expand_path(projpath)
         modeldir = os.path.join(self.path, 'model')

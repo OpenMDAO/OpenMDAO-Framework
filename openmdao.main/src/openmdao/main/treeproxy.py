@@ -3,7 +3,7 @@ import weakref
 
 class TreeProxy(object):
     """Acts as a proxy object for objects within an opaque, hierarchically
-    structured local object so that normal python attribute access will work
+    structured local object so that normal Python attribute access will work
     to access objects inside of the opaque object's tree.
     
     The opaque object must implement the following interface which is checked
@@ -20,7 +20,7 @@ class TreeProxy(object):
     indices or attribute names, e.g., [2,1], ['mykey'] or [2,1,['attrname']].
     Attribute names are buried inside of a nested list to avoid confusion
     with strings used to index into a container.  Also, nested tuples are not
-    used to avoid confusion for the same reason, i.e. they are hashable and
+    used to avoid confusion for the same reason, i.e., they are hashable and
     therefore could be used to index into a container.
     """
     def __init__(self, root, path):

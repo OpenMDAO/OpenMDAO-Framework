@@ -30,7 +30,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 class MultiObjExpectedImprovement(Component):
     best_cases = Slot(CaseSet, iotype="in",
                     desc="CaseIterator which contains only Pareto optimal cases \
-                    according to criteria")
+                    according to criteria.")
     
     criteria = Array(iotype="in",
                     desc="Names of responses to maximize expected improvement around. \
@@ -40,15 +40,15 @@ class MultiObjExpectedImprovement(Component):
                         desc="CaseIterator which contains NormalDistributions for each \
                         response at a location where you wish to calculate EI.")
     
-    n = Int(1000,iotype="in",desc="number of Monte Carlo Samples with \
-                        which to calculate probability of improvement")
+    n = Int(1000,iotype="in",desc="Number of Monte Carlo Samples with \
+                        which to calculate probability of improvement.")
     
-    calc_switch = Enum("PI",["PI","EI"],iotype="in",desc="switch to use either \
-                        probability (PI) or expected (EI) improvement")
+    calc_switch = Enum("PI",["PI","EI"],iotype="in",desc="Switch to use either \
+                        probability (PI) or expected (EI) improvement.")
     
-    PI = Float(0.0, iotype="out", desc="The probability of improvement of the next_case")
+    PI = Float(0.0, iotype="out", desc="The probability of improvement of the next_case.")
     
-    EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case")
+    EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case.")
 
     reset_y_star = Event()
     

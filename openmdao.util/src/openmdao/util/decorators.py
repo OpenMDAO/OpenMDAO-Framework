@@ -51,7 +51,7 @@ def stub_if_missing_deps(*deps):
     """A class decorator that will try to import the specified modules and in
     the event of failure will stub out the class, raising a RuntimeError that
     explains the missing dependencies whenever an attempt is made to
-    instatiate the class.
+    instantiate the class.
     
     deps: str args
         args in deps may have the form a.b.c or a.b.c:attr, where attr would be 
