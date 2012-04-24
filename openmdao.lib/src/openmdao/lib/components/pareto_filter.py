@@ -26,7 +26,7 @@ class ParetoFilter(Component):
                              
     case_sets = List(Slot(ICaseIterator), value=[], iotype="in",
                      desc="CaseSet with the cases to be filtered to "
-                     "Find the pareto optimal subset.")
+                     "find the pareto optimal subset.")
     
     pareto_set = Slot(CaseSet, iotype="out", 
                         desc="Resulting collection of pareto optimal cases.",copy="shallow")

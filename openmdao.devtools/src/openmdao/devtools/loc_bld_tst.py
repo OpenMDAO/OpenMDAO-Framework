@@ -241,7 +241,7 @@ def install_dev_env(url, branch=None):
     
 
 def activate_and_test(envdir, testargs=()):
-    """"
+    """
     Runs the test suite on an OpenMDAO virtual environment located
     in the specified directory.
     

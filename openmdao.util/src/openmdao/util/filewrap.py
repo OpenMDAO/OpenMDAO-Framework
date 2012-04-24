@@ -316,18 +316,18 @@ class InputFileGenerator(object):
         or free form arrays.
         
         value: float, integer, bool, str
-            array of values to insert.
+            Array of values to insert.
         
         row_start: integer
-            starting row for inserting the array. This is relative
+            Starting row for inserting the array. This is relative
             to the anchor, and can be negative.
         
         field_start: integer
-            starting field in the given row_start as denoted by 
+            Starting field in the given row_start as denoted by 
             delimiter(s). 
         
         field_end: integer
-            the final field the array uses in row_end. 
+            The final field the array uses in row_end. 
             We need this to figure out if the template is too small or large
         
         row_end: integer (optional)
@@ -381,7 +381,7 @@ class InputFileGenerator(object):
         row of the array is on its own line.
         
         value: ndarray
-            array of values to insert.
+            Array of values to insert.
         
         row_start: integer
             Starting row for inserting the array. This is relative
@@ -395,11 +395,11 @@ class InputFileGenerator(object):
             delimiter(s). 
         
         field_end: integer
-            the final field the array uses in row_end. 
-            We need this to figure out if the template is too small or large
+            The final field the array uses in row_end. 
+            We need this to figure out if the template is too small or large.
         
         sep: str (optional) (currently unsupported)
-            Separator to append between values if we go beyond the template"""
+            Separator to append between values if we go beyond the template."""
 
         sub = _SubHelper()
         i = 0
@@ -495,7 +495,7 @@ class FileParser(object):
             The text you want to search for.
         
         occurrence: integer
-            find nth instance of text; default is 1 (first). Use -1 to
+            Find nth instance of text; default is 1 (first). Use -1 to
             find last occurrence. Reverse searches always start at the end
             of the file no matter the state of any previous anchor."""
         
@@ -557,7 +557,7 @@ class FileParser(object):
         """Returns a whole line, relative to current anchor.
         
         row: integer
-            number of lines offset from anchor line (0 is anchor line).
+            Number of lines offset from anchor line (0 is anchor line).
             This can be negative."""
         
         return self.data[self.current_row + row].rstrip()
@@ -568,11 +568,11 @@ class FileParser(object):
         --- If the delimiter is a set of chars (e.g., ", ") ---
         
         row: integer
-            number of lines offset from anchor line (0 is anchor line).
+            Number of lines offset from anchor line (0 is anchor line).
             This can be negative.
         
         field: integer
-            which word in line to retrieve.
+            Which word in line to retrieve.
         
         fieldend - IGNORED
         
@@ -586,7 +586,7 @@ class FileParser(object):
             character position to start
         
         fieldend: integer (optional)
-            position of last character to return. If omitted, the end of
+            Position of last character to return. If omitted, the end of
             the line is used"""
         
         j = self.current_row + row
@@ -621,7 +621,7 @@ class FileParser(object):
             Which field to transfer. Field 0 is the key.
         
         occurrence: integer
-            find nth instance of text; default is 1 (first value
+            Find nth instance of text; default is 1 (first value
             field). Use -1 to find last occurance. Position 0 is the key
             field, so it should not be used as a value for occurrence.
         
@@ -671,10 +671,10 @@ class FileParser(object):
             Row number to start, relative to the current anchor
         
         fieldstart: integer
-            field number to start
+            Field number to start
         
         rowend: integer (optional)
-            row number to end. If not set, then only one row is grabbed.
+            Row number to end. If not set, then only one row is grabbed.
         
         Setting the delimiter to 'columns' elicits some special behavior
         from this method. Normally, the extraction process wraps around
@@ -736,13 +736,13 @@ class FileParser(object):
             Row number to start, relative to the current anchor
         
         fieldstart: integer
-            field number to start. 
+            Field number to start. 
         
         rowend: integer
-            row number to end relative to current anchor. 
+            Row number to end relative to current anchor. 
         
         fieldend: integer (optional)
-            field number to end. If not specified, grabs all fields up to the
+            Field number to end. If not specified, grabs all fields up to the
             end of the line.
                 
         If the delimiter is set to 'columns', then the values contained in

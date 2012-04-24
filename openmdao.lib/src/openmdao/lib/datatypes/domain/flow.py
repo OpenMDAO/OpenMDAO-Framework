@@ -147,7 +147,7 @@ class FlowSolution(object):
             The flowfield to check against.
 
         logger: :class:`Logger` or None
-            Used to log debug messages that will indicate what if anything is
+            Used to log debug messages that will indicate what, if anything, is
             not equivalent.
 
         tolerance: float

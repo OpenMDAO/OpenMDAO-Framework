@@ -10,8 +10,8 @@ assigning this access control attribute to methods.
 Remote access to attributes is checked based on role, accessing method, object,
 and attribute.
 
-These access checks are mediated by an :class:`AccessController`. There is a
-default controller assigned to each :class:`OpenMDAO_Server`. The server will
+These access checks are mediated by an :class:`AccessController`. A
+default controller is assigned to each :class:`OpenMDAO_Server`. The server will
 check for an object-specific controller by trying to invoke
 :meth:`get_access_controller` on the object before using the default.
 
@@ -291,7 +291,7 @@ def rbac_methods(obj):
 def need_proxy(meth, result, access_controller):
     """
     Returns True if `result` from `meth` requires a proxy.
-    If no proxy types have been explicitly defined for `meth` then
+    If no proxy types have been explicitly defined for `meth`, then
     `access_controller` provides a default set.
 
     meth: method.

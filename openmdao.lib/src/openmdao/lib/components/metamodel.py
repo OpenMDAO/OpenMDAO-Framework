@@ -31,7 +31,7 @@ class MetaModel(Component):
     warm_start_data = Slot(ICaseIterator,iotype="in",
                               desc="CaseIterator containing cases to use as "
                               "initial training data. When this is set, all "
-                              "previous training data is cleared, and replaced "
+                              "previous training data is cleared and replaced "
                               "with data from this CaseIterator")
     
     surrogate = Dict(key_trait=Str,

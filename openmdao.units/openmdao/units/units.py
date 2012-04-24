@@ -31,7 +31,7 @@ except ImportError:
 
 class NumberDict(dict):
     """
-    Dictionary storing numerical values
+    Dictionary storing numerical values.
   
     Constructor: NumberDict()
   
@@ -106,7 +106,7 @@ class PhysicalQuantity(object):
     
                 2. PhysicalQuantity(value_with_unit), where value_with_unit
                 is a string that contains both the value and the unit,
-                i.e. '1.5 m/s'. This form is provided for more convenient
+                i.e., '1.5 m/s'. This form is provided for more convenient
                 interactive use.
     
          @param args: either (value, unit) or (value_with_unit,)
@@ -259,7 +259,7 @@ class PhysicalQuantity(object):
     def in_base_units(self):
         """
         @returns: the same quantity converted to base units,
-        i.e. SI units in most cases
+        i.e., SI units in most cases
         @rtype: L{PhysicalQuantity}
         """
         new_value = self.value * self.unit.factor
@@ -287,7 +287,7 @@ class PhysicalQuantity(object):
         @param unit: a unit
         @type unit: C{str}
         @returns: C{True} if the specified unit is compatible with the
-        one of the quantity
+        one of the quantity.
         @rtype: C{bool}.
         """
         unit = _find_unit(unit)
@@ -334,7 +334,7 @@ class PhysicalQuantity(object):
 
 class PhysicalUnit(object):
     """
-    Physical unit
+    Physical unit.
   
     A physical unit is defined by a name (possibly composite), a scaling
     factor, and the exponentials of each of the SI base units that enter into
@@ -344,7 +344,7 @@ class PhysicalUnit(object):
     def __init__(self, names, factor, powers, offset=0):
         """
         @param names: a dictionary mapping each name component to its
-                      associated integer power (e.g. C{{'m': 1, 's': -1}})
+                      associated integer power (e.g., C{{'m': 1, 's': -1}})
                       for M{m/s}). As a shorthand, a string may be passed
                       which is assigned an implicit power 1.
         @type names: C{dict} or C{str}
@@ -495,13 +495,13 @@ class PhysicalUnit(object):
         """
         @param other: another unit
         @type other: L{PhysicalUnit}
-        @returns: C{True} if the units are compatible, i.e. if the powers of the base units are the same
+        @returns: C{True} if the units are compatible, i.e., if the powers of the base units are the same
         @rtype: C{bool}.
         """
         return self.powers == other.powers
 
     def is_dimensionless(self):
-        """Dimensionless PQ"""
+        """Dimensionless PQ."""
         return not any(self.powers)
   
     def is_angle(self):

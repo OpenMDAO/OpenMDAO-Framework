@@ -50,7 +50,7 @@ class VariableTree(Container):
             return super(VariableTree, self).get_metadata(traitpath, metaname)
 
     def copy(self):
-        """Returns a deep copy of this VariableTree"""
+        """Returns a deep copy of this VariableTree."""
         return copy.deepcopy(self)
     
     def add(self, name, obj):

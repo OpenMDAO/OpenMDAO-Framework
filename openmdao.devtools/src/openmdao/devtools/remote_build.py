@@ -18,7 +18,7 @@ from openmdao.util.fileutil import cleanup
     
 def remote_build(srcdirs=(), destdir=None, build_type='bdist_egg',
                  py=None, remote_dir=None, debug=False, **kwargs):
-    """Take the python distribution in the given directory, tar it up,
+    """Take the Python distribution in the given directory, tar it up,
     ship it over to host, build it, and bring it back, placing it
     in the specified destination directory.
     """
