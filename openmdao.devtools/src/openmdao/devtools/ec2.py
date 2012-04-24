@@ -170,7 +170,7 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
     created from an image or may be an existing image that is stopped.
     In either case, the instance will be started and the function will run.
     If the instance was created from an image, it will be
-    terminated, unless there is an error or keep==True, which will result in
+    terminated unless there is an error or keep==True, which will result in
     the instance being stopped but not terminated.  If the instance was
     pre-existing, then it will just be stopped instead of terminated.
     """

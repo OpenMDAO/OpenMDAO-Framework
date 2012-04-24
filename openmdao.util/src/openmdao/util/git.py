@@ -3,7 +3,7 @@ import os
 import urllib2
 
 def download_github_tar(org_name, repo_name, version, dest='.'):
-    """Pull a tarfile of a github repo and place it in the 
+    """Pull a tarfile of a GitHub repo and place it in the 
     specified destination directory. 'version' can be a tag or a commit id.
     """
     dest = os.path.abspath(os.path.expanduser(os.path.expandvars(dest)))

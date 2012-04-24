@@ -131,7 +131,7 @@ class TriangularDistribution(UncertainDistribution):
         
 class WeibullDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 
-    weibull distribution of uncertainty.
+    Weibull distribution of uncertainty.
     
     alpha: float
        scale parameter

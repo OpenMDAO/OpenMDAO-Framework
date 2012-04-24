@@ -15,7 +15,7 @@ from openmdao.units import convert_units
 
 class ChainRule(HasTraits):
     """ Differentiates a driver's workflow using the Chain Rule with Numerical
-    Derivatives (CRND) method"""
+    Derivatives (CRND) method."""
 
     implements(IDifferentiator)
     
@@ -171,7 +171,7 @@ class ChainRule(HasTraits):
                 self.gradient[wrt][con_name] = con_deriv
 
     def _chain_workflow(self, derivs, scope, param):
-        """Process a workflow, calculating all intermediate derivatives
+        """Process a workflow calculating all intermediate derivatives
         using the chain rule. This can be called recursively to handle
         nested assemblies."""
 
@@ -379,7 +379,7 @@ class ChainRule(HasTraits):
             Switch to reuse some data from the gradient calculation so that
             we don't have to re-run some points we already ran (namely the
             baseline, +eps, and -eps cases.) Obviously you do this when the
-            driver needs gradient and hessian information at the same point,
+            driver needs gradient and Hessian information at the same point
             and calls calc_gradient before calc_hessian.
         """
         

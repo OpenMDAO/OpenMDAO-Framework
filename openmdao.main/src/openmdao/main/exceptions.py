@@ -22,7 +22,7 @@ class RunStopped(RuntimeError):
     pass
 
 class TracedError(Exception):
-    """An exception that encapsulates another exception and its traceback"""
+    """An exception that encapsulates another exception and its traceback."""
     def __init__(self, orig_exc, tback):
         self.traceback = tback.strip()
         self.orig_exc = orig_exc

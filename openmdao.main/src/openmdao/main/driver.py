@@ -282,7 +282,7 @@ class Driver(Component):
     def record_case(self):
         """ A driver can call this function to record the current state of the
         current iteration as a Case into all slotted case recorders. Generally,
-        the driver should call this function once per iteration, and may also
+        the driver should call this function once per iteration and may also
         need to call it at the conclusion.
         
         All paramters, objectives, and constraints are included in the Case

@@ -16,10 +16,10 @@ class Uniform(HasTraits):
     implements(IDOEgenerator)
     
     # pylint: disable-msg=E1101
-    num_parameters = Int(0, iotype="in", desc="number of independent "
-                                              "parameters in the DOE")
-    num_samples = Int(0, iotype="in", desc="number of total samples in "
-                                              "the DOE")
+    num_parameters = Int(0, iotype="in", desc="Number of independent "
+                                              "parameters in the DOE.")
+    num_samples = Int(0, iotype="in", desc="Number of total samples in "
+                                              "the DOE.")
     
     def __init__(self, num_samples=None, *args, **kwargs):
     
@@ -33,7 +33,7 @@ class Uniform(HasTraits):
     def __iter__(self):
         """Return an iterator over our sets of input values"""
         if self.num_samples < 2: 
-            raise ValueError("Uniform distributions must have at least 2 samples. num_samples is set to less than 2")
+            raise ValueError("Uniform distributions must have at least 2 samples. num_samples is set to less than 2.")
         return self
                                            
     def next(self):

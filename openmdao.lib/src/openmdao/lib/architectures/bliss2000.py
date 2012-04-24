@@ -1,4 +1,4 @@
-"""Implementation of the BLISS2000 optimziation architecture based on the work described in 
+"""Implementation of the BLISS2000 optimization architecture based on the work described in 
 the following journal article:
 
 J. Sobieszczanski-Sobieski, T. Altus, M. Phillips, and Sandu, Bilevel Integrated System Synthesis 
@@ -22,7 +22,7 @@ from openmdao.lib.casehandlers.api import DBCaseRecorder
 
 class SubSystemObj(Component): 
     """Component which adds the weight factors for each output state variable 
-    for a given subsystem """
+    for a given subsystem. """
     
     f_wy = Float(0.0,iotype="out",desc="subsystem objective")
     
@@ -51,7 +51,7 @@ class SubSystemObj(Component):
         self.f_wy = sum([getattr(self,w)*getattr(self,v) for w,v in zip(self.weights,self.var_names)])
         
 class Broadcast(Component): 
-    """Used to create outputs in the SubSytemOpt assmebly"""
+    """Used to create outputs in the SubSytemOpt assembly."""
     
     input = Float(0.0,iotype="in")
     output = Float(0.0,iotype="out")
@@ -60,8 +60,8 @@ class Broadcast(Component):
         self.output = self.input        
         
 class SubSystemOpt(Assembly): 
-    """ assembly which takes global inputs, coupling indeps, and weight factors as inputs, 
-    and runs a local optimization on the local des vars"""
+    """ Assembly which takes global inputs, coupling indeps, and weight factors as inputs 
+    and runs a local optimization on the local des vars."""
     
     def __init__(self,component,global_params,local_params,couple_deps,couple_indeps,constraints): 
         super(SubSystemOpt,self).__init__()
