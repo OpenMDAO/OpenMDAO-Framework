@@ -58,10 +58,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 flowfig = workflow.getBestCompartmentFigure(x,y),
                 bestfig = workflow.getBestFigure(x,y);
             debug.info(droppedName,'dropped on',self.pathname,'workflow');
-            if (flowfig && droppedObject.hasClass('obj')) {
-                model.issueCommand('top'+flowfig.pathname+'.workflow.add("'+droppedPath+'")')
-            }
-            else if (droppedObject.hasClass('objtype') && (/^openmdao.lib.drivers./).test(droppedPath)) {
+            if (droppedObject.hasClass('objtype') && (/^openmdao.lib.drivers./).test(droppedPath)) {
                 // TODO: really need interface info to check if the type and fig are drivers
                 if (bestfig instanceof openmdao.WorkflowComponentFigure && openmdao.Util.getName(bestfig.pathname) === 'driver') {
                     path = openmdao.Util.getPath(bestfig.pathname);
