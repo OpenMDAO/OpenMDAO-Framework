@@ -199,16 +199,6 @@ class ExprMapper(object):
         """
         return [node for node, data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
     
-    #def connections_to(self, path):
-        #"""Returns a list of tuples of the form (srcpath, destpath) for
-        #all connections between the variable or component specified
-        #by *path*.
-        #"""
-        #exprs = self.find_referring_exprs(path)
-        #edges = [(src, dest) for src,dest in self._exprgraph.edges(exprs)]
-        #edges.extend([(src, dest) for src,dest in self._exprgraph.in_edges(exprs)])
-        #return edges
-    
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
         to_remove = []
@@ -258,42 +248,6 @@ class ExprMapper(object):
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src,dest))
         return srcexpr, destexpr
 
-    #def _get_invalidated_destexprs(self, scope, compname, varset):
-        #"""For a given set of variable names that has changed (or None),
-        #return a list of all destination expressions that are invalidated. A
-        #varset value of None indicates that ALL variables in the given
-        #component are invalidated.
-        #"""
-        #exprs = set()
-        #graph = self._exprgraph
-        
-        #if varset is None:
-            #exprs.update(self.find_referring_exprs(compname))
-        #else:
-            #if compname:
-                #for varpath in ['.'.join([compname, v]) for v in varset]:
-                    #exprs.update(self.find_referring_exprs(varpath))
-            #else:
-                #for varpath in varset:
-                    #exprs.update(self.find_referring_exprs(varpath))
-                    
-        #invalids = []
-        #for expr in exprs:
-            #dct = graph.succ.get(expr)
-            #if dct:
-                #invalids.extend([self.get_expr(dest) for dest in dct.keys()])
-        #return invalids
-        
-    #def __eq__(self, other):
-        #if isinstance(other, DependencyGraph):
-            #if self._exprgraph.nodes() == other._exprgraph.nodes():
-                #if self._exprgraph.edges() == other._exprgraph.edges():
-                    #return True
-        #return False
-    
-    #def __ne__(self, other):
-        #return not self.__eq__(other)
-            
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
@@ -347,6 +301,32 @@ class Assembly (Component):
         if is_instance(obj, Component):
             self._depgraph.add(obj.name)
         return obj
+    
+    def rename(self, oldname, newname):
+        """Renames a child of this object from oldname to newname."""
+        self._check_rename(oldname, newname)
+        # find any connections involving the old name
+        exprset = set(self._exprmapper.find_referring_exprs(oldname))
+        conns = [(u,v) for u,v in self.list_connections(show_passthrough=True) 
+                              if u in exprset or v in exprset]
+        # find any workflows containing the old name
+        wflows = []
+        for obj in self.__dict__.values():
+            if is_instance(obj, Driver) and oldname in obj.workflow:
+                wflows.append((obj.workflow, obj.workflow.index(oldname)))
+        
+        obj = self.remove(oldname)
+        self.add(newname, obj)
+        
+        # oldname has now been removed from workflows, but newname may be in the wrong
+        # location, so force it to be at the same index as before removal
+        for wflow, idx in wflows:
+            wflow.remove(newname)
+            wflow.add(newname, idx)
+            
+        # recreate all of the broken connections
+        for u,v in conns:
+            self.connect(u,v)
         
     def remove(self, name):
         """Remove the named container object from this assembly and remove
