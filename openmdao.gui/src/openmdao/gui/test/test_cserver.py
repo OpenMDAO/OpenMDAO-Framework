@@ -19,10 +19,10 @@ class ConsoleServerTestCase(unittest.TestCase):
         # CHECK FILES
         files = self.cserver.get_files()
         
-        self.assertTrue('\paraboloid.py' in files)
-        self.assertTrue('\optimization_constrained.py' in files)
-        self.assertTrue('\optimization_unconstrained.py' in files)
-        self.assertTrue('\_project_state' in files)
+        self.assertTrue('/paraboloid.py'.replace('/',os.sep) in files)
+        self.assertTrue('/optimization_constrained.py'.replace('/',os.sep) in files)
+        self.assertTrue('/optimization_unconstrained.py'.replace('/',os.sep) in files)
+        self.assertTrue('/_project_state'.replace('/',os.sep) in files)
         
         # IMPORT PARABOLOID
         self.cserver.default('from paraboloid import Paraboloid')
