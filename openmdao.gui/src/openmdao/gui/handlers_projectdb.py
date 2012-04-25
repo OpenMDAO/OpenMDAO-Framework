@@ -7,11 +7,11 @@ from urllib2 import HTTPError
 from tornado import web
 
 from openmdao.main import __version__
-from openmdao.gui.handlers import BaseHandler
+from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
 from openmdao.util.fileutil import clean_filename
 
-class IndexHandler(BaseHandler):
+class IndexHandler(ReqHandler):
     ''' get project list
     '''
     @web.authenticated
@@ -23,7 +23,7 @@ class IndexHandler(BaseHandler):
                      project_list=project_list,
                      version=__version__)
 
-class DeleteHandler(BaseHandler):
+class DeleteHandler(ReqHandler):
     ''' delete a project
     '''
     @web.authenticated
@@ -45,7 +45,7 @@ class DeleteHandler(BaseHandler):
     def get(self, project_id):
         self.redirect('/')
 
-class DetailHandler(BaseHandler):
+class DetailHandler(ReqHandler):
     ''' get/set project details
     '''
     
@@ -130,7 +130,7 @@ class DetailHandler(BaseHandler):
         delete=True)
 
 # FIXME: returns an error even though it works
-class DownloadHandler(BaseHandler):
+class DownloadHandler(ReqHandler):
     ''' download a copy of the project
     '''
     @web.authenticated
@@ -164,7 +164,7 @@ class DownloadHandler(BaseHandler):
             raise HTTPError(filename, 403, "no file found for %s" % \
                                             project['projectname'], None, None)
 
-class NewHandler(BaseHandler):
+class NewHandler(ReqHandler):
     ''' create a new (empty) project
     '''
     @web.authenticated
@@ -185,7 +185,7 @@ class NewHandler(BaseHandler):
         self.render('projdb/project_detail.html', project=project, 
                     delete=False)
 
-class AddHandler(BaseHandler):
+class AddHandler(ReqHandler):
     ''' upload a file and add it to the project database
     '''
     @web.authenticated
