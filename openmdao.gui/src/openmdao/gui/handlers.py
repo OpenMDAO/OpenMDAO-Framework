@@ -6,7 +6,7 @@ from openmdao.gui.session import TornadoSession
 
 SINGLE_USER = True
 
-class BaseHandler(RequestHandler):
+class ReqHandler(RequestHandler):
     ''' override the get_current_user() method in your request handlers to determine
         the current user based on the value of a cookie.
     '''
@@ -29,7 +29,7 @@ class BaseHandler(RequestHandler):
         return self.application.project_dir
         
 
-class LoginHandler(BaseHandler):
+class LoginHandler(ReqHandler):
     ''' lets users log into the application simply by specifying a nickname,
         which is then saved in a cookie.
     '''
@@ -51,7 +51,7 @@ class LoginHandler(BaseHandler):
         self.set_secure_cookie('user', self.get_argument('name'))
         self.redirect('/')
 
-class LogoutHandler(BaseHandler):
+class LogoutHandler(ReqHandler):
     ''' lets users log out of the application simply by deleting the nickname cookie
     '''
     def get(self):
@@ -62,7 +62,7 @@ class LogoutHandler(BaseHandler):
         self.clear_cookie('user')
         self.redirect('/')
         
-class ExitHandler(BaseHandler):
+class ExitHandler(ReqHandler):
     ''' lets users log out of the application simply by deleting the nickname cookie
     '''
     def get(self):
