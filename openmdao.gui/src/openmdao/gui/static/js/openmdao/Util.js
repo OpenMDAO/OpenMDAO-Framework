@@ -356,6 +356,8 @@ openmdao.Util = {
         };
         
         connect();
+        
+        return socket;
     }
 
 };
