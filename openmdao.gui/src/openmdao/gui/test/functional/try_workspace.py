@@ -5,6 +5,8 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
+from pageobjects.workspace import NotifierPage
+
 from util import setup_server, teardown_server, generate, begin, new_project
 
 
@@ -21,9 +23,7 @@ def _test_console(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    workspace_page.command = 'dir()'
-    workspace_page('submit').click()
-    time.sleep(0.5)
+    workspace_page.do_command('dir()')
     expected = ">>> dir()\n['__builtins__', 'path', 'top']"
     eq( workspace_page.history, expected )
 
@@ -137,10 +137,15 @@ def _test_menu(browser):
 #FIXME: These need to verify that the request has been performed.
     # View menu.
     for item in ('code', 'cmdline', 'console', 'files', 'libraries', 'objects',
-                 'properties', 'workflow', 'structure', 'refresh'):
+                 'properties', 'workflow', 'structure'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
         time.sleep(0.5)  # Just so we can see it.
+
+    workspace_page('view_menu').click()
+    workspace_page('refresh_button').click()
+    msg = NotifierPage.wait(workspace_page.browser, workspace_page.port)
+    eq( msg, 'Refresh complete' )
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
@@ -185,19 +190,21 @@ f_x = Float(0.0, iotype='out')
 
 
 if __name__ == '__main__':
-#    import sys
-#    import nose
-#    sys.argv.append('--cover-package=openmdao.')
-#    sys.argv.append('--cover-erase')
-#    nose.runmodule()
-
-    # To run outside of nose:
-    from util import setup_firefox
-    setup_server(virtual_display=False)
-    browser = setup_firefox()
-    _test_console(browser)
-    _test_import(browser)
-    _test_menu(browser)
-    _test_newfile(browser)
-    teardown_server()
+    if True:
+        # Run under nose.
+        import sys
+        import nose
+        sys.argv.append('--cover-package=openmdao.')
+        sys.argv.append('--cover-erase')
+        sys.exit(nose.runmodule())
+    else:
+        # Run outside of nose.
+        from util import setup_firefox
+        setup_server(virtual_display=False)
+        browser = setup_firefox()
+        _test_console(browser)
+        _test_import(browser)
+        _test_menu(browser)
+        _test_newfile(browser)
+        teardown_server()
 

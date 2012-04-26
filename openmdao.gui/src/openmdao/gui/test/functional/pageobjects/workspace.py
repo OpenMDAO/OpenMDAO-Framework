@@ -5,12 +5,17 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 
-from basepageobject import BasePageObject
+from selenium.common.exceptions import StaleElementReferenceException
+
+from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
+from util import ValuePrompt, NotifierPage
 
 
 class UploadPage(BasePageObject):
     """ Pops-up when adding a file. """
+
+    title_prefix = 'OpenMDAO: Upload'
 
     filename = InputElement((By.NAME, 'myfile'))
     submit = ButtonElement((By.XPATH, '/html/body/div/div[2]/form/input[2]'))
@@ -20,25 +25,9 @@ class UploadPage(BasePageObject):
         self('submit').click()
 
 
-class ComponentNamePrompt(BasePageObject):
-    """ Overlay displayed when requesting a name for a component. """
-
-    value = InputElement((By.ID, 'component-prompt'))
-
-    def set_value(self, value):
-        self.value = value+Keys.RETURN
-
-
-class FileNamePrompt(BasePageObject):
-    """ Overlay displayed when requesting a name for a file. """
-
-    value = InputElement((By.ID, 'filename-prompt'))
-
-    def set_value(self, value):
-        self.value = value+Keys.RETURN
-
-
 class WorkspacePage(BasePageObject):
+
+    title_prefix = 'OpenMDAO:'
 
     # Top.
     project_menu = ButtonElement((By.ID, 'project-menu'))
@@ -132,38 +121,48 @@ class WorkspacePage(BasePageObject):
         # Locator is relative to the iframe not the top level window.
         self.locators["code_input"] = ( By.XPATH, "/html/body" )
         
-        browser.execute_script("var openmdao_test_mode = true;")
+        WebDriverWait(self.browser, 2*TMO).until(
+            lambda browser: len(self.get_dataflow_figures()) > 0)
 
-    def run(self, timeout=10):
+    def run(self, timeout=TMO):
         """ Run current component. """
-        old_len = len(self.history)
         self('project_menu').click()
         self('run_button').click()
-        WebDriverWait(self.browser, timeout).until(
-            lambda browser: self.history[old_len:].endswith('Execution complete.'))
+        NotifierPage.wait(self.browser, self.port, timeout)
+
+    def do_command(self, cmd, timeout=TMO):
+        """ Execute a command. """
+        self.command = cmd
+        self('submit').click()
+        NotifierPage.wait(self.browser, self.port, timeout)
 
     def close_workspace(self):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
+#        self.browser.execute_script('openmdao.Util.closeWebSockets();')
+#        NotifierPage.wait(self.browser, self.port)
         self('project_menu').click()
         self('close_button').click()
-        WebDriverWait(self.browser, 10).until(
-            lambda browser: browser.title == 'Projects')
+        time.sleep(1)  # Pacing.
         from project import ProjectsListPage
-        return ProjectsListPage(self.browser, self.port)
+        return ProjectsListPage.verify(self.browser, self.port)
 
     def save_project(self):
         """ Save current project. """
         self('project_menu').click()
         self('save_button').click()
+        NotifierPage.wait(self.browser, self.port)
 
     def view_refresh(self):
         """ Refresh display. """
         self('view_menu').click()
         self('refresh_button').click()
+        NotifierPage.wait(self.browser, self.port)
 
     def get_files(self):
         '''Warning: the workspace needs to be refreshed to make sure
            this command can see everything'''
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element(By.ID, 'ftree'))
         file_items = self.browser.find_elements(*self.locators["files"])
         file_names = []
         for element in file_items:
@@ -172,6 +171,8 @@ class WorkspacePage(BasePageObject):
     
     def get_objects_attribute(self, attribute):
         """ Return list of `attribute` values for all objects. """
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element(By.ID, 'otree'))
         object_elements = self.browser.find_elements(*self.locators["objects"])
         values = []
         for element in object_elements:
@@ -202,15 +203,19 @@ class WorkspacePage(BasePageObject):
         self('file_menu').click()
         self('newfile_button').click()
 
-        page = FileNamePrompt(self.browser, self.port)
+        page = ValuePrompt(self.browser, self.port)
         page.set_value(filename)
 
         self.edit_file(filename)
 
         # Switch to editor iframe.
         self.browser.switch_to_frame(0)  # No identifying name or ID.
-        code_input_element = WebDriverWait(self.browser, 10).until(
+        code_input_element = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(*self.locators['code_input']))
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: code_input_element.text)
+#FIXME: absolute delay for editor to get ready.
+        time.sleep(2)
 
         # Go to the bottom of the code editor window
         for i in range(4):
@@ -219,7 +224,7 @@ class WorkspacePage(BasePageObject):
         code_input_element.send_keys(code)
         # Control-S to save.
         code_input_element.send_keys(Keys.CONTROL+'s')
-#FIXME: absolute delay.
+#FIXME: absolute delay for save to complete.
         time.sleep(2)
         
         # Back to main window.
@@ -228,20 +233,29 @@ class WorkspacePage(BasePageObject):
     def import_file(self, filename):
         """ Import from `filename`. """
         xpath = "//a[(@path='/%s')]" % filename
-        element = self.browser.find_element_by_xpath(xpath)
+        element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
         self('file_import').click()
-#FIXME: absolute delay.
-        time.sleep(2)
+        NotifierPage.wait(self.browser, self.port)
 
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
         xpath = "//a[(@path='/%s')]" % filename
-        element = self.browser.find_element_by_xpath(xpath)
+        element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
-        if dclick:
-            chain.double_click(element).perform()
+        if dclick:  # This has had issues...
+            for i in range(10):
+                try:
+                    chain.double_click(element).perform()
+                except StaleElementReferenceException:
+                    element = WebDriverWait(self.browser, 1).until(
+                        lambda browser: browser.find_element_by_xpath(xpath))
+                    chain = ActionChains(self.browser)
+                else:
+                    break
         else:
             chain.context_click(element).perform()
             self('file_edit').click()
@@ -250,7 +264,7 @@ class WorkspacePage(BasePageObject):
         """ Show structure of `component_name`. """
         self('objects_tab').click()
         xpath = "//div[@id='otree']//li[(@path='%s')]//a" % component_name
-        element = WebDriverWait(self.browser, 10).until(
+        element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
@@ -259,8 +273,10 @@ class WorkspacePage(BasePageObject):
     def add_library_item_to_structure(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
         xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
-        library_item = self.browser.find_element_by_xpath(xpath)
-        target = self.browser.find_element_by_xpath("//*[@id='-dataflow']")
+        library_item = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
+        target = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_xpath("//*[@id='-dataflow']"))
         chain = ActionChains(self.browser)
         #chain = chain.drag_and_drop(library_item, target)
         chain = chain.click_and_hold(library_item)
@@ -268,9 +284,9 @@ class WorkspacePage(BasePageObject):
         chain = chain.release(None)
         chain.perform()
 
-        page = ComponentNamePrompt(self.browser, self.port)
+        page = ValuePrompt(self.browser, self.port)
         page.set_value(instance_name)
-        WebDriverWait(self.browser, 10).until(
+        WebDriverWait(self.browser, TMO).until(
             lambda browser: instance_name in self.get_dataflow_component_names())
 
     def get_dataflow_figures(self):

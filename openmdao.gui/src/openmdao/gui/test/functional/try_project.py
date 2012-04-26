@@ -32,16 +32,18 @@ def _test_new_project(browser):
 
 
 if __name__ == '__main__':
-    import sys
-    import nose
-    sys.argv.append('--cover-package=openmdao.')
-    sys.argv.append('--cover-erase')
-    nose.runmodule()
-
-    # To run outside of nose:
-#    from util import setup_firefox
-#    setup_server(virtual_display=False)
-#    browser = setup_firefox()
-#    _test_new_project(browser)
-#    teardown_server()
+    if True:
+        # Run under nose.
+        import sys
+        import nose
+        sys.argv.append('--cover-package=openmdao.')
+        sys.argv.append('--cover-erase')
+        nose.runmodule()
+    else:
+        # Run outside of nose.
+        from util import setup_firefox
+        setup_server(virtual_display=False)
+        browser = setup_firefox()
+        _test_new_project(browser)
+        teardown_server()
 

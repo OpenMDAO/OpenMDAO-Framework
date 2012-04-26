@@ -8,16 +8,15 @@ import random
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
-from basepageobject import BasePageObject
+from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, CheckboxElement, InputElement, TextElement
 
 
 class ProjectPage(BasePageObject):
-    '''A super class for the new project page
-    and the project info page where details of the
-    project can be edited
-    '''
-    
+    """ Superclass of :class:`NewProjectPage` and :class:`ProjectInfoPage`. """
+
+    title_prefix = 'Project:'
+
     project_name = InputElement((By.ID, 'id_projectname'))
     description = InputElement((By.ID, 'id_description'))
     version = InputElement((By.ID, 'id_version'))
@@ -51,7 +50,8 @@ class NewProjectPage(ProjectPage):
         self.version = version
         self.shared = shared
         self.submit()
-        return ProjectInfoPage(self.browser, self.port)
+        title = ProjectInfoPage.project_title(project_name)
+        return ProjectInfoPage.verify(self.browser, self.port, title)
 
 
 class ProjectInfoPage(ProjectPage):
@@ -72,21 +72,26 @@ class ProjectInfoPage(ProjectPage):
     def __init__(self, browser, port):
         super(ProjectInfoPage, self).__init__(browser, port)
 
+    @staticmethod
+    def project_title(name):
+        """ Return page title for project `name`. """
+        return '%s %s' % (ProjectInfoPage.title_prefix, name)
+
     def load_project(self):
         """ Clicks the 'load' button. Returns :class:`WorkspacePage`. """
         self('load_button').click()
         from workspace import WorkspacePage
-        return WorkspacePage(self.browser, self.port)
+        return WorkspacePage.verify(self.browser, self.port)
 
     def delete_project(self):
         """ Clicks the 'delete' button. Returns :class:`ProjectsListPage`. """
         self('delete_button').click()
-        return ProjectsListPage(self.browser, self.port)
+        return ProjectsListPage.verify(self.browser, self.port)
 
     def go_to_projects_page(self):
         """ Clicks the 'back' button. Returns :class:`ProjectsListPage`. """
         self('back_button').click()
-        return ProjectsListPage(self.browser, self.port)
+        return ProjectsListPage.verify(self.browser, self.port)
 
     def logout(self):
         """
@@ -100,24 +105,23 @@ class ProjectInfoPage(ProjectPage):
         """
         self('logout_button').click()
         from login import LoginPage
-        return LoginPage(self.browser, self.port)
+        return LoginPage.verify(self.browser, self.port)
 
 
 class ProjectsListPage(BasePageObject):
     """ Displays list of projects. """
 
+    url = '/projects'
+    title_prefix = 'Projects'
+
     new_button = ButtonElement((By.CSS_SELECTOR,
                                 'html body div#body div.content p a'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
 
-    def __init__(self, browser, port):
-        super(ProjectsListPage, self).__init__(browser, port)
-        self._page_url = "http://localhost:%d/projects" % self.port
-
     def new_project(self):
         """ Clicks the 'new' button. Returns :class:`NewProjectPage`. """
         self('new_button').click()
-        return NewProjectPage(self.browser, self.port)
+        return NewProjectPage.verify(self.browser, self.port)
 
     def logout(self):
         """
@@ -130,10 +134,8 @@ class ProjectsListPage(BasePageObject):
 
         """
         self('logout_button').click()
-        WebDriverWait(self.browser, 10).until(
-            lambda browser: browser.title.startswith('Login'))
         from login import LoginPage
-        return LoginPage(self.browser, self.port)
+        return LoginPage.verify(self.browser, self.port)
 
     def contains(self, project_name):
         """ Returns True if `project_name` is in the list of projects. """
@@ -141,6 +143,9 @@ class ProjectsListPage(BasePageObject):
 
     def open_project(self, project_name):
         """ Clicks the 'open' button. Returns :class:`ProjectInfoPage`. """
-        self.browser.find_element_by_link_text(project_name).click()
-        return ProjectInfoPage(self.browser, self.port)
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_link_text(project_name))
+        element.click()
+        title = ProjectInfoPage.project_title(project_name)
+        return ProjectInfoPage.verify(self.browser, self.port, title)
 

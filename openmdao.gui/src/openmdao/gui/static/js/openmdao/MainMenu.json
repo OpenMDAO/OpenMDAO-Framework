@@ -3,9 +3,9 @@
       "items": [
         { "text": "Save",          "id": "project-save", "onclick": "openmdao.model.saveProject();" },
         { "text": "Run",           "id": "project-run", "onclick": "openmdao.model.runModel();" },
-        { "text": "Reload",        "id": "project-reload", "url": "/workspace/project" },
-        { "text": "Close",         "id": "project-close", "url": "/workspace/close" },
-        { "text": "Exit",          "id": "project-exit", "url": "/exit" }
+        { "text": "Reload",        "id": "project-reload", "onclick": "openmdao.model.reloadProject();" },
+        { "text": "Close",         "id": "project-close", "onclick": "openmdao.model.closeproject();" },
+        { "text": "Exit",          "id": "project-exit", "onclick": "openmdao.model.exitProject();" }
       ]
     },
     { "text": "View", "id": "view-menu",
@@ -20,7 +20,7 @@
         { "text": "Workflow",      "id": "view-workflow", "onclick": "jQuery('#workflow_tab').click();" },
         { "text": "Structure",     "id": "view-structure", "onclick": "jQuery('#structure_tab').click();" },
         { "text": "--------"       },
-        { "text": "Refresh",       "id": "view-refresh", "onclick": "openmdao.model.updateListeners();" }
+        { "text": "Refresh",       "id": "view-refresh", "onclick": "openmdao.model.refresh();" }
       ]
     },
     { "text": "Tools", "id": "tools-menu",

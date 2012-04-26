@@ -7,14 +7,13 @@ from elements import ButtonElement, InputElement
 class LoginPage(BasePageObject):
     """ There doesn't seem to be a 'login' page anymore... """
 
+#    url = '/accounts/login/?next=/'
+    url = '/'
+
     username = InputElement((By.ID, 'id_username'))
     password = InputElement((By.ID, 'id_password'))
-    submit_button = ButtonElement((By.XPATH, '/html/body/div/div[2]/form/input'))
-
-    def __init__(self, browser, port):
-        super(LoginPage, self).__init__(browser, port)
-#        self._page_url = "http://localhost:%d/accounts/login/?next=/" % self.port
-        self._page_url = "http://localhost:%d/" % self.port
+    submit_button = ButtonElement((By.XPATH,
+                                   '/html/body/div/div[2]/form/input'))
 
     def login_successfully(self, username, password):
         """ Login using valid parameters. """

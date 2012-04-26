@@ -1,4 +1,10 @@
+import time
+
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException
+
+# Default WebDriverWait timeout.
+TMO = 15
 
 
 class BasePageObject(object):
@@ -11,12 +17,6 @@ class BasePageObject(object):
 
     port: int
         Port on ``localhost`` to use.
-
-    title: string
-        Expected page title.
-
-    url: string
-        URL for page.
 
     Elements on this page should be subclasses of :class:`BaseElement` which
     implements the Python descriptor protocol.
@@ -32,10 +32,15 @@ class BasePageObject(object):
 
     """
 
-    def __init__(self, browser, port, url=None):
+    url = None
+    title_prefix = None
+
+    def __init__(self, browser, port):
         self.browser = browser
         self.port = port
-        self._page_url = url
+        # Note that we're testing. This alters some 'pretty' behavior.
+        time.sleep(0.1)  # Pacing.
+        self.browser.execute_script('openmdao_test_mode = true;')
 
     def __call__(self, element_name):
         """
@@ -50,8 +55,8 @@ class BasePageObject(object):
     @property
     def page_title(self):
         """ Current browser title. """
-        return WebDriverWait(self.browser, 10).until(
-                                                  lambda browser: browser.title)
+        return WebDriverWait(self.browser, TMO).until(
+                   lambda browser: browser.title)
     @property
     def page_url(self):
         """ Current browser URL. """
@@ -59,6 +64,21 @@ class BasePageObject(object):
 
     def go_to(self):
         """ Go to this page's URL. """
-        self.browser.get(self._page_url)
-        self.browser.execute_script("var openmdao_test_mode = true;")
+        self.browser.get('http://localhost:%d%s' % (self.port, self.url))
+        return self.verify(self.browser, self.port)
+
+    @classmethod
+    def verify(cls, browser, port, prefix=None):
+        """
+        Verify that we're on the page by checking `title_prefix`.
+        Returns self.
+        """
+        prefix = prefix or cls.title_prefix
+        if prefix:
+            try:
+                WebDriverWait(browser, TMO).until(
+                    lambda browser: browser.title.startswith(prefix))
+            except TimeoutException:
+                raise TimeoutException('Waiting for title %r' % prefix)
+        return cls(browser, port)
 

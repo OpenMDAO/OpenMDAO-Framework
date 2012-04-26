@@ -40,6 +40,10 @@ def setup_firefox():
     profile.native_events_enabled = True
     driver = webdriver.Firefox(profile)
     driver.implicitly_wait(15)
+#    with open('patch.js', 'r') as inp:
+#        patch = inp.read()
+#    time.sleep(10)
+#    driver.execute_script(patch)
     TEST_CONFIG['browsers'].append(driver)
     return driver
 
@@ -85,8 +89,7 @@ def _run():
     run(options=options)
 
 def teardown_server():
-    '''The function gets called once after all of the
-    tests are called'''
+    """ The function gets called once after all of the tests are called. """
     for browser in TEST_CONFIG['browsers']:
         browser.close()
     if _display is not None:
@@ -96,6 +99,11 @@ def teardown_server():
 
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """
+    # Because Xvfb does not exist on Windows, it's difficult to do
+    # headless (EC2) testing on Windows. So for now we just test on Linux.
+    if sys.platform == 'win32':
+        return
+
     module = sys.modules[modname]
     functions = inspect.getmembers(module, inspect.isfunction)
     tests = [func for name, func in functions if name.startswith('_test_')]
@@ -107,7 +115,8 @@ def generate(modname):
             logging.critical('Skipping %s, caught: %s', name, exc)
         else:
             for _test in tests:
-                logging.critical('running %s using %s', _test, name)
+                logging.critical('')
+                logging.critical('Running %s using %s', _test.__name__, name)
                 yield _test, browser
         browser.close()
         TEST_CONFIG['browsers'].remove(browser)

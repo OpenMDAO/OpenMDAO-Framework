@@ -90,7 +90,7 @@ openmdao.Model=function() {
         };
     };
     
-   /** notify all generic listeners that something may have changed  */
+    /** notify all generic listeners that something may have changed  */
     this.updateListeners = function() {        
         //debug.info('updateListeners',subscribers)
         var callbacks = subscribers[''];
@@ -106,6 +106,14 @@ openmdao.Model=function() {
                 }
             };
         };
+    };
+
+    /** refresh  */
+    this.refresh = function() {        
+        this.updateListeners();
+        if (typeof openmdao_test_mode != 'undefined') {
+            openmdao.Util.notify('Refresh complete');
+        }
     };
 
     /** get the list of object types that are available for creation */
@@ -137,10 +145,34 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'project',
             success: callback,
-            error: errorHandler
+            error: errorHandler,
+            complete: function(jqXHR, textStatus) {
+                          if (typeof openmdao_test_mode != 'undefined') {
+                              openmdao.Util.notify('Save complete: ' +textStatus);
+                          }
+                      }
         })
     }
    
+    /** reload the current project */
+    this.reloadProject = function() {
+        openmdao.Util.closeWebSockets();
+        window.location = "/workspace/project";
+    }
+
+    /** close the current project */
+    this.closeproject = function() {
+        openmdao.Util.closeWebSockets();
+        window.location = "/workspace/close";
+    }
+
+    /** exit the GUI */
+    this.exitProject = function() {
+        openmdao.Util.closeWebSockets();
+        window.location = "/exit";
+    }
+
+
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
@@ -267,7 +299,7 @@ openmdao.Model=function() {
     }
     
     /** issue the specified command against the model */
-    this.issueCommand = function(cmd, callback, errorHandler) {
+    this.issueCommand = function(cmd, callback, errorHandler, completeHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'command',
@@ -276,9 +308,10 @@ openmdao.Model=function() {
                         if (typeof callback == 'function') {
                             callback(txt)
                         };
-                        self.updateListeners()
+                        self.updateListeners();
                      },
-            error: errorHandler
+            error: errorHandler,
+            complete: completeHandler,
         })
     }
 
@@ -357,7 +390,7 @@ openmdao.Model=function() {
             if (/.json$/.test(name))
                 contents = '[]'                
             self.setFile(name,contents)
-        }, 'filename-prompt')
+        })
     }
 
     /** prompt for name & create a new folder */
@@ -367,7 +400,7 @@ openmdao.Model=function() {
                 name = folderpath+'/'+name;
             }
             self.createFolder(name);
-        }, 'folder-prompt')
+        })
     }
 
     /** upload a file to the model working directory */
@@ -397,7 +430,14 @@ openmdao.Model=function() {
         var path = filepath.replace(/\.py$/g,'').
                             replace(/\\/g,'.').
                             replace(/\//g,'.');
-        self.issueCommand("from "+path+" import *", callback, errorHandler);
+        cmd = 'from '+path+' import *'
+        self.issueCommand(cmd, callback, errorHandler,
+                          function(jqXHR, textStatus) {
+                              if (typeof openmdao_test_mode != 'undefined') {
+                                  openmdao.Util.notify("'"+cmd+"' complete: "
+                                                       +textStatus);
+                              }
+                          });
     }
 
     /** execute the model */
@@ -408,12 +448,19 @@ openmdao.Model=function() {
             url:  'exec',
             data: { },
             success: function(data, textStatus, jqXHR) {
-                         self.issueCommand('print "'+data.replace('\n','\\n') +'"')
+                         self.issueCommand('print "'+data.replace('\n','\\n')+'"',
+                                           null, null,
+                                           function(jqXHR, textStatus) {
+                                               if (typeof openmdao_test_mode != 'undefined') {
+                                                   openmdao.Util.notify('Run complete: '
+                                                                        +textStatus);
+                                               }
+                                           });
                      },
             error: function(jqXHR, textStatus, errorThrown) {
                        debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
                        debug.error(jqXHR,textStatus,errorThrown)
-                   }
+                   },
         })
     }
     

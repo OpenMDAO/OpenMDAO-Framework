@@ -3,9 +3,13 @@ Element descriptors and underlying object types which are intended to be used
 with BasePageObject.
 """
 
+import time
+
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, \
                                        ElementNotVisibleException
+from basepageobject import TMO
+
 
 class _BaseElement(object):
     """
@@ -25,7 +29,7 @@ class _BaseElement(object):
     @property
     def element(self):
         """ The element on the page. """
-        return WebDriverWait(self._browser, 10).until(
+        return WebDriverWait(self._browser, TMO).until(
                    lambda browser: browser.find_element(*self._locator))
 
     def is_present(self):
@@ -58,8 +62,9 @@ class _ButtonElement(_BaseElement):
     def click(self):
         """ 'Click' on the button. """
         element = self.element
-        WebDriverWait(self._browser, 10).until(
+        WebDriverWait(self._browser, TMO).until(
             lambda browser: element.is_displayed())
+        time.sleep(0.1)  # Just some pacing.
         element.click()
 
 
@@ -78,6 +83,7 @@ class _CheckboxElement(_BaseElement):
     def value(self, new_value):
         element = self.element
         if bool(new_value) != element.is_selected():
+            time.sleep(0.1)  # Just some pacing.
             element.click()  # Toggle it.
 
 
@@ -95,11 +101,11 @@ class _InputElement(_BaseElement):
     @value.setter
     def value(self, new_value):
         element = self.element
-        WebDriverWait(self._browser, 10).until(
+        WebDriverWait(self._browser, TMO).until(
             lambda browser: element.is_enabled())
         if element.get_attribute('value'):
-            value = element.get_attribute('value')
             element.clear()
+        time.sleep(0.1)  # Just some pacing.
         element.send_keys(new_value)
 
 

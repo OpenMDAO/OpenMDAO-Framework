@@ -136,43 +136,108 @@ openmdao.Util = {
     /**
      * prompt for a value
      *
+     * prompt:      prompt string
      * callback:    the function to call with the provided value
-     * id:	    id used for locating by test scripts
+     * baseId:      optional id, default ``get-value``, used for element ids
      */
-    promptForValue: function(prompt,callback,id) {
+    promptForValue: function(prompt, callback, baseId) {
+        baseId = baseId || 'get-value';
+
         // if the user didn't specify a callback, just return
         if (typeof callback != 'function') {
             return;
         }
 
-        // default for test script id
-        if (!id) {
-            id = 'prompt-for-value';
+        var promptId = baseId+'-prompt',
+            inputId = baseId+'-input',
+            okId = baseId+'-ok',
+            element = document.getElementById(baseId),
+            win = null;
+            userInput = null;
+
+        if (element == null) {
+            // Build dialog markup
+            win = jQuery('<div id="'+baseId+'"><p id="'+promptId+'"></p></div>');
+            userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
+            userInput.appendTo(win);
+            win.dialog({
+                autoOpen: false,
+                modal: true,
+                buttons: [
+                    {
+                        text: 'Ok',
+                        id: okId,
+                        // click is defined below.
+                    },
+                    {
+                        text: 'Cancel',
+                        id: baseId+'-cancel',
+                        click: function() {
+                            win.dialog('close');
+                        }
+                    },
+                ],
+            });
+        }
+        else {
+            win = jQuery('#'+baseId);
+            userInput = jQuery('#'+inputId);
         }
 
-        // Build dialog markup
-        var win = jQuery('<div><p>'+prompt+':</p></div>');
-        var userInput = jQuery('<input type="text" id="'+id+'" style="width:100%"></input>').keypress(function(e) {
+        // Update for current invocation.
+        jQuery('#'+promptId).text(prompt+':');
+        jQuery('#'+inputId).keypress(function(e) {
             if (e.which == 13) {
-                jQuery(win).dialog('close');
-                callback(jQuery(userInput).val());
+                win.dialog('close');
+                callback(userInput.val());
             }
         });
-        userInput.appendTo(win);
+        jQuery('#'+okId).click(function() {
+            win.dialog('close');
+            callback(userInput.val());
+        });
 
-        // Display dialog
-        jQuery(win).dialog({
-            'modal': true,
-            'buttons': {
-                'Ok': function() {
-                    jQuery(this).dialog('close');
-                    callback(jQuery(userInput).val());
-                },
-                'Cancel': function() {
-                    jQuery(this).dialog('close');
-                }
-            }
-        });
+        win.dialog('open');
+    },
+
+    /**
+     * Notify user with `msg`.  Typically used when testing to catch
+     * completion of 'background' processing.
+     *
+     * msg:     message to display.
+     * title:   optional title, default ``Note:``.
+     * baseId:  optional id, default ``notify``, used for element ids.
+     */
+    notify: function(msg, title, baseId) {
+        title = title || 'Note:';
+        baseId = baseId || 'notify';
+
+        var msgId = baseId+'-msg',
+            element = document.getElementById(msgId),
+            win = null;
+
+        if (element == null) {
+            win = jQuery('<div id="'+msgId+'"></div>');
+            win.dialog({
+                autoOpen: false,
+                modal: true,
+                title: title,
+                buttons: [
+                    {
+                        text: 'Ok',
+                        id: baseId+'-ok',
+                        click: function() {
+                            win.dialog('close');
+                        },
+                    },
+                ],
+            });
+        }
+        else
+            win = jQuery('#'+msgId);
+
+        win.text(msg);
+        win.dialog('open');
     },
 
     /**
@@ -285,14 +350,30 @@ openmdao.Util = {
         document.body.setAttribute('style',rotateCSS);
     },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;},
 
+
+    /** Open a WebSocket at `addr` using `handler` for messages. */
     openWebSocket: function(addr,handler) {
+       if (!openmdao.sockets)
+           openmdao.sockets = [];
        socket = new WebSocket(addr);
+       openmdao.sockets.push(socket);
        debug.info('websocket at',addr,socket);
+
        socket.onopen = function (e) {
            debug.info('websocket opened',e);
        };
        socket.onclose = function (e) {
            debug.info('websocket closed',e);
+           index = openmdao.sockets.indexOf(this);
+           if (index >= 0) {
+               openmdao.sockets.splice(index, 1);
+//               if (typeof openmdao_test_mode != 'undefined') {
+//                   if (openmdao.sockets.length == 0)
+//                       openmdao.Util.notify('WebSockets closed');
+//               }
+           }
+           else
+               debug.info('websocket not found!');
        };
        socket.onmessage = function(e) {
            handler(e.data);
@@ -300,7 +381,15 @@ openmdao.Util = {
        socket.onerror = function (e) {
            debug.info('websocket error',e);
        };
-    }
+    },
 
+    /** Close all WebSockets. */
+    closeWebSockets: function() {
+       if (openmdao.sockets) {
+          for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+             openmdao.sockets[i].close();
+          }
+       }
+    },
 
 }
