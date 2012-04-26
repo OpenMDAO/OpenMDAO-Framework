@@ -870,6 +870,31 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
                          ['comp1', 'nested', 'comp4'])
         self.assertEqual([c.name for c in asm.nested.driver.workflow],
                          ['comp2', 'comp3'])
+        self.assertEqual(asm.nested.name, 'nested')
+        self.assertFalse(hasattr(asm, 'sub'))
+        
+    def test_rename_child(self):
+        asm = self._setup_move_rename()
+        asm.sub.rename('comp2', 'newcomp2')
+        asm.sub.rename('comp3', 'newcomp3')
+        
+        self.assertEqual(asm.sub.newcomp2.name, 'newcomp2')
+        self.assertEqual(asm.sub.newcomp3.name, 'newcomp3')
+        self.assertFalse(hasattr(asm.sub, 'comp2'))
+        self.assertFalse(hasattr(asm.sub, 'comp3'))
+        
+        connections = asm.list_connections(show_passthrough=True)
+        self.assertEqual(set(connections), 
+                         set([('comp1.c', 'sub.a2'), ('comp1.d', 'sub.newcomp2.b'), 
+                              ('sub.newcomp3.d', 'comp4.b'), ('sub.c3', 'comp4.a')]))
+        sub_connections = asm.sub.list_connections(show_passthrough=True)
+        self.assertEqual(set(sub_connections), 
+                         set([('newcomp3.c', 'c3'), ('a2', 'newcomp2.a'), ('newcomp2.c', 'newcomp3.a')]))
+        self.assertEqual([c.name for c in asm.driver.workflow],
+                         ['comp1', 'sub', 'comp4'])
+        self.assertEqual([c.name for c in asm.sub.driver.workflow],
+                         ['newcomp2', 'newcomp3'])
+        
 
 if __name__ == "__main__":
     unittest.main()

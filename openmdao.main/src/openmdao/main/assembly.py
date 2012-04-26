@@ -327,6 +327,21 @@ class Assembly (Component):
         conns = self.find_referring_connections(oldname)
         wflows = self.find_in_workflows(oldname)
         
+        # clean up autopassthrough connections
+        if self.parent:
+            par_rgx = re.compile(r'(\W?)parent.')
+            old_rgx = re.compile(r'(\W?)%s.' % oldname)
+            
+            old_autos = []
+            for u,v in self._depgraph.list_autopassthroughs():
+                newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, oldname]), u)
+                newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, oldname]), v)
+                if newu != u or newv != v:
+                    old_autos.append((u,v))
+                    u = re.sub(par_rgx, r'\g<1>', newu)
+                    v = re.sub(par_rgx, r'\g<1>', newv)
+                    self.parent.disconnect(u,v)
+        
         obj = self.remove(oldname)
         self.add(newname, obj)
         
@@ -340,6 +355,15 @@ class Assembly (Component):
         for u,v in conns:
             self.connect(re.sub(r'(\W?)%s.' % oldname, r'\g<1>%s.' % newname, u),
                          re.sub(r'(\W?)%s.' % oldname, r'\g<1>%s.' % newname, v))
+        
+        # recreate autopassthroughs
+        if self.parent:
+            for u,v in old_autos:
+                u = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), u)
+                v = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), v)
+                u = re.sub(par_rgx, r'\g<1>', u)
+                v = re.sub(par_rgx, r'\g<1>', v)
+                self.parent.connect(u,v)
         
     def remove(self, name):
         """Remove the named container object from this assembly and remove
