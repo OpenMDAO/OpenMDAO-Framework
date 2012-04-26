@@ -6,6 +6,7 @@ __all__ = ['Assembly', 'set_as_top']
 
 import cStringIO
 import threading
+import re
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
@@ -302,18 +303,29 @@ class Assembly (Component):
             self._depgraph.add(obj.name)
         return obj
     
+    def find_referring_connections(self, name):
+        """Returns a list of connections where the given name is referred
+        to either in the source or the destination.
+        """
+        exprset = set(self._exprmapper.find_referring_exprs(name))
+        return [(u,v) for u,v in self.list_connections(show_passthrough=True) 
+                                                if u in exprset or v in exprset]
+        
+    def find_in_workflows(self, name):
+        """Returns a list of tuples of the form (workflow, index) for all
+        workflows in the scope of this Assembly.
+        """
+        wflows = []
+        for obj in self.__dict__.values():
+            if is_instance(obj, Driver) and name in obj.workflow:
+                wflows.append((obj.workflow, obj.workflow.index(name)))
+        return wflows
+        
     def rename(self, oldname, newname):
         """Renames a child of this object from oldname to newname."""
         self._check_rename(oldname, newname)
-        # find any connections involving the old name
-        exprset = set(self._exprmapper.find_referring_exprs(oldname))
-        conns = [(u,v) for u,v in self.list_connections(show_passthrough=True) 
-                              if u in exprset or v in exprset]
-        # find any workflows containing the old name
-        wflows = []
-        for obj in self.__dict__.values():
-            if is_instance(obj, Driver) and oldname in obj.workflow:
-                wflows.append((obj.workflow, obj.workflow.index(oldname)))
+        conns = self.find_referring_connections(oldname)
+        wflows = self.find_in_workflows(oldname)
         
         obj = self.remove(oldname)
         self.add(newname, obj)
@@ -324,14 +336,16 @@ class Assembly (Component):
             wflow.remove(newname)
             wflow.add(newname, idx)
             
-        # recreate all of the broken connections
+        # recreate all of the broken connections after translating oldname to newname
         for u,v in conns:
-            self.connect(u,v)
+            self.connect(re.sub(r'(\W?)%s.' % oldname, r'\g<1>%s.' % newname, u),
+                         re.sub(r'(\W?)%s.' % oldname, r'\g<1>%s.' % newname, v))
         
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
+        self.disconnect(name)
         self._depgraph.remove(name)
         self._exprmapper.remove(name)
         for obj in self.__dict__.values():
@@ -497,10 +511,6 @@ class Assembly (Component):
             to_remove = [(varpath, varpath2)]
             
         for u,v in to_remove:
-            #srcexpr = self._exprmapper.get_expr(u)
-            #if srcexpr:
-                #for ref in srcexpr.refs(copy=False):
-                    #super(Assembly, self).disconnect(ref, v)
             super(Assembly, self).disconnect(u, v)
                 
         self._exprmapper.disconnect(varpath, varpath2)

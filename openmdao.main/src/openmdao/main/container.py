@@ -652,7 +652,7 @@ class Container(SafeHasTraits):
         if not self.contains(oldname):
             self.raise_exception("can't rename '%s' to '%s': '%s' was not found." % 
                                  (oldname, newname, oldname), RuntimeError)
-        if self.contanis(newname):
+        if self.contains(newname):
             self.raise_exception("can't rename '%s' to '%s': '%s' already exists." % 
                                  (oldname, newname, newname), RuntimeError)
             

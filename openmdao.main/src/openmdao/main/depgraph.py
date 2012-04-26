@@ -112,6 +112,7 @@ class DependencyGraph(object):
         """Remove the name of a Component from the graph. It is not
         an error if the component is not found in the graph.
         """
+        self.disconnect(name)
         self._graph.remove_node(name)
                                     
     def invalidate_deps(self, scope, cnames, varsets, force=False):
@@ -333,23 +334,6 @@ class DependencyGraph(object):
                 if v == path:
                     conns.append((u, v))
         return conns
-    
-        #if not vname:  # a boundary variable
-            #for name in ['@bin', '@bout']:
-                #for u,v in self.var_edges(name):
-                    #if u.split('.',1)[1] == path:
-                        #conns.append((u, v))
-                #for u,v in self.var_in_edges(name):
-                    #if v.split('.',1)[1] == path:
-                        #conns.append((u, v))
-        #else:
-            #for u,v in self.var_edges(cname):
-                #if u == path:
-                    #conns.append((u, v))
-            #for u,v in self.var_in_edges(cname):
-                #if v == path:
-                    #conns.append((u, v))
-        #return conns
     
     def connections_to(self, path):
         """Returns a list of tuples of the form (srcpath, destpath) for
