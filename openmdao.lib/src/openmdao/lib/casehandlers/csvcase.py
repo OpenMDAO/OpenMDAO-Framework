@@ -1,4 +1,4 @@
-"""A CaseRecorder and CaseIterator that store the cases in a CSV file
+"""A CaseRecorder and CaseIterator that store the cases in a CSV file.
 """
 
 import csv
@@ -14,8 +14,8 @@ class CSVCaseIterator(object):
     optimizer, etc.
     
     Current limitations:
-        Quote character in the input CSV file should be ' or ". Other
-        choices don't seem to get identified by csv.Sniffer
+        Quote character in the input CSV file should be ``'`` or ``"``. Other
+        choices don't seem to get identified by csv.Sniffer.
         
         All string data must be contained inside of quotes. This includes
         field headers.

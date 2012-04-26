@@ -11,7 +11,7 @@ from openmdao.main.expreval import ExprEvaluator
 class ExecComp(Component):
     """Given a list of assignment statements, this component creates
     input and output I/O traits at construction time.  All variables
-    appearing on the left hand side of the assignments are outputs
+    appearing on the left-hand side of the assignments are outputs,
     and the rest are inputs.  All variables are assumed to be of
     type Float.
     """
@@ -23,13 +23,12 @@ class ExecComp(Component):
         allvars = set()
         self.codes = [compile(expr,'<string>','exec') for expr in exprs]
         for expr in exprs:
-            expreval = ExprEvaluator(expr, scope=self)
-            exvars = expreval.get_referenced_varpaths()
             lhs,rhs = expr.split('=')
             lhs = lhs.strip()
             lhs = lhs.split(',')
             outs.update(lhs)
-            allvars.update(exvars)
+            expreval = ExprEvaluator(expr, scope=self)
+            allvars.update(expreval.get_referenced_varpaths(copy=False))
         ins = allvars - outs
         for var in allvars:
             if '.' not in var:  # if a varname has dots, it's outside of our scope,
@@ -51,7 +50,7 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
     
     Given a list of assignment statements, this component creates
     input and output I/O traits at construction time.  All variables
-    appearing on the left hand side of the assignments are outputs
+    appearing on the left-hand side of the assignments are outputs,
     and the rest are inputs.  All variables are assumed to be of
     type Float.
     """
@@ -65,13 +64,12 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
         self.codes = [compile(expr,'<string>','exec') for expr in exprs]
         
         for expr in exprs:
-            expreval = ExprEvaluator(expr, scope=self)
-            exvars = expreval.get_referenced_varpaths()
             lhs,rhs = expr.split('=')
             lhs = lhs.strip()
             lhs = lhs.split(',')
             outs.update(lhs)
-            allvars.update(exvars)
+            expreval = ExprEvaluator(expr, scope=self)
+            allvars.update(expreval.get_referenced_varpaths(copy=False))
         ins = allvars - outs
         
         for var in allvars:
@@ -90,7 +88,7 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
         regex = re.compile('d(.*)_d(.*)')
         for expr in derivatives:
             expreval = ExprEvaluator(expr, scope=self)
-            exvars = expreval.get_referenced_varpaths()
+            exvars = expreval.get_referenced_varpaths(copy=False)
             
             lhs, _ = expr.split('=')
             lhs = lhs.strip()

@@ -587,6 +587,10 @@ def _get_distributions(objs, py_dir, logger, observer):
                 # Just being defensive.
                 except Exception:  #pragma no cover
                     logger.exception("ModuleFinder for '%s'" % path)
+                    # Note dependency, even if for some reason ModuleFinder
+                    # can't handle it.
+                    name, dot, ext = os.path.basename(path).partition('.')
+                    finder_info = [(name, path)]
                 else:
                     finder_info = []
                     for name, module in finder.modules.items():
@@ -839,7 +843,7 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
     highest protocol.
 
     root: object
-        The root of the object tree to save
+        The root of the object tree to save.
 
     outstream: file or string
         Stream or filename to save to.

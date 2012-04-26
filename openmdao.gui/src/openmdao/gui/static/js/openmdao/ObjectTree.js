@@ -71,11 +71,18 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
     function updateTree(json) {
         tree.empty()        
         tree.jstree({
-            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "dnd" ],
+            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm", "dnd"],
             json_data   : { "data": convertJSON(json,'') },
             themes      : { "theme":  "classic" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
+            crrm        : { "move" : {
+                                // don't allow moving within the tree (for now anyway)
+                                "check_move" : function (m) {
+                                    return false;
+                                }
+                            }
+                          },            
             dnd         : { /* drop_check: false means move is invalid, otherwise true */
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
@@ -115,11 +122,10 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                 debug.info("ObjectTree: drag_check:",data);
                                 // data.o - the foreign object being dragged
                                 // data.r - the hovered node
-                                return true;
                                 return { 
-                                    after : true, 
-                                    before : true, 
-                                    inside : true 
+                                    after  : false, 
+                                    before : false, 
+                                    inside : false 
                                 };
                             },
                             

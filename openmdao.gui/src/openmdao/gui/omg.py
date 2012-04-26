@@ -8,7 +8,6 @@ for WebSockets is required.
 """
 
 import os, sys
-import os.path
 import time
 
 from argparse import ArgumentParser
@@ -24,10 +23,10 @@ from tornado import httpserver, web
 from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import ensure_dir, launch_browser
+from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager 
 from openmdao.gui.zmqservermanager import ZMQServerManager
 
-from django.conf import settings
 
 debug = True
 def DEBUG(msg):
@@ -98,27 +97,17 @@ class AppServer(object):
         
         user_dir = get_user_dir()
 
-        # initialize django settings
-        database = os.path.join(user_dir,'mdaoproj.db')
-        settings.configure(DATABASES = { 
-                               'default': {
-                                   'NAME': database, 
-                                   'ENGINE': 'django.db.backends.sqlite3' 
-                                }
-                           },
-                           MEDIA_ROOT=os.path.join(user_dir,'projects'),
-                           INSTALLED_APPS=('openmdao.gui.projdb',
-                                           'django.contrib.auth',
-                                           'django.contrib.contenttypes',))
+        # initialize some settings
+        database = os.path.join(user_dir,'projects.db')
 
         if options.reset or not os.path.exists(database):
             print "Resetting project database..."
             if os.path.exists(database):
                 print "Deleting existing project database..."
                 os.remove(database)
-            from django.core.management import execute_manager
-            execute_manager(settings,argv=[__file__,'sqlall','projdb'])
-            execute_manager(settings,argv=[__file__,'syncdb'])
+                
+            pdb = Projects(database)
+            pdb.create()
         
         if (options.port < 1):
             options.port = get_unused_ip_port()

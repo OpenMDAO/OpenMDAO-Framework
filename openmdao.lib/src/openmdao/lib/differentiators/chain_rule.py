@@ -11,11 +11,11 @@ from openmdao.main.interfaces import implements, IDifferentiator
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
 from openmdao.main.numpy_fallback import array
-
+from openmdao.units import convert_units
 
 class ChainRule(HasTraits):
     """ Differentiates a driver's workflow using the Chain Rule with Numerical
-    Derivatives (CRND) method"""
+    Derivatives (CRND) method."""
 
     implements(IDifferentiator)
     
@@ -171,7 +171,7 @@ class ChainRule(HasTraits):
                 self.gradient[wrt][con_name] = con_deriv
 
     def _chain_workflow(self, derivs, scope, param):
-        """Process a workflow, calculating all intermediate derivatives
+        """Process a workflow calculating all intermediate derivatives
         using the chain rule. This can be called recursively to handle
         nested assemblies."""
 
@@ -219,7 +219,7 @@ class ChainRule(HasTraits):
                     # Inputs who are connected to something with a derivative
                     else:
                 
-                        sources = node.parent._depgraph._depgraph.connections_to(full_name)
+                        sources = node.parent._depgraph.connections_to(full_name)
                         
                         # This list keeps track of duplicated sources, which
                         # are a biproduct of a connection to multiple inputs
@@ -241,9 +241,21 @@ class ChainRule(HasTraits):
                                source not in used_sources:
                                 
                                 # Need derivative of the expression
-                                expr = node.parent._depgraph.get_expr(expr_txt)
+                                expr = node.parent._exprmapper.get_expr(expr_txt)
                                 expr_deriv = expr.evaluate_gradient(scope=node.parent,
                                                                     wrt=source)
+                                
+                                # We also need the derivative of the unit
+                                # conversion factor if there is one
+                                metadata = expr.get_metadata('units')
+                                source_unit = [x[1] for x in metadata if x[0]==source]
+                                if source_unit and source_unit[0]:
+                                    dest_expr = node.parent._exprmapper.get_expr(source_tuple[1])
+                                    metadata = dest_expr.get_metadata('units')
+                                    target_unit = [x[1] for x in metadata if x[0]==source_tuple[1]]
+
+                                    expr_deriv[source] = expr_deriv[source] * \
+                                        convert_units(1.0, source_unit[0], target_unit[0])
 
                                 incoming_deriv_names[input_name] = full_name
                                 if full_name in incoming_derivs:
@@ -281,7 +293,7 @@ class ChainRule(HasTraits):
         local_derivs = {}
         name = scope.name
         
-        for item in scope._depgraph._depgraph.var_edges('@xin'):
+        for item in scope._depgraph.var_edges('@xin'):
             src = item[0].replace('@xin.','')
             upscope_src = src.replace('parent.','')
             dest = item[1]
@@ -291,10 +303,23 @@ class ChainRule(HasTraits):
                 dest = dest.split('.')[1]
                 
             # Differentiate all expressions
-            expr_txt = scope._depgraph.get_source(dest.replace('@bin.',''))
-            expr = scope._depgraph.get_expr(expr_txt)
+            dest_txt = dest.replace('@bin.','')
+            expr_txt = scope._depgraph.get_source(dest_txt)
+            expr = scope._exprmapper.get_expr(expr_txt)
             expr_deriv = expr.evaluate_gradient(scope=scope,
                                                 wrt=src)
+            # We also need the derivative of the unit
+            # conversion factor if there is one
+            metadata = expr.get_metadata('units')
+            source_unit = [x[1] for x in metadata if x[0]==src]
+            if source_unit and source_unit[0]:
+                dest_expr = scope._exprmapper.get_expr(dest_txt)
+                metadata = dest_expr.get_metadata('units')
+                target_unit = [x[1] for x in metadata if x[0]==dest_txt]
+
+                expr_deriv[src] = expr_deriv[src] * \
+                              convert_units(1.0, source_unit[0], target_unit[0])
+
             if dest in local_derivs:    
                 local_derivs[dest] += upscope_derivs[upscope_src]*expr_deriv[src]
             else:
@@ -310,7 +335,7 @@ class ChainRule(HasTraits):
         self._chain_workflow(local_derivs, scope.driver, param)
         
         # Convert scope and return gradient of connected components.
-        for item in scope._depgraph._depgraph.var_in_edges('@bout'):
+        for item in scope._depgraph.var_in_edges('@bout'):
             src = item[0]
             upscope_src = '%s.%s' % (name, src)
             dest = item[1]
@@ -322,7 +347,7 @@ class ChainRule(HasTraits):
                 dest = dest.replace('@bout.','')
                 
                 expr_txt = scope._depgraph.get_source(dest)
-                expr = scope._depgraph.get_expr(expr_txt)
+                expr = scope._exprmapper.get_expr(expr_txt)
                 expr_deriv = expr.evaluate_gradient(scope=scope,
                                                     wrt=src)
                 
@@ -354,7 +379,7 @@ class ChainRule(HasTraits):
             Switch to reuse some data from the gradient calculation so that
             we don't have to re-run some points we already ran (namely the
             baseline, +eps, and -eps cases.) Obviously you do this when the
-            driver needs gradient and hessian information at the same point,
+            driver needs gradient and Hessian information at the same point
             and calls calc_gradient before calc_hessian.
         """
         

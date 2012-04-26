@@ -8,15 +8,12 @@ from inspect import getmro
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import TracedError
+from openmdao.main.variable import is_legal_name
 
 __all__ = ["Case"]
 
 class _Missing(object):
     pass
-
-# regex to check for simple names
-_namecheck_rgx = re.compile(
-    '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
 def _simpleflatten(name, obj):
     return [(name, obj)]
@@ -56,16 +53,16 @@ def flatten_obj(name, obj):
     return []
 
 class Case(object):
-    """Contains all information necessary to specify an input *case*, i.e., a
-    list of names for all inputs to the case and their values. The case names
-    may contain indexing into containers, attribute access, and/or function
-    calls, as long as the full expression is valid as the left hand side of an
-    assignment. Outputs to be collected may also be added to the Case, and
-    they can be more general expressions, i.e., they do not have to refer to a
-    single variable. After the Case is executed, it will contain an indicator
-    of the exit status of the case, a string containing error messages
-    associated with the running of the case (if any), and a unique case
-    identifier. 
+    """Contains all information necessary to specify an input *case*, i.e.,
+    a list of names for all inputs to the case and their values. The case
+    names may contain indexing into containers, attribute access, and/or
+    function calls, as long as the full expression is valid as the
+    left-hand side of an assignment. Outputs to be collected may also be
+    added to the Case, and they can be more general expressions, i.e., they do
+    not have to refer to a single variable. After the Case is executed, it
+    will contain an indicator of the exit status of the case, a string
+    containing error messages associated with the running of the case (if
+    any), and a unique case identifier. 
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
@@ -73,8 +70,8 @@ class Case(object):
                  msg=None):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
-        to contain array notation and/or function calls. outputs must be
-        an interator that returns strings containing names or expressions.
+        to contain array notation and/or function calls. Outputs must be
+        an iterator that returns strings containing names or expressions.
         
         """
         self._exprs = None
@@ -197,8 +194,8 @@ class Case(object):
         
         iotype: str or None
             If 'in', only inputs are returned.
-            If 'out', only outputs are returned
-            If None (the default), inputs and outputs are returned
+            If 'out', only outputs are returned.
+            If None (the default), inputs and outputs are returned.
             
         flatten: bool
             If True, split multi-part Variables (like VariableTrees and Arrays) into
@@ -224,8 +221,8 @@ class Case(object):
         
         iotype: str or None
             If 'in', only inputs are returned.
-            If 'out', only outputs are returned
-            If None (the default), inputs and outputs are returned
+            If 'out', only outputs are returned.
+            If None (the default), inputs and outputs are returned.
         """
         return [k for k,v in self.items(iotype, flatten=flatten)]
         
@@ -307,7 +304,7 @@ class Case(object):
         
         name: str
             Name of the input to be added. May contain an expression as long
-            as it is valid when placed on the left hand side of an assignment.
+            as it is valid when placed on the left-hand side of an assignment.
             
         value: 
             Value that the input will be assigned to.
@@ -318,8 +315,8 @@ class Case(object):
     def add_inputs(self, inp_iter):
         """Adds multiple inputs to this case.
         
-        inp_iter: iterator returning (name,value)
-            iterator of input names and values
+        inp_iter: Iterator returning (name,value)
+            Iterator of input names and values.
         """
         for name, value in inp_iter:
             self.add_input(name, value)
@@ -328,7 +325,7 @@ class Case(object):
         """Adds an output to this case.
         
         name: str
-            name of output to be added
+            Name of output to be added.
         """
         self._register_expr(name)
         if self._outputs is None:
@@ -368,10 +365,9 @@ class Case(object):
         
     def _register_expr(self, s):
         """If the given string contains an expression, create an ExprEvaluator and
-        store it in self._exprs
+        store it in self._exprs.
         """
-        match = _namecheck_rgx.match(s)
-        if match is None or match.group() != s:
+        if not is_legal_name(s):
             expr =  ExprEvaluator(s)
             if self._exprs is None:
                 self._exprs = {}

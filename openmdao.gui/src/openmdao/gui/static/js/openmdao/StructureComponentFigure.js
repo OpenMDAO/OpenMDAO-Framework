@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.DataflowComponentFigure=function(myModel,pathname,type){
+openmdao.StructureComponentFigure=function(myModel,pathname,type){
     this.myModel = myModel;
     this.pathname = pathname;
     this.type = type;
@@ -35,11 +35,11 @@ openmdao.DataflowComponentFigure=function(myModel,pathname,type){
     myModel.addListener(topic,this.setExecState.bind(this));    
 };
 
-openmdao.DataflowComponentFigure.prototype=new draw2d.Node();
+openmdao.StructureComponentFigure.prototype=new draw2d.Node();
 
-openmdao.DataflowComponentFigure.prototype.type="DataflowComponentFigure";
+openmdao.StructureComponentFigure.prototype.type="StructureComponentFigure";
 
-openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
+openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     var circleIMG = "url(/static/images/circle.png)";
     
     var item=document.createElement("div");    
@@ -133,7 +133,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     return item;
 };
 
-openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
+openmdao.StructureComponentFigure.prototype.setDimension=function(w,h){
     draw2d.Node.prototype.setDimension.call(this,w,h);
     if(this.top_left!==null){
         this.top_right.style.left=(this.width-this.cornerWidth)+"px";
@@ -154,19 +154,19 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
     }
 };
 
-openmdao.DataflowComponentFigure.prototype.isConnected=function(){
+openmdao.StructureComponentFigure.prototype.isConnected=function(){
     return ((this.outputPort.getConnections().size > 0) || (this.inputPort.getConnections().size > 0));
 };
 
-openmdao.DataflowComponentFigure.prototype.setTitle=function(title){
+openmdao.StructureComponentFigure.prototype.setTitle=function(title){
     this.header.innerHTML=title;
 };
 
-openmdao.DataflowComponentFigure.prototype.setContent=function(_5014){
+openmdao.StructureComponentFigure.prototype.setContent=function(_5014){
     this.textarea.innerHTML=_5014;
 };
 
-openmdao.DataflowComponentFigure.prototype.onDragstart=function(x,y){
+openmdao.StructureComponentFigure.prototype.onDragstart=function(x,y){
     var _5017=draw2d.Node.prototype.onDragstart.call(this,x,y);
     if(this.header===null){
         return false;
@@ -184,7 +184,7 @@ openmdao.DataflowComponentFigure.prototype.onDragstart=function(x,y){
     }
 };
 
-openmdao.DataflowComponentFigure.prototype.setCanDrag=function(flag){
+openmdao.StructureComponentFigure.prototype.setCanDrag=function(flag){
     draw2d.Node.prototype.setCanDrag.call(this,flag);
     this.html.style.cursor="";
     if(this.header===null){
@@ -197,7 +197,7 @@ openmdao.DataflowComponentFigure.prototype.setCanDrag=function(flag){
     }
 };
 
-openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
+openmdao.StructureComponentFigure.prototype.setWorkflow=function(wkflw){
     draw2d.Node.prototype.setWorkflow.call(this,wkflw);
     if(wkflw!==null && this.inputPort===null){
         this.inputPort=new draw2d.InputPort();
@@ -227,7 +227,7 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
     };
 };
 
-openmdao.DataflowComponentFigure.prototype.toggle=function(){
+openmdao.StructureComponentFigure.prototype.toggle=function(){
     if(this.originalHeight==-1){
         this.originalHeight=this.height;
         this.setDimension(this.width,this.cornerHeight*2);
@@ -239,19 +239,21 @@ openmdao.DataflowComponentFigure.prototype.toggle=function(){
     }
 };
 
-openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
+openmdao.StructureComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
     menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
         var cmd = oThis.pathname + '.run();';
         oThis.myModel.issueCommand(cmd);
     }));
-    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-        var asm = openmdao.Util.getPath(oThis.pathname),
-            cmd = asm + '.disconnect("'+oThis.name+'");'
-                + asm + '.config_changed(update_parent=True);';
-        oThis.myModel.issueCommand(cmd);
-    }));
+    var asm = openmdao.Util.getPath(oThis.pathname);
+    if (asm.length > 0) {
+        menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+            var cmd = asm + '.disconnect("'+oThis.name+'");'
+                    + asm + '.config_changed(update_parent=True);';
+            oThis.myModel.issueCommand(cmd);
+        }));
+    }
     menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
         oThis.myModel.removeComponent(oThis.pathname);
     }));    
@@ -259,24 +261,24 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
     return menu;
 };
 
-openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
+openmdao.StructureComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
 /**
-openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
+openmdao.StructureComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
     //this.getWorkflow().showTooltip(new openmdao.Tooltip(this.pathname),true);
 };
 
-openmdao.DataflowComponentFigure.prototype.onMouseLeave=function(){
+openmdao.StructureComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };
 **/
 
-openmdao.DataflowComponentFigure.prototype.setExecState=function(message){
+openmdao.StructureComponentFigure.prototype.setExecState=function(message){
     var state = message[1];
-    //debug.info('DataflowComponentFigure',this.pathname,state);
+    //debug.info('StructureComponentFigure',this.pathname,state);
     if (state === "VALID") {
         this.setColor(new draw2d.Color(0,255,0));
     }

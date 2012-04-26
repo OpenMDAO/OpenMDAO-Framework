@@ -34,7 +34,7 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class COBYLAdriver(Driver):
     """Minimize a function using the Constrained Optimization BY Linear
-    Approximation (COBYLA) method
+    Approximation (COBYLA) method.
 
     COBYLA is gradient-free and can handle inequality constraints.
     
@@ -46,25 +46,25 @@ class COBYLAdriver(Driver):
     
     # pylint: disable-msg=E1101
     rhobeg = Float(1.0, iotype='in', 
-                   desc = 'reasonable initial changes to the variables')
+                   desc = 'Reasonable initial changes to the variables.')
 
     rhoend = Float(1e-4, iotype='in', 
-                   desc = 'final accuracy in the optimization (not precisely guaranteed)')
+                   desc = 'Final accuracy in the optimization (not precisely guaranteed).')
 
     iprint = Enum(1, [0, 1, 2, 3], iotype='in',
-                  desc = 'controls the frequency of output: 0 (no output),1,2,3')
+                  desc = 'Controls the frequency of output: 0 (no output),1,2,3')
     
     maxfun = Int(1000, iotype='in',
-                  desc = 'maximum number of function evaluations')
+                  desc = 'Maximum number of function evaluations.')
     
     iout = Int(6, iotype='in',
-                  desc = 'FORTRAN output unit. Leave this at 6 for STDOUT')
+                  desc = 'Fortran output unit. Leave this at 6 for STDOUT')
     
     output_filename = Str('cobyla.out', iotype='in',
-                          desc = 'Name of output file (if iout not 6)')
+                          desc = 'Name of output file (if iout not 6).')
     
     error_code = Int(0, iotype='out',
-                  desc = 'Error code returned from COBYLA')
+                  desc = 'Error code returned from COBYLA.')
     
 
     def __init__(self, *args, **kwargs):

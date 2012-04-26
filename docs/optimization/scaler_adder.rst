@@ -197,7 +197,7 @@ Running this produces:
     (0.006667, -733.333313)
     >>> print "Elapsed time: ", time.time()-tt, "seconds"
     Elapsed time:  0.0160000324249 seconds
-    >>>> print "Execution count: ", opt_problem.paraboloid.exec_count
+    >>> print "Execution count: ", opt_problem.paraboloid.exec_count
     Execution count:  52
 
     
@@ -219,7 +219,7 @@ Running the assembly now gives:
     (0.006667, -733.333313)
     >>> print "Elapsed time: ", time.time()-tt, "seconds"
     Elapsed time:  0.0 seconds
-    >>>> print "Execution count: ", opt_problem.paraboloid.exec_count
+    >>> print "Execution count: ", opt_problem.paraboloid.exec_count
     Execution count:  23
     
 Just as before, the optimization converges more quickly and with fewer iterations.

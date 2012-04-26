@@ -76,7 +76,7 @@ class ProblemFormulationTest(unittest.TestCase):
         try: 
             self.asm.add_coupling_var(("D1.a","D2.a"))
         except Exception as err:
-            self.assertEqual(": Coupling variable with indep 'D1.a' already exists in assembly",str(err))
+            self.assertEqual(": Coupling variable with indep 'D1.a' already exists in assembly.",str(err))
         else: 
             self.fail("Exception expected")
         
@@ -91,7 +91,7 @@ class ProblemFormulationTest(unittest.TestCase):
         try: 
             self.asm.add_coupling_var(("D1.z","D2.a"))
         except Exception as err: 
-            self.assertEqual(": Cant add coupling variable with indep 'D1.z' because is not a valid variable",str(err))
+            self.assertEqual(": Can't add coupling variable with indep 'D1.z' because is not a valid variable.",str(err))
         else: 
             self.fail("Exception expected")
             
@@ -112,7 +112,7 @@ class ProblemFormulationTest(unittest.TestCase):
         try: 
             self.asm.remove_coupling_var(('D1.a','D2.a'))
         except Exception as err: 
-            self.assertEqual(": No coupling variable of ('D1.a','D2.a') exists in assembly",str(err))
+            self.assertEqual(": No coupling variable of ('D1.a','D2.a') exists in assembly.",str(err))
         else: 
             self.fail("Exception expected")
             

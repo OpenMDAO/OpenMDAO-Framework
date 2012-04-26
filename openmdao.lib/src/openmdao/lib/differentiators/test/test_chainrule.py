@@ -58,6 +58,59 @@ class Comp(ComponentWithDerivatives):
         self.derivatives.set_first_derivative('v', 'u', dv_du)
 
         
+class CompFoot(ComponentWithDerivatives):
+    """ Evaluates the equation y=x^2"""
+    
+    # set up interface to the framework  
+    # pylint: disable-msg=E1101
+    x = Float(1.0, iotype='in', units='ft')
+    y = Float(1.0, iotype='out', units='ft')
+
+    def __init__(self):
+        """ declare what derivatives that we can provide"""
+        
+        super(CompFoot, self).__init__()
+        
+        self.derivatives.declare_first_derivative('y', 'x')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y = 2.0*self.x
+
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""
+        
+        dy_dx = 2.0
+        self.derivatives.set_first_derivative('y', 'x', dy_dx)
+        
+class CompInch(ComponentWithDerivatives):
+    """ Evaluates the equation y=x^2"""
+    
+    # set up interface to the framework  
+    # pylint: disable-msg=E1101
+    x = Float(1.0, iotype='in', units='inch')
+    y = Float(1.0, iotype='out', units='inch')
+
+    def __init__(self):
+        """ declare what derivatives that we can provide"""
+        
+        super(CompInch, self).__init__()
+        
+        self.derivatives.declare_first_derivative('y', 'x')
+
+    def execute(self):
+        """ Executes it """
+        
+        self.y = 2.0*self.x
+
+    def calculate_first_derivatives(self):
+        """Analytical first derivatives"""
+        
+        dy_dx = 2.0
+        self.derivatives.set_first_derivative('y', 'x', dy_dx)
+        
+        
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
 class Driv(DriverUsesDerivatives):
     """ Simple dummy driver"""
@@ -189,7 +242,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.connect('comp3.y1', 'comp4.x2')
         self.top.connect('comp4.y1', 'comp5.x1')
         self.top.connect('comp4.y2', 'comp5.x2')
-        self.top.connect('comp4.y3 + 0.0*comp4.y2', 'comp5.x3')
+        self.top.connect('comp4.y3', 'comp5.x3')
     
         self.top.comp1.x1 = 2.0
         self.top.run()
@@ -253,7 +306,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.nest1.add('real_c3_x1', Float(iotype='in', desc='I am really here'))
         self.top.nest1.add('real_c4_y2', Float(iotype='out', desc='I am really here'))
     
-        self.top.connect('comp1.y1+0*comp1.y2', 'nest1.comp2.x1')
+        self.top.connect('comp1.y1', 'nest1.comp2.x1')
         #self.top.connect('comp1.y1', 'nest1.comp2.x1')
         self.top.connect('comp1.y2', 'nest1.real_c3_x1')
         self.top.nest1.connect('real_c3_x1', 'comp3.x1')
@@ -275,45 +328,64 @@ class ChainRuleTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient('comp5.y1-nest1.comp3.y1>0')
         assert_rel_error(self, grad[0], -313.0+10.5, .001)
     
-    def test_expr_connect(self):
+        
+    def test_simple_units(self):
         
         self.top = set_as_top(Assembly())
         
-        exp1 = ['y1 = x1',
-                'y2 = 2.0*x1',
-                'y3 = x1**2',]
-        deriv1 = ['dy1_dx1 = 1.0',
-                  'dy2_dx1 = 2.0',
-                  'dy3_dx1 = 2.0*x1']
+        self.top.add('comp1', CompFoot())
+        self.top.add('comp2', CompInch())
         
-        exp2 = ['y1 = 2.0*x1 + 3.0*x2']
-        deriv2 = ['dy1_dx1 = 2.0',
-                  'dy1_dx2 = 3.0']
-        
-        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
-        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
-        
-        self.top.connect('comp1.y1*3.0 + comp1.y2 + comp1.y3*2.0', 'comp2.x1')
-        self.top.connect('comp1.y1 - comp1.y3', 'comp2.x2')
+        self.top.connect('comp1.y', 'comp2.x')
         
         self.top.add('driver', Driv())
         self.top.driver.workflow.add(['comp1', 'comp2'])
         
         self.top.driver.differentiator = ChainRule()
         
-        obj = 'comp2.y1'
-        con = 'comp2.y1-comp1.y3 > 0'
-        self.top.driver.add_parameter('comp1.x1', low=-50., high=50., fd_step=.0001)
+        obj = 'comp2.y'
+        self.top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
         self.top.driver.add_objective(obj)
-        self.top.driver.add_constraint(con)
         
-        self.top.comp1.x1 = 2.0
+        self.top.comp1.x = 2.0
         self.top.run()
         self.top.driver.differentiator.calc_gradient()
         
         grad = self.top.driver.differentiator.get_gradient(obj)
-        assert_rel_error(self, grad[0], 17.0, .001)
+        assert_rel_error(self, grad[0], 48.0, .001)
         
+    def test_subassy_units(self):
+        
+        self.top = set_as_top(Assembly())
+        
+        self.top.add('nest1', Assembly())
+        self.top.add('comp1', CompFoot())
+        self.top.nest1.add('comp2', CompInch())
+        self.top.add('comp3', CompFoot())
+        
+        self.top.connect('comp1.y', 'nest1.comp2.x')
+        self.top.connect('nest1.comp2.y', 'comp3.x')
+        
+        self.top.add('driver', Driv())
+        self.top.driver.workflow.add(['comp1', 'nest1', 'comp3'])
+        self.top.nest1.driver.workflow.add(['comp2'])
+        
+        self.top.driver.differentiator = ChainRule()
+        
+        obj = 'comp3.y'
+        con = 'nest1.comp2.y>0'
+        self.top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
+        self.top.driver.add_objective(obj)
+        self.top.driver.add_constraint(con)
+        
+        self.top.comp1.x = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 8.0, .001)
+        grad = self.top.driver.differentiator.get_gradient(con)
+        assert_rel_error(self, grad[0], -48.0, .001)
         
     #def test_reset_state(self):
         

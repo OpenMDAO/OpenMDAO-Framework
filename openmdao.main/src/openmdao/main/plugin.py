@@ -773,7 +773,7 @@ def _github_install(dist_name, findLinks):
 def update_libpath(options=None):
     """Find all of the shared libraries in the current virtual environment and
     modify the activate script to put their directories in LD_LIBRARY_PATH
-    (or its equivalent)
+    (or its equivalent).
     """
     ldict = {
         'linux2': 'LD_LIBRARY_PATH',
@@ -1038,7 +1038,7 @@ def plugin_list(parser, options, args=None):
 
 
 def print_sub_help(parser, subname):
-    """Prints a usage message for the given subparser name"""
+    """Prints a usage message for the given subparser name."""
     for obj in parser._subparsers._actions:
         if obj.dest != 'help':
             obj.choices[subname].print_help()

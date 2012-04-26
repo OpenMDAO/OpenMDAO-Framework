@@ -26,14 +26,14 @@
     { "text": "Tools", "id": "tools-menu",
       "items": [
         { "text": "Plotter",       "id": "tools-plotter", "onclick": "new openmdao.Plotter()"},
-        { "text": "Addons",        "id": "tools-addons", "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"},
+        { "text": "Plugins",       "id": "tools-plugins", "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"},
         { "text": "3DTin",         "id": "tools-3dtin", "onclick": "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"}
       ]
     },
     { "text": "Help", "id": "help-menu",
       "items": [
-        { "text": "Documentation", "id": "help-doc", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs',800,600);"}
+        { "text": "Documentation", "id": "help-doc", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','',768,1024);"}
       ]
     },
-    { "text": "About",             "id": "about-item", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/',800,600);"}
+    { "text": "About",             "id": "about-item", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/','',768,1024);"}
 ]

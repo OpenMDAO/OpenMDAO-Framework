@@ -217,7 +217,7 @@ class CONMINdriver(DriverUsesDerivatives):
     fdchm = Float(.01, iotype='in', desc='Minimum absolute step in finite '
                       'difference gradient calculations.'
                       ' (only when CONMIN calculates gradient)')
-    icndir = Float(0, iotype='in', desc='Conjugate gradient restart '
+    icndir = Float(0, iotype='in', desc='Conjugate gradient restart. '
                       'parameter.')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
     ctmin = Float(0.004, iotype='in', desc='Minimum absolute value of ct '
@@ -236,7 +236,7 @@ class CONMINdriver(DriverUsesDerivatives):
     dabfun = Float(0.001, iotype='in', low=1.0e-10, 
                    desc='Absolute convergence tolerance.')
     linobj = Bool(False, iotype='in', desc='Linear objective function flag. '
-                    'Set to True if objective is linear')
+                    'Set to True if objective is linear.')
     itrm = Int(3, iotype='in', desc='Number of consecutive iterations to '
                       'indicate convergence (relative or absolute).')
         
@@ -317,7 +317,7 @@ class CONMINdriver(DriverUsesDerivatives):
 
     
     def pre_iteration(self):
-        """Checks for RunStopped"""
+        """Checks for RunStopped."""
         
         super(CONMINdriver, self).pre_iteration()
         if self._stop:
@@ -425,7 +425,7 @@ class CONMINdriver(DriverUsesDerivatives):
                     
         else:
             self.raise_exception('Unexpected value for flag INFO returned \
-                    from CONMIN', RuntimeError)
+                    from CONMIN.', RuntimeError)
         
             
     def post_iteration(self):

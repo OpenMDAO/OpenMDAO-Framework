@@ -48,8 +48,6 @@ class ConsoleServer(cmd.Cmd):
     def __init__(self, name='', host=''):
         cmd.Cmd.__init__(self)
 
-        print '<<<'+str(os.getpid())+'>>> ConsoleServer ..............'
-        
         self.intro  = 'OpenMDAO '+__version__+' ('+__date__+')'
         self.prompt = 'OpenMDAO>> '
         
@@ -178,6 +176,7 @@ class ConsoleServer(cmd.Cmd):
             cmd = 'from '+basename+' import *'
             self.default(cmd)
             # then execute anything after "if __name__ == __main__:"
+            # setting __name__ to __main__ won't work... fuggedaboutit
             with open(filename) as file:
                 contents = file.read()
             main_str = 'if __name__ == "__main__":'
@@ -341,7 +340,7 @@ class ConsoleServer(cmd.Cmd):
         connections = []
         if is_instance(asm,Assembly):
             # list of components (name & type) in the assembly
-            g = asm._depgraph._depgraph._graph
+            g = asm._depgraph._graph
             for name in nx.algorithms.dag.topological_sort(g):
                 if not name.startswith('@'):
                     comp = asm.get(name)
@@ -650,12 +649,9 @@ class ConsoleServer(cmd.Cmd):
     def cleanup(self):
         ''' Cleanup this server's directory. 
         '''
-        self.stdout = self.sysout
-        self.stderr = self.syserr
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:
-                print "trying to rmtree ",self.root_dir
                 shutil.rmtree(self.root_dir)
             except Exception, err:
                 self._error(err,sys.exc_info())
