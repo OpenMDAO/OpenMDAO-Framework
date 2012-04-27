@@ -313,7 +313,8 @@ class Assembly (Component):
         
     def find_in_workflows(self, name):
         """Returns a list of tuples of the form (workflow, index) for all
-        workflows in the scope of this Assembly.
+        workflows in the scope of this Assembly that contain the given
+        component name.
         """
         wflows = []
         for obj in self.__dict__.values():
@@ -329,8 +330,8 @@ class Assembly (Component):
         
         # clean up autopassthrough connections
         if self.parent:
-            par_rgx = re.compile(r'(\W?)parent.')
             old_rgx = re.compile(r'(\W?)%s.' % oldname)
+            par_rgx = re.compile(r'(\W?)parent.')
             
             old_autos = []
             for u,v in self._depgraph.list_autopassthroughs():
@@ -353,8 +354,8 @@ class Assembly (Component):
             
         # recreate all of the broken connections after translating oldname to newname
         for u,v in conns:
-            self.connect(re.sub(r'(\W?)%s.' % oldname, r'\g<1>%s.' % newname, u),
-                         re.sub(r'(\W?)%s.' % oldname, r'\g<1>%s.' % newname, v))
+            self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
+                         re.sub(old_rgx, r'\g<1>%s.' % newname, v))
         
         # recreate autopassthroughs
         if self.parent:
@@ -365,6 +366,24 @@ class Assembly (Component):
                 v = re.sub(par_rgx, r'\g<1>', v)
                 self.parent.connect(u,v)
         
+    def replace(self, target_name, newobj):
+        """Replace one object with another, attempting to mimic the inputs and connections
+        of the replaced object as much as possible.
+        """
+        tobj = getattr(self, target_name)
+        if hasattr(newobj, 'init_from_target'):
+            newobj.init_from_target(tobj)
+        if isinstance(tobj, Component):
+            if isinstance(newobj, Component):
+                # connections
+                # workflows stay the same since they just use the component name
+            else:
+                # remove target from workflows since new object isn't a Component
+                for wflow, idx in self.find_in_workflows(target_name):
+                    wflow.remove(target_name)
+        else:
+            ...
+    
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow (if any)."""
