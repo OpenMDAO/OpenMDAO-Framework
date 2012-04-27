@@ -3,7 +3,7 @@
       "items": [
         { "text": "Save",          "onclick": "openmdao.model.saveProject();" },
         { "text": "Run",           "onclick": "openmdao.model.runModel();" },
-        { "text": "Reload",        "url": "/workspace/project" },
+        { "text": "Reload",        "onclick": "openmdao.model.reload();" },
         { "text": "Close",         "onclick": "openmdao.model.close();" },
         { "text": "Exit",          "onclick": "openmdao.model.exit();" }
       ]
