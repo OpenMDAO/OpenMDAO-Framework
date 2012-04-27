@@ -142,6 +142,6 @@ if sys.platform.startswith( "linux" ):
     # This fixes that. Same thing for BrowserJsUnitTestCase
     JsTestDriverTestCase.__test__ = False
     ChromeJsUnitTestCase.__test__ = True
-    FirefoxJsUnitTestCase.__test__ = True
+    FirefoxJsUnitTestCase.__test__ = False
     BrowserJsUnitTestCase.__test__ = False
   
