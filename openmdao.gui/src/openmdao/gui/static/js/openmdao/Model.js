@@ -436,6 +436,17 @@ openmdao.Model=function() {
         })
     }
 
+    /** reload the model */
+    this.reload = function() {
+        if (this.outstream_socket) {
+            this.outstream_socket.close(1000,'close');
+        }
+        if (this.pubstream_socket) {
+            this.pubstream_socket.close(1000,'close');
+        }
+        window.location.replace('/workspace/project');
+    }    
+
     /** exit the model */
     this.close = function() {
         if (this.outstream_socket) {
