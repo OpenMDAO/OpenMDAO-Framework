@@ -588,8 +588,7 @@ def _install_req(py_executable, unzip=False, distribute=False,
 def file_search_dirs():
     here = os.path.dirname(os.path.abspath(__file__))
     dirs = ['.', here,
-            #join(here, 'virtualenv_support')]
-            '/usr/share/python-virtualenv/']
+            join(here, 'virtualenv_support')]
     if os.path.splitext(os.path.dirname(__file__))[0] != 'virtualenv':
         # Probably some boot script; just in case virtualenv is installed...
         try:
@@ -728,16 +727,9 @@ def main():
     parser.add_option(
         '--distribute',
         dest='use_distribute',
-        action='store_true', default=True,
-        help='Ignored.  Distribute is used by default. See --setuptools '
-        'to use Setuptools instead of Distribute.')
-
-    parser.add_option(
-        '--setuptools',
-        dest='use_distribute',
-        action='store_false',
-        help='Use Setuptools instead of Distribute. Set environ variable '
-        'VIRTUALENV_USE_SETUPTOOLS to make it the default.')
+        action='store_true',
+        help='Use Distribute instead of Setuptools. Set environ variable '
+        'VIRTUALENV_USE_DISTRIBUTE to make it the default ')
 
     default_search_dirs = file_search_dirs()
     parser.add_option(
@@ -893,7 +885,7 @@ def call_subprocess(cmd, show_stdout=True,
 
 
 def create_environment(home_dir, site_packages=True, clear=False,
-                       unzip_setuptools=False, use_distribute=True,
+                       unzip_setuptools=False, use_distribute=False,
                        prompt=None, search_dirs=None, never_download=False):
     """
     Creates a new environment in ``home_dir``.
@@ -912,11 +904,11 @@ def create_environment(home_dir, site_packages=True, clear=False,
 
     install_distutils(home_dir)
 
-    if not use_distribute or os.environ.get('VIRTUALENV_USE_SETUPTOOLS'):
-        install_setuptools(py_executable, unzip=unzip_setuptools, 
+    if use_distribute or os.environ.get('VIRTUALENV_USE_DISTRIBUTE'):
+        install_distribute(py_executable, unzip=unzip_setuptools, 
                            search_dirs=search_dirs, never_download=never_download)
     else:
-        install_distribute(py_executable, unzip=unzip_setuptools, 
+        install_setuptools(py_executable, unzip=unzip_setuptools, 
                            search_dirs=search_dirs, never_download=never_download)
 
     install_pip(py_executable, search_dirs=search_dirs, never_download=never_download)
@@ -1629,13 +1621,9 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['SetupDocs==1.0.5', 'docutils==0.8.1', 'Pyevolve==0.6', 'newsumt==1.1.0', 'Pygments==1.3.1', 'ordereddict==1.1', 'boto==2.0rc1', 'pycrypto==2.3', 'paramiko==1.7.7.1', 'decorator==3.2.0', 'Sphinx==1.1.3', 'Fabric==0.9.3', 'Jinja2==2.4', 'Traits==3.3.0', 'nose==0.11.3', 'zope.interface==3.6.1', 'networkx==1.3', 'pyparsing==1.5.2', 'conmin==1.0.1', 'virtualenv==1.6.4', 'argparse==1.2.1', 'cobyla==1.0.1', 'slsqp==1.0.1']
-    # Only linux needs the modules for doing the GUI unit testing at this time
-    if sys.platform.startswith( "linux" ):
-        guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'Django==1.3.1',  'easyprocess==0.1.3',
-                   'path.py==2.2.2', 'pyvirtualdisplay==0.0.9', 'lazr.testing==0.1.2a', 'mocker==1.1', 'zope.testrunner==4.0.4', 'zope.exceptions==3.6.1' ]
-    else:
-        guireqs = ['web.py==0.36', 'jsonpickle==0.4.0', 'Django==1.3.1' ]
+    reqs = ['SetupDocs==1.0.5', 'Pyevolve==0.6', 'networkx==1.3', 'slsqp==1.0.1', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'docutils==0.8.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Sphinx==1.1.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'virtualenv==1.6.4', 'conmin==1.0.1', 'pycrypto==2.3','sympy==0.7.1']
+    guireqs = ['pyzmq-static==2.1.11.1', 'jsonpickle==0.4.0', 'tornado==2.2']
+    guitestreqs = ['entrypoint2==0.0.5', 'mocker==1.1', 'zope.testing==4.1.1', 'EasyProcess==0.1.3', 'zope.exceptions==3.6.1', 'path.py==2.2.2', 'tornado==2.2', 'pyzmq-static==2.1.11.1', 'PyVirtualDisplay==0.0.9', 'zope.testrunner==4.0.4', 'lazr.testing==0.1.2a', 'jsonpickle==0.4.0']
     
     if options.findlinks is None:
         url = 'http://openmdao.org/dists'
@@ -1687,6 +1675,9 @@ def after_install(options, home_dir):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
+            # Only linux needs the modules for doing the GUI unit testing at this time
+            if sys.platform.startswith( "linux" ):
+                allreqs = allreqs + guitestreqs 
             
         for req in allreqs:
             if req.startswith('openmdao.'):

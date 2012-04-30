@@ -72,7 +72,8 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         if pull_docs:
             if result.return_code == 0:
                 print "pulling docs from %s" % hostname
-                retrieve_docs(remotedir)
+                retrieve_docs(os.path.join('~', remotedir))
+                print "doc retrieval successful"
             else:
                 print "not pulling docs from %s because test failed" % hostname
         else:

@@ -15,12 +15,14 @@ from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
 
-
 from openmdao.util.testutil import assert_rel_error
+
 
 class DumbRecorder(HasTraits):
     implements(ICaseRecorder)
     def record(self,case): 
+        pass
+    def close(self):
         pass
 
 

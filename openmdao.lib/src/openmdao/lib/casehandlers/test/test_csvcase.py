@@ -14,8 +14,10 @@ from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.numpy_fallback import array
 from openmdao.test.execcomp import ExecComp
+from openmdao.util.testutil import assert_raises
 from openmdao.main.test.test_vartree import DumbVT
     
+
 class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -42,10 +44,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.filename = "openmdao_test_csv_case_iterator.csv"
         
     def tearDown(self):
-        try:
-            self.top.driver.recorders[0].outfile.close()
-        except:
-            pass
+        for recorder in self.top.driver.recorders:
+            recorder.close()
         if os.path.exists(self.filename):
             os.remove(self.filename)
 
@@ -58,7 +58,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.run()
-        self.top.driver.recorders[0].outfile.close()
         
         # now use the CSV recorder as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
@@ -99,8 +98,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename, delimiter=';', \
                                                      quotechar="'")]
         self.top.run()
-        self.top.driver.recorders[0].outfile.close()
-        
+
         # now use the DB as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
         
@@ -242,8 +240,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.run()
-        self.top.driver.recorders[0].outfile.close()
-        
+
         # now use the CSV recorder as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
         
@@ -275,7 +272,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.iterator = ListCaseIterator([Case(inputs=inputs, outputs=outputs, label='case1')])
         self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.run()
-        self.top.driver.recorders[0].outfile.close()
         
         # now use the CSV recorder as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
@@ -324,7 +320,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
         finally:
-            rec.outfile.close()
+            rec.close()
         
         ## BAN - took this test out because only types with a flattener function
         ##       will be returned by the Case, so incompatible types just won't
@@ -338,12 +334,20 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             #self.top.driver.recorders[0].record(case)
         #except ValueError, err:
             #msg = "CSV format does not support variables of type <type 'NoneType'>"
-            #self.top.driver.recorders[0].outfile.close()
+            #self.top.driver.recorders[0].close()
             #self.assertEqual(msg, str(err))
         #else:
-            #self.top.driver.recorders[0].outfile.close()
+            #self.top.driver.recorders[0].close()
             #self.fail('ValueError Expected')
         
+    def test_close(self):
+        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.run()
+        case = Case(inputs=[('comp2.a_slot', None)])
+        assert_raises(self, 'self.top.driver.recorders[0].record(case)',
+                      globals(), locals(), RuntimeError,
+                      'Attempt to record on closed recorder')
+
 
 if __name__ == '__main__':
     unittest.main()

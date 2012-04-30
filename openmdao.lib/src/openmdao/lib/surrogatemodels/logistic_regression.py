@@ -58,7 +58,7 @@ class LogisticRegression(HasTraits):
         return -1*l   
     
     def get_uncertain_value(self,value): 
-        """Returns the value iself. Logistic regressions don't have uncertainty"""
+        """Returns the value iself. Logistic regressions don't have uncertainty."""
         return value
             
     def train(self,X,Y):

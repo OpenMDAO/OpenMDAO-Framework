@@ -27,7 +27,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 @stub_if_missing_deps(*_check)
 class ExpectedImprovement(Component):
     best_case = Slot(CaseSet, iotype="in",
-                       desc="CaseSet which contains a single case, "
+                       desc="CaseSet which contains a single case "
                             "representing the criteria value.", required=True)
     
     criteria = Str(iotype="in",
@@ -35,15 +35,15 @@ class ExpectedImprovement(Component):
                         "improvement around. Must be a NormalDistrubtion type.")
     
     predicted_value = Slot(NormalDistribution,iotype="in",
-                             desc="the Normal Distribution of the predicted value "
+                             desc="The Normal Distribution of the predicted value "
                                   "for some function at some point where you wish to"
                                   " calculate the EI.")
     
     EI = Float(0.0, iotype="out", 
-               desc="The expected improvement of the predicted_value")
+               desc="The expected improvement of the predicted_value.")
     
     PI = Float(0.0, iotype="out", 
-               desc="The probability of improvement of the predicted_value")
+               desc="The probability of improvement of the predicted_value.")
     
     def execute(self): 
         """ Calculates the expected improvement of the model at a given point.

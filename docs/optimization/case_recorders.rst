@@ -1,6 +1,6 @@
 .. index:: case_recorder case_iterator CSV db
 
-Recording your Inputs and Outputs
+Recording Your Inputs and Outputs
 =====================================
 
 The previous section showed you how you can record output from OpenMDAO using a case recorder. This
@@ -8,51 +8,58 @@ next lesson will show you the available case recorders in more detail.
 
 OpenMDAO contains the following case recorders:
 
-================== ==================================================================
-Name                Output Type
-================== ==================================================================
-CSVCaseRecorder     CSV file, defaults to cases.csv
------------------- ------------------------------------------------------------------
-DBCaseRecorder      SQLite database, default ':memory:'; can also be stored in file
------------------- ------------------------------------------------------------------
-DumpCaseRecorder    File-like object, defaults to sys.stdout
------------------- ------------------------------------------------------------------
-ListCaseRecorder    Python List
-================== ==================================================================
+==================== ====================================================================
+Name                  Output Type
+==================== ====================================================================
+``CSVCaseRecorder``   CSV file, defaults to cases.csv
+-------------------- --------------------------------------------------------------------
+``DBCaseRecorder``    SQLite database, default ``':memory:'``; can also be stored in file
+-------------------- --------------------------------------------------------------------
+``DumpCaseRecorder``  File-like object, defaults to ``sys.stdout``
+-------------------- --------------------------------------------------------------------
+``ListCaseRecorder``  Python List
+==================== ====================================================================
 
 The recorders are interchangeable, so you can use any of them in a slot that can accept them. All
-drivers contain a slot that can accept a list of case recorders. Why a list? That is so you can have the same
-case data recorded in multiple ways if you want to. For example, you could have use the DumpCaseRecorder 
-to output data to the screen, and use the DBCaseRecorder to save the same data to database. 
+drivers contain a slot that can accept a list of case recorders. Why a list? It's so you can have the same
+case data recorded in multiple ways if you want to. For example, you could use the ``DumpCaseRecorder`` to 
+output data to the screen and use the ``DBCaseRecorder`` to save the same data to a database. 
 
-Each driver determines what it needs to write to the recorders in it's list. 
+Each driver determines what it needs to write to the recorders in its list. 
 In the previous example, the ``DOEdriver`` saves each point in the DOE as a
-case. However, a single-objective optimizer such as the ``SLSQPdriver`` saves the state of the model
+case. However, a single-objective optimizer, such as the ``SLSQPdriver``, saves the state of the model
 at each iteration in the optimization so that the convergence history can be observed. The
 state of the model includes the parameters, objective, constraints, and any other data that
-the user chooses to include by listing them in the ``printvars`` variable.
+you choose to include by listing them in the ``printvars`` variable.
 
 The ``CSVCaseRecorder`` outputs the selected variables into a file in the csv
 (Comma Separated Value) format. The ``DBCaseRecorder`` stores the selected
 variables in an SQLite database, which can be stored in memory or on disc as
 a binary file. The ``DumpCaseRecorder`` is used to output the selected
 variables into a file-like object in a human-readable format. The default
-object is sys.stdout, which redirects the output to STDOUT. It can also take
+object is ``sys.stdout``, which redirects the output to STDOUT. It can also take
 a filename as an argument. Finally, the ``ListCaseRecorder`` stores the cases
-in a Python list. Of these recorders, the CSVCaseRecorder is the most useful
-for passing data to other applications such as an external post-processing
-tool. The DBCaseRecorder is the most useful for saving data for later use.
+in a Python list. Of these recorders, the ``CSVCaseRecorder`` is the most useful
+for passing data to other applications, such as an external post-processing
+tool. The ``DBCaseRecorder`` is the most useful for saving data for later use.
+
+At the end of the top-level assembly's ``run()`` all case recorders are closed.
+Each type of recorder defines its own implementation of ``close()``,
+but the general idea is to specify that the recording process is complete.
+For example, the ``CSVCaseRecorder`` will close the file being written so that
+other applications can use it. Note that in some cases you cannot record to
+a closed recorder.
 
 Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would
 like to print out the convergence history of the variables, objective, and constraint into a csv
-file, which we can read into Excel for some post processing. Additionally, we would like to save an
+file, which we can read into Excel for some post processing. Additionally, we'd like to save an
 SQLite database for future use. The code for this should look like:
 
 .. literalinclude:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
 Here, we set ``opt_problem.driver.recorders`` to be a list that contains the csv and db case recorders. The
 ``CSVCaseRecorder`` takes a filename as an argument, as does the ``DBCaseRecorder``. These files will be
-written in the directory where you execute this python file.
+written in the directory where you execute this Python file.
 
 OpenMDAO has a data structure for storing case information. This structure includes the variable names, their status
 as an input or output, and a number of other metadata fields. Run the above code, and inspect the resulting file
@@ -70,19 +77,19 @@ as an input or output, and a number of other metadata fields. Run the above code
 This file should be readable into an application that accepts a csv input file. The first line is a header that contains
 the variable names for the values that are printed. Notice that the objective and constraints are printed for an optimizer
 driver. The first column is a case label, which contains the iteration count. Columns with a
-section header ("/INPUTS", "/OUTPUTS", "/METADATA") do not contain any data. The final columns in the file contain 
+section header (``"/INPUTS", "/OUTPUTS", "/METADATA"``) do not contain any data. The final columns in the file contain 
 some metadata associated with the case. None of these are set by ``SLSQPdriver.`` Note that in OpenMDAO's flavor of
-csv, all string data will always be enclosed in double quotes.
+csv, string data will always be enclosed in double quotes.
 
 The ``CSVCaseRecorder`` supports simple data types -- integers, floats, and strings. It also supports single elements of an array.
 The chosen element becomes a column in the csv file. Some of the more complicated data types -- dictionaries, lists, multi-dimensional
-arrays, custom data objects -- are not yet supported by the CSVCaseRecorder, and it is not clear how some of these could best be
+arrays, custom data objects -- are not yet supported by the ``CSVCaseRecorder``, and it is not clear how some of these could best be
 represented in a comma-separated format. However, the other case recorders should support every type of variable, provided that
 it can be serialized.
 
-The ``DumpCaseRecorder`` is generally used to write readable text out to a
+The ``DumpCaseRecorder`` is generally used to write readable text to a
 file or to STDOUT. Let's try using a ``DumpCaseRecorder`` to output a history
-of our paramters, constraints, and objectives to a file named 'data.txt'.
+of our parameters, constraints, and objectives to a file named ``'data.txt'``.
 
 ::
 
@@ -96,7 +103,7 @@ of our paramters, constraints, and objectives to a file named 'data.txt'.
     opt_problem.run()
 
             
-You should now have a file called 'data.txt' that contains output that looks
+You should now have a file called ``'data.txt'`` that contains output that looks
 like this:
 
 ::
@@ -111,7 +118,7 @@ like this:
          Objective: -27.0833333304
 
 We can also choose to print out all framework variables from components in
-this driver's workflow using the wildcard "*" in the printvars list, and
+this driver's workflow using the wildcard "*" in the printvars list and
 rerunning the model. 
 
 ::
@@ -145,15 +152,15 @@ The output produced is more detailed:
          driver.error_code: 0
          paraboloid.f_xy: -27.0833333304
          
-You can also use partial wildcard matches, and include multiple wildcards in the 
-``printvars`` list, so scenarios like this:
+You can also use partial wildcard matches and include multiple wildcards in the 
+``printvars`` list, so scenarios like this
 
 ::
 
       opt_problem.driver.printvars = ['comp1.*', 'comp2.*', *error*]
 
-are possible. This will return a set of cases with all variables from comp1,
-comp2 as well as any variable with "error" in its name.
+are possible. This will return a set of cases with all variables from ``comp1,
+comp2`` as well as any variable with ```"error"`` in its name.
 
 The wildcard "?" is also supported for matching single characters, so you could
 rewrite the previous line like this:

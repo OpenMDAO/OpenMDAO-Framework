@@ -8,7 +8,21 @@ from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, ExprEx
 from openmdao.main.printexpr import ExprPrinter, transform_expression
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
+from openmdao.util.testutil import assert_rel_error
 
+#from numpy import sin,cos
+from math import log, sqrt, sin, cos
+
+try:
+    # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
+    from math import gamma
+except ImportError as err:
+    import logging
+    logging.warn("In %s: %r" % (__file__, err))
+    try:
+        from scipy.special import gamma
+    except ImportError as err:
+        logging.warn("In %s: %r" % (__file__, err))
 
 class A(Component):
     f = Float(iotype='in')
@@ -51,7 +65,7 @@ class Simple(Component):
     b = Float(iotype='in')
     c = Float(iotype='out')
     d = Float(iotype='out')
-    
+    x_array = Array([0,0,0], iotype='in')
     def __init__(self):
         super(Simple, self).__init__()
         self.a = 4.
@@ -63,7 +77,15 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
         
+        self.x_array[1] = self.a*self.b
         
+
+def new_text(expr):
+    ep = ExprPrinter()
+    ep.visit(expr._parse_get()[0])
+    return ep.get_text()
+        
+
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
@@ -77,7 +99,7 @@ class ExprEvalTestCase(unittest.TestCase):
         # each test is a tuple of the form (input, expected output)
         for tst in tests:
             ex = ExprEvaluator(tst[0], top)
-            self.assertEqual(ex.new_text, tst[1])
+            self.assertEqual(new_text(ex), tst[1])
             
     def test_eq(self): 
         ex1 = ExprEvaluator('comp.x', self.top)
@@ -225,7 +247,7 @@ class ExprEvalTestCase(unittest.TestCase):
         
         ex = ExprEvaluator('comp.x', self.top)
         self.assertEqual(99.5, ex.evaluate())
-        self.assertEqual(ex.new_text, "scope.get('comp.x')")
+        self.assertEqual(new_text(ex), "scope.get('comp.x')")
         
         ex.scope = self.top.a
         try:
@@ -234,9 +256,9 @@ class ExprEvalTestCase(unittest.TestCase):
             self.assertEqual(str(err), "a: object has no attribute 'comp.x'")
         else:
             self.fail("AttributeError expected")
-        self.assertEqual(ex.new_text, "scope.get('comp.x')")
+        self.assertEqual(new_text(ex), "scope.get('comp.x')")
         self.assertEqual(99.5, ex.evaluate(self.top)) # set scope back to self.top
-        self.assertEqual(ex.new_text, "scope.get('comp.x')")
+        self.assertEqual(new_text(ex), "scope.get('comp.x')")
         
         ex.text = 'comp.y'
         try:
@@ -248,7 +270,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ex.scope = self.top
         ex.set(11.1)
         self.assertEqual(11.1, self.top.comp.y)
-        self.assertEqual(ex.new_text, "scope.get('comp.y')")
+        self.assertEqual(new_text(ex), "scope.get('comp.y')")
         
     def test_no_scope(self):
         ex = ExprEvaluator('abs(-3)+int(2.3)+math.floor(5.4)')
@@ -258,7 +280,7 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ex.evaluate()
         except Exception, err:
-            self.assertEqual(str(err), "can't evaluate expression 'comp.x': expression has no scope")
+            self.assertEqual(str(err), "can't evaluate expression 'comp.x': 'NoneType' object has no attribute 'get'")
         else:
             self.fail("Exception expected")
             
@@ -437,22 +459,90 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(exp.get_required_compnames(top),
                          set())
         
+    def test_eval_gradient(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', Simple())
+        top.run()
+        
+        exp = ExprEvaluator('3.0*comp1.c', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        self.assertEqual(top.comp1.c, 7.0)
+        assert_rel_error(self, grad['comp1.c'], 3.0, 0.00001)
+        
+        # Commented out this test, until we find a case that can't be
+        # handled analytically
+        # interface test: step size
+        # (for linear slope, larger stepsize more accurate because of
+        # python's rounding)
+        #grad2 = exp.evaluate_gradient(scope=top, stepsize=0.1)
+        #assert( abs(grad['comp1.c'] - 3.0) > abs(grad2['comp1.c'] - 3.0) )
+        
+        # More complicated, multiple comps
+        top.add('comp2', Simple())
+
+        exp = ExprEvaluator('comp2.b*comp1.c**2', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        self.assertEqual(len(grad), 2)
+        assert_rel_error(self, grad['comp1.c'], 70.0, 0.00001)
+        assert_rel_error(self, grad['comp2.b'], 49.0, 0.00001)
+
+        # test limited varset
+        grad = exp.evaluate_gradient(scope=top, wrt=['comp2.b'])
+        self.assertEqual(len(grad), 1)
+        
+        exp = ExprEvaluator('pow(comp2.b,2)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.b'], 10.0, 0.00001)
+        
+        exp = ExprEvaluator('pow(comp2.b,3)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.b'], 75.0, 0.00001)
+        
+        exp = ExprEvaluator('log(comp2.a)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.a'], 1./top.comp2.a, 0.00001)
+                
+        exp = ExprEvaluator('sin(cos(comp2.b))+sqrt(comp2.a)/comp1.c', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        g1=-sin(top.comp2.b)*cos(cos(top.comp2.b)) #true gradient components
+        g2=(2*sqrt(top.comp2.a)*top.comp1.c)**-1
+        g3=-sqrt(top.comp2.a)/top.comp1.c**2
+        
+        assert_rel_error(self, grad['comp2.b'], g1, 0.00001)
+        assert_rel_error(self, grad['comp2.a'], g2, 0.00001)
+        assert_rel_error(self, grad['comp1.c'], g3, 0.00001)
+        
+        #exp = ExprEvaluator('gamma(comp2.a)', top.driver) #sympy fails; requires finite difference
+        #grad = exp.evaluate_gradient(scope=top)
+        #g1=gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
+        #assert_rel_error(self, grad['comp2.a'], g1, 0.001)
+        
+    def test_eval_gradient_array(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', A())
+        top.run()
+        
+        # Uncomment these when arrays work
+        exp = ExprEvaluator('4.0*comp1.b2d[0][1]*comp1.b2d[1][1]', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp1.b2d[0][1]'], 12.0, 0.00001)
+        assert_rel_error(self, grad['comp1.b2d[1][1]'], 4.0, 0.00001)
+
     def test_scope_transform(self):
-        exp = ExprEvaluator('var+abs(comp.x)*a.a1d[2]', self.top)
-        self.assertEqual(exp.new_text, "scope.get('var')+abs(scope.get('comp.x'))*scope.get('a.a1d',[(0,2)])")
+        exp = ExprEvaluator('myvar+abs(comp.x)*a.a1d[2]', self.top)
+        self.assertEqual(new_text(exp), "scope.get('myvar')+abs(scope.get('comp.x'))*scope.get('a.a1d',[(0,2)])")
         xformed = exp.scope_transform(self.top, self.top.comp)
-        self.assertEqual(xformed, 'parent.var+abs(x)*parent.a.a1d[2]')
+        self.assertEqual(xformed, 'parent.myvar+abs(x)*parent.a.a1d[2]')
         
         exp = ExprEvaluator('parent.var+abs(x)*parent.a.a1d[2]', self.top.comp)
         xformed = exp.scope_transform(self.top.comp, self.top)
         self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
         
     def test_connected_expr(self):
-        ConnectedExprEvaluator("var1+var2", self.top)._parse()
         try:
-            ConnectedExprEvaluator("var1+var2", self.top, is_dest=True)._parse()
+            ConnectedExprEvaluator("var1+var2", self.top)._parse()
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'var1+var2': must be a single variable name or an index or slice into an array variable")
+            self.assertEqual(str(err), "bad connected expression 'var1+var2' must reference exactly one variable")
         else:
             self.fail("Exception expected")
             

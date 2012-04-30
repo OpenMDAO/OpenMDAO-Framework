@@ -28,7 +28,7 @@ class VersionError(RuntimeError):
 
 @stub_if_missing_deps('fabric')
 def fabric_cleanup(debug=False):
-    """close all active fabric connections"""
+    """Close all active fabric connections."""
     for key in connections.keys():
         try:
             if debug:
@@ -170,7 +170,7 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
 
 @stub_if_missing_deps('fabric')
 def remote_py_cmd(cmds, py='python', remote_dir=None):
-    """Given a list of python statements, creates a self-deleting _cmd_.py
+    """Given a list of Python statements, creates a self-deleting _cmd_.py
     file, pushes it to the remote host, and runs it, returning the result of
     'run'.
     """
@@ -197,14 +197,14 @@ def remote_get_platform():
 
 @stub_if_missing_deps('fabric')
 def remote_check_setuptools(py):
-    """Return True if setuptools is installed on the remote host"""
+    """Return True if setuptools is installed on the remote host."""
     with settings(hide('everything'), warn_only=True):
         return remote_py_cmd(["import setuptools"],
                              py).succeeded
     
 @stub_if_missing_deps('fabric')
 def remote_check_pywin32(py):
-    """Return True if pywin32 is installed on the remote host"""
+    """Return True if pywin32 is installed on the remote host."""
     with settings(hide('everything'), warn_only=True):
         return remote_py_cmd(["import win32api",
                               "import win32security"
@@ -213,7 +213,7 @@ def remote_check_pywin32(py):
 
 @stub_if_missing_deps('fabric')
 def remote_untar(tarfile, remote_dir=None, delete=True):
-    """Use internal python tar package to untar a file in the current remote
+    """Use internal Python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
     """
     tarfile = tarfile.replace('\\','/')
@@ -306,13 +306,14 @@ def retrieve_docs(remote_dir):
     """Retrieve a tar file of the docs built on a remote machine."""
     cmds = [ "import tarfile",
              "import os",
-             "for fname in os.listdir('%s'):" % remote_dir,
+             "remote_dir = os.path.expanduser('%s')" % remote_dir,
+             "for fname in os.listdir(remote_dir):",
              "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
              "        break",
              "else:",
-             "    raise RuntimeError('install dir not found in %%s' %% os.path.join(os.getcwd(),'%s'))" % remote_dir,
-             "tardir = os.path.join('%s', fname, 'docs', '_build', 'html')" % remote_dir,
-             "tar = tarfile.open(os.path.join('%s','html.tar.gz'), mode='w:gz')" % remote_dir,
+             "    raise RuntimeError('install dir not found in %s' % remote_dir)",
+             "tardir = os.path.join(remote_dir, fname, 'docs', '_build', 'html')",
+             "tar = tarfile.open(os.path.join(remote_dir, 'html.tar.gz'), mode='w:gz')",
              "tar.add(tardir, arcname='html')",
              "tar.close()",
              ]
@@ -326,7 +327,7 @@ def retrieve_docs(remote_dir):
 #
 
 def repo_top():
-    """Return the top level directory in the current git repository"""
+    """Return the top level directory in the current Git repository."""
     # apparently --show-toplevel doesn't work until git 1.7 :(
     #p = Popen('git rev-parse --show-toplevel', 
               #stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)

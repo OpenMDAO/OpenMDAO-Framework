@@ -1,5 +1,5 @@
 """
-Routines to help out with obtaining debugging information
+Routines to help obtain debugging information.
 """
 
 import os

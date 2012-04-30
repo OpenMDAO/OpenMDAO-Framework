@@ -1,7 +1,8 @@
-"""A CaseRecorder and CaseIterator that store the cases in a CSV file
+"""A CaseRecorder and CaseIterator that store the cases in a CSV file.
 """
 
 import csv
+import cStringIO, StringIO
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
@@ -13,8 +14,8 @@ class CSVCaseIterator(object):
     optimizer, etc.
     
     Current limitations:
-        Quote character in the input CSV file should be ' or ". Other
-        choices don't seem to get identified by csv.Sniffer
+        Quote character in the input CSV file should be ``'`` or ``"``. Other
+        choices don't seem to get identified by csv.Sniffer.
         
         All string data must be contained inside of quotes. This includes
         field headers.
@@ -177,6 +178,8 @@ class CSVCaseRecorder(object):
         self.delimiter = delimiter
         self.quotechar = quotechar
         self.append = append
+        self.outfile = None
+        self.csv_writer = None
         self._header_size = 0
         
         #Open output file
@@ -230,6 +233,9 @@ class CSVCaseRecorder(object):
         Field i+j+9 - msg
         """
         
+        if self.outfile is None:
+            raise RuntimeError('Attempt to record on closed recorder')
+
         if self._write_headers:
             
             headers = ['label', '/INPUTS']
@@ -261,11 +267,22 @@ class CSVCaseRecorder(object):
         
         self.csv_writer.writerow(data)
 
+    def close(self):
+        """Closes the file."""
+
+        if self.csv_writer is not None:
+            if not isinstance(self.outfile,
+                              (StringIO.StringIO, cStringIO.OutputType)):
+                # Closing a StringIO deletes its contents.
+                self.outfile.close()
+            self.outfile = None
+            self.csv_writer = None
+
     def get_iterator(self):
         '''Return CSVCaseIterator that points to our current file'''
         
         # I think we can safely close the oufile if someone is
         # requesting the iterator
-        self.outfile.close()
+        self.close()
         
         return CSVCaseIterator(self.filename)

@@ -9,9 +9,6 @@ if sys.platform.startswith( "linux" ):
     import tempfile
     from distutils.spawn import find_executable
 
-    # for running Xvfb, so we can run our tests headlessly. Xvfb does not
-    #    exist on Windows
-    from pyvirtualdisplay import Display
     # For running tests using the JsTestDriver test runner
     from lazr.testing.jstestdriver import JsTestDriverTestCase
 
@@ -37,7 +34,7 @@ if sys.platform.startswith( "linux" ):
         
     load:
       - %(gd)s/static/js/require-jquery*
-    
+      - %(gd)s/static/js/ba-debug.min.js    
       - %(gd)s/static/js/openmdao/Util.js
       - %(gd)s/static/js/openmdao/Model.js
     
@@ -65,11 +62,6 @@ if sys.platform.startswith( "linux" ):
             pass
     
         def setUp(self):
-    
-            if find_executable( "Xvfb" ):
-                self.display = Display()
-                self.display.start()
-    
             super(BrowserJsUnitTestCase, self).setUp()
             
             # If java not available, skip the test since it is needed
@@ -78,6 +70,12 @@ if sys.platform.startswith( "linux" ):
                 raise SkipTest( "java is needed to do the "
                                 "GUI JavaScript unit testing" )
     
+            # run headless if xvfb is available             
+            if find_executable( "xvfb-run" ):
+                java_cmd = "xvfb-run java"
+            else:
+            	 java_cmd = "java"
+
             # What is the path to the exe of this browser, if any
             browser_name, browser_exe_filepath = self.get_browser_info()
             if not browser_exe_filepath:
@@ -85,13 +83,14 @@ if sys.platform.startswith( "linux" ):
                                "GUI JavaScript unit testing"  % browser_name)
             
             # Set some env vars used by jsTestDriver
-            os.environ[ 'JSTESTDRIVER' ] = """java -jar %(jstd_path)s
+            os.environ[ 'JSTESTDRIVER' ] = """%(java_cmd)s -jar %(jstd_path)s
                                                --port %(port_num)d
                                                --captureConsole
                                                --browser %(browser)s""" % \
-            { 'jstd_path': jstestdriver_path,
+            { 'java_cmd':  java_cmd,
+              'jstd_path': jstestdriver_path,
               'port_num' : port_number,
-              'browser': browser_exe_filepath,
+              'browser':   browser_exe_filepath,
               }
             os.environ[ 'JSTESTDRIVER_PORT' ] = str( port_number )
             os.environ[ 'JSTESTDRIVER_SERVER' ] = \
@@ -100,8 +99,6 @@ if sys.platform.startswith( "linux" ):
         def tearDown(self):
             #os.unlink(self.config_filename)
             super(BrowserJsUnitTestCase, self).tearDown()
-            if find_executable( "Xvfb" ):
-                self.display.stop()
     
         def get_browser_exe_filepath( self, browser_exes ):
             '''Look for an executable for the browser,
@@ -123,21 +120,20 @@ if sys.platform.startswith( "linux" ):
     
             browser_name = "chrome"
             browser_exe_filepath = self.get_browser_exe_filepath(
-                [ "google-chrome", "chrome" ] )
+                [ "chromium-browser", "google-chrome", "chrome" ] )
             return browser_name, browser_exe_filepath
             
-    # class FirefoxJsUnitTestCase(BrowserJsUnitTestCase):
-    #     """test GUI JavaScript using Firefox,
-    #        when OpenMDAO GUI supports it again"""
+    class FirefoxJsUnitTestCase(BrowserJsUnitTestCase):
+        """test GUI JavaScript using Firefox"""
     
-    #     config_filename = config_file.name
+        config_filename = config_file.name
     
-    #     def get_browser_info( self ):
-    #         '''Return the name and possible exes for chrome'''
+        def get_browser_info( self ):
+            '''Return the name and possible exes for firefox'''
     
-    #         browser_name = "firefox"
-    #         browser_exe_filepath = self.get_browser_exe_filepath( [ "firefox" ] )
-    #         return browser_name, browser_exe_filepath
+            browser_name = "firefox"
+            browser_exe_filepath = self.get_browser_exe_filepath( [ "firefox" ] )
+            return browser_name, browser_exe_filepath
             
     
     # If the following is not done, then nose will try to run
@@ -146,6 +142,6 @@ if sys.platform.startswith( "linux" ):
     # This fixes that. Same thing for BrowserJsUnitTestCase
     JsTestDriverTestCase.__test__ = False
     ChromeJsUnitTestCase.__test__ = True
-    #FirefoxJsUnitTestCase.__test__ = True
+    FirefoxJsUnitTestCase.__test__ = False
     BrowserJsUnitTestCase.__test__ = False
-    
+  

@@ -5,6 +5,30 @@
 TestCase("ModelTest", {
   setUp: function () {
     openmdao.model = new openmdao.Model();
+    
+    var modeltest = this ; // so we can refer to it in the promptForValue stub
+
+    // stub Util.promptForValue
+    this.promptedValue = "" ; // This is normally entered via a jQuery dialog
+    if ( ! this.promptStub ) {
+	    this.promptStub = sinon.stub(openmdao.Util, "promptForValue", 
+	          function( prompt, callback ) {
+	              // Here "this" is openmdao.Util so we can't use that
+	              callback( modeltest.promptedValue );
+	          }
+	    );
+	 };
+    
+    // stub Util.openWebSocket
+    if ( ! this.websocketStub ) {
+	    this.websocketStub = sinon.stub(openmdao.Util, "openWebSocket", 
+	          function( addr, handler ) {
+	          	  // We don't need no steenkin' web sockets
+	              return;
+	          }
+	    );
+	 };
+    
     this.fakeXhr = sinon.useFakeXMLHttpRequest();
     var requests = this.requests = [];
 
@@ -14,6 +38,8 @@ TestCase("ModelTest", {
   },
 
   tearDown: function () {
+    this.promptStub.restore() ;
+    this.websocketStub.restore();
     this.fakeXhr.restore();
   },
 
@@ -30,13 +56,12 @@ TestCase("ModelTest", {
   },  
 
 
-  "test addListener and updateListeners": function () {
+  "test addListener": function () {
 
-      /* Cannot really test addListener 
-           by itself since there is no access
-           to the callbacks list in the Model.
-         So need to test it indirectly using the
-           updateListeners method
+      /* Cannot really test addListener by itself since there is no access
+         to the callbacks list in the Model.
+           
+         So need to test it indirectly using the updateListeners method
       */
       callback1 = sinon.spy() ;
       callback2 = sinon.spy() ;
@@ -44,17 +69,24 @@ TestCase("ModelTest", {
       openmdao.model.updateListeners() ;
       sinon.assert.notCalled( callback1 );
 
-      openmdao.model.addListener( callback1 ) ;
+      openmdao.model.addListener( '', callback1 ) ;
+      
+      // 1st call to addListener will initialize the pubstream
+      assertEquals("pubstream", this.requests[0].url);
+      assertEquals("GET", this.requests[0].method);
+      assertEquals(true, this.requests[0].async);
+      assertEquals(1, this.requests.length);
+      assertEquals(null, this.requests[0].requestBody);
+            
       openmdao.model.updateListeners() ;
       sinon.assert.calledOnce( callback1 ) ;
 
-      openmdao.model.addListener( callback2 ) ;
+      openmdao.model.addListener( '', callback2 ) ;
       openmdao.model.updateListeners() ;
       sinon.assert.calledOnce( callback2 ) ;
       assertEquals(callback1.callCount, 2 ) ;
 
   },
-
 
   "test getTypes": function () {
 
@@ -64,6 +96,7 @@ TestCase("ModelTest", {
           function(info) {
               type_info = info ;
           }) ;
+          
       var error_handler = sinon.spy(
           function(jqXHR, textStatus, errorThrown) {
           }
@@ -93,21 +126,22 @@ TestCase("ModelTest", {
   "test newModel": function () {
 
       callback1 = sinon.spy() ;
-      openmdao.model.addListener( callback1 ) ;
-
+      openmdao.model.addListener( '', callback1 ) ;
+      
+      // call newModel
       openmdao.model.newModel( );
 
-      // Check the requests
-      assertEquals("model", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals(true, this.requests[0].async);
-      assertEquals(1, this.requests.length);
-      assertEquals(null, this.requests[0].requestBody);
+      // Check the request
+      assertEquals("model", this.requests[1].url);
+      assertEquals("POST", this.requests[1].method);
+      assertEquals(true, this.requests[1].async);
+      assertEquals(2, this.requests.length);
+      assertEquals(null, this.requests[1].requestBody);
 
       sinon.assert.notCalled( callback1 );
 
       // Set the response
-      this.requests[0].respond(200, {}, '');
+      this.requests[1].respond(200, {}, '');
 
       // Check the callbacks
       sinon.assert.calledOnce( callback1 );
@@ -118,24 +152,24 @@ TestCase("ModelTest", {
   "test saveProject": function () {
 
       callback1 = sinon.spy() ;
-      openmdao.model.addListener( callback1 ) ;
+      openmdao.model.addListener( '', callback1 ) ;
 
       openmdao.model.saveProject( );
 
       // Check the requests
-      assertEquals("project", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals(true, this.requests[0].async);
-      assertEquals(1, this.requests.length);
-      assertEquals(null, this.requests[0].requestBody);
+      assertEquals("project", this.requests[1].url);
+      assertEquals("POST", this.requests[1].method);
+      assertEquals(true, this.requests[1].async);
+      assertEquals(2, this.requests.length);
+      assertEquals(null, this.requests[1].requestBody);
 
       sinon.assert.notCalled( callback1 );
 
       // Set the response
-      this.requests[0].respond(200, {}, '');
+      this.requests[1].respond(200, {}, '');
 
-      // Check the callbacks
-      sinon.assert.calledOnce( callback1 );
+      // saving project has no side effects, so no callbacks at this time      
+      sinon.assert.notCalled( callback1 );
 
   },
 
@@ -364,10 +398,10 @@ TestCase("ModelTest", {
       assertEquals("type=typepath&parent=", this.requests[1].requestBody);
 
       // Are listeners updated?
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
       sinon.assert.notCalled( listener1 );
       openmdao.model.addComponent("typepath","component_name",null,callback) ;
-      this.requests[2].respond(200, 'response', '' ) ; // the ajax call just queues up the request
+      this.requests[3].respond(200, 'response', '' ) ; // the ajax call just queues up the request
       sinon.assert.calledTwice( callback );
       sinon.assert.calledOnce( listener1 );
 
@@ -395,16 +429,16 @@ TestCase("ModelTest", {
       assertEquals({ "status" : "OK"}, success_handler.args[0][0]) ;
 
       // Are listeners updated?
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
       sinon.assert.notCalled( listener1 );
       openmdao.model.issueCommand("command",success_handler,error_handler) ;
-      this.requests[1].respond(200, 'response', '' ) ; // the ajax call just queues up the request
+      this.requests[2].respond(200, 'response', '' ) ; // the ajax call just queues up the request
       sinon.assert.calledTwice( success_handler );
       sinon.assert.calledOnce( listener1 );
 
       // Does error handler get called?
       openmdao.model.issueCommand("command",success_handler,error_handler) ;
-      this.requests[2].respond(500, { "Content-Type": "application/json" }, '{ }');
+      this.requests[3].respond(500, { "Content-Type": "application/json" }, '{ }');
 
       sinon.assert.calledTwice( success_handler );
       sinon.assert.calledOnce( error_handler );
@@ -505,26 +539,27 @@ TestCase("ModelTest", {
       var listener1 = sinon.spy() ;
 
       // Normal operation
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
+      
       openmdao.model.setFile( "filepath", "file contents", error_handler );
-      assertEquals("file/filepath", this.requests[0].url);
-      assertEquals(this.requests[0].method, "POST" );
-      assertEquals("contents=file+contents", this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("file/filepath", this.requests[1].url);
+      assertEquals(this.requests[1].method, "POST" );
+      assertEquals("contents=file+contents", this.requests[1].requestBody);
+      this.requests[1].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.notCalled( error_handler );
       sinon.assert.calledOnce( listener1 );
              
       // Check error handler
       openmdao.model.setFile( "filepath", "file contents", error_handler );
-      this.requests[1].respond(500, { "Content-Type": "text/plain" }, '');
+      this.requests[2].respond(500, { "Content-Type": "text/plain" }, '');
       sinon.assert.calledOnce( error_handler );
       sinon.assert.calledOnce( listener1 );
       
       // test what happens when backslash is in filepath
       openmdao.model.setFile( "file\\path", "file contents", error_handler );
-      assertEquals("file/file/path", this.requests[2].url);
-      assertEquals( this.requests.length, 3 ) ;
-      this.requests[2].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("file/file/path", this.requests[3].url);
+      assertEquals( this.requests.length, 4 ) ;
+      this.requests[3].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledTwice( listener1 );
 
   }, 
@@ -535,26 +570,27 @@ TestCase("ModelTest", {
       var listener1 = sinon.spy() ;
 
       // Normal operation
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
+      
       openmdao.model.createFolder( "folderpath", error_handler );
-      assertEquals("file/folderpath", this.requests[0].url);
-      assertEquals(this.requests[0].method, "POST" );
-      assertEquals("isFolder=true", this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("file/folderpath", this.requests[1].url);
+      assertEquals(this.requests[1].method, "POST" );
+      assertEquals("isFolder=true", this.requests[1].requestBody);
+      this.requests[1].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.notCalled( error_handler );
       sinon.assert.calledOnce( listener1 );
              
       // Check error handler
       openmdao.model.createFolder( "folderpath", error_handler );
-      this.requests[1].respond(500, { "Content-Type": "text/plain" }, '');
+      this.requests[2].respond(500, { "Content-Type": "text/plain" }, '');
       sinon.assert.calledOnce( error_handler );
       sinon.assert.calledOnce( listener1 );
       
       // test what happens when backslash is in folderpath
       openmdao.model.createFolder( "folder\\path", error_handler );
-      assertEquals("file/folder/path", this.requests[2].url);
-      assertEquals( this.requests.length, 3 ) ;
-      this.requests[2].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("file/folder/path", this.requests[3].url);
+      assertEquals( this.requests.length, 4 ) ;
+      this.requests[3].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledTwice( listener1 );
 
   }, 
@@ -562,83 +598,55 @@ TestCase("ModelTest", {
   "test newFile": function () {
 
       var listener1 = sinon.spy() ;
-      var modeltest = this ; // so we can refer to it in the promptForValue stub
-      modeltest.newfilename = "" ; // This is normally entered via a jQuery dialog
-      
-
-      // stub Util.promptForValue
-      var stub = sinon.stub(openmdao.Util, "promptForValue", 
-          function( prompt, callback ) {
-              // Here "this" is openmdao.Util so we cannot
-              //   use that
-              callback( modeltest.newfilename );
-          }
-                           );
-
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
 
       // Normal operation with JSON new file name
-      modeltest.newfilename = "newfilename.json" ;
+      this.promptedValue = "newfilename.json" ;
       openmdao.model.newFile( "folderpath" );
       // It calls setFile so check to see if that happens as expected
-      assertEquals("file/folderpath/" + this.newfilename, this.requests[0].url);
-      assertEquals(this.requests[0].method, "POST" );
-      assertEquals("contents=%5B%5D", this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("file/folderpath/" + this.promptedValue, this.requests[1].url);
+      assertEquals(this.requests[1].method, "POST" );
+      assertEquals("contents=%5B%5D", this.requests[1].requestBody);
+      this.requests[1].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledOnce( listener1 );
 
       // Normal operation with .py new file name
-      modeltest.newfilename = "newfilename.py" ;
+      this.promptedValue = "newfilename.py" ;
       openmdao.model.newFile( "folderpath" );
       // It calls setFile so check to see if that happens as expected
-      assertEquals("file/folderpath/" + this.newfilename, this.requests[1].url);
-      assertEquals(this.requests[1].method, "POST" );
+      assertEquals("file/folderpath/" + this.promptedValue, this.requests[2].url);
+      assertEquals(this.requests[2].method, "POST" );
       assertEquals("contents=%22%22%22%0A+++folderpath%2Fnewfilename.py%0A%22%22%22%0A%0A", 
-           this.requests[1].requestBody);
-      this.requests[1].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+           this.requests[2].requestBody);
+      this.requests[2].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledTwice( listener1 );
 
       // Normal operation with no extension on file name
-      modeltest.newfilename = "newfilename" ;
+      this.promptedValue = "newfilename" ;
       openmdao.model.newFile( "folderpath" );
       // It calls setFile so check to see if that happens as expected
-      assertEquals("file/folderpath/" + this.newfilename, this.requests[2].url);
-      assertEquals(this.requests[2].method, "POST" );
-      assertEquals("contents=", this.requests[2].requestBody);
-      this.requests[2].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("file/folderpath/" + this.promptedValue, this.requests[3].url);
+      assertEquals(this.requests[3].method, "POST" );
+      assertEquals("contents=", this.requests[3].requestBody);
+      this.requests[3].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledThrice( listener1 );
 
-      stub.restore() ;
   }, 
 
   "test newFolder": function () {
 
       var listener1 = sinon.spy() ;
-      var modeltest = this ; // so we can refer to it in the promptForValue stub
-      modeltest.newfoldername = "" ; // This is normally entered via a jQuery dialog
-      
-      // stub Util.promptForValue
-      var stub = sinon.stub(openmdao.Util, "promptForValue", 
-          function( prompt, callback ) {
-              // Here "this" is openmdao.Util so we cannot
-              //   use that
-              callback( modeltest.newfoldername );
-          }
-                           );
-
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
 
       // Normal operation
-      modeltest.newfilename = "newfoldername" ;
+      this.promptedValue = "newfoldername" ;
       openmdao.model.newFolder( "folderpath" );
       // It calls createFolder so check to see if that happens as expected
-      assertEquals("file/folderpath/" + this.newfoldername, this.requests[0].url);
-      assertEquals(this.requests[0].method, "POST" );
-      assertEquals("isFolder=true", this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("file/folderpath/" + this.promptedValue, this.requests[1].url);
+      assertEquals(this.requests[1].method, "POST" );
+      assertEquals("isFolder=true", this.requests[1].requestBody);
+      this.requests[1].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledOnce( listener1 );
-
-      stub.restore() ;
   }, 
 
 
@@ -646,15 +654,15 @@ TestCase("ModelTest", {
 
       /* TODO: Not much to test yet since uploadFile is not complete yet */
       
-      var stub = sinon.stub(openmdao.Util, "popupWindow", 
+      var popupStub = sinon.stub(openmdao.Util, "popupWindow", 
           function( url,title,h,w ) {
               /* Do nothing for now */
           }
                            );
       openmdao.model.uploadFile( );
-      sinon.assert.calledOnce( stub );
+      sinon.assert.calledOnce( popupStub );
 
-      stub.restore() ;
+      popupStub.restore() ;
   }, 
 
 
@@ -663,12 +671,12 @@ TestCase("ModelTest", {
       var listener1 = sinon.spy() ;
 
       // Normal operation
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
       openmdao.model.removeFile( "filepath" );
-      assertEquals("filefilepath", this.requests[0].url);
-      assertEquals(this.requests[0].method, "DELETE" );
-      assertEquals("file=filepath", this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, '' ) ;
+      assertEquals("filefilepath", this.requests[1].url);
+      assertEquals(this.requests[1].method, "DELETE" );
+      assertEquals("file=filepath", this.requests[1].requestBody);
+      this.requests[1].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledOnce( listener1 );
              
       // TODO: I do not see how to check the error handling at this point
@@ -682,12 +690,13 @@ TestCase("ModelTest", {
       var listener1 = sinon.spy() ;
 
       // Normal execution
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
+      
       openmdao.model.importFile( "filepath.py" ) ;
-      assertEquals("command", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals(this.requests[0].requestBody, "command=from+filepath+import+*" );
-      this.requests[0].respond(200, { "Content-Type": "application/json" }, '{ "status" : "OK"}' ) ;
+      assertEquals("command", this.requests[1].url);
+      assertEquals("POST", this.requests[1].method);
+      assertEquals(this.requests[1].requestBody, "command=from+filepath+import+*" );
+      this.requests[1].respond(200, { "Content-Type": "application/json" }, '{ "status" : "OK"}' ) ;
       sinon.assert.calledOnce( listener1 );
 
       /* TODO: Maybe do more testing in this one. Right now the call to 
@@ -704,14 +713,15 @@ TestCase("ModelTest", {
       // Normal execution
       // Note that runModel does an Ajax call and then it calls issueCommand
       //   which also does an Ajax call. So there are two requests/responses
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
+      
       openmdao.model.runModel() ;
-      assertEquals("exec", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals(null, this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, 'OK' ) ;
-      this.requests[1].respond(200, { "Content-Type": "application/json" }, '{ "status" : "OK"}' ) ;
-      assertEquals(this.requests[1].requestBody, 'command=print+%22OK%22' );
+      assertEquals("exec", this.requests[1].url);
+      assertEquals("POST", this.requests[1].method);
+      assertEquals(null, this.requests[1].requestBody);
+      this.requests[1].respond(200, { "Content-Type": "text/plain" }, 'OK' ) ;
+      this.requests[2].respond(200, { "Content-Type": "application/json" }, '{ "status" : "OK"}' ) ;
+      assertEquals(this.requests[2].requestBody, 'command=print+%22OK%22' );
       sinon.assert.calledOnce( listener1 );
 
       /* TODO: Maybe do more testing in this one. Right now the call to 
@@ -726,32 +736,19 @@ TestCase("ModelTest", {
       var listener1 = sinon.spy() ;
 
       // Normal execution
-      openmdao.model.addListener( listener1 ) ;
+      openmdao.model.addListener( '', listener1 ) ;
+      
       openmdao.model.execFile("/file\\path") ;
-      assertEquals("exec", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals("filename=file%2Fpath", this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, 'OK' ) ;
+      assertEquals("exec", this.requests[1].url);
+      assertEquals("POST", this.requests[1].method);
+      assertEquals("filename=file%2Fpath", this.requests[1].requestBody);
+      this.requests[1].respond(200, { "Content-Type": "text/plain" }, 'OK' ) ;
       sinon.assert.calledOnce( listener1 );
 
       /* TODO: Maybe do more testing in this one. Right now the call to 
                issueCommand inside of execFile does not call callbacks */
 
   }, 
-
-
-  "test exit": function () {
-
-      // Normal execution
-      openmdao.model.exit() ;
-      assertEquals("exit", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals(null, this.requests[0].requestBody);
-      this.requests[0].respond(200, { "Content-Type": "text/plain" }, 'OK' ) ;
-
-  }, 
-
-
 
 
 

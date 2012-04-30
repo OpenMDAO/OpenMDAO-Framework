@@ -55,7 +55,7 @@ def write_server_config(server, filename, real_ip=None):  #pragma no cover
         Path to file to be written.
 
     real_ip: string
-        If specified, the IP address to report (rather than possible tunnel)
+        If specified, the IP address to report (rather than possible tunnel).
 
     Connection information including IP address, port, and public key is
     written using :class:`ConfigParser`.
@@ -89,7 +89,7 @@ def read_server_config(filename):
         Path to file to be read.
 
     Returns a dictionary containing 'address', 'port', 'tunnel', 'key', and
-    'logfile' information
+    'logfile' information.
     """
     if not os.path.exists(filename):
         raise IOError('No such file %r' % filename)

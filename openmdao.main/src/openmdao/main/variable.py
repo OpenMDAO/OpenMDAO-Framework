@@ -1,11 +1,19 @@
+import re
 
 from enthought.traits.api import TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
-
 from openmdao.main.interfaces import implements, IVariable
 
+# regex to check for valid names. 
+_namecheck_rgx = re.compile(
+    '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
+            
+def is_legal_name(name):
+    match = _namecheck_rgx.match(name)
+    return not (match is None or match.group() != name)
+
 class Variable(TraitType):
-    """An OpenMDAO specific trait type that serves as a common base
+    """An OpenMDAO-specific trait type that serves as a common base
     class for framework visible inputs and outputs.
     """
     implements(IVariable)

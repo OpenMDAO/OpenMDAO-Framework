@@ -253,6 +253,13 @@ class CaseSetTestCase(unittest.TestCase):
         for c1,c2 in zip(cs1, cs2):
             self.assertEqual(c1, c2)
         
+    def test_close(self):
+        c1 = Case(inputs=[('x',10),], outputs=[('y',10)])
+        cs1 = CaseSet()
+        cs1.record(c1)
+        cs1.close()
+
+
 if __name__ == "__main__":
     unittest.main()
 

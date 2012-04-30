@@ -38,7 +38,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
     /**/
         
     // ask model for an update whenever something changes
-    model.addListener(update)
+    model.addListener('',update)
     
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path) {
@@ -71,11 +71,18 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
     function updateTree(json) {
         tree.empty()        
         tree.jstree({
-            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "dnd" ],
+            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm", "dnd"],
             json_data   : { "data": convertJSON(json,'') },
             themes      : { "theme":  "classic" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
+            crrm        : { "move" : {
+                                // don't allow moving within the tree (for now anyway)
+                                "check_move" : function (m) {
+                                    return false;
+                                }
+                            }
+                          },            
             dnd         : { /* drop_check: false means move is invalid, otherwise true */
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
@@ -115,11 +122,10 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                 debug.info("ObjectTree: drag_check:",data);
                                 // data.o - the foreign object being dragged
                                 // data.r - the hovered node
-                                return true;
                                 return { 
-                                    after : true, 
-                                    before : true, 
-                                    inside : true 
+                                    after  : false, 
+                                    before : false, 
+                                    inside : false 
                                 };
                             },
                             
@@ -208,15 +214,8 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         };
         menu.remove = {
             "label"  : 'Remove',
-            "action" :  function(node) { 
-                            var parent = openmdao.Util.getPath(path);
-                            if (parent.length > 0 ) {
-                                model.issueCommand(parent+'.remove("'+openmdao.Util.getName(path)+'")');
-                            }
-                            else {
-                                model.issueCommand('del('+openmdao.Util.getName(path)+')');
-                            }
-                            
+            "action" :  function(node) {
+                            model.removeComponent(path);
                         }
         };        
         return menu;

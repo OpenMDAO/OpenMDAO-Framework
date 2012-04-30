@@ -1,4 +1,4 @@
-""" A component with derivatives. Derived from Component """
+""" A component with derivatives. Derived from Component. """
 
 from openmdao.main.component import Component
 from openmdao.main.derivatives import Derivatives
@@ -68,7 +68,7 @@ class ComponentWithDerivatives (Component):
             
             
     def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """Calls the validate method of the derivatives object, in order to
+        """Calls the validate method of the derivatives object in order to
         warn the user about all missing derivatives."""
         
         local_inputs = []

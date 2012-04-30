@@ -13,7 +13,7 @@ openmdao.ComponentEditor = function(model,pathname) {
     var self = this,
         panes = {};
         
-    model.addListener(update)
+    model.addListener('',update)
           
     /** load the table with the given properties */
     function loadTabs(properties) {
@@ -98,7 +98,7 @@ openmdao.ComponentEditor = function(model,pathname) {
             panes[name].loadData(val);
         }
         else if (name == 'Structure') {
-            panes[name] = new openmdao.DataflowPane(contentPane,model,pathname,name,false);
+            panes[name] = new openmdao.StructurePane(contentPane,model,pathname,name,false);
             panes[name].loadData(val);
         }
         else if (name == 'Slots') {
