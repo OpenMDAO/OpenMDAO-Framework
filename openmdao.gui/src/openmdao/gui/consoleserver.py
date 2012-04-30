@@ -27,7 +27,9 @@ from zope.interface import implementedBy
 import networkx as nx
 
 from openmdao.util.network import get_unused_ip_port
+
 from openmdao.gui.util import *
+from openmdao.gui.filemanager import FileManager 
 
 def modifies_model(target):
     ''' decorator for methods that modify the model
@@ -36,6 +38,17 @@ def modifies_model(target):
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
+        return result
+    return wrapper
+
+def modifies_files(target):
+    ''' decorator for methods that might modify files
+        publishes the updated file collection
+        TODO: remove this if/when filemanager implements file watchdog
+    '''
+    def wrapper(self, *args, **kwargs):
+        result = target(self, *args, **kwargs)
+        self.files.publish_files()
         return result
     return wrapper
 
@@ -55,20 +68,11 @@ class ConsoleServer(cmd.Cmd):
         self.known_types = []
 
         self.host = host
-        self.pid = os.getpid()
-        self.name = name or ('-cserver-%d' % self.pid)
-        self.orig_dir = os.getcwd()
-        self.root_dir = tempfile.mkdtemp(self.name)
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
-        os.mkdir(self.root_dir)
-        os.chdir(self.root_dir)
-        
-        print 'root_dir=',self.root_dir
-        
         self.projfile = ''
         self.proj = None
         self.exc_info = None
+        
+        self.files = FileManager('files',publish_updates=True)
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -97,15 +101,6 @@ class ConsoleServer(cmd.Cmd):
             traceback.print_tb(exc_traceback, limit=30)        
         else:
             print "No trace available."
-        
-    def getcwd(self):
-        return os.getcwd()
-
-    def chdir(self, dirname):
-        if not os.path.isdir(dirname):
-            os.mkdir(dirname)
-        os.chdir(dirname)
-        sys.path[0] = dirname
 
     def precmd(self, line):
         ''' This method is called after the line has been input but before
@@ -129,6 +124,7 @@ class ConsoleServer(cmd.Cmd):
         pass
         
     @modifies_model
+    @modifies_files
     def default(self, line):       
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
@@ -153,6 +149,7 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err,sys.exc_info())
             
     @modifies_model
+    @modifies_files
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
@@ -167,6 +164,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             print "Execution failed: No 'top' assembly was found."
 
+    @modifies_files
     def execfile(self, filename):
         ''' execfile in server's globals. 
         '''
@@ -189,10 +187,11 @@ class ConsoleServer(cmd.Cmd):
         except Exception, err:
             self._error(err,sys.exc_info())
 
+
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 
         '''
-        return self.pid
+        return os.getpid()
         
     def get_project(self):
         ''' Return the current model as a project archive.
@@ -565,7 +564,16 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self._error(err,sys.exc_info())
         return jsonpickle.encode(attr)
-    
+
+    def get_value(self,pathname):
+        ''' get the value of the object with the given pathname
+        '''
+        try:
+            val, root = self.get_container(pathname)            
+            return val
+        except Exception, err:
+            print "error getting value:",err
+
     def get_available_types(self):
         return packagedict(get_available_types())
         
@@ -587,12 +595,15 @@ class ConsoleServer(cmd.Cmd):
         return packagedict(self.known_types)
 
     @modifies_model
+    @modifies_files
     def load_project(self,filename):
         print 'loading project from:',filename
         self.projfile = filename
-        self.proj = project_from_archive(filename,dest_dir=self.getcwd())
-        self.proj.activate()
-        Publisher.get_instance()
+        try:
+            self.proj = project_from_archive(filename,dest_dir=self.files.getcwd())
+            self.proj.activate()
+        except Exception, err:
+            self._error(err,sys.exc_info())
         
     def save_project(self):
         ''' save the cuurent project state & export it whence it came
@@ -647,100 +658,43 @@ class ConsoleServer(cmd.Cmd):
         return self.proj.__dict__            
 
     def cleanup(self):
-        ''' Cleanup this server's directory. 
+        ''' Cleanup this server's files. 
         '''
-        os.chdir(self.orig_dir)
-        if os.path.exists(self.root_dir):
-            try:
-                shutil.rmtree(self.root_dir)
-            except Exception, err:
-                self._error(err,sys.exc_info())
+        self.files.cleanup()
         
     def get_files(self):
-        ''' get a nested dictionary of files in the working directory
+        ''' get a nested dictionary of files
         '''
-        cwd = os.getcwd()
-        return filedict(cwd,root=cwd)
+        return self.files.get_files()
 
     def get_file(self,filename):
-        ''' get contents of file in working directory
+        ''' get contents of a file
             returns None if file was not found
         '''
-        filepath = os.getcwd()+'/'+str(filename)
-        if os.path.exists(filepath):
-            contents=open(filepath, 'rb').read()
-            return contents
-        else:
-            return None
+        return self.files.get_file(filename)
 
     def ensure_dir(self,dirname):
-        ''' create directory in working directory
+        ''' create directory
             (does nothing if directory already exists)
         '''
-        dirpath = os.getcwd()+'/'+str(dirname)
-        if not os.path.isdir(dirpath):
-            os.makedirs(dirpath)
+        return self.files.ensure_dir(dirname)
 
     def write_file(self,filename,contents):
-        ''' write contents to file in working directory
+        ''' write contents to file
         '''
-        try:
-            filepath = os.getcwd()+'/'+str(filename)
-            fout = open(filepath,'wb')
-            fout.write(contents)
-            fout.close()
-            return True
-        except Exception, err:
-            return err
+        return self.files.write_file(filename,contents)
 
     def add_file(self,filename,contents):
-        ''' add file to working directory
-            if it's a zip file, unzip it
+        ''' add file
         '''
-        self.write_file(filename, contents)
-        if zipfile.is_zipfile(filename):
-            userdir = os.getcwd()
-            zfile = zipfile.ZipFile( filename, "r" )
-            zfile.printdir()
-            for fname in zfile.namelist():
-                if fname.endswith('/'):
-                    dirname = userdir+'/'+fname
-                    if not os.path.exists(dirname):
-                        os.makedirs(dirname)
-            for fname in zfile.namelist():
-                if not fname.endswith('/'):
-                    data = zfile.read(fname)
-                    fname = userdir+'/'+fname
-                    fname = fname.replace('\\','/')
-                    fout = open(fname, "wb")
-                    fout.write(data)
-                    fout.close()
-            zfile.close()
-            os.remove(filename)
+        return self.files.add_file(filename,contents)
 
     def delete_file(self,filename):
-        ''' delete file in working directory
+        ''' delete file from project
             returns False if file was not found, otherwise returns True
         '''
-        filepath = os.getcwd()+'/'+str(filename)
-        if os.path.exists(filepath):
-            if os.path.isdir(filepath):
-                os.rmdir(filepath)
-            else:
-                os.remove(filepath)
-            return True
-        else:
-            return False
+        return self.files.delete_file(filename)
                         
     def install_addon(self,url,distribution):
         print "Installing",distribution,"from",url
         easy_install.main( ["-U","-f",url,distribution] )
-            
-    def get_value(self,pathname):
-        ''' get the value of the object with the given pathname
-        '''
-        try:
-            val, root = self.get_container(pathname)            
-            return val
-        except Exception, err:
-            print "error getting value:",err

@@ -32,7 +32,7 @@ openmdao.StructureComponentFigure=function(myModel,pathname,type){
     
     // change color based on execution status
     topic = pathname+'.exec_state'
-    myModel.addListener(topic,this.setExecState.bind(this));    
+    myModel.addListener(topic,this.setExecState.bind(this));
 };
 
 openmdao.StructureComponentFigure.prototype=new draw2d.Node();

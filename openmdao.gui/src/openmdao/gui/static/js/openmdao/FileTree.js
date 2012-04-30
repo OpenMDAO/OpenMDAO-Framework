@@ -24,8 +24,16 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
         
-    // ask model for an update whenever something changes
-    model.addListener('',update)
+    // listen for 'files' messages
+    model.addListener('files', function(message) {
+    	if (message.length !== 2 || message[0] !== 'files') {
+    		debug.warn('Invalid files data:',message)    		
+    	}
+    	else {
+    		files = message[1];
+    		updateFiles(files);
+    	}
+    });
         
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
@@ -205,7 +213,10 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         
     /** update the tree from JSON file structure */
     function updateFiles(files) {
-        // generate HTML for the file tree
+        tree.html("<div>Updating...</div>")
+        	.effect('highlight',{color:'#ffd'},1000);
+        
+        // generate HTML for the file tree        
         var html = "<ul>";
         jQuery.each(files,function(path,val) {
             html += getFileHTML(path,val);
@@ -247,8 +258,6 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
 
     /** update the display, with data from the model */
     function update() {
-        tree.html("<div>Updating...</div>")
-            .effect('highlight',{color:'#ffd'},1000);
         model.getFiles(updateFiles);
     }
     
