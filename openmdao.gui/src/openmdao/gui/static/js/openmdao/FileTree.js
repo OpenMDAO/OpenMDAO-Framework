@@ -24,17 +24,6 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
         
-    // listen for 'files' messages
-    model.addListener('files', function(message) {
-    	if (message.length !== 2 || message[0] !== 'files') {
-    		debug.warn('Invalid files data:',message)    		
-    	}
-    	else {
-    		files = message[1];
-    		updateFiles(files);
-    	}
-    });
-        
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
         // get the file name and extension 
@@ -260,6 +249,22 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
     function update() {
         model.getFiles(updateFiles);
     }
+
+    // load initial file data
+    update();
+
+    // listen for 'files' messages and update file data accordingly
+    model.addListener('files', function(message) {
+    	if (message.length !== 2 || message[0] !== 'files') {
+    		debug.warn('Invalid files data:',message)    		
+    	}
+    	else {
+    		files = message[1];
+    		updateFiles(files);
+    	}
+    });
+        
+
     
     /***********************************************************************
      *  privileged
