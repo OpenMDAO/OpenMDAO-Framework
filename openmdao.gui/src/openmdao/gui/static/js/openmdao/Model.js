@@ -9,21 +9,23 @@ openmdao.Model=function() {
      
     var self = this,
         outstream_topic = 'outstream',
-        outstream_socket = false,
-        publisher_socket = false,
+        outstream_opened = false,
+        outstream_socket = null,
+        pubstream_opened = false,
+        pubstream_socket = null,
         subscribers = {};
  
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
            handler:    the message handler for the websocket
     */
-    function open_websocket(url,handler) {
+    function open_websocket(url,socket,handler) {
         // make ajax call to get outstream websocket
         jQuery.ajax({
             type: 'GET',
             url:  url,
             success: function(addr) {
-                openmdao.Util.openWebSocket(addr,handler);
+                socket = openmdao.Util.openWebSocket(addr,handler);
             },
             error: function(jqXHR, textStatus, err) {
                 debug.error('Error getting websocket url',jqXHR,textStatus,err);
@@ -33,7 +35,7 @@ openmdao.Model=function() {
 
     /** initialize the outstream websocket */
     function open_outstream_socket(topic) {
-        open_websocket('outstream', 
+        open_websocket('outstream', this.outstream_socket,
             function(data) {
                 var callbacks = subscribers[topic];
                 if (callbacks) {
@@ -51,8 +53,8 @@ openmdao.Model=function() {
     };
 
     /** initialize the publisher websocket */
-    function open_publisher_socket() {
-        open_websocket('pubstream',
+    function open_pubstream_socket() {
+        open_websocket('pubstream', this.pubstream_socket,
             function(message) {
                 message = jQuery.parseJSON(message);
                 var callbacks = subscribers[message[0]];
@@ -81,13 +83,13 @@ openmdao.Model=function() {
         }
         else {
             subscribers[topic] = [ callback ]
-            if (topic === outstream_topic && !outstream_socket) {
-                outstream_socket = true;
+            if (topic === outstream_topic && !outstream_opened) {
+                outstream_opened = true;
                 open_outstream_socket(outstream_topic);
             }
-            else if (!publisher_socket) {
-                publisher_socket = true;
-                open_publisher_socket();
+            else if (!pubstream_opened) {
+                pubstream_opened = true;
+                open_pubstream_socket();
             };
         };
     };
@@ -434,12 +436,37 @@ openmdao.Model=function() {
         })
     }
 
+    /** reload the model */
+    this.reload = function() {
+        if (this.outstream_socket) {
+            this.outstream_socket.close(1000,'close');
+        }
+        if (this.pubstream_socket) {
+            this.pubstream_socket.close(1000,'close');
+        }
+        window.location.replace('/workspace/project');
+    }    
+
+    /** exit the model */
+    this.close = function() {
+        if (this.outstream_socket) {
+            this.outstream_socket.close(1000,'close');
+        }
+        if (this.pubstream_socket) {
+            this.pubstream_socket.close(1000,'close');
+        }
+        window.location.replace('/workspace/close');
+    }
+    
     /** exit the model */
     this.exit = function() {
-        jQuery.ajax({
-            type: 'POST',
-            url: 'exit',
-        })
+        if (this.outstream_socket) {
+            this.outstream_socket.close(1000,'exit');
+        }
+        if (this.pubstream_socket) {
+            this.pubstream_socket.close(1000,'exit');
+        }
+        window.location.replace('/exit');
     }
     
 }

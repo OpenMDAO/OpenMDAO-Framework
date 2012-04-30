@@ -33,7 +33,12 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname)
                 })
-            }
+			}
+            else if (droppedObject.hasClass('obj')) {
+				var cmd = self.pathname+'='+droppedPath;
+				debug.info('SlotsPane:',cmd);
+				model.issueCommand(cmd);
+            };
         }
     });
     

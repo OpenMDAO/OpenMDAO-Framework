@@ -1,4 +1,5 @@
 import sys, os, traceback
+import re
 import time
 import jsonpickle
 
@@ -10,14 +11,11 @@ from tornado import httpserver, web, websocket
 from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.util import *
-from openmdao.gui.handlers import BaseHandler
+from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
 
 
-#class AddonForm(forms.Form):
-#    distribution = forms.CharField(label='Distribution')
-    
-class AddOnsHandler(BaseHandler):
+class AddOnsHandler(ReqHandler):
     ''' addon installation utility
     Eventually we will probably wrap the OpenMDAO plugin
     functions to work through here.
@@ -35,8 +33,37 @@ class AddOnsHandler(BaseHandler):
         ''' show available plugins, prompt for plugin to be installed
         '''
         self.render('workspace/addons.html')
-        
-class GeometryHandler(BaseHandler):
+    
+class ReqHandler(ReqHandler):
+    ''' render the base template
+    '''
+    @web.authenticated
+    def post(self):
+        ''' render the base template with the posted content
+        '''
+        attributes = {}
+        for field in ['head']:
+            if field in self.request.arguments.keys():
+                attributes[field]=self.request.arguments[field][0]                
+            else:
+                attributes[field]=False
+        self.render('workspace/base.html', **attributes)
+                     
+    @web.authenticated
+    def get(self):
+        attributes = {}
+        print 'self.request.arguments:',self.request.arguments
+        for field in ['head_script']:
+            if field in self.request.arguments.keys():
+                s = self.request.arguments[field][0]
+                s = re.sub(r'^"|"$', '', s)  # strip leading/trailing quotes
+                s = re.sub(r"^'|'$", "", s)  # strip leading/trailing quotes
+                attributes[field]=s                
+            else:
+                attributes[field]=False
+        self.render('workspace/base.html', **attributes)
+
+class GeometryHandler(ReqHandler):
     @web.authenticated
     def get(self):
         ''' geometry viewer
@@ -44,13 +71,13 @@ class GeometryHandler(BaseHandler):
         filename = self.get_argument('path')
         self.render('workspace/o3dviewer.html',filename=filename)
  
-class CloseHandler(BaseHandler):
+class CloseHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.delete_server()
         self.redirect('/')
 
-class CommandHandler(BaseHandler):
+class CommandHandler(ReqHandler):
     ''' get the command, send it to the cserver, return response
     '''
     @web.authenticated
@@ -76,7 +103,7 @@ class CommandHandler(BaseHandler):
         self.content_type = 'text/html'
         self.write('') # not used for now, could render a form
 
-class ComponentHandler(BaseHandler):
+class ComponentHandler(ReqHandler):
     ''' add, remove or get a component
     '''
     @web.authenticated
@@ -125,7 +152,7 @@ class ComponentHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(attr)
 
-class ComponentsHandler(BaseHandler):
+class ComponentsHandler(ReqHandler):
     @web.authenticated
     def get(self):
         cserver = self.get_server()
@@ -133,7 +160,7 @@ class ComponentsHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(json)
 
-class ConnectionsHandler(BaseHandler):
+class ConnectionsHandler(ReqHandler):
     ''' get/set connections between two components in an assembly
     '''
     @web.authenticated
@@ -164,7 +191,7 @@ class ConnectionsHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(connections)
 
-class ExecHandler(BaseHandler):
+class ExecHandler(ReqHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
     '''
@@ -189,7 +216,7 @@ class ExecHandler(BaseHandler):
             self.content_type = 'text/html'
             self.write(result)
 
-class FileHandler(BaseHandler):
+class FileHandler(ReqHandler):
     ''' get/set the specified file/folder
     '''
     @web.authenticated
@@ -214,7 +241,7 @@ class FileHandler(BaseHandler):
         self.content_type = 'text/html'
         self.write(str(cserver.get_file(filename)))
 
-class FilesHandler(BaseHandler):
+class FilesHandler(ReqHandler):
     ''' get a list of the users files in JSON format
     '''
     @web.authenticated
@@ -225,7 +252,7 @@ class FilesHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(json)
     
-class ModelHandler(BaseHandler):
+class ModelHandler(ReqHandler):
     ''' POST: get a new model (delete existing console server)
         GET:  get JSON representation of the model
     '''
@@ -241,7 +268,7 @@ class ModelHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(json)
 
-class OutstreamHandler(BaseHandler):
+class OutstreamHandler(ReqHandler):
     ''' return the url of the zmq outstream server,
     '''
     @web.authenticated
@@ -249,7 +276,7 @@ class OutstreamHandler(BaseHandler):
         url = self.application.server_manager.get_out_server_url(self.get_sessionid(),'/workspace/outstream')
         self.write(url)
 
-class ProjectHandler(BaseHandler):
+class ProjectHandler(ReqHandler):
     ''' GET:  load model fom the given project archive,
               or reload remebered project for session if no file given
               
@@ -259,14 +286,6 @@ class ProjectHandler(BaseHandler):
     def post(self):
         cserver = self.get_server()
         cserver.save_project()
-        
-        # Sadly, this probably won't work because of client/server
-        #filename = self.get_secure_cookie('filename')
-        #if filename:
-        #    pdb = Projects()
-        #    project = pdb.get_by_filename(filename)
-        #    pdb.modified(project['id'])
-            
         self.write('Saved.')
         
     @web.authenticated
@@ -285,7 +304,7 @@ class ProjectHandler(BaseHandler):
         else:
             self.redirect('/')
 
-class PlotHandler(BaseHandler):
+class PlotHandler(ReqHandler):
     ''' GET:  open a websocket server to supply updated valaues for the specified variable        
     '''
     @web.authenticated
@@ -294,7 +313,7 @@ class PlotHandler(BaseHandler):
         port = cserver.get_varserver(name)
         self.write(port)
 
-class PubstreamHandler(BaseHandler):
+class PubstreamHandler(ReqHandler):
     ''' return the url of the zmq publisher server,
     '''
     @web.authenticated
@@ -302,7 +321,7 @@ class PubstreamHandler(BaseHandler):
         url = self.application.server_manager.get_pub_server_url(self.get_sessionid(),'/workspace/pubstream')
         self.write(url)
         
-class StructureHandler(BaseHandler):
+class StructureHandler(ReqHandler):
     ''' get the structure of the specified assembly, or of the global 
         namespace if no pathname is specified, consisting of the list
         of components and the connections between them
@@ -314,7 +333,7 @@ class StructureHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(json)
 
-class TypesHandler(BaseHandler):
+class TypesHandler(ReqHandler):
     ''' get hierarchy of package/types to populate the Palette
     '''
     @web.authenticated
@@ -328,7 +347,7 @@ class TypesHandler(BaseHandler):
         self.content_type = 'application/javascript'        
         self.write(jsonpickle.encode(types))
 
-class UploadHandler(BaseHandler):
+class UploadHandler(ReqHandler):
     ''' file upload utility
     '''
     @web.authenticated
@@ -345,7 +364,7 @@ class UploadHandler(BaseHandler):
     def get(self):
         self.render('workspace/upload.html')
 
-class WorkflowHandler(BaseHandler):
+class WorkflowHandler(ReqHandler):
     @web.authenticated
     def get(self,name):
         cserver = self.get_server()
@@ -353,14 +372,14 @@ class WorkflowHandler(BaseHandler):
         self.content_type = 'application/javascript'
         self.write(json)
     
-class WorkspaceHandler(BaseHandler):
+class WorkspaceHandler(ReqHandler):
     ''' render the workspace
     '''
     @web.authenticated
     def get(self):
         self.render('workspace/workspace.html')
 
-class TestHandler(BaseHandler):
+class TestHandler(ReqHandler):
     ''' initialize the server manager &  render the workspace
     '''
     @web.authenticated
@@ -370,13 +389,13 @@ class TestHandler(BaseHandler):
 
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
+    web.url(r'/workspace/addons/?',         AddOnsHandler),
+    web.url(r'/workspace/base/?',           ReqHandler),
+    web.url(r'/workspace/close/?',          CloseHandler),
+    web.url(r'/workspace/command',          CommandHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
-    web.url(r'/workspace/addons/?',         AddOnsHandler),
-    web.url(r'/workspace/close/?',          CloseHandler),
-    web.url(r'/workspace/command',          CommandHandler),
-    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
     web.url(r'/workspace/files/?',          FilesHandler),
@@ -386,9 +405,11 @@ handlers = [
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
+    
     web.url(r'/workspace/test/?',           TestHandler),
 ]
 

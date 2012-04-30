@@ -5,14 +5,14 @@ from openmdao.main.interfaces import IComponent
                         
 class Broadcaster(Component): 
     """Takes inputs and passes them directly to outputs
-    to be broadcast out to other components"""
+    to be broadcast out to other components."""
     
-    names = ListStr(iotype="in",desc="names of the variables you want to broadcast from this component")
-    types = Dict({'default':Float},iotype="in",desc="name/type pairs describing the variable types of each broadcast variable."
-                 "'default' name is used if no other type is set explicitly")
+    names = ListStr(iotype="in",desc="Names of the variables you want to broadcast from this component.")
+    types = Dict({'default':Float},iotype="in",desc="Name/type pairs describing the variable types of each broadcast variable; " 
+                 "'default' name is used if no other type is set explicitly.")
     
     def __init__(self,names,types=None):
-        """names: ListSrt, list of the variable names you would like the broadcaster to create for you. all inputs will be named with a '_in' added. Outputs will follow the name given. 
+        """names: ListSrt, list of the variable names you would like the broadcaster to create for you. All inputs will be named with an '_in' added. Outputs will follow the name given. 
         types: Dict, dictionary of the name/type pairs describing which types you would like to broadcast. If given, the name 'default' indicates the default variable type to use."""
         
         super(Broadcaster,self).__init__()
@@ -41,7 +41,7 @@ class Broadcaster(Component):
                 traits = self.types['default']
             else: 
                 self.raise_exception('No type was provided for "%s" and no "default" type was provided. '
-                'Specify at least one of these'%name,ValueError)
+                'Specify at least one of these.'%name,ValueError)
             
             in_var = "%s_in"%name
             out_var = name

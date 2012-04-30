@@ -414,7 +414,7 @@ class ExprEvaluator(object):
         
     def is_valid_assignee(self):
         """Returns True if the syntax of our expression is valid to
-        be on the left hand side of an assignment.  No check is 
+        be on the left-hand side of an assignment.  No check is 
         performed to see if the variable(s) in the expression actually
         exist.
         """
@@ -550,7 +550,7 @@ class ExprEvaluator(object):
             Step size for finite difference.
             
         wrt: list of varpaths
-            Varpaths for which we want to calculate the gradient
+            Varpaths for which we want to calculate the gradient.
         """
         global _expr_dict
         
@@ -751,7 +751,7 @@ class ExprEvaluator(object):
         return len(self.get_unresolved()) == 0
     
     def get_unresolved(self):
-        """Return a list of all variables that cannot be resolved"""
+        """Return a list of all variables that cannot be resolved."""
         if self._code is None:
             self._parse()
         if len(self.var_names) > 0:

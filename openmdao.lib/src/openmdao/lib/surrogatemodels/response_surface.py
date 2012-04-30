@@ -1,4 +1,4 @@
-"""Surrogate Model based on a second order response surface equations."""
+"""Surrogate Model based on second order response surface equations."""
 
 from numpy import matrix, linalg, power, multiply, concatenate, ones
 
@@ -22,7 +22,7 @@ class ResponseSurface(HasTraits):
             self.train(X,Y)
             
     def get_uncertain_value(self,value): 
-        """Returns the value iself. Response surface equations don't have uncertainty""" 
+        """Returns the value iself. Response surface equations don't have uncertainty.""" 
         return value
 
     def train(self,X,Y): 
@@ -46,7 +46,7 @@ class ResponseSurface(HasTraits):
         self.betas, rs, r, s = linalg.lstsq(X,Y)
         
     def predict(self,new_x): 
-        """Calculates a predicted value of the response based on the current response surface modelfor the supplied list of inputs. """ 
+        """Calculates a predicted value of the response based on the current response surface model for the supplied list of inputs. """ 
         
         new_x = matrix(new_x)
         

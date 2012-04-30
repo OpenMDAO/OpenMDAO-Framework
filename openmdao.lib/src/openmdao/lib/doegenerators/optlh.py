@@ -37,7 +37,7 @@ from openmdao.util.decorators import stub_if_missing_deps
 @stub_if_missing_deps('numpy')
 def rand_latin_hypercube(n, k, edges=False):
     """
-    Calculates a random latin hypercube set of n points in k 
+    Calculates a random Latin hypercube set of n points in k 
     dimensions within [0,1]^k hypercube.
     
     n: int
@@ -45,7 +45,7 @@ def rand_latin_hypercube(n, k, edges=False):
     k: int
        Number of design variables (dimensions).
     edges: bool (optional)
-       if Edges=True, the extreme bins will have their centres on the
+       If Edges=True, the extreme bins will have their centres on the
        edges of the domain; otherwise the bins will be entirely 
        contained within the domain (default setting).
 
@@ -65,7 +65,7 @@ def rand_latin_hypercube(n, k, edges=False):
 
 
 def is_latin_hypercube(lh):
-    """Returns True if the given array is a latin hypercube.
+    """Returns True if the given array is a Latin hypercube.
     The given array is assumed to be a numpy array.
     """
     n,k = lh.shape
@@ -88,7 +88,7 @@ class LHC_indivudal(object):
     
     @property
     def shape(self):
-        """Size of the LatinHypercube doe (rows,cols)."""
+        """Size of the LatinHypercube DOE (rows,cols)."""
         return self.doe.shape
     
     def mmphi(self):
@@ -118,7 +118,7 @@ class LHC_indivudal(object):
     
     def perturb(self, mutation_count):
         """ Interchanges pairs of randomly chosen elements within randomly chosen
-        columns of a doe a number of times. The result of this operation will also 
+        columns of a DOE a number of times. The result of this operation will also 
         be a Latin hypercube.
         """
         new_doe = self.doe.copy()

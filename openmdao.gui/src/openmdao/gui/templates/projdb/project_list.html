@@ -9,31 +9,30 @@
     <h2>Your OpenMDAO Projects:</h2>
 
     {% if project_list %}
-        <table>
+        <table  border="5">
         <tr>
-        <td  width="20" style="padding-right: 6px;"></td>
-        <td style="padding-right: 6px;">Project Name</td>
-        <td style="padding-right: 6px;">Version</td>
-        <td style="padding-right: 6px;">Description</td>
-        <td style="padding-right: 6px;">Project Created</td>
-        <td style="padding-right: 6px;">Last Saved</td>
-        </tr>
+            <td style="padding-right: 6px; font-weight: bold;">Name</td>
+            <td style="padding-right: 6px; font-weight: bold;">Description</td>
+            <td style="padding-right: 6px; font-weight: bold;">Version</td>
+            <td style="padding-right: 6px; font-weight: bold;">Created</td>
+            <td style="padding-right: 6px; font-weight: bold;">Last Saved</td>
+            <td width="20" style="padding-right: 6px;"></td>
+		</tr>
         {% for project in project_list %}
-            <tr><td width="20" style="padding-right: 6px;">
-            <form action="/projects/{{ project['id'] }}" method="GET">
-                <input type="submit" value="Edit" style="font-size: 10px"/>
-            </form>
-            </td><td style="padding-right: 6px;">
-            <a href="/workspace/project?filename={{ project['filename'] }}">{{ project['projectname'] }}</a>
-            </td><td style="padding-right: 6px;">
-            {{ project['version'] }}
-            </td><td style="padding-right: 6px;">
-            {{ project['description'] }}
-            </td><td style="padding-right: 6px;">
-            {{ project['created'][:-7] }}
-            </td><td style="padding-right: 6px;">
-            {{ project['file_modified'] }}
-            </td></tr>
+        <tr>
+            <td style="padding-right: 6px; white-space: nowrap;">
+                <a href="/workspace/project?filename={{ project['filename'] }}">{{ project['projectname'] }}</a>
+            </td>
+            <td style="padding-right: 6px;">{{ project['description'] }}</td>
+            <td style="padding-right: 6px;">{{ project['version'] }}</td>
+            <td style="padding-right: 6px;">{{ project['created'][:-7] }}</td>
+            <td style="padding-right: 6px;">{{ project['file_modified'] }}</td>
+            <td width="20" style="padding-right: 6px;">
+                <form action="/projects/{{ project['id'] }}" method="GET">
+                    <input type="submit" value="Edit" style="font-size: 10px"/>
+                </form>
+            </td>
+        </tr>
         {% end %}
         </table>
     {% else %}
