@@ -798,6 +798,32 @@ class Component (Container):
         self.config_changed(update_parent=False)
     
     @rbac(('owner', 'user'))
+    def init_from_target(self, target):
+        """Initialize what we can from the given target object. Copy any
+        inputs that we share with the target and initialize our delegates with
+        any matching delegates from the target. This function does not assume
+        any compatability between target and self. It just tries to make self
+        as similar to target as possible without adding or removing any
+        methods or attributes.
+        """
+        if isinstance(target, Component):
+            self.name = target.name
+            
+        # update any delegates that we share with the target
+        if hasattr(target, '_delegates_') and hasattr(self, '_delegates_'):
+            for name, dclass in self._delegates_.items():
+                td = target._delegates_.get(name)
+                if td is not None:
+                    delegate = getattr(self, name)
+                    if hasattr(delegate, 'init_from_target'):
+                        delegate.init_from_target(td) # use target delegate as target
+
+        # now update any matching inputs from the target
+        for inp in target.list_inputs():
+            if hasattr(self, inp):
+                setattr(self, inp, getattr(target, inp))
+
+    @rbac(('owner', 'user'))
     def get_expr_depends(self):
         """Return a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.

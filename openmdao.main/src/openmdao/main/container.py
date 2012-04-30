@@ -645,6 +645,23 @@ class Container(SafeHasTraits):
             self._managers[key] = manager
         return manager.proxy
         
+    def _check_rename(self, oldname, newname):
+        if '.' in oldname or '.' in newname:
+            self.raise_exception("can't rename '%s' to '%s': rename only works within a single scope." % 
+                                 (oldname, newname), RuntimeError)
+        if not self.contains(oldname):
+            self.raise_exception("can't rename '%s' to '%s': '%s' was not found." % 
+                                 (oldname, newname, oldname), RuntimeError)
+        if self.contains(newname):
+            self.raise_exception("can't rename '%s' to '%s': '%s' already exists." % 
+                                 (oldname, newname, newname), RuntimeError)
+            
+    def rename(self, oldname, newname):
+        """Renames a child of this object from oldname to newname."""
+        self._check_rename(oldname, newname)
+        obj = self.remove(oldname)
+        self.add(newname, obj)
+        
     def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
