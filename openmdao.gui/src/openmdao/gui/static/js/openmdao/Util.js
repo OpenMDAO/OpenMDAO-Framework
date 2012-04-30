@@ -446,13 +446,14 @@ openmdao.Util = {
 //        } else {
 //            setTimeout(connect, 2000);
 //        }
+        return socket;
     },
 
     /** Close all WebSockets. */
-    closeWebSockets: function() {
+    closeWebSockets: function(reason) {
        if (openmdao.sockets) {
           for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
-             openmdao.sockets[i].close();
+             openmdao.sockets[i].close(1000, reason);
           }
        }
     },
