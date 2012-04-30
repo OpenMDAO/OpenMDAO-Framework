@@ -135,7 +135,7 @@ class DomainObj(object):
             The domain to check against.
 
         logger: Logger or None
-            Used to log debug messages that will indicate what if anything
+            Used to log debug messages that will indicate what, if anything,
             is not equivalent.
 
         tolerance: float
@@ -191,7 +191,7 @@ class DomainObj(object):
 
         zone_args: sequence
             Sequence of argument tuples to be used to extend each zone.
-            If an argument tuple is empty or ``None`` then that zone
+            If an argument tuple is empty or ``None``, then that zone
             is skipped.
         """
         domain = DomainObj()

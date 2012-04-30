@@ -843,7 +843,7 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
     highest protocol.
 
     root: object
-        The root of the object tree to save
+        The root of the object tree to save.
 
     outstream: file or string
         Stream or filename to save to.

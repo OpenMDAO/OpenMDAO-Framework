@@ -1,12 +1,12 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.DataflowDiagram = function(id,model,pathname) {
-    openmdao.DataflowDiagram.prototype.init.call(this,id,'Structure: '+pathname,[]);
+openmdao.StructureDiagram = function(id,model,pathname) {
+    openmdao.StructureDiagram.prototype.init.call(this,id,'Structure: '+pathname,[]);
     
     // initialize private variables
     var self = this,
-        pane = new openmdao.DataflowPane(jQuery('#'+id),model,pathname,'Data',false);
+        pane = new openmdao.StructurePane(jQuery('#'+id),model,pathname,'Data',false);
         
     /** update the schematic with data from the model */
     function update() {
@@ -14,7 +14,7 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
                            pane.loadData, 
                            function(jqXHR, textStatus, errorThrown) {
                                pane.pathname = ''
-                               debug.error("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                               debug.error("Error getting Structure (status="+jqXHR.status+"): "+jqXHR.statusText)
                                debug.error('jqXHR:',jqXHR)
                            })
     };
@@ -22,12 +22,12 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
     // ask model for an update whenever something changes
     model.addListener('',update)
     
-    /** set the pathname for which to display the dataflow */
-    this.showDataflow = function(path) {        
+    /** set the pathname for which to display the Structure */
+    this.showStructure = function(path) {        
         if (pane.pathname !== path) {
-            // if not already showing dataflow for this pathname
+            // if not already showing Structure for this pathname
             pane.pathname = path;            
-            self.setTitle('Dataflow: '+path);
+            self.setTitle('Structure: '+path);
             update();
         }
     };
@@ -39,5 +39,5 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
 }
 
 /** set prototype */
-openmdao.DataflowDiagram.prototype = new openmdao.BaseFrame();
-openmdao.DataflowDiagram.prototype.constructor = openmdao.DataflowDiagram;
+openmdao.StructureDiagram.prototype = new openmdao.BaseFrame();
+openmdao.StructureDiagram.prototype.constructor = openmdao.StructureDiagram;

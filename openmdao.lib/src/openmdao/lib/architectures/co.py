@@ -1,4 +1,4 @@
-"""Implementation of the Colaborative Optimization Optimization Architecture"""
+"""Implementation of the Collaborative Optimization Architecture"""
 
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import SLSQPdriver#, COBYLAdriver as SLSQPdriver

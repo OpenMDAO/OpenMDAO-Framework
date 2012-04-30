@@ -119,9 +119,9 @@ def unpack_zipfile(filename, logger=None, textfiles=None):
         Used for recording progress.
 
     textfiles: list
-        List of :mod:`fnmatch` style patterns specifying which upnapcked files
+        List of :mod:`fnmatch` style patterns specifying which unpacked files
         are text files possibly needing newline translation. If not supplied,
-        the first 4KB of each is scanned for a zero byte. If not found then the
+        the first 4KB of each is scanned for a zero byte. If not found, then the
         file is assumed to be a text file.
     """
     logger = logger or NullLogger()

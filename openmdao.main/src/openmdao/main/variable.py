@@ -13,7 +13,7 @@ def is_legal_name(name):
     return not (match is None or match.group() != name)
 
 class Variable(TraitType):
-    """An OpenMDAO specific trait type that serves as a common base
+    """An OpenMDAO-specific trait type that serves as a common base
     class for framework visible inputs and outputs.
     """
     implements(IVariable)

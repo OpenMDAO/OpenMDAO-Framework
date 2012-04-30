@@ -5,8 +5,7 @@ import shutil
 
 from openmdao.util.fileutil import find_files
 from openmdao.main.component import Component
-from openmdao.main.project import Project, project_from_archive, \
-     _is_valid_project_dir, PROJ_FILE_EXT
+from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -48,13 +47,6 @@ class ProjectTestCase(unittest.TestCase):
         top.connect('comp1.rval_out', 'comp2.rval_in')
         top.comp1.rval_in = 5.0
         
-    def test_new_project_is_valid(self):
-        proj = Project(os.path.join(self.tdir, 'proj1'))
-        self._fill_project(proj.top)
-        
-        self.assertEqual(proj.path, os.path.join(self.tdir, 'proj1'))
-        self.assertTrue(_is_valid_project_dir(proj.path))
-
     def test_project_export_import(self):
         proj = Project(os.path.join(self.tdir, 'proj1'))
         self._fill_project(proj.top)
@@ -68,7 +60,6 @@ class ProjectTestCase(unittest.TestCase):
                                        dest_dir=self.tdir)
 
         self.assertEqual(newproj.path, os.path.join(self.tdir, 'proj2'))
-        self.assertTrue(_is_valid_project_dir(proj.path))
     
         try:
             newproj = project_from_archive(os.path.join(self.tdir,

@@ -76,7 +76,7 @@ class testBroadcaster(unittest.TestCase):
             b = Broadcaster(['x'],{'y':Float})
         except ValueError, err: 
             self.assertEqual(str(err),': No type was provided for "x" and no "default" type was provided. '
-                'Specify at least one of these')
+                'Specify at least one of these.')
         else: 
             self.fail('ValueError Expected')
             

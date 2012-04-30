@@ -30,7 +30,7 @@ jQuery(function() {
     (function() {
         var model = openmdao.model;
         
-        var data = new openmdao.DataflowDiagram("structure",model,''),
+        var data = new openmdao.StructureDiagram("structure",model,''),
             work = new openmdao.WorkflowDiagram("workflow",model,''),
             code = new openmdao.CodeEditor("code",model),
             prop = new openmdao.PropertiesEditor("propertieseditor",model);
@@ -46,7 +46,7 @@ jQuery(function() {
         workflow_tab.click(function(e)  { central_label.text(work.getPathname()); })
         code_tab.click(function(e)      { central_label.text(code.getPathname()); })
             
-        function data_fn(path) { data.showDataflow(path); structure_tab.click(); }
+        function data_fn(path) { data.showStructure(path); structure_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
         function code_fn(path) { code.editFile(path);     code_tab.click(); }
         function prop_fn(path) { prop.editObject(path);   }
@@ -57,7 +57,7 @@ jQuery(function() {
         new openmdao.ObjectTree("otree", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTree("ftree",   model, code_fn, geom_fn);        
         new openmdao.Palette("palette",  model)        
-        new openmdao.Console("cmdform", "command", "history", model);
+        new openmdao.Console("console",  model);
         
         // initialize views
         model.updateListeners();

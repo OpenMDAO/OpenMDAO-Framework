@@ -24,7 +24,7 @@ from openmdao.util import shellproc
 class ExternalCode(ComponentWithDerivatives):
     """
     Run an external code as a component. The component can be configured to
-    run the code on a remote server, see :meth:`execute`.
+    run the code on a remote server. See :meth:`execute`.
 
     Default stdin is the 'null' device, default stdout is the console, and
     default stderr is ``error.out``.
@@ -87,7 +87,7 @@ class ExternalCode(ComponentWithDerivatives):
             4. Checks that all external output files exist.
 
         If a subclass generates outputs (such as postprocessing results),
-        then it should set attribute `check_external_outputs` False and call
+        then it should set attribute ``check_external_outputs`` False and call
         :meth:`check_files` itself.
 
         If `resources` have been specified, an appropriate server
@@ -128,10 +128,10 @@ class ExternalCode(ComponentWithDerivatives):
 
         .. warning::
 
-            Any file **not** labelled with `binary` True will undergo
+            Any file **not** labeled with `binary` True will undergo
             newline translation if the local and remote machines have
             different newline representations. Newline translation will
-            corrupt a file which is binary but hasn't been labelled as
+            corrupt a file which is binary but hasn't been labeled as
             such.
 
         """
@@ -190,10 +190,10 @@ class ExternalCode(ComponentWithDerivatives):
     def check_files(self, inputs):
         """
         Check that all 'specific' input or output external files exist.
-        If an external file path specifies a pattern it is *not* checked.
+        If an external file path specifies a pattern, it is *not* checked.
 
         inputs: bool
-            If True, check inputs, otherwise outputs.
+            If True, check inputs; otherwise outputs.
         """
         # External files.
         for metadata in self.external_files:

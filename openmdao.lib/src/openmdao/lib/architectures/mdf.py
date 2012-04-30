@@ -16,7 +16,7 @@ class MDF(Architecture):
         self.has_global_des_vars = False
     
     def configure(self): 
-        """setup and MDF architecture inside this assembly.
+        """Setup an MDF architecture inside this assembly.
         """
         #create the top level optimizer
         self.parent.add("driver",SLSQPdriver())
