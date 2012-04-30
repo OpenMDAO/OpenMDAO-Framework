@@ -421,8 +421,9 @@ openmdao.Util = {
                         }
                         else
                             debug.info('websocket not found!');
-	                if (retry == true) {
-	                	connect_after_delay();
+	                if ((e.code == 1006) && (retry == true)) {
+                            // See RFC 6455 for error code definitions.
+	                    connect_after_delay();
 	                }
 	            };
 	            socket.onmessage = function(e) {
@@ -439,7 +440,12 @@ openmdao.Util = {
         	}
         }
         
-        connect();
+        setTimeout(connect, 2000);
+//        if (typeof openmdao_test_mode == 'undefined') {
+//            connect();
+//        } else {
+//            setTimeout(connect, 2000);
+//        }
     },
 
     /** Close all WebSockets. */

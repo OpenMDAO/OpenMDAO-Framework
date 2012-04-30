@@ -1,4 +1,4 @@
-DelayedCommand.prototype.openmdao_patch = function() {
+DelayedCommand.prototype.shouldDelayExecutionForPendingRequest_ = function() {
   if("unstable" == loadStrategy_) {
     return!1
   }
@@ -15,6 +15,7 @@ DelayedCommand.prototype.openmdao_patch = function() {
         return !0;
       }
       var e = !1;
+// end of patch
       try {
         e = d.isPending()
       }catch(f) {

@@ -162,7 +162,7 @@ openmdao.Model=function() {
     }
 
     /** close the current project */
-    this.closeproject = function() {
+    this.closeProject = function() {
         openmdao.Util.closeWebSockets();
         window.location = "/workspace/close";
     }

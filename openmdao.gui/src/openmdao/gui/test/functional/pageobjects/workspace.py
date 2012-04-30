@@ -1,3 +1,4 @@
+import logging
 import time
 
 from selenium.webdriver import ActionChains
@@ -18,7 +19,7 @@ class UploadPage(BasePageObject):
     title_prefix = 'OpenMDAO: Upload'
 
     filename = InputElement((By.NAME, 'myfile'))
-    submit = ButtonElement((By.XPATH, '/html/body/div/div[2]/form/input[2]'))
+    submit = ButtonElement((By.ID, 'add-button'))
 
     def upload_file(self, path):
         self.filename = path
@@ -114,7 +115,6 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["dataflow_component_headers"] = ( By.XPATH, "//div[@class='DataflowComponentFigureHeader']" )
         self.locators["files"] = ( By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']" )
         self.locators["objects"] = ( By.XPATH, "//div[@id='otree']//li[@path]" )
 
@@ -126,12 +126,14 @@ class WorkspacePage(BasePageObject):
 
     def run(self, timeout=TMO):
         """ Run current component. """
+        time.sleep(2)
         self('project_menu').click()
         self('run_button').click()
         NotifierPage.wait(self.browser, self.port, timeout)
 
     def do_command(self, cmd, timeout=TMO):
         """ Execute a command. """
+        time.sleep(2)
         self.command = cmd
         self('submit').click()
         NotifierPage.wait(self.browser, self.port, timeout)
@@ -184,12 +186,13 @@ class WorkspacePage(BasePageObject):
         if file_path.endswith('.pyc'):
             file_path = file_path[:-1]
 
+        main_window_handle = self.browser.current_window_handle
+
         self('files_tab').click()
         self('file_menu').click()
         self('add_button').click()
 
         # Switch to the Window that pops up.
-        main_window_handle = self.browser.current_window_handle
         self.browser.switch_to_window('Add File')
         page = UploadPage(self.browser, self.port)
         page.upload_file(file_path)
@@ -251,6 +254,7 @@ class WorkspacePage(BasePageObject):
                 try:
                     chain.double_click(element).perform()
                 except StaleElementReferenceException:
+                    logging.critical('edit_file: StaleElementReferenceException')
                     element = WebDriverWait(self.browser, 1).until(
                         lambda browser: browser.find_element_by_xpath(xpath))
                     chain = ActionChains(self.browser)
@@ -276,12 +280,14 @@ class WorkspacePage(BasePageObject):
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
         target = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath("//*[@id='-dataflow']"))
+            lambda browser: browser.find_element_by_xpath("//*[@id='-structure']"))
         chain = ActionChains(self.browser)
-        #chain = chain.drag_and_drop(library_item, target)
-        chain = chain.click_and_hold(library_item)
-        chain = chain.move_to_element_with_offset(target, 100, 100)
-        chain = chain.release(None)
+        if False:
+            chain = chain.drag_and_drop(library_item, target)
+        else:
+            chain = chain.click_and_hold(library_item)
+            chain = chain.move_to_element_with_offset(target, 100, 100)
+            chain = chain.release(None)
         chain.perform()
 
         page = ValuePrompt(self.browser, self.port)
@@ -296,9 +302,26 @@ class WorkspacePage(BasePageObject):
     def get_dataflow_component_names(self):
         """ Return names of dataflow components. """
         dataflow_component_headers = \
-            self.browser.find_elements(*self.locators["dataflow_component_headers"])
+            self.browser.find_elements_by_class_name('DataflowComponentFigureHeader')
         names = []
-        for header in dataflow_component_headers:
-            names.append(header.text)
+
+#        for header in dataflow_component_headers:
+#            try:
+#                names.append(header.text)
+#            except StaleElementReferenceException:
+#                # Not sure why this would happen, but it has sometimes...
+#                logging.critical('get_dataflow_component_names: StaleElementReferenceException')
+#
+# Workaround from SeleniumQA (not entirely successful):
+        for i in range(len(dataflow_component_headers)):
+            try:
+                names.append(self.browser.find_elements_by_class_name('DataflowComponentFigureHeader')[i].text)
+            except StaleElementReferenceException:
+                logging.critical('get_dataflow_component_names: StaleElementReferenceException')
+
+        if len(names) != len(dataflow_component_headers):
+            logging.critical('get_dataflow_component_names:'
+                             ' expecting %d names, got %s',
+                             len(dataflow_component_headers), names)
         return names
 

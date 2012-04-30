@@ -20,7 +20,6 @@ class ProjectPage(BasePageObject):
     project_name = InputElement((By.ID, 'id_projectname'))
     description = InputElement((By.ID, 'id_description'))
     version = InputElement((By.ID, 'id_version'))
-    shared = CheckboxElement((By.ID, 'id_shared'))
 
 
 class NewProjectPage(ProjectPage):
@@ -43,12 +42,11 @@ class NewProjectPage(ProjectPage):
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
 
-    def create_project(self, project_name, description, version, shared):
+    def create_project(self, project_name, description, version):
         """ Create a project, returns :class:`ProjectInfoPage`. """
         self.project_name = project_name
         self.description = description
         self.version = version
-        self.shared = shared
         self.submit()
         title = ProjectInfoPage.project_title(project_name)
         return ProjectInfoPage.verify(self.browser, self.port, title)
@@ -114,8 +112,8 @@ class ProjectsListPage(BasePageObject):
     url = '/projects'
     title_prefix = 'Projects'
 
-    new_button = ButtonElement((By.CSS_SELECTOR,
-                                'html body div#body div.content p a'))
+    new_button = ButtonElement((By.LINK_TEXT, 'Start new project'))
+    add_button = ButtonElement((By.LINK_TEXT, 'Add existing project'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
 
     def new_project(self):
@@ -142,9 +140,18 @@ class ProjectsListPage(BasePageObject):
         return len(self.browser.find_elements_by_link_text(project_name)) > 0
 
     def open_project(self, project_name):
-        """ Clicks the 'open' button. Returns :class:`ProjectInfoPage`. """
+        """ Clicks the named link. Returns :class:`WorkspacePage`. """
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_link_text(project_name))
+        element.click()
+        from workspace import WorkspacePage
+        return WorkspacePage.verify(self.browser, self.port)
+
+    def edit_project(self, project_name):
+        """ Clicks the 'edit' button. Returns :class:`ProjectInfoPage`. """
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_link_text(project_name))
+        element = element.find_element_by_xpath('../../td[6]/form/input')
         element.click()
         title = ProjectInfoPage.project_title(project_name)
         return ProjectInfoPage.verify(self.browser, self.port, title)

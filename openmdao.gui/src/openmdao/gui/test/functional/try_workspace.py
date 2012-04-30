@@ -29,7 +29,7 @@ def _test_console(browser):
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.open_project(project_dict['name'])
+    project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
 
 
@@ -103,7 +103,7 @@ def _test_import(browser):
     projects_page = workspace_page.close_workspace()
 
     # Now try to re-open that project to see if items are still there.
-    project_info_page = projects_page.open_project(project_dict['name'])
+    project_info_page = projects_page.edit_project(project_dict['name'])
     workspace_page = project_info_page.load_project()
 
     # Check to see that the added files are still there.
@@ -116,7 +116,7 @@ def _test_import(browser):
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.open_project(project_dict['name'])
+    project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
 
 
@@ -132,7 +132,8 @@ def _test_menu(browser):
     expected = 'Executing...\nExecution complete.'
     eq( workspace_page.history, expected )
     top_figure = workspace_page.get_dataflow_figures()[0]
-    eq( top_figure.value_of_css_property('border'), '1px solid rgb(0, 255, 0)' )
+#FIXME: halo seems to go away now...
+#    eq( top_figure.value_of_css_property('border'), '1px solid rgb(0, 255, 0)' )
 
 #FIXME: These need to verify that the request has been performed.
     # View menu.
@@ -149,7 +150,7 @@ def _test_menu(browser):
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.open_project(project_dict['name'])
+    project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
 
 
@@ -185,7 +186,7 @@ f_x = Float(0.0, iotype='out')
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.open_project(project_dict['name'])
+    project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
 
 

@@ -4,7 +4,7 @@
         { "text": "Save",          "id": "project-save", "onclick": "openmdao.model.saveProject();" },
         { "text": "Run",           "id": "project-run", "onclick": "openmdao.model.runModel();" },
         { "text": "Reload",        "id": "project-reload", "onclick": "openmdao.model.reloadProject();" },
-        { "text": "Close",         "id": "project-close", "onclick": "openmdao.model.closeproject();" },
+        { "text": "Close",         "id": "project-close", "onclick": "openmdao.model.closeProject();" },
         { "text": "Exit",          "id": "project-exit", "onclick": "openmdao.model.exitProject();" }
       ]
     },
