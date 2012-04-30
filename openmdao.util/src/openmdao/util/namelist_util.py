@@ -182,10 +182,10 @@ class Namelist(object):
         can be used it your component has containers of variables.
         
         varpath: string
-            dotted path of container in the data hierarchy
+            Dotted path of container in the data hierarchy.
             
         skip: list of str
-            list of variables to skip printing to the file"""
+            List of variables to skip printing to the file."""
         
         target_container = self.comp.get(varpath)
         

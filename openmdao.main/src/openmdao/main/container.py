@@ -250,7 +250,7 @@ class Container(SafeHasTraits):
     def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression. 
         When a name begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
+        it is referring to a variable outside of this object's scope.
         
         srcexpr: str or ExprEvaluator
             Source expression object or expression string.
@@ -368,7 +368,7 @@ class Container(SafeHasTraits):
     def get_trait ( self, name, copy = False ):
         """Returns the trait indicated by name, or None if not found.  No recursive
         search is performed if name contains dots.  This is a replacement
-        for the trait() method on HasTraits objects, because that method
+        for the trait() method on HasTraits objects because that method
         can return traits that shouldn't exist. DO NOT use the trait() function
         as a way to determine the existence of a trait.
         """
@@ -470,7 +470,7 @@ class Container(SafeHasTraits):
 
     @classmethod
     def add_class_trait(cls, name, *trait):
-        """Overrides HasTraits definition of *add_class_trait* in order to
+        """Overrides HasTraits definition of *add_class_trait* to
         try to keep from clobbering framework stuff.
         """
         bases = [cls]
@@ -858,8 +858,8 @@ class Container(SafeHasTraits):
     def get(self, path, index=None):
         """Return the object specified by the given path, which may 
         contain '.' characters.  *index*, if not None,
-        should be either a list of non-tuple hashable objects, at most one 
-        for each array dimension of the target value, or a list of tuples of 
+        should be either a list of non-tuple hashable objects (at most one 
+        for each array dimension of the target value) or a list of tuples of 
         the form (operation_id, stuff).
               
         The forms of the various tuples are:
@@ -936,7 +936,7 @@ class Container(SafeHasTraits):
             ATTR:    (1, name) 
                 where name is the attribute name
             CALL:    (2, args, kwargs) 
-                where args is a list of values and kwargs is a list of 
+                where args is a list of values, and kwargs is a list of 
                 tuples of the form (keyword,value).
                 kwargs can be left out if empty.  args can be left out 
                 if empty as long as kwargs are also empty, for example, 
@@ -1059,10 +1059,10 @@ class Container(SafeHasTraits):
         should be specified relative to this container.
 
         name: string
-            Name for egg, must be an alphanumeric string.
+            Name for egg; must be an alphanumeric string.
 
         version: string
-            Version for egg,  must be an alphanumeric string.
+            Version for egg; must be an alphanumeric string.
 
         py_dir: string
             The (root) directory for local Python files. It defaults to
@@ -1456,7 +1456,7 @@ def get_default_name(obj, scope):
 
 def deep_hasattr(obj, pathname):
     """Returns True if the attrbute indicated by the given pathname
-    exists, False otherwise.
+    exists; False otherwise.
     """
     try:
         parts = pathname.split('.')

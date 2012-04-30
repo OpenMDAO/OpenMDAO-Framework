@@ -22,7 +22,7 @@ class Parameter(object):
                 try:
                     scaler = float(scaler)
                 except (TypeError, ValueError):
-                    msg = "Bad value given for parameter's 'scaler' attribute"
+                    msg = "Bad value given for parameter's 'scaler' attribute."
                     parent.raise_exception(msg, ValueError)
             if adder is None:
                 adder = 0.0
@@ -30,7 +30,7 @@ class Parameter(object):
                 try:
                     adder = float(adder)
                 except (TypeError, ValueError):
-                    msg = "Bad value given for parameter's 'adder' attribute"
+                    msg = "Bad value given for parameter's 'adder' attribute."
                     parent.raise_exception(msg, ValueError)
         
         self.low = low
@@ -331,10 +331,10 @@ class HasParameters(object):
             are supplied, use the transformed value here.
             
         scaler: float (optional)
-            Value to multiply the possibly offset parameter value by 
+            Value to multiply the possibly offset parameter value by. 
             
         adder: float (optional)
-            Value to add to parameter prior to possible scaling
+            Value to add to parameter prior to possible scaling.
             
         start: any (optional)
             Value to set into the target or targets of a parameter before starting 
@@ -343,7 +343,7 @@ class HasParameters(object):
 
         fd_step: float (optional)
             Step-size to use for finite difference calculation. If no value is
-            given, the differentitator will use its own default
+            given, the differentitator will use its own default.
             
         name: str (optional)
             Name used to refer to the parameter in place of the name of the

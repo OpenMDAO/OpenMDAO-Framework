@@ -1,5 +1,5 @@
 """
-A script to add a group of required packages to the current python
+A script to add a group of required packages to the current Python
 environment.
 """
 

@@ -3,9 +3,9 @@
       "items": [
         { "text": "Save",          "onclick": "openmdao.model.saveProject();" },
         { "text": "Run",           "onclick": "openmdao.model.runModel();" },
-        { "text": "Reload",        "url": "/workspace/project" },
-        { "text": "Close",         "url": "/workspace/close" },
-        { "text": "Exit",          "url": "/exit" }
+        { "text": "Reload",        "onclick": "openmdao.model.reload();" },
+        { "text": "Close",         "onclick": "openmdao.model.close();" },
+        { "text": "Exit",          "onclick": "openmdao.model.exit();" }
       ]
     },
     { "text": "View", 
@@ -32,8 +32,8 @@
     },
     { "text": "Help", 
       "items": [
-        { "text": "Documentation", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs',800,600);"}
+        { "text": "Documentation", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','',768,1024);"}
       ]
     },
-    { "text": "About",             "onclick": "openmdao.Util.popupWindow('http://openmdao.org/',800,600);"}
+    { "text": "About",             "onclick": "openmdao.Util.popupWindow('http://openmdao.org/','',768,1024);"}
 ]

@@ -2,7 +2,7 @@
 .. _`resource.py`:
 
 Support for allocation of servers from one or more resources
-(i.e., the local host, a cluster of remote hosts, etc.)
+(i.e., the local host, a cluster of remote hosts, etc.).
 """
 
 import ConfigParser

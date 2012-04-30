@@ -1,7 +1,7 @@
-"""Scalable Test Optimization test problem proposed by Martins and Marriage
+"""Scalable Test Optimization test problem proposed by Martins and Marriage.
 
-J. R. R. A. Martins and C. Marige, An Object-Oriented Framework for 
-Multidisciplinary Design Optimization, in 3rd AIAA Multidisciplinary 
+J. R. R. A. Martins and C. Marriage, "An Object-Oriented Framework for 
+Multidisciplinary Design Optimization," 3rd AIAA Multidisciplinary 
 Design Optimization Specialist Conference, 2007. """
 
 from openmdao.main.api import Component

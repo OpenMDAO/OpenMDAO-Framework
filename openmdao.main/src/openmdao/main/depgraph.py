@@ -181,7 +181,7 @@ class DependencyGraph(object):
     
     def get_link(self, srcname, destname):
         """Return the link between the two specified nodes.  If there is no 
-        connection then None is returned.
+        connection, then None is returned.
         """
         try:
             return self._graph[srcname][destname]['link']

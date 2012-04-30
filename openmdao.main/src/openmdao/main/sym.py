@@ -11,7 +11,7 @@ class SymbolicDerivativeError(Exception):
 
 
 def SymGrad(ex,vars):
-    """Symbolic gradient"""
+    """Symbolic gradient."""
     s=[]
     for var in vars:
         s.append(Symbol(var))
@@ -30,7 +30,7 @@ def SymGrad(ex,vars):
     return grad
     
 def SymHess(ex, vars):
-    """ symbolic hessian"""
+    """ Symbolic Hessian."""
     s = [Symbol(v) for v in vars]
 
     newex=ex
