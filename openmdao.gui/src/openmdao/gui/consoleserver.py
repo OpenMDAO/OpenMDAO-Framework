@@ -346,7 +346,9 @@ class ConsoleServer(cmd.Cmd):
                     if is_instance(comp,Component):
                         components.append({ 'name': comp.name,
                                             'pathname': pathname + '.' + name,
-                                            'type': type(comp).__name__ })
+                                            'type': type(comp).__name__ ,
+                                            'valid': comp.is_valid()
+                                          })
             # list of connections (convert tuples to lists)
             conntuples = asm.list_connections(show_passthrough=False)
             for connection in conntuples:
@@ -372,7 +374,9 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v,Component):
                     components.append({ 'name': k,
                                         'pathname': k+'.'+v.get_pathname(),
-                                        'type': type(v).__name__ })
+                                        'type': type(v).__name__,
+                                        'valid': v.is_valid()
+                                      })
             structure['components'] = components
             structure['connections'] = []
         return jsonpickle.encode(structure)
@@ -391,15 +395,17 @@ class ConsoleServer(cmd.Cmd):
                 ret['workflow'].append({ 
                     'pathname': pathname,
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
-                    'driver':   self._get_workflow(comp.driver,pathname+'.driver',root)
-                })
+                    'driver':   self._get_workflow(comp.driver,pathname+'.driver',root),
+                    'valid':    comp.is_valid()
+                  })
             elif is_instance(comp,Driver):
-                ret['workflow'].append(self._get_workflow(comp,pathname,root))            
+                ret['workflow'].append(self._get_workflow(comp,pathname,root))
             else:
                 ret['workflow'].append({ 
                     'pathname': pathname,
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
-                })
+                    'valid':    comp.is_valid()
+                  })
         return ret
 
     def get_workflow(self,pathname):
