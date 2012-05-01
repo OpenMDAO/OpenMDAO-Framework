@@ -402,50 +402,56 @@ openmdao.Util = {
             tid = setTimeout(connect, delay);
         }
         
+        function displaySockets() {
+            debug.info('WebSockets:');
+            for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+                debug.info('    '+i+': state '+openmdao.sockets[i].readyState);
+            }
+        }
+
         function connect() {
-        	if (socket == null || socket.readyState > 0) {
-	        	socket = new WebSocket(addr);
-                        openmdao.sockets.push(socket);
-	            socket.onopen = function (e) {
-	                debug.info('websocket opened',socket,e);
-	            };
-	            socket.onclose = function (e) {
-	                debug.info('websocket closed',socket,e);
-                        index = openmdao.sockets.indexOf(this);
-                        if (index >= 0) {
-                            openmdao.sockets.splice(index, 1);
-//                            if (typeof openmdao_test_mode != 'undefined') {
-//                                if (openmdao.sockets.length == 0)
-//                                    openmdao.Util.notify('WebSockets closed');
-//                            }
-                        }
-                        else
-                            debug.info('websocket not found!');
-	                if ((e.code == 1006) && (retry == true)) {
-                            // See RFC 6455 for error code definitions.
-	                    connect_after_delay();
-	                }
-	            };
-	            socket.onmessage = function(e) {
-	                handler(e.data);
-	            };            
-	            socket.onerror = function (e) {
-	                if (typeof errHandler === 'function') {
-	                    errHandler(e);
-	                }
-	                else {
-	                    debug.error('websocket error',socket,e);
-	                }
-	            };
-        	}
+            if (socket == null || socket.readyState > 0) {
+                socket = new WebSocket(addr);
+                openmdao.sockets.push(socket);
+                socket.onopen = function (e) {
+                    debug.info('websocket opened '+socket.readyState,socket,e);
+                    displaySockets();
+                };
+                socket.onclose = function (e) {
+                    debug.info('websocket closed',socket,e);
+                    displaySockets();
+                    index = openmdao.sockets.indexOf(this);
+                    if (index >= 0) {
+                        openmdao.sockets.splice(index, 1);
+//                        if (typeof openmdao_test_mode != 'undefined') {
+//                            if (openmdao.sockets.length == 0)
+//                                openmdao.Util.notify('WebSockets closed');
+//                        }
+                    }
+                    else {
+                        debug.info('websocket not found!');
+                    }
+                    if ((e.code == 1006) && (retry == true)) {
+                        // See RFC 6455 for error code definitions.
+                        connect_after_delay();
+                    }
+                };
+                socket.onmessage = function(e) {
+                    handler(e.data);
+                };            
+                socket.onerror = function (e) {
+                    if (typeof errHandler === 'function') {
+                        errHandler(e);
+                    }
+                    else {
+                        debug.error('websocket error',socket,e);
+                    }
+                };
+            }
         }
         
-        setTimeout(connect, 2000);
-//        if (typeof openmdao_test_mode == 'undefined') {
-//            connect();
-//        } else {
-//            setTimeout(connect, 2000);
-//        }
+        connect();
+
         return socket;
     },
 
@@ -456,6 +462,28 @@ openmdao.Util = {
              openmdao.sockets[i].close(1000, reason);
           }
        }
+    },
+
+    /** Notify when `nSockets` are open (used for testing). */
+    webSocketsReady: function(nSockets) {
+        function doPoll() {
+            setTimeout(poll, 1000);
+        }
+        function poll() {
+            debug.info('polling for '+nSockets+' open WebSockets');
+            if (openmdao.sockets.length >= nSockets) {
+                for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
+                    if (openmdao.sockets[i].readyState != 1) {
+                        debug.info('socket '+i+' not open: '
+                                   +openmdao.sockets[i].readyState);
+                        doPoll();
+                        return;
+                    }
+                }
+                openmdao.Util.notify('WebSockets open');
+            }
+        }
+        poll();
     },
 
 };

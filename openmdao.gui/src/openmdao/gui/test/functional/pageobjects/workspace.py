@@ -120,20 +120,24 @@ class WorkspacePage(BasePageObject):
 
         # Locator is relative to the iframe not the top level window.
         self.locators["code_input"] = ( By.XPATH, "/html/body" )
-        
+
+        # Wait for bulk of page to load.
         WebDriverWait(self.browser, 2*TMO).until(
             lambda browser: len(self.get_dataflow_figures()) > 0)
+        # Now wait for WebSockets.
+#FIXME: absolute delay before polling sockets.
+        time.sleep(2)
+        browser.execute_script('openmdao.Util.webSocketsReady(2);')
+        NotifierPage.wait(browser, port)
 
     def run(self, timeout=TMO):
         """ Run current component. """
-        time.sleep(2)
         self('project_menu').click()
         self('run_button').click()
         NotifierPage.wait(self.browser, self.port, timeout)
 
     def do_command(self, cmd, timeout=TMO):
         """ Execute a command. """
-        time.sleep(2)
         self.command = cmd
         self('submit').click()
         NotifierPage.wait(self.browser, self.port, timeout)
