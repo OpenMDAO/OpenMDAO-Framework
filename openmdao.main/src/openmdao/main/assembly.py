@@ -14,7 +14,9 @@ import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
-from openmdao.main.interfaces import implements, IAssembly, IDriver
+from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitecture, IComponent, IContainer,\
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator
+from openmdao.main.mp_support import has_interface
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
@@ -249,6 +251,13 @@ class ExprMapper(object):
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src,dest))
         return srcexpr, destexpr
 
+    
+def _find_common_interface(obj1, obj2):
+    for iface in (IAssembly, IComponent, IDriver, IArchitecture, IContainer,
+                  ICaseIterator, ICaseRecorder, IDOEgenerator):
+        if has_interface(obj1, iface) and has_interface(obj2, iface):
+            return iface
+    return None
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
@@ -322,26 +331,31 @@ class Assembly (Component):
                 wflows.append((obj.workflow, obj.workflow.index(name)))
         return wflows
         
-    def rename(self, oldname, newname):
-        """Renames a child of this object from oldname to newname."""
-        self._check_rename(oldname, newname)
-        conns = self.find_referring_connections(oldname)
-        wflows = self.find_in_workflows(oldname)
-        
-        # clean up autopassthrough connections
+    def _cleanup_autopassthroughs(self, name):
+        """Clean up any autopassthrough connections involving the given name.
+        Returns a list containing a tuple for each removed connection.
+        """
+        old_autos = []
         if self.parent:
-            old_rgx = re.compile(r'(\W?)%s.' % oldname)
+            old_rgx = re.compile(r'(\W?)%s.' % name)
             par_rgx = re.compile(r'(\W?)parent.')
             
-            old_autos = []
             for u,v in self._depgraph.list_autopassthroughs():
-                newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, oldname]), u)
-                newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, oldname]), v)
+                newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), u)
+                newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), v)
                 if newu != u or newv != v:
                     old_autos.append((u,v))
                     u = re.sub(par_rgx, r'\g<1>', newu)
                     v = re.sub(par_rgx, r'\g<1>', newv)
                     self.parent.disconnect(u,v)
+        return old_autos
+        
+    def rename(self, oldname, newname):
+        """Renames a child of this object from oldname to newname."""
+        self._check_rename(oldname, newname)
+        conns = self.find_referring_connections(oldname)
+        wflows = self.find_in_workflows(oldname)
+        old_autos = self._cleanup_autopassthroughs(oldname)
         
         obj = self.remove(oldname)
         self.add(newname, obj)
@@ -352,6 +366,9 @@ class Assembly (Component):
             wflow.remove(newname)
             wflow.add(newname, idx)
             
+        old_rgx = re.compile(r'(\W?)%s.' % oldname)
+        par_rgx = re.compile(r'(\W?)parent.')
+        
         # recreate all of the broken connections after translating oldname to newname
         for u,v in conns:
             self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
@@ -365,35 +382,43 @@ class Assembly (Component):
                 u = re.sub(par_rgx, r'\g<1>', u)
                 v = re.sub(par_rgx, r'\g<1>', v)
                 self.parent.connect(u,v)
-        
+    
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the inputs and connections
         of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
-        if hasattr(newobj, 'init_from_target'):
-            newobj.init_from_target(tobj)
-        if isinstance(tobj, Component):
-            if isinstance(newobj, Component):
-                # connections
-                # workflows stay the same since they just use the component name
-            else:
-                # remove target from workflows since new object isn't a Component
-                for wflow, idx in self.find_in_workflows(target_name):
-                    wflow.remove(target_name)
-        else:
-            ...
+        if hasattr(newobj, 'mimic'):
+            newobj.mimic(tobj) # this should copy inputs and set name
+        conns = self.find_referring_connections(target_name)
+        wflows = self.find_in_workflows(target_name)
+        target_rgx = re.compile(r'(\W?)%s.' % target_name)
+        conns.extend([(u,v) for u,v in self._depgraph.list_autopassthroughs() if
+                                 re.search(target_rgx, u) is not None or 
+                                 re.search(target_rgx, v) is not None])
+        
+        self.add(target_name, newobj) # this will remove the old object (and any connections to it)
+        
+        # recreate old connections
+        for u,v in conns:
+            self.connect(u,v)
+            
+        # add new object (if it's a Component) to any workflows where target was
+        if has_interface(newobj, IComponent):
+            for wflow,idx in wflows:
+                wflow.add(newname, idx)
     
     def remove(self, name):
         """Remove the named container object from this assembly and remove
-        it from its workflow (if any)."""
+        it from its workflow(s) if it's a Component."""
         cont = getattr(self, name)
         self.disconnect(name)
         self._depgraph.remove(name)
         self._exprmapper.remove(name)
-        for obj in self.__dict__.values():
-            if obj is not cont and is_instance(obj, Driver):
-                obj.workflow.remove(name)
+        if has_interface(cont, IComponent):
+            for obj in self.__dict__.values():
+                if obj is not cont and is_instance(obj, Driver):
+                    obj.workflow.remove(name)
                     
         return super(Assembly, self).remove(name)
 

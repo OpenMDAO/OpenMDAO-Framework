@@ -798,7 +798,7 @@ class Component (Container):
         self.config_changed(update_parent=False)
     
     @rbac(('owner', 'user'))
-    def init_from_target(self, target):
+    def mimic(self, target):
         """Initialize what we can from the given target object. Copy any
         inputs that we share with the target and initialize our delegates with
         any matching delegates from the target. This function does not assume
@@ -815,8 +815,8 @@ class Component (Container):
                 td = target._delegates_.get(name)
                 if td is not None:
                     delegate = getattr(self, name)
-                    if hasattr(delegate, 'init_from_target'):
-                        delegate.init_from_target(td) # use target delegate as target
+                    if hasattr(delegate, 'mimic'):
+                        delegate.mimic(td) # use target delegate as target
 
         # now update any matching inputs from the target
         for inp in target.list_inputs():
