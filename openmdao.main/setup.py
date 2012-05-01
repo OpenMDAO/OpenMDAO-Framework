@@ -49,6 +49,7 @@ setup(name='openmdao.main',
           'pyparsing==1.5.2',
           'setuptools',
           'Sphinx',
+          'sympy',
           'Traits==3.3.0',
           'zope.interface',
       ],
@@ -67,6 +68,9 @@ setup(name='openmdao.main',
       openmdao.main.component_with_derivatives.ComponentWithDerivatives = openmdao.main.component_with_derivatives:ComponentWithDerivatives
       openmdao.main.driver_uses_derivatives.DriverUsesDerivatives = openmdao.main.driver_uses_derivatives:DriverUsesDerivatives
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
+      
+      [openmdao.driver]
+      openmdao.main.assembly.Run_Once = openmdao.main.assembly:Run_Once
       
       [openmdao.variable]
       openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot

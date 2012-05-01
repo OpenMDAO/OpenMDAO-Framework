@@ -1,7 +1,7 @@
 """
    ``distributioncasedriver.py`` -- Driver that executes
-          cases for distribitions of points
-          in the neighborhood of a given point
+          cases for distributions of points
+          in the neighborhood of a given point.
 """
 
 import logging
@@ -28,19 +28,19 @@ from openmdao.util.decorators import stub_if_missing_deps
 class IDistributionGenerator(Interface):
     """An iterator that returns lists of input
     values that are mapped from a single design
-    point via some point distribution
+    point via some point distribution.
     """
     
     num_parameters = Attribute("number of parameters")
     
     def __iter__():
         """Return an iterator object where each iteration returns
-        a set of values
+        a set of values.
         """
 
 class FiniteDifferenceGenerator(HasTraits): 
     """
-    Generate the input cases for finite differences
+    Generate the input cases for finite differences.
     """    
     implements(IDistributionGenerator)
     
@@ -110,7 +110,7 @@ class FiniteDifferenceGenerator(HasTraits):
 
 @add_delegate(HasParameters)
 class DistributionCaseDriver(CaseIterDriverBase):
-    """ Driver for evaluating models at point distributions """
+    """ Driver for evaluating models at point distributions. """
     
     distribution_generator = Slot(IDistributionGenerator,
                                   iotype='in', required=True,

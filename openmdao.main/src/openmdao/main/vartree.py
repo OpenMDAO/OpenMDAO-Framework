@@ -5,7 +5,8 @@ from enthought.traits.api import Str
 from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.variable import Variable
-from openmdao.main.container import Container, Slot
+from openmdao.main.container import Container
+from openmdao.main.datatypes.slot import Slot
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 
@@ -49,7 +50,7 @@ class VariableTree(Container):
             return super(VariableTree, self).get_metadata(traitpath, metaname)
 
     def copy(self):
-        """Returns a deep copy of this VariableTree"""
+        """Returns a deep copy of this VariableTree."""
         return copy.deepcopy(self)
     
     def add(self, name, obj):
@@ -57,6 +58,9 @@ class VariableTree(Container):
             if self.trait(name) is None:
                 self.add_trait(name, Slot(VariableTree(), iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)
+        elif not isinstance(obj, Variable):
+            self.raise_exception("a VariableTree may only contain Variables or other VariableTrees",
+                                 TypeError)
         return super(VariableTree, self).add(name, obj)
         
     def add_trait(self, name, trait):
@@ -83,6 +87,8 @@ class VariableTree(Container):
                 v._iotype = new
         
     def _trait_modified(self, obj, name, old, new):
+        if name == 'trait_added':  # handle weird traits side-effect from hasattr call
+            return
         if isinstance(new, VariableTree):
             obj = getattr(self, name)
             obj.parent = self
@@ -129,25 +135,23 @@ class VariableTree(Container):
                 newdict = metadata
 
             if matches_io:
-                match_dict = dict([(k,v) for k,v in self._alltraits(**newdict).items() 
-                                        if not k.startswith('_')])
-            else:
-                return  #our children have same iotype as we do, so won't match if we didn't
-            
-            if recurse:
-                for name in self.list_containers():
+                for name, trait in self._alltraits(**newdict).items():
+                    if name.startswith('_'):
+                        continue
                     obj = getattr(self, name)
-                    if name in match_dict and id(obj) not in visited:
-                        yield(name, obj)
-                    if obj:
-                        for chname, child in obj._items(visited, recurse, 
-                                                        **metadata):
-                            yield ('.'.join([name, chname]), child)
-                            
-            for name, trait in match_dict.items():
-                obj = getattr(self, name)
-                if is_instance(obj, Container) and id(obj) not in visited:
-                    if not recurse:
-                        yield (name, obj)
-                else:
                     yield (name, obj)
+                    if recurse and is_instance(obj, VariableTree) and id(obj) not in visited:
+                        for chname, child in obj._items(visited, recurse, **metadata):
+                            yield ('.'.join([name, chname]), child)
+
+
+# register a flattener for Cases
+from openmdao.main.case import flatteners, flatten_obj
+
+def _flatten_vartree(name, vt):
+    ret = []
+    for n,v in vt._items(set()):
+        ret.extend([('.'.join([name,k]),v) for k,v in flatten_obj(n,v)])
+    return ret
+
+flatteners[VariableTree] = _flatten_vartree

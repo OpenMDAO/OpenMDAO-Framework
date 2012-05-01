@@ -1,5 +1,5 @@
 """
-Misc. file utility routines
+Misc. file utility routines.
 """
 
 import os
@@ -9,6 +9,8 @@ import sys
 import shutil
 import warnings
 import itertools
+import string
+
 from fnmatch import fnmatch
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
@@ -67,13 +69,13 @@ def find_in_dir_list(fname, dirlist, exts=('',)):
 def find_in_path(fname, pathvar=None, sep=os.pathsep, exts=('',)):
     """Search for a given file in all of the directories given
     in the pathvar string. Return the absolute path to the file
-    if found, None otherwise.
+    if found; None otherwise.
     
     fname: str
         Base name of file.
         
     pathvar: str
-        String containing search paths. Defaults to $PATH
+        String containing search paths. Defaults to $PATH.
         
     sep: str
         Delimiter used to separate paths within pathvar.
@@ -187,7 +189,7 @@ def get_module_path(fpath):
 def find_module(name, path=None):
     """Return the pathname of the file corresponding to the given module
     name, or None if it can't be found.  If path is set, search in path
-    for the file, otherwise search in sys.path
+    for the file; otherwise search in sys.path.
     """
     if path is None:
         path = sys.path
@@ -224,14 +226,14 @@ def copy(src, dest):
 
 def build_directory(dct, force=False, topdir='.'):
     """Create a directory structure based on the contents of a nested dict.
-    The directory is created in the specified top directory, or in the current
+    The directory is created in the specified top directory or in the current
     working directory if one isn't specified. If a file being created already
     exists, a warning will be issued and the file will not be changed if force
     is False. If force is True, the file will be overwritten.
     
     The structure of the dict is as follows: if the value at a key is a
     dict, then that key is used to create a directory. Otherwise, the key is
-    used to create a file and the value stored at that key is written to the
+    used to create a file, and the value stored at that key is written to the
     file. All keys must be relative names or a RuntimeError will be raised.
     """
     #TODO: if a value stored in the dict is a callable, then call it and store
@@ -273,3 +275,10 @@ def get_cfg_file():
     if os.path.isfile(cfgfile):
         return cfgfile
     else: return altcfg  
+    
+def clean_filename(name):
+    ''' Removes special characters from a proposed filename and replaces them
+    with underscores. To be safest, we allow only a limited set of chars.'''
+    
+    valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
+    return ''.join(c if c in valid_chars else '_' for c in name)

@@ -168,7 +168,7 @@ class PluginsTestCase(unittest.TestCase):
             url = _plugin_docs(options.plugin_dist_name)
             expected = os.path.join(self.tdir, 'foobar', 'src', 'foobar',
                                     'sphinx_build', 'html', 'index.html')
-            self.assertEqual(url, expected)
+            self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
         finally:
             # Uninstall
             logging.debug('')

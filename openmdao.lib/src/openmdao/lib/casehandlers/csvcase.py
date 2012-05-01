@@ -1,7 +1,8 @@
-"""A CaseRecorder and CaseIterator that store the cases in a CSV file
+"""A CaseRecorder and CaseIterator that store the cases in a CSV file.
 """
 
 import csv
+import cStringIO, StringIO
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
@@ -13,8 +14,8 @@ class CSVCaseIterator(object):
     optimizer, etc.
     
     Current limitations:
-        Quote character in the input CSV file should be ' or ". Other
-        choices don't seem to get identified by csv.Sniffer
+        Quote character in the input CSV file should be ``'`` or ``"``. Other
+        choices don't seem to get identified by csv.Sniffer.
         
         All string data must be contained inside of quotes. This includes
         field headers.
@@ -43,28 +44,27 @@ class CSVCaseIterator(object):
         
         self._filename = name
         
-        infile = open(self.filename, 'r')
-        
-        # Sniff out the dialect
-        #infile.seek(1)
-        dialect = csv.Sniffer().sniff(infile.readline())
-        infile.seek(0)
-        reader = csv.reader(infile, dialect, quoting=csv.QUOTE_NONNUMERIC)
-        
-        self.data = []
-        for row in reader:
-            self.data.append(row)
-       
-        if self.headers is None:
-            self.need_fieldnames = True
-        else:
-            self.need_fieldnames = False
-            if 'label' in self.headers.values():
-                for key, value in self.headers.iteritems():
-                    if value == 'label':
-                        self.label_field = key
-                        del self.headers[key]
-                        break
+        with open(self.filename, 'r') as infile:
+            # Sniff out the dialect
+            #infile.seek(1)
+            dialect = csv.Sniffer().sniff(infile.readline())
+            infile.seek(0)
+            reader = csv.reader(infile, dialect, quoting=csv.QUOTE_NONNUMERIC)
+            
+            self.data = []
+            for row in reader:
+                self.data.append(row)
+           
+            if self.headers is None:
+                self.need_fieldnames = True
+            else:
+                self.need_fieldnames = False
+                if 'label' in self.headers.values():
+                    for key, value in self.headers.iteritems():
+                        if value == 'label':
+                            self.label_field = key
+                            del self.headers[key]
+                            break
             
     def __iter__(self):
         return self._next_case()
@@ -95,10 +95,10 @@ class CSVCaseIterator(object):
                     input_fields, output_fields = self._parse_fieldnames(row)
                         
                     self.label_field = 0
-                    retries_field = 2 + len(input_fields) + len(output_fields)
-                    max_retries_field = retries + 1
-                    parent_uuid_field = retries + 2
-                    msg_field = retries + 3
+                    retries_field = row.index('/METADATA') + 1
+                    max_retries_field = retries_field + 1
+                    parent_uuid_field = retries_field + 2
+                    msg_field = retries_field + 3
                     
                 # Read headers from file
                 elif self.headers is None:
@@ -119,6 +119,12 @@ class CSVCaseIterator(object):
                 max_retries = row[max_retries_field]
                 parent_uuid = row[parent_uuid_field]
                 msg = row[msg_field]
+                
+                # For some reason, default for these in a case is None
+                if not retries:
+                    retries = None
+                if not max_retries:
+                    max_retries = None
                 
             inputs = []
             for i, field in input_fields.iteritems():
@@ -157,7 +163,7 @@ class CSVCaseIterator(object):
         # This file was generated externally
         else:
             pass
-                    
+
         return input_fields, output_fields
 
 
@@ -166,15 +172,18 @@ class CSVCaseRecorder(object):
     
     implements(ICaseRecorder)
     
-    def __init__(self, filename='cases.csv', append=False, delimiter=',', \
+    def __init__(self, filename='cases.csv', append=False, delimiter=',',
                  quotechar = '"'):
         
         self.delimiter = delimiter
         self.quotechar = quotechar
         self.append = append
+        self.outfile = None
+        self.csv_writer = None
+        self._header_size = 0
         
         #Open output file
-        self.write_headers = False
+        self._write_headers = False
         self.filename = filename
         
     @property
@@ -197,10 +206,10 @@ class CSVCaseRecorder(object):
             # Whenever we start a new CSV file, we need to insert a line
             # of headers. These won't be available until the first
             # case is passed to self.record.
-            self.write_headers = True
+            self._write_headers = True
             
-        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter, \
-                                     quotechar=self.quotechar, \
+        self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
+                                     quotechar=self.quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
 
 
@@ -224,50 +233,56 @@ class CSVCaseRecorder(object):
         Field i+j+9 - msg
         """
         
-        if self.write_headers:
+        if self.outfile is None:
+            raise RuntimeError('Attempt to record on closed recorder')
+
+        if self._write_headers:
             
             headers = ['label', '/INPUTS']
             
-            for name in case.keys(iotype='in'):
-                headers.append(name)
+            headers.extend(case.keys(iotype='in', flatten=True))
                 
             headers.append('/OUTPUTS')
-            for name in case.keys(iotype='out'):
-                headers.append(name)
+            
+            headers.extend(case.keys(iotype='out', flatten=True))
                 
-            for item in ['/METADATA', 'retries', 'max_retries', 'parent_uuid', \
-                           'msg']:
-                headers.append(item)
+            headers.extend(['/METADATA', 'retries', 'max_retries', 'parent_uuid',
+                            'msg'])
                     
             self.csv_writer.writerow(headers)
-            self.write_headers = False
+            self._write_headers = False
+            self._header_size = len(headers)
             
-        data = []
-        
-        data.append(case.label)
-        #data.append(case.uuid)
-        
+        data = [case.label]
+                
         for iotype in ['in', 'out']:
             data.append('')
-            for value in case.values(iotype=iotype):
-                
-                if isinstance(value, (int, float, str)):
-                    data.append(value)
-                else:
-                    raise ValueError('CSV format does not support ' + \
-                               'variables of type %s' % type(value))
+            data.extend(case.values(iotype=iotype, flatten=True))
             
-        for item in (case.retries, case.max_retries, \
-                     case.parent_uuid, case.msg):
-            data.append(item)
+        data.extend(['', case.retries, case.max_retries, 
+                     case.parent_uuid, case.msg])
+        
+        if self._header_size != len(data):
+            raise RuntimeError("number of data points doesn't match header size in CSV recorder")
         
         self.csv_writer.writerow(data)
+
+    def close(self):
+        """Closes the file."""
+
+        if self.csv_writer is not None:
+            if not isinstance(self.outfile,
+                              (StringIO.StringIO, cStringIO.OutputType)):
+                # Closing a StringIO deletes its contents.
+                self.outfile.close()
+            self.outfile = None
+            self.csv_writer = None
 
     def get_iterator(self):
         '''Return CSVCaseIterator that points to our current file'''
         
         # I think we can safely close the oufile if someone is
         # requesting the iterator
-        self.outfile.close()
+        self.close()
         
         return CSVCaseIterator(self.filename)

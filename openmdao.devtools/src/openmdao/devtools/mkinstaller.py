@@ -203,6 +203,7 @@ def after_install(options, home_dir):
     
     reqs = %(reqs)s
     guireqs = %(guireqs)s
+    guitestreqs = %(guitestreqs)s
     
     if options.findlinks is None:
         url = '%(url)s'
@@ -254,6 +255,9 @@ def after_install(options, home_dir):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
+            # Only linux needs the modules for doing the GUI unit testing at this time
+            if sys.platform.startswith( "linux" ):
+                allreqs = allreqs + guitestreqs 
             
         for req in allreqs:
             if req.startswith('openmdao.'):
@@ -300,6 +304,7 @@ def after_install(options, home_dir):
     
     reqs = set()
     guireqs = set()
+    guitestreqs = set()
     
     version = '?.?.?'
     excludes = set(['setuptools', 'distribute', 'SetupDocs']+openmdao_prereqs)
@@ -308,6 +313,9 @@ def after_install(options, home_dir):
     distnames = set([d.project_name for d in dists])-excludes
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
+    guitest_dists = working_set.resolve([Requirement.parse('openmdao.gui[jsTest]')])
+    guitest_dists.extend(working_set.resolve([Requirement.parse('openmdao.gui[functionalTest]')]))
+    guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes
     
     try:
         setupdoc_dist = working_set.resolve([Requirement.parse('setupdocs')])[0]
@@ -334,6 +342,15 @@ def after_install(options, home_dir):
         else:
             guireqs.add('%s' % dist.as_requirement())
 
+    for dist in guitest_dists:
+        if dist.project_name not in guitestnames:
+            continue
+        if options.dev: # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
+            if not dist.project_name.startswith('openmdao.'):
+                guitestreqs.add('%s' % dist.as_requirement())
+        else:
+            guitestreqs.add('%s' % dist.as_requirement())
+
     # adding setupdocs req is a workaround to prevent Traits from looking elsewhere for it
     if setupdoc_dist:
         _reqs = [str(setupdoc_dist.as_requirement())]
@@ -341,10 +358,12 @@ def after_install(options, home_dir):
         _reqs = ['setupdocs>=1.0']
     reqs = _reqs + list(reqs) 
     guireqs = list(guireqs)
+    guitestreqs = list(guitestreqs)
     
     optdict = { 
         'reqs': reqs, 
         'guireqs': guireqs,
+        'guitestreqs': guitestreqs,
         'version': version, 
         'url': options.findlinks,
         'make_dev_eggs': make_dev_eggs,

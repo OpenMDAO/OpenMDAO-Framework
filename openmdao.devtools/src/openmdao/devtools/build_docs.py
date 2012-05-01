@@ -129,10 +129,12 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
         print >> outfile, docs, '\n'
     
     #excluding traits now since they need to be sorted separately
+    #also excluding gui-related files, in case of non-gui build
     _names = list(_get_resource_files(dist,
                                     ['*__init__.py','*setup.py','*datatypes*.py',
-                                     '*/gui/*/views.py','*/gui/*/models.py','*/gui/manage.py',
-                                     '*/gui/urls.py','*/gui/*/urls.py','*/gui/projdb/admin.py'],
+                                     '*/main/zmq*.py','*/main/tornado*.py',
+                                     '*/gui/*/views.py','*/gui/*/models.py',
+                                     '*/gui/*/urls.py','*/gui/*/admin.py'],
                                     ['*.py']))
     names = []
     for n in _names:
@@ -267,8 +269,8 @@ def build_docs(parser=None, options=None, args=None):
 
 def view_docs(browser=None):
     """A script (openmdao docs) points to this. It just pops up a browser to 
-    view the openmdao sphinx docs. If the docs are not already built, it
-    builds them before viewing, but if the docs already exist, it's not smart enough
+    view the openmdao Sphinx docs. If the docs are not already built, it
+    builds them before viewing. But if the docs already exist, it's not smart enough
     to rebuild them if they've changed since the last build.
     """
     if not browser:
@@ -287,7 +289,7 @@ def view_docs(browser=None):
 
 
 def test_docs(parser, options, args=None):
-    """Tests the openmdao sphinx documentation.  
+    """Tests the openmdao Sphinx documentation.  
     A console script (openmdao test_docs) calls this.
     This forces a build of the docs before testing.
     """

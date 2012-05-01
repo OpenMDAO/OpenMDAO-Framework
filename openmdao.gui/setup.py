@@ -27,10 +27,22 @@ setup(name='openmdao.gui',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
+          'pyzmq-static>=2.1.11.1',
+          'tornado>=2.2',
           'jsonpickle', 
-          'web.py', 
-          'django'
       ],
+      extras_require = {
+          'jsTest':  [
+              'path.py==2.2.2', 
+              'lazr.testing==0.1.2a',
+              'mocker==1.1',
+              'zope.testrunner==4.0.4',
+              'zope.exceptions==3.6.1' 
+          ],
+          'functionalTest': [
+              'selenium==2.20.0',
+          ],
+      },   
       entry_points="""
       # -*- Entry points: -*-
       """,

@@ -4,7 +4,7 @@
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
-from openmdao.main.api import Component, Case, Slot
+from openmdao.main.api import Component, Case
 from openmdao.lib.datatypes.api import Slot, ListStr, Event, \
      List, Str, Dict, Bool
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
@@ -31,7 +31,7 @@ class MetaModel(Component):
     warm_start_data = Slot(ICaseIterator,iotype="in",
                               desc="CaseIterator containing cases to use as "
                               "initial training data. When this is set, all "
-                              "previous training data is cleared, and replaced "
+                              "previous training data is cleared and replaced "
                               "with data from this CaseIterator")
     
     surrogate = Dict(key_trait=Str,

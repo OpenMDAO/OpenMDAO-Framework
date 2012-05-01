@@ -2,14 +2,17 @@
 
 import unittest
 import logging
+import math
 import nose
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top, Dataflow
-from openmdao.lib.datatypes.api import Int
+from openmdao.lib.datatypes.api import Float, Int, Array
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
+from openmdao.test.execcomp import ExecComp
+from openmdao.util.testutil import assert_rel_error
 
 exec_order = []
 
@@ -22,10 +25,10 @@ class DumbDriver(Driver):
 
 
 class Simple(Component):
-    a = Int(iotype='in')
-    b = Int(iotype='in')
-    c = Int(iotype='out')
-    d = Int(iotype='out')
+    a = Float(iotype='in', units='ft')
+    b = Float(iotype='in', units='ft')
+    c = Float(iotype='out', units='ft')
+    d = Float(iotype='out', units='ft')
     
     def __init__(self):
         super(Simple, self).__init__()
@@ -66,37 +69,42 @@ subouts = ['comp1.c', 'comp1.d',
 
 subvars = subins+subouts
 
+def _nested_model():
+    global exec_order
+    exec_order = []
+    top = set_as_top(Assembly())
+    top.add('sub', Assembly())
+    top.add('comp7', Simple())
+    top.add('comp8', Simple())
+    sub = top.sub
+    sub.add('comp1', Simple())
+    sub.add('comp2', Simple())
+    sub.add('comp3', Simple())
+    sub.add('comp4', Simple())
+    sub.add('comp5', Simple())
+    sub.add('comp6', Simple())
+
+    top.driver.workflow.add(['comp7', 'sub', 'comp8'])
+    sub.driver.workflow.add(['comp1','comp2','comp3',
+                             'comp4','comp5','comp6'])
+
+    sub.create_passthrough('comp1.a', 'a1')
+    sub.create_passthrough('comp2.b', 'b2')
+    sub.create_passthrough('comp4.b', 'b4')
+    sub.create_passthrough('comp4.c', 'c4')
+    sub.create_passthrough('comp6.b', 'b6')
+    sub.create_passthrough('comp2.c', 'c2')
+    sub.create_passthrough('comp1.d', 'd1')
+    sub.create_passthrough('comp5.d', 'd5')
+    
+    return top
+
 class DependsTestCase(unittest.TestCase):
 
-    def setUp(self):
-        global exec_order
-        exec_order = []
-        top = set_as_top(Assembly())
-        self.top = top
-        top.add('sub', Assembly())
-        top.add('comp7', Simple())
-        top.add('comp8', Simple())
-        sub = top.sub
-        sub.add('comp1', Simple())
-        sub.add('comp2', Simple())
-        sub.add('comp3', Simple())
-        sub.add('comp4', Simple())
-        sub.add('comp5', Simple())
-        sub.add('comp6', Simple())
-
-        top.driver.workflow.add(['comp7', 'sub', 'comp8'])
-        sub.driver.workflow.add(['comp1','comp2','comp3',
-                                 'comp4','comp5','comp6'])
-
-        sub.create_passthrough('comp1.a', 'a1')
-        sub.create_passthrough('comp2.b', 'b2')
-        sub.create_passthrough('comp4.b', 'b4')
-        sub.create_passthrough('comp4.c', 'c4')
-        sub.create_passthrough('comp6.b', 'b6')
-        sub.create_passthrough('comp2.c', 'c2')
-        sub.create_passthrough('comp1.d', 'd1')
-        sub.create_passthrough('comp5.d', 'd5')
         
+    def setUp(self):
+        top = self.top = _nested_model()
+        sub = top.sub
         sub.connect('comp1.c', 'comp4.a')
         sub.connect('comp5.c', 'comp1.b')
         sub.connect('comp2.d', 'comp5.b')
@@ -163,7 +171,7 @@ class DependsTestCase(unittest.TestCase):
         self.top.disconnect('comp8')
         self.assertEqual(self.top.sub.list_outputs(connected=True),
                          [])
-        self.assertEqual(self.top.sub._depgraph.get_source('c4'), 'comp4.c')
+        self.assertEqual(self.top.sub._exprmapper.get_source('c4'), 'comp4.c')
         
     def test_lazy1(self):
         self.top.run()
@@ -352,29 +360,406 @@ class DependsTestCase(unittest.TestCase):
         sub.driver.add_objective('comp5.d')
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp6','comp5']))
-        sub.driver.add_parameter('comp1.a')
+        sub.driver.add_parameter('comp1.a', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp6','comp5','comp1','comp4']))
-        sub.driver.add_parameter('comp3.a')
+        sub.driver.add_parameter('comp3.a', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp6','comp5','comp1','comp4','comp3']))
 
+        
+class SimplePTAsm(Assembly):
+    def configure(self):
+        self.add('c2', Simple())
+        self.add('c1', Simple())
+        
+        self.driver.workflow.add(['c1','c2'])
+
+        self.connect('c1.c', 'c2.a')
+        self.connect('c1.d', 'c2.b')
+        
+        self.create_passthrough('c1.a', 'a1')
+        self.create_passthrough('c2.d', 'd2')
+    
+    
 class DependsTestCase2(unittest.TestCase):
 
     def setUp(self):
+        global exec_order
         self.top = set_as_top(Assembly())
         self.top.add('c2', Simple())
         self.top.add('c1', Simple())
+        self.top.driver.workflow.add(['c1','c2'])
     
-    def test_connected_outs(self):
+    def test_connected_vars(self):
         self.assertEqual(self.top.c1.list_outputs(connected=True), [])
+        self.assertEqual(self.top.c2.list_inputs(connected=True), [])
         self.top.connect('c1.c', 'c2.a')
         self.assertEqual(self.top.c1.list_outputs(connected=True), ['c'])
+        self.assertEqual(self.top.c2.list_inputs(connected=True), ['a'])
         self.top.connect('c1.d', 'c2.b')
         self.assertEqual(set(self.top.c1.list_outputs(connected=True)), set(['c', 'd']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=True)), set(['a', 'b']))
         self.top.disconnect('c1.d', 'c2.b')
         self.assertEqual(self.top.c1.list_outputs(connected=True), ['c'])
+        self.assertEqual(self.top.c2.list_inputs(connected=True), ['a'])
+                
+    def test_unconnected_vars(self):
+        extras = set(self.top.c1.list_vars())-set(['a','b','c','d'])
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set(['c', 'd']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set(['a', 'b']))
+        self.top.connect('c1.c', 'c2.a')
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set(['d']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set(['b']))
+        self.top.connect('c1.d', 'c2.b')
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set())
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set())
+        self.top.disconnect('c1.d', 'c2.b')
+        self.assertEqual(set(self.top.c1.list_outputs(connected=False))-extras, set(['d']))
+        self.assertEqual(set(self.top.c2.list_inputs(connected=False))-extras, set(['b']))
+                
+    def test_simple_run(self):
+        self.top.connect('c1.c', 'c2.a')
+        self.top.connect('c1.d', 'c2.b')
+        self.top.run()
+        self.assertEqual(self.top.c1.a, 1)
+        self.assertEqual(self.top.c1.b, 2)
+        self.assertEqual(self.top.c1.c, 3)
+        self.assertEqual(self.top.c1.d, -1)
+        self.assertEqual(self.top.c2.a, 3)
+        self.assertEqual(self.top.c2.b, -1)
+        self.assertEqual(self.top.c2.c, 2)
+        self.assertEqual(self.top.c2.d, 4)
         
+        self.top.c1.a = 2
+        self.top.run()
+        self.assertEqual(self.top.c1.a, 2)
+        self.assertEqual(self.top.c1.b, 2)
+        self.assertEqual(self.top.c1.c, 4)
+        self.assertEqual(self.top.c1.d, 0)
+        self.assertEqual(self.top.c2.a, 4)
+        self.assertEqual(self.top.c2.b, 0)
+        self.assertEqual(self.top.c2.c, 4)
+        self.assertEqual(self.top.c2.d, 4)
+        
+    def test_simple_passthrough(self):
+        cnames = ['a','b','c','d']
+        modnames = ['a1', 'd2']
+        
+        self.top.add('model', SimplePTAsm())
+        self.top.driver.workflow.add(['model'])
+        self.top.connect('c1.c', 'model.a1')
+        self.top.connect('model.d2', 'c2.a')
+        
+        self.assertEqual(self.top.c1.get_valid(cnames), 
+                         [True, True, False, False])
+        self.assertEqual(self.top.c2.get_valid(cnames), 
+                         [False, True, False, False])
+        self.assertEqual(self.top.model.get_valid(modnames), 
+                         [False, False])
+        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+                         [False, True, False, False])
+        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+                         [False, False, False, False])
+        
+        self.top.run()
+        
+        self.assertEqual(self.top.c1.get_valid(cnames), 
+                         [True, True, True, True])
+        self.assertEqual(self.top.c2.get_valid(cnames), 
+                         [True, True, True, True])
+        self.assertEqual(self.top.model.get_valid(modnames), 
+                         [True, True])
+        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+                         [True, True, True, True])
+        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+                         [True, True, True, True])
+
+        # test invalidation
+        self.top.c1.a = 99
+        self.assertEqual(self.top.c1.get_valid(cnames), 
+                         [True, True, False, False])
+        self.assertEqual(self.top.model.get_valid(modnames), 
+                         [False, False])
+        self.assertEqual(self.top.model.c1.get_valid(cnames), 
+                         [False, True, False, False])
+        self.assertEqual(self.top.model.c2.get_valid(cnames), 
+                         [False, False, False, False])
+        self.assertEqual(self.top.c2.get_valid(cnames), 
+                         [False, True, False, False])
+        
+    def test_array_expr(self):
+        class Dummy(Component): 
+        
+            x = Array([[-1, 1],[-2, 2]],iotype="in",shape=(2,2))
+            y = Array([[-1, 1],[-2, 2]],iotype="out",shape=(2,2))
+            
+            def execute(self): 
+                self.y = self.x
+                
+        class Stuff(Assembly): 
+        
+            def configure(self):
+                self.add('d1',Dummy())
+                self.add('d2',Dummy())
+                
+                self.connect('d1.y[0][0]','d2.x[1][0]')   
+                self.connect('d1.y[1][0]','d2.x[0][0]')
+                
+                self.driver.workflow.add(['d1','d2'])
+        
+        s = set_as_top(Stuff())
+        s.d1.x = [[-5,-6], [-7,-8]]
+        s.run()
+        self.assertEqual(s.d2.x[0,0], -7)
+        self.assertEqual(s.d2.x[1,0], -5)
+        self.assertEqual(s.d2.x[0,1], 1)
+        self.assertEqual(s.d2.x[1,1], 2)
+
+    def test_units(self):
+        top = self.top
+        top.c2.add("velocity", Float(3.0, iotype='in', units='inch/s'))
+        top.c1.add("length", Float(9.0, iotype='out', units='inch'))
+        
+        try:
+            top.connect('c1.c', 'c2.velocity')
+        except Exception as err:
+            self.assertEqual(str(err), ": Can't connect 'c1.c' to 'c2.velocity': velocity: units 'ft' are incompatible with assigning units of 'inch/s'")
+        else:
+            self.fail("Exception expected")
+        
+        top.c1.a = 1.
+        top.c1.b = 2.
+        top.c1.length = 24.
+        top.connect('c1.length', 'c2.a')
+        top.run()
+        assert_rel_error(self, top.c2.a, 2., 0.0001)
+        
+
+class ArrayComp(Component):
+    a = Array([1,2,3,4,5], iotype="in")
+    b = Array([1,2,3,4,5], iotype='in')
+    c = Array([2,4,6,8,10], iotype='out')
+    d = Array([0,0,0,0,0], iotype='out')
+    
+    def execute(self):
+        global exec_order
+        exec_order.append(self.name)
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+class ExprDependsTestCase(unittest.TestCase):
+
+    def setUp(self):
+        global exec_order
+        exec_order = []
+        self.top = set_as_top(Assembly())
+        self.top.add('c2', ArrayComp())
+        self.top.add('c1', ArrayComp())
+        self.top.driver.workflow.add(['c1','c2'])
+        
+    def test_basic(self):
+        self.top.connect('c1.c', 'c2.a')
+        self.top.connect('c1.d', 'c2.b')
+        self.top.run()
+        self.assertEqual(list(self.top.c1.c), [2,4,6,8,10])
+        self.assertEqual(list(self.top.c1.d), [0,0,0,0,0])
+        self.assertEqual(list(self.top.c2.a), [2,4,6,8,10])
+        self.assertEqual(list(self.top.c2.b), [0,0,0,0,0])
+        self.assertEqual(list(self.top.c2.c), [2,4,6,8,10])
+        self.assertEqual(list(self.top.c2.d), [2,4,6,8,10])
+
+    def test_entry_connect(self):
+        self.top.connect('c1.c[2]', 'c2.a[3]')
+        self.top.run()
+        self.assertEqual(list(self.top.c1.c), [2,4,6,8,10])
+        self.assertEqual(list(self.top.c1.d), [0,0,0,0,0])
+        self.assertEqual(list(self.top.c2.a), [1,2,3,6,5])
+        self.assertEqual(list(self.top.c2.b), [1,2,3,4,5])
+        self.assertEqual(list(self.top.c2.c), [2,4,6,10,10])
+        self.assertEqual(list(self.top.c2.d), [0,0,0,2,0])
+        
+        # now see if we can connect to another entry on c2.a
+        self.top.connect('c1.d[2]', 'c2.a[1]')
+        self.top.run()
+        self.assertEqual(list(self.top.c1.c), [2,4,6,8,10])
+        self.assertEqual(list(self.top.c1.d), [0,0,0,0,0])
+        self.assertEqual(list(self.top.c2.a), [1,0,3,6,5])
+        self.assertEqual(list(self.top.c2.b), [1,2,3,4,5])
+        self.assertEqual(list(self.top.c2.c), [2,2,6,10,10])
+        self.assertEqual(list(self.top.c2.d), [0,-2,0,2,0])
+        
+        # make sure only one connection allowed to a particular array entry
+        try:
+            self.top.connect('c1.d[1]', 'c2.a[1]')
+        except Exception as err:
+            self.assertEqual(str(err), ": Can't connect 'c1.d[1]' to 'c2.a[1]': : 'c2.a[1]' is already connected to source 'c1.d[2]'")
+            
+        # let's disconnect one entry and check the valid dict
+        self.top.disconnect('c2.a[1]')
+        self.assertEqual(self.top.c2._valid_dict['a[3]'], True)
+        self.assertTrue('a[1]' not in self.top.c2._valid_dict)
+
+    def test_invalidation(self):
+        global exec_order
+        vnames = ['a','b','c','d']
+        self.top.run()
+        valids = self.top.c2.get_valid(vnames)
+        self.assertEqual(valids, [True, True, True, True])
+        self.top.connect('c1.c[2]', 'c2.a[3]')
+        self.assertEqual(self.top.c2.get_valid(['a[3]']), [False])
+        exec_order = []
+        self.top.run()
+        self.assertEqual(self.top.c2.get_valid(['a[3]']), [True])
+        self.assertEqual(exec_order, ['c2'])
+        exec_order = []
+        self.top.c1.a = [9,9,9,9,9]
+        self.top.c2.run()
+        self.assertEqual(exec_order, ['c1', 'c2'])
+        valids = self.top.c2.get_valid(vnames)
+        self.assertEqual(valids, [True, True, True, True])
+        self.assertEqual(list(self.top.c2.a), [1,2,3,12,5])
+        
+    #def test_src_exprs(self):
+        #global exec_order
+        #vnames = ['a','b','c','d']
+        #top = _nested_model()
+        #top.run()
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        
+        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        #top.sub.connect('comp1.c+comp2.c+comp3.c', 'comp4.a')
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        #exec_order = []
+        #top.run()
+        #self.assertEqual(exec_order, ['comp4'])
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        #self.assertEqual(total, top.sub.comp4.a)
+        
+        #top.sub.comp2.a = 99
+        #self.assertEqual(top.sub.comp2.get_valid(vnames), [True, True, False, False])
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        #exec_order = []
+        #top.sub.run()
+        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        #self.assertEqual(total, top.sub.comp4.a)
+        #self.assertEqual(exec_order, ['comp2','comp4'])
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        #top.sub.comp2.a = 88
+        #top.sub.comp3.a = 33
+        #self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        #top.sub.run()
+        #total = top.sub.comp1.c+top.sub.comp2.c+top.sub.comp3.c
+        #self.assertEqual(total, top.sub.comp4.a)
+
+    def test_float_exprs(self):
+        global exec_order
+        vnames = ['a','b','c','d']
+        top = _nested_model()
+        top.run()
+        
+        total = math.sin(3.14)*top.sub.comp2.c
+        top.sub.connect('sin(3.14)*comp2.c', 'comp4.a')
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [False, True, False, False])
+        exec_order = []
+        top.run()
+        self.assertEqual(exec_order, ['comp4'])
+        self.assertEqual(top.sub.comp4.get_valid(vnames), [True, True, True, True])
+        self.assertEqual(total, top.sub.comp4.a)
+        
+        top.sub.disconnect('sin(3.14)*comp2.c', 'comp4.a')
+        total = 3.0*top.sub.comp1.c
+        top.sub.connect('3.0*comp1.c', 'comp4.a')
+        top.run()
+        self.assertEqual(total, top.sub.comp4.a)
+        
+    def test_slice_exprs(self):
+        global exec_order
+        vnames = ['a[0:2:]','a','b','c','d']
+        top = self.top
+        top.run()
+        total = top.c1.c[3:]
+        top.connect('c1.c[3:]', 'c2.a[0:2]')
+        self.assertEqual(top.c2.get_valid(vnames), [False, True, True, False, False])
+        exec_order = []
+        top.run()
+        self.assertEqual(exec_order, ['c2'])
+        self.assertEqual(top.c2.get_valid(vnames), [True, True, True, True, True])
+        self.assertEqual(list(total), list(top.c2.a[0:2]))
+        
+    def _all_nested_connections(self, obj):
+        """Return a list of all connections from ExprMappers and DepGraphs all the way down."""
+        visited = set()
+        connection_set = set()
+        objstack = [obj]
+        while objstack:
+            obj = objstack.pop()
+            if obj not in visited:
+                visited.add(obj)
+                if isinstance(obj, Assembly):
+                    connection_set.update(obj.list_connections())
+                    connection_set.update(obj._exprmapper.list_connections())
+                    connection_set.update(obj._depgraph.list_connections())
+                    for name in obj.list_containers():
+                        comp = getattr(obj, name)
+                        if isinstance(comp, Component):
+                            connection_set.update(comp._depgraph.list_connections())
+                            if isinstance(comp, Assembly):
+                                objstack.append(comp)
+        return connection_set
+        
+    def test_connection_cleanup(self):
+        global exec_order
+        vnames = ['a','b','c','d']
+        top = _nested_model()
+        initial_connections = set(top.sub.list_connections())
+        top.run()
+        top.sub.connect('comp1.c', 'comp3.b')
+        self.assertEqual(set(top.sub.list_connections())-initial_connections, 
+                         set([('comp1.c','comp3.b')]))
+        top.sub.disconnect('comp1')
+        self.assertEqual(set(top.sub.list_connections())-initial_connections, set())
+        for u,v in self._all_nested_connections(top.sub):
+            self.assertTrue('comp1.' not in u and 'comp1.' not in v)
+        
+    def test_connection_cleanup2(self):
+        top = _nested_model()
+        initial_connections = set(top.sub.list_connections())
+        top.run()
+        top.sub.connect('comp1.c*3.0', 'comp4.a')
+        top.sub.connect('comp1.c', 'comp3.b')
+        top.sub.disconnect('comp1.c','comp3.b')
+        self.assertEqual(set(top.sub.list_connections())-initial_connections, 
+                         set([('comp1.c*3.0', 'comp4.a')]))
+        self.assertEqual(initial_connections-set(top.sub.list_connections()), 
+                         set())
+        for u,v in self._all_nested_connections(top.sub):
+            self.assertTrue(not ('comp1.c' in u and 'comp3.b' in v))
+
+    def test_bad_exprs(self):
+        top = _nested_model()
+        try:
+            top.sub.connect('comp1.c', 'comp4.a+comp4.b')
+        except Exception as err:
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a+comp4.b': bad connected expression 'comp4.a+comp4.b' must reference exactly one variable")
+        else:
+            self.fail("Exception expected")
+            
+        try:
+            top.sub.connect('comp1.c', 'comp4.a[foo]')
+        except Exception as err:
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a[foo]': bad destination expression 'comp4.a[foo]': only constant indices are allowed for arrays and slices")
+        else:
+            self.fail("Exception expected")
+            
+        try:
+            top.sub.connect('comp1.c', 'comp4.a(5)')
+        except Exception as err:
+            self.assertEqual(str(err), "sub: Can't connect 'comp1.c' to 'comp4.a(5)': bad destination expression 'comp4.a(5)': not assignable")
+        else:
+            self.fail("Exception expected")
+                    
+                           
         
 if __name__ == "__main__":
     

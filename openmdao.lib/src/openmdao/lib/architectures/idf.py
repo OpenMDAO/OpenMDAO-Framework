@@ -5,7 +5,7 @@ from openmdao.lib.differentiators.finite_difference import FiniteDifference
 class IDF(Architecture):
     
     """ Architecture that uses a single top level optimizer, 
-    enforcing consitency with equality constraints"""
+    enforcing consistency with equality constraints."""
     
     def __init__(self, *args, **kwargs):
         super(IDF, self).__init__(*args, **kwargs)
@@ -18,7 +18,7 @@ class IDF(Architecture):
         self.has_global_des_vars = False
     
     def configure(self): 
-        """setup and IDF architecture inside this assembly.
+        """Setup an IDF architecture inside this assembly.
         """
         #create the top level optimizer
         self.parent.add("driver",SLSQPdriver())

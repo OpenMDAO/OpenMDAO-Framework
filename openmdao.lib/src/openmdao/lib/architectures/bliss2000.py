@@ -1,4 +1,4 @@
-"""Implementation of the BLISS2000 optimziation architecture based on the work described in 
+"""Implementation of the BLISS2000 optimization architecture based on the work described in 
 the following journal article:
 
 J. Sobieszczanski-Sobieski, T. Altus, M. Phillips, and Sandu, Bilevel Integrated System Synthesis 
@@ -22,7 +22,7 @@ from openmdao.lib.casehandlers.api import DBCaseRecorder
 
 class SubSystemObj(Component): 
     """Component which adds the weight factors for each output state variable 
-    for a given subsystem """
+    for a given subsystem. """
     
     f_wy = Float(0.0,iotype="out",desc="subsystem objective")
     
@@ -51,7 +51,7 @@ class SubSystemObj(Component):
         self.f_wy = sum([getattr(self,w)*getattr(self,v) for w,v in zip(self.weights,self.var_names)])
         
 class Broadcast(Component): 
-    """Used to create outputs in the SubSytemOpt assmebly"""
+    """Used to create outputs in the SubSytemOpt assembly."""
     
     input = Float(0.0,iotype="in")
     output = Float(0.0,iotype="out")
@@ -60,8 +60,8 @@ class Broadcast(Component):
         self.output = self.input        
         
 class SubSystemOpt(Assembly): 
-    """ assembly which takes global inputs, coupling indeps, and weight factors as inputs, 
-    and runs a local optimization on the local des vars"""
+    """ Assembly which takes global inputs, coupling indeps, and weight factors as inputs 
+    and runs a local optimization on the local des vars."""
     
     def __init__(self,component,global_params,local_params,couple_deps,couple_indeps,constraints): 
         super(SubSystemOpt,self).__init__()
@@ -85,8 +85,9 @@ class SubSystemOpt(Assembly):
             name = "global_%d"%i
             self.var_map[p.target] = name
             self.add_trait(name,Float(0.0,iotype="in",desc="global design var for %s"%p.target.split(".")[-1]))
+                        
             self.connect(name,p.target) #promote the global des vars
-            setattr(self,name,self.get(p.target))
+            #setattr(self,name,self.get(p.target))
     
         if self.local_params: #if there are none, you don't do an optimization
             self.add('objective_comp',SubSystemObj(len(dep_couple_vars)))
@@ -110,7 +111,7 @@ class SubSystemOpt(Assembly):
                 broadcast_name = 'output_%s'%var_name
                 self.add(broadcast_name,Broadcast())
                 self.add_trait(var_name,Float(0.0,iotype="out",desc="localy optimized value for %s"%target))
-                setattr(self,var_name,self.get(target))
+                #setattr(self,var_name,self.get(target))
 
                 self.connect("%s.output"%broadcast_name,target) #connect broadcast output to input of component
                 self.connect("%s.output"%broadcast_name,var_name) #connect broadcast output to variable in assembly
@@ -284,15 +285,27 @@ class BLISS2000(Architecture):
 
         #create some placeholder variables for the fixed point iteration         
         for l in locals:
-            s=l[0].replace('.','_')
+            s=system_var_map[l[0]].replace(".","_")
             
             s2='%s_store'%s
             self.parent.add(s2,Float(0.0))
             driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
             driver.add_constraint('%s = %s'%(system_var_map[l[1].target],s2))
             
-        for l in global_dvs:
-            s2='%s_store'%l[0]
+            
+        for i,g in enumerate(global_dvs):
+            s2='global%d_store'%i
             self.parent.add(s2,Float(0.0)) 
-            driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
-            driver.add_constraint('%s = %s'%(system_var_map[l[1].target],s2))             
+            driver.add_parameter(s2 , low=g[1].low, high=g[1].high)
+            driver.add_constraint('%s = %s'%(system_var_map[g[1].target],s2))       
+            
+            
+if __name__=="__main__": 
+    
+    from openmdao.lib.optproblems.api import UnitScalableProblem
+    
+    p = UnitScalableProblem()
+    
+    p.architecture = BLISS2000()
+    
+    p.run()

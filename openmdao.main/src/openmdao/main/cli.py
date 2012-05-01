@@ -1,4 +1,4 @@
-"""OpenMDAO Command Line Interface stuff"""
+"""OpenMDAO Command Line Interface stuff."""
 
 import os
 import sys
@@ -45,16 +45,16 @@ def _get_openmdao_parser():
     parser = subparsers.add_parser('list_testhosts', help='list hosts in testhosts config file')
     parser.add_argument("-c", "--config", action='store', dest='cfg', metavar='CONFIG',
                         default=get_cfg_file(),
-                        help="Path of config file where info for remote testing/building hosts is located")
+                        help="Path of config file where info for remote testing/building hosts is located.")
     parser.add_argument("--filter", action='append', dest='filters', 
                         default=[],
                         help="boolean expression to filter hosts")
     parser.add_argument("--host", action='append', dest='hosts', metavar='HOST',
                         default=[],
                         help="Select host from config file to run on. "
-                             "To run on multiple hosts, use multiple --host args")
+                             "To run on multiple hosts, use multiple --host args.")
     parser.add_argument("--all", action="store_true", dest='allhosts',
-                        help="Use all hosts found in testhosts.cfg file")
+                        help="Use all hosts found in testhosts.cfg file.")
     parser.set_defaults(func=list_testhosts)
 
     parser = subparsers.add_parser('docs', help='view the docs')
@@ -85,7 +85,7 @@ def _get_openmdao_parser():
         parser = subparsers.add_parser('test_branch', help='run tests on remote machines')
         parser.add_argument("-k","--keep", action="store_true", dest='keep',
                             help="Don't delete the temporary build directory. "
-                                 "If testing on EC2 stop the instance instead of terminating it.")
+                                 "If testing on EC2, stop the instance instead of terminating it.")
         parser.add_argument("-f","--file", action="store", type=str, 
                             dest='fname',
                             help="Pathname of a tarfile or URL of a git repo. "
@@ -106,7 +106,7 @@ def _get_openmdao_parser():
                             help="directory where dev_docs directory will be placed")
         parser.add_argument("-n", "--nodocbuild", action="store_true", 
                             dest="nodocbuild",
-                            help="used for testing. The docs will not be rebuilt if they already exist")
+                            help="Used for testing. The docs will not be rebuilt if they already exist.")
         parser.set_defaults(func=push_docs)
 
     except ImportError:
@@ -147,7 +147,29 @@ def _get_openmdao_parser():
         
     except ImportError: 
         pass
-    
+
+    # the following subcommands will only be available in a gui build
+    try:
+        import openmdao.gui.omg as gui
+        parser = subparsers.add_parser('gui', help='launch the graphical user interface')
+        # I'd like to do this but argparse doesn't have this signature
+        #parser = subparsers.add_parser('gui', gui.get_argument_parser())
+        # so I'll just copy and paste from openmdao.gui.omg :(
+        parser.add_argument("-p","--port", type=int, dest="port", default=0,
+                          help="port to run server on (defaults to any available port)")
+        parser.add_argument("-b","--browser", dest="browser", default="chrome",
+                          help="preferred browser")
+        parser.add_argument("-s","--server", action="store_true", dest="serveronly",
+                          help="don't launch browser, just run server")
+        parser.add_argument("-r","--reset", action="store_true", dest="reset",
+                          help="reset project database")
+        parser.add_argument("-d","--dev", action="store_true", dest="development",
+                          help="enable development options")
+        parser.set_defaults(func=gui.run)
+
+    except ImportError:
+        pass
+        
     return top_parser
 
 def openmdao():

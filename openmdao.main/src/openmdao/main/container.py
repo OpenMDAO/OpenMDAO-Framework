@@ -37,18 +37,18 @@ from enthought.traits.trait_base import not_none, not_event
 
 from multiprocessing import connection
 
-from openmdao.main.variable import Variable
+from openmdao.main.variable import Variable, is_legal_name
 from openmdao.main.filevar import FileRef
 from openmdao.main.datatypes.slot import Slot
-
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.index import process_index_entry, get_indexed_value, INDEX, ATTR, CALL, SLICE
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
-from openmdao.main.expreval import INDEX,ATTR,CALL,SLICE
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -88,7 +88,7 @@ def build_container_hierarchy(dct):
         else:
             setattr(top, key, val)
     return top
-        
+
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -98,22 +98,19 @@ push_exception_handler(handler = lambda o, t, ov, nv: None,
                        main = True,
                        locked = True )
 
-# regex to check for valid names.  Added '.' as allowed because
-# npsscomponent uses it...
-_namecheck_rgx = re.compile(
-    '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
-            
 class _ContainerDepends(object):
     """An object that bookkeeps connections to/from Container variables."""
     def __init__(self):
         self._srcs = {}
         
-    def connect(self, srcpath, destpath):
+    def check_connect(self, srcpath, destpath):
         dpdot = destpath+'.'
         for dst,src in self._srcs.items():
             if destpath.startswith(dst+'.') or dst.startswith(dpdot) or dst==destpath:
                 raise RuntimeError("'%s' is already connected to source '%s'" %
                                    (dst, src))
+        
+    def connect(self, srcpath, destpath):
         self._srcs[destpath] = srcpath
         
     def disconnect(self, srcpath, destpath):
@@ -228,8 +225,7 @@ class Container(SafeHasTraits):
     @name.setter
     def name(self, name):
         """Sets the name of this Container."""
-        match = _namecheck_rgx.search(name)
-        if match is None or match.group() != name:
+        if not is_legal_name(name):
             raise NameError("name '%s' contains illegal characters" % name)
         self._name = name
         self._logger.rename(self._name)
@@ -251,49 +247,79 @@ class Container(SafeHasTraits):
         return '.'.join(path[::-1])
             
     @rbac(('owner', 'user'))
-    def connect(self, srcpath, destpath):
-        """Connects one source variable to one destination variable. 
-        When a pathname begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
+    def connect(self, srcexpr, destexpr):
+        """Connects one source expression to one destination expression. 
+        When a name begins with 'parent.', that indicates
+        it is referring to a variable outside of this object's scope.
         
-        srcpath: str
-            Pathname of source variable.
+        srcexpr: str or ExprEvaluator
+            Source expression object or expression string.
             
-        destpath: str
-            Pathname of destination variable.
+        destexpr: str or ExprEvaluator
+            Destination expression object or expression string.
         """
-        cname = None
+        child_connections = []  # for undo
+        if isinstance(srcexpr, basestring):
+            srcexpr = ConnectedExprEvaluator(srcexpr, self)
+        if isinstance(destexpr, basestring):
+            destexpr = ConnectedExprEvaluator(destexpr, self, is_dest=True)
+        
+        destpath = destexpr.text
+        srcpath = srcexpr.text
+        
+        # check for self connections
         if not destpath.startswith('parent.'):
-            if not self.contains(destpath):
-                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
-            parts = destpath.split('.')
-            for i in range(len(parts)):
-                dname = '.'.join(parts[:i+1])
-                sname = self._depgraph.get_source(dname)
-                if sname is not None:
-                    self.raise_exception(
-                        "'%s' is already connected to source '%s'" % 
-                        (dname, sname), RuntimeError)
-            cname2, _, restofpath = destpath.partition('.')
-            if cname == cname2 and cname is not None:
-                self.raise_exception("Can't connect '%s' to '%s'. Both variables are on the same component"%
-                                     (srcpath,destpath), RuntimeError)
-            if restofpath:
-                child = getattr(self, cname2)
-                if is_instance(child, Container):
-                    child.connect('parent.'+srcpath, restofpath)
-                    
-        if not srcpath.startswith('parent.'):
-            if not self.contains(srcpath):
-                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
-            cname, _, restofpath = srcpath.partition('.')
-            if restofpath:
-                child = getattr(self, cname)
-                if is_instance(child, Container):
-                    child.connect(restofpath, 'parent.'+destpath)
-                
-        self._depgraph.connect(srcpath, destpath)
+            cname2, _, destvar = destpath.partition('.')
+            if cname2 in srcexpr.get_referenced_compnames():
+                self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
+                                     (srcpath, destpath), RuntimeError)
+        try:
+            self._depgraph.check_connect(srcpath, destpath)
+        
+            if not destpath.startswith('parent.'):
+                if not self.contains(destpath.split('[',1)[0]):
+                    self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+                parts = destpath.split('.')
+                for i in range(len(parts)):
+                    dname = '.'.join(parts[:i+1])
+                    sname = self._depgraph.get_source(dname)
+                    if sname is not None:
+                        self.raise_exception(
+                            "'%s' is already connected to source '%s'" % 
+                            (dname, sname), RuntimeError)
+                        
+                if destvar:
+                    child = getattr(self, cname2)
+                    if is_instance(child, Container):
+                        childsrc = srcexpr.scope_transform(self, child, parent=self)
+                        child.connect(childsrc, destvar)
+                        child_connections.append((child, childsrc, destvar)) 
+                        
+            for srcvar in srcexpr.get_referenced_varpaths(copy=False):
+                if not srcvar.startswith('parent.'):
+                    if not self.contains(srcvar):
+                        self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
+                        
+            srccomps = srcexpr.get_referenced_compnames()
+            if srccomps:
+                cname = srccomps.pop()
+                if cname != 'parent':
+                    child = getattr(self, cname)
+                    if is_instance(child, Container):
+                        childdest = 'parent.'+destpath
+                        restofpath = srcexpr.scope_transform(self, child, parent=self)
+                        child.connect(restofpath, childdest)
+                        child_connections.append((child, restofpath, childdest)) 
 
+            self._depgraph.connect(srcpath, destpath)
+        except Exception as err:
+            try:
+                for child, childsrc, childdest in child_connections:
+                    child.disconnect(childsrc, childdest)
+            except:
+                pass
+            self.raise_exception("Can't connect '%s' to '%s': %s" % (srcpath, destpath, str(err)),
+                                 RuntimeError)
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -301,18 +327,30 @@ class Container(SafeHasTraits):
         destination variable.
         """
         cname = cname2 = None
-        if not srcpath.startswith('parent.'):
-            if not self.contains(srcpath):
-                self.raise_exception("Can't find '%s'" % srcpath, AttributeError)
-            cname, _, restofpath = srcpath.partition('.')
-            if restofpath:
-                getattr(self, cname).disconnect(restofpath, 'parent.'+destpath)
+        destvar = destpath.split('[',1)[0]
+        srcexpr = ExprEvaluator(srcpath, self)
+        if not srcexpr.refs_parent():
+            srcvar = srcexpr.get_referenced_varpaths().pop()
+            if not self.contains(srcvar):
+                self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
+            srccomps = srcexpr.get_referenced_compnames()
+            if srccomps:
+                cname = srccomps.pop()
+                if cname != 'parent':
+                    child = getattr(self, cname)
+                    if is_instance(child, Container):
+                        childdest = 'parent.'+destpath
+                        restofpath = srcexpr.scope_transform(self, child, parent=self)
+                        child.disconnect(restofpath, childdest)
         if not destpath.startswith('parent.'):
-            if not self.contains(destpath):
-                self.raise_exception("Can't find '%s'" % destpath, AttributeError)
+            if not self.contains(destvar):
+                self.raise_exception("Can't find '%s'" % destvar, AttributeError)
             cname2, _, restofpath = destpath.partition('.')
             if restofpath:
-                getattr(self, cname2).disconnect('parent.'+srcpath, restofpath)
+                child = getattr(self, cname2)
+                if is_instance(child, Container):
+                    childsrc = srcexpr.scope_transform(self, child, parent=self)
+                    child.disconnect(childsrc, restofpath)
         
         if cname == cname2 and cname is not None:
             self.raise_exception("Can't disconnect '%s' from '%s'. "
@@ -330,7 +368,7 @@ class Container(SafeHasTraits):
     def get_trait ( self, name, copy = False ):
         """Returns the trait indicated by name, or None if not found.  No recursive
         search is performed if name contains dots.  This is a replacement
-        for the trait() method on HasTraits objects, because that method
+        for the trait() method on HasTraits objects because that method
         can return traits that shouldn't exist. DO NOT use the trait() function
         as a way to determine the existence of a trait.
         """
@@ -432,7 +470,7 @@ class Container(SafeHasTraits):
 
     @classmethod
     def add_class_trait(cls, name, *trait):
-        """Overrides HasTraits definition of *add_class_trait* in order to
+        """Overrides HasTraits definition of *add_class_trait* to
         try to keep from clobbering framework stuff.
         """
         bases = [cls]
@@ -484,7 +522,7 @@ class Container(SafeHasTraits):
         super(Container, self).remove_trait(name)
             
     @rbac(('owner', 'user'))
-    def get_wrapped_attr(self, name):
+    def get_wrapped_attr(self, name, index=None):
         """If the variable can return an AttrWrapper, then this
         function will return that, with the value set to the current value of
         the variable. Otherwise, it functions like *getattr*, just
@@ -495,13 +533,10 @@ class Container(SafeHasTraits):
         """
         scopename, _, restofpath = name.partition('.')
         if restofpath:
-            if scopename == 'parent':
-                return self.parent.get_wrapped_attr(name[7:])
             obj = getattr(self, scopename)
             if is_instance(obj, Container):
-                return obj.get_wrapped_attr(restofpath)
-            else:
-                return getattr(obj, restofpath)
+                return obj.get_wrapped_attr(restofpath, index)
+            return get_indexed_value(obj, restofpath)
         
         trait = self.get_trait(name)
         if trait is None:
@@ -514,13 +549,23 @@ class Container(SafeHasTraits):
         # to the original trait which is held in the 'trait_type' attribute.
         ttype = trait.trait_type
         getwrapper = ttype.get_val_wrapper
-        val = getattr(self, name)
-        # copy value if 'copy' found in metadata
-        if ttype.copy:
-            val = _copydict[ttype.copy](val)
-        if getwrapper is not None:
-            return getwrapper(val)
         
+        # if we have an index, try to figure out if we can still use the trait
+        # metadata or not.  For example, if we have an Array that has units, it's
+        # also valid to return the units metadata if we're indexing into the Array,
+        # assuming that all entries in the Array have the same units.
+        
+        val = getattr(self, name)
+        if index is None:
+            # copy value if 'copy' found in metadata
+            if ttype.copy:
+                val = _copydict[ttype.copy](val)
+                
+        if getwrapper is not None:
+            return getwrapper(val, index)
+        
+        if index is not None:
+            val = get_indexed_value(self, name, index)
         return val
         
     def add(self, name, obj):
@@ -807,19 +852,14 @@ class Container(SafeHasTraits):
                 obj = getattr(obj, name)
         except AttributeError as err:
             self.raise_exception(str(err), AttributeError)
-        if index is None:
-            return obj
-        else:
-            for idx in index:
-                obj = self._process_index_entry(obj, idx)
-            return obj
+        return get_indexed_value(obj, '', index)
         
     @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
         """Return the object specified by the given path, which may 
         contain '.' characters.  *index*, if not None,
-        should be either a list of non-tuple hashable objects, at most one 
-        for each array dimension of the target value, or a list of tuples of 
+        should be either a list of non-tuple hashable objects (at most one 
+        for each array dimension of the target value) or a list of tuples of 
         the form (operation_id, stuff).
               
         The forms of the various tuples are:
@@ -854,12 +894,7 @@ class Container(SafeHasTraits):
             obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
-            if index is None:
-                return obj
-            else:
-                for idx in index:
-                    obj = self._process_index_entry(obj, idx)
-                return obj
+            return get_indexed_value(obj, '', index)
      
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
@@ -901,7 +936,7 @@ class Container(SafeHasTraits):
             ATTR:    (1, name) 
                 where name is the attribute name
             CALL:    (2, args, kwargs) 
-                where args is a list of values and kwargs is a list of 
+                where args is a list of values, and kwargs is a list of 
                 tuples of the form (keyword,value).
                 kwargs can be left out if empty.  args can be left out 
                 if empty as long as kwargs are also empty, for example, 
@@ -920,7 +955,8 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
-                src = 'parent.'+src
+                #src = 'parent.'+src
+                src = ExprEvaluator(src,scope=self).scope_transform(self, obj, parent=self)
             obj.set(restofpath, value, index, src=src, force=force)
         else:
             try:
@@ -928,7 +964,7 @@ class Container(SafeHasTraits):
             except Exception:
                 return self._set_failed(path, value, index, src, force)
                 
-            if iotype == 'in': # setting an input, so have to check source
+            if iotype == 'in' or src is not None: # setting an input or a boundary output, so have to check source
                 if not force:
                     self._check_source(path, src)
                 if index is None:
@@ -960,70 +996,18 @@ class Container(SafeHasTraits):
             else:
                 setattr(self, path, value)
 
-    def _process_index_entry(self, obj, idx):
-        """Return a new object based on a starting object and some operation
-        indicated by idx that can be either an index into a container, an 
-        attribute access, or a fuction call.  idx can be non-tuple hashable
-        object, which will be interpreted as an index to a container, or it can
-        be a tuple of the form (operation_id, stuff)
-            
-            where operation_id is as follows (the named constants are defined in expreval.py):
-              INDEX = 0
-              ATTR = 1
-              CALL = 2
-              SLICE = 3
-              
-        On the off chance that you want to use a tuple as a key into a dict, you'll have to
-        nest your key tuple inside of an INDEX tuple to avoid ambiguity, e.g., (INDEX, my_tuple)
-              
-        The forms of the various tuples are:
-              
-              INDEX:   (0, idx)  where idx is some hashable value
-              ATTR:    (1, name) where name is the attribute name
-              CALL:    (2, args, kwargs) where args is a list of values and kwargs
-                                         is a list of tuples of the form (keyword,value).
-                                         kwargs can be left out if empty.  args
-                                         can be left out if empty as long as kwargs
-                                         are also empty, for example, (2,) and 
-                                         (2,[],[('foo',1)]) are valid
-                                         but (2,[('foo',1)]) is not.
-              SLICE:   (3, lower, upper, step) All members must be present and should
-                                               have a value of None if not set.
-        """
-        if not isinstance(idx, tuple):
-            return obj[idx]
-        if idx[0] == INDEX:
-            return obj[idx[1]]
-        elif idx[0] == ATTR:
-            return getattr(obj, idx[1])
-        elif idx[0] == CALL:
-            if len(idx) == 1:
-                return obj.__call__()
-            else:
-                args = idx[1]
-                if len(idx) == 3:
-                    kwargs = dict(idx[2])
-                else:
-                    kwargs = {}
-                return obj.__call__(*args, **kwargs)
-        elif idx[0] == SLICE:
-            return obj.__getitem__(slice(idx[1],idx[2],idx[3]))
-        
-        self.raise_exception("invalid index: %s" % idx, ValueError)
         
     def _index_set(self, name, value, index):
-        obj = getattr(self, name)
-        for idx in index[:-1]:
-            obj = self._process_index_entry(obj, idx)
+        obj = get_indexed_value(self, name, index[:-1])
         idx = index[-1]
-        old = self._process_index_entry(obj, idx)
+        old = process_index_entry(obj, idx)
         if isinstance(idx, tuple):
             if idx[0] == INDEX:
                 obj[idx[1]] = value
             elif idx[0] == ATTR:
                 setattr(obj, idx[1], value)
             elif idx[0] == SLICE:
-                obj.__setitem__(slice(idx[1],idx[2],idx[3]), value)
+                obj.__setitem__(slice(idx[1][0],idx[1][1],idx[1][2]), value)
         else:
             obj[idx] = value
                 
@@ -1031,9 +1015,13 @@ class Container(SafeHasTraits):
         # _input_trait_modified, so do it manually
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
-        if old != value:
+        eq = (old == value)
+        if not isinstance(eq, bool): # FIXME: probably a numpy sub-array. assume value has changed for now...
+            eq = False
+        if not eq:
             self._call_execute = True
-            self._input_updated(name)
+            if name in self._valid_dict:
+                self._input_updated(name)
             
     def _input_check(self, name, old):
         """This raises an exception if the specified input is attached
@@ -1071,10 +1059,10 @@ class Container(SafeHasTraits):
         should be specified relative to this container.
 
         name: string
-            Name for egg, must be an alphanumeric string.
+            Name for egg; must be an alphanumeric string.
 
         version: string
-            Version for egg,  must be an alphanumeric string.
+            Version for egg; must be an alphanumeric string.
 
         py_dir: string
             The (root) directory for local Python files. It defaults to
@@ -1241,6 +1229,7 @@ class Container(SafeHasTraits):
         Returns the root object.
         """
         top = eggloader.load(instream, fmt, package, logger)
+        top.cpath_updated()
         if name:
             top.name = name
         if call_post_load:
@@ -1466,8 +1455,8 @@ def get_default_name(obj, scope):
         
 
 def deep_hasattr(obj, pathname):
-    """Returns True if the attrbute indicated by the give pathname
-    exists, False otherwise.
+    """Returns True if the attrbute indicated by the given pathname
+    exists; False otherwise.
     """
     try:
         parts = pathname.split('.')
@@ -1476,6 +1465,14 @@ def deep_hasattr(obj, pathname):
     except Exception:
         return False
     return hasattr(obj, parts[-1])
+
+def deep_getattr(obj, pathname):
+    """Returns the attrbute indicated by the given pathname or raises
+    and exception if it doesn't exist.
+    """
+    for name in pathname.split('.'):
+        obj = getattr(obj, name)
+    return obj
 
 
 def find_trait_and_value(obj, pathname):

@@ -4,7 +4,10 @@ import ordereddict
 
 from enthought.traits.api import Dict
 
-from openmdao.main.api import Interface, ExprEvaluator, Assembly, Slot
+from openmdao.main.interfaces import Interface
+from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.assembly import Assembly
+from openmdao.main.datatypes.slot import Slot
 from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IArchitecture, implements, IHasConstraints,IHasParameters,IHasCouplingVars,IHasObjectives
 
@@ -51,10 +54,10 @@ class Couple(object):
         
 
 class HasCouplingVars(object):
-    """This class provides an implementation of the IHasCouplingVar interface 
+    """This class provides an implementation of the IHasCouplingVar interface. 
     
     parent: Assembly
-        assembly object that this object belongs to
+        Assembly object that this object belongs to.
     """
     
     def __init__(self,parent):
@@ -62,20 +65,20 @@ class HasCouplingVars(object):
         self._couples = ordereddict.OrderedDict()    
         
     def add_coupling_var(self,indep_dep,name=None,start=None):
-        """adds a new coupling var to the assembly
+        """Adds a new coupling var to the assembly.
         
         indep_dep: 2-tuple (str,str)
             2-tuple of (indep,dep) where indep is the name of the 
             independent variable, or the variable that should be 
-            varied, to meet the coupling constraint and dep is the
+            varied, to meet the coupling constraint, and dep is the
             name of the dependent variable, or the variable that 
             needs to be consistent with the independent    
             
         name: str (optional)
-            short name used to idenfity the coupling variable
+            Short name used to idenfity the coupling variable.
             
         start: float (optional)    
-            initial value to set to the independent part of the coupling constraint
+            Initial value to set to the independent part of the coupling constraint.
         """
         
         
@@ -83,19 +86,19 @@ class HasCouplingVars(object):
                 
         expr_indep = CouplingVar(indep,self._parent)
         if not expr_indep.check_resolve() or not expr_indep.is_valid_assignee():
-                self._parent.raise_exception("Cant add coupling variable with indep '%s' "
-                                             "because is not a valid variable"%indep,
+                self._parent.raise_exception("Can't add coupling variable with indep '%s' "
+                                             "because is not a valid variable."%indep,
                                              ValueError)
                 
         expr_dep = CouplingVar(dep,self._parent)
         if not expr_indep.check_resolve() or not expr_indep.is_valid_assignee():
-                self._parent.raise_exception("Cant add coupling variable with dep '%s' "
-                                             "because is not a valid variable"%dep,
+                self._parent.raise_exception("Can't add coupling variable with dep '%s' "
+                                             "because is not a valid variable."%dep,
                                              ValueError)        
         if self._couples:          
             if indep in [c[0] for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
-                                             "exists in assembly"%indep,ValueError)    
+                                             "exists in assembly."%indep,ValueError)    
             
             #It should be allowed for dependents to repeat    
             #if dep in [c[1] for c in self._couples]:
@@ -114,15 +117,15 @@ class HasCouplingVars(object):
         return c
             
     def remove_coupling_var(self,indep_dep):
-        """removes the coupling var, indep/dep pair from the assembly. 
+        """Removes the coupling var, indep/dep pair from the assembly. 
         
         indep_dep: tuple of str 
-            two tuple of (<indep>,<dep>) to be removed
+            Two tuple of (<indep>,<dep>) to be removed.
         
         """
         if indep_dep not in self._couples:
             self._parent.raise_exception("No coupling variable of ('%s','%s') exists "
-                                         "in assembly"%indep_dep,ValueError)
+                                         "in assembly."%indep_dep,ValueError)
         else: 
             c = self._couples[indep_dep]
             del self._couples[indep_dep]
@@ -131,11 +134,11 @@ class HasCouplingVars(object):
             
         
     def get_coupling_vars(self): 
-        """returns an OrderDict of CouplingVar instances keyes to the names of (indep,dep) in the assembly"""
+        """Returns an OrderDict of CouplingVar instances keys to the names of (indep,dep) in the assembly."""
         return self._couples
     
     def clear_coupling_vars(self): 
-        """removes all coupling variables from the assembly"""
+        """Removes all coupling variables from the assembly."""
         self._couples = [] 
         
     def init_coupling_vars(self): 
@@ -149,7 +152,7 @@ class ArchitectureAssembly(Assembly):
     implements(IHasConstraints,IHasParameters,IHasCouplingVars,IHasObjectives)
     
     architecture = Slot(IArchitecture,
-                        desc="Slot for automatic architecture configurations")
+                        desc="Slot for automatic architecture configurations.")
     
     def get_expr_scope(self):
         """Return the scope to be used to evaluate ExprEvaluators."""
@@ -168,12 +171,12 @@ class ArchitectureAssembly(Assembly):
                                  "architecture.", RuntimeError)
     
     def initialize(self): 
-        """Sets all des_vars and coupling_vars to the start values, if specified""" 
+        """Sets all des_vars and coupling_vars to the start values, if specified.""" 
         self.init_parameters()
         self.init_coupling_vars()
     
     def check_config(self):
-        """checks the configuration of the assembly to make sure it's compatible 
+        """Checks the configuration of the assembly to make sure it's compatible 
         with the architecture. Then initializes all the values in the 
         parameters and coupling vars and configures the architecture if it hasn't
         been done already.
@@ -201,7 +204,7 @@ class ArchitectureAssembly(Assembly):
                 
     def get_local_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 
-        all single target parameters."""
+        all single-target parameters."""
         comps = {}
         for k,v in self.get_parameters().items():
             if isinstance(v, Parameter): 
@@ -218,13 +221,13 @@ class ArchitectureAssembly(Assembly):
         return comps
         
     def get_local_des_vars(self):
-        """Return a list of single target Parameters."""
+        """Return a list of single-target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, Parameter)]
     
     def get_global_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters for 
-        all multi target parameters."""
+        all multi-target parameters."""
         result = {}
         for k,v in self.get_parameters().items():
             if isinstance(v, ParameterGroup): 
@@ -238,14 +241,14 @@ class ArchitectureAssembly(Assembly):
         return result    
     
     def get_global_des_vars(self): 
-        """Return a list of multi target Parameters."""
+        """Return a list of multi-target Parameters."""
         return [(k,v) for k,v in self.get_parameters().items() 
                                         if isinstance(v, ParameterGroup)]
     
     
     def get_des_vars_by_comp(self): 
         """Return a dictionary of component names/list of parameters 
-        (global and local)""" 
+        (global and local).""" 
         
         result = self.get_local_des_vars_by_comp()
         for k,v in self.get_global_des_vars_by_comp().iteritems(): 
@@ -258,7 +261,7 @@ class ArchitectureAssembly(Assembly):
     
     def get_coupling_indeps_by_comp(self): 
         """Returns a dictionary of coupling var independent  
-        parameter objects, keyed to the component they are part of""" 
+        parameter objects, keyed to the component they are part of.""" 
         
         result = {}
         for indep_dep,couple in self.get_coupling_vars().iteritems(): 
@@ -272,7 +275,7 @@ class ArchitectureAssembly(Assembly):
                 
     def get_coupling_deps_by_comp(self): 
         """Returns a dictionary of coupling var dependent 
-        keyed to the component they are part of""" 
+        keyed to the component they are part of.""" 
         
         result = {}
         for indep_dep,couple in self.get_coupling_vars().iteritems(): 
@@ -300,15 +303,15 @@ class ArchitectureAssembly(Assembly):
     
 class OptProblem(ArchitectureAssembly): 
     """Class for specifying test problems for optimization 
-    algorithms and architectures"""
+    algorithms and architectures."""
     
     solution = Dict({},iotype="in",desc="dictionary of expected values for "
                      "all des_vars and coupling_vars")
 
     
     def check_solution(self,strict=False): 
-        """return dictionary errors (actual-expected) of all des_vars, coupling_vars,
-        and objectives
+        """Return dictionary errors (actual-expected) of all des_vars, coupling_vars,
+        and objectives.
 
         strict: Boolean (optional)
             If True, then an error will be raised for any des_var, coupling_var, or 

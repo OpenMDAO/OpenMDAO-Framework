@@ -25,9 +25,9 @@ and Design of Experiments (DOE) to construct different kinds of optimization pro
 Understanding this section is important if you want to implement a new MDAO architecture 
 or an existing one that is not currently available within OpenMDAO.
 
-Once you understand how to construct an MDAO architecture by hand, you may realize that it can
-take a good amount of work to set one up. So we'll show you how to set up your problem so you can
-automatically apply the MDAO architectures. Using the automatic implementation of an architecture
+Once you understand how to construct an MDAO architecture by hand, you'll see that it can
+take a good amount of work to set up.  That's why we'll show you how to set up your problem so you can
+automatically apply a number of different MDAO architectures. Using the automatic implementation of an architecture
 will dramatically simplify your input files.
 
 .. index:: Sellar

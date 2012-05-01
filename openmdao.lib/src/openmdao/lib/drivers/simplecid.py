@@ -15,8 +15,7 @@ class SimpleCaseIterDriver(Driver):
     with similar functionality, see :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `recorders` socket is used to record results. This is inherited from
-                      the :class:`Driver` class.
+    - The `recorders` socket is used to record results. This is inherited from the :class:`Driver` class.
     
     For each case coming from the `iterator`, the workflow will
     be executed once.

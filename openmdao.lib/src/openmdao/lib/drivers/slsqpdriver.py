@@ -2,7 +2,7 @@
 slsqpdriver.py - Contains a driver that wraps the SLSQP
 optimizer as used in pyOpt:
 
-Minimize a function using Sequential Least SQuares Programming
+Minimize a function using Sequential Least SQuares Programming.
 
 SLSQP is a gradient optimizer that can handle both equality and
 inequality constraints.
@@ -21,7 +21,6 @@ except ImportError as err:
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.main.api import Case, ExprEvaluator
 from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasparameters import HasParameters
@@ -36,13 +35,13 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 @add_delegate(HasParameters, HasConstraints, HasObjective)
 class SLSQPdriver(DriverUsesDerivatives):
     """Minimize a function using the Sequential Least SQuares Programming
-    (SLSQP) method,
+    (SLSQP) method.
 
     SLSQP is a gradient optimizer that can handle both equality and
     inequality constraints.
     
-    Note: constraints should be added using the OpenMDAO convention
-    (positive = violated)
+    Note: Constraints should be added using the OpenMDAO convention
+    (positive = violated).
     """
     
     implements(IHasParameters, IHasConstraints, IHasObjective)
@@ -52,23 +51,20 @@ class SLSQPdriver(DriverUsesDerivatives):
                      desc = 'Convergence accuracy')
 
     maxiter = Int(50, iotype='in', 
-                   desc = 'Maximum number of iterations')
+                   desc = 'Maximum number of iterations.')
 
     iprint = Enum(0, [0, 1, 2, 3], iotype='in',
-                  desc = 'controls the frequency of output: 0 (no output),1,2,3')
+                  desc = 'Controls the frequency of output: 0 (no output),1,2,3.')
     
     iout = Int(6, iotype='in',
-                  desc = 'FORTRAN output unit. Leave this at 6 for STDOUT')
+                  desc = 'Fortran output unit. Leave  this at 6 for STDOUT.')
     
     output_filename = Str('slsqp.out', iotype='in',
-                          desc = 'Name of output file (if iout not 6)')
+                          desc = 'Name of output file (if iout not 6).')
     
     error_code = Int(0, iotype='out',
-                  desc = 'Error code returned from SLSQP')
+                  desc = 'Error code returned from SLSQP.')
     
-    # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to '
-                               'output in the recorder.')
     
     def __init__(self, *args, **kwargs):
         
@@ -184,7 +180,7 @@ class SLSQPdriver(DriverUsesDerivatives):
         f = self.eval_objective()
 
         if isnan(f):
-            msg = "Numerical overflow in the objective"
+            msg = "Numerical overflow in the objective."
             self.raise_exception(msg, RuntimeError)
             
         # Constraints
@@ -204,29 +200,8 @@ class SLSQPdriver(DriverUsesDerivatives):
             pyflush(self.iout)
             
         # Write out some relevant information to the recorder
-        if self.recorders:
-            
-            case_input = []
-            for var, val in zip(self.get_parameters().keys(), xnew):
-                case_name = var[0] if isinstance(var, tuple) else var
-                case_input.append([case_name, val])
-            if self.printvars:
-                case_output = [(name,
-                                ExprEvaluator(name, scope=self.parent).evaluate())
-                                       for name in self.printvars]
-            else:
-                case_output = []
-            case_output.append(["objective", f])
-        
-            for i, val in enumerate(g):
-                case_output.append(["Constraint%d" % i, val])
-            
-            case = Case(case_input, case_output, parent_uuid=self._case_id)
-            
-            for recorder in self.recorders:
-                recorder.record(case)
+        self.record_case()
 
-            
         return f, g
     
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):

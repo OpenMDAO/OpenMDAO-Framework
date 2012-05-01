@@ -1,5 +1,5 @@
 """
-    sensitivity.py -- Driver to calculate the gradient of a workflow, and return
+    sensitivity.py -- Driver to calculate the gradient of a workflow and return
     it as a driver output. 
     
     SensitivityDriver includes a differentiator slot where the differentiation
@@ -25,7 +25,7 @@ from openmdao.main.interfaces import IHasParameters, IHasObjectives, IHasConstra
 
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
 class SensitivityDriver(DriverUsesDerivatives):
-    """Driver to calculate the gradient of a workflow, and return
+    """Driver to calculate the gradient of a workflow and return
     it as a driver output. The gradient is calculated from all
     inputs (Parameters) to all outputs (Objectives and Constraints).
     
@@ -36,23 +36,23 @@ class SensitivityDriver(DriverUsesDerivatives):
     implements(IHasParameters, IHasObjectives, IHasConstraints)
     
     dF = Array(zeros((0, 0),'d'), iotype='out', desc='Sensitivity of the '
-               'objectives withrespect to the parameters. Index 1 is the '
-               'objective output, while index 2 is the parameter input')
+               'objectives with respect to the parameters. Index 1 is the '
+               'objective output, while index 2 is the parameter input.')
     dG = Array(zeros((0, 0),'d'), iotype='out', desc='Sensitivity of the '
-               'constraints withrespect to the parameters. Index 1 is the '
-               'constraint output, while index 2 is the parameter input')
+               'constraints with respect to the parameters. Index 1 is the '
+               'constraint output, while index 2 is the parameter input.')
     
     F = Array(zeros((0, 0),'d'), iotype='out', desc='Values of the objectives '
                'which sensitivities are taken around.')
     G = Array(zeros((0, 0),'d'), iotype='out', desc='Values of the constraints '
                'which sensitivities are taken around.')
     
-    dF_names = List([], iotype='out', desc='Objective names that'
-                     'correspond to our array indices')
-    dG_names = List([], iotype='out', desc='Constraint names that'
-                     'correspond to our array indices')
-    dx_names = List([], iotype='out', desc='Parameter names that'
-                     'correspond to our array indices')
+    dF_names = List([], iotype='out', desc='Objective names that '
+                     'correspond to our array indices.')
+    dG_names = List([], iotype='out', desc='Constraint names that '
+                     'correspond to our array indices.')
+    dx_names = List([], iotype='out', desc='Parameter names that '
+                     'correspond to our array indices.')
     
     F = Array(zeros(0,'d'), iotype='out', desc='Objective baseline values '
                         'where sensitivity is evaluated.')
@@ -106,10 +106,12 @@ class SensitivityDriver(DriverUsesDerivatives):
         # Sensitivity is sometimes run sequentially using different submodels,
         # so we need to return the state to the baseline value.
         self.differentiator.reset_state()
+        
+        self.record_case()
                                 
         
     def _check(self):
-        """Make sure we aren't missing inputs or outputs"""
+        """Make sure we aren't missing inputs or outputs."""
         
         if len(self.get_parameters().values()) < 1:
             msg = "Missing inputs for gradient calculation"

@@ -1,18 +1,11 @@
-## utility functions used by openmdao gui
+"""  utility functions used by openmdao gui
+"""
 
-import os, os.path
+import sys, os, os.path
 import webbrowser
 from xml.dom.minidom import Document
+import json
 
-def singleton(cls):
-    ''' a decorator to make a class a singleton
-    '''
-    instances = {}
-    def getinstance():
-        if cls not in instances:
-            instances[cls] = cls()
-        return instances[cls]
-    return getinstance
 
 def ensure_dir(d):
     ''' create directory if it doesn't exist
@@ -33,11 +26,17 @@ def print_dict (dict):
         key, value = item
         print str(key)+' = '+str(value)
 
-def makenode(doc,path):
-    ''' modified version of:
-        http://code.activestate.com/recipes/305313-xml-directory-tree/        
+def print_json(data):
+    ''' pretty print json data
     '''
-    "Return a document node contains a directory tree for the path."
+    print json.dumps(json.loads(str(data)),indent=2)        
+
+def makenode(doc,path):
+    ''' Return a document node contains a directory tree for the path.
+    
+        modified version of:
+        http://code.activestate.com/recipes/305313-xml-directory-tree/
+    '''
     node = doc.createElement('dir')
     node.setAttribute('name', path)
     for f in os.listdir(path):
@@ -90,58 +89,71 @@ def packagedict(types):
 from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom.minidom import Document
 def packageXML(types):
-        xml = '<?xml version=\"1.0\"?>\n'
-        xml = xml + '<response>\n'
-        typeTree = Element("Types")
-        # get the installed types
-        for t in types:
-            path = t[0].split('.');
-            last = path[len(path)-1]
-            parent = typeTree
-            for node in path:
-                if not node==last:
-                    # it's a package name, see if we have it already
-                    existingElem = None
-                    packages = parent.findall('Package')
-                    for p in packages:
-                        if p.get("name") == node:
-                            existingElem = p
-                    # set the parent to this package
-                    if existingElem is None:
-                        pkgElem = SubElement(parent,"Package")
-                        pkgElem.set("name",node)
-                        parent = pkgElem
-                    else:
-                        parent = existingElem
+    ''' create an XML representation of a package structure
+    '''
+    xml = '<?xml version=\"1.0\"?>\n'
+    xml = xml + '<response>\n'
+    typeTree = Element("Types")
+    # get the installed types
+    for t in types:
+        path = t[0].split('.');
+        last = path[len(path)-1]
+        parent = typeTree
+        for node in path:
+            if not node==last:
+                # it's a package name, see if we have it already
+                existingElem = None
+                packages = parent.findall('Package')
+                for p in packages:
+                    if p.get("name") == node:
+                        existingElem = p
+                # set the parent to this package
+                if existingElem is None:
+                    pkgElem = SubElement(parent,"Package")
+                    pkgElem.set("name",node)
+                    parent = pkgElem
                 else:
-                    # it's the class name, add it under current package
-                    typeElem = SubElement(parent,"Type")
-                    typeElem.set("name",node)
-                    typeElem.set("path",t[0])
-        # get the "working" types
-        pkgElem = SubElement(typeTree,"Package")
-        pkgElem.set("name","working")
-        xml = xml + tostring(typeTree)
-        xml = xml + '</response>\n'
-        return xml    
+                    parent = existingElem
+            else:
+                # it's the class name, add it under current package
+                typeElem = SubElement(parent,"Type")
+                typeElem.set("name",node)
+                typeElem.set("path",t[0])
+    # get the "working" types
+    pkgElem = SubElement(typeTree,"Package")
+    pkgElem.set("name","working")
+    xml = xml + tostring(typeTree)
+    xml = xml + '</response>\n'
+    return xml    
 
-#
-# launch web browser on specified port
-# (chrome will launch in "app mode" on Windows 7)
-#
 def launch_browser(port,preferred_browser=None):
-    ''' try to use preferred browser if specified, fall back to default 
+    ''' launch web browser on specified port
+        try to use preferred browser if specified, fall back to default 
+        (chrome will launch in "app mode")
     '''
     url = 'http://localhost:'+str(port)    
     print 'Opening URL in browser: '+url+' (pid='+str(os.getpid())+')'
     
-    # webbrowser doesn't know about chrome, so try to find it (this is for win7)
+    # webbrowser doesn't know about chrome, so try to find it
     if preferred_browser and preferred_browser.lower() == 'chrome':
-        USERPROFILE = os.getenv("USERPROFILE")
-        if USERPROFILE:
-            CHROMEPATH = USERPROFILE+'\AppData\Local\Google\Chrome\Application\chrome.exe'
+    	if sys.platform == 'win32':
+    	    # Windows7
+            USERPROFILE = os.getenv("USERPROFILE")
+            if USERPROFILE:
+                CHROMEPATH = USERPROFILE+'\AppData\Local\Google\Chrome\Application\chrome.exe'
+       	        if os.path.isfile(CHROMEPATH):
+                    preferred_browser = CHROMEPATH.replace('\\','\\\\')+' --app=%s'
+        elif sys.platform == 'darwin':
+            # Mac OSX
+            CHROMEPATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
        	    if os.path.isfile(CHROMEPATH):
-                preferred_browser = CHROMEPATH.replace('\\','\\\\')+' --app=%s'
+       	        CHROMEPATH = CHROMEPATH.replace('Google Chrome','Google\ Chrome')
+                preferred_browser = 'open -a '+CHROMEPATH+' %s'
+        elif sys.platform == 'linux2':
+            # Linux
+            CHROMEPATH = '/usr/bin/chromium-browser'
+       	    if os.path.isfile(CHROMEPATH):
+                preferred_browser = CHROMEPATH+' --app=%s &'
     
     # try to get preferred browser, fall back to default
     if preferred_browser:
@@ -160,14 +172,3 @@ def launch_browser(port,preferred_browser=None):
     else:
         print "Couldn't launch browser: "+str(browser)
 
-# 
-# end current process (TODO: make this work?)
-#
-def end_process():
-    if (os.name == 'nt'):
-        import win32api, win32con
-        handle = win32api.OpenProcess( win32con.PROCESS_TERMINATE, 0, pid )
-        win32api.TerminateProcess( handle, 0 )
-        win32api.CloseHandle( handle )
-    else:
-        os.kill(os.getpid(), 9)

@@ -20,8 +20,7 @@ except ImportError as err:
     
 from cobyla.cobyla import cobyla, closeunit
 
-from openmdao.main.api import Case, ExprEvaluator
-from openmdao.main.datatypes.api import Enum, Float, Int, Str, List
+from openmdao.main.datatypes.api import Enum, Float, Int, Str
 from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
@@ -35,7 +34,7 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class COBYLAdriver(Driver):
     """Minimize a function using the Constrained Optimization BY Linear
-    Approximation (COBYLA) method
+    Approximation (COBYLA) method.
 
     COBYLA is gradient-free and can handle inequality constraints.
     
@@ -47,29 +46,26 @@ class COBYLAdriver(Driver):
     
     # pylint: disable-msg=E1101
     rhobeg = Float(1.0, iotype='in', 
-                   desc = 'reasonable initial changes to the variables')
+                   desc = 'Reasonable initial changes to the variables.')
 
     rhoend = Float(1e-4, iotype='in', 
-                   desc = 'final accuracy in the optimization (not precisely guaranteed)')
+                   desc = 'Final accuracy in the optimization (not precisely guaranteed).')
 
     iprint = Enum(1, [0, 1, 2, 3], iotype='in',
-                  desc = 'controls the frequency of output: 0 (no output),1,2,3')
+                  desc = 'Controls the frequency of output: 0 (no output),1,2,3')
     
     maxfun = Int(1000, iotype='in',
-                  desc = 'maximum number of function evaluations')
+                  desc = 'Maximum number of function evaluations.')
     
     iout = Int(6, iotype='in',
-                  desc = 'FORTRAN output unit. Leave this at 6 for STDOUT')
+                  desc = 'Fortran output unit. Leave this at 6 for STDOUT')
     
     output_filename = Str('cobyla.out', iotype='in',
-                          desc = 'Name of output file (if iout not 6)')
+                          desc = 'Name of output file (if iout not 6).')
     
     error_code = Int(0, iotype='out',
-                  desc = 'Error code returned from COBYLA')
+                  desc = 'Error code returned from COBYLA.')
     
-    # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to '
-                               'output in the recorder.')
 
     def __init__(self, *args, **kwargs):
         
@@ -168,27 +164,7 @@ class COBYLAdriver(Driver):
         g = array(con_list)
         
         # Write out some relevant information to the recorder
-        if self.recorders:
-            
-            case_input = []
-            for var, val in zip(self.get_parameters().keys(), xnew):
-                case_name = var[0] if isinstance(var, tuple) else var
-                case_input.append([case_name, val])
-            if self.printvars:
-                case_output = [(name,
-                                ExprEvaluator(name, scope=self.parent).evaluate())
-                                       for name in self.printvars]
-            else:
-                case_output = []
-            case_output.append(["objective", f])
-        
-            for i, val in enumerate(g):
-                case_output.append(["Constraint%d" % i, val])
-            
-            case = Case(case_input, case_output, parent_uuid=self._case_id)
-            
-            for recorder in self.recorders:
-                recorder.record(case)
+        self.record_case()
             
         return f, g
         

@@ -19,14 +19,14 @@ from openmdao.main.hasparameters import HasParameters
 
 @add_delegate(HasParameters)
 class DOEdriver(CaseIterDriverBase):
-    """ Driver for Design of Experiments """
+    """ Driver for Design of Experiments. """
     
     # pylint: disable-msg=E1101
     DOEgenerator = Slot(IDOEgenerator, iotype='in', required=True,
                         desc='Iterator supplying normalized DOE values.')
 
     record_doe = Bool(True, iotype='in',
-                      desc='Record normalized DOE values to CSV file')
+                      desc='Record normalized DOE values to CSV file.')
 
     doe_filename = Str('', iotype='in',
                        desc='Name of CSV file to record to'
@@ -39,7 +39,7 @@ class DOEdriver(CaseIterDriverBase):
                        desc='Selects cases to be run.')
 
     def execute(self):
-        """Generate and Evaluate cases."""
+        """Generate and evaluate cases."""
         self._csv_file = None
         try:
             super(DOEdriver, self).execute()
@@ -86,7 +86,7 @@ class DOEdriver(CaseIterDriverBase):
 @add_delegate(HasParameters)            
 class NeighborhoodDOEdriver(CaseIterDriverBase):
     """Driver for Design of Experiments within a specified neighborhood
-    around a point"""
+    around a point."""
     
     # pylint: disable-msg=E1101
     DOEgenerator = Slot(IDOEgenerator, iotype='in', required=True,
@@ -96,10 +96,10 @@ class NeighborhoodDOEdriver(CaseIterDriverBase):
                            desc='A list of outputs to be saved with each case.')
     
     alpha = Float(.3, low=.01, high =1.0, iotype='in',
-                  desc='Multiplicative factor for neighborhood DOE Driver')
+                  desc='Multiplicative factor for neighborhood DOE Driver.')
     
     beta = Float(.01, low=.001, high=1.0, iotype='in',
-                 desc='Another factor for neighborhood DOE Driver')
+                 desc='Another factor for neighborhood DOE Driver.')
 
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
@@ -135,7 +135,8 @@ class NeighborhoodDOEdriver(CaseIterDriverBase):
             case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
             # now add events
             for varname in self.get_events(): 
-                case.add_input(varname, True)
-            case.add_outputs(self.case_outputs)              
-            yield case            
 
+                case.add_input(varname, True)
+            case.add_outputs(self.case_outputs)
+            
+            yield case            
