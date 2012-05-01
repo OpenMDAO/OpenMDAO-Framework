@@ -12,7 +12,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
-debug = True
+debug = False
 def DEBUG(msg):
     if debug:
         print '<<<'+str(os.getpid())+'>>> ZMQStreamServer --',msg

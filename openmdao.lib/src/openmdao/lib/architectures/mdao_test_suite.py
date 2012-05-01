@@ -18,18 +18,18 @@ from openmdao.util.dep import PythonSourceTreeAnalyser
 
 
 def build_arch_list(include=[], exclude=[]):
-    """builds a list of architectures
+    """Builds a list of architectures.
     
     include: list of architecture names
-        the names of the architectures to test. Only architectures in this list 
-        will be tested. Each name should just be the class name (e.g. 'MDF', 'CO'). 
+        The names of the architectures to test. Only architectures in this list 
+        will be tested. Each name should be just the class name (e.g. 'MDF', 'CO'). 
         Must be set to None, if excludes is specified
     
     exclude: list of architecture names
-        the names of the architectures not to test. All architectures from
+        The names of the architectures not to test. All architectures from
         openmdao.lib.architectures will be tested, except for the ones in this 
-        list. Each name should just be the class name (e.g. 'MDF', 'CO'). 
-        Must be set to None, if includes is specified 
+        list. Each name should be just the class name (e.g., 'MDF', 'CO'). 
+        Must be set to None, if includes is specified. 
     """
     
     if include and exclude: 
@@ -56,13 +56,13 @@ def build_optproblem_list(include=[], exclude=[]):
     """builds a list of optproblems
     
     include: (optional) list of optproblems names
-        the names of the optproblems to test. Only optproblems in this list 
-        will be tested. Each name should just be the class name (e.g. 'SellarProblem'). 
+        The names of the optproblems to test. Only optproblems in this list 
+        will be tested. Each name should be just the class name (e.g., 'SellarProblem'). 
         Must be set to None, if excludes is specified. If not specified, 
         all OptProblems, except those in exclude are used. 
     
     exclude: (optional) list of optproblems names
-        the names of the optproblems not to test. All optproblems from
+        The names of the optproblems not to test. All optproblems from
         openmdao.lib.optproblems will be tested, except for the ones in this 
         list. Each name should just be the class name (e.g. 'SellarProblem'). 
         Must be set to None, if includes is specified. 
@@ -89,13 +89,13 @@ def build_optproblem_list(include=[], exclude=[]):
     return probs
 
 def run_arch_test_suite(arch=[], optproblems=[]): 
-    """Runs the architectures against optproblems and records the results
+    """Runs the architectures against optproblems and records the results.
     
     arch: list of Architectures 
-        the architectures to test
+        The architectures to test.
         
     optproblems: list of OptProblems 
-        The OptProblems to test the Architectures on. 
+        The OptProblems to use for testing the Architectures. 
     """
     
     compat_data = {}
@@ -151,7 +151,7 @@ def run_arch_test_suite(arch=[], optproblems=[]):
 
 def cli_arch_test_suite(parser=None, options=None, args=None): 
     """Runs all the architectures against all the test problems. 
-    A console script runs this function
+    A console script runs this function.
     """ 
     if not parser: #then you're not getting called from cli
         return 

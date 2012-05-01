@@ -53,7 +53,7 @@ def assert_raises(test_case, code, globals, locals, exception, msg,
 def assert_rel_error(test_case, actual, desired, tolerance):
     """
     Determine that the relative error between `actual` and `desired`
-    is within `tolerance`. If `desired` is zero then use absolute error.
+    is within `tolerance`. If `desired` is zero, then use absolute error.
 
     test_case: :class:`unittest.TestCase`
         TestCase instance used for assertions.
@@ -95,14 +95,14 @@ def assert_rel_error(test_case, actual, desired, tolerance):
 
 
 def find_python():
-    """ Return path to the OpenMDAO python command"""
+    """ Return path to the OpenMDAO Python command."""
     return sys.executable
 
 
 def make_protected_dir():
     """
     Returns the the absolute path of an inaccessible directory.
-    Files cannot be created in it, it can't be :meth:`os.chdir` to, etc.
+    Files cannot be created in it; it can't be :meth:`os.chdir` to, etc.
     Not supported on Windows.
     """
     directory = '__protected__'

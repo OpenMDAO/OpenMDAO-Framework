@@ -123,18 +123,17 @@ if sys.platform.startswith( "linux" ):
                 [ "chromium-browser", "google-chrome", "chrome" ] )
             return browser_name, browser_exe_filepath
             
-    # class FirefoxJsUnitTestCase(BrowserJsUnitTestCase):
-    #     """test GUI JavaScript using Firefox,
-    #        when OpenMDAO GUI supports it again"""
+    class FirefoxJsUnitTestCase(BrowserJsUnitTestCase):
+        """test GUI JavaScript using Firefox"""
     
-    #     config_filename = config_file.name
+        config_filename = config_file.name
     
-    #     def get_browser_info( self ):
-    #         '''Return the name and possible exes for firefox'''
+        def get_browser_info( self ):
+            '''Return the name and possible exes for firefox'''
     
-    #         browser_name = "firefox"
-    #         browser_exe_filepath = self.get_browser_exe_filepath( [ "firefox" ] )
-    #         return browser_name, browser_exe_filepath
+            browser_name = "firefox"
+            browser_exe_filepath = self.get_browser_exe_filepath( [ "firefox" ] )
+            return browser_name, browser_exe_filepath
             
     
     # If the following is not done, then nose will try to run
@@ -143,6 +142,6 @@ if sys.platform.startswith( "linux" ):
     # This fixes that. Same thing for BrowserJsUnitTestCase
     JsTestDriverTestCase.__test__ = False
     ChromeJsUnitTestCase.__test__ = True
-    #FirefoxJsUnitTestCase.__test__ = True
+    FirefoxJsUnitTestCase.__test__ = False
     BrowserJsUnitTestCase.__test__ = False
   

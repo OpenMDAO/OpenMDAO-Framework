@@ -378,7 +378,7 @@ class Component (Container):
         This method approximates the output using a Taylor series expansion
         about the saved baseline point.
         
-        This function is overridden by ComponentWithDerivatives
+        This function is overridden by ComponentWithDerivatives.
         
         ffd_order: int
             Order of the derivatives to be used (1 or 2).
@@ -439,15 +439,15 @@ class Component (Container):
 
         force: bool
             If True, force component to execute even if inputs have not
-            changed. (Default is False)
+            changed. (Default is False.)
             
         ffd_order: int
             Order of the derivatives to be used during Fake
             Finite Difference (typically 1 or 2). During regular execution,
-            ffd_order should be 0. (Default is 0)
+            ffd_order should be 0. (Default is 0.)
             
         case_id: str
-            Identifier for the Case that is associated with this run. (Default is '')
+            Identifier for the Case that is associated with this run. (Default is ''.)
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
@@ -751,8 +751,8 @@ class Component (Container):
     @rbac(('owner', 'user'))
     def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression. 
-        When a name begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
+        When a name begins with 'parent.', that indicates 
+        it is referring to a variable outside of this object's scope.
         
         srcexpr: str or ExprEvaluator
             Source expression object or expression string.
@@ -799,7 +799,7 @@ class Component (Container):
     
     @rbac(('owner', 'user'))
     def get_expr_depends(self):
-        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        """Return a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
         """
         conn_list = []
@@ -1410,7 +1410,7 @@ class Component (Container):
         for out in outs:
             valids[out] = False
             
-        return None  # None indicates that all of our outputs are invalid
+        return None  # None indicates that all of our outputs are invalid.
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

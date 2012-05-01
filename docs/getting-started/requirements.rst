@@ -55,7 +55,7 @@ use it, you must have compilers (C and Fortran) on your system.
 
 - `Python 2.6.x or 2.7.x <http://www.python.org/download/releases//>`_
 
-- `numpy <http://sourceforge.net/projects/numpy/files/>`_ 
+- `NumPy <http://sourceforge.net/projects/numpy/files/>`_ 
 
 - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
 
@@ -86,7 +86,7 @@ use it, you must have compilers (C and Fortran) on your system.
    will cause some of the OpenMDAO tests to fail. It's not clear exactly what release the fix first
    appeared in, but version `Python 2.6.5 <http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg>`_ definitely has the
    fix.
- - `numpy <http://sourceforge.net/projects/numpy/files/>`_ 
+ - `NumPy <http://sourceforge.net/projects/numpy/files/>`_ 
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
  - `gfortran <http://r.research.att.com/gfortran-42-5646.pkg>`_ -- This version goes with Xcode. 
  - `Matplotlib <http://sourceforge.net/projects/matplotlib/files/matplotlib/matplotlib-1.0/>`_
@@ -95,7 +95,7 @@ use it, you must have compilers (C and Fortran) on your system.
 - On **Leopard:**
 
  - `Python (2.6.x or 2.7.x)`__ 
- - `numpy <http://sourceforge.net/projects/numpy/files/>`_
+ - `NumPy <http://sourceforge.net/projects/numpy/files/>`_
  - `SciPy <http://sourceforge.net/projects/scipy/files/>`_
  - `gfortran`__  - Click on ``fortran-macosx-leopard-x86.dmg`` under
    **Miscellaneous Downloads.**
@@ -110,3 +110,27 @@ use it, you must have compilers (C and Fortran) on your system.
 .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
 
 .. __: http://openmdao.org/downloads
+
+- On **Lion (OS X 10.7):**
+
+ - Python 2.7.x (OS X Lion has 2.7.1 as its native version) - Install this `version of NumPy <http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1-py2.7-python.org-macosx10.6.dmg/download>`_
+ 
+ - Install this `version of SciPy <http://sourceforge.net/projects/scipy/files/scipy/0.10.1/scipy-0.10.1-py2.7-python.org-macosx10.6.dmg/download>`_
+ 
+ - Make sure that Xcode version 4.3.2 or higher is installed, via the Mac App Store. When you install Xcode, it does not by default install the compilers you
+   need.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
+
+   .. figure:: OSX_Lion_Screenshot.png
+      :align: center
+      :alt: Screenshot of XCode's Downloads screen showing options
+   
+      XCode's *Downloads* Screen
+   
+ - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_
+ 
+ - `gcc 4.2 <http://web.mit.edu/mfloyd/www/computing/mac/gfortran/>`_
+
+
+
+
+

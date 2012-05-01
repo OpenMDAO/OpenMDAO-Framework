@@ -23,7 +23,7 @@ role is allowed access. The current role is determined by an
 :class:`AccessController` based on a :class:`Credentials` object received from
 the proxy.
 
-Assuming the credentials check passes, the server will set it's credentials
+Assuming the credentials check passes, the server will set its credentials
 to those specified by the :class:`AccessController` during the execution of the
 method.
 """
@@ -87,7 +87,7 @@ def is_instance(obj, typ):
     typ: class
         Class to be tested against.
 
-    Returns True if `obj` is an instance of `typ`, or the object `obj` refers
+    Returns True if `obj` is an instance of `typ` or the object `obj` refers
     to is an instance of `typ`.
     """
     if isinstance(obj, OpenMDAO_Proxy):
