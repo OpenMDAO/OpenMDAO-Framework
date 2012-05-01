@@ -305,19 +305,14 @@ class WorkspacePage(BasePageObject):
             self.browser.find_elements_by_class_name('DataflowComponentFigureHeader')
         names = []
 
-#        for header in dataflow_component_headers:
-#            try:
-#                names.append(header.text)
-#            except StaleElementReferenceException:
-#                # Not sure why this would happen, but it has sometimes...
-#                logging.critical('get_dataflow_component_names: StaleElementReferenceException')
-#
-# Workaround from SeleniumQA (not entirely successful):
         for i in range(len(dataflow_component_headers)):
-            try:
-                names.append(self.browser.find_elements_by_class_name('DataflowComponentFigureHeader')[i].text)
-            except StaleElementReferenceException:
-                logging.critical('get_dataflow_component_names: StaleElementReferenceException')
+            for retry in range(10):  # This has had issues...
+                try:
+                    names.append(self.browser.find_elements_by_class_name('DataflowComponentFigureHeader')[i].text)
+                except StaleElementReferenceException:
+                    logging.critical('get_dataflow_component_names: StaleElementReferenceException')
+                else:
+                    break
 
         if len(names) != len(dataflow_component_headers):
             logging.critical('get_dataflow_component_names:'
