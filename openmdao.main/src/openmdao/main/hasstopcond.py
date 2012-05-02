@@ -51,3 +51,10 @@ class HasStopConditions(object):
             if cond.evaluate() and cond.refs_valid():
                 return True
         return False
+
+    def mimic(self, target):
+        """Copy stop conditions from the target."""
+        self.clear_stop_conditions()
+        for exp in target.get_stop_conditions():
+            self.add_stop_condition(exp)
+        

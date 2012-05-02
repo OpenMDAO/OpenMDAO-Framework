@@ -121,8 +121,22 @@ class HasObjectives(object):
             except AttributeError:
                 pass
         return scope
-
-
+    
+    def mimic(self, target):
+        """Copy what objectives we can from the target."""
+        if len(target._objectives) > self._max_objectives:
+            self._parent.raise_exception("This driver allows a maximum of %d objectives, but the driver being replaced has %d" %
+                                         (self._max_objectives, len(target._objectives)),
+                                         RuntimeError)
+        old_obj = self._objectives
+        self.clear_objectives()
+        try:
+            for name,obj in target._objectives.items():
+                self.add_objective(obj.text, name=name, scope=obj.scope)
+        except Exception:
+            self._objectives = old_obj
+            raise
+        
 class HasObjective(HasObjectives):
     def __init__(self, parent):
         super(HasObjective, self).__init__(parent, max_objectives=1)

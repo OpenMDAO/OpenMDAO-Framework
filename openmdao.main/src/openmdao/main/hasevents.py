@@ -52,3 +52,9 @@ class HasEvents(object):
         scope = self._parent.parent
         for event in self._events:
             scope.set(event, True)
+
+    def mimic(self, target):
+        """Mimic the target HasEvents by copying its event list."""
+        self.clear_events()
+        self._events = target.get_events()[:]
+        

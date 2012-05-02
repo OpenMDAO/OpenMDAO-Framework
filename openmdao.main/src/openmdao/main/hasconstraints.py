@@ -173,13 +173,16 @@ class _HasConstraintsBase(object):
         """Tries to mimic the target object's constraints.  Target constraints that
         are incompatible with this object are ignored.
         """
-        self.clear_constraints()
-        for name, cnst in target.copy_constraints().items():
-            try:
+        old_cnst = self._constraints
+        self._constraints = ordereddict.OrderedDict()
+
+        try:
+            for name, cnst in target.copy_constraints().items():
                 self.add_existing_constraint(cnst, name)
-            except Exception:
-                pass
-    
+        except Exception:
+            self._constraints = old_cnst
+            raise
+
 class HasEqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports equality
     constraints but does not support inequality constraints.
@@ -261,8 +264,8 @@ class HasEqConstraints(_HasConstraintsBase):
         if cnst.comparator == '=':
             self._constraints[name] = cnst
         else:
-            self._parent.raise_exception("Inequality constraints are not supported on this driver", 
-                                         ValueError)
+            self._parent.raise_exception("Inequality constraint '%s' is not supported on this driver" %
+                                         str(cnst), ValueError)
 
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
@@ -356,8 +359,8 @@ class HasIneqConstraints(_HasConstraintsBase):
         if cnst.comparator != '=':
             self._constraints[name] = cnst
         else:
-            self._parent.raise_exception("Equality constraints are not supported on this driver", 
-                                         ValueError)
+            self._parent.raise_exception("Equality constraint '%s' is not supported on this driver" % 
+                                         str(cnst), ValueError)
 
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""
@@ -534,7 +537,7 @@ class HasConstraints(object):
 
     def mimic(self, target):
         """Tries to mimic the target object's constraints.  Target constraints that
-        are incompatible with this object are ignored.
+        are incompatible with raise an exception.
         """
         self.clear_constraints()
         for name, cnst in target.copy_constraints().items():

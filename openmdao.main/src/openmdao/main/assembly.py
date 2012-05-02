@@ -388,8 +388,10 @@ class Assembly (Component):
         of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
+        if has_interface(newobj, IComponent): # remove any existing connections to replacement object
+            self.disconnect(newobj.name)
         if hasattr(newobj, 'mimic'):
-            newobj.mimic(tobj) # this should copy inputs and set name
+            newobj.mimic(tobj) # this should copy inputs, delegates and set name
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
         target_rgx = re.compile(r'(\W?)%s.' % target_name)
@@ -406,7 +408,7 @@ class Assembly (Component):
         # add new object (if it's a Component) to any workflows where target was
         if has_interface(newobj, IComponent):
             for wflow,idx in wflows:
-                wflow.add(newname, idx)
+                wflow.add(target_name, idx)
     
     def remove(self, name):
         """Remove the named container object from this assembly and remove

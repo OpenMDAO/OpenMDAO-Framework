@@ -806,7 +806,7 @@ class Component (Container):
         as similar to target as possible without adding or removing any
         methods or attributes.
         """
-        if isinstance(target, Component):
+        if isinstance(target, Container):
             self.name = target.name
             
         # update any delegates that we share with the target
