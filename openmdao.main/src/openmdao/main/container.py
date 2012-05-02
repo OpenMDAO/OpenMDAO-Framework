@@ -57,6 +57,7 @@ _copydict = {
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
+_missing = object()
 
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
@@ -1000,7 +1001,10 @@ class Container(SafeHasTraits):
     def _index_set(self, name, value, index):
         obj = get_indexed_value(self, name, index[:-1])
         idx = index[-1]
-        old = process_index_entry(obj, idx)
+        try:
+            old = process_index_entry(obj, idx)
+        except KeyError:
+            old = _missing
         if isinstance(idx, tuple):
             if idx[0] == INDEX:
                 obj[idx[1]] = value
