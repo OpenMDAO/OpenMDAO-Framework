@@ -8,44 +8,21 @@ import zipfile
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
 
-# if watchdog is available, then use that to monitor file system for changes
-# otherwise just fall back to triggering updates when certain functions are
-# called
-
-try:
-    from watchdog.observers import Observer
-    from watchdog.events import FileSystemEventHandler
-    use_watchdog = True
-
-    class FilesPublisher(FileSystemEventHandler):
-        """ publishes file collection when ANY file system event occurs
-        """
-
-        def __init__(self, files):
-            self.files = files
-
-        def dispatch(self, event):
-            """ just publish the updated file collection
-            """
-            print "watchdog publishing files", event
-            self.files.publish_files()
-
-except ImportError, err:
-    use_watchdog = False
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 
-def modifies_files(target):
-    ''' decorator for methods that change something in the file collection
-        publishes the updated file collection information
+class FilesPublisher(FileSystemEventHandler):
+    ''' publishes file collection when ANY file system event occurs
     '''
 
-    def wrapper(self, *args, **kwargs):
-        result = target(self, *args, **kwargs)
-        if self.publish_updates and not use_watchdog:
-            print "wrapper publishing files"
-            self.publish_files()
-        return result
-    return wrapper
+    def __init__(self, files):
+        self.files = files
+
+    def dispatch(self, event):
+        ''' just publish the updated file collection
+        '''
+        self.files.publish_files()
 
 
 class FileManager(object):
@@ -65,12 +42,11 @@ class FileManager(object):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
-        print 'root_dir=', self.root_dir
 
         self.publish_updates = publish_updates
         self.publisher = None
 
-        if self.publish_updates and use_watchdog:
+        if self.publish_updates:
             self.observer = Observer()
             self.observer.schedule(FilesPublisher(self),
                                    path=self.root_dir,
@@ -125,7 +101,6 @@ class FileManager(object):
         else:
             return None
 
-    @modifies_files
     def ensure_dir(self, dirname):
         ''' create directory in working directory
             (does nothing if directory already exists)
@@ -134,7 +109,6 @@ class FileManager(object):
         if not os.path.isdir(dirpath):
             os.makedirs(dirpath)
 
-    @modifies_files
     def write_file(self, filename, contents):
         ''' write contents to file in working directory
         '''
@@ -147,7 +121,6 @@ class FileManager(object):
         except Exception, err:
             return err
 
-    @modifies_files
     def add_file(self, filename, contents):
         ''' add file to working directory
             if it's a zip file, unzip it
@@ -173,7 +146,6 @@ class FileManager(object):
             zfile.close()
             os.remove(filename)
 
-    @modifies_files
     def delete_file(self, filename):
         ''' delete file in working directory
             returns False if file was not found, otherwise returns True

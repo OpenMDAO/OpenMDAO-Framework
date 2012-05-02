@@ -40,19 +40,6 @@ def modifies_model(target):
     return wrapper
 
 
-def modifies_files(target):
-    ''' decorator for methods that might modify files
-        publishes the updated file collection
-        TODO: remove this if/when filemanager implements file watchdog
-    '''
-
-    def wrapper(self, *args, **kwargs):
-        result = target(self, *args, **kwargs)
-        self.files.publish_files()
-        return result
-    return wrapper
-
-
 class ConsoleServer(cmd.Cmd):
     ''' Object which knows how to load a model and provides a command line
         interface and various methods to access and modify that model.
@@ -124,7 +111,6 @@ class ConsoleServer(cmd.Cmd):
         pass
 
     @modifies_model
-    @modifies_files
     def default(self, line):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
@@ -149,7 +135,6 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
 
     @modifies_model
-    @modifies_files
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
@@ -165,7 +150,6 @@ class ConsoleServer(cmd.Cmd):
         else:
             print "Execution failed: No 'top' assembly was found."
 
-    @modifies_files
     def execfile(self, filename):
         ''' execfile in server's globals.
         '''
@@ -607,7 +591,6 @@ class ConsoleServer(cmd.Cmd):
         return packagedict(self.known_types)
 
     @modifies_model
-    @modifies_files
     def load_project(self, filename):
         print 'loading project from:', filename
         self.projfile = filename
