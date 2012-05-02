@@ -60,13 +60,17 @@ class ZMQServer(object):
         ''' create a parser for command line arguments
         '''
         parser = OptionParser()
-        parser.add_option("-c", "--class",   dest='classpath',
+        parser.add_option("-c", "--class",
+                          dest='classpath',
                           help="module path to class of top level component")
-        parser.add_option("-r", "--rep_url", dest="rep_url",
+        parser.add_option("-r", "--rep_url",
+                          dest="rep_url",
                           help="the address of the RPC proxy")
-        parser.add_option("-p", "--pub_url", dest="pub_url",
+        parser.add_option("-p", "--pub_url",
+                          dest="pub_url",
                           help="the address or the publisher")
-        parser.add_option("-o", "--out_url", dest="out_url",
+        parser.add_option("-o", "--out_url",
+                          dest="out_url",
                           help="the address of the output stream")
         return parser
 

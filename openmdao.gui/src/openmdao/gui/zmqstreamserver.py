@@ -105,7 +105,7 @@ class ZMQStreamApp(web.Application):
 
 
 class ZMQStreamServer(object):
-    ''' runs an http server hat serves a ZMQStream over a WebSocket
+    ''' runs an http server that serves a ZMQStream over a WebSocket
     '''
 
     def __init__(self, options):
@@ -128,11 +128,14 @@ class ZMQStreamServer(object):
         ''' create a parser for command line arguments
         '''
         parser = OptionParser()
-        parser.add_option("-z", "--zmqstream", dest="addr", default=0,
+        parser.add_option("-z", "--zmqstream",
+                          dest="addr", default=0,
                           help="the address of the zmqstream")
-        parser.add_option("-p", "--port", type="int", dest="port", default=0,
+        parser.add_option("-p", "--port",
+                          dest="port", type="int", default=0,
                           help="the port to run websocket server on")
-        parser.add_option("-u", "--url", dest="url",
+        parser.add_option("-u", "--url",
+                          dest="url",
                           help="the url to expose for the websocket")
         return parser
 
