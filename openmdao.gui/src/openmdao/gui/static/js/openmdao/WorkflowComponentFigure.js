@@ -1,9 +1,10 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
+openmdao.WorkflowComponentFigure=function(myModel,pathname,type, valid) {
     this.myModel = myModel;
     this.pathname = pathname;
     this.type = type;
+    this.valid = valid;
     this.cornerWidth=15;
     this.cornerHeight=15;
     this.outputPort=null;
@@ -34,6 +35,14 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type){
     this.setCanDrag(false);
     this.setResizeable(false);
     
+    // set color based on valid status
+    if (this.valid) {
+        this.setColor(new draw2d.Color(0,255,0));
+    }
+    else {
+        this.setColor(new draw2d.Color(255,0,0));
+    }
+        
     // change color based on execution status
     topic = pathname+'.exec_state'
     myModel.addListener(topic, this.setExecState.bind(this));    
