@@ -24,7 +24,7 @@ from zope.interface import implementedBy
 
 import networkx as nx
 
-from openmdao.gui.util import packagedict
+from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 
 

@@ -1,6 +1,5 @@
-import os, sys
+import os
 from time import strftime
-import datetime
 from urllib2 import HTTPError
 
 # tornado
@@ -112,7 +111,6 @@ class DetailHandler(ReqHandler):
                 out.close()
 
             project['filename'] = unique
-            print 'created file:', pname, unique
 
         if project_is_new:
             pdb.new(project)

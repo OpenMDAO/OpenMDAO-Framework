@@ -52,6 +52,8 @@ class FileManager(object):
                                    path=self.root_dir,
                                    recursive=True)
             self.observer.start()
+        else:
+            self.observer = None
 
     def publish_files(self):
         ''' publish the current file collection
