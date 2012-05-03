@@ -102,6 +102,8 @@ class _InputElement(_BaseElement):
     def value(self, new_value):
         element = self.element
         WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_displayed())
+        WebDriverWait(self._browser, TMO).until(
             lambda browser: element.is_enabled())
         if element.get_attribute('value'):
             element.clear()

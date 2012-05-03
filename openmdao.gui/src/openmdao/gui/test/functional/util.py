@@ -2,19 +2,22 @@
 Utilities for GUI functional testing.
 """
 
+import getpass
 import inspect
 import logging
+import os.path
+import shutil
+import signal
 import socket
+import subprocess
 import sys
 import time
 
 from distutils.spawn import find_executable
-from multiprocessing import Process
 from nose.tools import eq_ as eq
 from pyvirtualdisplay import Display
 from selenium import webdriver
 
-from openmdao.gui.omg import AppServer, run
 from openmdao.util.network import get_unused_ip_port
 
 from pageobjects.project import ProjectsListPage
@@ -53,8 +56,8 @@ def setup_firefox():
     return driver
 
 _browsers_to_test = dict(
-    #Chrome=setup_chrome,
-    Firefox=setup_firefox,
+    Chrome=setup_chrome,
+    #Firefox=setup_firefox,
 )
 
 
@@ -62,10 +65,24 @@ def setup_server(virtual_display=True):
     """ Start server on ``localhost`` using an unused port. """
     port = get_unused_ip_port()
     TEST_CONFIG['port'] = port
-    server = Process(target=_run)
+    server_dir = 'gui-server'
+    if os.path.exists(server_dir):
+        shutil.rmtree(server_dir)
+    os.mkdir(server_dir)
+    TEST_CONFIG['server_dir'] = server_dir
+    orig = os.getcwd()
+    os.chdir(server_dir)
+    stdout = open('stdout', 'w')
+    TEST_CONFIG['stdout'] = stdout
+    try:
+        server = subprocess.Popen(('python', '-m', 'openmdao.gui.omg',
+                                   '--server', '--port', str(port)),
+                                   stdout=stdout, stderr=subprocess.STDOUT)
+    finally:
+        os.chdir(orig)
     TEST_CONFIG['server'] = server
-    server.start()
 
+    # Wait for server port to open.
     for i in range(100):
         time.sleep(.1)
         try:
@@ -83,23 +100,26 @@ def setup_server(virtual_display=True):
     if virtual_display:
         global _display
 #        _display = Display(visible=0, size=(800, 600))
-        _display = Display(backend='xvfb')
-        _display.start()
+#        _display = Display(backend='xvfb')
+#        _display.start()
 
-def _run():
-    """ Starts GUI server. """
-    parser = AppServer.get_argument_parser()
-    options, args = parser.parse_known_args(('--server', '--port',
-                                             str(TEST_CONFIG['port'])))
-    run(options=options)
 
 def teardown_server():
     """ The function gets called once after all of the tests are called. """
     for browser in TEST_CONFIG['browsers']:
-        browser.close()
+        if isinstance(browser, webdriver.Chrome):
+            psfu = subprocess.check_output(('ps', '-fu', getpass.getuser()))
+            pid = os.getpid()
+            for line in psfu.splitlines(True):
+                if 'chromedriver' in line:
+                    fields = line.split()
+                    # UID PID PPID C STIME TTY TIME CMD
+                    if int(fields[2]) == pid:
+                        os.kill(int(fields[1]), signal.SIGTERM)
     if _display is not None:
         _display.stop()
     TEST_CONFIG['server'].terminate()
+    TEST_CONFIG['stdout'].close()
 
 
 def generate(modname):
@@ -114,17 +134,18 @@ def generate(modname):
     tests = [func for name, func in functions if name.startswith('_test_')]
     for name in sorted(_browsers_to_test.keys()):
         try:
-            browser = _browsers_to_test[name]()
+            browser = _browsers_to_test[name]()  # Open browser.
             browser.title
         except Exception as exc:
             logging.critical('Skipping %s, caught: %s', name, exc)
-        else:
+            continue
+        try:
             for _test in tests:
                 logging.critical('')
                 logging.critical('Running %s using %s', _test.__name__, name)
                 yield _test, browser
-        browser.close()
-        TEST_CONFIG['browsers'].remove(browser)
+        finally:
+            browser.close()
 
 
 def begin(browser):

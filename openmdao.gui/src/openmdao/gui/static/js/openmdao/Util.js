@@ -423,10 +423,10 @@ openmdao.Util = {
                     index = openmdao.sockets.indexOf(this);
                     if (index >= 0) {
                         openmdao.sockets.splice(index, 1);
-//                        if (typeof openmdao_test_mode != 'undefined') {
-//                            if (openmdao.sockets.length == 0)
-//                                openmdao.Util.notify('WebSockets closed');
-//                        }
+                        if (typeof openmdao_test_mode != 'undefined') {
+                            if (openmdao.sockets.length == 0)
+                                openmdao.Util.notify('WebSockets closed');
+                        }
                     }
                     else {
                         debug.info('websocket not found!');

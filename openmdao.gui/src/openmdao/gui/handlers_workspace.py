@@ -1,4 +1,5 @@
 import sys, os, traceback
+import logging
 import re
 import time
 import jsonpickle
@@ -74,8 +75,11 @@ class GeometryHandler(ReqHandler):
 class CloseHandler(ReqHandler):
     @web.authenticated
     def get(self):
+        logging.critical('CloseHandler.get()')
         self.delete_server()
+        logging.critical('server deleted')
         self.redirect('/')
+        logging.critical('redirected')
 
 class CommandHandler(ReqHandler):
     ''' get the command, send it to the cserver, return response

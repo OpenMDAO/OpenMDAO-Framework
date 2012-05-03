@@ -2,6 +2,7 @@ import os, os.path, sys, traceback
 import shutil
 import cmd
 import jsonpickle
+import logging
 import tempfile
 import zipfile
 
@@ -59,12 +60,10 @@ class ConsoleServer(cmd.Cmd):
         self.name = name or ('-cserver-%d' % self.pid)
         self.orig_dir = os.getcwd()
         self.root_dir = tempfile.mkdtemp(self.name)
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
-        os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
         
         print 'root_dir=',self.root_dir
+        logging.critical('root_dir=%s', self.root_dir)
         
         self.projfile = ''
         self.proj = None
@@ -87,6 +86,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         self.exc_info = exc_info
         print str(err.__class__.__name__), ":", err
+        logging.critical('%s:%s', err.__class__.__name__, err)
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -99,9 +99,11 @@ class ConsoleServer(cmd.Cmd):
             print "No trace available."
         
     def getcwd(self):
+        logging.critical('getcwd()')
         return os.getcwd()
 
     def chdir(self, dirname):
+        logging.critical('chdir(%s)', dirname)
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
         os.chdir(dirname)
@@ -117,6 +119,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def onecmd(self, line):
+        logging.critical('onecmd(%s)', line)
         self._hist += [ line.strip() ]
         # Override the onecmd() method so we can trap error returns
         try:
@@ -133,6 +136,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
         '''
+        logging.critical('default(%s)', line)
         isStatement = False
         try:
             code = compile(line, '<string>', 'eval')
@@ -156,20 +160,24 @@ class ConsoleServer(cmd.Cmd):
     def run(self, *args, **kwargs):
         ''' run the model (i.e. the top assembly)
         '''
+        logging.critical('run(%s, %s)', args, kwargs)
         if 'top' in self.proj.__dict__:
             print "Executing..."
             try:
                 top = self.proj.__dict__['top']
                 top.run(*args, **kwargs)
                 print "Execution complete."
+                logging.critical('Execution complete.')
             except Exception, err:
                 self._error(err,sys.exc_info())
         else:
             print "Execution failed: No 'top' assembly was found."
+            logging.critical("Execution failed: No 'top' assembly was found.")
 
     def execfile(self, filename):
         ''' execfile in server's globals. 
         '''
+        logging.critical('execfile(%s)', filename)
         try:
             # first import all definitions
             basename = os.path.splitext(filename)[0]
@@ -192,27 +200,32 @@ class ConsoleServer(cmd.Cmd):
     def get_pid(self):
         ''' Return this server's :attr:`pid`. 
         '''
+        logging.critical('getpid()')
         return self.pid
         
     def get_project(self):
         ''' Return the current model as a project archive.
         '''
+        logging.critical('get_project()')
         return self.proj
 
     def get_history(self):
         ''' Return this server's :attr:`_hist`. 
         '''
+        logging.critical('get_history()')
         return self._hist
 
     def get_JSON(self):
         ''' return current state as JSON 
         '''
+        logging.critical('get_JSON()')
         return jsonpickle.encode(self.proj.__dict__)
 
     def get_container(self,pathname):
         ''' get the container with the specified pathname
             returns the container and the name of the root object
         '''
+        logging.critical('get_container(%s)', pathname)
         cont = None
         root = pathname.split('.')[0]
         if self.proj and root in self.proj.__dict__:
@@ -255,12 +268,14 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' get hierarchical dictionary of openmdao objects 
         '''
+        logging.critical('get_components()')
         comps = self._get_components(self.proj.__dict__)
         return jsonpickle.encode(comps)
 
     def get_connections(self,pathname,src_name,dst_name):
         ''' get list of src outputs, dst inputs and connections between them
         '''
+        logging.critical('get_connections(%s, %s, %s)', pathname, src_name, dst_name)
         conns = {}
         asm, root = self.get_container(pathname)
         if asm:
@@ -313,6 +328,7 @@ class ConsoleServer(cmd.Cmd):
     def set_connections(self,pathname,src_name,dst_name,connections):
         ''' set connections between src and dst components in the given assembly
         '''
+        logging.critical('set_connections(%s, %s, %s, %s)', pathname, src_name, dst_name, connections)
         asm, root = self.get_container(pathname)
         if asm:
             try:
@@ -359,6 +375,7 @@ class ConsoleServer(cmd.Cmd):
             namespace if no pathname is specified, consisting of the list
             of components and the connections between them
         '''
+        logging.critical('get_structure(%s)', pathname)
         structure = {}
         if pathname and len(pathname) > 0:
             try:
@@ -404,6 +421,7 @@ class ConsoleServer(cmd.Cmd):
         return ret
 
     def get_workflow(self,pathname):
+        logging.critical('get_workflow(%s)', pathname)
         flow = {}
         drvr, root = self.get_container(pathname)
         # allow for request on the parent assembly
@@ -556,6 +574,7 @@ class ConsoleServer(cmd.Cmd):
         return attrs
         
     def get_attributes(self,pathname):
+        logging.critical('get_attributes(%s)', pathname)
         attr = {}
         comp, root = self.get_container(pathname)
         if comp:
@@ -567,11 +586,13 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(attr)
     
     def get_available_types(self):
+        logging.critical('get_available_types()')
         return packagedict(get_available_types())
         
     def get_workingtypes(self):
         ''' Return this server's user defined types. 
         '''
+        logging.critical('get_working_types()')
         g = self.proj.__dict__.items()
         for k,v in g:
             if not k in self.known_types and \
@@ -588,6 +609,7 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self,filename):
+        logging.critical('load_project(%s)', filename)
         print 'loading project from:',filename
         self.projfile = filename
         self.proj = project_from_archive(filename,dest_dir=self.getcwd())
@@ -597,6 +619,7 @@ class ConsoleServer(cmd.Cmd):
     def save_project(self):
         ''' save the cuurent project state & export it whence it came
         '''
+        logging.critical('save_project()')
         if self.proj:
             try:
                 self.proj.save()
@@ -617,6 +640,7 @@ class ConsoleServer(cmd.Cmd):
     def add_component(self,name,classname,parentname):
         ''' add a new component of the given type to the specified parent. 
         '''
+        logging.critical('add_component(%s, %s, %s)', name, classname, parentname)
         if (parentname and len(parentname)>0):
             parent, root = self.get_container(parentname)
             if parent:
@@ -636,6 +660,7 @@ class ConsoleServer(cmd.Cmd):
     def create(self,typname,name):
         ''' create a new object of the given type. 
         '''
+        logging.critical('create(%s, %s)', typname, name)
         try:
             if (typname.find('.') < 0):
                 self.default(name+'='+typname+'()')
@@ -649,6 +674,7 @@ class ConsoleServer(cmd.Cmd):
     def cleanup(self):
         ''' Cleanup this server's directory. 
         '''
+        logging.critical('cleanup()')
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:
@@ -659,6 +685,7 @@ class ConsoleServer(cmd.Cmd):
     def get_files(self):
         ''' get a nested dictionary of files in the working directory
         '''
+        logging.critical('get_files()')
         cwd = os.getcwd()
         return filedict(cwd,root=cwd)
 
@@ -666,6 +693,7 @@ class ConsoleServer(cmd.Cmd):
         ''' get contents of file in working directory
             returns None if file was not found
         '''
+        logging.critical('get_file(%s)', filename)
         filepath = os.getcwd()+'/'+str(filename)
         if os.path.exists(filepath):
             contents=open(filepath, 'rb').read()
@@ -677,6 +705,7 @@ class ConsoleServer(cmd.Cmd):
         ''' create directory in working directory
             (does nothing if directory already exists)
         '''
+        logging.critical('ensure_dir(%s)', dirname)
         dirpath = os.getcwd()+'/'+str(dirname)
         if not os.path.isdir(dirpath):
             os.makedirs(dirpath)
@@ -684,6 +713,7 @@ class ConsoleServer(cmd.Cmd):
     def write_file(self,filename,contents):
         ''' write contents to file in working directory
         '''
+        logging.critical('write_file(%s)', filename)
         try:
             filepath = os.getcwd()+'/'+str(filename)
             fout = open(filepath,'wb')
@@ -697,6 +727,7 @@ class ConsoleServer(cmd.Cmd):
         ''' add file to working directory
             if it's a zip file, unzip it
         '''
+        logging.critical('add_file(%s)', filename)
         self.write_file(filename, contents)
         if zipfile.is_zipfile(filename):
             userdir = os.getcwd()
@@ -722,6 +753,7 @@ class ConsoleServer(cmd.Cmd):
         ''' delete file in working directory
             returns False if file was not found, otherwise returns True
         '''
+        logging.critical('delete_file(%s)', filename)
         filepath = os.getcwd()+'/'+str(filename)
         if os.path.exists(filepath):
             if os.path.isdir(filepath):
@@ -733,12 +765,14 @@ class ConsoleServer(cmd.Cmd):
             return False
                         
     def install_addon(self,url,distribution):
+        logging.critical('install_addon(%s, %s)', url, distribution)
         print "Installing",distribution,"from",url
         easy_install.main( ["-U","-f",url,distribution] )
             
     def get_value(self,pathname):
         ''' get the value of the object with the given pathname
         '''
+        logging.critical('get_value(%s)', pathname)
         try:
             val, root = self.get_container(pathname)            
             return val

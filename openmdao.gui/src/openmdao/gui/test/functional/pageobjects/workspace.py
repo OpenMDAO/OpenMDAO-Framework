@@ -144,8 +144,8 @@ class WorkspacePage(BasePageObject):
 
     def close_workspace(self):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
-#        self.browser.execute_script('openmdao.Util.closeWebSockets();')
-#        NotifierPage.wait(self.browser, self.port)
+        self.browser.execute_script('openmdao.Util.closeWebSockets();')
+        NotifierPage.wait(self.browser, self.port)
         self('project_menu').click()
         self('close_button').click()
         time.sleep(1)  # Pacing.
@@ -283,8 +283,12 @@ class WorkspacePage(BasePageObject):
         xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: library_item.is_displayed())
+
         target = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath("//*[@id='-structure']"))
+
         chain = ActionChains(self.browser)
         if False:
             chain = chain.drag_and_drop(library_item, target)

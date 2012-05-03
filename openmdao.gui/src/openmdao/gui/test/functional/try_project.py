@@ -47,9 +47,9 @@ if __name__ == '__main__':
         nose.runmodule()
     else:
         # Run outside of nose.
-        from util import setup_firefox
+        from util import setup_chrome, setup_firefox
         setup_server(virtual_display=False)
-        browser = setup_firefox()
+        browser = setup_chrome()
         _test_new_project(browser)
         teardown_server()
 
