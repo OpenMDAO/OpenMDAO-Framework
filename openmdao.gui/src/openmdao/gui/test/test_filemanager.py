@@ -16,52 +16,57 @@ class FileManagerTestCase(unittest.TestCase):
         '''
         # constructor
         tempdir = tempfile.mkdtemp()
+	tempdir = os.path.realpath(tempdir)  # osx
         filemanager = FileManager('test', tempdir)
 
         # getcwd
-        self.assertEquals(tempdir, filemanager.getcwd())
+        self.assertEquals(filemanager.getcwd(), tempdir)
 
         # ensure_dir
-        filemanager.ensure_dir('subdirectory')
-        self.assertTrue(os.path.exists(os.path.join(tempdir, 'subdirectory')))
+        dname = 'subdirectory'
+        filemanager.ensure_dir(dname)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, dname)))
 
         # write_file
-        hello_filename = 'hello.py'
-        hello_contents = 'print "hello world!"'
-        filemanager.write_file(hello_filename, hello_contents)
-        self.assertTrue(os.path.exists(os.path.join(tempdir, hello_filename)))
+        fname = 'hello.py'
+        hello = 'print "hello world!"'
+        filemanager.write_file(fname, hello)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, fname)))
 
-        hello_filename = os.path.join('subdirectory', 'hello.py')
-        filemanager.write_file(hello_filename, hello_contents)
-        self.assertTrue(os.path.exists(os.path.join(tempdir, hello_filename)))
+        sname = os.path.join(dname, fname)
+        filemanager.write_file(sname, hello)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, sname)))
 
         # get_file
-        contents = filemanager.get_file(hello_filename)
-        self.assertEqual(contents, hello_contents)
+        contents = filemanager.get_file(sname)
+        self.assertEqual(contents, hello)
 
         # get_files
+        # note that os.sep will be prepended to all file names
         files = filemanager.get_files()
         self.assertEqual(len(files), 2)
-        self.assertTrue('/hello.py' in files)
-        self.assertTrue('/subdirectory' in files)
-        self.assertEqual(files['/hello.py'], len(hello_contents))
-        self.assertTrue(len(files['/subdirectory']), 1)
-        self.assertTrue('/subdirectory/hello.py' in files['/subdirectory'])
-        self.assertEqual(files['/subdirectory']['/subdirectory/hello.py'], len(hello_contents))
+        s_fname = os.sep + fname
+        s_dname = os.sep + dname
+        s_sname = os.sep + sname
+        self.assertTrue(s_fname in files)
+        self.assertTrue(s_dname in files)
+        self.assertEqual(files[s_fname], len(hello))
+        self.assertTrue(len(files[s_dname]), 1)
+        self.assertTrue(s_sname in files[s_dname])
+        self.assertEqual(files[s_dname][s_sname], len(hello))
 
         # delete_file
         try:
-            filemanager.delete_file('subdirectory')
+            filemanager.delete_file(dname)
         except OSError as (errno, errmsg):
-            # OSError: [Errno 39] Directory not empty
-            self.assertEqual(errno, 39)
-        self.assertTrue(os.path.exists(os.path.join(tempdir, 'subdirectory')))
+            self.assertTrue(errmsg.find('Directory not empty') >= 0)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, dname)))
 
-        filemanager.delete_file(hello_filename)
-        self.assertTrue(not os.path.exists(os.path.join(tempdir, hello_filename)))
+        filemanager.delete_file(sname)
+        self.assertTrue(not os.path.exists(os.path.join(tempdir, sname)))
 
-        filemanager.delete_file('subdirectory')
-        self.assertTrue(not os.path.exists(os.path.join(tempdir, 'subdirectory')))
+        filemanager.delete_file(dname)
+        self.assertTrue(not os.path.exists(os.path.join(tempdir, dname)))
 
         # cleanup
         filemanager.cleanup()
@@ -73,6 +78,7 @@ class FileManagerTestCase(unittest.TestCase):
         '''
         # create a zip file
         tempdir = tempfile.mkdtemp()
+	tempdir = os.path.realpath(tempdir)  # osx
         temptxt = os.path.join(tempdir,'temp.txt')
         with open(temptxt,'w') as f:
             f.write('this is just a test')
