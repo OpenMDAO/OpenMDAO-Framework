@@ -1,5 +1,6 @@
 import unittest
 import os.path
+import shutil
 import tempfile
 import zipfile
 
@@ -16,7 +17,7 @@ class FileManagerTestCase(unittest.TestCase):
         '''
         # constructor
         tempdir = tempfile.mkdtemp()
-	tempdir = os.path.realpath(tempdir)  # osx
+        tempdir = os.path.realpath(tempdir)  # osx
         filemanager = FileManager('test', tempdir)
 
         # getcwd
@@ -72,32 +73,35 @@ class FileManagerTestCase(unittest.TestCase):
         filemanager.cleanup()
         self.assertTrue(not os.path.exists(tempdir))
 
-
     def test_add_file(self):
         ''' exercise filemanager add_file function
         '''
         # create a zip file
         tempdir = tempfile.mkdtemp()
-	tempdir = os.path.realpath(tempdir)  # osx
-        temptxt = os.path.join(tempdir,'temp.txt')
-        with open(temptxt,'w') as f:
+        tempdir = os.path.realpath(tempdir)  # osx
+        temptxt = os.path.join(tempdir, 'temp.txt')
+        with open(temptxt, 'w') as f:
             f.write('this is just a test')
-        tempzip = os.path.join(tempdir,'temp.zip')
-        zf = zipfile.ZipFile(tempzip,mode='w')
+        tempzip = os.path.join(tempdir, 'temp.zip')
+        zf = zipfile.ZipFile(tempzip, mode='w')
         try:
             zf.write(temptxt, arcname='filename.txt')
         finally:
             zf.close()
-        with open(tempzip,'rb') as f:
+        with open(tempzip, 'rb') as f:
             contents = f.read()
+        shutil.rmtree(tempdir)
 
         # add_file
         filemanager = FileManager('test')
-        filemanager.add_file(os.path.basename(tempzip),contents)
+        filemanager.add_file('unzip me', contents)
         files = filemanager.get_files()
         self.assertEqual(len(files), 1)
         self.assertTrue('/filename.txt' in files)
         self.assertEqual(files['/filename.txt'], len('this is just a test'))
+
+        # cleanup
+        filemanager.cleanup()
 
     def tearDown(self):
         pass
