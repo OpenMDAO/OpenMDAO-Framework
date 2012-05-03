@@ -33,6 +33,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             {id:"units", name:"Units", field:"units", width:60},
             {id:"valid", name:"Valid", field:"valid", width:60},
             {id:"desc",  name:"Description", field:"desc", width:120},
+            {id:"connected",  name:"connected", field:"connected", width:0},
         ];
     }
     
@@ -40,10 +41,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     props = new Slick.Grid(propsDiv, [], columns, options)
     
     props.onBeforeEditCell.subscribe(function(row,cell){
-        if (row['key']==0){
         
-        return false;}
-        return;
+        if (props.getDataItem(cell.row).connected == true) {
+            return false;
+            }
+        else {
+            return true;
+            }
     })
     
     if (editable) {

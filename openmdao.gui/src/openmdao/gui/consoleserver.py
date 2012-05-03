@@ -439,6 +439,12 @@ class ConsoleServer(cmd.Cmd):
                                 attr[field] = meta[field]
                             else:
                                 attr[field] = ''
+                    #adding 'connected' attribute 
+                    connected_inputs=comp.parent._depgraph.get_connected_inputs()
+                    if vname in connected_inputs:
+                        attr['connected']=True
+                    else:
+                        attr['connected']=False
                 inputs.append(attr)
             attrs['Inputs'] = inputs
                 
