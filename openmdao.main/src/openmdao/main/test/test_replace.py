@@ -9,6 +9,7 @@ from openmdao.lib.datatypes.api import Float, Int, Array
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.util.decorators import add_delegate
 
 
@@ -38,7 +39,7 @@ class Eqdriver(Driver):
     pass
 
 @add_delegate(HasParameters, HasConstraints, HasObjective)
-class Constraintdriver(Driver):
+class EqInEqdriver(Driver):
     pass
 
 def _nested_model():
@@ -106,7 +107,7 @@ class ReplaceTestCase(unittest.TestCase):
         
     def test_replace_driver(self):
         top = set_as_top(Assembly())
-        top.add('driver', Constraintdriver())
+        top.add('driver', EqInEqdriver())
         top.add('comp1', Simple())
         top.add('comp2', Simple())
         top.driver.workflow.add(['comp1', 'comp2'])
@@ -114,8 +115,8 @@ class ReplaceTestCase(unittest.TestCase):
         top.driver.add_parameter('comp1.a', low=-100, high=100, 
                       scaler=1.2, adder=3, start=7,
                       fd_step=0.034, name='param1', scope=top)
-        top.driver.add_parameter('comp2.a', scope=top)
+        top.driver.add_parameter('comp2.a', low=-50, high=50, scope=top)
         top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
-        top.driver.add_constraint()
+        top.driver.add_constraint('comp1.d-comp1.c=.5')
         
         top.replace('driver', InEqdriver())

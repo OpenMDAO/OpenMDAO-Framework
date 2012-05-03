@@ -811,7 +811,15 @@ class Component (Container):
             
         # update any delegates that we share with the target
         if hasattr(target, '_delegates_') and hasattr(self, '_delegates_'):
-            for name, dclass in self._delegates_.items():
+            # should be safe assuming only one delegate of each type here, since
+            # multiples would simply overwrite each other
+            tdict = dict([(type(v), v) for v in target._delegates_.values()])
+            sdict = dict([(type(v), v) for v in self._delegates_.values()])
+            if len(tdict) != len(sdict):
+                self.raise_exception("can't mimic '%s': delegates don't match" % 
+                                          target.name if hasattr(target, 'name') else str(target))
+            for sdel in sdelegates:
+                
                 td = target._delegates_.get(name)
                 if td is not None:
                     delegate = getattr(self, name)

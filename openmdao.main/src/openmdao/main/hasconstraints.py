@@ -539,6 +539,14 @@ class HasConstraints(object):
         """Tries to mimic the target object's constraints.  Target constraints that
         are incompatible with raise an exception.
         """
+        old_eq = self._eq._constraints
+        old_ineq = self._ineq._constraints
+        
         self.clear_constraints()
-        for name, cnst in target.copy_constraints().items():
-            self.add_existing_constraint(cnst, name)
+        try:
+            for name, cnst in target.copy_constraints().items():
+                self.add_existing_constraint(cnst, name)
+        except Exception:
+            self._eq._constraints = old_eq
+            self._ineq._constraints = old_ineq
+            raise

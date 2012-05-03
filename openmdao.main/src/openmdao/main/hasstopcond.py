@@ -54,7 +54,11 @@ class HasStopConditions(object):
 
     def mimic(self, target):
         """Copy stop conditions from the target."""
+        old_stop_cond = self._stop_conditions
         self.clear_stop_conditions()
-        for exp in target.get_stop_conditions():
-            self.add_stop_condition(exp)
-        
+        try:
+            for exp in target.get_stop_conditions():
+                self.add_stop_condition(exp)
+        except Exception:
+            self._stop_conditions = old_stop_cond
+            raise

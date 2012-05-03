@@ -521,6 +521,11 @@ class HasParameters(object):
         return scope
 
     def mimic(self, target):
+        old = self._parameters
         self.clear_parameters()
-        for name, p in target.get_parameters().items():
-            self._parameters[name] = p.copy()
+        try:
+            for name, p in target.get_parameters().items():
+                self._parameters[name] = p.copy()
+        except Exception:
+            self._parameters = old
+            raise
