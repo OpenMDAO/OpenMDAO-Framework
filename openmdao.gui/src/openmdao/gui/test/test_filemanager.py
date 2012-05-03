@@ -60,7 +60,7 @@ class FileManagerTestCase(unittest.TestCase):
         try:
             filemanager.delete_file(dname)
         except OSError as (errno, errmsg):
-            self.assertTrue(errmsg.find('Directory not empty') >= 0)
+            self.assertTrue(errmsg.lower().find('not empty') > 0)
         self.assertTrue(os.path.exists(os.path.join(tempdir, dname)))
 
         filemanager.delete_file(sname)
@@ -85,7 +85,7 @@ class FileManagerTestCase(unittest.TestCase):
         tempzip = os.path.join(tempdir, 'temp.zip')
         zf = zipfile.ZipFile(tempzip, mode='w')
         try:
-            zf.write(temptxt, arcname='filename.txt')
+            zf.write(temptxt, arcname='testfile.txt')
         finally:
             zf.close()
         with open(tempzip, 'rb') as f:
@@ -97,8 +97,9 @@ class FileManagerTestCase(unittest.TestCase):
         filemanager.add_file('unzip me', contents)
         files = filemanager.get_files()
         self.assertEqual(len(files), 1)
-        self.assertTrue('/filename.txt' in files)
-        self.assertEqual(files['/filename.txt'], len('this is just a test'))
+        filename = os.sep + 'testfile.txt'
+        self.assertTrue(filename in files)
+        self.assertEqual(files[filename], len('this is just a test'))
 
         # cleanup
         filemanager.cleanup()
