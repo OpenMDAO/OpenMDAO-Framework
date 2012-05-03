@@ -34,15 +34,15 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type, valid) {
     // do not allow moving or resizing
     this.setCanDrag(false);
     this.setResizeable(false);
-    
-    // set color based on valid status
-    if (this.valid) {
-        this.setColor(new draw2d.Color(0,255,0));
-    }
-    else {
-        this.setColor(new draw2d.Color(255,0,0));
-    }
-        
+
+//    // set color based on valid status
+//    if (this.valid) {
+//        this.setColor(new draw2d.Color(0,255,0));
+//    }
+//    else {
+//        this.setColor(new draw2d.Color(255,0,0));
+//    }
+
     // change color based on execution status
     topic = pathname+'.exec_state'
     myModel.addListener(topic, this.setExecState.bind(this));    
