@@ -258,7 +258,8 @@ class ExprExaminer(ast.NodeVisitor):
     def visit_Index(self, node):
         self.simplevar = self.const = False
         if not isinstance(node.value, ast.Num):
-            self.const_indices = False
+            if not (isinstance(node.value, ast.Tuple) and len(node.value.elts)==0):
+                self.const_indices = False
         self.visit(node.value)
 
     def visit_Assign(self, node):
