@@ -85,11 +85,12 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     /** update workflow from JSON workflow data
      */
     function updateFigures(flow_name,json) {
-        var path = json['pathname'],
-            type = json['type'],
-            drvr = json['driver'],
-            flow = json['workflow'],
-            asm  = openmdao.Util.getPath(path),
+        var path  = json['pathname'],
+            type  = json['type'],
+            valid = json['valid'],
+            drvr  = json['driver'],
+            flow  = json['workflow'],
+            asm   = openmdao.Util.getPath(path),
             comp_key = flow_name+':'+path,
             comp_fig, flow_fig, flowpath, newflow_fig, count, x, y;
             
@@ -99,7 +100,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 comp_fig = comp_figs[comp_key];
             }
             else {
-                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type);
+                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type,valid);
                 comp_figs[comp_key] = comp_fig;
             }
             
@@ -137,7 +138,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 comp_fig = comp_figs[comp_key];
             }
             else {
-                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type);
+                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type,valid);
                 comp_figs[comp_key] = comp_fig;
             }
 

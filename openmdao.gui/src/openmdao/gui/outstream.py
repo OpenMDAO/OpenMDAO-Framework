@@ -1,5 +1,5 @@
-import sys, os, traceback
-import time
+import sys
+import traceback
 from io import StringIO
 from multiprocessing import Process
 
@@ -7,7 +7,6 @@ import zmq
 from zmq.eventloop import ioloop
 from zmq.eventloop.zmqstream import ZMQStream
 
-from random import randrange
 
 class OutStream(object):
     """ A file like object that publishes the stream to a 0MQ PUB socket.
@@ -68,10 +67,12 @@ class OutStream(object):
     def _new_buffer(self):
         self._buffer = StringIO()
 
+
 class OutStreamRedirector(Process):
     ''' listen for output on the given port and dump it to a file
     '''
-    def __init__(self,name,addr,filename='sys.stdout'):
+
+    def __init__(self, name, addr, filename='sys.stdout'):
         super(OutStreamRedirector, self).__init__()
         self.name = name
         self.addr = addr
@@ -83,11 +84,11 @@ class OutStreamRedirector(Process):
         elif self.filename == 'sys.stderr':
             self.file = sys.stderr
         else:
-            self.file = open(self.filename,'a+b')
-            
+            self.file = open(self.filename, 'a+b')
+
         ioloop.install()
         loop = ioloop.IOLoop.instance()
-        
+
         stream = None
         try:
             context = zmq.Context()
@@ -96,23 +97,21 @@ class OutStreamRedirector(Process):
             socket.setsockopt(zmq.SUBSCRIBE, '')
             stream = ZMQStream(socket)
         except Exception, err:
-            print self.name,'error getting outstream:',err
+            print self.name, 'error getting outstream:', err
             exc_type, exc_value, exc_traceback = sys.exc_info()
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            traceback.print_tb(exc_traceback, limit=30)   
+            traceback.print_tb(exc_traceback, limit=30)
             if stream and not stream.closed():
                 stream.close()
         else:
             stream.on_recv(self._write_message)
             loop.start()
-    
-    def _write_message(self,msg):
+
+    def _write_message(self, msg):
         try:
-            print >> self.file, self.name,'>>',msg
+            print >> self.file, self.name, '>>', msg
         except Exception, err:
-            print 'Error writing to file:',err
+            print 'Error writing to file:', err
 
     def terminate(self):
         super(OutStreamRedirector, self).terminate()
-
-    
