@@ -439,10 +439,10 @@ openmdao.Model=function() {
     /** reload the model */
     this.reload = function() {
         if (this.outstream_socket) {
-            this.outstream_socket.close(1000,'close');
+            this.outstream_socket.close(1000,'reload');
         }
         if (this.pubstream_socket) {
-            this.pubstream_socket.close(1000,'close');
+            this.pubstream_socket.close(1000,'reload');
         }
         window.location.replace('/workspace/project');
     }    

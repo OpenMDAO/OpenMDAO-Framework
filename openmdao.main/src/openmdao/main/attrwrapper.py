@@ -72,4 +72,8 @@ class UnitsAttrWrapper(AttrWrapper):
     def __neg__(self):
         return UnitsAttrWrapper(-self.value, units=self.pq.get_unit_name())
 
-    
+    def convert_from(self, wrapper):
+        if isinstance(wrapper, UnitsAttrWrapper):
+            return wrapper.pq.convert_value(self.pq.unit)
+        raise ValueError("incompatible AttrWrapper objects")
+        

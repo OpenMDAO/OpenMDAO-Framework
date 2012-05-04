@@ -40,6 +40,7 @@ from multiprocessing import connection
 from openmdao.main.variable import Variable, is_legal_name
 from openmdao.main.filevar import FileRef
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
@@ -956,7 +957,6 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
-                #src = 'parent.'+src
                 src = ExprEvaluator(src,scope=self).scope_transform(self, obj, parent=self)
             obj.set(restofpath, value, index, src=src, force=force)
         else:
@@ -999,12 +999,23 @@ class Container(SafeHasTraits):
 
         
     def _index_set(self, name, value, index):
-        obj = get_indexed_value(self, name, index[:-1])
+        obj = self.get_wrapped_attr(name, index[:-1])
+        if isinstance(obj, AttrWrapper):
+            wrapper = obj
+            obj = obj.value
+        else:
+            wrapper = None
+        if isinstance(value, AttrWrapper):
+            if wrapper:
+                value = wrapper.convert_from(value)
+            else:
+                value = value.value
         idx = index[-1]
         try:
             old = process_index_entry(obj, idx)
         except KeyError:
             old = _missing
+            
         if isinstance(idx, tuple):
             if idx[0] == INDEX:
                 obj[idx[1]] = value

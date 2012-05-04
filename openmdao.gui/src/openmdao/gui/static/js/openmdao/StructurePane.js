@@ -43,14 +43,15 @@ openmdao.StructurePane = function(elm,model,pathname,name,editable) {
         jQuery.each(json['components'],function(idx,comp) {
             var name = comp['name'],
                 type = comp['type'],
+                valid = comp['valid'],
                 fig = figures[name];
                 
             if (!fig) {
                 if (self.pathname) {
-                    var fig = new openmdao.StructureComponentFigure(model,self.pathname+'.'+name,type);
+                    var fig = new openmdao.StructureComponentFigure(model,self.pathname+'.'+name,type,valid);
                 }
                 else {
-                    var fig = new openmdao.StructureComponentFigure(model,name,type);
+                    var fig = new openmdao.StructureComponentFigure(model,name,type,valid);
                 }
                 fig.setTitle(name);
                 figures[name] = fig;
