@@ -1,29 +1,29 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
+openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
     var id = ('DCE-'+pathname+'-'+src_comp+'-'+dst_comp).replace(/\./g,'-');
-    openmdao.DataConnectionEditor.prototype.init.call(this, id,
+    openmdao.ConnectionEditor.prototype.init.call(this, id,
         'Connections: '+openmdao.Util.getName(pathname)+' '+src_comp+' to '+dst_comp);
-    
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+
     // initialize private variables
     var self = this,
         figures = {},
         dataflowID = "#"+id+"-connections",
         dataflowDiv = jQuery('<div id='+dataflowID+'>').appendTo('<div style="background:white">').appendTo('#'+id),
         dataflow = new draw2d.Workflow(dataflowID);
-        
+
     self.pathname = pathname;
     self.src_comp = src_comp;
     self.dst_comp = dst_comp;
 
     dataflowDiv.css({'background':'gray'});
     //dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
-    
+
     model.addListener('',update)
 
     function loadData(data) {
@@ -53,7 +53,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                 y = y + fig.height + 10;
             });
             dataflowDiv.css({'height':y+'px','width': x+100+'px'});
-            
+
             jQuery.each(data['connections'],function(idx,conn) {
                 // internal connections
                 if ((conn[0].indexOf('.') > 0) && (conn[1].indexOf('.') > 0)) {
@@ -62,7 +62,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                         src_fig = figures[src_name],
                         dst_fig = figures[dst_name],
                         src_port = src_fig.getPort("output"),
-                        dst_port = dst_fig.getPort("input");                        
+                        dst_port = dst_fig.getPort("input");
                     c = new draw2d.Connection()
                     c.setSource(src_port);
                     c.setTarget(dst_port);
@@ -73,7 +73,7 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
                         var oThis=this;
                         menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
                                 var asm = self.pathname,
-                                    cmd = asm + '.disconnect("'+src_name+"','"+dst_name+'");'
+                                    cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'");'
                                         + asm + '.config_changed(update_parent=True);';
                                 model.issueCommand(cmd);
                             })
@@ -89,27 +89,27 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
             })
         }
     }
-    
+
     /** if there is something loaded, update it from the model */
     function update() {
         self.editConnections(self.pathname,self.src_comp,self.dst_comp);
     }
-    
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
     /** edit connectiosn between the source and destination objects in the assembly */
     this.editConnections = function(pathname, src_comp, dst_comp) {        
         self.pathname = pathname;
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
-        
+
         var callback = loadData;
         model.getConnections(pathname, src_comp, dst_comp, callback,
             function(jqXHR, textStatus, errorThrown) {
                 debug.error(jqXHR,textStatus,errorThrown);
-                self.close();                
+                self.close();
             }
         )
         return this;
@@ -120,5 +120,5 @@ openmdao.DataConnectionEditor = function(model,pathname,src_comp,dst_comp) {
 }
 
 /** set prototype */
-openmdao.DataConnectionEditor.prototype = new openmdao.BaseFrame();
-openmdao.DataConnectionEditor.prototype.constructor = openmdao.DataConnectionEditor;
+openmdao.ConnectionEditor.prototype = new openmdao.BaseFrame();
+openmdao.ConnectionEditor.prototype.constructor = openmdao.ConnectionEditor;

@@ -10,11 +10,11 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                     },
                 ];
     openmdao.ObjectTree.prototype.init.call(this,id,'Objects',menu);
-    
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+
     // initialize private variables
     var self = this,
         filter_beg = '_',
@@ -36,20 +36,20 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             }
     })
     /**/
-        
+
     // ask model for an update whenever something changes
     model.addListener('',update)
-    
+
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path) {
         var data = [];
-            
+
         jQuery.each(json, function(idx,item) {
             var pathname   = item['pathname'],
                 type       = item['type'],
                 interfaces = item['interfaces'],
                 name = openmdao.Util.getName(pathname);
-                
+
             if (filter_beg.indexOf(name[0])<0) {
                 interfaces = JSON.stringify(interfaces)
                 var node = { 'data': name  };
@@ -86,7 +86,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             dnd         : { /* drop_check: false means move is invalid, otherwise true */
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
-                                // data.r - the drop target                                
+                                // data.r - the drop target
                                 //debug.info("ObjectTree: drop_check:",data);
                                 if (data.r.hasClass('WorkflowFigure')) {
                                     return true;
@@ -95,14 +95,14 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                     return false;
                                 }
                             },
-                            
+
                             /* drop_target: jquery selector matching all drop targets */
                             "drop_target" : "*",
-                            
+
                             /* drop_finish: executed after a valid drop */
                             "drop_finish" : function (data) { 
                                 // data.o - the object being dragged
-                                // data.r - the drop target                                
+                                // data.r - the drop target
                                 debug.info("ObjectTree: drop_finish:",data)
                                 data.e.stopPropagation();
                                 if (data.r.hasClass('WorkflowFigure')) {
@@ -113,10 +113,10 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                     model.issueCommand(cmd);
                                 }
                             },
-                            
+
                             /* drag_target: jquery selector matching all foreign nodes that can be dropped on the tree */
                             "drag_target" : ".objtype",
-                            
+
                             /* drag_check: */
                             "drag_check" : function (data) {
                                 debug.info("ObjectTree: drag_check:",data);
@@ -128,14 +128,14 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                     inside : false 
                                 };
                             },
-                            
+
                             /* drag_finish:  executed after a dropping a foreign element on a tree item */
                             "drag_finish" : function (data) { 
                                 // data.o - the foreign object being dragged
                                 // data.r - the target node
                                 debug.info("ObjectTree: drag_finish:",data)
                             }
-                          },            
+                          },
         })
         .bind("select_node.jstree", function(e,data) {
             if (typeof select_fn == 'function') {
@@ -158,19 +158,19 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
 
     /** get a context menu for the specified node */
     function contextMenu(node) {
-        
+
         var isAssembly = false;  // there's no "IAssembly" interface, so..
         if (! node.is('.jstree-leaf')) {
             isAssembly = true;
         }
-        
+
         var path = node.attr('path'),
             type = node.attr('type'),
             interfaces = jQuery.parseJSON(node.attr('interfaces'));
-            
+
         // now create the menu
         var menu = {}
-        
+
         menu.properties = {
             "label"  : 'Properties',
             "action" :  function(node) { 
@@ -180,7 +180,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         };
         if (isAssembly) {
             menu.show_dataflow = {
-                "label"  : 'Show Structure',
+                "label"  : 'Show Dataflow',
                 "action" :  function(node) { 
                                 dataflow_fn(path);
                             }
@@ -217,19 +217,19 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             "action" :  function(node) {
                             model.removeComponent(path);
                         }
-        };        
+        };
         return menu;
     }
-    
+
     /** update the tree, with data from the model  */
     function update() {
         model.getComponents(updateTree)
     }
-    
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
- 
+
 }
 
 /** set prototype */

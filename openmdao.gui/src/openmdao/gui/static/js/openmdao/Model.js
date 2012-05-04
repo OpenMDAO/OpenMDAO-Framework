@@ -71,11 +71,11 @@ openmdao.Model=function() {
             }
         );
     };
-    
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
     /** add a subscriber (i.e. a function to be called) for messgages with the given topic */
     this.addListener = function(topic, callback) {
         if (topic in subscribers) {
@@ -93,9 +93,9 @@ openmdao.Model=function() {
             };
         };
     };
-    
+
    /** notify all generic listeners that something may have changed  */
-    this.updateListeners = function() {        
+    this.updateListeners = function() {
         //debug.info('updateListeners',subscribers)
         var callbacks = subscribers[''];
         //debug.info('updateListeners',callbacks)
@@ -143,7 +143,7 @@ openmdao.Model=function() {
             error: errorHandler
         })
     }
-   
+
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
@@ -158,9 +158,9 @@ openmdao.Model=function() {
             })
         }
     }
-    
-    /** get the data structure for an assembly */
-    this.getStructure = function(pathname,callback,errorHandler) {
+
+    /** get the data flow (structure) of an assembly */
+    this.getDataflow = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
             return
         else {
@@ -176,7 +176,7 @@ openmdao.Model=function() {
             })
         }
     }
- 
+
     /** get  hierarchical list of components*/
     this.getComponents = function(callback,errorHandler) {
         if (typeof callback != 'function')
