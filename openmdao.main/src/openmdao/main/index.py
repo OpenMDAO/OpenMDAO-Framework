@@ -4,7 +4,6 @@ ATTR = 1
 CALL = 2
 SLICE = 3
 
-
 def process_index_entry(obj, idx):
     """
     
@@ -15,7 +14,7 @@ def process_index_entry(obj, idx):
     be a tuple of the form (operation_id, stuff) where operation_id is 
     as follows (the named constants are defined in expreval.py)::
           
-	  INDEX = 0
+          INDEX = 0
           ATTR = 1
           CALL = 2
           SLICE = 3
@@ -27,13 +26,13 @@ def process_index_entry(obj, idx):
           
           INDEX:   (0, idx)  where idx is some hashable value
           ATTR:    (1, name) where name is the attribute name
-	  CALL:    (2, args, kwargs) where args is a list of values, and kwargs is a list
-		   of tuples of the form (keyword,value). kwargs can be left out if
-		   empty.  args can be left out if empty as long as kwargs are also
-		   empty, for example, (2,) and  (2,[],[('foo',1)]) are valid but
-		   (2,[('foo',1)]) is not.
-	  SLICE:   (3, lower, upper, step) All members must be present and should have a
-		   value of None if not set.
+          CALL:    (2, args, kwargs) where args is a list of values, and kwargs is a list
+                   of tuples of the form (keyword,value). kwargs can be left out if
+                   empty.  args can be left out if empty as long as kwargs are also
+                   empty, for example, (2,) and  (2,[],[('foo',1)]) are valid but
+                   (2,[('foo',1)]) is not.
+          SLICE:   (3, lower, upper, step) All members must be present and should have a
+                   value of None if not set.
 
     """
     if not isinstance(idx, tuple):

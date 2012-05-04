@@ -1013,7 +1013,6 @@ class Container(SafeHasTraits):
             else:
                 setattr(self, path, value)
 
-        
     def _index_set(self, name, value, index):
         obj = get_indexed_value(self, name, index[:-1])
         idx = index[-1]

@@ -115,7 +115,7 @@ class SellarBLISS(Assembly):
         self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt']) 
 
         
-if __name__ == "__main__": # pragma: no cover         
+if __name__ == "__main__": # pragma: no cover
 
     import time
     import math
