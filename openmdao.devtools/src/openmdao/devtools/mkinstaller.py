@@ -315,7 +315,7 @@ def after_install(options, home_dir):
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
     guitest_dists = working_set.resolve([Requirement.parse('openmdao.gui[jsTest]')])
     guitest_dists.extend(working_set.resolve([Requirement.parse('openmdao.gui[functionalTest]')]))
-    guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes
+    guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes-guinames
     
     try:
         setupdoc_dist = working_set.resolve([Requirement.parse('setupdocs')])[0]

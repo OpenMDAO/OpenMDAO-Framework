@@ -113,9 +113,24 @@ use it, you must have compilers (C and Fortran) on your system.
 
 - On **Lion (OS X 10.7):**
 
- - Python 2.7.x (OS X Lion has 2.7.1 as its native version)
- - Install this `version of NumPy <http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1-py2.7-python.org-macosx10.6.dmg/download>`_
+ - Python 2.7.x (OS X Lion has 2.7.1 as its native version) - Install this `version of NumPy <http://sourceforge.net/projects/numpy/files/NumPy/1.6.1/numpy-1.6.1-py2.7-python.org-macosx10.6.dmg/download>`_
+ 
  - Install this `version of SciPy <http://sourceforge.net/projects/scipy/files/scipy/0.10.1/scipy-0.10.1-py2.7-python.org-macosx10.6.dmg/download>`_
- - Make sure Xcode version 4.3.2 or higher is installed, via the Mac App Store.
+ 
+ - Make sure that Xcode version 4.3.2 or higher is installed, via the Mac App Store. When you install Xcode, it does not by default install the compilers you
+   need.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
+
+   .. figure:: OSX_Lion_Screenshot.png
+      :align: center
+      :alt: Screenshot of XCode's Downloads screen showing options
+   
+      XCode's *Downloads* Screen
+   
  - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_
+ 
  - `gcc 4.2 <http://web.mit.edu/mfloyd/www/computing/mac/gfortran/>`_
+
+
+
+
+
