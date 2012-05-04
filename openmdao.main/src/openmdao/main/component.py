@@ -819,7 +819,6 @@ class Component (Container):
                 self.raise_exception("can't mimic '%s': delegates don't match" % 
                                           target.name if hasattr(target, 'name') else str(target))
             for sdel in sdelegates:
-                
                 td = target._delegates_.get(name)
                 if td is not None:
                     delegate = getattr(self, name)
