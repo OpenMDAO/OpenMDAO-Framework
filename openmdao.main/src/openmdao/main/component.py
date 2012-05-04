@@ -801,10 +801,7 @@ class Component (Container):
     def mimic(self, target):
         """Initialize what we can from the given target object. Copy any
         inputs that we share with the target and initialize our delegates with
-        any matching delegates from the target. This function does not assume
-        any compatability between target and self. It just tries to make self
-        as similar to target as possible without adding or removing any
-        methods or attributes.
+        any matching delegates from the target.
         """
         if isinstance(target, Container):
             self.name = target.name
