@@ -33,7 +33,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             {id:"units", name:"Units", field:"units", width:60},
             {id:"valid", name:"Valid", field:"valid", width:60},
             {id:"desc",  name:"Description", field:"desc", width:120},
-            {id:"connected",  name:"connected", field:"connected", width:0},
+            {id:"connected",  name:"connected", field:"connected", width:100},
         ];
     }
     
