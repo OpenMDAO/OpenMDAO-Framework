@@ -38,16 +38,16 @@ class HasParametersTestCase(unittest.TestCase):
     
     def test_param_output(self):
         try:
-            p = Parameter('comp.c', self.top, low=0, high=1e99, scope=self.top)
+            p = Parameter('comp.c', low=0, high=1e99, scope=self.top)
         except Exception as err:
             self.assertEqual(str(err), 
-                             ": Can't add parameter 'comp.c' because 'comp.c' is an output.")
+                             "Can't add parameter 'comp.c' because 'comp.c' is an output.")
         else:
             self.fail("Exception expected")
         
     def test_add_parameter_param_target(self): 
-        p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
-        p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)
+        p = Parameter('comp.x', low=0, high=1e99, scope=self.top)
+        p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
         
         self.top.driver.add_parameter(p)
         self.assertEqual({'comp.x':p},self.top.driver.get_parameters())
@@ -280,13 +280,13 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(param[1].fd_step, None)
     
     def test_get_metadata(self): 
-        p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
+        p = Parameter('comp.x', low=0, high=1e99, scope=self.top)
         
         p.get_metadata()
         self.assertEqual(p.get_metadata(),('comp.x',{'high': None, 'iotype': 'in', 'type': 'trait', 'low': None, 'vartypename': 'Float'}))
         
-        p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)
-        pg = ParameterGroup([p,p2])        
+        p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
+        pg = ParameterGroup([p,p2])
         self.assertEqual(pg.get_metadata(),(['comp.x','comp.y'],{'fd_step': None, 'name': 'comp.x', 'scaler': None, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': None}))    
 
 class ParametersTestCase(unittest.TestCase):

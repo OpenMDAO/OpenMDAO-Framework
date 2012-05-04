@@ -1016,17 +1016,22 @@ class Container(SafeHasTraits):
 
     def _index_set(self, name, value, index):
         obj = self.get_wrapped_attr(name, index[:-1])
+        idx = index[-1]
         if isinstance(obj, AttrWrapper):
             wrapper = obj
             obj = obj.value
         else:
             wrapper = None
         if isinstance(value, AttrWrapper):
+            truval = value.value
             if wrapper:
-                value = wrapper.convert_from(value)
-            else:
-                value = value.value
-        idx = index[-1]
+                if idx[0] != ATTR:
+                    truval = wrapper.convert_from(value)
+                elif isinstance(obj, Container):
+                    att = obj.get_wrapped_attr(idx[1])
+                    if isinstance(att, AttrWrapper):
+                        truval = att.convert_from(value)
+            value = truval
         try:
             old = process_index_entry(obj, idx)
         except KeyError:
