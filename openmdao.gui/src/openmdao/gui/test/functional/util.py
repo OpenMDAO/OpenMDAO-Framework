@@ -26,7 +26,6 @@ if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
 
 TEST_CONFIG = dict(browsers=[], server=None, port=None)
-_console_dbug = None
 _display = None
 
 
@@ -44,15 +43,7 @@ def setup_firefox():
     profile.native_events_enabled = True
     driver = webdriver.Firefox(profile)
     driver.implicitly_wait(15)
-#    with open('patch.js', 'r') as inp:
-#        patch = inp.read()
-#    time.sleep(10)
-#    patch = 'ufoxHTTPListener.prototype.observe = function(subject, topic, data) { return; };'
-    patch = 'openmdao_patch = 3;'
-    driver.execute_script(patch)
     TEST_CONFIG['browsers'].append(driver)
-    global _console_dbug
-    _console_dbug = 'fxdriver.Logger.dumpn("%s");'
     return driver
 
 _browsers_to_test = dict(
@@ -83,7 +74,7 @@ def setup_server(virtual_display=True):
     TEST_CONFIG['server'] = server
 
     # Wait for server port to open.
-    for i in range(100):
+    for i in range(200):  # ~20 sec.
         time.sleep(.1)
         try:
             sock = socket.create_connection(('localhost', port))
@@ -106,6 +97,7 @@ def setup_server(virtual_display=True):
 
 def teardown_server():
     """ The function gets called once after all of the tests are called. """
+    # Kill chromedriver.
     for browser in TEST_CONFIG['browsers']:
         if isinstance(browser, webdriver.Chrome):
             psfu = subprocess.check_output(('ps', '-fu', getpass.getuser()))
@@ -116,10 +108,21 @@ def teardown_server():
                     # UID PID PPID C STIME TTY TIME CMD
                     if int(fields[2]) == pid:
                         os.kill(int(fields[1]), signal.SIGTERM)
+
+    # Shut down virtual framebuffer.
     if _display is not None:
         _display.stop()
+
+    # Shut down server.
     TEST_CONFIG['server'].terminate()
     TEST_CONFIG['stdout'].close()
+
+    # Clean up.
+    server_dir = TEST_CONFIG['server_dir']
+    if os.path.exists(server_dir):
+        shutil.rmtree(server_dir)
+    if os.path.exists('chromedriver.log'):
+        os.remove('chromedriver.log')
 
 
 def generate(modname):
@@ -154,18 +157,6 @@ def begin(browser):
     projects_page.go_to()
     eq( "Projects", projects_page.page_title )
     return projects_page
-
-
-def dbug(browser, msg, *args):
-    """ Write `msg` to stdout and possibly the error console. """
-    if args:
-        msg = msg % args
-    print msg
-    if _console_dbug:
-        script = _console_dbug % msg
-        print '    %r' % script
-        browser.title
-#        browser.execute_script(script)
 
 
 def new_project(new_project_page):

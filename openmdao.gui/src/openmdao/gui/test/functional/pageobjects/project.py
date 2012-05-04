@@ -4,7 +4,6 @@ Pages related to project management.
 
 import random
 import string
-import time
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -49,7 +48,6 @@ class NewProjectPage(ProjectPage):
         self.description = description
         self.version = version
         self.submit()
-        time.sleep(1)  # Pacing.
         title = ProjectInfoPage.project_title(project_name)
         return ProjectInfoPage.verify(self.browser, self.port, title)
 
@@ -80,20 +78,17 @@ class ProjectInfoPage(ProjectPage):
     def load_project(self):
         """ Clicks the 'load' button. Returns :class:`WorkspacePage`. """
         self('load_button').click()
-        time.sleep(1)  # Pacing.
         from workspace import WorkspacePage
         return WorkspacePage.verify(self.browser, self.port)
 
     def delete_project(self):
         """ Clicks the 'delete' button. Returns :class:`ProjectsListPage`. """
         self('delete_button').click()
-        time.sleep(1)  # Pacing.
         return ProjectsListPage.verify(self.browser, self.port)
 
     def go_to_projects_page(self):
         """ Clicks the 'back' button. Returns :class:`ProjectsListPage`. """
         self('back_button').click()
-        time.sleep(1)  # Pacing.
         return ProjectsListPage.verify(self.browser, self.port)
 
     def logout(self):
@@ -107,7 +102,6 @@ class ProjectInfoPage(ProjectPage):
 
         """
         self('logout_button').click()
-        time.sleep(1)  # Pacing.
         from login import LoginPage
         return LoginPage.verify(self.browser, self.port)
 
@@ -125,7 +119,6 @@ class ProjectsListPage(BasePageObject):
     def new_project(self):
         """ Clicks the 'new' button. Returns :class:`NewProjectPage`. """
         self('new_button').click()
-        time.sleep(1)  # Pacing.
         return NewProjectPage.verify(self.browser, self.port)
 
     def logout(self):
@@ -139,7 +132,6 @@ class ProjectsListPage(BasePageObject):
 
         """
         self('logout_button').click()
-        time.sleep(1)  # Pacing.
         from login import LoginPage
         return LoginPage.verify(self.browser, self.port)
 
@@ -152,7 +144,6 @@ class ProjectsListPage(BasePageObject):
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_link_text(project_name))
         element.click()
-        time.sleep(1)  # Pacing.
         from workspace import WorkspacePage
         return WorkspacePage.verify(self.browser, self.port)
 
@@ -162,7 +153,6 @@ class ProjectsListPage(BasePageObject):
                       lambda browser: browser.find_element_by_link_text(project_name))
         element = element.find_element_by_xpath('../../td[6]/form/input')
         element.click()
-        time.sleep(1)  # Pacing.
         title = ProjectInfoPage.project_title(project_name)
         return ProjectInfoPage.verify(self.browser, self.port, title)
 

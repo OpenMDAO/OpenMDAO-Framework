@@ -1,3 +1,10 @@
+/*
+ * This patch is a workaround for an uncaught exception that occasionally
+ * occurs during testing with Firefox. The symptoms are the test hangs
+ * and the error log shows an execption referring to this code.
+ * Submitted to Selenium site, but their response was 'we know how to fix
+ * it, but we need a test case to be sure it stays fixed'.
+ */
 DelayedCommand.prototype.shouldDelayExecutionForPendingRequest_ = function() {
   if("unstable" == loadStrategy_) {
     return!1

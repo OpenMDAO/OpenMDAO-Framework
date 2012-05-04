@@ -81,7 +81,6 @@ def _test_import(browser):
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
     workspace_page('working_section').click()
-    time.sleep(1)  # Wait for slide-out animation.
 
     # Make sure there is only one dataflow component.
     eq( len(workspace_page.get_dataflow_figures()), 1 )
@@ -183,7 +182,6 @@ f_x = Float(0.0, iotype='out')
     workspace_page.show_structure('top')
     workspace_page('libraries_tab').click()
     workspace_page('working_section').click()
-    time.sleep(1)  # Wait for slide-out animation.
     workspace_page.add_library_item_to_structure('Plane', 'plane')
 
     # Clean up.

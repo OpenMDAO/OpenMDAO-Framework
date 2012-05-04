@@ -125,7 +125,7 @@ class WorkspacePage(BasePageObject):
         WebDriverWait(self.browser, 2*TMO).until(
             lambda browser: len(self.get_dataflow_figures()) > 0)
         # Now wait for WebSockets.
-#FIXME: absolute delay before polling sockets.
+# FIXME: absolute delay before polling sockets.
         time.sleep(2)
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         NotifierPage.wait(browser, port)
@@ -148,7 +148,6 @@ class WorkspacePage(BasePageObject):
         NotifierPage.wait(self.browser, self.port)
         self('project_menu').click()
         self('close_button').click()
-        time.sleep(1)  # Pacing.
         from project import ProjectsListPage
         return ProjectsListPage.verify(self.browser, self.port)
 
@@ -221,8 +220,10 @@ class WorkspacePage(BasePageObject):
             lambda browser: browser.find_element(*self.locators['code_input']))
         WebDriverWait(self.browser, TMO).until(
             lambda browser: code_input_element.text)
-#FIXME: absolute delay for editor to get ready.
-        time.sleep(2)
+# FIXME: absolute delay for editor to get ready.
+#        Problem is Firefox sometimes sends arrow key to scrollbar.
+#        Sadly this didn't completely fix the issue.
+        time.sleep(1)
 
         # Go to the bottom of the code editor window
         for i in range(4):
@@ -231,7 +232,7 @@ class WorkspacePage(BasePageObject):
         code_input_element.send_keys(code)
         # Control-S to save.
         code_input_element.send_keys(Keys.CONTROL+'s')
-#FIXME: absolute delay for save to complete.
+# FIXME: absolute delay for save to complete.
         time.sleep(2)
         
         # Back to main window.
@@ -285,6 +286,8 @@ class WorkspacePage(BasePageObject):
             lambda browser: browser.find_element_by_xpath(xpath))
         WebDriverWait(self.browser, TMO).until(
             lambda browser: library_item.is_displayed())
+# FIXME: absolute delay to wait for 'slide' to complete.
+        time.sleep(1)
 
         target = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath("//*[@id='-structure']"))
@@ -304,7 +307,7 @@ class WorkspacePage(BasePageObject):
             lambda browser: instance_name in self.get_dataflow_component_names())
 
     def get_dataflow_figures(self):
-        """ Return dataflow figures. """
+        """ Return dataflow figure elements. """
         return self.browser.find_elements_by_class_name('DataflowComponentFigure')
 
     def get_dataflow_component_names(self):

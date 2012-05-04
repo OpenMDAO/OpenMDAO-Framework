@@ -61,8 +61,9 @@ class ZMQServerManager(object):
                 server_info['pub_server'].terminate()
             
             server = server_info['server']
+            proxy = server_info['proxy']
             try:
-                server.cleanup()
+                proxy.cleanup()
             except Exception, err:
                 pass
             server.terminate()

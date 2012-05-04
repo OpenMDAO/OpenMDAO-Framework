@@ -22,7 +22,8 @@ def main():
         print msg
         logfile.write('\n'+msg+'\n')
 
-        for test_script in ('try_project.py', 'try_workspace.py'):
+        for test_script in ('try_project.py',
+                            'try_workspace.py'):
             msg = '    Running %s' % test_script
             print msg
             logfile.write(msg+'\n')
