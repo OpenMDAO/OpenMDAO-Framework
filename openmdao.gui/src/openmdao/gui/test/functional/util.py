@@ -6,12 +6,16 @@ import getpass
 import inspect
 import logging
 import os.path
+import platform
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import time
+import urllib2
+import zipfile
 
 from distutils.spawn import find_executable
 from nose.tools import eq_ as eq
@@ -31,7 +35,37 @@ _display = None
 
 def setup_chrome():
     """ Initialize the 'chrome' browser. """
-    path = find_executable('chromedriver')
+    exe = 'chromedriver'
+    path = find_executable(exe)
+    if not path:
+        # Download, unpack, and install in OpenMDAO 'bin'.
+        prefix = 'http://chromedriver.googlecode.com/files/'
+        if sys.platform == 'darwin':
+            flavor = 'mac'
+        elif sys.platform == 'win32':
+            flavor = 'win'
+        elif '64bit' in platform.architecture():
+            flavor = 'linux64'
+        else:
+            flavor = 'linux32'
+        filename = '%s_%s_19.0.1068.0.zip' % (exe, flavor)
+        orig_dir = os.getcwd()
+        os.chdir(os.path.dirname(sys.executable))
+        try:
+            logging.critical('Downloading %s to %s', filename, os.getcwd())
+            src = urllib2.urlopen(prefix+filename)
+            with open(filename, 'wb') as dst:
+                dst.write(src.read())
+            src.close()
+            zip = zipfile.ZipFile(filename)
+            zip.extract(exe)
+            zip.close()
+            if sys.platform != 'win32':
+                os.chmod(exe, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+            path = os.path.join(os.getcwd(), exe)
+            os.remove(filename)
+        finally:
+            os.chdir(orig_dir)
     driver = webdriver.Chrome(executable_path=path)
     driver.implicitly_wait(15)
     TEST_CONFIG['browsers'].append(driver)
