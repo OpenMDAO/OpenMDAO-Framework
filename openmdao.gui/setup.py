@@ -42,6 +42,7 @@ setup(name='openmdao.gui',
           ],
           'functionalTest': [
               'selenium==2.20.0',
+              'PyVirtualDisplay==0.1',
           ]
       },   
       entry_points="""

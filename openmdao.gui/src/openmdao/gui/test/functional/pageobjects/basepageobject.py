@@ -38,7 +38,6 @@ class BasePageObject(object):
         self.browser = browser
         self.port = port
         # Note that we're testing. This alters some 'pretty' behavior.
-        time.sleep(0.1)  # Pacing, improved Chrome tests on Mac.
         self.browser.execute_script('openmdao_test_mode = true;')
 
     def __call__(self, element_name):
@@ -72,7 +71,7 @@ class BasePageObject(object):
         Verify that we're on the page by checking `title_prefix`.
         Returns self.
         """
-        time.sleep(1)  # Pacing for page load.
+        time.sleep(0.5)  # Pacing for page load.
         prefix = prefix or cls.title_prefix
         if prefix:
             try:

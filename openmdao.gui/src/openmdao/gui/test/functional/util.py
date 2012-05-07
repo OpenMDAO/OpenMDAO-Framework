@@ -90,9 +90,10 @@ def setup_server(virtual_display=True):
 # FIXME: this has no effect when running under nose (firefox on hx).
     if virtual_display:
         global _display
+        _display = Display()
 #        _display = Display(visible=0, size=(800, 600))
 #        _display = Display(backend='xvfb')
-#        _display.start()
+        _display.start()
 
 
 def teardown_server():

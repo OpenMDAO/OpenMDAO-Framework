@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 
 from selenium.webdriver import ActionChains
@@ -147,9 +148,22 @@ class WorkspacePage(BasePageObject):
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
         NotifierPage.wait(self.browser, self.port)
         self('project_menu').click()
-        self('close_button').click()
+
+        # Sometimes chromedriver hangs here, so we click in separate thread.
+        # It's a known issue on the chromedriver site.
+        closer = threading.Thread(target=self._closer)
+        closer.daemon = True
+        closer.start()
+        closer.join(60)
+        if closer.is_alive():
+            raise RuntimeError("Can't close workspace, driver hung :-(")
+
         from project import ProjectsListPage
         return ProjectsListPage.verify(self.browser, self.port)
+
+    def _closer(self):
+        """ Clicks the close button. """
+        self('close_button').click()
 
     def save_project(self):
         """ Save current project. """
