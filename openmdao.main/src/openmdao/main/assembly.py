@@ -390,7 +390,12 @@ class Assembly (Component):
         if has_interface(newobj, IComponent): # remove any existing connections to replacement object
             self.disconnect(newobj.name)
         if hasattr(newobj, 'mimic'):
-            newobj.mimic(tobj) # this should copy inputs, delegates and set name
+            try:
+                newobj.mimic(tobj) # this should copy inputs, delegates and set name
+            except Exception as err:
+                self.raise_exception("Couldn't replace '%s' of type %s with type %s: %s" %
+                                     (target_name, type(tobj).__name__, type(newobj).__name__, str(err)), 
+                                     TypeError)
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
         target_rgx = re.compile(r'(\W?)%s.' % target_name)

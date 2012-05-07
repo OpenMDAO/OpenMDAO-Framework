@@ -217,6 +217,7 @@ class ParameterGroup(object):
             return False
         return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step,self.name)==\
                (other._params,other.low,other.high,other.start,other.scaler,other.adder,other.fd_step,self.name)
+    
     def __str__(self):
         return "%s" % self.targets
 
@@ -301,6 +302,13 @@ class HasParameters(object):
         self._parent = parent
         self._allowed_types = ['continuous']
 
+    def _item_count(self):
+        """This is used by the replace function to determine if a delegate from the
+        target object is 'empty' or not.  If it's empty then it's not an error if the
+        replacing object doesn't have this delegate.
+        """
+        return len(self._parameters)
+    
     def _override_param(self, param, low=None, high=None, 
                         scaler=None, adder=None, start=None,
                         fd_step=None, name=None):

@@ -42,6 +42,10 @@ class Eqdriver(Driver):
 class EqInEqdriver(Driver):
     pass
 
+@add_delegate(HasObjectives)
+class Objectivesdriver(Driver):
+    pass
+
 def _nested_model():
     top = set_as_top(Assembly())
     top.add('sub', Assembly())
@@ -119,4 +123,51 @@ class ReplaceTestCase(unittest.TestCase):
         top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
         top.driver.add_constraint('comp1.d-comp1.c=.5')
         
-        top.replace('driver', InEqdriver())
+        old_params = top.driver.get_parameters()
+        old_objectives = top.driver.get_objectives()
+        old_constraints = top.driver.get_eq_constraints()
+        
+        try:
+            top.replace('driver', InEqdriver())
+        except Exception as err:
+            self.assertEqual(str(err), 
+                             ": Couldn't replace 'driver' of type EqInEqdriver with type InEqdriver: driver: Equality constraint 'comp1.d-comp1.c = .5' is not supported on this driver")
+            
+        top.replace('driver', Eqdriver())
+        self.assertEqual(old_params, top.driver.get_parameters())
+        self.assertEqual(old_objectives, top.driver.get_objectives())
+        self.assertEqual(old_constraints, top.driver.get_eq_constraints())
+        
+        top.add('driver', Objectivesdriver())
+        top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
+        top.driver.add_objective('comp1.c-comp2.d*3.5', scope=top)
+        
+        try:
+            top.replace('driver', Eqdriver())
+        except Exception as err:
+            self.assertEqual(str(err),
+                             ": Couldn't replace 'driver' of type Objectivesdriver with type Eqdriver: driver: This driver allows a maximum of 1 objectives, but the driver being replaced has 2")
+            
+        top.add('driver', InEqdriver())
+        top.driver.add_parameter('comp1.a', low=-100, high=100, 
+                      scaler=1.2, adder=3, start=7,
+                      fd_step=0.034, name='param1', scope=top)
+        top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
+        
+        try:
+            top.replace('driver', Objectivesdriver())
+        except Exception as err:
+            self.assertEqual(str(err),
+                             ": Couldn't replace 'driver' of type InEqdriver with type Objectivesdriver: driver: target delegate '_hasparameters' has no match")
+        
+        top.add('driver', InEqdriver())
+        top.driver.add_objective('comp1.d+comp2.c-comp2.d', scope=top)
+        top.driver.add_constraint('comp1.d-comp1.c<.5')
+        
+        try:
+            top.replace('driver', Objectivesdriver())
+        except Exception as err:
+            self.assertEqual(str(err),
+                             ": Couldn't replace 'driver' of type InEqdriver with type Objectivesdriver: driver: target delegate '_hasineqconstraints' has no match")
+        
+            

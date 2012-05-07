@@ -20,6 +20,13 @@ class HasStopConditions(object):
         self._parent = parent
         self._stop_conditions = ordereddict.OrderedDict()
     
+    def _item_count(self):
+        """This is used by the replace function to determine if a delegate from the
+        target object is 'empty' or not.  If it's empty then it's not an error if the
+        replacing object doesn't have this delegate.
+        """
+        return len(self._stop_conditions)
+    
     def add_stop_condition(self, exprstr):
         ident = _remove_spaces(exprstr)
         expr = ExprEvaluator(exprstr, scope=self._parent.parent)

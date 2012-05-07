@@ -6,6 +6,13 @@ class HasEvents(object):
         self._events = []
         self._parent = parent
 
+    def _item_count(self):
+        """This is used by the replace function to determine if a delegate from the
+        target object is 'empty' or not.  If it's empty then it's not an error if the
+        replacing object doesn't have this delegate.
+        """
+        return len(self._events)
+    
     def add_event(self, name):
         """Adds an event variable to be set by the driver. 
         

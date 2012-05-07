@@ -48,8 +48,8 @@ class Constraint(object):
         self.adder = adder
         
     def copy(self):
-        return Constraint(self.lhs.text+self.comparator+self.rhs.text, 
-                          scaler=self.scaler, adder=self.adder, scope=self.lhs.scope)
+        return Constraint(self.lhs.text, self.comparator, self.rhs.text, 
+                          self.scaler, self.adder, scope=self.lhs.scope)
         
     def evaluate(self, scope):
         """Returns a tuple of the form (lhs, rhs, comparator, is_violated)."""
@@ -77,6 +77,12 @@ class Constraint(object):
 
     def __str__(self):
         return ' '.join([self.lhs.text, self.comparator, self.rhs.text])
+
+    def __eq__(self, other):
+        if not isinstance(other, Constraint): 
+            return False
+        return (self.lhs,self.comparator,self.rhs,self.scaler,self.adder) == \
+               (other.lhs,other.comparator,other.rhs,other.scaler,other.adder)
 
 def _parse_constraint(expr_string):
     """ Parses the constraint expression string and returns the lhs string, 
@@ -182,6 +188,15 @@ class _HasConstraintsBase(object):
         except Exception:
             self._constraints = old_cnst
             raise
+        
+    def _item_count(self):
+        """This is used by the replace function to determine if a delegate from the
+        target object is 'empty' or not.  If it's empty then it's not an error if the
+        replacing object doesn't have this delegate.
+        """
+        return len(self._constraints)
+    
+
 
 class HasEqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports equality
@@ -388,6 +403,13 @@ class HasConstraints(object):
         self._eq = HasEqConstraints(parent)
         self._ineq = HasIneqConstraints(parent)
 
+    def _item_count(self):
+        """This is used by the replace function to determine if a delegate from the
+        target object is 'empty' or not.  If it's empty then it's not an error if the
+        replacing object doesn't have this delegate.
+        """
+        return self._eq._item_count() + self._ineq._item_count()
+    
     def add_constraint(self, expr_string, scaler=1.0, adder=0.0, name=None,
                        scope=None):
         """Adds a constraint in the form of a boolean expression string
