@@ -7,7 +7,7 @@ from openmdao.util.decorators import add_delegate
 
 class Parameter(object): 
     
-    def __init__(self, target, parent, high=None, low=None, 
+    def __init__(self, target, high=None, low=None, 
                  scaler=None, adder=None, start=None, 
                  fd_step=None, scope=None, name=None):
         self._metadata = None
@@ -22,16 +22,14 @@ class Parameter(object):
                 try:
                     scaler = float(scaler)
                 except (TypeError, ValueError):
-                    msg = "Bad value given for parameter's 'scaler' attribute."
-                    parent.raise_exception(msg, ValueError)
+                    raise ValueError("Bad value given for parameter's 'scaler' attribute.")
             if adder is None:
                 adder = 0.0
             else:
                 try:
                     adder = float(adder)
                 except (TypeError, ValueError):
-                    msg = "Bad value given for parameter's 'adder' attribute."
-                    parent.raise_exception(msg, ValueError)
+                    raise ValueError("Bad value given for parameter's 'adder' attribute.")
         
         self.low = low
         self.high = high
@@ -47,11 +45,10 @@ class Parameter(object):
         try:
             expreval = ExprEvaluator(target, scope)
         except Exception as err:
-            parent.raise_exception("Can't add parameter: %s" % str(err),
-                                   type(err))
+            raise err.__class__("Can't add parameter: %s" % str(err))
         if not expreval.is_valid_assignee():
-            parent.raise_exception("Can't add parameter: '%s' is not a valid parameter expression" % 
-                                   expreval.text, ValueError)
+            raise ValueError("Can't add parameter: '%s' is not a valid parameter expression" % 
+                             expreval.text)
 
         self._expreval = expreval
         
@@ -60,12 +57,10 @@ class Parameter(object):
             # the actual metadata dict 
             metadata = self.get_metadata()[1]
         except AttributeError:
-            parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % target,
-                                   AttributeError)
+            raise AttributeError("Can't add parameter '%s' because it doesn't exist." % target)
             
         if 'iotype' in metadata and metadata['iotype'] == 'out':
-            parent.raise_exception("Can't add parameter '%s' because '%s' is an output." % (target, target),
-                                   RuntimeError)
+            raise RuntimeError("Can't add parameter '%s' because '%s' is an output." % (target, target))
         try:
             # So, our traits might not have a vartypename?
             self.vartypename = metadata['vartypename']
@@ -75,8 +70,7 @@ class Parameter(object):
         try:
             val = expreval.evaluate()
         except Exception as err:
-            parent.raise_exception("Can't add parameter because I can't evaluate '%s'." % target, 
-                                   ValueError)
+            raise ValueError("Can't add parameter because I can't evaluate '%s'." % target)
             
         self.valtypename = type(val).__name__
 
@@ -84,45 +78,46 @@ class Parameter(object):
             return    # it's an Enum, so no need to set high or low
         
         if not isinstance(val, real_types) and not isinstance(val, int_types):
-            parent.raise_exception("The value of parameter '%s' must be a real or integral type, but its type is '%s'." %
-                                   (target,type(val).__name__), ValueError)
+            raise ValueError("The value of parameter '%s' must be a real or integral type, but its type is '%s'." %
+                                   (target,type(val).__name__))
         
         meta_low = metadata.get('low') # this will be None if 'low' isn't there
         if meta_low is not None:
             if low is None:
                 self.low = self._untransform(meta_low)
             elif low < self._untransform(meta_low):
-                parent.raise_exception("Trying to add parameter '%s', " 
+                raise ValueError("Trying to add parameter '%s', " 
                                        "but the lower limit supplied (%s) exceeds the " 
                                        "built-in lower limit (%s)." % 
-                                       (target, low, meta_low), ValueError)
+                                       (target, low, meta_low))
         else:
             if low is None:
-                parent.raise_exception("Trying to add parameter '%s', "
+                raise ValueError("Trying to add parameter '%s', "
                                        "but no lower limit was found and no " 
                                        "'low' argument was given. One or the "
-                                       "other must be specified." % target,ValueError)
+                                       "other must be specified." % target)
 
         meta_high = metadata.get('high') # this will be None if 'low' isn't there
         if meta_high is not None:
             if high is None:
                 self.high = self._untransform(meta_high)
             elif high > self._untransform(meta_high):
-                parent.raise_exception("Trying to add parameter '%s', " 
+                raise ValueError("Trying to add parameter '%s', " 
                                        "but the upper limit supplied (%s) exceeds the " 
                                        "built-in upper limit (%s)." % 
-                                       (target, high, meta_high), ValueError)
+                                       (target, high, meta_high))
         else:
             if high is None:
-                parent.raise_exception("Trying to add parameter '%s', "
+                raise ValueError("Trying to add parameter '%s', "
                                    "but no upper limit was found and no " 
                                    "'high' argument was given. One or the "
-                                   "other must be specified." % target,ValueError)
+                                   "other must be specified." % target)
 
 
         if self.low > self.high:
-            parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
-                                   (target, self.low, self.high), ValueError)
+            raise ValueError("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
+                                   (target, self.low, self.high))
+        
     def __eq__(self,other):
         if not isinstance(other,Parameter): 
             return False
@@ -188,6 +183,12 @@ class Parameter(object):
     def get_referenced_varpaths(self):
         """Return a set of Variable names referenced in our target string."""
         return self._expreval.get_referenced_varpaths(copy=False)
+    
+    def copy(self):
+        """Return a copy of this Parameter."""
+        return Parameter(self._expreval.text, high=self.high, low=self.low, 
+                         scaler=self.scaler, adder=self.adder, start=self.start, 
+                         fd_step=self.fd_step, scope=self._expreval.scope, name=self.name)
 
     
 class ParameterGroup(object):
@@ -216,6 +217,7 @@ class ParameterGroup(object):
             return False
         return (self._params,self.low,self.high,self.start,self.scaler,self.adder,self.fd_step,self.name)==\
                (other._params,other.low,other.high,other.start,other.scaler,other.adder,other.fd_step,self.name)
+    
     def __str__(self):
         return "%s" % self.targets
 
@@ -285,6 +287,10 @@ class ParameterGroup(object):
             result.update(param.get_referenced_varpaths(copy=False))
         return result
 
+    def copy(self):
+        return ParameterGroup([p.copy() for p in self._params])
+
+    
 class HasParameters(object): 
     """This class provides an implementation of the IHasParameters interface."""
 
@@ -296,6 +302,13 @@ class HasParameters(object):
         self._parent = parent
         self._allowed_types = ['continuous']
 
+    def _item_count(self):
+        """This is used by the replace function to determine if a delegate from the
+        target object is 'empty' or not.  If it's empty then it's not an error if the
+        replacing object doesn't have this delegate.
+        """
+        return len(self._parameters)
+    
     def _override_param(self, param, low=None, high=None, 
                         scaler=None, adder=None, start=None,
                         fd_step=None, name=None):
@@ -390,12 +403,15 @@ class HasParameters(object):
                 self._parent.raise_exception("%s are already Parameter targets" % 
                                              sorted(list(dups)), ValueError)
                 
-            parameters = [Parameter(name, self._parent, low=low, high=high, 
-                                    scaler=scaler, adder=adder, start=start,
-                                    fd_step=fd_step, name=key,
-                                    scope=self._get_scope(scope)) 
-                          for name in names]
-    
+            try:
+                parameters = [Parameter(name, low=low, high=high, 
+                                        scaler=scaler, adder=adder, start=start,
+                                        fd_step=fd_step, name=key,
+                                        scope=self._get_scope(scope)) 
+                              for name in names]
+            except Exception as err:
+                self._parent.raise_exception(str(err), type(err))
+
             if key in self._parameters:
                 self._parent.raise_exception("%s is already a Parameter" % key,
                                              ValueError)
@@ -512,3 +528,12 @@ class HasParameters(object):
                 pass
         return scope
 
+    def mimic(self, target):
+        old = self._parameters
+        self.clear_parameters()
+        try:
+            for name, p in target.get_parameters().items():
+                self._parameters[name] = p.copy()
+        except Exception:
+            self._parameters = old
+            raise
