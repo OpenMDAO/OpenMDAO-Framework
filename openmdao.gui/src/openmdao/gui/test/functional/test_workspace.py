@@ -133,7 +133,7 @@ def _test_menu(browser):
     eq( workspace_page.history, expected )
     top_figure = workspace_page.get_dataflow_figures()[0]
 #FIXME: halo seems to go away now...
-#    eq( top_figure.value_of_css_property('border'), '1px solid rgb(0, 255, 0)' )
+    eq( top_figure.value_of_css_property('border'), '3px solid rgb(0, 255, 0)' )
 
 #FIXME: These need to verify that the request has been performed.
     # View menu.
