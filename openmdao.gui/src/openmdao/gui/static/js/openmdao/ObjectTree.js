@@ -38,7 +38,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
     /**/
         
     // ask model for an update whenever something changes
-    model.addListener('',update)
+    model.addListener('components',update)
     
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path) {

@@ -18,6 +18,8 @@ from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import project_from_archive
 
+from openmdao.main.publisher import Publisher
+
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
 from zope.interface import implementedBy
@@ -36,6 +38,8 @@ def modifies_model(target):
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
+        if self.publish_updates:
+            self.publish_state()
         return result
     return wrapper
 
@@ -45,7 +49,7 @@ class ConsoleServer(cmd.Cmd):
         interface and various methods to access and modify that model.
     '''
 
-    def __init__(self, name='', host=''):
+    def __init__(self, name='', host='', publish_updates=True):
         cmd.Cmd.__init__(self)
 
         self.intro = 'OpenMDAO '+__version__+' ('+__date__+')'
@@ -58,8 +62,10 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = ''
         self.proj = None
         self.exc_info = None
+        self.publish_updates = publish_updates
+        self.publisher = None
 
-        self.files = FileManager('files', publish_updates=True)
+        self.files = FileManager('files', publish_updates=publish_updates)
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -72,6 +78,20 @@ class ConsoleServer(cmd.Cmd):
                     v.name = k
             if is_instance(v, Assembly):
                 set_as_top(v)
+
+    def publish_state(self):
+        ''' publish the current state of the model
+            including the compnent tree and ... (TODO)
+        '''
+        if not self.publisher:
+            try:
+                self.publisher = Publisher.get_instance()
+            except Exception, err:
+                print 'Error getting publisher:', err
+                self.publisher = None
+
+        if self.publisher:
+            self.publisher.publish('components', self.get_components())
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -623,6 +643,7 @@ class ConsoleServer(cmd.Cmd):
     def add_component(self, name, classname, parentname):
         ''' add a new component of the given type to the specified parent.
         '''
+        name = name.encode('utf8')
         if (parentname and len(parentname)>0):
             parent, root = self.get_container(parentname)
             if parent:
