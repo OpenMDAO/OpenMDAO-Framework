@@ -18,6 +18,7 @@ import urllib2
 import zipfile
 
 from distutils.spawn import find_executable
+from nose import SkipTest
 from nose.tools import eq_ as eq
 from pyvirtualdisplay import Display
 from selenium import webdriver
@@ -175,22 +176,45 @@ def generate(modname):
             browser = _browsers_to_test[name]()  # Open browser.
             browser.title
         except Exception as exc:
-            logging.critical('Skipping %s, caught: %s', name, exc)
+            msg = '%s setup failed: %s' % (name, exc)
+            logging.critical(msg)
+            yield _Runner(tests[0]), msg  # `msg` used in begin() for SkipTest.
             continue
         try:
-            for _test in tests:
+            for test in tests:
                 logging.critical('')
                 logging.critical('Running %s using %s', _test.__name__, name)
-                yield _test, browser
+                yield _Runner(test), browser
         finally:
             browser.close()
 
 
+class _Runner(object):
+    """
+    Used to get better descriptions on tests.
+    If `browser` is a string, raise :class:`nose.SkipTest`.
+    """
+
+    def __init__(self, test):
+        self.test = test
+        if test.__doc__:
+            self.description = test.__doc__
+        else:
+            self.description = '%s (%s)' % (test.__name__, test.__module__)
+
+    def __call__(self, browser):
+        if isinstance(browser, basestring):
+            raise SkipTest(browser)
+        self.test(browser)
+
+
 def begin(browser):
-    """ Start in projects page. Returns that page. """
+    """
+    Otherwise, load the projects page and return its page object.
+    """
     projects_page = ProjectsListPage(browser, TEST_CONFIG['port'])
     projects_page.go_to()
-    eq( "Projects", projects_page.page_title )
+    eq( 'Projects', projects_page.page_title )
     return projects_page
 
 

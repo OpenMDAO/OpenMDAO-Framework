@@ -7,12 +7,16 @@ MAX_TRIALS = 100
 
 def main():
     """ Run GUI functional tests up to `MAX_TRIALS` times. """
+    max_trials = MAX_TRIALS
+    if len(sys.argv) > 1:
+        max_trials = int(sys.argv[1])
+
     stop = 'STOP'
     if os.path.exists(stop):
         os.remove(stop)
     logfile = open('stressit.log', 'w')
 
-    for trial in range(MAX_TRIALS):
+    for trial in range(max_trials):
         if os.path.exists(stop):
             break
     
@@ -28,7 +32,7 @@ def main():
             print msg
             logfile.write(msg+'\n')
             logfile.flush()
-            status = subprocess.call(('python', test_script), stdout=logfile,
+            status = subprocess.call(('python', test_script, '-v'), stdout=logfile,
                                      stderr=subprocess.STDOUT)
             if status:
                 sys.exit(status)

@@ -17,8 +17,7 @@ def test_generator():
 
 
 def _test_console(browser):
-    """ Check basic console functionality. """
-    # Start with a new project.
+    # Check basic console functionality.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
@@ -34,8 +33,7 @@ def _test_console(browser):
 
 
 def _test_import(browser):
-    """ Import some files and add components from them. """
-    # Start with a new project.
+    # Import some files and add components from them.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
@@ -121,8 +119,7 @@ def _test_import(browser):
 
 
 def _test_menu(browser):
-    """ Just click on various main menu buttons. """
-    # Start with a new project.
+    # Just click on various main menu buttons.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
@@ -155,8 +152,7 @@ def _test_menu(browser):
 
 
 def _test_newfile(browser):
-    """ Creates a file in the GUI. """
-    # Start with a new project.
+    # Creates a file in the GUI.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()

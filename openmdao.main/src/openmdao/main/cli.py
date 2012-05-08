@@ -96,6 +96,8 @@ def _get_openmdao_parser():
         parser.add_argument("--testargs", action="store", type=str, dest='testargs',
                             default='',
                             help="args to be passed to openmdao test")
+        parser.add_argument('-v', '--verbose', action='store_true',
+                            help='display test progress')
         parser = add_config_options(parser)
         parser.set_defaults(func=test_branch)
         
