@@ -80,6 +80,11 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 c.onDoubleClick = function() {
                     new openmdao.ConnectionEditor(model,self.pathname,src_name,dst_name);
                 };
+                c.getContextMenu=function(){
+                    var menu=new draw2d.Menu();
+                    // no context menu for now
+                    return menu;
+                }
                 dataflow.addFigure(c);
             }
         })

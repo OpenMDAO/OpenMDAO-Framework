@@ -37,9 +37,6 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
     })
     /**/
 
-    // subscribe to updates to components
-    model.addListener('components',update)
-
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path) {
         var data = [];
@@ -51,7 +48,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                 name = openmdao.Util.getName(pathname);
 
             if (filter_beg.indexOf(name[0])<0) {
-                interfaces = JSON.stringify(interfaces)
+                interfaces = JSON.stringify(interfaces);
                 var node = { 'data': name  };
                 node['attr'] = { 
                      'type'  : type,
@@ -61,15 +58,15 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                 if (item['children']) {
                     node['children'] = convertJSON(item['children'],pathname);
                 };
-                data.push(node)
+                data.push(node);
             }
         })
-        return data
+        return data;
     }
-  
+
     /** update the tree with JSON model data  */
     function updateTree(json) {
-        tree.empty()        
+        tree.empty();
         tree.jstree({
             plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm", "dnd"],
             json_data   : { "data": convertJSON(json,'') },
@@ -82,7 +79,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                                     return false;
                                 }
                             }
-                          },            
+                          },
             dnd         : { /* drop_check: false means move is invalid, otherwise true */
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
@@ -221,15 +218,28 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
         return menu;
     }
 
-    /** update the tree, with data from the model  */
-    function update() {
-        model.getComponents(updateTree)
-    }
+    // listen for 'components' messages and update object tree accordingly
+    model.addListener('components', function(message) {
+    	if (message.length !== 2 || message[0] !== 'components') {
+    		debug.warn('Invalid components data:',message);
+    	}
+    	else {
+    		components = jQuery.parseJSON(message[1]);
+    		updateTree(components);
+    	}
+    });
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
+    /** update the tree, with data from the model  */
+    this.update = function() {
+        model.getComponents(updateTree);
+    }
+
+    // load initial component data
+    this.update();
 }
 
 /** set prototype */

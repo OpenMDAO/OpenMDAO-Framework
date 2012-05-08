@@ -194,6 +194,20 @@ class ConnectionsHandler(ReqHandler):
         self.write(connects)
 
 
+class DataflowHandler(ReqHandler):
+    ''' get the structure of the specified assembly, or of the global
+        namespace if no pathname is specified, consisting of the list of
+        components and the connections between them (i.e. the dataflow)
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        json = cserver.get_dataflow(name)
+        self.content_type = 'application/javascript'
+        self.write(json)
+
+
 class ExecHandler(ReqHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
@@ -343,20 +357,6 @@ class PubstreamHandler(ReqHandler):
         self.write(url)
 
 
-class StructureHandler(ReqHandler):
-    ''' get the structure of the specified assembly, or of the global
-        namespace if no pathname is specified, consisting of the list
-        of components and the connections between them
-    '''
-
-    @web.authenticated
-    def get(self, name):
-        cserver = self.get_server()
-        json = cserver.get_structure(name)
-        self.content_type = 'application/javascript'
-        self.write(json)
-
-
 class TypesHandler(ReqHandler):
     ''' get hierarchy of package/types to populate the Palette
     '''
@@ -429,6 +429,7 @@ handlers = [
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
+    web.url(r'/workspace/dataflow/(.*)/?',  DataflowHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
     web.url(r'/workspace/files/?',          FilesHandler),
@@ -438,7 +439,6 @@ handlers = [
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
-    web.url(r'/workspace/structure/(.*)/?', StructureHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),

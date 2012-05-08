@@ -20,7 +20,7 @@
         { "text": "Workflow",      "onclick": "jQuery('#workflow_tab').click();" },
         { "text": "Dataflow",      "onclick": "jQuery('#dataflow_tab').click();" },
         { "text": "--------"       },
-        { "text": "Refresh",       "onclick": "openmdao.model.updateListeners();" }
+        { "text": "Refresh",       "onclick": "openmdao.update();" }
       ]
     },
     { "text": "Tools", 
