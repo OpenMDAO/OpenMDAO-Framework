@@ -1,6 +1,5 @@
 import os
 import os.path
-import sys
 import shutil
 import tempfile
 import zipfile
@@ -84,7 +83,7 @@ class FileManager(object):
             try:
                 shutil.rmtree(self.root_dir)
             except Exception, err:
-                self._error(err, sys.exc_info())
+                print 'Filemanager: Error cleaning up file directory', err
 
     def get_files(self):
         ''' get a nested dictionary of files in the working directory
