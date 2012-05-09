@@ -28,24 +28,38 @@ class Publisher(object):
 
     def publish(self, topic, value):
         if Publisher.__enabled:
+            if isinstance(topic, unicode):
+                # in case someone snuck in a unicode name
+                topic = topic.encode('utf-8', errors='backslashreplace')
             with self._lock:
-                self._sender.send_multipart([
-                    topic,
-                    pickle.dumps(value, -1)
-                ])
-                if hasattr(self._sender, 'flush'):
-                    self._sender.flush()
-
-    def publish_list(self, items):
-        if Publisher.__enabled:
-            with self._lock:
-                for topic, value in items:
+                try:
                     self._sender.send_multipart([
                         topic,
                         pickle.dumps(value, -1)
                     ])
-                if hasattr(self._sender, 'flush'):
-                    self._sender.flush()
+                    if hasattr(self._sender, 'flush'):
+                        self._sender.flush()
+                except Exception, err:
+                    print 'Publisher - Error publishing message %s: %s, %s' % \
+                          (topic, value, err)
+
+    def publish_list(self, items):
+        if Publisher.__enabled:
+            with self._lock:
+                try: 
+                    for topic, value in items:
+                        if isinstance(topic, unicode):
+                            # in case someone snuck in a unicode name
+                            topic = topic.encode('utf-8', errors='backslashreplace')
+                        self._sender.send_multipart([
+                            topic,
+                            pickle.dumps(value, -1)
+                        ])
+                    if hasattr(self._sender, 'flush'):
+                        self._sender.flush()
+                except Exception, err:
+                    print 'Publisher - Error publishing list %s, %s' % \
+                          (topic, err)
 
     @staticmethod
     def get_instance():
