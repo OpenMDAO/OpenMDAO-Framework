@@ -11,7 +11,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
-from util import ValuePrompt, NotifierPage
+from util import ABORT, ValuePrompt, NotifierPage
 
 
 class UploadPage(BasePageObject):
@@ -156,6 +156,7 @@ class WorkspacePage(BasePageObject):
         closer.start()
         closer.join(60)
         if closer.is_alive():
+            ABORT = True
             raise RuntimeError("Can't close workspace, driver hung :-(")
 
         from project import ProjectsListPage

@@ -255,8 +255,8 @@ def after_install(options, home_dir):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
-            # Only linux needs the modules for doing the GUI unit testing at this time
-            if sys.platform.startswith( "linux" ):
+            # No GUI unit or functional testing on Windows at this time.
+            if sys.platform != 'win32':
                 allreqs = allreqs + guitestreqs 
             
         for req in allreqs:

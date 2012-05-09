@@ -26,6 +26,7 @@ from selenium import webdriver
 from openmdao.util.network import get_unused_ip_port
 
 from pageobjects.project import ProjectsListPage
+from pageobjects.util import ABORT
 
 if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
@@ -164,7 +165,7 @@ def teardown_server():
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """
     # Because Xvfb does not exist on Windows, it's difficult to do
-    # headless (EC2) testing on Windows. So for now we just test on Linux.
+    # headless (EC2) testing on Windows. So for now we don't test there.
     if sys.platform == 'win32':
         return
 
@@ -178,14 +179,23 @@ def generate(modname):
         except Exception as exc:
             msg = '%s setup failed: %s' % (name, exc)
             logging.critical(msg)
-            yield _Runner(tests[0]), msg  # `msg` used in begin() for SkipTest.
+            yield _Runner(tests[0]), SkipTest(msg)
             continue
-        try:
-            for test in tests:
-                logging.critical('')
-                logging.critical('Running %s using %s', _test.__name__, name)
+
+        ABORT = False
+        for test in tests:
+            logging.critical('')
+            if ABORT:
+                msg = '%s tests aborting' % name
+                logging.critical(msg)
+                yield _Runner(test), RuntimeError(msg)
+            else:
+                logging.critical('Run %s using %s', test.__name__, name)
                 yield _Runner(test), browser
-        finally:
+
+        if ABORT:
+            logging.critical('Aborting tests, skipping browser close')
+        else:
             browser.close()
 
 
@@ -198,13 +208,13 @@ class _Runner(object):
     def __init__(self, test):
         self.test = test
         if test.__doc__:
-            self.description = test.__doc__
+            self.description = test.__doc__.strip()
         else:
             self.description = '%s (%s)' % (test.__name__, test.__module__)
 
     def __call__(self, browser):
-        if isinstance(browser, basestring):
-            raise SkipTest(browser)
+        if isinstance(browser, Exception):
+            raise browser
         self.test(browser)
 
 

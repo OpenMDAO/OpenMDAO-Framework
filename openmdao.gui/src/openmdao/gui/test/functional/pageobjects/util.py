@@ -7,6 +7,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
 
+# Set this True on fatal driver errors.
+ABORT = False
+
 
 class ValuePrompt(BasePageObject):
     """ Overlay displayed by ``openmdao.Util.promptForValue()``. """

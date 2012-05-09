@@ -59,9 +59,6 @@ def _test_import(browser):
     file_path = openmdao.examples.simple.optimization_unconstrained.__file__
     workspace_page.add_file(file_path)
 
-    # Refresh to update file tree.
-    workspace_page.view_refresh()
-
     # Check to make sure the files were added.
     file_names = workspace_page.get_files()
     expected_file_names = ['paraboloid.py', 'optimization_unconstrained.py']
