@@ -46,8 +46,8 @@ def _test_import(browser):
     workspace_page('workflow_tab').click()
     time.sleep(0.5)  # Just so we can see it.
 
-    # View structure.
-    workspace_page('structure_tab').click()
+    # View dataflow.
+    workspace_page('dataflow_tab').click()
 
     # Add paraboloid file.
     import openmdao.examples.simple.paraboloid
@@ -82,7 +82,7 @@ def _test_import(browser):
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
-    workspace_page.add_library_item_to_structure('Paraboloid', paraboloid_name)
+    workspace_page.add_library_item_to_dataflow('Paraboloid', paraboloid_name)
 
     # Now there should be two.
     eq( len(workspace_page.get_dataflow_figures()), 2 )
@@ -132,7 +132,7 @@ def _test_menu(browser):
 #FIXME: These need to verify that the request has been performed.
     # View menu.
     for item in ('code', 'cmdline', 'console', 'files', 'libraries', 'objects',
-                 'properties', 'workflow', 'structure'):
+                 'properties', 'workflow', 'dataflow'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
         time.sleep(0.5)  # Just so we can see it.
@@ -172,10 +172,10 @@ f_x = Float(0.0, iotype='out')
     workspace_page.import_file('plane.py')
 
     # Drag over Plane.
-    workspace_page.show_structure('top')
+    workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
     workspace_page('working_section').click()
-    workspace_page.add_library_item_to_structure('Plane', 'plane')
+    workspace_page.add_library_item_to_dataflow('Plane', 'plane')
 
     # Clean up.
     projects_page = workspace_page.close_workspace()

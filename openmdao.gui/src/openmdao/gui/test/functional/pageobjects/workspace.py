@@ -48,7 +48,7 @@ class WorkspacePage(BasePageObject):
     objects_button = ButtonElement((By.ID, 'view-objects'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
     workflow_button = ButtonElement((By.ID, 'view-workflow'))
-    structure_button = ButtonElement((By.ID, 'view-structure'))
+    dataflow_button = ButtonElement((By.ID, 'view-dataflow'))
     refresh_button = ButtonElement((By.ID, 'view-refresh'))
 
     tools_menu = ButtonElement((By.ID, 'tools-menu'))
@@ -76,7 +76,7 @@ class WorkspacePage(BasePageObject):
 
     # Object context menu.
     obj_properties = ButtonElement((By.XPATH, "//a[(@rel='properties')]"))
-    obj_structure = ButtonElement((By.XPATH, "//a[(@rel='show_dataflow')]"))
+    obj_dataflow = ButtonElement((By.XPATH, "//a[(@rel='show_dataflow')]"))
     obj_workflow = ButtonElement((By.XPATH, "//a[(@rel='show_workflow')]"))
     obj_run = ButtonElement((By.XPATH, "//a[(@rel='run')]"))
     obj_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
@@ -95,7 +95,7 @@ class WorkspacePage(BasePageObject):
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Center.
-    structure_tab = ButtonElement((By.ID, 'structure_tab'))
+    dataflow_tab = ButtonElement((By.ID, 'dataflow_tab'))
     workflow_tab = ButtonElement((By.ID, 'workflow_tab'))
     code_tab = ButtonElement((By.ID, 'code_tab'))
 
@@ -179,8 +179,7 @@ class WorkspacePage(BasePageObject):
         NotifierPage.wait(self.browser, self.port)
 
     def get_files(self):
-        '''Warning: the workspace needs to be refreshed to make sure
-           this command can see everything'''
+        """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'ftree'))
         file_items = self.browser.find_elements(*self.locators["files"])
@@ -284,17 +283,17 @@ class WorkspacePage(BasePageObject):
             chain.context_click(element).perform()
             self('file_edit').click()
 
-    def show_structure(self, component_name):
-        """ Show structure of `component_name`. """
+    def show_dataflow(self, component_name):
+        """ Show dataflow of `component_name`. """
         self('objects_tab').click()
         xpath = "//div[@id='otree']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
-        self('obj_structure').click()
+        self('obj_dataflow').click()
 
-    def add_library_item_to_structure(self, item_name, instance_name):
+    def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
         xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
@@ -305,7 +304,7 @@ class WorkspacePage(BasePageObject):
         time.sleep(1)
 
         target = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath("//*[@id='-structure']"))
+            lambda browser: browser.find_element_by_xpath("//*[@id='-dataflow']"))
 
         chain = ActionChains(self.browser)
         if False:
