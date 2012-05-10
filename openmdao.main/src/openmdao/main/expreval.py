@@ -770,7 +770,7 @@ class ExprEvaluator(object):
             self._parse()
         
         oldname = scope.name + '.' if scope.name else ''
-        newname = new_scope.name + '.'
+        newname = new_scope.name + '.' if new_scope.name else ''
         if scope is new_scope.parent or scope is parent:
             oldname = 'parent.'
         elif new_scope is scope.parent or new_scope is parent:

@@ -24,6 +24,8 @@ from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
                                      ICaseIterator, ICaseRecorder
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -797,6 +799,51 @@ class Component (Container):
                 self._valid_dict[destpath] = True  # disconnected boundary outputs are always valid
         self.config_changed(update_parent=False)
     
+    @rbac(('owner', 'user'))
+    def mimic(self, target):
+        """Initialize what we can from the given target object. Copy any
+        inputs that we share with the target and initialize our delegates with
+        any matching delegates from the target.
+        """
+        if isinstance(target, Container) and target.name != '':
+            self.name = target.name
+            
+        # update any delegates that we share with the target
+        if hasattr(target, '_delegates_') and hasattr(self, '_delegates_'):
+            groups = [(HasConstraints, HasEqConstraints, HasIneqConstraints),
+                      (HasObjective, HasObjectives)]
+            matches = {}
+            tset = set(target._delegates_.keys())
+            # should be safe assuming only one delegate of each type here, since
+            # multiples would simply overwrite each other
+            for tname, tdel in target._delegates_.items():
+                for sname, sdel in self._delegates_.items():
+                    if sname in matches:
+                        continue
+                    if tname == sname:
+                        matches[sname] = target._delegates_[tname]
+                    else:
+                        for g in groups:
+                            if isinstance(tdel, g) and isinstance(sdel, g):
+                                matches[sname] = target._delegates_[tname]
+                                break
+                    if sname in matches:
+                        break
+                else: # current tname wasn't matched to anything in self._delegates_
+                    if hasattr(tdel, '_item_count') and tdel._item_count() > 0:
+                        self.raise_exception("target delegate '%s' has no match" % tname,
+                                             RuntimeError)
+
+            for sname, tdel in matches.items():
+                delegate = self._delegates_[sname]
+                if hasattr(delegate, 'mimic'):
+                    delegate.mimic(tdel) # use target delegate as target
+
+        # now update any matching inputs from the target
+        for inp in target.list_inputs():
+            if hasattr(self, inp):
+                setattr(self, inp, getattr(target, inp))
+
     @rbac(('owner', 'user'))
     def get_expr_depends(self):
         """Return a list of tuples of the form (src_comp_name, dest_comp_name)

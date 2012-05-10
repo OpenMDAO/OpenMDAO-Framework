@@ -647,6 +647,23 @@ class Container(SafeHasTraits):
             self._managers[key] = manager
         return manager.proxy
         
+    def _check_rename(self, oldname, newname):
+        if '.' in oldname or '.' in newname:
+            self.raise_exception("can't rename '%s' to '%s': rename only works within a single scope." % 
+                                 (oldname, newname), RuntimeError)
+        if not self.contains(oldname):
+            self.raise_exception("can't rename '%s' to '%s': '%s' was not found." % 
+                                 (oldname, newname, oldname), RuntimeError)
+        if self.contains(newname):
+            self.raise_exception("can't rename '%s' to '%s': '%s' already exists." % 
+                                 (oldname, newname, newname), RuntimeError)
+            
+    def rename(self, oldname, newname):
+        """Renames a child of this object from oldname to newname."""
+        self._check_rename(oldname, newname)
+        obj = self.remove(oldname)
+        self.add(newname, obj)
+        
     def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
@@ -997,20 +1014,24 @@ class Container(SafeHasTraits):
             else:
                 setattr(self, path, value)
 
-        
     def _index_set(self, name, value, index):
         obj = self.get_wrapped_attr(name, index[:-1])
+        idx = index[-1]
         if isinstance(obj, AttrWrapper):
             wrapper = obj
             obj = obj.value
         else:
             wrapper = None
         if isinstance(value, AttrWrapper):
+            truval = value.value
             if wrapper:
-                value = wrapper.convert_from(value)
-            else:
-                value = value.value
-        idx = index[-1]
+                if idx[0] != ATTR:
+                    truval = wrapper.convert_from(value)
+                elif isinstance(obj, Container):
+                    att = obj.get_wrapped_attr(idx[1])
+                    if isinstance(att, AttrWrapper):
+                        truval = att.convert_from(value)
+            value = truval
         try:
             old = process_index_entry(obj, idx)
         except KeyError:

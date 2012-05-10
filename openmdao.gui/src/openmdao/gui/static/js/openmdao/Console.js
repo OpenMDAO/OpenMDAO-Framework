@@ -3,11 +3,11 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.Console = function(id,model) {  
     openmdao.Console.prototype.init.call(this,id,'Console');
-  
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+
     // note: there is CSS that maps to these specific IDs, so don't change them :/
     var self = this,
         historyBox = jQuery('<div id="historybox">').appendTo(this.elm),
@@ -16,9 +16,9 @@ openmdao.Console = function(id,model) {
                           + '  <input type="text" id="command" />'
                           + '  <input type="submit" value="Submit" class="button" id="command-button"/>'
                           + '</form>').appendTo(this.elm),
-        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>").appendTo(historyBox)
-    
-    // create context menu for history    
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>").appendTo(historyBox);
+
+    // create context menu for history
     contextMenu.append(jQuery('<li>Trace</li>').click(function(ev) {
         model.issueCommand('trace');
     }));
@@ -28,12 +28,10 @@ openmdao.Console = function(id,model) {
     contextMenu.append(jQuery('<li>Copy</li>').click(function(ev) {
         openmdao.Util.htmlWindow(history.html());
     }));
-    
     contextMenu.append(jQuery('<li>Pop Out</li>').click(function(ev) {
         var init_fn = "jQuery(function(){openmdao.PopoutConsole()})";
         openmdao.Util.popupScript('Console',init_fn);
     }));
-    
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
 
     // submit a command
@@ -52,7 +50,7 @@ openmdao.Console = function(id,model) {
                 },
                 // failure
                 function(jqXHR, textStatus, errorThrown) {
-                    alert('Error issuing command: '+jqXHR.statusText)
+                    alert('Error issuing command: '+jqXHR.statusText);
                 },
                 // completion
                 function(jqXHR, textStatus) {
@@ -65,7 +63,7 @@ openmdao.Console = function(id,model) {
         }
         return false;
     })
-    
+
     /** scroll to bottom */
     function scrollToBottom() {
         var h = history.height(),
@@ -73,7 +71,7 @@ openmdao.Console = function(id,model) {
             hidden = h-hb
         historyBox.scrollTop(hidden);
     }
-    
+
     /** update the history */
     function updateHistory(text) {
         if (text.length > 0) {

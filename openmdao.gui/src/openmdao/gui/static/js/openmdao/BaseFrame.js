@@ -1,13 +1,20 @@
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+
+openmdao.update = function() {
+    // tell all openmdao frames to update themselves
+    jQuery.each(this.frames,function(id,frame) {
+        frame.update();
+    });
+}
 
 openmdao.BaseFrame = function () {
     id:         null;   // the id attribute of the element the frame is built on
     elm:        null;   // the element the frame is built on wrapped by jQuery
     par:        null;   // the parent element as a jQuery object
     title:      "";     // the title to be used for this frame
-    menu:       null;   // an optional menu     
+    menu:       null;   // an optional menu
 }
-     
+
 openmdao.BaseFrame.prototype.init = function (id,title,menu) {
 /*  initialize a BaseFrame on the element with the given ID
     if the element doesn't exist it will be created as a popup
@@ -28,9 +35,15 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         else {
             openmdao.uniqueID = 1;
         }
-        this.id = "BaseFrame"+openmdao.uniqueID
+        this.id = "BaseFrame"+openmdao.uniqueID;
+    };
+
+    // add to list of frames
+    if (! ('frames' in openmdao)) {
+        openmdao['frames'] = { };
     }
-    
+    openmdao.frames[this.id] = this;
+
     // if the elm doesn't exist, create it as a popup 
     if (this.elm && this.elm.length > 0) {
         this.par = this.elm.parent();
@@ -39,14 +52,14 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         this.par = null;
         this.elm = jQuery('<div id='+this.id+'></div>');
         this.popup(this.title);
-    }
-        
+    };
+
     // delete any existing content and prevent browser context menu
     this.elm.html("")
-                 .bind("contextmenu", function(e) { return false; })
-    
+            .bind("contextmenu", function(e) { return false; })
+
     // create menubar and add menu if one has been provided
-    if (this.menu) {        
+    if (this.menu) {
         var menuID = this.id+"-menu",
             menuDiv = this.elm.append("<nav2 id='"+menuID+"'>"),
             popButton = jQuery("<div title='Pop Out' style='position:absolute;top:5px;right:5px;z-index:1001'>*</div>")
@@ -55,9 +68,9 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         new openmdao.Menu(menuID,this.menu)
         // FIXME: HACK, add button to make window pop out (TODO: alternately open in new browser window?)
         menuDiv.append(popButton)
-    }                
+    }
 },
-    
+
 openmdao.BaseFrame.prototype.popup = function (title) {
     /* put this frame in a popup */
     this.elm.dialog({
@@ -94,3 +107,13 @@ openmdao.BaseFrame.prototype.close = function () {
         this.elm.remove(); 
     }
 }
+
+openmdao.BaseFrame.prototype.update = function() {
+    // place holder to update contents of the frame (optional)
+    //debug.warn('BaseFrame.update - no update function defined for',this)
+}
+
+openmdao.BaseFrame.prototype.destroy = function() {
+    // place holder to clean up subscriptions, etc
+}
+

@@ -6,7 +6,7 @@ openmdao.Model=function() {
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+
     var self = this,
         outstream_topic = 'outstream',
         outstream_opened = false,
@@ -14,7 +14,7 @@ openmdao.Model=function() {
         pubstream_opened = false,
         pubstream_socket = null,
         subscribers = {};
- 
+
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
            handler:    the message handler for the websocket
@@ -71,11 +71,11 @@ openmdao.Model=function() {
             }
         );
     };
-    
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
     /** add a subscriber (i.e. a function to be called) for messgages with the given topic */
     this.addListener = function(topic, callback) {
         if (topic in subscribers) {
@@ -156,7 +156,7 @@ openmdao.Model=function() {
                       }
         })
     }
-   
+
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
@@ -171,9 +171,9 @@ openmdao.Model=function() {
             })
         }
     }
-    
-    /** get the data structure for an assembly */
-    this.getStructure = function(pathname,callback,errorHandler) {
+
+    /** get the structure (data flow)) of an assembly */
+    this.getDataflow = function(pathname,callback,errorHandler) {
         if (typeof callback != 'function')
             return
         else {
@@ -182,14 +182,14 @@ openmdao.Model=function() {
             };
             jQuery.ajax({
                 type: 'GET',
-                url:  'structure/'+pathname,
+                url:  'dataflow/'+pathname,
                 dataType: 'json',
                 success: callback,
                 error: errorHandler
             })
         }
     }
- 
+
     /** get  hierarchical list of components*/
     this.getComponents = function(callback,errorHandler) {
         if (typeof callback != 'function')
@@ -205,7 +205,7 @@ openmdao.Model=function() {
             })
         }
     }
-    
+
     /** get  attributes of a component*/
     this.getComponent = function(name,callback,errorHandler) {
         if (typeof callback != 'function')
@@ -249,13 +249,13 @@ openmdao.Model=function() {
             error: errorHandler
         })
     }
-    
+
     /** add an object of the specified type & name to the specified parent */
     this.addComponent = function(typepath,name,parent,callback) {
         if (!parent) {
             parent = '';
         };
-       
+
         if (/driver/.test(typepath)&&(openmdao.Util['$'+name])){openmdao.Util['$'+name]();return;};
 
         jQuery.ajax({
@@ -281,7 +281,7 @@ openmdao.Model=function() {
             self.issueCommand('del('+openmdao.Util.getName(pathname)+')');
         }
     }
-    
+
     /** issue the specified command against the model */
     this.issueCommand = function(cmd, callback, errorHandler, completeHandler) {
         jQuery.ajax({
@@ -407,7 +407,7 @@ openmdao.Model=function() {
                    }
             })
     }
-    
+
     /** import the contents of the specified file into the model */
     this.importFile = function(filepath, callback, errorHandler) {
         // change path to package notation and import
@@ -447,7 +447,7 @@ openmdao.Model=function() {
                    },
         })
     }
-    
+
     /** execute the specified file */
     this.execFile = function(filepath) {
         // convert to relative path with forward slashes
@@ -468,18 +468,18 @@ openmdao.Model=function() {
     this.reload = function() {
         openmdao.Util.closeWebSockets('reload');
         window.location.replace('/workspace/project');
-    }    
+    }
 
     /** exit the model */
     this.close = function() {
         openmdao.Util.closeWebSockets('close');
         window.location.replace('/workspace/close');
     }
-    
+
     /** exit the model */
     this.exit = function() {
         openmdao.Util.closeWebSockets('exit');
         window.location.replace('/exit');
     }
-    
+
 }

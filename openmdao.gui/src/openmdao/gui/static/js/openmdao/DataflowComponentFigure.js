@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.StructureComponentFigure=function(myModel,pathname,type,valid){
+openmdao.DataflowComponentFigure=function(myModel,pathname,type,valid){
     this.myModel = myModel;
     this.pathname = pathname;
     this.type = type;
@@ -13,11 +13,11 @@ openmdao.StructureComponentFigure=function(myModel,pathname,type,valid){
     draw2d.Node.call(this);
     this.setDimension(100,50);
     this.originalHeight=-1;
-    
+
     // get name for this figure and set title appropriately
     this.name = openmdao.Util.getName(pathname);
     this.setTitle(this.name);
-    
+
     // set the content text to be the type name (in italics)
     var tok = type.split('.');
     if (tok.length > 1) {
@@ -44,14 +44,14 @@ openmdao.StructureComponentFigure=function(myModel,pathname,type,valid){
     myModel.addListener(topic,this.setExecState.bind(this));
 };
 
-openmdao.StructureComponentFigure.prototype=new draw2d.Node();
+openmdao.DataflowComponentFigure.prototype=new draw2d.Node();
 
-openmdao.StructureComponentFigure.prototype.type="StructureComponentFigure";
+openmdao.DataflowComponentFigure.prototype.type="DataflowComponentFigure";
 
-openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
+openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     var circleIMG = "url(/static/images/circle.png)";
-    
-    var item=document.createElement("div");    
+
+    var item=document.createElement("div");
     item.id=this.id;
     item.style.color="black";
     item.style.position="absolute";
@@ -63,7 +63,7 @@ openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     item.style.padding="0px";
     item.style.outline="none";
     item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
-    item.className="DataflowComponentFigure" ;
+    item.className="DataflowComponentFigure";
     
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
@@ -81,7 +81,7 @@ openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     this.top_right.style.left="0px";
     this.top_right.style.top="0px";
     this.top_right.style.fontSize="2px";
-    
+
     this.bottom_left=document.createElement("div");
     this.bottom_left.style.background=circleIMG+" no-repeat bottom left";
     this.bottom_left.style.position="absolute";
@@ -98,7 +98,7 @@ openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     this.bottom_right.style.left="0px";
     this.bottom_right.style.top="0px";
     this.bottom_right.style.fontSize="2px";
-    
+
     this.header=document.createElement("div");
     this.header.style.position="absolute";
     this.header.style.left=this.cornerWidth+"px";
@@ -109,8 +109,8 @@ openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
     this.disableTextSelection(this.header);
-    this.header.className="DataflowComponentFigureHeader" ;
-    
+    this.header.className="DataflowComponentFigureHeader";
+
     this.footer=document.createElement("div");
     this.footer.style.position="absolute";
     this.footer.style.left=this.cornerWidth+"px";
@@ -119,7 +119,7 @@ openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     this.footer.style.backgroundColor="white";
     this.footer.style.borderBottom="1px solid #666666";
     this.footer.style.fontSize="2px";
-    
+
     this.textarea=document.createElement("div");
     this.textarea.style.position="absolute";
     this.textarea.style.left="0px";
@@ -131,7 +131,7 @@ openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     this.textarea.style.overflow="hidden";
     this.textarea.style.fontSize="9pt";
     this.disableTextSelection(this.textarea);
-    
+
     item.appendChild(this.top_left);
     item.appendChild(this.header);
     item.appendChild(this.top_right);
@@ -142,7 +142,7 @@ openmdao.StructureComponentFigure.prototype.createHTMLElement=function(){
     return item;
 };
 
-openmdao.StructureComponentFigure.prototype.setDimension=function(w,h){
+openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
     draw2d.Node.prototype.setDimension.call(this,w,h);
     if(this.top_left!==null){
         this.top_right.style.left=(this.width-this.cornerWidth)+"px";
@@ -163,19 +163,19 @@ openmdao.StructureComponentFigure.prototype.setDimension=function(w,h){
     }
 };
 
-openmdao.StructureComponentFigure.prototype.isConnected=function(){
+openmdao.DataflowComponentFigure.prototype.isConnected=function(){
     return ((this.outputPort.getConnections().size > 0) || (this.inputPort.getConnections().size > 0));
 };
 
-openmdao.StructureComponentFigure.prototype.setTitle=function(title){
+openmdao.DataflowComponentFigure.prototype.setTitle=function(title){
     this.header.innerHTML=title;
 };
 
-openmdao.StructureComponentFigure.prototype.setContent=function(_5014){
+openmdao.DataflowComponentFigure.prototype.setContent=function(_5014){
     this.textarea.innerHTML=_5014;
 };
 
-openmdao.StructureComponentFigure.prototype.onDragstart=function(x,y){
+openmdao.DataflowComponentFigure.prototype.onDragstart=function(x,y){
     var _5017=draw2d.Node.prototype.onDragstart.call(this,x,y);
     if(this.header===null){
         return false;
@@ -193,7 +193,7 @@ openmdao.StructureComponentFigure.prototype.onDragstart=function(x,y){
     }
 };
 
-openmdao.StructureComponentFigure.prototype.setCanDrag=function(flag){
+openmdao.DataflowComponentFigure.prototype.setCanDrag=function(flag){
     draw2d.Node.prototype.setCanDrag.call(this,flag);
     this.html.style.cursor="";
     if(this.header===null){
@@ -206,14 +206,14 @@ openmdao.StructureComponentFigure.prototype.setCanDrag=function(flag){
     }
 };
 
-openmdao.StructureComponentFigure.prototype.setWorkflow=function(wkflw){
+openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
     draw2d.Node.prototype.setWorkflow.call(this,wkflw);
     if(wkflw!==null && this.inputPort===null){
         this.inputPort=new draw2d.InputPort();
         this.inputPort.setWorkflow(wkflw);
         this.inputPort.setName("input");
         this.addPort(this.inputPort,this.width/2,0);
-        
+
         this.outputPort=new draw2d.OutputPort();
         this.outputPort.setWorkflow(wkflw);
         this.outputPort.setName("output");
@@ -227,8 +227,8 @@ openmdao.StructureComponentFigure.prototype.setWorkflow=function(wkflw){
                     var path = openmdao.Util.getPath(oThis.pathname),
                         src  = oThis.name,
                         dst  = request.source.getParent().name;            
-                    new openmdao.DataConnectionEditor(oThis.myModel,path,src,dst)
-                };                
+                    new openmdao.ConnectionEditor(oThis.myModel,path,src,dst)
+                };
                 return null;
             }
         }
@@ -236,7 +236,7 @@ openmdao.StructureComponentFigure.prototype.setWorkflow=function(wkflw){
     };
 };
 
-openmdao.StructureComponentFigure.prototype.toggle=function(){
+openmdao.DataflowComponentFigure.prototype.toggle=function(){
     if(this.originalHeight==-1){
         this.originalHeight=this.height;
         this.setDimension(this.width,this.cornerHeight*2);
@@ -248,46 +248,61 @@ openmdao.StructureComponentFigure.prototype.toggle=function(){
     }
 };
 
-openmdao.StructureComponentFigure.prototype.getContextMenu=function(){
-    var menu=new draw2d.Menu();
-    var oThis=this;
-    menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
-        var cmd = oThis.pathname + '.run();';
-        oThis.myModel.issueCommand(cmd);
+openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
+    var menu=new draw2d.Menu(),
+        model = this.myModel,
+        pathname = this.pathname,
+        name = this.name;
+
+    // properties
+    menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
+        var id = (pathname+'-properties').replace(/\./g,'-')
+        new openmdao.PropertiesEditor(id,model).editObject(pathname)
     }));
-    var asm = openmdao.Util.getPath(oThis.pathname);
+
+    // run
+    menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
+        var cmd = pathname + '.run();';
+        model.issueCommand(cmd);
+    }));
+
+    // disconnect
+    var asm = openmdao.Util.getPath(pathname);
     if (asm.length > 0) {
         menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-            var cmd = asm + '.disconnect("'+oThis.name+'");'
+            var cmd = asm + '.disconnect("'+name+'");'
                     + asm + '.config_changed(update_parent=True);';
-            oThis.myModel.issueCommand(cmd);
+            model.issueCommand(cmd);
         }));
     }
+
+    // remove
     menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
-        oThis.myModel.removeComponent(oThis.pathname);
-    }));    
+        model.removeComponent(pathname);
+    }));
+
     menu.setZOrder(999999);
     return menu;
 };
 
-openmdao.StructureComponentFigure.prototype.onDoubleClick=function(){
+openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
     new openmdao.ComponentEditor(this.myModel,this.pathname)
 };
 
 /**
-openmdao.StructureComponentFigure.prototype.onMouseEnter=function(){
+openmdao.DataflowComponentFigure.prototype.onMouseEnter=function(){
     this.setColor(new draw2d.Color(0,255,0));
     //this.getWorkflow().showTooltip(new openmdao.Tooltip(this.pathname),true);
 };
 
-openmdao.StructureComponentFigure.prototype.onMouseLeave=function(){
+openmdao.DataflowComponentFigure.prototype.onMouseLeave=function(){
     this.setColor(null);
 };
 **/
 
-openmdao.StructureComponentFigure.prototype.setExecState=function(message){
+openmdao.DataflowComponentFigure.prototype.setExecState=function(message){
     var state = message[1];
-    //debug.info('StructureComponentFigure',this.pathname,state);
+    //debug.info('DataflowComponentFigure',this.pathname,state);
     if (state === "VALID") {
         this.setColor(new draw2d.Color(0,255,0));
     }

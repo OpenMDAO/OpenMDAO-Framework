@@ -18,9 +18,10 @@
         { "text": "Objects",       "id": "view-objects", "onclick": "layout.open('west'); jQuery('#otree_tab').click();" },
         { "text": "Properties",    "id": "view-properties", "onclick": "layout.open('east'); jQuery('#properties_tab').click();" },
         { "text": "Workflow",      "id": "view-workflow", "onclick": "jQuery('#workflow_tab').click();" },
-        { "text": "Structure",     "id": "view-structure", "onclick": "jQuery('#structure_tab').click();" },
+        { "text": "Dataflow",      "id": "view-structure", "onclick": "jQuery('#dataflow_tab').click();" },
         { "text": "--------"       },
-        { "text": "Refresh",       "id": "view-refresh", "onclick": "openmdao.model.refresh();" }
+//        { "text": "Refresh",       "id": "view-refresh", "onclick": "openmdao.model.refresh();" }
+        { "text": "Refresh",       "id": "view-refresh", "onclick": "openmdao.update();" }
       ]
     },
     { "text": "Tools", "id": "tools-menu",

@@ -16,9 +16,16 @@ class HasObjectives(object):
     
     def __init__(self, parent, max_objectives=0):
         self._objectives = ordereddict.OrderedDict()
-        self._max_objectives = max_objectives
+        self._max_objectives = max_objectives # max_objectives of 0 means unlimited objectives
         self._parent = parent
 
+    def _item_count(self):
+        """This is used by the replace function to determine if a delegate from the
+        target object is 'empty' or not.  If it's empty then it's not an error if the
+        replacing object doesn't have this delegate.
+        """
+        return len(self._objectives)
+    
     def add_objectives(self, obj_iter, scope=None):
         """Takes an iterator of objective strings and creates
         objectives for them in the driver.
@@ -121,8 +128,22 @@ class HasObjectives(object):
             except AttributeError:
                 pass
         return scope
-
-
+    
+    def mimic(self, target):
+        """Copy what objectives we can from the target."""
+        if self._max_objectives > 0 and len(target._objectives) > self._max_objectives:
+            self._parent.raise_exception("This driver allows a maximum of %d objectives, but the driver being replaced has %d" %
+                                         (self._max_objectives, len(target._objectives)),
+                                         RuntimeError)
+        old_obj = self._objectives
+        self.clear_objectives()
+        try:
+            for name,obj in target._objectives.items():
+                self.add_objective(obj.text, name=name, scope=obj.scope)
+        except Exception:
+            self._objectives = old_obj
+            raise
+        
 class HasObjective(HasObjectives):
     def __init__(self, parent):
         super(HasObjective, self).__init__(parent, max_objectives=1)

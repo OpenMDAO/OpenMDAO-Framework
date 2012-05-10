@@ -18,6 +18,8 @@ from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import project_from_archive
 
+from openmdao.main.publisher import Publisher
+
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
 from zope.interface import implementedBy
@@ -36,6 +38,8 @@ def modifies_model(target):
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
+        if self.publish_updates:
+            self.publish_components()
         return result
     return wrapper
 
@@ -45,7 +49,7 @@ class ConsoleServer(cmd.Cmd):
         interface and various methods to access and modify that model.
     '''
 
-    def __init__(self, name='', host=''):
+    def __init__(self, name='', host='', publish_updates=True):
         cmd.Cmd.__init__(self)
 
         self.intro = 'OpenMDAO '+__version__+' ('+__date__+')'
@@ -58,8 +62,10 @@ class ConsoleServer(cmd.Cmd):
         self.projfile = ''
         self.proj = None
         self.exc_info = None
+        self.publish_updates = publish_updates
+        self.publisher = None
 
-        self.files = FileManager('files', publish_updates=True)
+        self.files = FileManager('files', publish_updates=publish_updates)
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -72,6 +78,19 @@ class ConsoleServer(cmd.Cmd):
                     v.name = k
             if is_instance(v, Assembly):
                 set_as_top(v)
+
+    def publish_components(self):
+        ''' publish the current component tree
+        '''
+        if not self.publisher:
+            try:
+                self.publisher = Publisher.get_instance()
+            except Exception, err:
+                print 'Error getting publisher:', err
+                self.publisher = None
+
+        if self.publisher:
+            self.publisher.publish('components', self.get_components())
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -319,7 +338,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self._error(err, sys.exc_info())
 
-    def _get_structure(self, asm, pathname):
+    def _get_dataflow(self, asm, pathname):
         ''' get the list of components and connections between them
             that make up the data flow for the given assembly
         '''
@@ -343,16 +362,16 @@ class ConsoleServer(cmd.Cmd):
                 connections.append(list(connection))
         return { 'components': components, 'connections': connections }
 
-    def get_structure(self, pathname):
+    def get_dataflow(self, pathname):
         ''' get the structure of the specified assembly, or of the global
-            namespace if no pathname is specified, consisting of the list
-            of components and the connections between them
+            namespace if no pathname is specified, consisting of the list of
+            components and the connections between them (i.e. the dataflow)
         '''
-        structure = {}
+        dataflow = {}
         if pathname and len(pathname) > 0:
             try:
                 asm, root = self.get_container(pathname)
-                structure = self._get_structure(asm, pathname)
+                dataflow = self._get_dataflow(asm, pathname)
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
@@ -365,9 +384,9 @@ class ConsoleServer(cmd.Cmd):
                                         'type': type(v).__name__,
                                         'valid': v.is_valid()
                                       })
-            structure['components'] = components
-            structure['connections'] = []
-        return jsonpickle.encode(structure)
+            dataflow['components'] = components
+            dataflow['connections'] = []
+        return jsonpickle.encode(dataflow)
 
     def _get_workflow(self, drvr, pathname, root):
         ''' get the driver info and the list of components that make up the
@@ -455,7 +474,7 @@ class ConsoleServer(cmd.Cmd):
             attrs['Outputs'] = outputs
 
         if is_instance(comp, Assembly):
-            attrs['Structure'] = self._get_structure(comp, pathname)
+            attrs['Dataflow'] = self._get_dataflow(comp, pathname)
 
         if has_interface(comp, IDriver):
             attrs['Workflow'] = self._get_workflow(comp, pathname, root)
@@ -623,6 +642,7 @@ class ConsoleServer(cmd.Cmd):
     def add_component(self, name, classname, parentname):
         ''' add a new component of the given type to the specified parent.
         '''
+        name = name.encode('utf8')
         if (parentname and len(parentname)>0):
             parent, root = self.get_container(parentname)
             if parent:
