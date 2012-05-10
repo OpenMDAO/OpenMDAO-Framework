@@ -1,8 +1,8 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowDiagram = function(id,model,pathname) {
-    openmdao.WorkflowDiagram.prototype.init.call(this,id,'Workflow: '+pathname,[]);
+openmdao.WorkflowFrame = function(id,model,pathname) {
+    openmdao.WorkflowFrame.prototype.init.call(this,id,'Workflow: '+pathname,[]);
 
     /***********************************************************************
      *  private
@@ -20,8 +20,8 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
 
     /** update the schematic with data from the model */
     this.update = function() {
-        model.getWorkflow(self.pathname, 
-                          pane.loadData, 
+        model.getWorkflow(self.pathname,
+                          pane.loadData,
                           function(jqXHR, textStatus, errorThrown) {
                               self.pathname = ''
                               debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
@@ -30,7 +30,7 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
     };
 
     /** set the pathname of the object for which to display the workflow */
-    this.showWorkflow = function(path) {        
+    this.showWorkflow = function(path) {
         if (self.pathname !== path) {
             // if not already editing this object, create the tabbed panes
             self.pathname = path;
@@ -49,5 +49,5 @@ openmdao.WorkflowDiagram = function(id,model,pathname) {
 }
 
 /** set prototype */
-openmdao.WorkflowDiagram.prototype = new openmdao.BaseFrame();
-openmdao.WorkflowDiagram.prototype.constructor = openmdao.WorkflowDiagram;
+openmdao.WorkflowFrame.prototype = new openmdao.BaseFrame();
+openmdao.WorkflowFrame.prototype.constructor = openmdao.WorkflowFrame;

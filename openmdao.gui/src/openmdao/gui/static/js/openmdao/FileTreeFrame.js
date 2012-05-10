@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.FileTree = function(id,model,code_fn,geom_fn) {
+openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
     var menu = [  
                     {   "text": "File",
                         "items": [
@@ -11,7 +11,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                         ]
                     }
                 ];
-    openmdao.PropertiesEditor.prototype.init.call(this,id,'Files',menu);
+    openmdao.FileTreeFrame.prototype.init.call(this,id,'Files',menu);
 
     /***********************************************************************
      *  private
@@ -90,7 +90,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                     isEmptyFolder = true;
                 }
                 else {
-                    debug.error("FileTree: leaf node that's not a file or empty folder?",node);
+                    debug.error("FileTreeFrame: leaf node that's not a file or empty folder?",node);
                 }
             }
         }
@@ -101,7 +101,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                 isEmptyFolder = false;
             }
             else {
-                debug.error("FileTree: non-leaf node that's not a folder?",node);
+                debug.error("FileTreeFrame: non-leaf node that's not a folder?",node);
             }
         }
 
@@ -270,5 +270,5 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
 }
 
 /** set prototype */
-openmdao.FileTree.prototype = new openmdao.BaseFrame();
-openmdao.FileTree.prototype.constructor = openmdao.FileTree;
+openmdao.FileTreeFrame.prototype = new openmdao.BaseFrame();
+openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;

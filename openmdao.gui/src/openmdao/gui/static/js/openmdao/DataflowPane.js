@@ -78,7 +78,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 c.setTarget(dst_fig.getPort("input"));
                 c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                 c.onDoubleClick = function() {
-                    new openmdao.ConnectionEditor(model,self.pathname,src_name,dst_name);
+                    new openmdao.ConnectionFrame(model,self.pathname,src_name,dst_name);
                 };
                 c.getContextMenu=function(){
                     var menu=new draw2d.Menu();

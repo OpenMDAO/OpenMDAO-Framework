@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.CodeEditor = function(id,model) {
-    openmdao.CodeEditor.prototype.init.call(this,id,'Code');
+openmdao.CodeFrame = function(id,model) {
+    openmdao.CodeFrame.prototype.init.call(this,id,'Code');
     
     /***********************************************************************
      *  private
@@ -29,7 +29,7 @@ openmdao.CodeEditor = function(id,model) {
         accept: '.file .obj',
         drop: function(ev,ui) { 
             var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('CodeEditor drop',droppedObj);
+            debug.info('CodeFrame drop',droppedObj);
             if (droppedObject.hasClass('file')) {
                 editFile(droppedObject.attr("path"));
             };
@@ -69,5 +69,5 @@ openmdao.CodeEditor = function(id,model) {
 }
 
 /** set prototype */
-openmdao.CodeEditor.prototype = new openmdao.BaseFrame();
-openmdao.CodeEditor.prototype.constructor = openmdao.CodeEditor;
+openmdao.CodeFrame.prototype = new openmdao.BaseFrame();
+openmdao.CodeFrame.prototype.constructor = openmdao.CodeFrame;

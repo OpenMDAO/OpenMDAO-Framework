@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.Palette = function(id,model) {
-    openmdao.Palette.prototype.init.call(this,id,'Libraries',[]);
+openmdao.PaletteFrame = function(id,model) {
+    openmdao.PaletteFrame.prototype.init.call(this,id,'Libraries',[]);
 
     /***********************************************************************
      *  private
@@ -16,11 +16,11 @@ openmdao.Palette = function(id,model) {
     libs.droppable ({
         accept: '.file',
         drop: function(ev,ui) { 
-            debug.info('Palette drop: ',ev,ui);
+            debug.info('PaletteFrame drop: ',ev,ui);
             var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('Palette drop: ',droppedObject);
+            debug.info('PaletteFrame drop: ',droppedObject);
             var path = droppedObject.attr("path");
-            debug.info('Palette drop: '+path);
+            debug.info('PaletteFrame drop: '+path);
             if (/.py$/.test(path)) {
                 model.importFile(path);
             }
@@ -98,5 +98,5 @@ openmdao.Palette = function(id,model) {
 }
 
 /** set prototype */
-openmdao.Palette.prototype = new openmdao.BaseFrame();
-openmdao.Palette.prototype.constructor = openmdao.Palette;
+openmdao.PaletteFrame.prototype = new openmdao.BaseFrame();
+openmdao.PaletteFrame.prototype.constructor = openmdao.PaletteFrame;

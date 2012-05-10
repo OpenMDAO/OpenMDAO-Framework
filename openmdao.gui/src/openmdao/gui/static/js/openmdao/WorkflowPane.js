@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
     // initialize private variables
@@ -10,11 +10,11 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         workflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
         workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">').appendTo(elm),
         workflow = new draw2d.Workflow(workflowID);
-        
+
     self.pathname = pathname;
-        
+
     workflow.setBackgroundImage( "/static/images/grid_10.png", true);
-        
+
     /** FIXME: workflow context menu conflicts with figure context menu ** /
     // context menu
     workflow.getContextMenu=function(){
@@ -34,20 +34,21 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             // y = Math.round(y - off.top)
             // workflow.addFigure(annotation,x,y);
         // }));
-        
+
         return menu;
     };
     /**/
-    
+
     /** / toolbar may be useful at some point?
     var tbar = new openmdao.Toolbar();
     workflow.showDialog(tbar,400,10);
     /**/
-    
+
     // make the workflow pane droppable
+    // TODO: handle drops of objtype
     workflowDiv.droppable ({
-        accept: '.obj, .objtype',
-        drop: function(ev,ui) { 
+        accept: '.obj',
+        drop: function(ev,ui) {
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
@@ -74,7 +75,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             }
         }
     });
-    
+
     /** expand workflow (container) figures to contain all their children */
     function resizeFlowFigures() {
         for (fig in flow_figs) {
@@ -93,7 +94,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             asm   = openmdao.Util.getPath(path),
             comp_key = flow_name+':'+path,
             comp_fig, flow_fig, flowpath, newflow_fig, count, x, y;
-            
+
         if (flow) {
             // add driver figure
             if (comp_key in comp_figs) {
@@ -103,7 +104,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 comp_fig = new openmdao.WorkflowComponentFigure(model,path,type,valid);
                 comp_figs[comp_key] = comp_fig;
             }
-            
+
             flow_fig = flow_figs[flow_name];
             if (flow_fig) {
                 flow_fig.addComponentFigure(comp_fig);
@@ -161,5 +162,5 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             resizeFlowFigures();
         };
     }
-    
+
 }

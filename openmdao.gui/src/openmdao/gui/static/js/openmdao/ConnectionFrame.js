@@ -1,9 +1,9 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
+openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
     var id = ('DCE-'+pathname+'-'+src_comp+'-'+dst_comp).replace(/\./g,'-');
-    openmdao.ConnectionEditor.prototype.init.call(this, id,
+    openmdao.ConnectionFrame.prototype.init.call(this, id,
         'Connections: '+openmdao.Util.getName(pathname)+' '+src_comp+' to '+dst_comp);
 
     /***********************************************************************
@@ -120,5 +120,5 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
 }
 
 /** set prototype */
-openmdao.ConnectionEditor.prototype = new openmdao.BaseFrame();
-openmdao.ConnectionEditor.prototype.constructor = openmdao.ConnectionEditor;
+openmdao.ConnectionFrame.prototype = new openmdao.BaseFrame();
+openmdao.ConnectionFrame.prototype.constructor = openmdao.ConnectionFrame;

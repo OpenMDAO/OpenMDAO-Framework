@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.Menu = function(id, json) {
     /***********************************************************************
@@ -7,7 +7,7 @@ openmdao.Menu = function(id, json) {
      ***********************************************************************/
     var self = this,
         elm = jQuery("#"+id)
-        
+
     /** build menus from JSON data structure */
     function buildMenus(menus) {
         // generate HTML for the menus
@@ -35,21 +35,21 @@ openmdao.Menu = function(id, json) {
                 };
 
             // toggle this menu and hide all the others on click
-            //header.click(function() { 
+            //header.click(function() {
             //    menu.toggle();
             //    header.parent().siblings().find("ul").hide();
             //});
 
             if (menu.length > 0) {
                 jQuery("<span>").text("^").appendTo(header);
-                
+
                 jQuery(this).hoverIntent( settings );
-                
-                menu.find("li").click(function() { menu.toggle(); });                
+
+                menu.find("li").click(function() { menu.toggle(); });
             }
         });
     }
-    
+
     /** recursively build HTML for JSON nested menu structure */
     function getMenuHTML(menu) {
         var menuHTML = '<li><a '
@@ -60,7 +60,7 @@ openmdao.Menu = function(id, json) {
             menuHTML += 'onclick="'+menu.onclick+'" '
         }
         menuHTML += '>'+menu.text+'</a>'
-        
+
         if ('items' in menu) {
             menuHTML += "<ul>"
             for (var i = 0; i < menu.items.length; i++) {
@@ -68,7 +68,7 @@ openmdao.Menu = function(id, json) {
             }
             menuHTML += "</ul>"
         }
-        
+
         menuHTML += '</li>'
         return menuHTML;
     }
@@ -76,12 +76,12 @@ openmdao.Menu = function(id, json) {
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
     /** rebuild menus from given JSON data */
     this.updateFromJSON = function(json) {
         buildMenus(json)
     }
-    
+
     /** rebuild menus from JSON at given url */
     this.updateFromURL = function(url) {
         jQuery.ajax({
@@ -92,6 +92,6 @@ openmdao.Menu = function(id, json) {
             error: function(x,y,z) { debug.info("Error getting Menu data:",x,y,z) }
         })
     }
-    
+
     buildMenus(json)
 }

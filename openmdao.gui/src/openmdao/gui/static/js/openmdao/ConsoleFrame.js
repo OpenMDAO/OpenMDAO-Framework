@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.Console = function(id,model) {  
-    openmdao.Console.prototype.init.call(this,id,'Console');
+openmdao.ConsoleFrame = function(id,model) {  
+    openmdao.ConsoleFrame.prototype.init.call(this,id,'Console');
 
     /***********************************************************************
      *  private
@@ -29,7 +29,7 @@ openmdao.Console = function(id,model) {
         openmdao.Util.htmlWindow(history.html());
     }));
     contextMenu.append(jQuery('<li>Pop Out</li>').click(function(ev) {
-        var init_fn = "jQuery(function(){openmdao.PopoutConsole()})";
+        var init_fn = "jQuery(function(){openmdao.PopoutConsoleFrame()})";
         openmdao.Util.popupScript('Console',init_fn);
     }));
     ContextMenu.set(contextMenu.attr('id'), historyBox.attr('id'));
@@ -79,12 +79,12 @@ openmdao.Console = function(id,model) {
 }
 
 /** set prototype */
-openmdao.Console.prototype = new openmdao.BaseFrame();
-openmdao.Console.prototype.constructor = openmdao.Console;
+openmdao.ConsoleFrame.prototype = new openmdao.BaseFrame();
+openmdao.ConsoleFrame.prototype.constructor = openmdao.ConsoleFrame;
 
 /** initialize a console in a child window */
-openmdao.PopoutConsole = function() {
+openmdao.PopoutConsoleFrame = function() {
 	openmdao.model = opener.openmdao.model;
     jQuery('body').append('<div id="console"></div>');
-	new openmdao.Console("console",  openmdao.model) 
+	new openmdao.ConsoleFrame("console",  openmdao.model) 
 }

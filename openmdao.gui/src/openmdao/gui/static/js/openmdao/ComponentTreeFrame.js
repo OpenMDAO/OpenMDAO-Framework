@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,dataflow_fn) {
+openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_fn,dataflow_fn) {
     var menu =  [
                     {   "text": "Component", 
                         "items": [
@@ -9,7 +9,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                         ]
                     },
                 ];
-    openmdao.ObjectTree.prototype.init.call(this,id,'Objects',menu);
+    openmdao.ComponentTreeFrame.prototype.init.call(this,id,'Objects',menu);
 
     /***********************************************************************
      *  private
@@ -84,7 +84,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
                                 // data.r - the drop target
-                                //debug.info("ObjectTree: drop_check:",data);
+                                //debug.info("ComponentTreeFrame: drop_check:",data);
                                 if (data.r.hasClass('WorkflowFigure')) {
                                     return true;
                                 }
@@ -100,7 +100,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             "drop_finish" : function (data) { 
                                 // data.o - the object being dragged
                                 // data.r - the drop target
-                                debug.info("ObjectTree: drop_finish:",data)
+                                debug.info("ComponentTreeFrame: drop_finish:",data)
                                 data.e.stopPropagation();
                                 if (data.r.hasClass('WorkflowFigure')) {
                                     var component = openmdao.Util.getName(data.o.attr('path')),
@@ -116,7 +116,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
 
                             /* drag_check: */
                             "drag_check" : function (data) {
-                                debug.info("ObjectTree: drag_check:",data);
+                                debug.info("ComponentTreeFrame: drag_check:",data);
                                 // data.o - the foreign object being dragged
                                 // data.r - the hovered node
                                 return { 
@@ -130,7 +130,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
                             "drag_finish" : function (data) { 
                                 // data.o - the foreign object being dragged
                                 // data.r - the target node
-                                debug.info("ObjectTree: drag_finish:",data)
+                                debug.info("ComponentTreeFrame: drag_finish:",data)
                             }
                           },
         })
@@ -172,7 +172,7 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
             "label"  : 'Properties',
             "action" :  function(node) { 
                             var id = (path+'-properties').replace(/\./g,'-')
-                            new openmdao.PropertiesEditor(id,model).editObject(path)
+                            new openmdao.PropertiesFrame(id,model).editObject(path)
                         }
         };
         if (isAssembly) {
@@ -243,5 +243,5 @@ openmdao.ObjectTree = function(id,model,select_fn,dblclick_fn,workflow_fn,datafl
 }
 
 /** set prototype */
-openmdao.ObjectTree.prototype = new openmdao.BaseFrame();
-openmdao.ObjectTree.prototype.constructor = openmdao.ObjectTree;
+openmdao.ComponentTreeFrame.prototype = new openmdao.BaseFrame();
+openmdao.ComponentTreeFrame.prototype.constructor = openmdao.ComponentTreeFrame;

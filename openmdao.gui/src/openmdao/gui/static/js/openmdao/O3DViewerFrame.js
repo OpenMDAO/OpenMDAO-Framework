@@ -16,9 +16,9 @@ o3djs.require('o3djs.loader');
 o3djs.require('o3djs.targetCamera');
 o3djs.require('o3djs.canvas');
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.O3DViewer = function(id,g_url) {
+openmdao.O3DViewerFrame = function(id,g_url) {
     var title    = "Geometry",
         helpHTML = "<div>"+
                    "Drag the mouse, or use the W, A, S, and D keys to rotate<br/>"+
@@ -30,21 +30,21 @@ openmdao.O3DViewer = function(id,g_url) {
         menu =  [
                     { text: "Help", onclick: "jQuery('"+helpHTML+"').dialog({'title':'"+title+"','width':400,'height':150})" }
                 ];
-    openmdao.O3DViewer.prototype.init.call(this,id,title,menu);
-                
+    openmdao.O3DViewerFrame.prototype.init.call(this,id,title,menu);
+
     var o3dDiv = jQuery('<div id="o3d" style="width: 100%; height: 100%;">'),
         messageDiv = jQuery("<div>")
-        
-    this.elm.width(screen.width).height(screen.height)        
+
+    this.elm.width(screen.width).height(screen.height)
     jQuery('<div style="height:100%">').appendTo(this.elm).append(o3dDiv)
-    
+
     // create the client area.
     o3djs.webgl.makeClients(initStep2);
 
     // The following call enables a debug WebGL context, which makes debugging much easier.
     // o3djs.webgl.makeClients(initStep2, undefined, undefined, undefined, undefined, undefined, true);
-                   
-        
+
+
     var modelTransform;
     var g_simple;
     // var g_url;
@@ -72,7 +72,7 @@ openmdao.O3DViewer = function(id,g_url) {
         messageDiv.css({"color":color});
         messageDiv.dialog({'title':title})
     }
-    
+
     function startDragging(e) { //mousedown
         g_camera.click(e);
     }
@@ -89,7 +89,7 @@ openmdao.O3DViewer = function(id,g_url) {
         g_camera.mouseWheel(e);
     }
 
-    function keyPressedCallback(event) { //keyboard pressed 
+    function keyPressedCallback(event) { //keyboard pressed
         event = event || window.event;
         g_camera.keyPressed(event);
     }
@@ -106,7 +106,7 @@ openmdao.O3DViewer = function(id,g_url) {
             //set the loading message
             if (exception) {
                 showMessage("Could not load " + path + "\n" + exception,"red");
-            } 
+            }
             else {
                 showMessage("Loading finished.","green");
 
@@ -188,11 +188,11 @@ openmdao.O3DViewer = function(id,g_url) {
                 secondCounter.countMode = o3d.Counter.CYCLE;
                 secondCounter.start = 0;
                 secondCounter.end = 1;
-                
+
                 o3djs.scene.loadScene( g_client, g_pack, parent, path, callback,
                 {opt_async: false});
 
-            } 
+            }
             catch (e) {
                 showMessage("Loading failed: " + e,"red");
             }
@@ -269,7 +269,7 @@ openmdao.O3DViewer = function(id,g_url) {
         o3djs.event.addEventListener(g_o3dElement, 'wheel', scrollMe);
         window.document.onkeypress = keyPressedCallback;
         g_client.setRenderCallback(onRender);
-        
+
         o3dDiv.width(screen.width).height(screen.height)
     }
 
@@ -300,11 +300,11 @@ openmdao.O3DViewer = function(id,g_url) {
     function setCamera() {
         g_camera.set();
     }
-        
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
     this.load = function(url) {
         if (g_root) {
             g_root.parent = null;
@@ -319,9 +319,9 @@ openmdao.O3DViewer = function(id,g_url) {
             g_root = loadFile(g_viewInfo.drawContext, url);
         }
     }
-    
+
 }
 
 /** set prototype */
-openmdao.O3DViewer.prototype = new openmdao.BaseFrame();
-openmdao.O3DViewer.prototype.constructor = openmdao.O3DViewer;
+openmdao.O3DViewerFrame.prototype = new openmdao.BaseFrame();
+openmdao.O3DViewerFrame.prototype.constructor = openmdao.O3DViewerFrame;

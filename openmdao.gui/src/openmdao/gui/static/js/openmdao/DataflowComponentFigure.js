@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowComponentFigure=function(myModel,pathname,type,valid){
     this.myModel = myModel;
@@ -154,7 +154,7 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
         this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
     if (this.outputPort!==null) {
-        this.outputPort.setPosition(this.width+5,this.height/2);        
+        this.outputPort.setPosition(this.width+5,this.height/2);
     }
     if (this.inputPort!==null) {
         this.inputPort.setPosition(this.width/2,0);
@@ -224,13 +224,13 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
                 if (request.source instanceof draw2d.InputPort) {
                     var path = openmdao.Util.getPath(oThis.pathname),
                         src  = oThis.name,
-                        dst  = request.source.getParent().name;            
-                    new openmdao.ConnectionEditor(oThis.myModel,path,src,dst)
+                        dst  = request.source.getParent().name;
+                    new openmdao.ConnectionFrame(oThis.myModel,path,src,dst)
                 };
                 return null;
             }
         }
-        this.addPort(this.outputPort,this.width+5,this.height/2);    
+        this.addPort(this.outputPort,this.width+5,this.height/2);
     };
 };
 
@@ -255,7 +255,7 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
     // properties
     menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
         var id = (pathname+'-properties').replace(/\./g,'-')
-        new openmdao.PropertiesEditor(id,model).editObject(pathname)
+        new openmdao.PropertiesFrame(id,model).editObject(pathname)
     }));
 
     // run
@@ -284,7 +284,7 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
-    new openmdao.ComponentEditor(this.myModel,this.pathname)
+    new openmdao.ComponentFrame(this.myModel,this.pathname)
 };
 
 /**

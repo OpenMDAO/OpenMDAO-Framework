@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.PropertiesEditor = function(id,model) {
-    openmdao.PropertiesEditor.prototype.init.call(this,id,'Properties');
+openmdao.PropertiesFrame = function(id,model) {
+    openmdao.PropertiesFrame.prototype.init.call(this,id,'Properties');
 
     /***********************************************************************
      *  private
@@ -119,5 +119,5 @@ openmdao.PropertiesEditor = function(id,model) {
 }
 
 /** set prototype */
-openmdao.PropertiesEditor.prototype = new openmdao.BaseFrame();
-openmdao.PropertiesEditor.prototype.constructor = openmdao.PropertiesEditor;
+openmdao.PropertiesFrame.prototype = new openmdao.BaseFrame();
+openmdao.PropertiesFrame.prototype.constructor = openmdao.PropertiesFrame;

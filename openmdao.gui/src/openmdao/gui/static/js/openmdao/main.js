@@ -1,11 +1,11 @@
 /**
  * stuff to do after the page is loaded
  */
- 
-    
+
+
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
-    openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+    openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
     openmdao.model = new openmdao.Model();
 
     // set the layout (note: global scope)
@@ -30,10 +30,10 @@ jQuery(function() {
     (function() {
         var model = openmdao.model;
 
-        var data = new openmdao.DataflowDiagram("dataflow",model,''),
-            work = new openmdao.WorkflowDiagram("workflow",model,''),
-            code = new openmdao.CodeEditor("code",model),
-            prop = new openmdao.PropertiesEditor("propertieseditor",model);
+        var data = new openmdao.DataflowFrame("dataflow",model,''),
+            work = new openmdao.WorkflowFrame("workflow",model,''),
+            code = new openmdao.CodeFrame("code",model),
+            prop = new openmdao.PropertiesFrame("propertieseditor",model);
 
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
@@ -43,8 +43,8 @@ jQuery(function() {
             code_tab      = jQuery('#code_tab');
 
         dataflow_tab.click(function(e) { central_label.text(data.getPathname()); })
-        workflow_tab.click(function(e)  { central_label.text(work.getPathname()); })
-        code_tab.click(function(e)      { central_label.text(code.getPathname()); })
+        workflow_tab.click(function(e) { central_label.text(work.getPathname()); })
+        code_tab.click(function(e)     { central_label.text(code.getPathname()); })
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
@@ -52,12 +52,12 @@ jQuery(function() {
         function prop_fn(path) { prop.editObject(path);   }
 
         function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
-        function comp_fn(path) { new openmdao.ComponentEditor(model,path) };
+        function comp_fn(path) { new openmdao.ComponentFrame(model,path) };
 
-        new openmdao.ObjectTree("otree", model, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.FileTree("ftree",   model, code_fn, geom_fn);        
-        new openmdao.Palette("palette",  model)        
-        new openmdao.Console("console",  model);
+        new openmdao.ComponentTreeFrame("otree", model, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.FileTreeFrame("ftree",   model, code_fn, geom_fn);
+        new openmdao.PaletteFrame("palette",  model)
+        new openmdao.ConsoleFrame("console",  model);
 
         // initialize views
         model.updateListeners();

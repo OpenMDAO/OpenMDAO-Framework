@@ -1,9 +1,9 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.ComponentEditor = function(model,pathname) {
+openmdao.ComponentFrame = function(model,pathname) {
     // TODO: hack alert... mangling pathname
-    openmdao.ComponentEditor.prototype.init.call(this,'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
+    openmdao.ComponentFrame.prototype.init.call(this,'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
 
     /***********************************************************************
      *  private
@@ -106,7 +106,7 @@ openmdao.ComponentEditor = function(model,pathname) {
             panes[name].loadData(val);
         }
         else {
-            debug.warn("ComponentEditor: Unexpected object",pathname,name)
+            debug.warn("ComponentFrame: Unexpected object",pathname,name)
         }
     }
 
@@ -116,7 +116,7 @@ openmdao.ComponentEditor = function(model,pathname) {
                 panes[name].loadData(val);
             }
             else if (name !== 'type') {
-                debug.warn("ComponentEditor: Unexpected object",pathname,name,val)
+                debug.warn("ComponentFrame: Unexpected object",pathname,name,val)
             }
         })
     }
@@ -157,5 +157,5 @@ openmdao.ComponentEditor = function(model,pathname) {
 }
 
 /** set prototype */
-openmdao.ComponentEditor.prototype = new openmdao.BaseFrame();
-openmdao.ComponentEditor.prototype.constructor = openmdao.ComponentEditor;
+openmdao.ComponentFrame.prototype = new openmdao.BaseFrame();
+openmdao.ComponentFrame.prototype.constructor = openmdao.ComponentFrame;

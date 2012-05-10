@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
-openmdao.DataflowDiagram = function(id,model,pathname) {
-    openmdao.DataflowDiagram.prototype.init.call(this,id,'Dataflow: '+pathname,[]);
+openmdao.DataflowFrame = function(id,model,pathname) {
+    openmdao.DataflowFrame.prototype.init.call(this,id,'Dataflow: '+pathname,[]);
 
     /***********************************************************************
      *  private
@@ -47,5 +47,5 @@ openmdao.DataflowDiagram = function(id,model,pathname) {
 }
 
 /** set prototype */
-openmdao.DataflowDiagram.prototype = new openmdao.BaseFrame();
-openmdao.DataflowDiagram.prototype.constructor = openmdao.DataflowDiagram;
+openmdao.DataflowFrame.prototype = new openmdao.BaseFrame();
+openmdao.DataflowFrame.prototype.constructor = openmdao.DataflowFrame;

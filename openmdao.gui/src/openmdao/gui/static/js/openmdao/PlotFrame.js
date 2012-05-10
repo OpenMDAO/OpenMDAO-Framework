@@ -3,8 +3,8 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 // requires flot.js
 
-openmdao.Plotter = function(id,model,port) {
-    openmdao.Plotter.prototype.init.call(this,id,'Plotter');
+openmdao.PlotFrame = function(id,model,port) {
+    openmdao.PlotFrame.prototype.init.call(this,id,'Plot');
     
     /***********************************************************************
      *  private
@@ -106,5 +106,5 @@ openmdao.Plotter = function(id,model,port) {
 };
 
 /** set prototype */
-openmdao.Plotter.prototype = new openmdao.BaseFrame();
-openmdao.Plotter.prototype.constructor = openmdao.Plotter;
+openmdao.PlotFrame.prototype = new openmdao.BaseFrame();
+openmdao.PlotFrame.prototype.constructor = openmdao.PlotFrame;
