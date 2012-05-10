@@ -19,12 +19,12 @@ openmdao.DataflowFrame = function(id,model,pathname) {
     /** update the schematic with data from the model */
     this.update = function() {
         model.getDataflow(pane.pathname, 
-                           pane.loadData, 
-                           function(jqXHR, textStatus, errorThrown) {
-                               pane.pathname = ''
-                               debug.error("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                               debug.error('jqXHR:',jqXHR)
-                           })
+                          pane.loadData, 
+                          function(jqXHR, textStatus, errorThrown) {
+                              pane.pathname = ''
+                              debug.error("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                              debug.error('jqXHR:',jqXHR)
+                          });
     };
 
     /** set the pathname for which to display the dataflow */

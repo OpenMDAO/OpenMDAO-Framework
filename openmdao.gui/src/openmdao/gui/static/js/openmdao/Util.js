@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 // TODO: may try es5 compat lib like https://bitbucket.org/JustinLove/es5/
 
@@ -16,7 +16,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
     };
 }
 
-/** 
+/**
  * this is for older browsers (e.g. ffox 3.x) that don't implement ECMAScript5 Object.keys()
  * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
  */
@@ -30,12 +30,12 @@ if(!Object.keys) Object.keys = function(o){
 
 /**
  * utility functions used in the openmdao gui
- */ 
+ */
 openmdao.Util = {
 
     /**
-     * function to toggle visibility of an element 
-     * 
+     * function to toggle visibility of an element
+     *
      * id:   id of the element to hide/show
      */
     toggle_visibility: function(id) {
@@ -45,9 +45,9 @@ openmdao.Util = {
         else
             e.style.display = 'block';
     },
-       
+
     /**
-     * function to block all input on the page 
+     * function to block all input on the page
      * (by covering it with a semi-transparnet div)
      */
     toggle_screen: function() {
@@ -67,7 +67,7 @@ openmdao.Util = {
         else
             el.style.display = 'block';
     },
-       
+
     /**
      * open a popup window to view a URL
      *
@@ -115,16 +115,16 @@ openmdao.Util = {
         w = w || 800;
         return openmdao.Util.popupWindow("/workspace/base?head_script='"+init_script+"'",title,h,w);
     },
-    
-    
+
+
     /**
-     *  escape anything in the text that might look like HTML, etc. 
+     *  escape anything in the text that might look like HTML, etc.
      */
     escapeHTML: function(text) {
         var result = "";
         for(var i = 0; i < text.length; i++){
-            if(text.charAt(i) == "&" 
-                  && text.length-i-1 >= 4 
+            if(text.charAt(i) == "&"
+                  && text.length-i-1 >= 4
                   && text.substr(i, 4) != "&amp;"){
                 result = result + "&amp;";
             } else if(text.charAt(i)== "<"){
@@ -168,7 +168,7 @@ openmdao.Util = {
      */
     scrollToBottom: function(el) {
         el.scrollTop = el.scrollHeight;
-        el.scrollTop = el.scrollHeight - el.clientHeight;     
+        el.scrollTop = el.scrollHeight - el.clientHeight;
     },
 
     /**
@@ -217,7 +217,7 @@ openmdao.Util = {
             debug.log(prop + ": " + obj[prop]);
         }
     },
-    
+
     /**
      * close the browser window
      */
@@ -226,14 +226,14 @@ openmdao.Util = {
         window.open('','_self');
         window.close();
     },
-    
+
     /**
      * The purge function takes a reference to a DOM element as an argument. It loops through the
      * element's attributes. If it finds any functions, it nulls them out. This breaks the cycle,
      * allowing memory to be reclaimed. It will also look at all of the element's descendent
      * elements, and clear out all of their cycles as well. The purge function is harmless on
      * Mozilla and Opera. It is essential on IE. The purge function should be called before removing
-     * any element, either by the removeChild method, or by setting the innerHTML property.  
+     * any element, either by the removeChild method, or by setting the innerHTML property.
      *
      * http://www.crockford.com/javascript/memory/leak.html
      */
@@ -256,7 +256,7 @@ openmdao.Util = {
             }
         }
     },
-   
+
     /**
      * refresh n times (for debugging memory leak)
      */
@@ -279,7 +279,7 @@ openmdao.Util = {
         }
         return path;
     },
-   
+
     /** get the name from the pathname */
     getName: function(pathname) {
         var name = pathname,
@@ -289,7 +289,7 @@ openmdao.Util = {
         }
         return name;
     },
-    
+
     /** find the element with the highest z-index of those specified by the jQuery selector */
     getHighest: function (selector) {
         var elems = jQuery(selector);
@@ -305,7 +305,7 @@ openmdao.Util = {
         }
         return highest_elm;
     },
-    
+
     /** rotate the page */
     rotatePage: function (x) {
         x = parseInt(x);
@@ -322,13 +322,13 @@ openmdao.Util = {
         // if retry is true and connection fails, try again to connect after delay
         retry = typeof retry !== 'undefined' ? retry : true;
         delay = typeof delay !== 'undefined' ? delay : 2000;
-        
+
         var socket = null;
-        
+
         function connect_after_delay() {
             tid = setTimeout(connect, delay);
         };
-        
+
         function connect() {
         	if (socket == null || socket.readyState > 0) {
 	        	socket = new WebSocket(addr);
@@ -339,24 +339,24 @@ openmdao.Util = {
 	                debug.info('websocket closed',socket,e);
 	                if ((e.code == 1006) && (retry == true)) {
 	                	connect_after_delay();
-	                };                
+	                };
 	            };
 	            socket.onmessage = function(e) {
 	                handler(e.data);
-	            };            
+	            };
 	            socket.onerror = function (e) {
 	                if (typeof errHandler === 'function') {
 	                    errHandler(e);
 	                }
 	                else {
 	                    debug.error('websocket error',socket,e);
-	                };                
+	                };
 	            };
         	};
         };
-        
+
         connect();
-        
+
         return socket;
     }
 

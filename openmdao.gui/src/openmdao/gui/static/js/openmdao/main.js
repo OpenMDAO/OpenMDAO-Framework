@@ -61,8 +61,7 @@ jQuery(function() {
 
         // initialize views
         model.updateListeners();
-    })()
-
+    })();
 
     // start with objects, workflow & properties visible
     jQuery('#otree_tab').click();

@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowComponentFigure=function(myModel,pathname,type,valid){
-    this.myModel = myModel;
+openmdao.DataflowComponentFigure=function(model,pathname,type,valid){
+    this.model = model;
     this.pathname = pathname;
     this.type = type;
     this.valid = valid;
@@ -41,7 +41,7 @@ openmdao.DataflowComponentFigure=function(myModel,pathname,type,valid){
 
     // change color based on execution status
     topic = pathname+'.exec_state'
-    myModel.addListener(topic,this.setExecState.bind(this));
+    model.addListener(topic,this.setExecState.bind(this));
 };
 
 openmdao.DataflowComponentFigure.prototype=new draw2d.Node();
@@ -215,17 +215,18 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
         this.outputPort=new draw2d.OutputPort();
         this.outputPort.setWorkflow(wkflw);
         this.outputPort.setName("output");
-        var oThis=this;
+
+        var self=this;
         this.outputPort.createCommand = function(request) {
             if(request.getPolicy() == draw2d.EditPolicy.CONNECT) {
                 if( request.source.parentNode.id == request.target.parentNode.id) {
                     return null;
                 }
                 if (request.source instanceof draw2d.InputPort) {
-                    var path = openmdao.Util.getPath(oThis.pathname),
-                        src  = oThis.name,
+                    var path = openmdao.Util.getPath(self.pathname),
+                        src  = self.name,
                         dst  = request.source.getParent().name;
-                    new openmdao.ConnectionFrame(oThis.myModel,path,src,dst)
+                    new openmdao.ConnectionFrame(self.model,path,src,dst)
                 };
                 return null;
             }
@@ -248,7 +249,7 @@ openmdao.DataflowComponentFigure.prototype.toggle=function(){
 
 openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu(),
-        model = this.myModel,
+        model = this.model,
         pathname = this.pathname,
         name = this.name;
 
@@ -284,7 +285,7 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
-    new openmdao.ComponentFrame(this.myModel,this.pathname)
+    new openmdao.ComponentFrame(this.model,this.pathname)
 };
 
 /**
