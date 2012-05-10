@@ -6,6 +6,7 @@ __all__ = ['Assembly', 'set_as_top']
 
 import cStringIO
 import threading
+import re
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
@@ -13,7 +14,9 @@ import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
-from openmdao.main.interfaces import implements, IAssembly, IDriver
+from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitecture, IComponent, IContainer,\
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator
+from openmdao.main.mp_support import has_interface
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
@@ -198,16 +201,6 @@ class ExprMapper(object):
         """
         return [node for node, data in self._exprgraph.nodes(data=True) if data['expr'].refers_to(name)]
     
-    #def connections_to(self, path):
-        #"""Returns a list of tuples of the form (srcpath, destpath) for
-        #all connections between the variable or component specified
-        #by *path*.
-        #"""
-        #exprs = self.find_referring_exprs(path)
-        #edges = [(src, dest) for src,dest in self._exprgraph.edges(exprs)]
-        #edges.extend([(src, dest) for src,dest in self._exprgraph.in_edges(exprs)])
-        #return edges
-    
     def _remove_disconnected_exprs(self):
         # remove all expressions that are no longer connected to anything
         to_remove = []
@@ -257,42 +250,13 @@ class ExprMapper(object):
             raise RuntimeError("'%s' and '%s' refer to the same component." % (src,dest))
         return srcexpr, destexpr
 
-    #def _get_invalidated_destexprs(self, scope, compname, varset):
-        #"""For a given set of variable names that has changed (or None),
-        #return a list of all destination expressions that are invalidated. A
-        #varset value of None indicates that ALL variables in the given
-        #component are invalidated.
-        #"""
-        #exprs = set()
-        #graph = self._exprgraph
-        
-        #if varset is None:
-            #exprs.update(self.find_referring_exprs(compname))
-        #else:
-            #if compname:
-                #for varpath in ['.'.join([compname, v]) for v in varset]:
-                    #exprs.update(self.find_referring_exprs(varpath))
-            #else:
-                #for varpath in varset:
-                    #exprs.update(self.find_referring_exprs(varpath))
-                    
-        #invalids = []
-        #for expr in exprs:
-            #dct = graph.succ.get(expr)
-            #if dct:
-                #invalids.extend([self.get_expr(dest) for dest in dct.keys()])
-        #return invalids
-        
-    #def __eq__(self, other):
-        #if isinstance(other, DependencyGraph):
-            #if self._exprgraph.nodes() == other._exprgraph.nodes():
-                #if self._exprgraph.edges() == other._exprgraph.edges():
-                    #return True
-        #return False
     
-    #def __ne__(self, other):
-        #return not self.__eq__(other)
-            
+def _find_common_interface(obj1, obj2):
+    for iface in (IAssembly, IComponent, IDriver, IArchitecture, IContainer,
+                  ICaseIterator, ICaseRecorder, IDOEgenerator):
+        if has_interface(obj1, iface) and has_interface(obj2, iface):
+            return iface
+    return None
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
@@ -346,16 +310,121 @@ class Assembly (Component):
         if is_instance(obj, Component):
             self._depgraph.add(obj.name)
         return obj
+    
+    def find_referring_connections(self, name):
+        """Returns a list of connections where the given name is referred
+        to either in the source or the destination.
+        """
+        exprset = set(self._exprmapper.find_referring_exprs(name))
+        return [(u,v) for u,v in self.list_connections(show_passthrough=True) 
+                                                if u in exprset or v in exprset]
         
+    def find_in_workflows(self, name):
+        """Returns a list of tuples of the form (workflow, index) for all
+        workflows in the scope of this Assembly that contain the given
+        component name.
+        """
+        wflows = []
+        for obj in self.__dict__.values():
+            if is_instance(obj, Driver) and name in obj.workflow:
+                wflows.append((obj.workflow, obj.workflow.index(name)))
+        return wflows
+        
+    def _cleanup_autopassthroughs(self, name):
+        """Clean up any autopassthrough connections involving the given name.
+        Returns a list containing a tuple for each removed connection.
+        """
+        old_autos = []
+        if self.parent:
+            old_rgx = re.compile(r'(\W?)%s.' % name)
+            par_rgx = re.compile(r'(\W?)parent.')
+            
+            for u,v in self._depgraph.list_autopassthroughs():
+                newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), u)
+                newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), v)
+                if newu != u or newv != v:
+                    old_autos.append((u,v))
+                    u = re.sub(par_rgx, r'\g<1>', newu)
+                    v = re.sub(par_rgx, r'\g<1>', newv)
+                    self.parent.disconnect(u,v)
+        return old_autos
+        
+    def rename(self, oldname, newname):
+        """Renames a child of this object from oldname to newname."""
+        self._check_rename(oldname, newname)
+        conns = self.find_referring_connections(oldname)
+        wflows = self.find_in_workflows(oldname)
+        old_autos = self._cleanup_autopassthroughs(oldname)
+        
+        obj = self.remove(oldname)
+        self.add(newname, obj)
+        
+        # oldname has now been removed from workflows, but newname may be in the wrong
+        # location, so force it to be at the same index as before removal
+        for wflow, idx in wflows:
+            wflow.remove(newname)
+            wflow.add(newname, idx)
+            
+        old_rgx = re.compile(r'(\W?)%s.' % oldname)
+        par_rgx = re.compile(r'(\W?)parent.')
+        
+        # recreate all of the broken connections after translating oldname to newname
+        for u,v in conns:
+            self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
+                         re.sub(old_rgx, r'\g<1>%s.' % newname, v))
+        
+        # recreate autopassthroughs
+        if self.parent:
+            for u,v in old_autos:
+                u = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), u)
+                v = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), v)
+                u = re.sub(par_rgx, r'\g<1>', u)
+                v = re.sub(par_rgx, r'\g<1>', v)
+                self.parent.connect(u,v)
+    
+    def replace(self, target_name, newobj):
+        """Replace one object with another, attempting to mimic the inputs and connections
+        of the replaced object as much as possible.
+        """
+        tobj = getattr(self, target_name)
+        if has_interface(newobj, IComponent): # remove any existing connections to replacement object
+            self.disconnect(newobj.name)
+        if hasattr(newobj, 'mimic'):
+            try:
+                newobj.mimic(tobj) # this should copy inputs, delegates and set name
+            except Exception as err:
+                self.raise_exception("Couldn't replace '%s' of type %s with type %s: %s" %
+                                     (target_name, type(tobj).__name__, type(newobj).__name__, str(err)), 
+                                     TypeError)
+        conns = self.find_referring_connections(target_name)
+        wflows = self.find_in_workflows(target_name)
+        target_rgx = re.compile(r'(\W?)%s.' % target_name)
+        conns.extend([(u,v) for u,v in self._depgraph.list_autopassthroughs() if
+                                 re.search(target_rgx, u) is not None or 
+                                 re.search(target_rgx, v) is not None])
+        
+        self.add(target_name, newobj) # this will remove the old object (and any connections to it)
+        
+        # recreate old connections
+        for u,v in conns:
+            self.connect(u,v)
+            
+        # add new object (if it's a Component) to any workflows where target was
+        if has_interface(newobj, IComponent):
+            for wflow,idx in wflows:
+                wflow.add(target_name, idx)
+    
     def remove(self, name):
         """Remove the named container object from this assembly and remove
-        it from its workflow (if any)."""
+        it from its workflow(s) if it's a Component."""
         cont = getattr(self, name)
+        self.disconnect(name)
         self._depgraph.remove(name)
         self._exprmapper.remove(name)
-        for obj in self.__dict__.values():
-            if obj is not cont and is_instance(obj, Driver):
-                obj.workflow.remove(name)
+        if has_interface(cont, IComponent):
+            for obj in self.__dict__.values():
+                if obj is not cont and is_instance(obj, Driver):
+                    obj.workflow.remove(name)
                     
         return super(Assembly, self).remove(name)
 
@@ -516,10 +585,6 @@ class Assembly (Component):
             to_remove = [(varpath, varpath2)]
             
         for u,v in to_remove:
-            #srcexpr = self._exprmapper.get_expr(u)
-            #if srcexpr:
-                #for ref in srcexpr.refs(copy=False):
-                    #super(Assembly, self).disconnect(ref, v)
             super(Assembly, self).disconnect(u, v)
                 
         self._exprmapper.disconnect(varpath, varpath2)

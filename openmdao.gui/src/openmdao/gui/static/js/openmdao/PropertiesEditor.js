@@ -3,11 +3,11 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.PropertiesEditor = function(id,model) {
     openmdao.PropertiesEditor.prototype.init.call(this,id,'Properties');
-    
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+
     // initialize private variables
     var self = this,
         pathname,
@@ -33,22 +33,20 @@ openmdao.PropertiesEditor = function(id,model) {
         inputsDiv.toggle("normal")
         return false;
     });
-    
+
     outputs = new openmdao.PropertiesPane(outputsDiv,model,self.pathname,'Outputs',false)
     outputsHeader.click(function () {
         outputsDiv.toggle("normal")
         return false;
     });
-    
-    model.addListener('',update)
-          
+
     /** load the tables with the given properties */
     function loadTables(properties) {
         if (properties && properties['type']) {
             nameHeader.html(properties['type']+': '+self.pathname)
             inputs.loadData(properties['Inputs'])
             outputs.loadData(properties['Outputs'])
-            
+
             /** experiment using dat.GUI * /
             var inp_gui = new dat.GUI({ autoPlace: false });
             inputsDiv.html('')
@@ -63,7 +61,7 @@ openmdao.PropertiesEditor = function(id,model) {
                 inp_gui.add(inp,name);
             })
             debug.info('inp',inp)
-            
+
             var out_gui = new dat.GUI({ autoPlace: false });
             outputsDiv.html('')
             outputsDiv[0].appendChild(out_gui.domElement);
@@ -76,7 +74,7 @@ openmdao.PropertiesEditor = function(id,model) {
                 out[name] = val;
                 out_gui.add(out,name);
             })
-            debug.info('out',out)    
+            debug.info('out',out)
             /**/
         }
         else {
@@ -85,21 +83,15 @@ openmdao.PropertiesEditor = function(id,model) {
             outputs.loadData([])
         }
     }
-    
-    /** if there is an object loaded, update it from the model */
-    function update() {
-        if (self.pathname && self.pathname.length>0)
-            self.editObject(self.pathname)
-    }
-    
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
     /** get the specified object from model, load properties into table */
     this.editObject = function(path) {
         if (self.pathname !== path) {
-            self.pathname = path
+            self.pathname = path;
             inputs.pathname = path;
             outputs.pathname = path;
         }
@@ -116,7 +108,14 @@ openmdao.PropertiesEditor = function(id,model) {
         )
         return this
     }
-    
+
+    /** if there is an object loaded, update it from the model */
+    this.update = function() {
+        if (self.pathname && self.pathname.length>0)
+            self.editObject(self.pathname)
+    }
+
+    model.addListener('',this.update)
 }
 
 /** set prototype */
