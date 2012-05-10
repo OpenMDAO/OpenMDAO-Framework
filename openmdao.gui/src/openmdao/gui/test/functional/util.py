@@ -32,6 +32,7 @@ if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
 
 TEST_CONFIG = dict(browsers=[], server=None, port=None)
+_display_set = False
 _display = None
 
 
@@ -90,6 +91,10 @@ _browsers_to_test = dict(
 
 def setup_server(virtual_display=True):
     """ Start server on ``localhost`` using an unused port. """
+    global _display, _display_set
+    if _display_set:
+        return
+
     port = get_unused_ip_port()
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
@@ -123,23 +128,27 @@ def setup_server(virtual_display=True):
     else:
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
-# FIXME: this has no effect when running under nose (firefox on hx).
+    # If running headless, setup the virtal display.
     if virtual_display:
-        global _display
         _display = Display()
 #        _display = Display(visible=0, size=(800, 600))
 #        _display = Display(backend='xvfb')
         _display.start()
+    _display_set = True
 
 
 def teardown_server():
     """ The function gets called once after all of the tests are called. """
+    global _display, _display_set
+
     # Kill chromedriver.
     for browser in TEST_CONFIG['browsers']:
         if isinstance(browser, webdriver.Chrome):
-            psfu = subprocess.check_output(('ps', '-fu', getpass.getuser()))
+            proc = subprocess.Popen(('ps', '-fu', getpass.getuser()),
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = proc.communicate()
             pid = os.getpid()
-            for line in psfu.splitlines(True):
+            for line in stdout.splitlines(True):
                 if 'chromedriver' in line:
                     fields = line.split()
                     # UID PID PPID C STIME TTY TIME CMD
@@ -149,6 +158,8 @@ def teardown_server():
     # Shut down virtual framebuffer.
     if _display is not None:
         _display.stop()
+        _display = None
+    _display_set = False
 
     # Shut down server.
     TEST_CONFIG['server'].terminate()
@@ -168,6 +179,11 @@ def generate(modname):
     # headless (EC2) testing on Windows. So for now we don't test there.
     if sys.platform == 'win32':
         return
+
+    # Due to the way nose handles generator functions, setup_server()
+    # won't be called until *after* we yield a test, which is too late.
+    if not _display_set:
+        setup_server()
 
     module = sys.modules[modname]
     functions = inspect.getmembers(module, inspect.isfunction)
