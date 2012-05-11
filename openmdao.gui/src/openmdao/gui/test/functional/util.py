@@ -217,7 +217,7 @@ def generate(modname):
 class _Runner(object):
     """
     Used to get better descriptions on tests.
-    If `browser` is a string, raise :class:`nose.SkipTest`.
+    If `browser` is an exception, raise it rather than running the test.
     """
 
     def __init__(self, test):

@@ -1,3 +1,4 @@
+import sys
 import time
 
 from nose.tools import eq_ as eq
@@ -5,15 +6,15 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
-from pageobjects.workspace import NotifierPage
 
-from util import setup_server, teardown_server, generate, begin, new_project
+if sys.platform != 'win32':  # No testing on Windows yet.
+    from pageobjects.workspace import NotifierPage
+    from util import setup_server, teardown_server, generate, begin, new_project
 
-
-@with_setup(setup_server, teardown_server)
-def test_generator():
-    for _test, browser in generate(__name__):
-        yield _test, browser
+    @with_setup(setup_server, teardown_server)
+    def test_generator():
+        for _test, browser in generate(__name__):
+            yield _test, browser
 
 
 def _test_console(browser):
@@ -181,7 +182,6 @@ f_x = Float(0.0, iotype='out')
 if __name__ == '__main__':
     if True:
         # Run under nose.
-        import sys
         import nose
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
