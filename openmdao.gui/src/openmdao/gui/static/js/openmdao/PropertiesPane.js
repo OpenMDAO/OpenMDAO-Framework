@@ -1,6 +1,7 @@
 
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
+
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
@@ -32,11 +33,23 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             {id:"units", name:"Units", field:"units", width:60},
             {id:"valid", name:"Valid", field:"valid", width:60},
             {id:"desc",  name:"Description", field:"desc", width:120},
+            {id:"connected",  name:"connected", field:"connected", width:100},
         ];
     }
-
+    
     elm.append(propsDiv);
     props = new Slick.Grid(propsDiv, [], columns, options)
+    
+    props.onBeforeEditCell.subscribe(function(row,cell){
+        
+        if (props.getDataItem(cell.row).connected == true) {
+            return false;
+            }
+        else {
+            return true;
+            }
+    })
+    
     if (editable) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
