@@ -5,15 +5,16 @@ openmdao.WorkflowFigure=function(model,flowpath,pathname,driver){
     this.driver = driver;
 
     // if my name is 'driver', then use my parent's (assembly) name
-    var tok = flowpath.split('.')
+    var tok = flowpath.split('.');
     if (tok.length > 1) {
         this.name = tok[tok.length-1];
         if (tok.length > 2 && this.name === 'driver') {
             this.name = tok[tok.length-2];
         }
     }
-    else
+    else {
         this.name = flowpath;
+    }
 
     draw2d.CompartmentFigure.call(this);
 
@@ -44,15 +45,14 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     this.titlebar.style.height="15px";
     this.titlebar.style.margin="0px";
     this.titlebar.style.padding="0px";
-    this.titlebar.style.font="normal 10px";
+    this.titlebar.style.fontSize="10px";
     this.titlebar.style.backgroundColor="gray";
     this.titlebar.style.borderBottom="1px solid gray";
     this.titlebar.style.borderLeft="5px solid transparent";
     this.titlebar.style.whiteSpace="nowrap";
     this.titlebar.style.textAlign="left";
     //this.titlebar.style.backgroundImage="url(window_toolbar.png)";
-    this.textNode=document.createTextNode(this.name);
-    this.titlebar.appendChild(this.textNode);
+    this.titlebar.innerHTML= this.name;
     item.appendChild(this.titlebar);
 
     // set up for dropping objects from jstree
@@ -85,7 +85,7 @@ openmdao.WorkflowFigure.prototype.setDimension=function(w,h){
     }
 };
 openmdao.WorkflowFigure.prototype.setTitle=function(title){
-    this.title=title;
+    this.titlebar.innerHTML= title;
 };
 openmdao.WorkflowFigure.prototype.getMinWidth=function(){
     return 50;
@@ -148,21 +148,21 @@ openmdao.WorkflowFigure.prototype.resize=function(){
             x = child.getAbsoluteX();
             if (x < xmin) {
                 xmin = x;
-            };
+            }
             if (x > xmax) {
                 xmax = x;
                 width = child.getWidth();
-            };
+            }
             y = child.getAbsoluteY();
             if (y < ymin) {
                 ymin = y;
-            };
+            }
             if (y > ymax) {
                 ymax = y;
                 height = child.getHeight();
-            };
-        };
-    };
+            }
+        }
+    }
     width = xmax+width-xmin;
     height = ymax+height-ymin+20;
     this.setDimension(width,height);
@@ -202,6 +202,6 @@ openmdao.WorkflowFigure.prototype.redraw=function(){
             }
         }
         child.setPosition(x,y);
-    };
+    }
     this.resize();
 };

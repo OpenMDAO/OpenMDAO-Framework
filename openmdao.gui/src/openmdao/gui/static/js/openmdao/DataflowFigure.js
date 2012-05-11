@@ -34,15 +34,14 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     this.titlebar.style.height="15px";
     this.titlebar.style.margin="0px";
     this.titlebar.style.padding="0px";
-    this.titlebar.style.font="normal 10px";
+    this.titlebar.style.fontSize="10px";
     this.titlebar.style.backgroundColor="gray";
     this.titlebar.style.borderBottom="1px solid gray";
     this.titlebar.style.borderLeft="5px solid transparent";
     this.titlebar.style.whiteSpace="nowrap";
     this.titlebar.style.textAlign="left";
     //this.titlebar.style.backgroundImage="url(window_toolbar.png)";
-    this.textNode=document.createTextNode(this.name);
-    this.titlebar.appendChild(this.textNode);
+    this.titlebar.innerHTML= this.name;
     item.appendChild(this.titlebar);
 
     // set up for dropping objects from jstree
@@ -64,7 +63,7 @@ openmdao.DataflowFigure.prototype.onFigureLeave=function(_4a1d){
     this.setBackgroundColor(this.defaultBackgroundColor);
 };
 openmdao.DataflowFigure.prototype.onFigureDrop=function(_4a1e){
-    debug.info("DataflowFigure.onFigureDrop",_4a1e)
+    debug.info("DataflowFigure.onFigureDrop",_4a1e);
     draw2d.CompartmentFigure.prototype.onFigureDrop.call(this,_4a1e);
     this.setBackgroundColor(this.defaultBackgroundColor);
 };
@@ -75,7 +74,7 @@ openmdao.DataflowFigure.prototype.setDimension=function(w,h){
     }
 };
 openmdao.DataflowFigure.prototype.setTitle=function(title){
-    this.title=title;
+    this.titlebar.innerHTML= title;
 };
 openmdao.DataflowFigure.prototype.getMinWidth=function(){
     return 50;
@@ -111,19 +110,21 @@ openmdao.DataflowFigure.prototype.updateFigures=function(json) {
 
         if (!fig) {
             if (self.pathname) {
-                fig = new openmdao.DataflowComponentFigure(self.openmdao_model,self.pathname+'.'+name,type,valid);
+                fig = new openmdao.DataflowComponentFigure(self.openmdao_model,
+                                self.pathname+'.'+name,type,valid);
             }
             else {
-                fig = new openmdao.DataflowComponentFigure(self.openmdao_model,name,type,valid);
+                fig = new openmdao.DataflowComponentFigure(self.openmdao_model,
+                                name,type,valid);
             }
             fig.setTitle(name);
             self.figures[name] = fig;
-        };
+        }
 
         fig.setContent('<center>(('+type+'))'+'</center>');
 
         self.addComponentFigure(fig);
-    })
+    });
 
     jQuery.each(json['connections'],function(idx,conn) {
         // internal connections only
@@ -138,15 +139,15 @@ openmdao.DataflowFigure.prototype.updateFigures=function(json) {
             c.setTarget(dst_fig.getPort("input"));
             c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
             c.onDoubleClick = function() {
-                debug.info('DataflowFigure connection onDoubleClick',this,self,src_name,dst_name)
-                new openmdao.ConnectionFrame(self.openmdao_model,self.pathname,src_name,dst_name);
+                new openmdao.ConnectionFrame(self.openmdao_model,
+                        self.pathname,src_name,dst_name);
             };
             self.getWorkflow().addFigure(c);
         }
-    })
+    });
 
     this.layout();
-}
+};
 
 /** add a component figure to this dataflow (container) figure */
 openmdao.DataflowFigure.prototype.addComponentFigure=function(comp_fig){
@@ -221,21 +222,21 @@ openmdao.DataflowFigure.prototype.resize=function(){
             x = child.getAbsoluteX();
             if (x < xmin) {
                 xmin = x;
-            };
+            }
             if (x > xmax) {
                 xmax = x;
                 width = child.getWidth();
-            };
+            }
             y = child.getAbsoluteY();
             if (y < ymin) {
                 ymin = y;
-            };
+            }
             if (y > ymax) {
                 ymax = y;
                 height = child.getHeight();
-            };
-        };
-    };
+            }
+        }
+    }
     width = xmax+width-xmin+5;
     height = ymax+height-ymin+25;
     this.setDimension(width,height);
@@ -275,6 +276,6 @@ openmdao.DataflowFigure.prototype.redraw=function(){
             }
         }
         child.setPosition(x,y);
-    };
+    }
     this.resize();
 };
