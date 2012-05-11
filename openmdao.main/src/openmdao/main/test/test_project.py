@@ -86,6 +86,10 @@ class ProjectTestCase(unittest.TestCase):
         self.assertEqual(fooproj.top.comp1.rval_out, 1.)
         self.assertEqual(fooproj.top.comp2.rval_out, 4.)
             
+    def test_localfile_factory(self):
+        proj = Project(os.path.join(self.tdir, 'proj2'))
+        self._fill_project(proj.top)
+        
 
 if __name__ == "__main__":
     unittest.main()

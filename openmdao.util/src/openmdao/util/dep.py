@@ -46,14 +46,13 @@ def _real_name(name, finfo):
     """
     while True:
         parts = name.rsplit('.', 1)
-        if len(parts) > 1:
-            if parts[0] in finfo:
-                trans = finfo[parts[0]].localnames.get(parts[1], parts[1])
-                if trans == name:
-                    return trans
-                else:
-                    name = trans
-                    continue
+        if len(parts) > 1 and parts[0] in finfo:
+            trans = finfo[parts[0]].localnames.get(parts[1], parts[1])
+            if trans == name:
+                return trans
+            else:
+                name = trans
+                continue
         return name
 
 class ClassInfo(object):
@@ -105,7 +104,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
     Python file.
     """
-    def __init__(self, fname, stop_classes=None):
+    def __init__(self, fname):
         ast.NodeVisitor.__init__(self)
         self.fname = os.path.abspath(fname)
         self.modpath = get_module_path(fname)
@@ -161,7 +160,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 
 
 class PythonSourceTreeAnalyser(object):
-    def __init__(self, startdir=None, exclude=None):
+    def __init__(self, startdir=None, exclude=None, startfiles=None):
         # inheritance graph. It's a directed graph with base classes
         # pointing to the classes that inherit from them
         self.graph = nx.DiGraph()
@@ -173,37 +172,51 @@ class PythonSourceTreeAnalyser(object):
         else:
             self.startdirs = startdir
             
+        if startfiles is None:
+            startfiles = []
+            
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
             
         self.exclude = exclude
-        
         self.ifaces = set()
+        self.fileinfo = {}
             
-        self._analyze()
+        self._analyze(startfiles)
             
-    def _analyze(self):
+    def analyze_file(self, pyfile, first_pass=False):
+        myvisitor = PythonSourceFileAnalyser(pyfile)
+        
+        # in order to get this to work with the 'ast' lib, I have
+        # to read using universal newlines and append a newline
+        # to the string I read for some files.  The 'compiler' lib
+        # didn't have this problem. :(
+        f = open(pyfile, 'Ur')
+        try:
+            for node in ast.walk(ast.parse(f.read()+'\n', pyfile)):
+                myvisitor.visit(node)
+        finally:
+            f.close()
+        self.fileinfo[get_module_path(pyfile)] = myvisitor
+        
+        if not first_pass:
+            myvisitor.translate(self.fileinfo)
+            self._update_graph(myvisitor)
+            
+        return myvisitor
+        
+    def _analyze(self, startfiles):
         """Gather import and class inheritance information from
         the source trees under the specified set of starting 
         directories.
         """
-        fileinfo = {}
-        
+        # if any startfiles were specified, parse them first
+        for pyfile in startfiles:
+            self.analyze_file(pyfile, first_pass=True)
+
         # gather python files from the specified starting directories
         # and parse them, extracting class and import information
         for pyfile in find_files(self.startdirs, "*.py", self.exclude):
-            myvisitor = PythonSourceFileAnalyser(pyfile)
-            # in order to get this to work with the 'ast' lib, I have
-            # to read using universal newlines and append a newline
-            # to the string I read for some files.  The 'compiler' lib
-            # didn't have this problem. :(
-            f = open(pyfile, 'Ur')
-            try:
-                for node in ast.walk(ast.parse(f.read()+'\n', pyfile)):
-                    myvisitor.visit(node)
-            finally:
-                f.close()
-            fileinfo[get_module_path(pyfile)] = myvisitor
-            
+            self.analyze_file(pyfile, first_pass=True)
         # now translate any indirect imports into absolute module pathnames
         # NOTE: only indirect imports within the set of specified source
         #       trees will be fully resolved, i.e., if a file in your set
@@ -213,21 +226,23 @@ class PythonSourceTreeAnalyser(object):
         #       won't be included in the translation.  This means that
         #       openmdao.main.api.Component will not be translated to
         #       openmdao.main.component.Component like it should.
-        for visitor in fileinfo.values():
-            visitor.translate(fileinfo)
+        for visitor in self.fileinfo.values():
+            visitor.translate(self.fileinfo)
     
         # build the inheritance/interface graph
-        for visitor in fileinfo.values():
-            for classname, classinfo in visitor.classes.items():
-                for base in classinfo.bases:
-                    self.graph.add_edge(classname, base)
-                for impl in classinfo.impls:
-                    self.ifaces.add(impl)
-                    self.graph.add_edge(classname, impl)
+        for visitor in self.fileinfo.values():
+            self._update_graph(visitor)
+        
+    def _update_graph(self, visitor):
+        for classname, classinfo in visitor.classes.items():
+            for base in classinfo.bases:
+                self.graph.add_edge(base, classname)
+            for impl in classinfo.impls:
+                self.ifaces.add(impl)
+                self.graph.add_edge(impl, classname)
     
-        # flip orientation of inheritance graph so we can find all classes
-        # that inherit from a particular base more easily
-        self.graph = self.graph.reverse(copy=False)
+    def remove_module(self, modname):
+        mod = self.fileinfo[modname]
         
     def find_inheritors(self, base):
         """Returns a list of names of classes that inherit from the given base class."""

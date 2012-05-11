@@ -125,6 +125,8 @@ def find_files(start, match=None, exclude=None, nodirs=True):
     Walks all subdirectories below each specified starting directory.
     """
     startdirs = [start] if isinstance(start, basestring) else start
+    if len(startdirs) == 0:
+        return iter([])
     
     gen = _file_gen if nodirs else _file_dir_gen
     if match is None:
@@ -187,9 +189,9 @@ def get_module_path(fpath):
     return '.'.join(pnames[::-1])
 
 def find_module(name, path=None):
-    """Return the pathname of the file corresponding to the given module
-    name, or None if it can't be found.  If path is set, search in path
-    for the file; otherwise search in sys.path.
+    """Return the pathname of the uncompiled python file corresponding to the
+    given module name, or None if it can't be found. If path is set, search in
+    path for the file; otherwise search in sys.path.
     """
     if path is None:
         path = sys.path

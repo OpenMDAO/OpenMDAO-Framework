@@ -314,8 +314,22 @@ class IFactory (Interface):
 
     def create (typ):
         """Create an object of the specified type and return it, or a proxy
-        to it if it resides in another process."""
+        to it if it resides in another process. Should return None if this
+        factory is unable to create the specified type.
+        """
 
+    def get_available_types(self, groups=None):
+        """Return a list tuples of the form (typename, meta_dict) for all
+        available types based on the given list of entry point groups. If
+        groups is None, all types matching any openmdao entry point group will
+        be returned.
+        """
+
+    def cleanup(self):
+        """This function is optional, but if present it will be called by
+        the FactoryManager prior to the factory being removed from the
+        list of active factories.
+        """
 
 #class IGeomQueryObject (Interface):
     #"""A Component representing an object having physical dimensions and

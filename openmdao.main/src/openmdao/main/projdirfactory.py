@@ -2,38 +2,74 @@
 #public symbols
 __all__ = ["ProjDirFactory"]
 
-
-from openmdao.main.factory import Factory
-from openmdao.util.log import logger
+import os
+import sys
 import fnmatch
 
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, PatternMatchingEventHandler
+from watchdog.events import FileSystemEventHandler
+
+import openmdao.main.api
+import openmdao.main.datatypes.api
+
+from openmdao.main.factory import Factory
+from openmdao.util.dep import PythonSourceTreeAnalyser, find_files
 
 
 class PyWatcher(FileSystemEventHandler):
 
-    #def __init__(self):
-        #super(PyWatcher, self).__init__(patterns=['*.py'], ignore_directories=True, 
-                                        #case_sensitive=True)
+    def __init__(self, factory):
+        super(PyWatcher, self).__init__()
+        self.factory = factory
 
     def on_modified(self, event):
         if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
-            print 'MODIFIED: ', event.event_type, event.is_directory, event.src_path
-    
-    def on_deleted(self, event):
-        if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
-            print 'DELETED: ', event.event_type, event.is_directory, event.src_path
+            self.factory.on_modified(event.src_path)
     
     def on_moved(self, event):
-        if not event.is_directory and event.src_path is not None and fnmatch.fnmatch(event.src_path, '*.py'):
-            print 'MOVED: ', event.event_type, event.is_directory, event.src_path
-   
+        if event._src_path and (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
+            self.factory.on_deleted(event._src_path)
+        
+        if fnmatch.fnmatch(event._dest_path, '*.py'):
+            self.factory.on_modified(event._dest_path)
+    
+    def on_deleted(self, event):
+        if event.is_directory or fnmatch.fnmatch(event.src_path, '*.py'):
+            self.factory.on_deleted(event.src_path)
+            
+    
+_startmods = [
+    'api',
+    'datatypes.api',
+    'component',
+    'container',
+    'driver',
+    'arch',
+    'assembly',
+    'variable',
+    'vartree',
+    ]
+
 class ProjDirFactory(Factory):
+    """A Factory that watches a Project directory and dynamically keeps
+    the set of available types up-to-date as project files change.
     """
-    """
-    def __init__(self):
+    def __init__(self, watchdir):
         super(ProjDirFactory, self).__init__()
+        self.watchdir = watchdir
+        startfiles = [sys.modules['openmdao.main.'+n].__file__.replace('.pyc','.py') 
+                          for n in _startmods]
+        self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
+        self._baseset = set(self.analyzer.graph.nodes())
+        
+        self._typeinfo = {}  # dict of typename vs tuples (ctor, metadata, loaded)
+        
+        for pyfile in find_files(self.watchdir, "*.py"):
+            self.on_modified(pyfile)
+
+        self.observer = Observer()
+        self.observer.schedule(PyWatcher(self), path=watchdir, recursive=True)
+        self.observer.start()
 
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
@@ -44,8 +80,25 @@ class ProjDirFactory(Factory):
     def get_available_types(self, groups=None):
         """
         """
-        pass
+        return [(t, {}) for t in (set(self.analyzer.graph.nodes()) - self._baseset)]
 
+    def on_modified(self, fpath):
+        if os.path.isdir(fpath):
+            return
+        visitor = self.analyzer.analyze_file(fpath)
+
+    def on_deleted(self, fpath):
+        if os.path.isdir(fpath):
+            for pyfile in find_files(self.watchdir, "*.py"):
+                self.on_deleted(pyfile)
+        else:
+            for modpath, info in self.analyzer.fileinfo.items():
+                if info.fname == fpath:
+                    self.analyzer.graph.remove_nodes_from(info.classes.keys())
+
+    def cleanup(self):
+        self.observer.stop()
+        self.observer.join()
 
 if __name__ == '__main__':
     import time

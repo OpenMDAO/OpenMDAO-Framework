@@ -9,9 +9,7 @@ import pkg_resources
 from pkg_resources import get_entry_map, get_distribution, working_set
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
     
-import openmdao.main.factory 
-Factory = openmdao.main.factory.Factory
-
+from openmdao.main.factory import Factory
 
 
 # This is a dict containing all of the entry point groups that OpenMDAO uses to
