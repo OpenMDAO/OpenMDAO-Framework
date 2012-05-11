@@ -2,6 +2,7 @@
 
 import sys
 import StringIO
+import re
 
 import networkx as nx
 from networkx.algorithms.dag import topological_sort_recursive,is_directed_acyclic_graph
@@ -9,7 +10,7 @@ from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.printexpr import eliminate_expr_ws, transform_expression
-from openmdao.main.variable import is_legal_name
+from openmdao.main.variable import is_legal_name, namecheck_rgx
 
 class AlreadyConnectedError(RuntimeError):
     pass
@@ -112,6 +113,7 @@ class DependencyGraph(object):
         """Remove the name of a Component from the graph. It is not
         an error if the component is not found in the graph.
         """
+        self.disconnect(name)
         self._graph.remove_node(name)
                                     
     def invalidate_deps(self, scope, cnames, varsets, force=False):
@@ -175,8 +177,21 @@ class DependencyGraph(object):
                             conns.append((src, dest))
             else:
                 for dest,src in link._dests_ext.items():
-                    #conns.append(('.'.join([u,src]), '.'.join([v,dest])))
                     conns.append((src, '.'.join([v,dest])))
+        return conns
+    
+    def list_autopassthroughs(self):
+        """Returns a list of autopassthrough connections as (src, dest) tuples."""
+        conns = []
+        #namesub = re.compile('(([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*)')
+        inlink = self.get_link('@xin', '@bin')
+        if inlink:
+            conns.extend([(v,u) 
+                           for u,v in inlink._dests.items() if '.' in u and '.' in v])
+        outlink = self.get_link('@bout', '@xout')
+        if outlink:
+            conns.extend([(v,u) 
+                           for u,v in outlink._dests.items() if '.' in u and '.' in v])
         return conns
     
     def get_link(self, srcname, destname):
@@ -333,23 +348,6 @@ class DependencyGraph(object):
                 if v == path:
                     conns.append((u, v))
         return conns
-    
-        #if not vname:  # a boundary variable
-            #for name in ['@bin', '@bout']:
-                #for u,v in self.var_edges(name):
-                    #if u.split('.',1)[1] == path:
-                        #conns.append((u, v))
-                #for u,v in self.var_in_edges(name):
-                    #if v.split('.',1)[1] == path:
-                        #conns.append((u, v))
-        #else:
-            #for u,v in self.var_edges(cname):
-                #if u == path:
-                    #conns.append((u, v))
-            #for u,v in self.var_in_edges(cname):
-                #if v == path:
-                    #conns.append((u, v))
-        #return conns
     
     def connections_to(self, path):
         """Returns a list of tuples of the form (srcpath, destpath) for

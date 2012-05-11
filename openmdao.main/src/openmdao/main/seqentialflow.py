@@ -24,6 +24,9 @@ class SequentialWorkflow(Workflow):
     def __contains__(self, comp):
         return comp in self._names
     
+    def index(self, comp):
+        return self._names.index(comp)
+    
     #def get_configinfo(self, pathname):
         #"""Return a ConfigInfo object for this instance.  The
         #ConfigInfo object should also contain ConfigInfo objects
@@ -44,7 +47,7 @@ class SequentialWorkflow(Workflow):
         """Return a list of component names in this workflow."""
         return self._names[:]
     
-    def add(self, compnames):
+    def add(self, compnames, index=None):
         """ Add new component(s) to the end of the workflow by name. """
         if isinstance(compnames, basestring):
             nodes = [compnames]
@@ -56,7 +59,11 @@ class SequentialWorkflow(Workflow):
             raise TypeError("Components must be added by name to a workflow.")
         for node in nodes:
             if isinstance(node, basestring):
-                self._names.append(node)
+                if index is None:
+                    self._names.append(node)
+                else:
+                    self._names.insert(index, node)
+                    index += 1
             else:
                 raise TypeError("Components must be added by name to a workflow.")
         

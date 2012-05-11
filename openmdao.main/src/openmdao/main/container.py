@@ -40,6 +40,7 @@ from multiprocessing import connection
 from openmdao.main.variable import Variable, is_legal_name
 from openmdao.main.filevar import FileRef
 from openmdao.main.datatypes.slot import Slot
+from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, is_instance, has_interface, CLASSES_TO_PROXY
 from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
@@ -646,6 +647,23 @@ class Container(SafeHasTraits):
             self._managers[key] = manager
         return manager.proxy
         
+    def _check_rename(self, oldname, newname):
+        if '.' in oldname or '.' in newname:
+            self.raise_exception("can't rename '%s' to '%s': rename only works within a single scope." % 
+                                 (oldname, newname), RuntimeError)
+        if not self.contains(oldname):
+            self.raise_exception("can't rename '%s' to '%s': '%s' was not found." % 
+                                 (oldname, newname, oldname), RuntimeError)
+        if self.contains(newname):
+            self.raise_exception("can't rename '%s' to '%s': '%s' already exists." % 
+                                 (oldname, newname, newname), RuntimeError)
+            
+    def rename(self, oldname, newname):
+        """Renames a child of this object from oldname to newname."""
+        self._check_rename(oldname, newname)
+        obj = self.remove(oldname)
+        self.add(newname, obj)
+        
     def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
@@ -956,7 +974,6 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
-                #src = 'parent.'+src
                 src = ExprEvaluator(src,scope=self).scope_transform(self, obj, parent=self)
             obj.set(restofpath, value, index, src=src, force=force)
         else:
@@ -997,14 +1014,29 @@ class Container(SafeHasTraits):
             else:
                 setattr(self, path, value)
 
-        
     def _index_set(self, name, value, index):
-        obj = get_indexed_value(self, name, index[:-1])
+        obj = self.get_wrapped_attr(name, index[:-1])
         idx = index[-1]
+        if isinstance(obj, AttrWrapper):
+            wrapper = obj
+            obj = obj.value
+        else:
+            wrapper = None
+        if isinstance(value, AttrWrapper):
+            truval = value.value
+            if wrapper:
+                if idx[0] != ATTR:
+                    truval = wrapper.convert_from(value)
+                elif isinstance(obj, Container):
+                    att = obj.get_wrapped_attr(idx[1])
+                    if isinstance(att, AttrWrapper):
+                        truval = att.convert_from(value)
+            value = truval
         try:
             old = process_index_entry(obj, idx)
         except KeyError:
             old = _missing
+            
         if isinstance(idx, tuple):
             if idx[0] == INDEX:
                 obj[idx[1]] = value
