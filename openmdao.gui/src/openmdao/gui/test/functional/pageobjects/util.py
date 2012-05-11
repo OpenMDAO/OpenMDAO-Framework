@@ -7,8 +7,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
 
+
 # Set this True on fatal driver errors.
-ABORT = False
+_ABORT = False
+
+def abort(value=None):
+    """ Return current abort status and optionally update it. """
+    global _ABORT
+    current = _ABORT
+    if value is not None:
+        _ABORT = value
+    return current
 
 
 class ValuePrompt(BasePageObject):

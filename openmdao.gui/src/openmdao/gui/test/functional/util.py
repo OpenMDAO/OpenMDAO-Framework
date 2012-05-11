@@ -26,7 +26,7 @@ from selenium import webdriver
 from openmdao.util.network import get_unused_ip_port
 
 from pageobjects.project import ProjectsListPage
-from pageobjects.util import ABORT
+from pageobjects.util import abort
 
 if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
@@ -131,8 +131,6 @@ def setup_server(virtual_display=True):
     # If running headless, setup the virtal display.
     if virtual_display:
         _display = Display()
-#        _display = Display(visible=0, size=(800, 600))
-#        _display = Display(backend='xvfb')
         _display.start()
     _display_set = True
 
@@ -145,7 +143,8 @@ def teardown_server():
     for browser in TEST_CONFIG['browsers']:
         if isinstance(browser, webdriver.Chrome):
             proc = subprocess.Popen(('ps', '-fu', getpass.getuser()),
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
             stdout, stderr = proc.communicate()
             pid = os.getpid()
             for line in stdout.splitlines(True):
@@ -198,10 +197,10 @@ def generate(modname):
             yield _Runner(tests[0]), SkipTest(msg)
             continue
 
-        ABORT = False
+        abort(False)
         for test in tests:
             logging.critical('')
-            if ABORT:
+            if abort():
                 msg = '%s tests aborting' % name
                 logging.critical(msg)
                 yield _Runner(test), RuntimeError(msg)
@@ -209,7 +208,7 @@ def generate(modname):
                 logging.critical('Run %s using %s', test.__name__, name)
                 yield _Runner(test), browser
 
-        if ABORT:
+        if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
             browser.close()

@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, CheckboxElement, InputElement, TextElement
+from elements import ButtonElement, InputElement, TextElement
 
 
 class ProjectPage(BasePageObject):
@@ -55,7 +55,7 @@ class NewProjectPage(ProjectPage):
 class ProjectInfoPage(ProjectPage):
     """ Page displaying project information. """
 
-    project_title = TextElement((By.XPATH, '/html/body/div/div[2]/h2'))
+    project_header = TextElement((By.XPATH, '/html/body/div/div[2]/h2'))
     update_button = ButtonElement((By.XPATH,
                                    '/html/body/div/div[2]/form/input'))
     delete_button = ButtonElement((By.XPATH,
