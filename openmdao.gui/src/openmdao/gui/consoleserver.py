@@ -439,8 +439,10 @@ class ConsoleServer(cmd.Cmd):
 
             if comp.parent is None:
                 connected_inputs = []
+                connected_outputs = []
             else:
                 connected_inputs = comp._depgraph.get_connected_inputs()
+                connected_outputs = comp._depgraph.get_connected_outputs()
 
             for vname in comp.list_inputs():
                 v = comp.get(vname)
@@ -457,10 +459,10 @@ class ConsoleServer(cmd.Cmd):
                                 attr[field] = meta[field]
                             else:
                                 attr[field] = ''
+                    attr['connected'] = ''
                     if vname in connected_inputs:
-                        attr['connected'] = True
-                    else:
-                        attr['connected'] = False
+                        # there can be only one connection to an input
+                        attr['connected'] = [ src for src, dst in comp._depgraph.connections_to(vname) ][0].replace('@xin.','')
                 inputs.append(attr)
             attrs['Inputs'] = inputs
 
@@ -480,6 +482,9 @@ class ConsoleServer(cmd.Cmd):
                                 attr[field] = meta[field]
                             else:
                                 attr[field] = ''
+                    attr['connected'] = ''
+                    if vname in connected_outputs:
+                        attr['connected'] = str([ dst for src, dst in comp._depgraph.connections_to(vname) ]).replace('@xout.','')
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
