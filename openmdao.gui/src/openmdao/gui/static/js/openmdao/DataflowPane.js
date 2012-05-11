@@ -9,8 +9,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                       'width:'+(screen.width-100)+'px;'+
                       'overflow:auto;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">').appendTo(elm),
-        dataflow = new draw2d.Workflow(dataflowID),
-        dataflowFig;
+        dataflow = new draw2d.Workflow(dataflowID);
 
     self.model = model;
     self.pathname = pathname;
@@ -43,9 +42,6 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
     /** update dataflow diagram */
     this.loadData = function(json) {
         dataflow.clear();
-
-        debug.info('DataflowPane.loadData',model,pathname,this);
-
         dataflowFig = new openmdao.DataflowFigure(self.model, self.pathname);
         dataflow.addFigure(dataflowFig,20,20);
         figures = {};

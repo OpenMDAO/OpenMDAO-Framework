@@ -436,12 +436,12 @@ class ConsoleServer(cmd.Cmd):
 
         if has_interface(comp, IComponent):
             inputs = []
+
             if comp.parent is None:
-                connected_inputs = []            
-            else:    
+                connected_inputs = []
+            else:
                 connected_inputs = comp._depgraph.get_connected_inputs()
-                
-            
+
             for vname in comp.list_inputs():
                 v = comp.get(vname)
                 attr = {}
@@ -457,7 +457,6 @@ class ConsoleServer(cmd.Cmd):
                                 attr[field] = meta[field]
                             else:
                                 attr[field] = ''
-                    #adding 'connected' attribute 
                     if vname in connected_inputs:
                         attr['connected'] = True
                     else:

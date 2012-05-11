@@ -1,7 +1,7 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowComponentFigure=function(myModel,pathname,type, valid) {
-    this.myModel = myModel;
+openmdao.WorkflowComponentFigure=function(model,pathname,type, valid) {
+    this.openmdao_model = model;
     this.pathname = pathname;
     this.type = type;
     this.valid = valid;
@@ -35,17 +35,17 @@ openmdao.WorkflowComponentFigure=function(myModel,pathname,type, valid) {
     this.setCanDrag(false);
     this.setResizeable(false);
 
-//    // set color based on valid status
-//    if (this.valid) {
-//        this.setColor(new draw2d.Color(0,255,0));
-//    }
-//    else {
-//        this.setColor(new draw2d.Color(255,0,0));
-//    }
+    // set color based on valid status
+    if (this.valid) {
+        this.setColor(new draw2d.Color(0,255,0));
+    }
+    else {
+        this.setColor(new draw2d.Color(255,0,0));
+    }
 
     // change color based on execution status
     topic = pathname+'.exec_state'
-    myModel.addListener(topic, this.setExecState.bind(this));    
+    model.addListener(topic, this.setExecState.bind(this));
 };
 
 openmdao.WorkflowComponentFigure.prototype=new draw2d.Node();
@@ -67,7 +67,7 @@ openmdao.WorkflowComponentFigure.prototype.createHTMLElement=function(){
     item.style.padding="0px";
     item.style.outline="none";
     item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
-    
+
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
     this.top_left.style.position="absolute";
@@ -121,7 +121,7 @@ openmdao.WorkflowComponentFigure.prototype.createHTMLElement=function(){
     this.footer.style.backgroundColor="white";
     this.footer.style.borderBottom="1px solid #666666";
     this.footer.style.fontSize="2px";
-    
+
     this.textarea=document.createElement("div");
     this.textarea.style.position="absolute";
     this.textarea.style.left="0px";
@@ -234,7 +234,7 @@ openmdao.WorkflowComponentFigure.prototype.toggle=function(){
 
 openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu(),
-        model = this.myModel,
+        model = this.openmdao_model,
         pathname = this.pathname,
         name = this.name;
 
@@ -267,7 +267,7 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.WorkflowComponentFigure.prototype.onDoubleClick=function(){
-    new openmdao.ComponentFrame(this.myModel,this.pathname)
+    new openmdao.ComponentFrame(this.openmdao_model,this.pathname)
 };
 
 /**

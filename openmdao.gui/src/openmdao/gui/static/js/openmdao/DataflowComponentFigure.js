@@ -2,7 +2,7 @@
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowComponentFigure=function(model,pathname,type,valid){
-    this.model = model;
+    this.openmdao_model = model; // draw2d has it's own model
     this.pathname = pathname;
     this.type = type;
     this.valid = valid;
@@ -10,7 +10,9 @@ openmdao.DataflowComponentFigure=function(model,pathname,type,valid){
     this.cornerHeight=15;
     this.outputPort=null;
     this.inputPort=null;
+
     draw2d.Node.call(this);
+
     this.setDimension(100,50);
     this.originalHeight=-1;
 
@@ -32,12 +34,12 @@ openmdao.DataflowComponentFigure=function(model,pathname,type,valid){
     this.setResizeable(false);
 
     // set color based on valid status
-//    if (this.valid) {
-//        this.setColor(new draw2d.Color(0,255,0));
-//    }
-//    else {
-//        this.setColor(new draw2d.Color(255,0,0));
-//    }
+    if (this.valid) {
+        this.setColor(new draw2d.Color(0,255,0));
+    }
+    else {
+        this.setColor(new draw2d.Color(255,0,0));
+    }
 
     // change color based on execution status
     topic = pathname+'.exec_state'
@@ -162,7 +164,8 @@ openmdao.DataflowComponentFigure.prototype.setDimension=function(w,h){
 };
 
 openmdao.DataflowComponentFigure.prototype.isConnected=function(){
-    return ((this.outputPort.getConnections().size > 0) || (this.inputPort.getConnections().size > 0));
+    return ((this.outputPort.getConnections().size > 0) ||
+            (this.inputPort.getConnections().size > 0));
 };
 
 openmdao.DataflowComponentFigure.prototype.setTitle=function(title){
@@ -216,17 +219,19 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
         this.outputPort.setWorkflow(wkflw);
         this.outputPort.setName("output");
 
-        var self=this;
+        var model = this.openmdao_model,
+            name = this.name,
+            pathname = this.pathname;
         this.outputPort.createCommand = function(request) {
             if(request.getPolicy() == draw2d.EditPolicy.CONNECT) {
                 if( request.source.parentNode.id == request.target.parentNode.id) {
                     return null;
                 }
                 if (request.source instanceof draw2d.InputPort) {
-                    var path = openmdao.Util.getPath(self.pathname),
-                        src  = self.name,
+                    var path = openmdao.Util.getPath(pathname),
+                        src  = name,
                         dst  = request.source.getParent().name;
-                    new openmdao.ConnectionFrame(self.model,path,src,dst)
+                    new openmdao.ConnectionFrame(model,path,src,dst)
                 };
                 return null;
             }
@@ -249,7 +254,7 @@ openmdao.DataflowComponentFigure.prototype.toggle=function(){
 
 openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu(),
-        model = this.model,
+        model = this.openmdao_model,
         pathname = this.pathname,
         name = this.name;
 
@@ -285,7 +290,7 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
-    new openmdao.ComponentFrame(this.model,this.pathname)
+    new openmdao.ComponentFrame(this.openmdao_model,this.pathname)
 };
 
 /**
@@ -301,7 +306,6 @@ openmdao.DataflowComponentFigure.prototype.onMouseLeave=function(){
 
 openmdao.DataflowComponentFigure.prototype.setExecState=function(message){
     var state = message[1];
-    //debug.info('DataflowComponentFigure',this.pathname,state);
     if (state === "VALID") {
         this.setColor(new draw2d.Color(0,255,0));
     }

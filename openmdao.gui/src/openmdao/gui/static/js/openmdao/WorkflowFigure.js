@@ -1,7 +1,7 @@
 openmdao.WorkflowFigure=function(model,flowpath,pathname,driver){
     draw2d.CompartmentFigure.call(this);
 
-    this.model = model;
+    this.openmdao_model = model;
     this.flowpath = flowpath;
     this.pathname = pathname;
     this.driver = driver;
@@ -113,7 +113,7 @@ openmdao.WorkflowFigure.prototype.getContextMenu=function(){
     menu.appendMenuItem(new draw2d.MenuItem("Clear Workflow",null,function(){
         var asm = self.pathname,
             cmd = asm + '.workflow.clear();' + asm + '.config_changed();';
-        self.model.issueCommand(cmd);
+        self.openmdao_model.issueCommand(cmd);
     }));
     menu.setZOrder(999999);
     return menu;
@@ -121,7 +121,6 @@ openmdao.WorkflowFigure.prototype.getContextMenu=function(){
 
 /** add a component figure to this workflow (container) figure */
 openmdao.WorkflowFigure.prototype.addComponentFigure=function(comp_fig){
-    //debug.info("flow:",this.name,"children:",this.getChildren(),'horizontal',this.horizontal)
     var count = this.getChildren().size;
     if (this.horizontal) {
         //x = this.getAbsoluteX()+getFlowWidth(this);
