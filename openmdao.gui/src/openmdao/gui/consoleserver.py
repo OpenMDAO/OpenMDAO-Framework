@@ -439,10 +439,8 @@ class ConsoleServer(cmd.Cmd):
             if comp.parent is None:
                 connected_inputs = []            
             else:    
-                connected_inputs = comp.parent._depgraph.get_connected_inputs()
-            
-            print "Connectein inputzeichen:", connected_inputs            
-            
+                connected_inputs = comp._depgraph.get_connected_inputs()
+                
             
             for vname in comp.list_inputs():
                 v = comp.get(vname)
