@@ -6,7 +6,7 @@ from ordereddict import OrderedDict
 
 from enthought.traits.api import HasTraits
 
-from openmdao.lib.datatypes.api import Float
+from openmdao.lib.datatypes.api import Float, Enum
 from openmdao.main.interfaces import implements, IDifferentiator
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
@@ -22,6 +22,10 @@ class ChainRule(HasTraits):
     # Local FD might need a stepsize
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
                              'difference step size.')
+    
+    method = Enum('Chain', ['Chain', 'Matrix'], iotype='in', \
+                  desc="Solution method. 'Chain' -- Forward accumulation; " + \
+                       "'Matrix' -- Assemble and solve as a matrix.")
 
     def __init__(self):
 
@@ -106,8 +110,17 @@ class ChainRule(HasTraits):
 
 
     def calc_gradient(self):
+        """Choose solution method to calculate the gradient."""
+        
+        if self.method == 'Chain':
+            self.calc_gradient_chain()
+        else:
+            self.calc_gradient_matrix()
+            
+        
+    def calc_gradient_chain(self):
         """Calculates the gradient vectors for all outputs in this Driver's
-        workflow."""
+        workflow for method 'Chain' -- forward accumulation."""
         
         self.setup()
 
@@ -368,6 +381,72 @@ class ChainRule(HasTraits):
             if target not in upscope_derivs:
                 upscope_derivs[target] = value
             
+
+    def calc_gradient_matrix(self):
+        """Calculates the gradient vectors for all outputs in this Driver's
+        workflow for method 'Matrix' -- matrix solution."""
+        
+        self.setup()
+
+        # Create our 2D dictionary the first time we execute.
+        if not self.gradient:
+            for name in self.param_names:
+                self.gradient[name] = {}
+        
+        # Determine gradient of model outputs wrt each parameter
+        for wrt in self.param_names:
+                    
+            derivs = { wrt: 1.0 }
+            
+            # Find derivatives for all component outputs in the workflow
+            self._chain_workflow(derivs, self._parent, wrt)
+
+            # Calculate derivative of the objectives.
+            for obj_name, expr in self._parent.get_objectives().iteritems():
+            
+                obj_grad = expr.evaluate_gradient(scope=self._parent.parent,
+                                                  wrt=derivs.keys())
+                obj_deriv = 0.0
+                for input_name, val in obj_grad.iteritems():
+                    obj_deriv += val*derivs[input_name]
+                    
+                self.gradient[wrt][obj_name] = obj_deriv
+                
+            # Calculate derivatives of the constraints.
+            for con_name, constraint in \
+                self._parent.get_constraints().iteritems():
+                
+                lhs, rhs, comparator, _ = \
+                    constraint.evaluate_gradient(scope=self._parent.parent,
+                                                 wrt=derivs.keys())
+                
+                con_deriv = 0.0
+                con_vals = {}
+                if '>' in comparator:
+                    for input_name, val in lhs.iteritems():
+                        con_vals[input_name] = -val
+                        
+                    for input_name, val in rhs.iteritems():
+                        if input_name in con_vals:
+                            con_vals[input_name] += val
+                        else:
+                            con_vals[input_name] = val
+                            
+                else:
+                    for input_name, val in lhs.iteritems():
+                        con_vals[input_name] = val
+                        
+                    for input_name, val in rhs.iteritems():
+                        if input_name in con_vals:
+                            con_vals[input_name] -= val
+                        else:
+                            con_vals[input_name] = val
+
+                for input_name, val in con_vals.iteritems():
+                    con_deriv += val*derivs[input_name]
+                    
+                self.gradient[wrt][con_name] = con_deriv
+
 
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for all outputs in the Driver's
