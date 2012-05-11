@@ -156,11 +156,6 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
     /** get a context menu for the specified node */
     function contextMenu(node) {
 
-        var isAssembly = false;  // there's no "IAssembly" interface, so..
-        if (! node.is('.jstree-leaf')) {
-            isAssembly = true;
-        }
-
         var path = node.attr('path'),
             type = node.attr('type'),
             interfaces = jQuery.parseJSON(node.attr('interfaces'));
@@ -175,15 +170,22 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                             new openmdao.PropertiesFrame(id,model).editObject(path)
                         }
         };
-        if (isAssembly) {
+        if (jQuery.inArray('IAssembly',interfaces) >= 0) {
             menu.show_dataflow = {
                 "label"  : 'Show Dataflow',
                 "action" :  function(node) { 
                                 dataflow_fn(path);
                             }
             }
+            // shortcut to driver workflow
+            menu.show_workflow = {
+                "label"  : 'Show Workflow',
+                "action" :  function(node) { 
+                                workflow_fn(path);
+                            }
+            }
         };
-        if (isAssembly || jQuery.inArray('IDriver',interfaces) >= 0) {
+        if (jQuery.inArray('IDriver',interfaces) >= 0) {
             menu.show_workflow = {
                 "label"  : 'Show Workflow',
                 "action" :  function(node) { 

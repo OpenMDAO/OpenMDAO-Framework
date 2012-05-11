@@ -5,7 +5,9 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
     // initialize private variables
     var self = this,
         dataflowID  = pathname.replace(/\./g,'-')+"-dataflow",
-        dataflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
+        dataflowCSS = 'height:'+(screen.height-100)+'px;'+
+                      'width:'+(screen.width-100)+'px;'+
+                      'overflow:auto;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">').appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID),
         dataflowFig;
@@ -28,7 +30,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name,editable) {
                 y = Math.round(ui.offset.top - off.top);
             var elem = dataflowDiv[0];
             var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
-            debug.info(droppedName,'(path=',droppedPath,') dropped on dataflow:',self.pathname,'z-index',dataflowDiv.css('z-index'),'zIndex',dataflowDiv.css('zIndex'));
+            debug.info(droppedName,'(path=',droppedPath,') dropped on dataflow:',self.pathname,
+                                   'z-index',dataflowDiv.css('z-index'),'zIndex',dataflowDiv.css('zIndex'));
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
                     model.addComponent(droppedPath,name,self.pathname);
