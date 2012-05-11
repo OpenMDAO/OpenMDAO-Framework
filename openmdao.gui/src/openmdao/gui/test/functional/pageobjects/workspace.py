@@ -172,12 +172,6 @@ class WorkspacePage(BasePageObject):
         self('save_button').click()
         NotifierPage.wait(self.browser, self.port)
 
-    def view_refresh(self):
-        """ Refresh display. """
-        self('view_menu').click()
-        self('refresh_button').click()
-        NotifierPage.wait(self.browser, self.port)
-
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(

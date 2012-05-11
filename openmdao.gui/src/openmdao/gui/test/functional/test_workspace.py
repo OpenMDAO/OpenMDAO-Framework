@@ -132,15 +132,10 @@ def _test_menu(browser):
 #FIXME: These need to verify that the request has been performed.
     # View menu.
     for item in ('code', 'cmdline', 'console', 'files', 'libraries', 'objects',
-                 'properties', 'workflow', 'dataflow'):
+                 'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
         time.sleep(0.5)  # Just so we can see it.
-
-    workspace_page('view_menu').click()
-    workspace_page('refresh_button').click()
-    msg = NotifierPage.wait(workspace_page.browser, workspace_page.port)
-    eq( msg, 'Refresh complete' )
 
     # Clean up.
     projects_page = workspace_page.close_workspace()

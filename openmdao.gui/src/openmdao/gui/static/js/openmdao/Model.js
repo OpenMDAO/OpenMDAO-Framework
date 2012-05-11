@@ -111,14 +111,6 @@ openmdao.Model=function() {
         };
     };
 
-    /** refresh  */
-    this.refresh = function() {        
-        this.updateListeners();
-        if (typeof openmdao_test_mode != 'undefined') {
-            openmdao.Util.notify('Refresh complete');
-        }
-    };
-
     /** get the list of object types that are available for creation */
     this.getTypes = function(callback, errorHandler) {
         if (typeof callback != 'function')
