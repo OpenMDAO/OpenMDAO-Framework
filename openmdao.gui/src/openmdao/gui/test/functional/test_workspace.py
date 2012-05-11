@@ -61,7 +61,7 @@ def _test_import(browser):
 
     # Check to make sure the files were added.
     file_names = workspace_page.get_files()
-    expected_file_names = ['paraboloid.py', 'optimization_unconstrained.py']
+    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"

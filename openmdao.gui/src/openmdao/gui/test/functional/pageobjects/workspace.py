@@ -176,10 +176,18 @@ class WorkspacePage(BasePageObject):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'ftree'))
+# FIXME: absolute delay for tree population.
+        time.sleep(1)
         file_items = self.browser.find_elements(*self.locators["files"])
         file_names = []
-        for element in file_items:
-            file_names.append(element.text[1:])
+        for i in range(len(file_items)):
+            for retry in range(10):  # This has had issues...
+                try:
+                    file_names.append(self.browser.find_elements(*self.locators["files"])[i].text.strip())
+                except StaleElementReferenceException:
+                    logging.critical('get_files: StaleElementReferenceException')
+                else:
+                    break
         return file_names
     
     def get_objects_attribute(self, attribute):
