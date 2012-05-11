@@ -1,10 +1,9 @@
 openmdao.DataflowFigure=function(model,pathname){
-    draw2d.CompartmentFigure.call(this);
-
     this.openmdao_model = model;
     this.pathname = pathname;
     this.name = openmdao.Util.getName(pathname);
-    this.title = this.name;
+
+    draw2d.CompartmentFigure.call(this);
 
     this.defaultBackgroundColor=new draw2d.Color(255,255,255);
     this.highlightBackgroundColor=new draw2d.Color(250,250,200);
@@ -35,14 +34,14 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     this.titlebar.style.height="15px";
     this.titlebar.style.margin="0px";
     this.titlebar.style.padding="0px";
-    this.titlebar.style.font="normal 10px verdana";
+    this.titlebar.style.font="normal 10px";
     this.titlebar.style.backgroundColor="gray";
     this.titlebar.style.borderBottom="1px solid gray";
     this.titlebar.style.borderLeft="5px solid transparent";
     this.titlebar.style.whiteSpace="nowrap";
     this.titlebar.style.textAlign="left";
     //this.titlebar.style.backgroundImage="url(window_toolbar.png)";
-    this.textNode=document.createTextNode(this.title);
+    this.textNode=document.createTextNode(this.name);
     this.titlebar.appendChild(this.textNode);
     item.appendChild(this.titlebar);
 
