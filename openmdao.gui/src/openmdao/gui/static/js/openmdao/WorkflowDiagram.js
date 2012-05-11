@@ -3,46 +3,49 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.WorkflowDiagram = function(id,model,pathname) {
     openmdao.WorkflowDiagram.prototype.init.call(this,id,'Workflow: '+pathname,[]);
-    
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     // initialize private variables
     var self = this,
         pane = new openmdao.WorkflowPane(jQuery('#'+id),model,pathname,'Workflow',false);
-        
-    self.pathname = pathname;
-        
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
+
+    this.pathname = pathname;
+
     /** update the schematic with data from the model */
-    function update(message) {
-        if (message) {
-            debug.info('WorkflowDiagram got message:',message);
-        }
-        else {
-            model.getWorkflow(self.pathname, 
-                              pane.loadData, 
-                              function(jqXHR, textStatus, errorThrown) {
-                                  self.pathname = ''
-                                  debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                                  debug.error('jqXHR:',jqXHR)
-                              });
-        }
+    this.update = function() {
+        model.getWorkflow(self.pathname, 
+                          pane.loadData, 
+                          function(jqXHR, textStatus, errorThrown) {
+                              self.pathname = ''
+                              debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
+                              debug.error('jqXHR:',jqXHR)
+                          });
     };
-    
-    // ask model for an update whenever something changes
-    model.addListener(pathname,update)
-    
+
     /** set the pathname of the object for which to display the workflow */
     this.showWorkflow = function(path) {        
         if (self.pathname !== path) {
             // if not already editing this object, create the tabbed panes
             self.pathname = path;
             self.setTitle('Workflow: '+path);
-            update();
+            this.update();
         };
     };
-    
+
     /** get the pathname for the current workflow */
     this.getPathname = function() {
         return self.pathname;
     };
+
+    // ask model for an update whenever something changes
+    model.addListener('',this.update)
 }
 
 /** set prototype */

@@ -51,6 +51,11 @@ class Couple(object):
     @property
     def indep_dep(self): 
         return (self.indep.target,self.dep.target)
+    
+    def copy(self):
+        return Couple(CouplingVar(self.indep.text),
+                      CouplingVar(self.dep.text),
+                      name=self.name, start=self.start)
         
 
 class HasCouplingVars(object):
@@ -62,7 +67,7 @@ class HasCouplingVars(object):
     
     def __init__(self,parent):
         self._parent = parent
-        self._couples = ordereddict.OrderedDict()    
+        self._couples = ordereddict.OrderedDict()  
         
     def add_coupling_var(self,indep_dep,name=None,start=None):
         """Adds a new coupling var to the assembly.
@@ -98,7 +103,7 @@ class HasCouplingVars(object):
         if self._couples:          
             if indep in [c[0] for c in self._couples]:
                 self._parent.raise_exception("Coupling variable with indep '%s' already "
-                                             "exists in assembly."%indep,ValueError)    
+                                             "exists in assembly."%indep,ValueError)
             
             #It should be allowed for dependents to repeat    
             #if dep in [c[1] for c in self._couples]:
@@ -131,8 +136,6 @@ class HasCouplingVars(object):
             del self._couples[indep_dep]
             return c
 
-            
-        
     def get_coupling_vars(self): 
         """Returns an OrderDict of CouplingVar instances keys to the names of (indep,dep) in the assembly."""
         return self._couples
@@ -146,6 +149,10 @@ class HasCouplingVars(object):
             if couple.start is not None: 
                 couple.indep.set(couple.start,self._parent.get_expr_scope())
 
+    def mimic(self, target):
+        self._couples = ordereddict.OrderedDict()
+        for key,val in target._couples.items():
+            self._couples[key] = val.copy()
         
 @add_delegate(HasConstraints,HasParameters,HasCouplingVars,HasObjectives)
 class ArchitectureAssembly(Assembly): 

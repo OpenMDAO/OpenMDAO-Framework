@@ -12,21 +12,18 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                     }
                 ];
     openmdao.PropertiesEditor.prototype.init.call(this,id,'Files',menu);
-    
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+
     // initialize private variables
     var self = this,
         tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id),
         filter_beg = '_.',
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
-        
-    // ask model for an update whenever something changes
-    model.addListener('',update)
-        
+
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
         // get the file name and extension 
@@ -35,7 +32,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             name = name[name.length-1],
             ext = name.split('.'),
             ext = ext[ext.length-1];
-            
+
         if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
             var html = "<li><a";
             if (typeof val === 'object') {    // a folder
@@ -56,7 +53,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         }
         return html;
     }
-    
+
     /** if we have an edit function, then call it on the specified file */
     function editFile(pathname) {
         if (typeof code_fn == 'function')
@@ -107,12 +104,12 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                 debug.error("FileTree: non-leaf node that's not a folder?",node);
             }
         }
-        
+
         var path = filenode.attr('path');
 
         // now create the menu
         var menu = {};
-        
+
         // if they clicked on a folder then create new files inside that folder
         if (isFolder) {
             menu.create = {
@@ -148,7 +145,7 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
             "label"  : 'Rename',
             "action" : function(node) { alert("Rename is not implemented yet, sorry :(") }
         }
-        
+
         // if it's not a folder, 
         if (!isFolder) {
             // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
@@ -166,18 +163,18 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                 menu.importfile = {
                     "label"  : 'Import * from File',
                     "action" : function(node) { model.importFile(path) }
-                };          
+                };
                 menu.execfile = {
                     "label"  : 'Execute File',
                     "action" : function(node) { model.execFile(path) }
-                };           
+                };
             };
             // if it's a geometry file, let them load it into viewer
             if (/.geom$/.test(path)) {
                 menu.viewGeometry = {
                     "label"  : 'View Geometry',
                     "action" : function(node) { viewGeometry('file'+path.replace(/\\/g,'/')) }
-                };            
+                };
             };
         };
 
@@ -194,27 +191,30 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
                 "action" : function(node) { model.removeFile(path); }
             }
         }
-        
+
         menu.toggle = {
             "label"  : 'Toggle Hidden Files',
             "action" :  function(node) { filter_active = !filter_active; update(); }
         };
-        
+
         return menu
     }
-        
+
     /** update the tree from JSON file structure */
     function updateFiles(files) {
+        tree.html("<div>Updating...</div>")
+        	.effect('highlight',{color:'#ffd'},1000);
+
         // generate HTML for the file tree
         var html = "<ul>";
         jQuery.each(files,function(path,val) {
             html += getFileHTML(path,val);
         })
         html += "</ul>";
-        
+
         // replace old html
         tree.html(html);
-        
+
         // convert to a jstree
         tree.jstree({
             "plugins" :     [ "html_data", "sort", "themes", "types", "cookies", "contextmenu", "ui" ],
@@ -245,17 +245,28 @@ openmdao.FileTree = function(id,model,code_fn,geom_fn) {
         })
     }
 
-    /** update the display, with data from the model */
-    function update() {
-        tree.html("<div>Updating...</div>")
-            .effect('highlight',{color:'#ffd'},1000);
-        model.getFiles(updateFiles);
-    }
-    
+    // listen for 'files' messages and update file data accordingly
+    model.addListener('files', function(message) {
+    	if (message.length !== 2 || message[0] !== 'files') {
+    		debug.warn('Invalid files data:',message);
+    	}
+    	else {
+    		files = message[1];
+    		updateFiles(files);
+    	}
+    });
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
+    /** update the display, with data from the model */
+    this.update = function() {
+        model.getFiles(updateFiles);
+    }
+
+    // load initial file data
+    this.update();
 }
 
 /** set prototype */

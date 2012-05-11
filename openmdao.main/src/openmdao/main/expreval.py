@@ -258,7 +258,8 @@ class ExprExaminer(ast.NodeVisitor):
     def visit_Index(self, node):
         self.simplevar = self.const = False
         if not isinstance(node.value, ast.Num):
-            self.const_indices = False
+            if not (isinstance(node.value, ast.Tuple) and len(node.value.elts)==0):
+                self.const_indices = False
         self.visit(node.value)
 
     def visit_Assign(self, node):
@@ -769,7 +770,7 @@ class ExprEvaluator(object):
             self._parse()
         
         oldname = scope.name + '.' if scope.name else ''
-        newname = new_scope.name + '.'
+        newname = new_scope.name + '.' if new_scope.name else ''
         if scope is new_scope.parent or scope is parent:
             oldname = 'parent.'
         elif new_scope is scope.parent or new_scope is parent:
