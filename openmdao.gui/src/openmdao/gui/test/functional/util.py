@@ -203,7 +203,7 @@ def generate(modname):
             if abort():
                 msg = '%s tests aborting' % name
                 logging.critical(msg)
-                yield _Runner(test), RuntimeError(msg)
+                yield _Runner(test), SkipTest(msg)
             else:
                 logging.critical('Run %s using %s', test.__name__, name)
                 yield _Runner(test), browser
