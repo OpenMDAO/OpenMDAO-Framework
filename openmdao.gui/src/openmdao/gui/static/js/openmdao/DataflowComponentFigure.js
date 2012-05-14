@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowComponentFigure=function(model,pathname,type,valid){
     this.openmdao_model = model; // draw2d has it's own model
@@ -64,7 +64,7 @@ openmdao.DataflowComponentFigure.prototype.createHTMLElement=function(){
     item.style.margin="0px";
     item.style.padding="0px";
     item.style.outline="none";
-    item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
+    item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
 
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
@@ -185,8 +185,10 @@ openmdao.DataflowComponentFigure.prototype.onDragstart=function(x,y){
         this.toggle();
         return false;
     }
-    if(this.originalHeight==-1){
-        if(this.canDrag===true&&x<parseInt(this.header.style.width)&&y<parseInt(this.header.style.height)){
+    if(this.originalHeight===-1){
+        if(this.canDrag===true &&
+           x<parseInt(this.header.style.width,10) &&
+           y<parseInt(this.header.style.height,10)) {
             return true;
         }
     }else{
@@ -223,8 +225,8 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
             name = this.name,
             pathname = this.pathname;
         this.outputPort.createCommand = function(request) {
-            if(request.getPolicy() == draw2d.EditPolicy.CONNECT) {
-                if( request.source.parentNode.id == request.target.parentNode.id) {
+            if(request.getPolicy() === draw2d.EditPolicy.CONNECT) {
+                if( request.source.parentNode.id === request.target.parentNode.id) {
                     return null;
                 }
                 if (request.source instanceof draw2d.InputPort) {
@@ -241,7 +243,7 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
 };
 
 openmdao.DataflowComponentFigure.prototype.toggle=function(){
-    if(this.originalHeight==-1){
+    if(this.originalHeight===-1){
         this.originalHeight=this.height;
         this.setDimension(this.width,this.cornerHeight*2);
         this.setResizeable(false);

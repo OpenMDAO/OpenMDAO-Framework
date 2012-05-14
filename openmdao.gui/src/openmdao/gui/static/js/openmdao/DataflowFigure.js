@@ -1,3 +1,6 @@
+
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
+
 openmdao.DataflowFigure=function(model,pathname){
     this.openmdao_model = model;
     this.pathname = pathname;

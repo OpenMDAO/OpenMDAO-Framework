@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ; 
 
 openmdao.DataflowFrame = function(id,model,pathname) {
     openmdao.DataflowFrame.prototype.init.call(this,id,'Dataflow: '+pathname,[]);
@@ -10,7 +10,7 @@ openmdao.DataflowFrame = function(id,model,pathname) {
 
     // initialize private variables
     var self = this,
-        pane = new openmdao.DataflowPane(jQuery('#'+id),model,pathname,'Data',false);
+        pane = new openmdao.DataflowPane(jQuery('#'+id),model,pathname,'Dataflow');
 
     /***********************************************************************
      *  privileged
@@ -21,13 +21,13 @@ openmdao.DataflowFrame = function(id,model,pathname) {
         model.getDataflow(pane.pathname, 
                           pane.loadData, 
                           function(jqXHR, textStatus, errorThrown) {
-                              pane.pathname = ''
-                              debug.error("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                              debug.error('jqXHR:',jqXHR)
+                              pane.pathname = '';
+                              debug.error("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText);
+                              debug.error('jqXHR:',jqXHR);
                           });
     };
 
-    /** set the pathname for which to display the dataflow */
+    /** set the pathname of the object for which to display the dataflow */
     this.showDataflow = function(path) {
         if (pane.pathname !== path) {
             // if not already showing dataflow for this pathname

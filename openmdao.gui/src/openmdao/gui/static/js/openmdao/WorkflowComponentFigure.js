@@ -1,4 +1,5 @@
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.WorkflowComponentFigure=function(model,pathname,type, valid) {
     this.openmdao_model = model;
@@ -66,7 +67,7 @@ openmdao.WorkflowComponentFigure.prototype.createHTMLElement=function(){
     item.style.margin="0px";
     item.style.padding="0px";
     item.style.outline="none";
-    item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
+    item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
 
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
@@ -183,7 +184,9 @@ openmdao.WorkflowComponentFigure.prototype.onDragstart=function(x,y){
         return false;
     }
     if(this.originalHeight===-1){
-        if(this.canDrag===true&&x<parseInt(this.header.style.width)&&y<parseInt(this.header.style.height)){
+        if(this.canDrag===true &&
+           x<parseInt(this.header.style.width,10) &&
+           y<parseInt(this.header.style.height,10)) {
             return true;
         }
     }else{

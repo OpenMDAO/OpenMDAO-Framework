@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.WorkflowFrame = function(id,model,pathname) {
     openmdao.WorkflowFrame.prototype.init.call(this,id,'Workflow: '+pathname,[]);
@@ -10,43 +10,41 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
 
     // initialize private variables
     var self = this,
-        pane = new openmdao.WorkflowPane(jQuery('#'+id),model,pathname,'Workflow',false);
+        pane = new openmdao.WorkflowPane(jQuery('#'+id),model,pathname,'Workflow');
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
-    this.pathname = pathname;
-
     /** update the schematic with data from the model */
     this.update = function() {
-        model.getWorkflow(self.pathname,
+        model.getWorkflow(pane.pathname,
                           pane.loadData,
                           function(jqXHR, textStatus, errorThrown) {
-                              self.pathname = ''
-                              debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText)
-                              debug.error('jqXHR:',jqXHR)
+                              pane.pathname = '';
+                              debug.error("Error getting workflow (status="+jqXHR.status+"): "+jqXHR.statusText);
+                              debug.error('jqXHR:',jqXHR);
                           });
     };
 
     /** set the pathname of the object for which to display the workflow */
     this.showWorkflow = function(path) {
-        if (self.pathname !== path) {
-            // if not already editing this object, create the tabbed panes
-            self.pathname = path;
+        if (pane.pathname !== path) {
+            // if not already showing workflow for this pathname
+            pane.pathname = path;
             self.setTitle('Workflow: '+path);
             this.update();
-        };
+        }
     };
 
     /** get the pathname for the current workflow */
     this.getPathname = function() {
-        return self.pathname;
+        return pane.pathname;
     };
 
     // ask model for an update whenever something changes
-    model.addListener('',this.update)
-}
+    model.addListener('',this.update);
+};
 
 /** set prototype */
 openmdao.WorkflowFrame.prototype = new openmdao.BaseFrame();

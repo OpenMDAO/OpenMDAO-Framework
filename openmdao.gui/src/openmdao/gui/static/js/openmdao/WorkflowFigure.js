@@ -1,3 +1,6 @@
+
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
+
 openmdao.WorkflowFigure=function(model,flowpath,pathname,driver){
     this.openmdao_model = model;
     this.flowpath = flowpath;

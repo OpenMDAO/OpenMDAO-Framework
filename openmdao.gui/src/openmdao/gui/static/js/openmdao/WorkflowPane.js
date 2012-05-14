@@ -1,51 +1,24 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
+openmdao.WorkflowPane = function(elm,model,pathname,name) {
     // initialize private variables
     var self = this,
         comp_figs = {},
         flow_figs = {},
         workflowID = "#"+pathname.replace(/\./g,'-')+"-workflow",
-        workflowCSS = 'height:'+(screen.height-100)+'px;width:'+(screen.width-100)+'px;overflow:auto;',
-        workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">').appendTo(elm),
+        workflowCSS = 'height:'+(screen.height-100)+'px;'+
+                      'width:'+(screen.width-100)+'px;' +
+                      'overflow:auto;',
+        workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
+                      .appendTo(elm),
         workflow = new draw2d.Workflow(workflowID);
 
     self.pathname = pathname;
 
     workflow.setBackgroundImage( "/static/images/grid_10.png", true);
 
-    /** FIXME: workflow context menu conflicts with figure context menu ** /
-    // context menu
-    workflow.getContextMenu=function(){
-        var menu=new draw2d.Menu();
-        menu.appendMenuItem(new draw2d.MenuItem("Show Grid",null,function(x,y){
-            workflow.setGridWidth(10,10);
-            workflow.setBackgroundImage("/static/images/grid_10.png",true);
-        }));
-        menu.appendMenuItem(new draw2d.MenuItem("Hide Grid",null,function(x,y){
-            workflow.setBackgroundImage(null,false);
-        }));
-        // menu.appendMenuItem(new draw2d.MenuItem("Add Note",null,function(x,y){
-            // var annotation = new draw2d.Annotation("NOTE: ");
-            // annotation.setDimension(250,70);
-            // var off = workflowDiv.parent().offset()
-            // x = Math.round(x - off.left)
-            // y = Math.round(y - off.top)
-            // workflow.addFigure(annotation,x,y);
-        // }));
-
-        return menu;
-    };
-    /**/
-
-    /** / toolbar may be useful at some point?
-    var tbar = new openmdao.Toolbar();
-    workflow.showDialog(tbar,400,10);
-    /**/
-
-    // make the workflow pane droppable
-    // TODO: handle drops of objtype
+    // make the workflow pane droppable (TODO: handle drops of objtype)
     workflowDiv.droppable ({
         accept: '.obj',
         drop: function(ev,ui) {
@@ -59,12 +32,13 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 flowfig = workflow.getBestCompartmentFigure(x,y),
                 bestfig = workflow.getBestFigure(x,y);
             debug.info(droppedName,'dropped on',self.pathname,'workflow');
-            if (droppedObject.hasClass('objtype') && (/^openmdao.lib.drivers./).test(droppedPath)) {
-                // TODO: really need interface info to check if the type and fig are drivers
-                if (bestfig instanceof openmdao.WorkflowComponentFigure && 
+            if (droppedObject.hasClass('objtype') &&
+               (/^openmdao.lib.drivers./).test(droppedPath)) {
+                // TODO: need interface info to check if type & fig are drivers
+                if (bestfig instanceof openmdao.WorkflowComponentFigure &&
                     openmdao.Util.getName(bestfig.pathname) === 'driver') {
                     path = openmdao.Util.getPath(bestfig.pathname);
-                    // TODO: need a 'replaceDriver' function to preserve driver config
+                    // TODO: need a 'replace' function to preserve driver config
                     model.addComponent(droppedPath,'driver',path);
                 }
                 else {
@@ -72,33 +46,33 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 }
             }
             else {
-                debug.info('Workflow drop was not valid (obj on flow or objtype on driver)')
+                debug.info('Workflow drop was not valid (obj on flow or objtype on driver)');
             }
         }
     });
 
     /** expand workflow (container) figures to contain all their children */
     function resizeFlowFigures() {
-        for (fig in flow_figs) {
-            flow_figs[fig].resize();
-        }
+        jQuery.each(flow_figs, function (flowpath,flowfig) {
+            flowfig.resize();
+        });
     }
 
     /** update workflow from JSON workflow data
      */
     function updateFigures(flow_name,json) {
-        var path  = json['pathname'],
-            type  = json['type'],
-            valid = json['valid'],
-            drvr  = json['driver'],
-            flow  = json['workflow'],
+        var path  = json.pathname,
+            type  = json.type,
+            valid = json.valid,
+            drvr  = json.driver,
+            flow  = json.workflow,
             asm   = openmdao.Util.getPath(path),
             comp_key = flow_name+':'+path,
             comp_fig, flow_fig, flowpath, newflow_fig, count, x, y;
 
         if (flow) {
             // add driver figure
-            if (comp_key in comp_figs) {
+            if (comp_figs.hasOwnProperty(comp_key)) {
                 comp_fig = comp_figs[comp_key];
             }
             else {
@@ -114,8 +88,9 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
                 workflow.addFigure(comp_fig,50,50);
             }
 
-            // add workflow compartment figure for this flow (overlap bottom right of driver figure)
-            flowpath = flow_name+'.'+path
+            // add workflow compartment figure for this flow
+            // (overlap bottom right of driver figure)
+            flowpath = flow_name+'.'+path;
             newflow_fig = new openmdao.WorkflowFigure(model,flowpath,path,comp_fig);
             x = comp_fig.getAbsoluteX()+comp_fig.getWidth()-20;
             y = comp_fig.getAbsoluteY()+comp_fig.getHeight()-10;
@@ -128,15 +103,16 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
 
             jQuery.each(flow,function(idx,comp) {
                 updateFigures(flowpath,comp);
-            })
+            });
         }
         else if (drvr) {
-            // don't add a figure for an assembly, it will be represented by it's driver
+            // don't add a figure for an assembly,
+            // it will be represented by it's driver
             updateFigures(flow_name,drvr);
         }
         else {
             // add component figure
-            if (comp_key in comp_figs) {
+            if (comp_figs.hasOwnProperty(comp_key)) {
                 comp_fig = comp_figs[comp_key];
             }
             else {
@@ -161,7 +137,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
         if (Object.keys(json).length > 0) {
             updateFigures('',json);
             resizeFlowFigures();
-        };
-    }
+        }
+    };
 
-}
+};
