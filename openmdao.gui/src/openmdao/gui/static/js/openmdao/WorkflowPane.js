@@ -18,9 +18,10 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
 
     workflow.setBackgroundImage( "/static/images/grid_10.png", true);
 
-    // make the workflow pane droppable (TODO: handle drops of objtype)
+    // make the workflow pane droppable, handle drops of objtype
+    // (obj drops from ComponentTree are handled in ComponentTreeFrame.js)
     workflowDiv.droppable ({
-        accept: '.obj',
+        accept: '.objtype',
         drop: function(ev,ui) {
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
@@ -31,18 +32,31 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                 y = Math.round(ui.offset.top - off.top),
                 flowfig = workflow.getBestCompartmentFigure(x,y),
                 bestfig = workflow.getBestFigure(x,y);
-            debug.info(droppedName,'dropped on',self.pathname,'workflow');
-            if (droppedObject.hasClass('objtype') &&
-               (/^openmdao.lib.drivers./).test(droppedPath)) {
-                // TODO: need interface info to check if type & fig are drivers
-                if (bestfig instanceof openmdao.WorkflowComponentFigure &&
-                    openmdao.Util.getName(bestfig.pathname) === 'driver') {
-                    path = openmdao.Util.getPath(bestfig.pathname);
-                    // TODO: need a 'replace' function to preserve driver config
-                    model.addComponent(droppedPath,'driver',path);
+            debug.info(droppedName,'dropped on workflow',self.pathname,bestfig);
+            if (droppedObject.hasClass('objtype')) {
+                if (bestfig instanceof openmdao.WorkflowFigure) {
+                    parent = openmdao.Util.getPath(bestfig.pathname);
+                    openmdao.Util.promptForValue('Specify a name for the new '+droppedName,
+                        function(name) {
+                            model.addComponent(droppedPath,name,parent, function() {
+                                // if successful, then add to workflow as well
+                                cmd = bestfig.pathname+'.workflow.add("'+name+'")';
+                                model.issueCommand(cmd);
+                            });
+                        }
+                    );
                 }
-                else {
-                    debug.info(droppedPath,'was not dropped on a driver', bestfig);
+                else if ((/^openmdao.lib.drivers./).test(droppedPath)) {
+                    // TODO: need interface info to check if type & fig are drivers
+                    if (bestfig instanceof openmdao.WorkflowComponentFigure &&
+                        openmdao.Util.getName(bestfig.pathname) === 'driver') {
+                        path = openmdao.Util.getPath(bestfig.pathname);
+                        // TODO: need a 'replace' function to preserve driver config
+                        model.addComponent(droppedPath,'driver',path);
+                    }
+                    else {
+                        debug.info(droppedPath,'was not dropped on a driver', bestfig);
+                    }
                 }
             }
             else {
@@ -133,6 +147,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
     /** update workflow diagram */
     this.loadData = function(json) {
         workflow.clear();
+        comp_figs = {};
         flow_figs = {};
         if (Object.keys(json).length > 0) {
             updateFigures('',json);
