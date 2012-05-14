@@ -388,7 +388,7 @@ class ConsoleServer(cmd.Cmd):
             dataflow['connections'] = []
         return jsonpickle.encode(dataflow)
 
-    def _get_workflow(self, drvr, pathname, root):
+    def _get_workflow(self, drvr, pathname):
         ''' get the driver info and the list of components that make up the
             driver's workflow, recurse on nested drivers
         '''
@@ -402,11 +402,11 @@ class ConsoleServer(cmd.Cmd):
                 ret['workflow'].append({
                     'pathname': pathname,
                     'type':     type(comp).__module__+'.'+type(comp).__name__,
-                    'driver':   self._get_workflow(comp.driver, pathname+'.driver', root),
+                    'driver':   self._get_workflow(comp.driver, pathname+'.driver'),
                     'valid':    comp.is_valid()
                   })
             elif is_instance(comp, Driver):
-                ret['workflow'].append(self._get_workflow(comp, pathname, root))
+                ret['workflow'].append(self._get_workflow(comp, pathname))
             else:
                 ret['workflow'].append({
                     'pathname': pathname,
@@ -424,12 +424,12 @@ class ConsoleServer(cmd.Cmd):
             pathname = pathname + '.driver'
         if drvr:
             try:
-                flow = self._get_workflow(drvr, pathname, root)
+                flow = self._get_workflow(drvr, pathname)
             except Exception, err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(flow)
 
-    def _get_attributes(self, comp, pathname, root):
+    def _get_attributes(self, comp, pathname):
         ''' get attributes of object
         '''
         attrs = {}
@@ -492,7 +492,7 @@ class ConsoleServer(cmd.Cmd):
             attrs['Dataflow'] = self._get_dataflow(comp, pathname)
 
         if has_interface(comp, IDriver):
-            attrs['Workflow'] = self._get_workflow(comp, pathname, root)
+            attrs['Workflow'] = self._get_workflow(comp, pathname)
 
         if has_interface(comp, IHasCouplingVars):
             couples = []
@@ -589,7 +589,7 @@ class ConsoleServer(cmd.Cmd):
         comp, root = self.get_container(pathname)
         if comp:
             try:
-                attr = self._get_attributes(comp, pathname, root)
+                attr = self._get_attributes(comp, pathname)
                 attr['type'] = type(comp).__name__
             except Exception, err:
                 self._error(err, sys.exc_info())
