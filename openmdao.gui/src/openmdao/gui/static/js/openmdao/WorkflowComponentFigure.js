@@ -15,11 +15,11 @@ openmdao.WorkflowComponentFigure=function(model,pathname,type, valid) {
 
     // get name for this figure and set title appropriately
     this.name = openmdao.Util.getName(pathname);
-    if (this.name == 'driver') {
+    if (this.name === 'driver') {
         var parent = openmdao.Util.getPath(pathname),
             parentName = openmdao.Util.getName(parent);
         this.name = parentName + '.driver';
-    };
+    }
     this.setTitle(this.name);
 
     // set the content text to be the type name (in italics)
@@ -28,7 +28,7 @@ openmdao.WorkflowComponentFigure=function(model,pathname,type, valid) {
         this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>');
     }
     else {
-        this.setContent('<center><i>'+type+''+'</i></center>');
+        this.setContent('<center><i>'+type+'</i></center>');
     }
 
     // do not allow moving or resizing
@@ -44,7 +44,7 @@ openmdao.WorkflowComponentFigure=function(model,pathname,type, valid) {
     }
 
     // change color based on execution status
-    topic = pathname+'.exec_state'
+    topic = pathname+'.exec_state';
     model.addListener(topic, this.setExecState.bind(this));
 };
 
@@ -182,7 +182,7 @@ openmdao.WorkflowComponentFigure.prototype.onDragstart=function(x,y){
         this.toggle();
         return false;
     }
-    if(this.originalHeight==-1){
+    if(this.originalHeight===-1){
         if(this.canDrag===true&&x<parseInt(this.header.style.width)&&y<parseInt(this.header.style.height)){
             return true;
         }
@@ -206,22 +206,10 @@ openmdao.WorkflowComponentFigure.prototype.setCanDrag=function(flag){
 
 openmdao.WorkflowComponentFigure.prototype.setWorkflow=function(_5019){
     draw2d.Node.prototype.setWorkflow.call(this,_5019);
-    if(_5019!==null&&this.inputPort===null){
-        // TODO: don't want ports for openmdao.Workflow, will want for Dataflow
-        // this.inputPort=new draw2d.InputPort();
-        // this.inputPort.setWorkflow(_5019);
-        // this.inputPort.setName("input");
-        // this.addPort(this.inputPort,-5,this.height/2);
-        // this.outputPort=new draw2d.OutputPort();
-        // this.outputPort.setMaxFanOut(5);
-        // this.outputPort.setWorkflow(_5019);
-        // this.outputPort.setName("output");
-        // this.addPort(this.outputPort,this.width+5,this.height/2);
-    }
 };
 
 openmdao.WorkflowComponentFigure.prototype.toggle=function(){
-    if(this.originalHeight==-1){
+    if(this.originalHeight===-1){
         this.originalHeight=this.height;
         this.setDimension(this.width,this.cornerHeight*2);
         this.setResizeable(false);
@@ -236,12 +224,13 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu(),
         model = this.openmdao_model,
         pathname = this.pathname,
-        name = this.name;
+        name = this.name,
+        parent = this.getParent();
 
     // properties
     menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
-        var id = (pathname+'-properties').replace(/\./g,'-')
-        new openmdao.PropertiesFrame(id,model).editObject(pathname)
+        var id = (pathname+'-properties').replace(/\./g,'-');
+        editor = new openmdao.PropertiesFrame(id,model).editObject(pathname);
     }));
 
     menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
@@ -250,7 +239,6 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     }));
 
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
-        var parent = oThis.getParent();
         if (parent) {
             var cmd = parent.pathname+".workflow.remove('";
             if (/.driver$/.test(name)) {
@@ -258,7 +246,7 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
             }
             else {
                 cmd = cmd + name + "')";
-            };
+            }
             model.issueCommand(cmd);
         }
     }));
@@ -267,7 +255,7 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.WorkflowComponentFigure.prototype.onDoubleClick=function(){
-    new openmdao.ComponentFrame(this.openmdao_model,this.pathname)
+    editor = new openmdao.ComponentFrame(this.openmdao_model,this.pathname);
 };
 
 /**
@@ -293,4 +281,4 @@ openmdao.WorkflowComponentFigure.prototype.setExecState=function(message){
     else if (state === "RUNNING") {
         this.setColor(new draw2d.Color(0,0,255));
     }
-}
+};

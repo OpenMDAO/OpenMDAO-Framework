@@ -75,6 +75,7 @@ openmdao.WorkflowFigure.prototype.onFigureLeave=function(_4a1d){
     this.setBackgroundColor(this.defaultBackgroundColor);
 };
 openmdao.WorkflowFigure.prototype.onFigureDrop=function(_4a1e){
+    debug.info("DataflowFigure.onFigureDrop",_4a1e);
     draw2d.CompartmentFigure.prototype.onFigureDrop.call(this,_4a1e);
     this.setBackgroundColor(this.defaultBackgroundColor);
 };

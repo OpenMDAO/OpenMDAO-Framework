@@ -26,7 +26,7 @@ openmdao.DataflowComponentFigure=function(model,pathname,type,valid){
         this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>');
     }
     else {
-        this.setContent('<center><i>'+type+''+'</i></center>');
+        this.setContent('<center><i>'+type+'</i></center>');
     }
 
     // do not allow moving or resizing (TODO: allow moving)
@@ -42,7 +42,7 @@ openmdao.DataflowComponentFigure=function(model,pathname,type,valid){
     }
 
     // change color based on execution status
-    topic = pathname+'.exec_state'
+    topic = pathname+'.exec_state';
     model.addListener(topic,this.setExecState.bind(this));
 };
 
@@ -231,13 +231,13 @@ openmdao.DataflowComponentFigure.prototype.setWorkflow=function(wkflw){
                     var path = openmdao.Util.getPath(pathname),
                         src  = name,
                         dst  = request.source.getParent().name;
-                    new openmdao.ConnectionFrame(model,path,src,dst)
-                };
+                    eitor = new openmdao.ConnectionFrame(model,path,src,dst);
+                }
                 return null;
             }
-        }
+        };
         this.addPort(this.outputPort,this.width+5,this.height/2);
-    };
+    }
 };
 
 openmdao.DataflowComponentFigure.prototype.toggle=function(){
@@ -260,8 +260,8 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
 
     // properties
     menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
-        var id = (pathname+'-properties').replace(/\./g,'-')
-        new openmdao.PropertiesFrame(id,model).editObject(pathname)
+        var id = (pathname+'-properties').replace(/\./g,'-');
+        editor = new openmdao.PropertiesFrame(id,model).editObject(pathname);
     }));
 
     // run
@@ -290,7 +290,7 @@ openmdao.DataflowComponentFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.DataflowComponentFigure.prototype.onDoubleClick=function(){
-    new openmdao.ComponentFrame(this.openmdao_model,this.pathname)
+    editor = new openmdao.ComponentFrame(this.openmdao_model,this.pathname);
 };
 
 /**
@@ -315,4 +315,4 @@ openmdao.DataflowComponentFigure.prototype.setExecState=function(message){
     else if (state === "RUNNING") {
         this.setColor(new draw2d.Color(0,0,255));
     }
-}
+};

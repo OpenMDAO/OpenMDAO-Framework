@@ -13,7 +13,7 @@ openmdao.DataflowFigure=function(model,pathname){
     this.horizontal = true;
 
     // do not allow moving or resizing
-    this.setCanDrag(true);
+    this.setCanDrag(false);
     this.setResizeable(false);
 
     this.figures = {};
@@ -102,10 +102,10 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 openmdao.DataflowFigure.prototype.updateFigures=function(json) {
     var self=this;
 
-    jQuery.each(json['components'],function(idx,comp) {
-        var name = comp['name'],
-            type = comp['type'],
-            valid = comp['valid'],
+    jQuery.each(json.components,function(idx,comp) {
+        var name = comp.name,
+            type = comp.type,
+            valid = comp.valid,
             fig = self.figures[name];
 
         if (!fig) {
@@ -126,7 +126,7 @@ openmdao.DataflowFigure.prototype.updateFigures=function(json) {
         self.addComponentFigure(fig);
     });
 
-    jQuery.each(json['connections'],function(idx,conn) {
+    jQuery.each(json.connections,function(idx,conn) {
         // internal connections only
         if ((conn[0].indexOf('.') > 0) && (conn[1].indexOf('.') > 0)) {
             var src_name = conn[0].split('.')[0],
@@ -139,8 +139,8 @@ openmdao.DataflowFigure.prototype.updateFigures=function(json) {
             c.setTarget(dst_fig.getPort("input"));
             c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
             c.onDoubleClick = function() {
-                new openmdao.ConnectionFrame(self.openmdao_model,
-                        self.pathname,src_name,dst_name);
+                var editor = new openmdao.ConnectionFrame(self.openmdao_model,
+                                            self.pathname,src_name,dst_name);
             };
             self.getWorkflow().addFigure(c);
         }

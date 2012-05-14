@@ -61,7 +61,8 @@ openmdao.WorkflowPane = function(elm,model,pathname,name,editable) {
             debug.info(droppedName,'dropped on',self.pathname,'workflow');
             if (droppedObject.hasClass('objtype') && (/^openmdao.lib.drivers./).test(droppedPath)) {
                 // TODO: really need interface info to check if the type and fig are drivers
-                if (bestfig instanceof openmdao.WorkflowComponentFigure && openmdao.Util.getName(bestfig.pathname) === 'driver') {
+                if (bestfig instanceof openmdao.WorkflowComponentFigure && 
+                    openmdao.Util.getName(bestfig.pathname) === 'driver') {
                     path = openmdao.Util.getPath(bestfig.pathname);
                     // TODO: need a 'replaceDriver' function to preserve driver config
                     model.addComponent(droppedPath,'driver',path);
