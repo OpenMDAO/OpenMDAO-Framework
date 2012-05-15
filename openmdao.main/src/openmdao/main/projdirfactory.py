@@ -13,7 +13,7 @@ import openmdao.main.api
 import openmdao.main.datatypes.api
 
 from openmdao.main.factory import Factory
-from openmdao.util.dep import PythonSourceTreeAnalyser, find_files
+from openmdao.util.dep import PythonSourceTreeAnalyser, find_files, plugin_groups
 
 
 class PyWatcher(FileSystemEventHandler):
@@ -50,6 +50,12 @@ _startmods = [
     'vartree',
     ]
 
+# predicate functions for selecting available types
+def is_plugin(name, meta):
+    return True
+
+#
+
 class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
     the set of available types up-to-date as project files change.
@@ -77,10 +83,21 @@ class ProjDirFactory(Factory):
         """
         pass
 
-    def get_available_types(self, groups=None):
+    def get_available_types(self, predicate=is_plugin):
         """
         """
-        return [(t, {}) for t in (set(self.analyzer.graph.nodes()) - self._baseset)]
+        typset = set(self.analyzer.graph.nodes()) - self._baseset
+        types = []
+        if groups is None:
+            groups = plugin_groups.values()
+        ifaces = set([plugin_groups[g] for g in groups])
+        graph = self.analyzer.graph
+        
+        for typ in typset:
+            if ifaces.intersection(self.analyzer.find_inheritors(typ)):
+                meta = graph.node[typ]['classinfo'].meta
+                types.append((typ, meta))
+                
 
     def on_modified(self, fpath):
         if os.path.isdir(fpath):

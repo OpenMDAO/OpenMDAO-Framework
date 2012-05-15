@@ -13,13 +13,17 @@ _dstruct = {
 """
 from openmdao.main.api import Component
 class MyComp(Component):
-    pass
+    __openmdao_meta__ = {
+        'version': '1.0',
+    }
 """,
     "mydrv.py":
 """
 from openmdao.main.api import Driver
 class MyDrv(Driver):
-    pass
+    __openmdao_meta__ = {
+        'version': '1.0',
+    }
 """
     }
 

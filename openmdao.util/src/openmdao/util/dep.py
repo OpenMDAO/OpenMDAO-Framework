@@ -18,6 +18,21 @@ import networkx as nx
 
 from openmdao.util.fileutil import find_files, get_module_path
 
+# This is a dict containing all of the entry point groups that OpenMDAO uses to
+# identify plugins, and their corresponding Interface.
+plugin_groups = { 'openmdao.container': 'IContainer',
+                  'openmdao.component': 'IComponent', 
+                  'openmdao.driver': 'IDriver', 
+                  'openmdao.variable': 'IVariable', 
+                  'openmdao.surrogatemodel': 'ISurrogate',
+                  'openmdao.doegenerator': 'IDOEgenerator', 
+                  'openmdao.caseiterator': 'ICaseIterator', 
+                  'openmdao.caserecorder': 'ICaseRecorder', 
+                  'openmdao.architecture': 'IArchitecture', 
+                  'openmdao.optproblem': 'IOptProblem', 
+                  'openmdao.differentiator': 'IDifferentiator',
+                  }
+
 class StrVisitor(ast.NodeVisitor):
     def __init__(self):
         ast.NodeVisitor.__init__(self)
@@ -56,12 +71,13 @@ def _real_name(name, finfo):
         return name
 
 class ClassInfo(object):
-    def __init__(self, name, bases, decorators, impls):
+    def __init__(self, name, bases, decorators, impls, meta):
         self.name = name
         self.bases = bases
         self.decorators = decorators
         self.entry_points = []
         self.impls = impls
+        self.meta = meta
         
         for dec in decorators:
             if dec.func.id == 'entry_point':
@@ -83,10 +99,11 @@ class ClassInfo(object):
         """
         self.bases = [_real_name(b, finfo) for b in self.bases]
         
-
+            
 class _ClassBodyVisitor(ast.NodeVisitor):
-    def __init__(self, impl_list):
-        self.impl_list = impl_list
+    def __init__(self):
+        self.impl_list = []
+        self.metadata = None
         ast.NodeVisitor.__init__(self)
         
     def visit_ClassDef(self, node):
@@ -98,7 +115,12 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             for arg in node.args:
                 if isinstance(arg, ast.Name):
                     self.impl_list.append(arg.id)
-
+    
+    def visit_Assign(self, node):
+        if self.metadata is None and len(node.targets) == 1:
+            lhs = node.targets[0]
+            if isinstance(lhs, ast.Name) and lhs.id=='__openmdao_meta__':
+                self.metadata = ast.literal_eval(node.value)
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
@@ -129,14 +151,14 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         self.localnames[node.name] = fullname
         bases = [_to_str(b) for b in node.bases]
 
-        impl_list = []
-        bodyvisitor = _ClassBodyVisitor(impl_list)
-        bodyvisitor.visit(node)
+        bvisitor = _ClassBodyVisitor()
+        bvisitor.visit(node)
 
         self.classes[fullname] = ClassInfo(fullname, 
                                            [self.localnames.get(b,b) for b in bases], 
                                            node.decorator_list,
-                                           impl_list)
+                                           bvisitor.impl_list, 
+                                           bvisitor.metadata)
         
     def visit_Import(self, node):
         """This executes every time an "import foo" style import statement 
@@ -202,6 +224,10 @@ class PythonSourceTreeAnalyser(object):
             myvisitor.translate(self.fileinfo)
             self._update_graph(myvisitor)
             
+            ifaces = set(plugin_groups.values())
+            for iface in ifaces:
+                inheritors = self.find_inheritors(iface)
+            ????
         return myvisitor
         
     def _analyze(self, startfiles):
@@ -232,9 +258,17 @@ class PythonSourceTreeAnalyser(object):
         # build the inheritance/interface graph
         for visitor in self.fileinfo.values():
             self._update_graph(visitor)
+            
+        # now, update ifaces metadata for all of the classinfo objects in the graph
+        ifaces = set(plugin_groups.values())
+        for iface in ifaces:
+            for inheritor in self.find_inheritors(iface):
+                if inheritor not in ifaces:
+                    self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',[]).append(iface)
         
     def _update_graph(self, visitor):
         for classname, classinfo in visitor.classes.items():
+            self.graph.add_node(classname, classinfo=classinfo)
             for base in classinfo.bases:
                 self.graph.add_edge(base, classname)
             for impl in classinfo.impls:

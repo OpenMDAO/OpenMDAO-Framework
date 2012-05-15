@@ -10,22 +10,7 @@ from pkg_resources import get_entry_map, get_distribution, working_set
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
     
 from openmdao.main.factory import Factory
-
-
-# This is a dict containing all of the entry point groups that OpenMDAO uses to
-# identify plugins, and their corresponding Interface.
-plugin_groups = { 'openmdao.container': 'IContainer',
-                  'openmdao.component': 'IComponent', 
-                  'openmdao.driver': 'IDriver', 
-                  'openmdao.variable': 'IVariable', 
-                  'openmdao.surrogatemodel': 'ISurrogate',
-                  'openmdao.doegenerator': 'IDOEgenerator', 
-                  'openmdao.caseiterator': 'ICaseIterator', 
-                  'openmdao.caserecorder': 'ICaseRecorder', 
-                  'openmdao.architecture': 'IArchitecture', 
-                  'openmdao.optproblem': 'IOptProblem', 
-                  'openmdao.differentiator': 'IDifferentiator',
-                  }
+from openmdao.util.dep import plugin_groups
                 
 class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
