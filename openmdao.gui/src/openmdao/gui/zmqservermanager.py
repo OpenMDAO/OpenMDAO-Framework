@@ -63,8 +63,10 @@ class ZMQServerManager(object):
 
             if 'out_server' in server_info:
                 server_info['out_server'].terminate()
+                server_info['out_server'].wait()
             if 'pub_server' in server_info:
                 server_info['pub_server'].terminate()
+                server_info['pub_server'].wait()
 
             server = server_info['server']
             proxy = server_info['proxy']
@@ -73,6 +75,7 @@ class ZMQServerManager(object):
             except Exception:
                 pass
             server.terminate()
+            server.wait()
 
     def get_pub_socket_url(self, server_id):
         ''' get the url of the publisher socket for the server associated with
