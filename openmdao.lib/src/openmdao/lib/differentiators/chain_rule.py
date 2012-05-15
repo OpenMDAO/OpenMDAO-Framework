@@ -234,11 +234,6 @@ class ChainRule(HasTraits):
                 
                         sources = node.parent._depgraph.connections_to(full_name)
                         
-                        # This list keeps track of duplicated sources, which
-                        # are a biproduct of a connection to multiple inputs
-                        # across a fake boundary node.
-                        used_sources = []
-                        
                         for source_tuple in sources:
                             
                             source = source_tuple[0]
@@ -250,8 +245,7 @@ class ChainRule(HasTraits):
                             
                             # Only process inputs who are connected to outputs
                             # with derivatives in the chain
-                            if expr_txt and source in derivs and \
-                               source not in used_sources:
+                            if expr_txt and source in derivs:
                                 
                                 # Need derivative of the expression
                                 expr = node.parent._exprmapper.get_expr(expr_txt)
@@ -277,8 +271,6 @@ class ChainRule(HasTraits):
                                 else:
                                     incoming_derivs[full_name] = derivs[source] * \
                                         expr_deriv[source]
-                                    
-                                used_sources.append(source)
                         
                             
                 # CHAIN RULE
