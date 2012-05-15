@@ -128,7 +128,7 @@ def setup_server(virtual_display=True):
     else:
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
-    # If running headless, setup the virtal display.
+    # If running headless, setup the virtual display.
     if virtual_display:
         _display = Display()
         _display.start()
@@ -136,7 +136,7 @@ def setup_server(virtual_display=True):
 
 
 def teardown_server():
-    """ The function gets called once after all of the tests are called. """
+    """ This function gets called once after all of the tests are run. """
     global _display, _display_set
 
     # Kill chromedriver.
@@ -152,7 +152,9 @@ def teardown_server():
                     fields = line.split()
                     # UID PID PPID C STIME TTY TIME CMD
                     if int(fields[2]) == pid:
-                        os.kill(int(fields[1]), signal.SIGTERM)
+                        driver_pid = int(fields[1])
+                        os.kill(driver_pid, signal.SIGTERM)
+                        os.waitpid(driver_pid, 0)
 
     # Shut down virtual framebuffer.
     if _display is not None:
@@ -162,6 +164,7 @@ def teardown_server():
 
     # Shut down server.
     TEST_CONFIG['server'].terminate()
+    TEST_CONFIG['server'].wait()
     TEST_CONFIG['stdout'].close()
 
     # Clean up.
