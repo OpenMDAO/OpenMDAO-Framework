@@ -18,22 +18,16 @@ openmdao.DataflowFrame = function(id,model,pathname) {
 
     /** update the schematic with data from the model */
     this.update = function() {
-        model.getDataflow(pane.pathname, 
-                          pane.loadData, 
-                          function(jqXHR, textStatus, errorThrown) {
-                              pane.pathname = '';
-                              debug.error("Error getting dataflow (status="+jqXHR.status+"): "+jqXHR.statusText);
-                              debug.error('jqXHR:',jqXHR);
-                          });
+        pane.update();
     };
 
     /** set the pathname of the object for which to display the dataflow */
     this.showDataflow = function(path) {
         if (pane.pathname !== path) {
             // if not already showing dataflow for this pathname
-            pane.pathname = path;
             self.setTitle('Dataflow: '+path);
-            this.update();
+            pane.pathname = path;
+            pane.update();
         }
     };
 
@@ -43,7 +37,7 @@ openmdao.DataflowFrame = function(id,model,pathname) {
     };
 
     // ask model for an update whenever something changes
-    model.addListener('',this.update);
+    model.addListener('',pane.update);
 }
 
 /** set prototype */

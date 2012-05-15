@@ -172,12 +172,12 @@ openmdao.DataflowComponentFigure.prototype.setTitle=function(title){
     this.header.innerHTML=title;
 };
 
-openmdao.DataflowComponentFigure.prototype.setContent=function(_5014){
-    this.textarea.innerHTML=_5014;
+openmdao.DataflowComponentFigure.prototype.setContent=function(content){
+    this.textarea.innerHTML=content;
 };
 
 openmdao.DataflowComponentFigure.prototype.onDragstart=function(x,y){
-    var _5017=draw2d.Node.prototype.onDragstart.call(this,x,y);
+    var dragStarted = draw2d.Node.prototype.onDragstart.call(this,x,y);
     if(this.header===null){
         return false;
     }
@@ -192,7 +192,7 @@ openmdao.DataflowComponentFigure.prototype.onDragstart=function(x,y){
             return true;
         }
     }else{
-        return _5017;
+        return dragStarted;
     }
 };
 

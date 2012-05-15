@@ -35,7 +35,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
                        'z-index',dataflowDiv.css('z-index'),
                        'zIndex',dataflowDiv.css('zIndex'));
             if (droppedObject.hasClass('objtype')) {
-                openmdao.Util.promptForValue('Specify a name for the new '+droppedName,
+                openmdao.Util.promptForValue('Enter name for new '+droppedName,
                     function(name) {
                         model.addComponent(droppedPath,name,self.pathname);
                     }
@@ -45,12 +45,10 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
     });
 
     /** update dataflow diagram */
-    this.loadData = function(json) {
+    this.update = function() {
         dataflow.clear();
         dataflowFig = new openmdao.DataflowFigure(model, self.pathname);
         dataflow.addFigure(dataflowFig,20,20);
-        if (Object.keys(json).length > 0) {
-            dataflowFig.updateFigures(json);
-        }
+        dataflowFig.maximize();
     };
 };
