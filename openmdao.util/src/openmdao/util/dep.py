@@ -10,9 +10,8 @@ import fnmatch
 from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
-from tokenize import generate_tokens
 import ast
-import parser
+import imp
 
 import networkx as nx
 
@@ -144,7 +143,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         """
         for classinfo in self.classes.values():
             classinfo.resolve_true_basenames(finfo)
-                
+                            
     def visit_ClassDef(self, node):
         """This executes every time a class definition is parsed."""
         fullname = '.'.join([self.modpath, node.name])
@@ -223,11 +222,8 @@ class PythonSourceTreeAnalyser(object):
         if not first_pass:
             myvisitor.translate(self.fileinfo)
             self._update_graph(myvisitor)
+            myvisitor.update_impls(self.graph)
             
-            ifaces = set(plugin_groups.values())
-            for iface in ifaces:
-                inheritors = self.find_inheritors(iface)
-            ????
         return myvisitor
         
     def _analyze(self, startfiles):
@@ -286,3 +282,37 @@ class PythonSourceTreeAnalyser(object):
             return []
         del paths[base] # don't want the base itself in the list
         return paths.keys()
+
+def _py_gen(pathlist):
+    """generate a list of python files and package dirs"""
+    for dname in pathlist:
+        for path, dirlist, filelist in os.walk(dname):
+            if os.path.isfile(os.path.join(path,'__init__.py')):
+                yield path
+            for name in filelist:
+                if name.endswith('.py') and name != '__init__.py':
+                    yield join(path, name)
+            # when using os.walk, dirlist can be modified in place to prune the tree
+            to_remove = []
+            for d in dirlist:
+                if not os.path.isfile(os.path.join(path,d,'__init__.py')):
+                    to_remove.append(d)
+            for d in to_remove:
+                dirlist.remove(d)
+    
+def map_modules(modmap, pathlist=None):
+    if pathlist is None:
+        pathlist = sys.path
+    packages = {}
+
+    for f in py_gen(path):
+        head, tail = os.path.split(f)
+        if tail == '__init__.py':
+            h,t = os.path.split(head)
+            if os.path.isfile(os.path.join(h, '__init__.py')):
+                # parent dir is a package dir, so create a new subpackage
+                modmap[head] = '.'.join(modmap[h], t)
+        else:
+            modname = tail[:-3]
+            
+    return modmap
