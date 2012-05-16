@@ -391,7 +391,7 @@ class ChainRule(HasTraits):
             derivs = { wrt: 1.0 }
             
             # Find derivatives for all component outputs in the workflow
-            self._chain_workflow(derivs, self._parent, wrt)
+            self._chain_workflow_matrix(derivs, self._parent, wrt)
 
             # Calculate derivative of the objectives.
             for obj_name, expr in self._parent.get_objectives().iteritems():
@@ -439,6 +439,120 @@ class ChainRule(HasTraits):
                     
                 self.gradient[wrt][con_name] = con_deriv
 
+    def _chain_workflow_matrix(self, derivs, scope, param):
+        """Process a workflow calculating all intermediate derivatives using
+        the chain rule, and assemble them into a matrix. This matrix is
+        solved based on user chosen algorithm. This can be called recursively
+        to handle nested assemblies. """
+
+        # Would like to determine the size, but can't at the moment.
+        #   LHS - N x N
+        #   RHS - N x 1
+        #   array2name - list that translates array location into a varpath
+        list_conn = scope._depgraph.get_connected_outputs()
+        
+        # Loop through each comp in the workflow
+        for node in scope.workflow.__iter__():
+            
+            node_name = node.name
+            #print "processing ", node_name
+    
+            incoming_deriv_names = {}
+            incoming_derivs = {}
+            
+            # We don't handle nested drivers yet.
+            if isinstance(node, Driver):
+                raise NotImplementedError('Nested drivers')
+            
+            # Recurse into assemblies.
+            elif isinstance(node, Assembly):
+                
+                if not isinstance(node.driver, Run_Once):
+                    raise NotImplementedError('Nested drivers')
+                
+                self._recurse_assy(node, derivs, param)
+                                     
+            # This component can determine its derivatives.
+            elif hasattr(node, 'calculate_first_derivatives'):
+                
+                node.calc_derivatives(first=True)
+                
+                local_inputs = node.derivatives.in_names
+                local_outputs = node.derivatives.out_names
+                local_derivs = node.derivatives.first_derivatives
+                
+                for input_name in local_inputs:
+                    
+                    full_name = '.'.join([node_name, input_name])
+
+                    # Inputs who are hooked directly to the parameters
+                    if full_name == param and \
+                            full_name in derivs:
+                            
+                        incoming_deriv_names[input_name] = full_name
+                        incoming_derivs[full_name] = derivs[full_name]
+                        
+                    # Inputs who are connected to something with a derivative
+                    else:
+                
+                        sources = node.parent._depgraph.connections_to(full_name)
+                        
+                        for source_tuple in sources:
+                            
+                            source = source_tuple[0]
+                            expr_txt = node.parent._depgraph.get_source(source_tuple[1])
+                            
+                            # Variables on an assembly boundary
+                            if source[0:4] == '@bin' and source.count('.') < 2:
+                                source = source.replace('@bin.', '')
+                            
+                            # Only process inputs who are connected to outputs
+                            # with derivatives in the chain
+                            if expr_txt and source in derivs:
+                                
+                                # Need derivative of the expression
+                                expr = node.parent._exprmapper.get_expr(expr_txt)
+                                expr_deriv = expr.evaluate_gradient(scope=node.parent,
+                                                                    wrt=source)
+                                
+                                # We also need the derivative of the unit
+                                # conversion factor if there is one
+                                metadata = expr.get_metadata('units')
+                                source_unit = [x[1] for x in metadata if x[0]==source]
+                                if source_unit and source_unit[0]:
+                                    dest_expr = node.parent._exprmapper.get_expr(source_tuple[1])
+                                    metadata = dest_expr.get_metadata('units')
+                                    target_unit = [x[1] for x in metadata if x[0]==source_tuple[1]]
+
+                                    expr_deriv[source] = expr_deriv[source] * \
+                                        convert_units(1.0, source_unit[0], target_unit[0])
+
+                                incoming_deriv_names[input_name] = full_name
+                                if full_name in incoming_derivs:
+                                    incoming_derivs[full_name] += derivs[source] * \
+                                        expr_deriv[source]
+                                else:
+                                    incoming_derivs[full_name] = derivs[source] * \
+                                        expr_deriv[source]
+                        
+                            
+                # CHAIN RULE
+                # Propagate derivatives wrt parameter through current component
+                for output_name in local_outputs:
+                    
+                    full_output_name = '.'.join([node_name, output_name])
+                    derivs[full_output_name] = 0.0
+                    
+                    for input_name, full_input_name in incoming_deriv_names.iteritems():
+                        derivs[full_output_name] += \
+                            local_derivs[output_name][input_name] * \
+                            incoming_derivs[full_input_name]
+                            
+            # This component must be finite differenced.
+            else:
+                raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
+            
+        # Solve the system of linear equations
 
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for all outputs in the Driver's
