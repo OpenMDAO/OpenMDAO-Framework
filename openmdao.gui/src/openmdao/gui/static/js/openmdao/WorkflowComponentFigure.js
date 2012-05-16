@@ -230,17 +230,23 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
         name = this.name,
         parent = this.getParent();
 
+    // menu header
+    menu.appendMenuItem(new draw2d.MenuItem("<b>"+name+"</b>",null,function(){
+    }));
+
     // properties
     menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
         var id = (pathname+'-properties').replace(/\./g,'-');
         editor = new openmdao.PropertiesFrame(id,model).editObject(pathname);
     }));
 
-    menu.appendMenuItem(new draw2d.MenuItem("Run this Component",null,function(){
+    // run
+    menu.appendMenuItem(new draw2d.MenuItem("Run",null,function(){
         var cmd = pathname + '.run();';
         model.issueCommand(cmd);
     }));
 
+    // remove
     menu.appendMenuItem(new draw2d.MenuItem("Remove from Workflow",null,function(){
         if (parent) {
             var cmd = parent.pathname+".workflow.remove('";
@@ -253,6 +259,7 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
             model.issueCommand(cmd);
         }
     }));
+
     menu.setZOrder(999999);
     return menu;
 };

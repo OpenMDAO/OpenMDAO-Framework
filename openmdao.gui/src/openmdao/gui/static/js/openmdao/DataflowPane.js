@@ -10,11 +10,13 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
                       'overflow:auto;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
                       .appendTo(elm),
-        dataflow = new draw2d.Workflow(dataflowID);
+        dataflow = new draw2d.Workflow(dataflowID),
+        dataflowFig = new openmdao.DataflowFigure(model, pathname);
 
     self.pathname = pathname;
 
     dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
+    dataflow.addFigure(dataflowFig,20,20);
 
     // make the dataflow pane droppable
     dataflowDiv.droppable ({
@@ -44,11 +46,23 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         }
     });
 
-    /** update dataflow diagram */
+    /** change the dataflow to the one with the specified pathname */
+    this.showDataflow = function(pathname) {
+        self.pathname = pathname;
+        self.update();
+    };
+
+    /** load json dataflow data */
+    this.loadData = function(json) {
+        dataflowFig.updateDataflow(json);
+    };
+
+    /** update dataflow diagram by clearing and rebuilding it */
     this.update = function() {
         dataflow.clear();
         dataflowFig = new openmdao.DataflowFigure(model, self.pathname);
         dataflow.addFigure(dataflowFig,20,20);
         dataflowFig.maximize();
     };
+
 };

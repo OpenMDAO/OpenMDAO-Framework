@@ -94,11 +94,11 @@ openmdao.ComponentFrame = function(model,pathname) {
             panes[name].loadData(val);
         }
         else if (name == 'Workflow') {
-            panes[name] = new openmdao.WorkflowPane(contentPane,model,pathname,name,false);
+            panes[name] = new openmdao.WorkflowPane(contentPane,model,pathname,name);
             panes[name].loadData(val);
         }
         else if (name == 'Dataflow') {
-            panes[name] = new openmdao.DataflowPane(contentPane,model,pathname,name,false);
+            panes[name] = new openmdao.DataflowPane(contentPane,model,pathname,name);
             panes[name].loadData(val);
         }
         else if (name == 'Slots') {

@@ -26,8 +26,7 @@ openmdao.DataflowFrame = function(id,model,pathname) {
         if (pane.pathname !== path) {
             // if not already showing dataflow for this pathname
             self.setTitle('Dataflow: '+path);
-            pane.pathname = path;
-            pane.update();
+            pane.showDataflow(path);
         }
     };
 
