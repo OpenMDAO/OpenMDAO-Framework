@@ -207,7 +207,15 @@ class DataflowHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(json)
 
-
+class EditorHandler(ReqHandler):
+    
+    @web.authenticated
+    def get(self):
+        '''Code Editor
+        '''
+        filename = self.get_argument('path')
+        self.render('workspace/editor.html', filename=filename)
+        
 class ExecHandler(ReqHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
@@ -430,6 +438,7 @@ handlers = [
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
     web.url(r'/workspace/dataflow/(.*)/?',  DataflowHandler),
+    web.url(r'/workspace/editor/?',         EditorHandler),
     web.url(r'/workspace/exec/?',           ExecHandler),
     web.url(r'/workspace/file/(.*)',        FileHandler),
     web.url(r'/workspace/files/?',          FilesHandler),
@@ -442,6 +451,5 @@ handlers = [
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
-
     web.url(r'/workspace/test/?',           TestHandler),
 ]
