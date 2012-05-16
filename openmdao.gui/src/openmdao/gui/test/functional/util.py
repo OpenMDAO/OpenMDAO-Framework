@@ -139,22 +139,22 @@ def teardown_server():
     """ This function gets called once after all of the tests are run. """
     global _display, _display_set
 
-    # Kill chromedriver.
-    for browser in TEST_CONFIG['browsers']:
-        if isinstance(browser, webdriver.Chrome):
-            proc = subprocess.Popen(('ps', '-fu', getpass.getuser()),
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            stdout, stderr = proc.communicate()
-            pid = os.getpid()
-            for line in stdout.splitlines(True):
-                if 'chromedriver' in line:
-                    fields = line.split()
-                    # UID PID PPID C STIME TTY TIME CMD
-                    if int(fields[2]) == pid:
-                        driver_pid = int(fields[1])
-                        os.kill(driver_pid, signal.SIGTERM)
-                        os.waitpid(driver_pid, 0)
+#    # Kill chromedriver.
+#    for browser in TEST_CONFIG['browsers']:
+#        if isinstance(browser, webdriver.Chrome):
+#            proc = subprocess.Popen(('ps', '-fu', getpass.getuser()),
+#                                    stdout=subprocess.PIPE,
+#                                    stderr=subprocess.PIPE)
+#            stdout, stderr = proc.communicate()
+#            pid = os.getpid()
+#            for line in stdout.splitlines(True):
+#                if 'chromedriver' in line:
+#                    fields = line.split()
+#                    # UID PID PPID C STIME TTY TIME CMD
+#                    if int(fields[2]) == pid:
+#                        driver_pid = int(fields[1])
+#                        os.kill(driver_pid, signal.SIGTERM)
+#                        os.waitpid(driver_pid, 0)
 
     # Shut down virtual framebuffer.
     if _display is not None:
@@ -165,14 +165,13 @@ def teardown_server():
     # Shut down server.
     TEST_CONFIG['server'].terminate()
     TEST_CONFIG['server'].wait()
+    TEST_CONFIG['server'] = None
     TEST_CONFIG['stdout'].close()
 
     # Clean up.
     server_dir = TEST_CONFIG['server_dir']
     if os.path.exists(server_dir):
         shutil.rmtree(server_dir)
-    if os.path.exists('chromedriver.log'):
-        os.remove('chromedriver.log')
 
 
 def generate(modname):
@@ -214,7 +213,10 @@ def generate(modname):
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
-            browser.close()
+#            browser.close()
+            browser.quit()
+            if name == 'Chrome' and os.path.exists('chromedriver.log'):
+                os.remove('chromedriver.log')
 
 
 class _Runner(object):
