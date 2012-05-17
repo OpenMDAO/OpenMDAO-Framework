@@ -213,9 +213,10 @@ class EditorHandler(ReqHandler):
     def get(self):
         '''Code Editor
         '''
-        filename = self.get_argument('path')
-        self.render('workspace/editor.html', filename=filename)
-        
+        #filename = self('path')
+        #self.render('workspace/editor.html', filename=filename)
+        self.render('workspace/editor.html')
+                    
 class ExecHandler(ReqHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
