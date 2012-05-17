@@ -283,36 +283,38 @@ class PythonSourceTreeAnalyser(object):
         del paths[base] # don't want the base itself in the list
         return paths.keys()
 
-def _py_gen(pathlist):
-    """generate a list of python files and package dirs"""
-    for dname in pathlist:
-        for path, dirlist, filelist in os.walk(dname):
-            if os.path.isfile(os.path.join(path,'__init__.py')):
-                yield path
-            for name in filelist:
-                if name.endswith('.py') and name != '__init__.py':
-                    yield join(path, name)
-            # when using os.walk, dirlist can be modified in place to prune the tree
-            to_remove = []
-            for d in dirlist:
-                if not os.path.isfile(os.path.join(path,d,'__init__.py')):
-                    to_remove.append(d)
-            for d in to_remove:
-                dirlist.remove(d)
+def py_gen(dname):
+    """generate a list of python files in the given directory and its subdirs, but only 
+    if the subdirs are python package directories.
+    """
+    for path, dirlist, filelist in os.walk(dname):
+        for name in filelist:
+            if name.endswith('.py'):
+                yield join(path, name)
+        # when using os.walk, dirlist can be modified in place to prune the tree, so
+        # use that to remove any subdirs that are not package dirs (i.e. that don't contain an __init__.py file)
+        to_remove = []
+        for d in dirlist:
+            if not os.path.isfile(os.path.join(path,d,'__init__.py')):
+                to_remove.append(d)
+        for d in to_remove[::-1]:
+            dirlist.remove(d)
     
-def map_modules(modmap, pathlist=None):
+def mod_gen(pathlist=None):
+    """Generate tuples of the form (filepath, modpath) for all python modules under the given
+    list of directories.  Files in subdirectories will be ignored if they are not contained in
+    python package directories, i.e., if their directory doesn't contain an __init__.py file.
+    """
     if pathlist is None:
         pathlist = sys.path
-    packages = {}
 
-    for f in py_gen(path):
-        head, tail = os.path.split(f)
-        if tail == '__init__.py':
-            h,t = os.path.split(head)
-            if os.path.isfile(os.path.join(h, '__init__.py')):
-                # parent dir is a package dir, so create a new subpackage
-                modmap[head] = '.'.join(modmap[h], t)
-        else:
-            modname = tail[:-3]
-            
-    return modmap
+    for path in pathlist:
+        for name in py_gen(path):
+            dname, fname = os.path.split(name)
+            if fname == '__init__.py':
+                mpath = '.'.join(dname[len(path)+1:].split(os.sep))
+                if mpath:
+                    yield (name, mpath)
+            else:
+                yield (name, '.'.join(name[:-3][len(path)+1:].split(os.sep)))
+
