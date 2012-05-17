@@ -39,6 +39,11 @@ class ChainRule(HasTraits):
         
         self.gradient = {}
         self.hessian = {}
+        
+        # Stores the set of vertices for which we need derivatives.
+        # Dictionary key is the scope, since we need to store this for each
+        # (param, assembly recursion level) pair.
+        self.vertex_dicts = {}
     
     def setup(self):
         """Sets some dimensions."""
@@ -112,18 +117,70 @@ class ChainRule(HasTraits):
     def calc_gradient(self):
         """Choose solution method to calculate the gradient."""
         
+        self.setup()
+
         if self.method == 'Chain':
             self.calc_gradient_chain()
         else:
             self.calc_gradient_matrix()
             
         
+    def _find_vertices(self, param, scope):
+        ''' Finds the minimum set of vertices for which we need derivatives.
+        These vertices are outputs that are in the workflow of the driver, and
+        whose source component has derivatives defined.
+        
+        For each scope and parameter, we store a list of tuples ordered as
+        per the workflow. This tuple contains the output vertex varpath, and
+        the source component varpath.
+        
+        TODO - As part of this process, we will already need to know of any
+        blocks that must be finite differenced together.
+        '''
+        
+        self.vertex_dicts[scope] = {}
+        
+        # Determine gradient of model outputs wrt each parameter
+        for wrt in self.param_names:
+            
+            self.vertex_dicts[scope][wrt] = []
+            vertex_dict = self.vertex_dicts[scope][wrt]
+            
+            # Loop through each comp in the workflow
+            for node in scope.workflow.__iter__():
+        
+                node_name = node.name
+            
+                # We don't handle nested drivers yet.
+                if isinstance(node, Driver):
+                    raise NotImplementedError('Nested drivers')
+                
+                # Assemblies should be able to calculate all derivatives
+                # on boundary.
+                elif isinstance(node, Assembly):
+                    
+                    if not isinstance(node.driver, Run_Once):
+                        raise NotImplementedError('Nested drivers')
+                    
+                                         
+                # This component can determine its derivatives. Only
+                # derivatives that are defined should be added to our list of
+                # vertices.
+                elif hasattr(node, 'calculate_first_derivatives'):
+                    
+                    local_inputs = node.derivatives.in_names
+                    local_outputs = node.derivatives.out_names
+                    
+                # This component is part of a block that must be finite
+                # differenced. These should provide all derivatives
+                else:
+                    raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
+                
+                
     def calc_gradient_chain(self):
         """Calculates the gradient vectors for all outputs in this Driver's
         workflow for method 'Chain' -- forward accumulation."""
         
-        self.setup()
-
         # Create our 2D dictionary the first time we execute.
         if not self.gradient:
             for name in self.param_names:
@@ -378,8 +435,6 @@ class ChainRule(HasTraits):
         """Calculates the gradient vectors for all outputs in this Driver's
         workflow for method 'Matrix' -- matrix solution."""
         
-        self.setup()
-
         # Create our 2D dictionary the first time we execute.
         if not self.gradient:
             for name in self.param_names:
