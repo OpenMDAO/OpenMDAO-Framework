@@ -208,9 +208,6 @@ class OpenMDAO_Server(Server):
             self._access_controller.class_proxy_required(cls)
         self._address_type = connection.address_type(self.address)
 
-        # Flag noting that we've received a shutdown request.
-        self._shutting_down = False
-
     @property
     def public_key(self):
         """ Public key for session establishment. """
@@ -239,13 +236,13 @@ class OpenMDAO_Server(Server):
         current_process()._manager_server = self
         try:
             try:
-                while 1:
+                while not self.stop:
                     try:
                         conn = self.listener.accept()
                     # Hard to cause this to happen.
                     except (OSError, IOError):  #pragma no cover
-                        if self._shutting_down:
-                            raise
+                        if self.stop:
+                            break
                         else:
                             continue
 
@@ -783,11 +780,27 @@ class OpenMDAO_Server(Server):
     # Will only be seen on remote.
     def shutdown(self, conn):  #pragma no cover
         """ Shutdown this process. """
-        self._shutting_down = True
-        self._logger.debug('received shutdown request, running exit functions')
+        self.stop = 888
+        msg = 'received shutdown request, running exit functions'
+        print msg
+        sys.stdout.flush()
+        self._logger.debug(msg)
+
         # Deprecated, but marginally better than atexit._run_exitfuncs()
         if hasattr(sys, 'exitfunc'):
-            sys.exitfunc()
+            try:
+                sys.exitfunc()
+            except Exception as exc:
+                msg = 'sys.exitfunc(): %s' % exc
+                print msg
+                sys.stdout.flush()
+                self._logger.debug(msg)
+
+        msg = '    exit functions complete'
+        print msg
+        sys.stdout.flush()
+        self._logger.debug(msg)
+
         super(OpenMDAO_Server, self).shutdown(conn)
 
 
