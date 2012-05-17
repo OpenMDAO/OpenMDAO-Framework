@@ -40,6 +40,7 @@ import hashlib
 import inspect
 import logging
 import os
+import signal
 import socket
 import sys
 import threading
@@ -207,6 +208,9 @@ class OpenMDAO_Server(Server):
             self._access_controller.class_proxy_required(cls)
         self._address_type = connection.address_type(self.address)
 
+        # Flag noting that we've received a shutdown request.
+        self._shutting_down = False
+
     @property
     def public_key(self):
         """ Public key for session establishment. """
@@ -240,7 +244,10 @@ class OpenMDAO_Server(Server):
                         conn = self.listener.accept()
                     # Hard to cause this to happen.
                     except (OSError, IOError):  #pragma no cover
-                        continue
+                        if self._shutting_down:
+                            raise
+                        else:
+                            continue
 
                     address = self.listener.last_accepted
                     if address:
@@ -776,6 +783,7 @@ class OpenMDAO_Server(Server):
     # Will only be seen on remote.
     def shutdown(self, conn):  #pragma no cover
         """ Shutdown this process. """
+        self._shutting_down = True
         self._logger.debug('received shutdown request, running exit functions')
         # Deprecated, but marginally better than atexit._run_exitfuncs()
         if hasattr(sys, 'exitfunc'):
@@ -1010,6 +1018,12 @@ class OpenMDAO_Manager(BaseManager):
                     process.join(timeout=1)
                     if process.is_alive():
                         logging.warning('manager still alive after terminate')
+                if process.is_alive():
+                    if sys.platform != 'win32':
+                        os.kill(process.pid. signal.SIGKILL)
+                        process.join(timeout=1)
+                        if process.is_alive():
+                            logging.warning('manager still alive after kill')
 
         state.value = State.SHUTDOWN
         try:

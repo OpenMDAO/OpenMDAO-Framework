@@ -2,13 +2,11 @@
 Utilities for GUI functional testing.
 """
 
-import getpass
 import inspect
 import logging
 import os.path
 import platform
 import shutil
-import signal
 import socket
 import stat
 import subprocess
@@ -36,8 +34,17 @@ _display_set = False
 _display = None
 
 
+def check_for_chrome():
+    """ Determine if Chrome is available. """
+    if os.path.exists('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'):
+        return True
+    for exe in ('chromium-browser', 'google-chrome', 'chrome'):
+        if find_executable(exe):
+            return True
+    return False
+
 def setup_chrome():
-    """ Initialize the 'chrome' browser. """
+    """ Initialize the Chrome browser. """
     exe = 'chromedriver'
     path = find_executable(exe)
     if not path:
@@ -74,8 +81,18 @@ def setup_chrome():
     TEST_CONFIG['browsers'].append(driver)
     return driver
 
+
+def check_for_firefox():
+    """ Determine if Firefox is available. """
+    if os.path.exists('/Applications/Firefox.app/Contents/MacOS/firefox'):
+        return True
+    for exe in ('firefox',):
+        if find_executable(exe):
+            return True
+    return False
+
 def setup_firefox():
-    """ Initialize the 'firefox' browser. """
+    """ Initialize the Firefox browser. """
     profile = webdriver.FirefoxProfile()
     profile.native_events_enabled = True
     driver = webdriver.Firefox(profile)
@@ -83,18 +100,22 @@ def setup_firefox():
     TEST_CONFIG['browsers'].append(driver)
     return driver
 
+
 _browsers_to_test = dict(
-    Chrome=setup_chrome,
-    #Firefox=setup_firefox,
+    Chrome=(check_for_chrome, setup_chrome),
+    #Firefox=(check_for_firefox, setup_firefox),
 )
 
 
 def setup_server(virtual_display=True):
     """ Start server on ``localhost`` using an unused port. """
     global _display, _display_set
+
+    # Check if already setup (or skipping setup).
     if _display_set:
         return
 
+    # Start server.
     port = get_unused_ip_port()
     TEST_CONFIG['port'] = port
     server_dir = 'gui-server'
@@ -139,22 +160,9 @@ def teardown_server():
     """ This function gets called once after all of the tests are run. """
     global _display, _display_set
 
-#    # Kill chromedriver.
-#    for browser in TEST_CONFIG['browsers']:
-#        if isinstance(browser, webdriver.Chrome):
-#            proc = subprocess.Popen(('ps', '-fu', getpass.getuser()),
-#                                    stdout=subprocess.PIPE,
-#                                    stderr=subprocess.PIPE)
-#            stdout, stderr = proc.communicate()
-#            pid = os.getpid()
-#            for line in stdout.splitlines(True):
-#                if 'chromedriver' in line:
-#                    fields = line.split()
-#                    # UID PID PPID C STIME TTY TIME CMD
-#                    if int(fields[2]) == pid:
-#                        driver_pid = int(fields[1])
-#                        os.kill(driver_pid, signal.SIGTERM)
-#                        os.waitpid(driver_pid, 0)
+    # Do nothing if the server isn't started.
+    if TEST_CONFIG['server'] is None:
+        return
 
     # Shut down virtual framebuffer.
     if _display is not None:
@@ -165,7 +173,6 @@ def teardown_server():
     # Shut down server.
     TEST_CONFIG['server'].terminate()
     TEST_CONFIG['server'].wait()
-    TEST_CONFIG['server'] = None
     TEST_CONFIG['stdout'].close()
 
     # Clean up.
@@ -176,9 +183,34 @@ def teardown_server():
 
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """
+    global _display_set
+
     # Because Xvfb does not exist on Windows, it's difficult to do
     # headless (EC2) testing on Windows. So for now we don't test there.
     if sys.platform == 'win32':
+        return
+
+    # Check if functional tests are to be skipped.
+    skip = int(os.environ.get('OPENMDAO_SKIP_GUI', '0'))
+    if skip:
+        return
+
+    # Search for tests to run.
+    module = sys.modules[modname]
+    functions = inspect.getmembers(module, inspect.isfunction)
+    tests = [func for name, func in functions if name.startswith('_test_')]
+    if not tests:
+        return
+
+    # Check if any configured browsers are available.
+    available_browsers = []
+    for name in sorted(_browsers_to_test.keys()):
+        if _browsers_to_test[name][0]():
+            available_browsers.append(name)
+    if not available_browsers:
+        msg = 'No browsers available for GUI functional testing'
+        _display_set = True  # Avoids starting the server.
+        yield _Runner(tests[0]), SkipTest(msg)
         return
 
     # Due to the way nose handles generator functions, setup_server()
@@ -186,12 +218,10 @@ def generate(modname):
     if not _display_set:
         setup_server()
 
-    module = sys.modules[modname]
-    functions = inspect.getmembers(module, inspect.isfunction)
-    tests = [func for name, func in functions if name.startswith('_test_')]
-    for name in sorted(_browsers_to_test.keys()):
+    for name in available_browsers:
         try:
-            browser = _browsers_to_test[name]()  # Open browser.
+            # Open browser and verify we can get page title.
+            browser = _browsers_to_test[name][1]()
             browser.title
         except Exception as exc:
             msg = '%s setup failed: %s' % (name, exc)
@@ -213,7 +243,6 @@ def generate(modname):
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
-#            browser.close()
             browser.quit()
             if name == 'Chrome' and os.path.exists('chromedriver.log'):
                 os.remove('chromedriver.log')
