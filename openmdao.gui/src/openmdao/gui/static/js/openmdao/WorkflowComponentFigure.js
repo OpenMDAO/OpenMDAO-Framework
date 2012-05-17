@@ -37,6 +37,7 @@ openmdao.WorkflowComponentFigure=function(model,pathname,type, valid) {
     this.setResizeable(false);
 
     // set color based on valid status
+    debug.info('WorkflowComponentFigure()',pathname,' valid=',valid);
     if (this.valid) {
         this.setColor(new draw2d.Color(0,255,0));
     }

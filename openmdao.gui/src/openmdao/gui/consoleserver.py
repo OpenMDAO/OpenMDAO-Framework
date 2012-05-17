@@ -52,10 +52,10 @@ class ConsoleServer(cmd.Cmd):
     def __init__(self, name='', host='', publish_updates=True):
         cmd.Cmd.__init__(self)
 
-        self.intro = 'OpenMDAO '+__version__+' ('+__date__+')'
+        self.intro = 'OpenMDAO ' + __version__ + ' (' + __date__ + ')'
         self.prompt = 'OpenMDAO>> '
 
-        self._hist = []      ## No history yet
+        self._hist = []
         self.known_types = []
 
         self.host = host
@@ -176,7 +176,7 @@ class ConsoleServer(cmd.Cmd):
         try:
             # first import all definitions
             basename = os.path.splitext(filename)[0]
-            cmd = 'from '+basename+' import *'
+            cmd = 'from ' + basename + ' import *'
             self.default(cmd)
             # then execute anything after "if __name__ == __main__:"
             # setting __name__ to __main__ won't work... fuggedaboutit
@@ -222,7 +222,7 @@ class ConsoleServer(cmd.Cmd):
             if root == pathname:
                 cont = self.proj.__dict__[root]
             else:
-                rest = pathname[len(root)+1:]
+                rest = pathname[len(root) + 1:]
                 try:
                     cont = self.proj.__dict__[root].get(rest)
                 except Exception, err:
@@ -243,7 +243,7 @@ class ConsoleServer(cmd.Cmd):
                     comp['pathname'] = k
                     children = self._get_components(v, k)
                 else:
-                    comp['pathname'] = pathname+'.'+ k if pathname else k
+                    comp['pathname'] = pathname + '.' + k if pathname else k
                     children = self._get_components(v, comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
@@ -278,7 +278,7 @@ class ConsoleServer(cmd.Cmd):
                     if meta and 'units' in meta:
                         units = meta['units']
                     outputs.append({'name': name,
-                                    'type': type(src.get(name)).__name__ ,
+                                    'type': type(src.get(name)).__name__,
                                     'valid': src.get_valid([name])[0],
                                     'units': units,
                                     'connected': (name in connected)
@@ -295,7 +295,7 @@ class ConsoleServer(cmd.Cmd):
                     if meta and 'units' in meta:
                         units = meta['units']
                     inputs.append({'name': name,
-                                   'type': type(dst.get(name)).__name__ ,
+                                   'type': type(dst.get(name)).__name__,
                                    'valid': dst.get_valid([name])[0],
                                    'units': units,
                                    'connected': (name in connected)
@@ -306,8 +306,8 @@ class ConsoleServer(cmd.Cmd):
                 connections = []
                 conntuples = asm.list_connections(show_passthrough=False)
                 for src, dst in conntuples:
-                    if src.startswith(src_name+".") and \
-                       dst.startswith(dst_name+"."):
+                    if src.startswith(src_name + ".") and \
+                       dst.startswith(dst_name + "."):
                         connections.append([src, dst])
                 conns['connections'] = connections
             except Exception, err:
@@ -324,8 +324,8 @@ class ConsoleServer(cmd.Cmd):
                 conntuples = asm.list_connections(show_passthrough=False)
                 # disconnect any connections that are not in the new set
                 for src, dst in conntuples:
-                    if src.startswith(src_name+".") and \
-                       dst.startswith(dst_name+"."):
+                    if src.startswith(src_name + ".") and \
+                       dst.startswith(dst_name + "."):
                         if [src, dst] not in connections:
                             print "disconnecting", src, dst
                             asm.disconnect(src, dst)
@@ -351,16 +351,16 @@ class ConsoleServer(cmd.Cmd):
                 if not name.startswith('@'):
                     comp = asm.get(name)
                     if is_instance(comp, Component):
-                        components.append({ 'name': comp.name,
-                                            'pathname': pathname + '.' + name,
-                                            'type': type(comp).__name__ ,
-                                            'valid': comp.is_valid()
+                        components.append({'name': comp.name,
+                                           'pathname': pathname + '.' + name,
+                                           'type': type(comp).__name__,
+                                           'valid': comp.is_valid()
                                           })
             # list of connections (convert tuples to lists)
             conntuples = asm.list_connections(show_passthrough=False)
             for connection in conntuples:
                 connections.append(list(connection))
-        return { 'components': components, 'connections': connections }
+        return {'components': components, 'connections': connections}
 
     def get_dataflow(self, pathname):
         ''' get the structure of the specified assembly, or of the global
@@ -379,10 +379,10 @@ class ConsoleServer(cmd.Cmd):
             g = self.proj.__dict__.items()
             for k, v in g:
                 if is_instance(v, Component):
-                    components.append({ 'name': k,
-                                        'pathname': k+'.'+v.get_pathname(),
-                                        'type': type(v).__name__,
-                                        'valid': v.is_valid()
+                    components.append({'name': k,
+                                       'pathname': k + '.' + v.get_pathname(),
+                                       'type': type(v).__name__,
+                                       'valid': v.is_valid()
                                       })
             dataflow['components'] = components
             dataflow['connections'] = []
@@ -394,15 +394,16 @@ class ConsoleServer(cmd.Cmd):
         '''
         ret = {}
         ret['pathname'] = pathname
-        ret['type'] = type(drvr).__module__+'.'+type(drvr).__name__
+        ret['type'] = type(drvr).__module__ + '.' + type(drvr).__name__
         ret['workflow'] = []
+        ret['valid'] = drvr.is_valid()
         for comp in drvr.workflow:
             pathname = comp.get_pathname()
             if is_instance(comp, Assembly) and comp.driver:
                 ret['workflow'].append({
                     'pathname': pathname,
-                    'type':     type(comp).__module__+'.'+type(comp).__name__,
-                    'driver':   self._get_workflow(comp.driver, pathname+'.driver'),
+                    'type':     type(comp).__module__ + '.' + type(comp).__name__,
+                    'driver':   self._get_workflow(comp.driver, pathname + '.driver'),
                     'valid':    comp.is_valid()
                   })
             elif is_instance(comp, Driver):
@@ -410,7 +411,7 @@ class ConsoleServer(cmd.Cmd):
             else:
                 ret['workflow'].append({
                     'pathname': pathname,
-                    'type':     type(comp).__module__+'.'+type(comp).__name__,
+                    'type':     type(comp).__module__ + '.' + type(comp).__name__,
                     'valid':    comp.is_valid()
                   })
         return ret
@@ -462,7 +463,7 @@ class ConsoleServer(cmd.Cmd):
                     attr['connected'] = ''
                     if vname in connected_inputs:
                         # there can be only one connection to an input
-                        attr['connected'] = [ src for src, dst in comp._depgraph.connections_to(vname) ][0].replace('@xin.','')
+                        attr['connected'] = [src for src, dst in comp._depgraph.connections_to(vname)][0].replace('@xin.', '')
                 inputs.append(attr)
             attrs['Inputs'] = inputs
 
@@ -484,7 +485,7 @@ class ConsoleServer(cmd.Cmd):
                                 attr[field] = ''
                     attr['connected'] = ''
                     if vname in connected_outputs:
-                        attr['connected'] = str([ dst for src, dst in comp._depgraph.connections_to(vname) ]).replace('@xout.','')
+                        attr['connected'] = str([dst for src, dst in comp._depgraph.connections_to(vname)]).replace('@xout.', '')
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
@@ -629,7 +630,8 @@ class ConsoleServer(cmd.Cmd):
         print 'loading project from:', filename
         self.projfile = filename
         try:
-            self.proj = project_from_archive(filename, dest_dir=self.files.getcwd())
+            self.proj = project_from_archive(filename,
+                                             dest_dir=self.files.getcwd())
             self.proj.activate()
         except Exception, err:
             self._error(err, sys.exc_info())
@@ -641,11 +643,11 @@ class ConsoleServer(cmd.Cmd):
             try:
                 self.proj.save()
                 print 'Project state saved.'
-                if len(self.projfile)>0:
+                if len(self.projfile) > 0:
                     dir = os.path.dirname(self.projfile)
                     ensure_dir(dir)
                     self.proj.export(destdir=dir)
-                    print 'Exported to ', dir+'/'+self.proj.name
+                    print 'Exported to ', dir + '/' + self.proj.name
                 else:
                     print 'Export failed, directory not known'
             except Exception, err:
@@ -658,7 +660,7 @@ class ConsoleServer(cmd.Cmd):
         ''' add a new component of the given type to the specified parent.
         '''
         name = name.encode('utf8')
-        if (parentname and len(parentname)>0):
+        if (parentname and len(parentname) > 0):
             parent, root = self.get_container(parentname)
             if parent:
                 try:
@@ -669,7 +671,7 @@ class ConsoleServer(cmd.Cmd):
                 except Exception, err:
                     self._error(err, sys.exc_info())
             else:
-                print "Error adding component: parent", parentname, "not found."
+                print "Error adding component, parent not found:", parentname
         else:
             self.create(classname, name)
 
@@ -679,9 +681,9 @@ class ConsoleServer(cmd.Cmd):
         '''
         try:
             if (typname.find('.') < 0):
-                self.default(name+'='+typname+'()')
+                self.default(name + '=' + typname + '()')
             else:
-                self.proj.__dict__[name]=create(typname)
+                self.proj.__dict__[name] = create(typname)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -727,4 +729,5 @@ class ConsoleServer(cmd.Cmd):
 
     def install_addon(self, url, distribution):
         print "Installing", distribution, "from", url
-        easy_install.main( ["-U", "-f", url, distribution] )
+        easy_install.main(["-U", "-f", url, distribution])
+

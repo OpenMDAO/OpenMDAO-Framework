@@ -1,5 +1,5 @@
 [
-    { "text": "Project", 
+    { "text": "Project",
       "items": [
         { "text": "Save",          "onclick": "openmdao.model.saveProject();" },
         { "text": "Run",           "onclick": "openmdao.model.runModel();" },
@@ -8,7 +8,7 @@
         { "text": "Exit",          "onclick": "openmdao.model.exit();" }
       ]
     },
-    { "text": "View", 
+    { "text": "View",
       "items": [
         { "text": "Code Editor",   "onclick": "jQuery('#code_tab').click();" },
         { "text": "Command Line",  "onclick": "openmdao.Util.toggle_visibility('cmdform');" },
@@ -23,13 +23,13 @@
         { "text": "Refresh",       "onclick": "openmdao.update();" }
       ]
     },
-    { "text": "Tools", 
+    { "text": "Tools",
       "items": [
-        { "text": "Plot",          "onclick": "new openmdao.PlotFrame()"},
-        { "text": "Plugins",       "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"}
+        { "text": "Plot",          "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"},
+        { "text": "Plugins",       "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540);"}
       ]
     },
-    { "text": "Help", 
+    { "text": "Help",
       "items": [
         { "text": "Documentation", "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','',768,1024);"}
       ]

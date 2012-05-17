@@ -27,8 +27,6 @@ openmdao.DataflowFigure=function(model,pathname,type,valid){
     }
     this.setContent(this.contentHTML);
 
-    //this.setBorder(new draw2d.LineBorder(1));
-
     this.defaultBackgroundColor=new draw2d.Color(255,255,255);
     this.highlightBackgroundColor=new draw2d.Color(250,250,200);
     this.setBackgroundColor(this.defaultBackgroundColor);
@@ -44,14 +42,15 @@ openmdao.DataflowFigure=function(model,pathname,type,valid){
     this.margin = 20;
 
     // set color based on valid status
-    if (this.valid) {
+    debug.info('DataflowFigure()',pathname,' valid=',valid);
+    if (this.valid === true) {
         this.setColor(new draw2d.Color(0,255,0));
     }
-    else {
+    else if (this.valid === false) {
         this.setColor(new draw2d.Color(255,0,0));
     }
 
-    // change color based on execution status
+    // set color based on execution status
     topic = pathname+'.exec_state';
     model.addListener(topic,this.setExecState.bind(this));
 };
@@ -72,8 +71,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     item.style.padding="0px";
     item.style.outline="none";
     item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
-
-    item.style.borderStyle = "none";
 
     var circleIMG = "url(/static/images/circle.png)";
 
@@ -104,60 +101,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     this.bottom_left.style.top="0px";
     this.bottom_left.style.fontSize="2px";
 
-    this.bottom_right=document.createElement("div");
-    this.bottom_right.style.background=circleIMG+" no-repeat bottom right";
-    this.bottom_right.style.position="absolute";
-    this.bottom_right.style.width=this.cornerWidth+"px";
-    this.bottom_right.style.height=this.cornerHeight+"px";
-    this.bottom_right.style.left="0px";
-    this.bottom_right.style.top="0px";
-    this.bottom_right.style.fontSize="2px";
-
-    this.header=document.createElement("div");
-    this.header.style.position="absolute";
-    this.header.style.left=this.cornerWidth+"px";
-    this.header.style.top="0px";
-    this.header.style.height=(this.cornerHeight)+"px";
-    this.header.style.backgroundColor="#CCCCCC";
-    this.header.style.borderTop="3px solid #666666";
-    this.header.style.fontSize="9px";
-    this.header.style.textAlign="center";
-    this.disableTextSelection(this.header);
-
-    this.footer=document.createElement("div");
-    this.footer.style.position="absolute";
-    this.footer.style.left=this.cornerWidth+"px";
-    this.footer.style.top="0px";
-    this.footer.style.height=(this.cornerHeight)+"px";
-    this.footer.style.backgroundColor="white";
-    this.footer.style.borderBottom="1px solid #666666";
-    this.footer.style.fontSize="2px";
-
-    this.top_left=document.createElement("div");
-    this.top_left.style.background=circleIMG+" no-repeat top left";
-    this.top_left.style.position="absolute";
-    this.top_left.style.width=this.cornerWidth+"px";
-    this.top_left.style.height=this.cornerHeight+"px";
-    this.top_left.style.left="0px";
-    this.top_left.style.top="0px";
-    this.top_left.style.fontSize="2px";
-    this.top_right=document.createElement("div");
-    this.top_right.style.background=circleIMG+" no-repeat top right";
-    this.top_right.style.position="absolute";
-    this.top_right.style.width=this.cornerWidth+"px";
-    this.top_right.style.height=this.cornerHeight+"px";
-    this.top_right.style.left="0px";
-    this.top_right.style.top="0px";
-    this.top_right.style.fontSize="2px";
-
-    this.bottom_left=document.createElement("div");
-    this.bottom_left.style.background=circleIMG+" no-repeat bottom left";
-    this.bottom_left.style.position="absolute";
-    this.bottom_left.style.width=this.cornerWidth+"px";
-    this.bottom_left.style.height=this.cornerHeight+"px";
-    this.bottom_left.style.left="0px";
-    this.bottom_left.style.top="0px";
-    this.bottom_left.style.fontSize="2px";
     this.bottom_right=document.createElement("div");
     this.bottom_right.style.background=circleIMG+" no-repeat bottom right";
     this.bottom_right.style.position="absolute";
@@ -313,11 +256,11 @@ openmdao.DataflowFigure.prototype.setContent=function(content){
 };
 
 openmdao.DataflowFigure.prototype.getMinWidth=function(){
-    return 110;
+    return 100;
 };
 
 openmdao.DataflowFigure.prototype.getMinHeight=function(){
-    return 60;
+    return 50;
 };
 
 openmdao.DataflowFigure.prototype.setBackgroundColor=function(color){
