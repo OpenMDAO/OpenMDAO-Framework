@@ -4,7 +4,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 // requires flot.js
 
 openmdao.PlotFrame = function(id,model,pathname) {
-    openmdao.PlotFrame.prototype.init.call(this,id,'Plot');
+    openmdao.PlotFrame.prototype.init.call(this,id,'Plot: '+pathname);
 
     /***********************************************************************
      *  private
@@ -14,7 +14,7 @@ openmdao.PlotFrame = function(id,model,pathname) {
         plot = null,
         options = {
             series: { shadowSize: 0 }, // drawing is faster without shadows
-            yaxis: { min: 0, max: 5 },
+            yaxis: { min: 0, max: 150 },
             xaxis: { show: false }
         },
         data = {},
@@ -40,9 +40,10 @@ openmdao.PlotFrame = function(id,model,pathname) {
     // subscribe to model for data (or set a timer to poll for data)
     if (pathname) {
         model.addListener(pathname,function(message) {
-            debug.info('PlotFrame received message',message);
-            if (message.length === 2 && message[0] === self.pathname) {
-                updateData(message[1]);
+            if (message.length === 2) {
+                var newdata = {};
+                newdata[message[0]] = message[1];
+                updateData(newdata);
             }
             updatePlot();
         });
@@ -69,7 +70,11 @@ openmdao.PlotFrame = function(id,model,pathname) {
 
     /** add new values to the data set, capping the number of points */
     function updateData(newValues) {
-        newValues = jQuery.parseJSON(newValues);
+        if (!newValues) {
+            debug.error('PlotFrame received bad data for',pathname,newValues);
+            return;
+        }
+        //newValues = jQuery.parseJSON(newValues);
         jQuery.each(newValues,function (name,val) {
             if (! data[name]) {
                 data[name] = [];
@@ -78,6 +83,7 @@ openmdao.PlotFrame = function(id,model,pathname) {
             if (data[name].length > maxPoints) {
                 data[name] = data[name].slice(1);
             }
+            val = parseFloat(val);
             data[name].push(val);
         });
     }
@@ -95,7 +101,7 @@ openmdao.PlotFrame = function(id,model,pathname) {
             plotdata.push({ 'data':xydata, 'label':name });
         });
         plot.setData(plotdata);
-        plot.resize();          // in case the popup was resized
+        plot.resize();          // in case the frame was resized
         plot.setupGrid();
         plot.draw();
     }
@@ -115,7 +121,7 @@ openmdao.PlotFrame.prototype = new openmdao.BaseFrame();
 openmdao.PlotFrame.prototype.chooseVariable = function() {
     openmdao.Util.promptForValue('Enter pathname of variable to plot:',
         function(pathname) {
-            p = new openmdao.PlotFrame('plot-'+pathname,openmdao.model,pathname);
+            p=new openmdao.PlotFrame('plot-'+pathname,openmdao.model,pathname);
         }
     );
 };

@@ -731,3 +731,19 @@ class ConsoleServer(cmd.Cmd):
         print "Installing", distribution, "from", url
         easy_install.main(["-U", "-f", url, distribution])
 
+    def publish(self, pathname):
+        ''' publish the specified topic
+        '''
+        if not self.publisher:
+            try:
+                self.publisher = Publisher.get_instance()
+            except Exception, err:
+                print 'Error getting publisher:', err
+                self.publisher = None
+
+        if self.publisher:
+            parts = pathname.split('.')
+            if len(parts) > 0:
+                root = self.proj.__dict__[parts[0]]
+                rest = '.'.join(parts[1:])
+                root.register_published_vars(rest)

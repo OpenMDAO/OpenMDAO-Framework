@@ -90,9 +90,19 @@ openmdao.Model=function() {
                 outstream_opened = true;
                 open_outstream_socket(outstream_topic);
             }
-            else if (!pubstream_opened) {
-                pubstream_opened = true;
-                open_pubstream_socket();
+            else {
+                if (!pubstream_opened) {
+                    pubstream_opened = true;
+                    open_pubstream_socket();
+                }
+                if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                    jQuery.ajax({
+                        type: 'GET',
+                        url:  'publish',
+                        dataType: 'json',
+                        data: {'topic': topic}
+                    });
+                }
             }
             subscribers[topic] = [ callback ];
         }

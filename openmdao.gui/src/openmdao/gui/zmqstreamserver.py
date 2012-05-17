@@ -20,7 +20,7 @@ debug = False
 
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> ZMQStreamServer --', msg
+        print '<<<' + str(os.getpid()) + '>>> ZMQStreamServer --', msg
 
 
 class ZMQStreamHandler(websocket.WebSocketHandler):
@@ -62,18 +62,23 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 self.write_message(message)
             except Exception, err:
                 DEBUG('Unable to write message to stream:')
-                DEBUG('message:'+message)
+                DEBUG('message:' + message)
                 print err
         elif len(message) == 2:
             try:
                 self.message_count += 1
                 topic = message[0]
                 content = pickle.loads(message[1])
-                json = jsonpickle.encode([topic, content])
+                try:
+                    number = float(content)
+                except ValueError, TypeError:
+                    json = jsonpickle.encode([topic, content])
+                else:
+                    json = jsonpickle.encode([topic, number])
                 self.write_message(json)
             except Exception, err:
                 DEBUG('Unable to write JSON to stream:')
-                DEBUG('JSON:'+json)
+                DEBUG('JSON:' + json)
                 print err
 
     def on_message(self, message):
@@ -83,7 +88,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
         DEBUG('zmqstream connection closed')
         if debug:
             total_time = time.time() - self.time_opened
-            rate = self.message_count/total_time
+            rate = self.message_count / total_time
             if self.message_count > 0:
                 print '%d messages in %d secs (%d msg/sec)' \
                     % (self.message_count, total_time, rate)

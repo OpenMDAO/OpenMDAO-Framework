@@ -39,9 +39,9 @@ class ReqHandler(ReqHandler):
         attributes = {}
         for field in ['head']:
             if field in self.request.arguments.keys():
-                attributes[field]=self.request.arguments[field][0]
+                attributes[field] = self.request.arguments[field][0]
             else:
-                attributes[field]=False
+                attributes[field] = False
         self.render('workspace/base.html', **attributes)
 
     @web.authenticated
@@ -53,9 +53,9 @@ class ReqHandler(ReqHandler):
                 s = self.request.arguments[field][0]
                 s = re.sub(r'^"|"$', '', s)  # strip leading/trailing quotes
                 s = re.sub(r"^'|'$", "", s)  # strip leading/trailing quotes
-                attributes[field]=s
+                attributes[field] = s
             else:
-                attributes[field]=False
+                attributes[field] = False
         self.render('workspace/base.html', **attributes)
 
 
@@ -102,7 +102,7 @@ class CommandHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.content_type = 'text/html'
-        self.write('') # not used for now, could render a form
+        self.write('')  # not used for now, could render a form
 
 
 class ComponentHandler(ReqHandler):
@@ -131,7 +131,7 @@ class ComponentHandler(ReqHandler):
         cserver = self.get_server()
         result = ''
         try:
-            result = cserver.onecmd('del '+name)
+            result = cserver.onecmd('del ' + name)
         except Exception, e:
             print e
             result = sys.exc_info()
@@ -346,6 +346,17 @@ class PlotHandler(ReqHandler):
         self.write(port)
 
 
+class PublishHandler(ReqHandler):
+    ''' GET: tell the server to publish the specified topic/variable
+    '''
+
+    @web.authenticated
+    def get(self):
+        topic = self.get_argument('topic')
+        cserver = self.get_server()
+        cserver.publish(topic)
+
+
 class PubstreamHandler(ReqHandler):
     ''' return the url of the zmq publisher server,
     '''
@@ -438,6 +449,7 @@ handlers = [
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
+    web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
