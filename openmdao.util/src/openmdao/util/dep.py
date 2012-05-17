@@ -70,12 +70,11 @@ def _real_name(name, finfo):
         return name
 
 class ClassInfo(object):
-    def __init__(self, name, bases, decorators, impls, meta):
+    def __init__(self, name, bases, decorators,  meta):
         self.name = name
         self.bases = bases
         self.decorators = decorators
         self.entry_points = []
-        self.impls = impls
         self.meta = meta
         
         for dec in decorators:
@@ -101,8 +100,7 @@ class ClassInfo(object):
             
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
-        self.impl_list = []
-        self.metadata = None
+        self.metadata = {}
         ast.NodeVisitor.__init__(self)
         
     def visit_ClassDef(self, node):
@@ -113,13 +111,13 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name) and node.func.id == 'implements':
             for arg in node.args:
                 if isinstance(arg, ast.Name):
-                    self.impl_list.append(arg.id)
+                    self.metadata.setdefault('ifaces',[]).append(arg.id)
     
     def visit_Assign(self, node):
-        if self.metadata is None and len(node.targets) == 1:
+        if len(self.metadata)==0 and len(node.targets) == 1:
             lhs = node.targets[0]
             if isinstance(lhs, ast.Name) and lhs.id=='__openmdao_meta__':
-                self.metadata = ast.literal_eval(node.value)
+                self.metadata.update(ast.literal_eval(node.value))
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
@@ -131,6 +129,17 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         self.modpath = get_module_path(fname)
         self.classes = {}
         self.localnames = {}  # map of local names to package names
+        
+        # in order to get this to work with the 'ast' lib, I have
+        # to read using universal newlines and append a newline
+        # to the string I read for some files.  The 'compiler' lib
+        # didn't have this problem. :(
+        f = open(fname, 'Ur')
+        try:
+            for node in ast.walk(ast.parse(f.read()+'\n', fname)):
+                myvisitor.visit(node)
+        finally:
+            f.close()
         
     def translate(self, finfo):
         """Take module pathnames of classes that may be indirect names and
@@ -155,8 +164,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
 
         self.classes[fullname] = ClassInfo(fullname, 
                                            [self.localnames.get(b,b) for b in bases], 
-                                           node.decorator_list,
-                                           bvisitor.impl_list, 
+                                           node.decorator_list, 
                                            bvisitor.metadata)
         
     def visit_Import(self, node):
@@ -206,23 +214,12 @@ class PythonSourceTreeAnalyser(object):
             
     def analyze_file(self, pyfile, first_pass=False):
         myvisitor = PythonSourceFileAnalyser(pyfile)
-        
-        # in order to get this to work with the 'ast' lib, I have
-        # to read using universal newlines and append a newline
-        # to the string I read for some files.  The 'compiler' lib
-        # didn't have this problem. :(
-        f = open(pyfile, 'Ur')
-        try:
-            for node in ast.walk(ast.parse(f.read()+'\n', pyfile)):
-                myvisitor.visit(node)
-        finally:
-            f.close()
         self.fileinfo[get_module_path(pyfile)] = myvisitor
         
         if not first_pass:
             myvisitor.translate(self.fileinfo)
             self._update_graph(myvisitor)
-            myvisitor.update_impls(self.graph)
+            #myvisitor.update_impls(self.graph)
             
         return myvisitor
         

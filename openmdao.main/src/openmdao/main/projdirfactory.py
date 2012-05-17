@@ -84,20 +84,18 @@ class ProjDirFactory(Factory):
         pass
 
     def get_available_types(self, predicate=is_plugin):
-        """
+        """Return a list of available types that cause predicate(classname, metadata) to
+        return True.
         """
         typset = set(self.analyzer.graph.nodes()) - self._baseset
         types = []
-        if groups is None:
-            groups = plugin_groups.values()
-        ifaces = set([plugin_groups[g] for g in groups])
         graph = self.analyzer.graph
         
         for typ in typset:
-            if ifaces.intersection(self.analyzer.find_inheritors(typ)):
-                meta = graph.node[typ]['classinfo'].meta
+            meta = graph.node[typ]['classinfo'].meta
+            if predicate(typ, meta):
                 types.append((typ, meta))
-                
+        return types
 
     def on_modified(self, fpath):
         if os.path.isdir(fpath):

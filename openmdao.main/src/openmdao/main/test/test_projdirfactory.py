@@ -61,7 +61,6 @@ class MyComp2(Component):
             typenames = [n for n,mdata in types]
             self.assertEqual(set(typenames), set(expected))
             
-            
         finally:
             pdf.cleanup()
         
