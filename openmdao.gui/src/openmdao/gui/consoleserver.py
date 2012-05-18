@@ -11,8 +11,6 @@ from enthought.traits.api import HasTraits
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly, set_as_top
-from openmdao.main.driver import Driver
-from openmdao.main.datatypes.slot import Slot
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
@@ -21,10 +19,8 @@ from openmdao.main.project import project_from_archive
 from openmdao.main.publisher import Publisher
 
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.interfaces import *
+from openmdao.main.interfaces import IContainer
 from zope.interface import implementedBy
-
-import networkx as nx
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
@@ -334,33 +330,8 @@ class ConsoleServer(cmd.Cmd):
                     if (src, dst) not in conntuples:
                         print "connecting", src, dst
                         asm.connect(src, dst)
-                conns['connections'] = connections
             except Exception, err:
                 self._error(err, sys.exc_info())
-
-    def _get_dataflow(self, asm, pathname):
-        ''' get the list of components and connections between them
-            that make up the data flow for the given assembly
-        '''
-        components = []
-        connections = []
-        if is_instance(asm, Assembly):
-            # list of components (name & type) in the assembly
-            g = asm._depgraph._graph
-            for name in nx.algorithms.dag.topological_sort(g):
-                if not name.startswith('@'):
-                    comp = asm.get(name)
-                    if is_instance(comp, Component):
-                        components.append({'name': comp.name,
-                                           'pathname': pathname + '.' + name,
-                                           'type': type(comp).__name__,
-                                           'valid': comp.is_valid()
-                                          })
-            # list of connections (convert tuples to lists)
-            conntuples = asm.list_connections(show_passthrough=False)
-            for connection in conntuples:
-                connections.append(list(connection))
-        return {'components': components, 'connections': connections}
 
     def get_dataflow(self, pathname):
         ''' get the structure of the specified assembly, or of the global
@@ -371,7 +342,7 @@ class ConsoleServer(cmd.Cmd):
         if pathname and len(pathname) > 0:
             try:
                 asm, root = self.get_container(pathname)
-                dataflow = self._get_dataflow(asm, pathname)
+                dataflow = asm.get_dataflow()
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:

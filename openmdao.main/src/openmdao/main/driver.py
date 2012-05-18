@@ -5,13 +5,11 @@ __all__ = ["Driver"]
 
 import fnmatch
 
-from networkx.algorithms.shortest_paths.generic import shortest_path
 from enthought.traits.api import List
 
 # pylint: disable-msg=E0611,F0401
 
-from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, ICaseIterator, \
-                                     IHasEvents, implements
+from openmdao.main.interfaces import IDriver, ICaseRecorder, IHasEvents, implements
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.component import Component
@@ -22,11 +20,11 @@ from openmdao.main.hasevents import HasEvents
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
-from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.datatypes.api import Slot, Str
+
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -41,7 +39,6 @@ class Driver(Component):
     # Extra variables for printing
     printvars = List(Str, iotype='in', desc='List of extra variables to '
                                'output in the recorders.')
-
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__
@@ -74,7 +71,7 @@ class Driver(Component):
                 return False
         return True
 
-    def check_config (self):
+    def check_config(self):
         """Verify that our workflow is able to resolve all of its components."""
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config()
@@ -163,7 +160,7 @@ class Driver(Component):
         return full
 
     @rbac('*', 'owner')
-    def run (self, force=False, ffd_order=0, case_id=''):
+    def run(self, force=False, ffd_order=0, case_id=''):
         """Run this object. This should include fetching input variables if necessary,
         executing, and updating output variables. Do not override this function.
 
@@ -249,7 +246,6 @@ class Driver(Component):
         """Called prior to each iteration.  This is where iteration events are set."""
         self.set_events()
 
-
     def run_iteration(self):
         """Runs workflow."""
         wf = self.workflow
@@ -312,15 +308,15 @@ class Driver(Component):
                 val = con.evaluate(self.parent)
                 if '>' in val[2]:
                     case_output.append(["Constraint ( %s )" % name,
-                                                              val[0]-val[1]])
+                                                              val[0] - val[1]])
                 else:
                     case_output.append(["Constraint ( %s )" % name,
-                                                              val[1]-val[0]])
+                                                              val[1] - val[0]])
 
         if hasattr(self, 'get_eq_constraints'):
             for name, con in self.get_eq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                case_output.append(["Constraint ( %s )" % name, val[1]-val[0]])
+                case_output.append(["Constraint ( %s )" % name, val[1] - val[0]])
 
         # Additional user-requested variables
         for printvar in self.printvars:
@@ -365,7 +361,6 @@ class Driver(Component):
         for var in self.list_vars():
             all_vars.append('%s.%s' % (self.name, var))
 
-
         for comp in self.workflow.__iter__():
 
             # All variables from components in workflow
@@ -379,7 +374,6 @@ class Driver(Component):
                 assy_vars = comp.driver._get_all_varpaths(pattern, assy_header)
                 all_vars = all_vars + assy_vars
 
-
         # Match pattern in our var names
         matched_vars = []
         if pattern == '*':
@@ -389,13 +383,13 @@ class Driver(Component):
 
         return matched_vars
 
-
     def get_workflow(self):
         """ get the driver info and the list of components that make up the
             driver's workflow, recurse on nested drivers
         """
+        from openmdao.main.assembly import Assembly
         ret = {}
-        ret['pathname'] = pathname
+        ret['pathname'] = self.get_pathname()
         ret['type'] = type(self).__module__ + '.' + type(self).__name__
         ret['workflow'] = []
         ret['valid'] = self.is_valid()
@@ -417,5 +411,4 @@ class Driver(Component):
                     'valid':    comp.is_valid()
                   })
         return ret
-
 

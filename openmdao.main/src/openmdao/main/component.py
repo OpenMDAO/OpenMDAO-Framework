@@ -19,11 +19,16 @@ import cPickle as pickle
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
+from zope.interface import implementedBy
+
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
-                                     ICaseIterator, ICaseRecorder
+                                     ICaseIterator, ICaseRecorder, \
+                                     IHasCouplingVars, IHasObjectives, \
+                                     IHasParameters, IHasConstraints, \
+                                     IHasEqConstraints, IHasIneqConstraints
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.filevar import FileMetadata, FileRef
@@ -37,7 +42,6 @@ from openmdao.main.publisher import Publisher
 
 import openmdao.util.log as tracing
 
-from openmdao.main.assembly import Assembly
 
 
 class SimulationRoot (object):
@@ -1574,11 +1578,11 @@ class Component (Container):
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
-        if is_instance(self, Assembly):
-            attrs['Dataflow'] = self._get_dataflow(self, self.get_pathname())
+        if has_interface(self, IAssembly):
+            attrs['Dataflow'] = self.get_dataflow()
 
         if has_interface(self, IDriver):
-            attrs['Workflow'] = self._get_workflow(self, self.get_pathname())
+            attrs['Workflow'] = self.get_workflow()
 
         if has_interface(self, IHasCouplingVars):
             couples = []
