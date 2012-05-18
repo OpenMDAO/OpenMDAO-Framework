@@ -75,7 +75,7 @@ class MyComp2(Component):
             with open(os.path.join(self.tdir, 'mydrv.py'), 'w') as f:
                 f.write("""
 from openmdao.main.api import Component
-class MyDrv(Component):
+class MyDrv(Component):  #old MyDrv was a Driver, new one is just a Component
     pass
     
 class Foo(Component):
