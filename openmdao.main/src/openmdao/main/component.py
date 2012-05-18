@@ -37,6 +37,8 @@ from openmdao.main.publisher import Publisher
 
 import openmdao.util.log as tracing
 
+from openmdao.main.assembly import Assembly
+
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -1507,6 +1509,166 @@ class Component (Container):
                 lst = [('.'.join([pname, var]), getattr(self, var))
                        for var in pub_vars]
                 pub.publish_list(lst)
+
+    def get_attributes(self):
+        """ get attributes of component, includes a dictionary of attributes
+            for each interface implemented by the component
+        """
+        attrs = {}
+
+        attrs['type'] = type(self).__name__
+
+        if has_interface(self, IComponent):
+            inputs = []
+
+            if self.parent is None:
+                connected_inputs = []
+                connected_outputs = []
+            else:
+                connected_inputs = self._depgraph.get_connected_inputs()
+                connected_outputs = self._depgraph.get_connected_outputs()
+
+            for vname in self.list_inputs():
+                v = self.get(vname)
+                attr = {}
+                if not is_instance(v, Component):
+                    attr['name'] = vname
+                    attr['type'] = type(v).__name__
+                    attr['value'] = str(v)
+                    attr['valid'] = self.get_valid([vname])[0]
+                    meta = self.get_metadata(vname)
+                    if meta:
+                        for field in ['units', 'high', 'low', 'desc']:
+                            if field in meta:
+                                attr[field] = meta[field]
+                            else:
+                                attr[field] = ''
+                    attr['connected'] = ''
+                    if vname in connected_inputs:
+                        # there can be only one connection to an input
+                        attr['connected'] = [src for src, dst in \
+                            self._depgraph.connections_to(vname)][0].replace('@xin.', '')
+                inputs.append(attr)
+            attrs['Inputs'] = inputs
+
+            outputs = []
+            for vname in self.list_outputs():
+                v = self.get(vname)
+                attr = {}
+                if not is_instance(v, Component):
+                    attr['name'] = vname
+                    attr['type'] = type(v).__name__
+                    attr['value'] = str(v)
+                    attr['valid'] = self.get_valid([vname])[0]
+                    meta = self.get_metadata(vname)
+                    if meta:
+                        for field in ['units', 'high', 'low', 'desc']:
+                            if field in meta:
+                                attr[field] = meta[field]
+                            else:
+                                attr[field] = ''
+                    attr['connected'] = ''
+                    if vname in connected_outputs:
+                        attr['connected'] = str([dst for src, dst in \
+                            self._depgraph.connections_to(vname)]).replace('@xout.', '')
+                outputs.append(attr)
+            attrs['Outputs'] = outputs
+
+        if is_instance(self, Assembly):
+            attrs['Dataflow'] = self._get_dataflow(self, self.get_pathname())
+
+        if has_interface(self, IDriver):
+            attrs['Workflow'] = self._get_workflow(self, self.get_pathname())
+
+        if has_interface(self, IHasCouplingVars):
+            couples = []
+            objs = self.list_coupling_vars()
+            for indep, dep in objs:
+                attr = {}
+                attr['independent'] = indep
+                attr['dependent'] = dep
+                couples.append(attr)
+            attrs['CouplingVars'] = couples
+
+        if has_interface(self, IHasObjectives):
+            objectives = []
+            objs = self.get_objectives()
+            for key in objs.keys():
+                attr = {}
+                attr['name'] = str(key)
+                attr['expr'] = objs[key].text
+                attr['scope'] = objs[key].scope.name
+                objectives.append(attr)
+            attrs['Objectives'] = objectives
+
+        if has_interface(self, IHasParameters):
+            parameters = []
+            parms = self.get_parameters()
+            for key, parm in parms.iteritems():
+                attr = {}
+                attr['name']    = str(key)
+                attr['target']  = parm.target
+                attr['low']     = parm.low
+                attr['high']    = parm.high
+                attr['scaler']  = parm.scaler
+                attr['adder']   = parm.adder
+                attr['fd_step'] = parm.fd_step
+                #attr['scope']   = parm.scope.name
+                parameters.append(attr)
+            attrs['Parameters'] = parameters
+
+        if has_interface(self, IHasConstraints) or \
+           has_interface(self, IHasEqConstraints):
+            constraints = []
+            cons = self.get_eq_constraints()
+            for key, con in cons.iteritems():
+                attr = {}
+                attr['name']    = str(key)
+                attr['expr']    = str(con)
+                attr['scaler']  = con.scaler
+                attr['adder']   = con.adder
+                constraints.append(attr)
+            attrs['EqConstraints'] = constraints
+
+        if has_interface(self, IHasConstraints) or \
+           has_interface(self, IHasIneqConstraints):
+            constraints = []
+            cons = self.get_ineq_constraints()
+            for key, con in cons.iteritems():
+                attr = {}
+                attr['name']    = str(key)
+                attr['expr']    = str(con)
+                attr['scaler']  = con.scaler
+                attr['adder']   = con.adder
+                constraints.append(attr)
+            attrs['IneqConstraints'] = constraints
+
+        slots = []
+        for name, value in self.traits().items():
+            if value.is_trait_type(Slot):
+                attr = {}
+                attr['name'] = name
+                attr['klass'] = value.trait_type.klass.__name__
+                inames = []
+                for klass in list(implementedBy(attr['klass'])):
+                    inames.append(klass.__name__)
+                attr['interfaces'] = inames
+                if getattr(self, name) is None:
+                    attr['filled'] = False
+                else:
+                    attr['filled'] = True
+                meta = self.get_metadata(name)
+                if meta:
+                    for field in ['desc']:    # just desc?
+                        if field in meta:
+                            attr[field] = meta[field]
+                        else:
+                            attr[field] = ''
+                    attr['type'] = meta['vartypename']
+                slots.append(attr)
+        attrs['Slots'] = slots
+
+        return attrs
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no cover
     """prints out validity status of all input and output traits

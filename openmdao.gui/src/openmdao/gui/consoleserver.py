@@ -388,34 +388,6 @@ class ConsoleServer(cmd.Cmd):
             dataflow['connections'] = []
         return jsonpickle.encode(dataflow)
 
-    def _get_workflow(self, drvr, pathname):
-        ''' get the driver info and the list of components that make up the
-            driver's workflow, recurse on nested drivers
-        '''
-        ret = {}
-        ret['pathname'] = pathname
-        ret['type'] = type(drvr).__module__ + '.' + type(drvr).__name__
-        ret['workflow'] = []
-        ret['valid'] = drvr.is_valid()
-        for comp in drvr.workflow:
-            pathname = comp.get_pathname()
-            if is_instance(comp, Assembly) and comp.driver:
-                ret['workflow'].append({
-                    'pathname': pathname,
-                    'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                    'driver':   self._get_workflow(comp.driver, pathname + '.driver'),
-                    'valid':    comp.is_valid()
-                  })
-            elif is_instance(comp, Driver):
-                ret['workflow'].append(self._get_workflow(comp, pathname))
-            else:
-                ret['workflow'].append({
-                    'pathname': pathname,
-                    'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                    'valid':    comp.is_valid()
-                  })
-        return ret
-
     def get_workflow(self, pathname):
         flow = {}
         drvr, root = self.get_container(pathname)
@@ -425,173 +397,17 @@ class ConsoleServer(cmd.Cmd):
             pathname = pathname + '.driver'
         if drvr:
             try:
-                flow = self._get_workflow(drvr, pathname)
+                flow = drvr.get_workflow()
             except Exception, err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(flow)
-
-    def _get_attributes(self, comp, pathname):
-        ''' get attributes of object
-        '''
-        attrs = {}
-
-        if has_interface(comp, IComponent):
-            inputs = []
-
-            if comp.parent is None:
-                connected_inputs = []
-                connected_outputs = []
-            else:
-                connected_inputs = comp._depgraph.get_connected_inputs()
-                connected_outputs = comp._depgraph.get_connected_outputs()
-
-            for vname in comp.list_inputs():
-                v = comp.get(vname)
-                attr = {}
-                if not is_instance(v, Component):
-                    attr['name'] = vname
-                    attr['type'] = type(v).__name__
-                    attr['value'] = str(v)
-                    attr['valid'] = comp.get_valid([vname])[0]
-                    meta = comp.get_metadata(vname)
-                    if meta:
-                        for field in ['units', 'high', 'low', 'desc']:
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    attr['connected'] = ''
-                    if vname in connected_inputs:
-                        # there can be only one connection to an input
-                        attr['connected'] = [src for src, dst in comp._depgraph.connections_to(vname)][0].replace('@xin.', '')
-                inputs.append(attr)
-            attrs['Inputs'] = inputs
-
-            outputs = []
-            for vname in comp.list_outputs():
-                v = comp.get(vname)
-                attr = {}
-                if not is_instance(v, Component):
-                    attr['name'] = vname
-                    attr['type'] = type(v).__name__
-                    attr['value'] = str(v)
-                    attr['valid'] = comp.get_valid([vname])[0]
-                    meta = comp.get_metadata(vname)
-                    if meta:
-                        for field in ['units', 'high', 'low', 'desc']:
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    attr['connected'] = ''
-                    if vname in connected_outputs:
-                        attr['connected'] = str([dst for src, dst in comp._depgraph.connections_to(vname)]).replace('@xout.', '')
-                outputs.append(attr)
-            attrs['Outputs'] = outputs
-
-        if is_instance(comp, Assembly):
-            attrs['Dataflow'] = self._get_dataflow(comp, pathname)
-
-        if has_interface(comp, IDriver):
-            attrs['Workflow'] = self._get_workflow(comp, pathname)
-
-        if has_interface(comp, IHasCouplingVars):
-            couples = []
-            objs = comp.list_coupling_vars()
-            for indep, dep in objs:
-                attr = {}
-                attr['independent'] = indep
-                attr['dependent'] = dep
-                couples.append(attr)
-            attrs['CouplingVars'] = couples
-
-        if has_interface(comp, IHasObjectives):
-            objectives = []
-            objs = comp.get_objectives()
-            for key in objs.keys():
-                attr = {}
-                attr['name'] = str(key)
-                attr['expr'] = objs[key].text
-                attr['scope'] = objs[key].scope.name
-                objectives.append(attr)
-            attrs['Objectives'] = objectives
-
-        if has_interface(comp, IHasParameters):
-            parameters = []
-            parms = comp.get_parameters()
-            for key, parm in parms.iteritems():
-                attr = {}
-                attr['name']    = str(key)
-                attr['target']  = parm.target
-                attr['low']     = parm.low
-                attr['high']    = parm.high
-                attr['scaler']  = parm.scaler
-                attr['adder']   = parm.adder
-                attr['fd_step'] = parm.fd_step
-                #attr['scope']   = parm.scope.name
-                parameters.append(attr)
-            attrs['Parameters'] = parameters
-
-        if has_interface(comp, IHasConstraints) or \
-           has_interface(comp, IHasEqConstraints):
-            constraints = []
-            cons = comp.get_eq_constraints()
-            for key, con in cons.iteritems():
-                attr = {}
-                attr['name']    = str(key)
-                attr['expr']    = str(con)
-                attr['scaler']  = con.scaler
-                attr['adder']   = con.adder
-                constraints.append(attr)
-            attrs['EqConstraints'] = constraints
-
-        if has_interface(comp, IHasConstraints) or \
-           has_interface(comp, IHasIneqConstraints):
-            constraints = []
-            cons = comp.get_ineq_constraints()
-            for key, con in cons.iteritems():
-                attr = {}
-                attr['name']    = str(key)
-                attr['expr']    = str(con)
-                attr['scaler']  = con.scaler
-                attr['adder']   = con.adder
-                constraints.append(attr)
-            attrs['IneqConstraints'] = constraints
-
-        slots = []
-        for name, value in comp.traits().items():
-            if value.is_trait_type(Slot):
-                attr = {}
-                attr['name'] = name
-                attr['klass'] = value.trait_type.klass.__name__
-                inames = []
-                for klass in list(implementedBy(attr['klass'])):
-                    inames.append(klass.__name__)
-                attr['interfaces'] = inames
-                if getattr(comp, name) is None:
-                    attr['filled'] = False
-                else:
-                    attr['filled'] = True
-                meta = comp.get_metadata(name)
-                if meta:
-                    for field in ['desc']:    # just desc?
-                        if field in meta:
-                            attr[field] = meta[field]
-                        else:
-                            attr[field] = ''
-                    attr['type'] = meta['vartypename']
-                slots.append(attr)
-        attrs['Slots'] = slots
-
-        return attrs
 
     def get_attributes(self, pathname):
         attr = {}
         comp, root = self.get_container(pathname)
         if comp:
             try:
-                attr = self._get_attributes(comp, pathname)
-                attr['type'] = type(comp).__name__
+                attr = comp.get_attributes()
             except Exception, err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(attr)
