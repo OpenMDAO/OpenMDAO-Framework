@@ -14,13 +14,14 @@ openmdao.PlotFrame = function(id,model,pathname) {
         plot = null,
         options = {
             series: { shadowSize: 0 }, // drawing is faster without shadows
-            yaxis: { min: 0, max: 150 },
+            yaxis: { min: 0, max: 300 },
             xaxis: { show: false }
         },
         data = {},
         interval = 30,
         timer = null,
-        maxPoints = 300;
+        maxPoints = 300,
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>");
 
     self.pathname = pathname;
 
@@ -29,16 +30,8 @@ openmdao.PlotFrame = function(id,model,pathname) {
            .appendTo(this.elm);
     plot = jQuery.plot(plot, [ data ], options);
 
-    /** set the plot to continuously update after specified ms */
-    function setRefresh(interval, func) {
-        if (timer !== 'undefined') {
-            clearInterval(timer);
-        }
-        timer = setInterval(func,interval);
-    }
-
-    // subscribe to model for data (or set a timer to poll for data)
-    if (pathname) {
+    // subscribe to model for data
+    function plotVariable(pathname) {
         model.addListener(pathname,function(message) {
             if (message.length === 2) {
                 var newdata = {};
@@ -47,25 +40,6 @@ openmdao.PlotFrame = function(id,model,pathname) {
             }
             updatePlot();
         });
-    }
-    else {
-        setRefresh(interval,function() {
-            updateData(getRandomValue());
-            updatePlot();
-        });
-    }
-
-    /** return a new data value, randomly generated from last value */
-    function getRandomValue() {
-        var prev = data.length > 0 ? data[data.length - 1] : 50;
-        var y = prev + Math.random() * 10 - 5;
-        if (y < 0) {
-            y = 0;
-        }
-        if (y > 100) {
-            y = 100;
-        }
-        return y;
     }
 
     /** add new values to the data set, capping the number of points */
@@ -104,6 +78,26 @@ openmdao.PlotFrame = function(id,model,pathname) {
         plot.resize();          // in case the frame was resized
         plot.setupGrid();
         plot.draw();
+    }
+
+    // prompt for a new variable to add to the plot
+    function addVariable() {
+        openmdao.Util.promptForValue('Enter pathname of variable to plot:',
+            function(pathname) {
+                plotVariable(pathname);
+            }
+        );
+    }
+
+    // create context menu
+    contextMenu.append(jQuery('<li>Add Variable...</li>').click(function(ev) {
+        addVariable();
+    }));
+    contextMenu.appendTo(this.elm);
+    ContextMenu.set(contextMenu.attr('id'), id);
+
+    if (pathname) {
+        plotVariable(pathname);
     }
 
     /***********************************************************************

@@ -57,18 +57,24 @@ openmdao.Model=function() {
     function open_pubstream_socket() {
         open_websocket('pubstream', this.pubstream_socket,
             function(message) {
-                message = jQuery.parseJSON(message);
-                var callbacks = subscribers[message[0]];
-                if (callbacks) {
-                    for (i = 0; i < callbacks.length; i++) {
-                        if (typeof callbacks[i] === 'function') {
-                            callbacks[i](message);
-                        }
-                        else {
-                            debug.error('Model: invalid callback for topic:',
-                                        topic,callbacks[i]);
+                try {
+                    message = jQuery.parseJSON(message);
+                    var callbacks = subscribers[message[0]];
+                    if (callbacks) {
+                        for (i = 0; i < callbacks.length; i++) {
+                            if (typeof callbacks[i] === 'function') {
+                                callbacks[i](message);
+                            }
+                            else {
+                                debug.error('Model: invalid callback for topic:',
+                                            topic,callbacks[i]);
+                            }
                         }
                     }
+                }
+                catch(err) {
+                    debug.error('Model: Error parsing pubstream message',
+                                err, message);
                 }
             }
         );
