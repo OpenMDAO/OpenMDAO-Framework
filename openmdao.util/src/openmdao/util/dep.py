@@ -110,13 +110,17 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name) and node.func.id == 'implements':
             for arg in node.args:
                 if isinstance(arg, ast.Name):
-                    self.metadata.setdefault('ifaces',[]).append(arg.id)
+                    self.metadata.setdefault('ifaces',set()).add(arg.id)
     
     def visit_Assign(self, node):
         if len(self.metadata)==0 and len(node.targets) == 1:
             lhs = node.targets[0]
             if isinstance(lhs, ast.Name) and lhs.id=='__openmdao_meta__':
-                self.metadata.update(ast.literal_eval(node.value))
+                dct = ast.literal_eval(node.value)
+                dct.setdefault('ifaces', [])
+                dct['ifaces'] = set(dct['ifaces']) # ifaces may be defined by the user as a list, so make it a set
+                dct['ifaces'].update(self.metadata.setdefault('ifaces',[]))
+                self.metadata.update(dct)
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
@@ -142,7 +146,6 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 self.visit(node)
         finally:
             f.close()
-
         
     def translate(self, finfo):
         """Take module pathnames of classes that may be indirect names and
@@ -194,14 +197,21 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
             graph.add_node(classname, classinfo=classinfo)
             for base in classinfo.bases:
                 graph.add_edge(base, classname)
-            for iface in classinfo.meta.setdefault('ifaces', []):
+            for iface in classinfo.meta.setdefault('ifaces', set()):
                 graph.add_edge(iface, classname)
     
     def update_ifaces(self, graph):
         """Update our ifaces metadata based on the contents of the inheritance/implements
         graph.
         """
-        
+        for iface in plugin_groups.values():
+            try:
+                paths = nx.shortest_path(graph, source=iface)
+            except KeyError:
+                continue
+            for cname, cinfo in self.classes.items():
+                if cname in paths:
+                    cinfo.meta.setdefault('ifaces',set()).add(iface)
 
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None, startfiles=None):
@@ -233,7 +243,7 @@ class PythonSourceTreeAnalyser(object):
         
         if not first_pass:
             myvisitor.translate(self.fileinfo)
-            self._update_graph(myvisitor)
+            myvisitor.update_graph(self.graph)
             myvisitor.update_ifaces(self.graph)
             
         return myvisitor
@@ -273,7 +283,7 @@ class PythonSourceTreeAnalyser(object):
         for iface in ifaces:
             for inheritor in self.find_inheritors(iface):
                 if inheritor not in ifaces:
-                    self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',[]).append(iface)
+                    self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',set()).add(iface)
         
     #def remove_module(self, modname):
         #mod = self.fileinfo[modname]

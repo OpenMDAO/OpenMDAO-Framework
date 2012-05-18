@@ -100,6 +100,7 @@ class ProjDirFactory(Factory):
     def on_modified(self, fpath):
         if os.path.isdir(fpath):
             return
+        self.on_deleted(fpath)
         visitor = self.analyzer.analyze_file(fpath)
 
     def on_deleted(self, fpath):
@@ -110,6 +111,8 @@ class ProjDirFactory(Factory):
             for modpath, info in self.analyzer.fileinfo.items():
                 if info.fname == fpath:
                     self.analyzer.graph.remove_nodes_from(info.classes.keys())
+                    del self.analyzer.fileinfo[modpath]
+                    break
 
     def cleanup(self):
         self.observer.stop()
