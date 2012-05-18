@@ -42,11 +42,9 @@ jQuery(function() {
 
         dataflow_tab.click(function(e) { central_label.text(data.getPathname()); })
         workflow_tab.click(function(e)  { central_label.text(work.getPathname()); })
-        code_tab.click(function(e)      { central_label.text(code.getPathname()); })
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
-        function code_fn(path) { code.editFile(path);     code_tab.click(); }
         function prop_fn(path) { prop.editObject(path);   }
 
         function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }

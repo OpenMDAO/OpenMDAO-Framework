@@ -12,8 +12,7 @@ jQuery(function() {
     layout = jQuery('body').layout({
         north__size: 40,
         north__resizable: false,
-        north_showOverflowOnHover: true,
-        south__size: 150
+        north_showOverflowOnHover: true
     });
 
     // add tabbed pane functionality
@@ -32,17 +31,15 @@ jQuery(function() {
         var central_label = jQuery('#central_label'),
             code_tab      = jQuery('#code_tab');
 
-        code_tab.click(function(e)      { central_label.text(code.getPathname()); })
+        code_tab.click(function(e) { central_label.text(code.getPathname()); })
 
-        function code_fn(path) { code.editFile(path);     code_tab.click(); }
+        function code_fn(path) { code.editFile(path); code_tab.click(); }
 
-        new openmdao.FileTree("ftree", model, code_fn);        
-        
-        // initialize views
-        model.updateListeners();
+        new openmdao.FileTree("ftree", model, code_fn);
     })()
 
     jQuery('#code_tab').click();
     jQuery('#ftree_tab').click();
+    jQuery("body").trigger("layoutresizeall");
 
 });
