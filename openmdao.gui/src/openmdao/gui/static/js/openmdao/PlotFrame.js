@@ -14,7 +14,6 @@ openmdao.PlotFrame = function(id,model,pathname) {
         plot = null,
         options = {
             series: { shadowSize: 0 }, // drawing is faster without shadows
-            yaxis: { min: 0, max: 300 },
             xaxis: { show: false }
         },
         data = {},
