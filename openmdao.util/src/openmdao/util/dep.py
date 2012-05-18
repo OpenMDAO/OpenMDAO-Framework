@@ -11,7 +11,6 @@ from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
 import ast
-import imp
 
 import networkx as nx
 
@@ -66,8 +65,9 @@ def _real_name(name, finfo):
                 return trans
             else:
                 name = trans
-                continue
-        return name
+        else:
+            break
+    return name
 
 class ClassInfo(object):
     def __init__(self, name, bases, decorators,  meta):
@@ -97,7 +97,6 @@ class ClassInfo(object):
         """
         self.bases = [_real_name(b, finfo) for b in self.bases]
         
-            
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
         self.metadata = {}
@@ -125,7 +124,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
     """
     def __init__(self, fname):
         ast.NodeVisitor.__init__(self)
-        self.fname = os.path.abspath(fname)
+        self.fname = os.path.abspath(os.path.expanduser(fname))
         self.modpath = get_module_path(fname)
         self.classes = {}
         self.localnames = {}  # map of local names to package names
@@ -136,10 +135,14 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         # didn't have this problem. :(
         f = open(fname, 'Ur')
         try:
-            for node in ast.walk(ast.parse(f.read()+'\n', fname)):
-                myvisitor.visit(node)
+            contents = f.read()
+            if len(contents)>0 and contents[-1] != '\n':
+                contents += '\n'
+            for node in ast.walk(ast.parse(contents, fname)):
+                self.visit(node)
         finally:
             f.close()
+
         
     def translate(self, finfo):
         """Take module pathnames of classes that may be indirect names and
@@ -172,9 +175,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         is parsed.
         """
         for al in node.names:
-            if al.asname is None:
-                self.localnames[al.name] = al.name
-            else:
+            if al.asname is not None:
                 self.localnames[al.asname] = al.name
 
     def visit_ImportFrom(self, node):
@@ -187,11 +188,26 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
             else:
                 self.localnames[al.asname] = '.'.join([node.module, al.name])
                 
+    def update_graph(self, graph):
+        """Update the inheritance/implements graph."""
+        for classname, classinfo in self.classes.items():
+            graph.add_node(classname, classinfo=classinfo)
+            for base in classinfo.bases:
+                graph.add_edge(base, classname)
+            for iface in classinfo.meta.setdefault('ifaces', []):
+                graph.add_edge(iface, classname)
+    
+    def update_ifaces(self, graph):
+        """Update our ifaces metadata based on the contents of the inheritance/implements
+        graph.
+        """
+        
 
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None, startfiles=None):
         # inheritance graph. It's a directed graph with base classes
-        # pointing to the classes that inherit from them
+        # pointing to the classes that inherit from them.  Also includes interfaces
+        # pointing to classes that implement them.
         self.graph = nx.DiGraph()
         
         if isinstance(startdir, basestring):
@@ -207,7 +223,6 @@ class PythonSourceTreeAnalyser(object):
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
             
         self.exclude = exclude
-        self.ifaces = set()
         self.fileinfo = {}
             
         self._analyze(startfiles)
@@ -219,7 +234,7 @@ class PythonSourceTreeAnalyser(object):
         if not first_pass:
             myvisitor.translate(self.fileinfo)
             self._update_graph(myvisitor)
-            #myvisitor.update_impls(self.graph)
+            myvisitor.update_ifaces(self.graph)
             
         return myvisitor
         
@@ -236,6 +251,7 @@ class PythonSourceTreeAnalyser(object):
         # and parse them, extracting class and import information
         for pyfile in find_files(self.startdirs, "*.py", self.exclude):
             self.analyze_file(pyfile, first_pass=True)
+            
         # now translate any indirect imports into absolute module pathnames
         # NOTE: only indirect imports within the set of specified source
         #       trees will be fully resolved, i.e., if a file in your set
@@ -250,7 +266,7 @@ class PythonSourceTreeAnalyser(object):
     
         # build the inheritance/interface graph
         for visitor in self.fileinfo.values():
-            self._update_graph(visitor)
+            visitor.update_graph(self.graph)
             
         # now, update ifaces metadata for all of the classinfo objects in the graph
         ifaces = set(plugin_groups.values())
@@ -259,17 +275,8 @@ class PythonSourceTreeAnalyser(object):
                 if inheritor not in ifaces:
                     self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',[]).append(iface)
         
-    def _update_graph(self, visitor):
-        for classname, classinfo in visitor.classes.items():
-            self.graph.add_node(classname, classinfo=classinfo)
-            for base in classinfo.bases:
-                self.graph.add_edge(base, classname)
-            for impl in classinfo.impls:
-                self.ifaces.add(impl)
-                self.graph.add_edge(impl, classname)
-    
-    def remove_module(self, modname):
-        mod = self.fileinfo[modname]
+    #def remove_module(self, modname):
+        #mod = self.fileinfo[modname]
         
     def find_inheritors(self, base):
         """Returns a list of names of classes that inherit from the given base class."""
