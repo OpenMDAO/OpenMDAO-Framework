@@ -1,5 +1,5 @@
 /**
- * stuff to do after the page is loaded
+ * stuff to do after the code editor is loaded
  */
  
     
@@ -15,11 +15,6 @@ jQuery(function() {
         north_showOverflowOnHover: true,
         south__size: 150
     });
-
-    // add main menu
-    //jQuery.getJSON("/static/js/openmdao/MainMenu.json",
-    //    function(json) { new openmdao.Menu("menu",json) }
-    //)
 
     // add tabbed pane functionality
     openmdao.TabbedPane("leftcol_tabs");
@@ -41,10 +36,13 @@ jQuery(function() {
 
         function code_fn(path) { code.editFile(path);     code_tab.click(); }
 
-        new openmdao.FileTree("ftree",   model, code_fn);        
+        new openmdao.FileTree("ftree", model, code_fn);        
         
         // initialize views
         model.updateListeners();
     })()
+
+    jQuery('#code_tab').click();
+    jQuery('#ftree_tab').click();
 
 });
