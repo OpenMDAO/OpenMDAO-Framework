@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.PropertiesFrame = function(id,model) {
     openmdao.PropertiesFrame.prototype.init.call(this,id,'Properties');
@@ -17,7 +17,7 @@ openmdao.PropertiesFrame = function(id,model) {
         inputsHeader = jQuery("<h3>Inputs</h3>"),
         outputsHeader = jQuery("<h3>Outputs</h3>"),
         inputsDiv = jQuery("<div id='inputs'>"),
-        outputsDiv = jQuery("<div id='outputs'>")
+        outputsDiv = jQuery("<div id='outputs'>");
 
     this.elm.append(nameHeader);
     this.elm.append('<p>');
@@ -28,59 +28,29 @@ openmdao.PropertiesFrame = function(id,model) {
     this.elm.append(outputsDiv);
     this.elm.width(200);
 
-    inputs = new openmdao.PropertiesPane(inputsDiv,model,self.pathname,'Inputs',true)
+    inputs = new openmdao.PropertiesPane(inputsDiv,model,self.pathname,'Inputs',true);
     inputsHeader.click(function () {
-        inputsDiv.toggle("normal")
+        inputsDiv.toggle("normal");
         return false;
     });
 
-    outputs = new openmdao.PropertiesPane(outputsDiv,model,self.pathname,'Outputs',false)
+    outputs = new openmdao.PropertiesPane(outputsDiv,model,self.pathname,'Outputs',false);
     outputsHeader.click(function () {
-        outputsDiv.toggle("normal")
+        outputsDiv.toggle("normal");
         return false;
     });
 
     /** load the tables with the given properties */
     function loadTables(properties) {
-        if (properties && properties['type']) {
-            nameHeader.html(properties['type']+': '+self.pathname)
-            inputs.loadData(properties['Inputs'])
-            outputs.loadData(properties['Outputs'])
-
-            /** experiment using dat.GUI * /
-            var inp_gui = new dat.GUI({ autoPlace: false });
-            inputsDiv.html('')
-            inputsDiv[0].appendChild(inp_gui.domElement);
-            var inp = {};
-            jQuery.each(properties['Inputs'],function(idx,obj) {
-                var name = obj['name'],
-                    val = obj['value'];
-                debug.info(obj,name,val);
-                if (!val || val['py/object']) { val = '' };
-                inp[name] = val;
-                inp_gui.add(inp,name);
-            })
-            debug.info('inp',inp)
-
-            var out_gui = new dat.GUI({ autoPlace: false });
-            outputsDiv.html('')
-            outputsDiv[0].appendChild(out_gui.domElement);
-            var out = {};
-            jQuery.each(properties['Outputs'],function(idx,obj) {
-                var name = obj['name'],
-                    val = obj['value'];
-                debug.info(obj,name,val);
-                if (!val || val['py/object']) { val = '' };
-                out[name] = val;
-                out_gui.add(out,name);
-            })
-            debug.info('out',out)
-            /**/
+        if (properties && properties.type) {
+            nameHeader.html(properties.type+': '+self.pathname);
+            inputs.loadData(properties.Inputs);
+            outputs.loadData(properties.Outputs);
         }
         else {
-            nameHeader.html(self.pathname)
-            inputs.loadData([])
-            outputs.loadData([])
+            nameHeader.html(self.pathname);
+            inputs.loadData([]);
+            outputs.loadData([]);
         }
     }
 
@@ -105,19 +75,21 @@ openmdao.PropertiesFrame = function(id,model) {
                     loadTables({});
                 }
             }
-        )
-        return this
-    }
+        );
+        return this;
+    };
 
     /** if there is an object loaded, update it from the model */
     this.update = function() {
-        if (self.pathname && self.pathname.length>0)
-            self.editObject(self.pathname)
-    }
+        if (self.pathname && self.pathname.length>0) {
+            self.editObject(self.pathname);
+        }
+    };
 
-    model.addListener('',this.update)
-}
+    model.addListener('',this.update);
+};
 
 /** set prototype */
 openmdao.PropertiesFrame.prototype = new openmdao.BaseFrame();
 openmdao.PropertiesFrame.prototype.constructor = openmdao.PropertiesFrame;
+

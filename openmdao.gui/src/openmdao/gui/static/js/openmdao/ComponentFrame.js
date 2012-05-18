@@ -1,9 +1,10 @@
 
-var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ComponentFrame = function(model,pathname) {
     // TODO: hack alert... mangling pathname
-    openmdao.ComponentFrame.prototype.init.call(this,'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
+    openmdao.ComponentFrame.prototype.init.call(this,
+        'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
 
     /***********************************************************************
      *  private
@@ -13,12 +14,10 @@ openmdao.ComponentFrame = function(model,pathname) {
     var self = this,
         panes = {};
 
-    model.addListener('',this.update);
-
     /** load the table with the given properties */
     function loadTabs(properties) {
         if (!properties || properties.length === 0) {
-            alert('No properties found for ',pathname);
+            alert('No properties found for ',self.pathname);
             return;
         }
 
@@ -33,7 +32,7 @@ openmdao.ComponentFrame = function(model,pathname) {
         jQuery.each(properties,function (name,val) {
             if (name === 'type') {
                 if (self.elm.parent().hasClass('ui-dialog')) {
-                    self.elm.dialog("option","title",val+': '+pathname);
+                    self.elm.dialog("option","title",val+': '+self.pathname);
                 }
             }
             else {
@@ -70,43 +69,52 @@ openmdao.ComponentFrame = function(model,pathname) {
     function getContent(contentPane,name,val) {
         // TODO: get content pane type more dynamically (a look up table maybe?)
         if (name === 'Inputs') {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,true,true);
+            panes[name] = new openmdao.PropertiesPane(contentPane,model,
+                                self.pathname,name,true,true);
             panes[name].loadData(val);
         }
         else if (name === 'Outputs') {
-            panes[name] = new openmdao.PropertiesPane(contentPane,model,pathname,name,false,true);
+            panes[name] = new openmdao.PropertiesPane(contentPane,model,
+                                self.pathname,name,false,true);
             panes[name].loadData(val);
         }
         else if (name === 'CouplingVars') {
-            panes[name] = new openmdao.CouplingVarsPane(contentPane,model,pathname,name,true);
+            panes[name] = new openmdao.CouplingVarsPane(contentPane,model,
+                                self.pathname,name,true);
             panes[name].loadData(val);
         }
         else if (name === 'Objectives') {
-            panes[name] = new openmdao.ObjectivesPane(contentPane,model,pathname,name,true);
+            panes[name] = new openmdao.ObjectivesPane(contentPane,model,
+                                self.pathname,name,true);
             panes[name].loadData(val);
         }
         else if (name === 'Parameters') {
-            panes[name] = new openmdao.ParametersPane(contentPane,model,pathname,name,true);
+            panes[name] = new openmdao.ParametersPane(contentPane,model,
+                                self.pathname,name,true);
             panes[name].loadData(val);
         }
         else if ((name === 'EqConstraints') || (name === 'IneqConstraints')) {
-            panes[name] = new openmdao.ConstraintsPane(contentPane,model,pathname,name,true);
+            panes[name] = new openmdao.ConstraintsPane(contentPane,model,
+                                self.pathname,name,true);
             panes[name].loadData(val);
         }
         else if (name === 'Workflow') {
-            panes[name] = new openmdao.WorkflowPane(contentPane,model,pathname,name);
+            panes[name] = new openmdao.WorkflowPane(contentPane,model,
+                                self.pathname,name);
             panes[name].loadData(val);
         }
         else if (name === 'Dataflow') {
-            panes[name] = new openmdao.DataflowPane(contentPane,model,pathname,name);
+            panes[name] = new openmdao.DataflowPane(contentPane,model,
+                                self.pathname,name);
             panes[name].loadData(val);
         }
         else if (name === 'Slots') {
-            panes[name] = new openmdao.SlotsPane(contentPane,model,pathname,name,false);
+            panes[name] = new openmdao.SlotsPane(contentPane,model,
+                                self.pathname,name,false);
             panes[name].loadData(val);
         }
         else {
-            debug.warn("ComponentFrame: Unexpected object",pathname,name);
+            debug.warn("ComponentFrame: Unexpected object",self.pathname,name);
         }
     }
 
@@ -116,7 +124,8 @@ openmdao.ComponentFrame = function(model,pathname) {
                 panes[name].loadData(props);
             }
             else if (name !== 'type') {
-                debug.warn("ComponentFrame: Unexpected object",pathname,name,props);
+                debug.warn("ComponentFrame: Unexpected object",
+                                self.pathname,name,props);
             }
         });
     }
@@ -131,19 +140,20 @@ openmdao.ComponentFrame = function(model,pathname) {
         if (self.pathname && self.pathname.length>0) {
             self.editObject(self.pathname);
         }
-    }
+    };
 
     /** get the specified object from model, load properties into tabs */
     this.editObject = function(path) {
         var callback = loadData;
-        if (self.pathname !== path) {
+        if (!self.pathname || self.pathname !== path) {
             // if not already editing this object, create the tabbed panes
             self.pathname = path;
             callback = loadTabs;
         }
         model.getComponent(path, callback,
             function(jqXHR, textStatus, errorThrown) {
-                self.pathname = '';
+                debug.warn('ComponentFrame.editObject() Error:',
+                            jqXHR, textStatus, errorThrown);
                 // assume component has been deleted, so close frame
                 self.close();
             }
@@ -151,10 +161,9 @@ openmdao.ComponentFrame = function(model,pathname) {
         return this;
     };
 
-    if (pathname) {
-        this.editObject(pathname);
-    }
+    this.editObject(pathname);
 
+    model.addListener('',this.update);
 };
 
 /** set prototype */

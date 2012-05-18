@@ -116,9 +116,7 @@ openmdao.Model=function() {
 
    /** notify all generic listeners that something may have changed  */
     this.updateListeners = function() {
-        //debug.info('updateListeners',subscribers)
         var callbacks = subscribers[''];
-        //debug.info('updateListeners',callbacks)
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {

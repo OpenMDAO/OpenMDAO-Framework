@@ -26,8 +26,6 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
     dataflowDiv.css({'background':'gray'});
     //dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
 
-    model.addListener('',this.update);
-
     function loadData(data) {
         if (!data || !data.outputs || !data.inputs) {
             // don't have what we need, probably something got deleted
@@ -118,8 +116,8 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
         return this;
     };
 
-    update();
-
+    this.update();
+    model.addListener('',this.update);
 };
 
 /** set prototype */

@@ -1,7 +1,7 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ConsoleFrame = function(id,model) {  
+openmdao.ConsoleFrame = function(id,model) {
     openmdao.ConsoleFrame.prototype.init.call(this,id,'Console');
 
     /***********************************************************************
@@ -16,7 +16,8 @@ openmdao.ConsoleFrame = function(id,model) {
                           + '  <input type="text" id="command" />'
                           + '  <input type="submit" value="Submit" class="button" id="command-button"/>'
                           + '</form>').appendTo(this.elm),
-        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>").appendTo(historyBox);
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
+                      .appendTo(historyBox);
 
     // create context menu for history
     contextMenu.append(jQuery('<li>Trace</li>').click(function(ev) {
@@ -42,7 +43,7 @@ openmdao.ConsoleFrame = function(id,model) {
             command.val("");
             updateHistory('\n>>> '+cmd+'\n');
             model.issueCommand(cmd,
-                // success, record any response in the history & clear the command
+                // success, record any response in history & clear the command
                 function(responseText) {
                     if (responseText.length > 0) {
                         updateHistory(responseText);
@@ -55,28 +56,28 @@ openmdao.ConsoleFrame = function(id,model) {
             );
         }
         return false;
-    })
+    });
 
     /** scroll to bottom */
     function scrollToBottom() {
         var h = history.height(),
             hb = historyBox.height(),
-            hidden = h-hb
+            hidden = h-hb;
         historyBox.scrollTop(hidden);
     }
 
     /** update the history */
     function updateHistory(text) {
         if (text.length > 0) {
-            history.append(openmdao.Util.escapeHTML(text).replace(/\n\r?/g, '<br />'))
+            history.append(openmdao.Util.escapeHTML(text).
+                            replace(/\n\r?/g, '<br />'));
             scrollToBottom();
         }
     }
 
     // ask model for an update whenever something changes
-    model.addListener('outstream',updateHistory)
-
-}
+    model.addListener('outstream',updateHistory);
+};
 
 /** set prototype */
 openmdao.ConsoleFrame.prototype = new openmdao.BaseFrame();
@@ -84,7 +85,8 @@ openmdao.ConsoleFrame.prototype.constructor = openmdao.ConsoleFrame;
 
 /** initialize a console in a child window */
 openmdao.PopoutConsoleFrame = function() {
-	openmdao.model = opener.openmdao.model;
+    openmdao.model = opener.openmdao.model;
     jQuery('body').append('<div id="console"></div>');
-	new openmdao.ConsoleFrame("console",  openmdao.model) 
-}
+    frame = new openmdao.ConsoleFrame("console",  openmdao.model);
+};
+
