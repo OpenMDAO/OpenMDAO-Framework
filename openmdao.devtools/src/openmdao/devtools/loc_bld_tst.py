@@ -252,7 +252,7 @@ def activate_and_test(envdir, testargs=()):
         command = 'activate.bat && openmdao test %s' % ' '.join(testargs)
     else:
         devbindir = 'bin'
-        command = '. ./activate && openmdao test %s' % ' '.join(testargs)
+        command = '. ./activate && openmdao test %s 2>&1 | tee ../../test.out' % ' '.join(testargs)
         
     # activate the environment and run tests
     devbinpath = os.path.join(envdir, devbindir)
