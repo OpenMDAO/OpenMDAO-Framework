@@ -10,10 +10,8 @@
     },
     { "text": "View", "id": "view-menu",
       "items": [
-        { "text": "Code Editor",   "id": "view-code", "onclick": "jQuery('#code_tab').click();" },
         { "text": "Command Line",  "id": "view-cmdline", "onclick": "openmdao.Util.toggle_visibility('cmdform');" },
         { "text": "Console",       "id": "view-console", "onclick": "layout.open('south');" },
-        { "text": "Files",         "id": "view-files", "onclick": "layout.open('west'); jQuery('#ftree_tab').click();" },
         { "text": "Libraries",     "id": "view-libraries", "onclick": "layout.open('east'); jQuery('#palette_tab').click();" },
         { "text": "Objects",       "id": "view-objects", "onclick": "layout.open('west'); jQuery('#otree_tab').click();" },
         { "text": "Properties",    "id": "view-properties", "onclick": "layout.open('east'); jQuery('#properties_tab').click();" },
@@ -28,6 +26,7 @@
         { "text": "Plotter",       "id": "tools-plotter", "onclick": "new openmdao.Plotter()"},
         { "text": "Plugins",       "id": "tools-plugins", "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"},
         { "text": "3DTin",         "id": "tools-3dtin", "onclick": "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"}
+        { "text": "Code Editor",   "id": "code-editor", "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor', 768, 1024)"}      
       ]
     },
     { "text": "Help", "id": "help-menu",
