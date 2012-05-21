@@ -25,8 +25,8 @@
       "items": [
         { "text": "Plotter",       "id": "tools-plotter", "onclick": "new openmdao.Plotter()"},
         { "text": "Plugins",       "id": "tools-plugins", "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"},
-        { "text": "3DTin",         "id": "tools-3dtin", "onclick": "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"}
-        { "text": "Code Editor",   "id": "code-editor", "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor', 768, 1024)"}      
+        { "text": "3DTin",         "id": "tools-3dtin", "onclick": "openmdao.Util.popupWindow('http://www.3dtin.com','3DTin',768,1024)"},
+        { "text": "Code Editor",   "id": "tools-editor", "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor', 768, 1024)"}      
       ]
     },
     { "text": "Help", "id": "help-menu",

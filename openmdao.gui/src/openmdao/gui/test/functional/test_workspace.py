@@ -39,10 +39,6 @@ def _test_import(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    # View the Code Editor.
-    workspace_page('code_tab').click()
-    time.sleep(0.5)  # Just so we can see it.
-
     # View the Workflow Pane.
     workspace_page('workflow_tab').click()
     time.sleep(0.5)  # Just so we can see it.
@@ -50,18 +46,22 @@ def _test_import(browser):
     # View dataflow.
     workspace_page('dataflow_tab').click()
 
+    # Open code editor.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+
     # Add paraboloid file.
     import openmdao.examples.simple.paraboloid
     file_path = openmdao.examples.simple.paraboloid.__file__
-    workspace_page.add_file(file_path)
+    editor_page.add_file(file_path)
 
     # Add optimization_unconstrained file.
     import openmdao.examples.simple.optimization_unconstrained
     file_path = openmdao.examples.simple.optimization_unconstrained.__file__
-    workspace_page.add_file(file_path)
+    editor_page.add_file(file_path)
 
     # Check to make sure the files were added.
-    file_names = workspace_page.get_files()
+    file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
@@ -69,10 +69,17 @@ def _test_import(browser):
             % (expected_file_names, file_names))
 
     # Import * from paraboloid.
-    workspace_page.import_file('paraboloid.py')
+    editor_page.import_file('paraboloid.py')
 
     # Import * from optimization_unconstrained.
-    workspace_page.import_file('optimization_unconstrained.py')
+    editor_page.import_file('optimization_unconstrained.py')
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+# FIXME: refresh shouldn't be required.
+    workspace_page('view_menu').click()
+    workspace_page('refresh_button').click()
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
@@ -103,12 +110,16 @@ def _test_import(browser):
     workspace_page = project_info_page.load_project()
 
     # Check to see that the added files are still there.
-    workspace_page('files_tab').click()
-    file_names = workspace_page.get_files()
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    editor_page('files_tab').click()
+    file_names = editor_page.get_files()
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
+    browser.close()
+    browser.switch_to_window(workspace_window)
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
@@ -132,7 +143,7 @@ def _test_menu(browser):
 
 #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('code', 'cmdline', 'console', 'files', 'libraries', 'objects',
+    for item in ('cmdline', 'console', 'libraries', 'objects',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
@@ -150,8 +161,12 @@ def _test_newfile(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
+    # Open code editor.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+
     # Create the file (code editor automatically indents).
-    workspace_page.new_file('plane.py', """
+    editor_page.new_file('plane.py', """
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
@@ -165,7 +180,14 @@ f_x = Float(0.0, iotype='out')
 """)
 
     # Import it.
-    workspace_page.import_file('plane.py')
+    editor_page.import_file('plane.py')
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+# FIXME: refresh shouldn't be required.
+    workspace_page('view_menu').click()
+    workspace_page('refresh_button').click()
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
