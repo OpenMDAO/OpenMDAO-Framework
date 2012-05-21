@@ -63,6 +63,7 @@ class ProjDirFactory(Factory):
     def __init__(self, watchdir):
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
+        self.imported = {}  # imported files vs ctor dict
         startfiles = [sys.modules['openmdao.main.'+n].__file__.replace('.pyc','.py') 
                           for n in _startmods]
         self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
@@ -75,13 +76,36 @@ class ProjDirFactory(Factory):
 
         self.observer = Observer()
         self.observer.schedule(PyWatcher(self), path=watchdir, recursive=True)
+        self.observer.daemon = True
         self.observer.start()
 
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
         """
         """
-        pass
+        if server is None and res_desc is None and typ in self.analyzer.class_file_map:
+            fpath = self.analyzer.class_file_map[typ]
+            if fpath in self.imported:
+                ctor = self.imported[fpath][typ]
+            else:
+                modpath = self.analyzer.fileinfo[fpath].modpath
+                sys.path = [os.path.dirname(fpath)] + sys.path
+                try:
+                    __import__(modpath)
+                except ImportError as err:
+                    return None
+                finally:
+                    sys.path = sys.path[1:]
+                mod = sys.modules[modpath]
+                try:
+                    ctor = getattr(mod, typ.split('.')[-1])
+                except AttributeError, err:
+                    return None
+                visitor = self.analyzer.fileinfo[fpath]
+                self.imported[fpath] = {}
+                for cname in visitor.classes.keys():
+                    self.imported[fpath][cname] = getattr(mod, cname.split('.')[-1])
+            return ctor(**ctor_args)
 
     def get_available_types(self, predicate=is_plugin):
         """Return a list of available types that cause predicate(classname, metadata) to
@@ -100,7 +124,8 @@ class ProjDirFactory(Factory):
     def on_modified(self, fpath):
         if os.path.isdir(fpath):
             return
-        self.on_deleted(fpath)
+        if fpath in self.analyzer.fileinfo:
+            self.on_deleted(fpath)
         visitor = self.analyzer.analyze_file(fpath)
 
     def on_deleted(self, fpath):
@@ -108,13 +133,12 @@ class ProjDirFactory(Factory):
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_deleted(pyfile)
         else:
-            for modpath, info in self.analyzer.fileinfo.items():
-                if info.fname == fpath:
-                    self.analyzer.graph.remove_nodes_from(info.classes.keys())
-                    del self.analyzer.fileinfo[modpath]
-                    break
+            self.analyzer.remove_file(fpath)
 
     def cleanup(self):
+        """If this factory is removed from the FactoryManager during execution, this function
+        will stop the watchdog observer thread.
+        """
         self.observer.stop()
         self.observer.join()
 

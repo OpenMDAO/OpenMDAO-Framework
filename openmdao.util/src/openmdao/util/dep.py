@@ -53,14 +53,14 @@ def _to_str(arg):
     return myvisitor.get_value()
 
 
-def _real_name(name, finfo):
+def _real_name(name, modinfo):
     """Given the name of an object, return the full name (including package)
     from where it is actually defined.
     """
     while True:
         parts = name.rsplit('.', 1)
-        if len(parts) > 1 and parts[0] in finfo:
-            trans = finfo[parts[0]].localnames.get(parts[1], parts[1])
+        if len(parts) > 1 and parts[0] in modinfo:
+            trans = modinfo[parts[0]].localnames.get(parts[1], parts[1])
             if trans == name:
                 return trans
             else:
@@ -84,7 +84,7 @@ class ClassInfo(object):
                     args.append(name)
                 self.entry_points.append((args[0],args[1],name))
         
-    def resolve_true_basenames(self, finfo):
+    def resolve_true_basenames(self, modinfo):
         """Take module pathnames of base classes that may be an indirect names and
         convert them to their true absolute module pathname.  For example,
         "from openmdao.main.api import Component" implies the module
@@ -93,9 +93,9 @@ class ClassInfo(object):
         "from openmdao.main.component import Component," so the true
         module pathname of Component is ``openmdao.main.component.Component``.
         
-        finfo: list
+        modinfo: list
         """
-        self.bases = [_real_name(b, finfo) for b in self.bases]
+        self.bases = [_real_name(b, modinfo) for b in self.bases]
         
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -147,7 +147,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         finally:
             f.close()
         
-    def translate(self, finfo):
+    def translate(self, tree_analyzer):
         """Take module pathnames of classes that may be indirect names and
         convert them to their true absolute module pathname.  For example,
         "from openmdao.main.api import Component" implies the module
@@ -157,7 +157,8 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         module pathname of Component is ``openmdao.main.component.Component``.
         """
         for classinfo in self.classes.values():
-            classinfo.resolve_true_basenames(finfo)
+            classinfo.resolve_true_basenames(tree_analyzer.modinfo)
+            tree_analyzer.class_file_map[classinfo.name] = self.fname
                             
     def visit_ClassDef(self, node):
         """This executes every time a class definition is parsed."""
@@ -234,16 +235,19 @@ class PythonSourceTreeAnalyser(object):
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
             
         self.exclude = exclude
+        self.modinfo = {}
         self.fileinfo = {}
+        self.class_file_map = {}
             
         self._analyze(startfiles)
             
     def analyze_file(self, pyfile, first_pass=False):
         myvisitor = PythonSourceFileAnalyser(pyfile)
-        self.fileinfo[get_module_path(pyfile)] = myvisitor
+        self.modinfo[get_module_path(pyfile)] = myvisitor
+        self.fileinfo[myvisitor.fname] = myvisitor
         
         if not first_pass:
-            myvisitor.translate(self.fileinfo)
+            myvisitor.translate(self)
             myvisitor.update_graph(self.graph)
             myvisitor.update_ifaces(self.graph)
             
@@ -272,11 +276,11 @@ class PythonSourceTreeAnalyser(object):
         #       won't be included in the translation.  This means that
         #       openmdao.main.api.Component will not be translated to
         #       openmdao.main.component.Component like it should.
-        for visitor in self.fileinfo.values():
-            visitor.translate(self.fileinfo)
+        for visitor in self.modinfo.values():
+            visitor.translate(self)
     
         # build the inheritance/interface graph
-        for visitor in self.fileinfo.values():
+        for visitor in self.modinfo.values():
             visitor.update_graph(self.graph)
             
         # now, update ifaces metadata for all of the classinfo objects in the graph
@@ -288,8 +292,17 @@ class PythonSourceTreeAnalyser(object):
                 if inheritor not in ifaces:
                     self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',set()).add(iface)
         
-    #def remove_module(self, modname):
-        #mod = self.fileinfo[modname]
+    def remove_file(self, fname):
+        fvisitor = self.fileinfo[fname]
+        del self.fileinfo[fname]
+        del self.modinfo[fvisitor.modpath]
+        nodes = []
+        for klass, fpath in self.class_file_map.items():
+            if fpath == fname:
+                nodes.append(klass)
+        self.graph.remove_nodes_from(nodes)
+        for klass in nodes:
+            del self.class_file_map[klass]
         
     def find_inheritors(self, base):
         """Returns a list of names of classes that inherit from the given base class."""

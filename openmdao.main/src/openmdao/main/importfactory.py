@@ -24,7 +24,6 @@ class ImportFactory(Factory):
         name as the module. The module must be importable in the current Python
         environment.
         """
-                
         if server is not None or version is not None:
             return None
         if res_desc is not None and len(res_desc)>0:

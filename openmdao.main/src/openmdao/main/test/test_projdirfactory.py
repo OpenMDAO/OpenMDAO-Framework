@@ -6,7 +6,8 @@ import time
 import os
 
 from openmdao.util.fileutil import build_directory
-from openmdao.main.projdirfactory import ProjDirFactory
+from openmdao.main.projdirfactory import ProjDirFactory, _startmods
+from openmdao.main.driver import Driver
 
 _dstruct = {
     "mycomp.py": 
@@ -50,6 +51,16 @@ class ProjDirFactoryTestCase(unittest.TestCase):
                     self.assertEqual(set(meta['ifaces']), set(['IContainer','IComponent']))
                 else:
                     self.fail("type %s was not expected" % typ)
+            self.assertEqual(len(pdf.analyzer.fileinfo), 2+len(_startmods))
+            self.assertEqual(len(pdf.analyzer.modinfo), 2+len(_startmods))
+            self.assertTrue('mydrv.MyDrv' in pdf.analyzer.class_file_map)
+            self.assertTrue('mycomp.MyComp' in pdf.analyzer.class_file_map)
+            
+            # now try creating a MyDrv
+            mydrv = pdf.create('mydrv.MyDrv')
+            self.assertTrue(isinstance(mydrv, Driver))
+            
+            # now create a new file
             with open(os.path.join(self.tdir, 'mycomp2.py'), 'w') as f:
                 f.write("""
 from openmdao.main.api import Component
@@ -63,6 +74,10 @@ class MyComp2(Component):
             for typ,meta in types:
                 if typ=='mycomp2.MyComp2':
                     self.assertEqual(set(meta['ifaces']), set(['IContainer','IComponent']))
+                    
+            self.assertEqual(len(pdf.analyzer.fileinfo), 3+len(_startmods))
+            self.assertEqual(len(pdf.analyzer.modinfo), 3+len(_startmods))
+            self.assertTrue('mycomp2.MyComp2' in pdf.analyzer.class_file_map)
             
             # now test removal
             os.remove(os.path.join(self.tdir, 'mycomp2.py'))
@@ -70,6 +85,9 @@ class MyComp2(Component):
             types = pdf.get_available_types()
             typenames = [n for n,mdata in types]
             self.assertEqual(set(typenames), set(expected))
+            self.assertEqual(len(pdf.analyzer.fileinfo), 2+len(_startmods))
+            self.assertEqual(len(pdf.analyzer.modinfo), 2+len(_startmods))
+            self.assertTrue('mycomp2.MyComp2' not in pdf.analyzer.class_file_map)
             
             # now try modifying an existing file
             with open(os.path.join(self.tdir, 'mydrv.py'), 'w') as f:

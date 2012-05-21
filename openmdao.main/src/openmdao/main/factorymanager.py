@@ -9,7 +9,6 @@ __all__ = [ "create", "register_class_factory", "get_available_types" ]
 
 
 import os
-import atexit
 
 from pkg_resources import parse_version
 
@@ -47,11 +46,6 @@ def remove_class_factory(factory):
             _factories.remove(factory)
             return
 
-def _cleanup():
-    for factory in _factories:
-        if hasattr(factory, 'cleanup'):
-            factory.cleanup()
-
 def _cmp(tup1, tup2):
     s1 = tup1[0].lower()
     s2 = tup2[0].lower()
@@ -88,4 +82,3 @@ register_class_factory(_pkg_res_factory)
 # register factory for simple imports
 register_class_factory(ImportFactory())
 
-atexit.register(_cleanup)

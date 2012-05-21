@@ -172,7 +172,7 @@ class ObjServerFactory(Factory):
     @rbac('*')
     def get_available_types(self, groups=None):
         """
-        Returns a set of tuples of the form ``(typename, dist_version)``,
+        Returns a set of tuples of the form ``(typename, metadata)``,
         one for each available plugin type in the given entry point groups.
         If groups is *None,* return the set for all openmdao entry point groups.
         """
