@@ -8,25 +8,23 @@ openmdao.Model=function() {
      ***********************************************************************/
 
     var self = this,
-        outstream_topic = 'outstream',
         outstream_opened = false,
         pubstream_opened = false,
+        sockets = {},
         subscribers = {};
 
-    this.outstream_socket = null;
-    this.pubstream_socket = null;
-    
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
            handler:    the message handler for the websocket
     */
-    function open_websocket(url,socket,handler) {
-        // make ajax call to get outstream websocket
+    function open_websocket(url,handler) {
+        // make ajax call (to url) to get the address of the websocket
         jQuery.ajax({
             type: 'GET',
             url:  url,
             success: function(addr) {
-                socket = openmdao.Util.openWebSocket(addr,handler);
+                sockets[url] = openmdao.Util.openWebSocket(addr,handler);
+                debug.info('opened socket at',url,sockets[url]);
             },
             error: function(jqXHR, textStatus, err) {
                 debug.error('Error getting websocket url',jqXHR,textStatus,err);
@@ -34,55 +32,63 @@ openmdao.Model=function() {
         });
     }
 
-    /** initialize the outstream websocket */
-    function open_outstream_socket(topic) {
-        open_websocket('outstream', this.outstream_socket,
-            function(data) {
-                var callbacks = subscribers[topic];
-                if (callbacks) {
-                    for (i = 0; i < callbacks.length; i++) {
-                        if (typeof callbacks[i] === 'function') {
-                            callbacks[i](data);
-                        }
-                        else {
-                            debug.error('Model: invalid callback for topic:',
-                                        topic,callbacks[i]);
-                        }
-                    }
-                }
-            }
-        );
+    /** close all websockets */
+    function close_websockets(reason) {
+        jQuery.each(sockets,function(idx,socket) {
+            debug.info('closing websocket',socket);
+            socket.close(1000,reason);
+        });
     }
 
-    /** initialize the publisher websocket */
-    function open_pubstream_socket() {
-        open_websocket('pubstream', this.pubstream_socket,
-            function(message) {
-                try {
-                    message = jQuery.parseJSON(message);
-                    var topic = message[0];
-                    if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                        debug.info('Model pubstream message',message);
-                    }
-                    var callbacks = subscribers[message[0]];
-                    if (callbacks) {
-                        for (i = 0; i < callbacks.length; i++) {
-                            if (typeof callbacks[i] === 'function') {
-                                callbacks[i](message);
-                            }
-                            else {
-                                debug.error('Model: invalid callback for topic:',
-                                            topic,callbacks[i]);
-                            }
-                        }
-                    }
+    /** handle an output message, which is just passed on to all subscribers */ 
+    function handleOutMessage(message) {
+        var callbacks = subscribers['outstream'];
+        if (callbacks) {
+            for (i = 0; i < callbacks.length; i++) {
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](message);
                 }
-                catch(err) {
-                    debug.error('Model: Error parsing pubstream message',
-                                err, message);
+                else {
+                    debug.error('Model: invalid callback for topic:',
+                                topic,callbacks[i]);
                 }
             }
-        );
+        }
+    }
+
+    /** handle a published message, which has a topic
+        the message is passed only to subscribers of that topic
+    */
+    function handlePubMessage(message) {
+        debug.info('handlePubMessage subscribers:',message);
+        if (message.indexOf("exec_state")<0) {
+            debug.info('Model pubstream message',message);
+        }
+        try {
+            message = jQuery.parseJSON(message);
+            var topic = message[0];
+            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                debug.info('Model pubstream parsed message',message);
+            }
+            debug.info('handlePubMessage subscribers:',subscribers);
+            var callbacks = subscribers[message[0]];
+            debug.info('handlePubMessage callbacks:',callbacks);
+            if (callbacks) {
+                for (i = 0; i < callbacks.length; i++) {
+                    if (typeof callbacks[i] === 'function') {
+                        callbacks[i](message);
+                    }
+                    else {
+                        debug.error('Model: invalid callback for topic:',
+                                    topic,callbacks[i]);
+                    }
+                }
+            }
+        }
+        catch(err) {
+            debug.error('Model: Error parsing pubstream message',
+                        err, message);
+        }
     }
 
     /***********************************************************************
@@ -97,27 +103,31 @@ openmdao.Model=function() {
             subscribers[topic].push(callback);
         }
         else {
-            if (topic === outstream_topic && !outstream_opened) {
+            if (topic === 'outstream' && !outstream_opened) {
+                // if outstream socket is not opened yet, open it
                 outstream_opened = true;
-                open_outstream_socket(outstream_topic);
+                open_websocket('outstream', handleOutMessage);
             }
             else {
+                // if pubstream socket is not opened yet, open it
                 if (!pubstream_opened) {
                     pubstream_opened = true;
-                    open_pubstream_socket();
+                    open_websocket('pubstream', handlePubMessage);
                 }
+                // tell server to publish the topic (exec_state is automatic)
                 if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
                     jQuery.ajax({
                         type: 'GET',
                         url:  'publish',
-                        dataType: 'json',
                         data: {'topic': topic}
                     });
                 }
             }
             subscribers[topic] = [ callback ];
         }
+        debug.info('Model.addListener:',topic,subscribers);
     };
+
 
    /** notify all generic listeners that something may have changed  */
     this.updateListeners = function() {
@@ -483,34 +493,19 @@ openmdao.Model=function() {
 
     /** reload the model */
     this.reload = function() {
-        if (this.outstream_socket) {
-            this.outstream_socket.close(1000,'reload');
-        }
-        if (this.pubstream_socket) {
-            this.pubstream_socket.close(1000,'reload');
-        }
+        close_websockets('reload');
         window.location.replace('/workspace/project');
     };
 
     /** exit the model */
     this.close = function() {
-        if (this.outstream_socket) {
-            this.outstream_socket.close(1000,'close');
-        }
-        if (this.pubstream_socket) {
-            this.pubstream_socket.close(1000,'close');
-        }
+        close_websockets('close');
         window.location.replace('/workspace/close');
     };
 
     /** exit the model */
     this.exit = function() {
-        if (this.outstream_socket) {
-            this.outstream_socket.close(1000,'exit');
-        }
-        if (this.pubstream_socket) {
-            this.pubstream_socket.close(1000,'exit');
-        }
+        close_websockets('exit');
         window.location.replace('/exit');
     };
 

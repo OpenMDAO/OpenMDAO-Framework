@@ -314,7 +314,7 @@ openmdao.Util = {
             if (socket === null || socket.readyState > 0) {
                 socket = new WebSocket(addr);
                 socket.onopen = function (e) {
-                    debug.info('websocket opened',socket,e);
+                    debug.info('websocket opened',socket,e,handler);
                 };
                 socket.onclose = function (e) {
                     debug.info('websocket closed',socket,e);
@@ -323,6 +323,7 @@ openmdao.Util = {
                     }
                 };
                 socket.onmessage = function(e) {
+                    debug.info('websocket message',socket,e,handler);
                     handler(e.data);
                 };
                 socket.onerror = function (e) {
@@ -338,7 +339,10 @@ openmdao.Util = {
 
         connect();
 
+        debug.info('Util.openWebSocket returning socket =',socket);
+
         return socket;
     }
 
 };
+

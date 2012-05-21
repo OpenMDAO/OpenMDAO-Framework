@@ -42,7 +42,6 @@ openmdao.DataflowFigure=function(model,pathname,type,valid){
     this.margin = 20;
 
     // set color based on valid status
-    debug.info('DataflowFigure()',pathname,' valid=',valid);
     if (this.valid === true) {
         this.setColor(new draw2d.Color(0,255,0));
     }

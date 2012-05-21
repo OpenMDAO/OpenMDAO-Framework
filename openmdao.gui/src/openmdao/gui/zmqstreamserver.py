@@ -4,9 +4,6 @@ import time
 import traceback
 import subprocess
 
-import jsonpickle
-import cPickle as pickle
-
 from optparse import OptionParser
 
 import zmq
@@ -15,7 +12,10 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
-debug = False
+import jsonpickle
+import cPickle as pickle
+
+debug = True
 
 
 def DEBUG(msg):
@@ -54,25 +54,34 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
-        print 'message:', message
+        DEBUG('len(message):' + str(len(message)))
         if len(message) == 1:
+            message = message[0]
             try:
-                message = message[0]
-                #if not isinstance(message, unicode):
-                #    message = message.decode(self.enc, 'replace')
+                if not isinstance(message, unicode):
+                    message = message.decode(self.enc, 'replace')
+                print '>>>>>>>>>>>>  writing message:', message
                 self.write_message(message)
             except Exception, err:
-                DEBUG('Unable to write message to stream:')
-                DEBUG('message:' + message)
-                print err
+                print 'Unable to write message to stream:'
+                print '    message:' + message
+                print 'Error:', err
         elif len(message) == 2:
-            try:
                 self.message_count += 1
-                self.write_message([message[0], message[1]])
-            except Exception, err:
-                #DEBUG('Unable to write JSON to stream:')
-                #DEBUG('JSON:' + json)
-                print err
+                topic = message[0]
+                #content = pickle.loads(message[1])
+                content = message[1]    # should be just a jsonpickle string
+                DEBUG('>>>>>>>>>>>>  writing message topic: ' + topic)
+                DEBUG('>>>>>>>>>>>>  writing message content: ' + content)
+                #                try:
+                #                    number = float(content)
+                #                except (ValueError, TypeError):
+                #                    json = jsonpickle.encode([topic, content])
+                #                else:
+                #                    json = jsonpickle.encode([topic, number])
+                #                DEBUG('>>>>>>>>>>>>  writing message json: ' + json)
+                #                self.write_message(json)
+                self.write_message([topic, content])
 
     def on_message(self, message):
         pass
