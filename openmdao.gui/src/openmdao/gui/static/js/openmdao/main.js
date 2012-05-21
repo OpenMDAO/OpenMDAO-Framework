@@ -32,30 +32,25 @@ jQuery(function() {
 
         var data = new openmdao.DataflowDiagram("dataflow",model,''),
             work = new openmdao.WorkflowDiagram("workflow",model,''),
-            code = new openmdao.CodeEditor("code",model),
             prop = new openmdao.PropertiesEditor("propertieseditor",model);
 
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
         var central_label = jQuery('#central_label'),
             dataflow_tab  = jQuery('#dataflow_tab'),
-            workflow_tab  = jQuery('#workflow_tab'),
-            code_tab      = jQuery('#code_tab');
+            workflow_tab  = jQuery('#workflow_tab');
 
         dataflow_tab.click(function(e) { central_label.text(data.getPathname()); })
         workflow_tab.click(function(e)  { central_label.text(work.getPathname()); })
-        code_tab.click(function(e)      { central_label.text(code.getPathname()); })
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
-        function code_fn(path) { code.editFile(path);     code_tab.click(); }
         function prop_fn(path) { prop.editObject(path);   }
 
         function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800) }
         function comp_fn(path) { new openmdao.ComponentEditor(model,path) };
 
-        new openmdao.ObjectTree("otree", model, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.FileTree("ftree",   model, code_fn, geom_fn);        
+        new openmdao.ObjectTree("otree", model, prop_fn, comp_fn, work_fn, data_fn);       
         new openmdao.Palette("palette",  model)        
         new openmdao.Console("console",  model);
 
