@@ -1,32 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
-
-// TODO: may try es5 compat lib like https://bitbucket.org/JustinLove/es5/
-
-/**
- * this is for older browsers (e.g. ffox 3.x) that don't implement ECMAScript5 create()
- * @see http://javascript.crockford.com/prototypal.html
- */
- if (typeof Object.create !== 'function') {
-    //alert("You are using an older browser that is not supported.  We'll try anyway, but please upgrade to Chrome or Firefox 5...")
-    Object.create = function (o) {
-        function F() {}
-        F.prototype = o;
-        return new F();
-    };
-}
-
-/**
- * this is for older browsers (e.g. ffox 3.x) that don't implement ECMAScript5 Object.keys()
- * @see https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/Object/keys
- */
-if(!Object.keys) Object.keys = function(o){
-    if (o !== Object(o))
-        throw new TypeError('Object.keys called on non-object');
-    var ret=[],p;
-    for(p in o) if(Object.prototype.hasOwnProperty.call(o,p)) ret.push(p);
-    return ret;
-}
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 /**
  * utility functions used in the openmdao gui
@@ -40,10 +13,12 @@ openmdao.Util = {
      */
     toggle_visibility: function(id) {
         var e = document.getElementById(id);
-        if (e.style.display == 'block')
+        if (e.style.display === 'block') {
             e.style.display = 'none';
-        else
+        }
+        else {
             e.style.display = 'block';
+        }
     },
 
     /**
@@ -53,7 +28,7 @@ openmdao.Util = {
     toggle_screen: function() {
         var id = '_smokescreen_',
             el = document.getElementById(id);
-        if (el == null) {
+        if (el === null) {
             el = document.createElement('div');
             el.setAttribute('id',id);
             el.style.cssText='position:fixed;top:0px;left:0px;'+
@@ -62,10 +37,12 @@ openmdao.Util = {
                              'z-index:999;display:none';
             document.body.appendChild(el);
         }
-        if (el.style.display == 'block')
+        if (el.style.display === 'block') {
             el.style.display = 'none';
-        else
+        }
+        else {
             el.style.display = 'block';
+        }
     },
 
     /**
@@ -121,23 +98,24 @@ openmdao.Util = {
      *  escape anything in the text that might look like HTML, etc.
      */
     escapeHTML: function(text) {
-        var result = "";
-        for(var i = 0; i < text.length; i++){
-            if(text.charAt(i) == "&"
+        var i = 0,
+            result = "";
+        for(i = 0; i < text.length; i++){
+            if(text.charAt(i) === "&"
                   && text.length-i-1 >= 4
-                  && text.substr(i, 4) != "&amp;"){
+                  && text.substr(i, 4) !== "&amp;"){
                 result = result + "&amp;";
-            } else if(text.charAt(i)== "<"){
+            } else if(text.charAt(i) === "<"){
                 result = result + "&lt;";
-            } else if(text.charAt(i)== ">"){
+            } else if(text.charAt(i) === ">"){
                 result = result + "&gt;";
-            } else if(text.charAt(i)== " "){
+            } else if(text.charAt(i) === " "){
                 result = result + "&nbsp;";
             } else {
                 result = result + text.charAt(i);
             }
         }
-        return result
+        return result;
     },
 
     /**
@@ -148,7 +126,7 @@ openmdao.Util = {
      */
     addLoadEvent: function(func) {
         var oldonload = window.onload;
-        if (typeof window.onload != 'function') {
+        if (typeof window.onload !== 'function') {
             window.onload = func;
         }
         else {
@@ -157,7 +135,7 @@ openmdao.Util = {
                     oldonload();
                 }
                 func();
-            }
+            };
         }
     },
 
@@ -178,14 +156,15 @@ openmdao.Util = {
      */
     promptForValue: function(prompt,callback) {
         // if the user didn't specify a callback, just return
-        if (typeof callback != 'function') {
+        if (typeof callback !== 'function') {
             return;
         }
 
         // Build dialog markup
         var win = jQuery('<div><p>'+prompt+':</p></div>');
-        var userInput = jQuery('<input type="text" style="width:100%"></input>').keypress(function(e) {
-            if (e.which == 13) {
+        var userInput = jQuery('<input type="text" style="width:100%"></input>');
+        userInput.keypress(function(e) {
+            if (e.which === 13) {
                 jQuery(win).dialog('close');
                 callback(jQuery(userInput).val());
             }
@@ -213,7 +192,8 @@ openmdao.Util = {
      * obj:     the object for which properties are to be displayed
      */
     dumpProps: function(obj) {
-        for (var prop in obj) {
+        var prop;
+        for (prop in obj) {
             debug.log(prop + ": " + obj[prop]);
         }
     },
@@ -292,13 +272,14 @@ openmdao.Util = {
 
     /** find the element with the highest z-index of those specified by the jQuery selector */
     getHighest: function (selector) {
-        var elems = jQuery(selector);
-        var highest_elm = null;
-        var highest_idx = 0;
-        for (var i = 0; i < elems.length; i++)  {
+        var elems = jQuery(selector),
+            highest_elm = null,
+            highest_idx = 0,
+            i = 0;
+        for (i = 0; i < elems.length; i++)  {
             var elem = elems[i][0];
             var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
-            if ((zindex > highest_idx) && (zindex != 'auto')) {
+            if ((zindex > highest_idx) && (zindex !== 'auto')) {
                 highest_elm = elem;
                 highest_idx = zindex;
             }
@@ -308,14 +289,14 @@ openmdao.Util = {
 
     /** rotate the page */
     rotatePage: function (x) {
-        x = parseInt(x);
+        x = parseInt(x,10);
         var rotateCSS = ' -moz-transform: rotate('+x+'deg); -moz-transform-origin: 50% 50%;'
                       + ' -webkit-transform: rotate('+x+'deg);-webkit-transform-origin: 50% 50%;'
                       + ' -o-transform: rotate('+x+'deg); -o-transform-origin: 50% 50%;'
                       + ' -ms-transform: rotate('+x+'deg); -ms-transform-origin: 50% 50%;'
                       + ' transform: rotate('+x+'deg); transform-origin: 50% 50%;';
         document.body.setAttribute('style',rotateCSS);
-    },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);}; return;},
+    },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);} return;},
 
     /** connect to websocket at specified address */
     openWebSocket: function(addr,handler,errHandler,retry,delay) {
@@ -327,33 +308,33 @@ openmdao.Util = {
 
         function connect_after_delay() {
             tid = setTimeout(connect, delay);
-        };
+        }
 
         function connect() {
-        	if (socket == null || socket.readyState > 0) {
-	        	socket = new WebSocket(addr);
-	            socket.onopen = function (e) {
-	                debug.info('websocket opened',socket,e);
-	            };
-	            socket.onclose = function (e) {
-	                debug.info('websocket closed',socket,e);
-	                if ((e.code == 1006) && (retry == true)) {
-	                	connect_after_delay();
-	                };
-	            };
-	            socket.onmessage = function(e) {
-	                handler(e.data);
-	            };
-	            socket.onerror = function (e) {
-	                if (typeof errHandler === 'function') {
-	                    errHandler(e);
-	                }
-	                else {
-	                    debug.error('websocket error',socket,e);
-	                };
-	            };
-        	};
-        };
+            if (socket === null || socket.readyState > 0) {
+                socket = new WebSocket(addr);
+                socket.onopen = function (e) {
+                    debug.info('websocket opened',socket,e);
+                };
+                socket.onclose = function (e) {
+                    debug.info('websocket closed',socket,e);
+                    if ((e.code === 1006) && (retry === true)) {
+                        connect_after_delay();
+                    }
+                };
+                socket.onmessage = function(e) {
+                    handler(e.data);
+                };
+                socket.onerror = function (e) {
+                    if (typeof errHandler === 'function') {
+                        errHandler(e);
+                    }
+                    else {
+                        debug.error('websocket error',socket,e);
+                    }
+                };
+            }
+        }
 
         connect();
 

@@ -149,6 +149,7 @@ openmdao.ComponentFrame = function(model,pathname) {
             // if not already editing this object, create the tabbed panes
             self.pathname = path;
             callback = loadTabs;
+            model.addListener(self.pathname,callback);
         }
         model.getComponent(path, callback,
             function(jqXHR, textStatus, errorThrown) {
@@ -163,7 +164,7 @@ openmdao.ComponentFrame = function(model,pathname) {
 
     this.editObject(pathname);
 
-    model.addListener('',this.update);
+    //model.addListener('',this.update);
 };
 
 /** set prototype */

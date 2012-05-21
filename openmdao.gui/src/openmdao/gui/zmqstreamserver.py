@@ -54,11 +54,12 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
+        print 'message:', message
         if len(message) == 1:
             try:
                 message = message[0]
-                if not isinstance(message, unicode):
-                    message = message.decode(self.enc, 'replace')
+                #if not isinstance(message, unicode):
+                #    message = message.decode(self.enc, 'replace')
                 self.write_message(message)
             except Exception, err:
                 DEBUG('Unable to write message to stream:')
@@ -67,18 +68,10 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
         elif len(message) == 2:
             try:
                 self.message_count += 1
-                topic = message[0]
-                content = pickle.loads(message[1])
-                try:
-                    number = float(content)
-                except ValueError, TypeError:
-                    json = jsonpickle.encode([topic, content])
-                else:
-                    json = jsonpickle.encode([topic, number])
-                self.write_message(json)
+                self.write_message([message[0], message[1]])
             except Exception, err:
-                DEBUG('Unable to write JSON to stream:')
-                DEBUG('JSON:' + json)
+                #DEBUG('Unable to write JSON to stream:')
+                #DEBUG('JSON:' + json)
                 print err
 
     def on_message(self, message):

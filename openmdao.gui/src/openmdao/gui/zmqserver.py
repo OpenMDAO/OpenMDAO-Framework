@@ -15,7 +15,7 @@ debug = True
 
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> ZMQServer --', msg
+        print '<<<' + str(os.getpid()) + '>>> ZMQServer --', msg
 
 
 class ZMQServer(object):
@@ -40,7 +40,7 @@ class ZMQServer(object):
         try:
             context = zmq.Context()
             socket = context.socket(zmq.PUB)
-            DEBUG('binding output to '+self.options.out_url)
+            DEBUG('binding output to ' + self.options.out_url)
             socket.bind(self.options.out_url)
             self.sysout = sys.stdout
             self.syserr = sys.stderr
@@ -50,7 +50,7 @@ class ZMQServer(object):
             print err, sys.exc_info()
 
         self.obj = self.ctor()
-        DEBUG('obj='+str(self.obj))
+        DEBUG('obj=' + str(self.obj))
         ZmqCompWrapper.serve(self.obj,
                              rep_url=self.options.rep_url,
                              pub_url=self.options.pub_url)

@@ -64,6 +64,7 @@ openmdao.PropertiesFrame = function(id,model) {
             self.pathname = path;
             inputs.pathname = path;
             outputs.pathname = path;
+            model.addListener(self.pathname,loadTables);
         }
         model.getComponent(path, loadTables,
             function(jqXHR, textStatus, errorThrown) {
@@ -86,7 +87,7 @@ openmdao.PropertiesFrame = function(id,model) {
         }
     };
 
-    model.addListener('',this.update);
+    //model.addListener('',this.update);
 };
 
 /** set prototype */

@@ -10,11 +10,12 @@ openmdao.Model=function() {
     var self = this,
         outstream_topic = 'outstream',
         outstream_opened = false,
-        outstream_socket = null,
         pubstream_opened = false,
-        pubstream_socket = null,
         subscribers = {};
 
+    this.outstream_socket = null;
+    this.pubstream_socket = null;
+    
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
            handler:    the message handler for the websocket
@@ -59,6 +60,10 @@ openmdao.Model=function() {
             function(message) {
                 try {
                     message = jQuery.parseJSON(message);
+                    var topic = message[0];
+                    if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                        debug.info('Model pubstream message',message);
+                    }
                     var callbacks = subscribers[message[0]];
                     if (callbacks) {
                         for (i = 0; i < callbacks.length; i++) {

@@ -534,3 +534,4 @@ class ConsoleServer(cmd.Cmd):
                 root = self.proj.__dict__[parts[0]]
                 rest = '.'.join(parts[1:])
                 root.register_published_vars(rest)
+

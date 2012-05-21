@@ -13,8 +13,6 @@ import pkg_resources
 import sys
 import weakref
 
-import cPickle as pickle
-
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
@@ -43,15 +41,14 @@ from openmdao.main.publisher import Publisher
 import openmdao.util.log as tracing
 
 
-
-class SimulationRoot (object):
+class SimulationRoot(object):
     """Singleton object used to hold root directory."""
 
     # Execution root directory. Root of all legal file paths.
     __root = None
 
     @staticmethod
-    def chroot (path):
+    def chroot(path):
         """Change to directory `path` and set the singleton's root.
         Normally not called but useful in special situations.
 
@@ -63,7 +60,7 @@ class SimulationRoot (object):
         SimulationRoot.get_root()
 
     @staticmethod
-    def get_root ():
+    def get_root():
         """Return this simulation's root directory path."""
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.path.realpath(os.getcwd())
@@ -72,7 +69,7 @@ class SimulationRoot (object):
         return SimulationRoot.__root
 
     @staticmethod
-    def legal_path (path):
+    def legal_path(path):
         """Return True if `path` is legal (descendant of our root).
 
         path: string
@@ -108,12 +105,10 @@ class DirectoryContext(object):
         self.component = weakref.ref(self.component)
 
 
-
-_iodict = { 'out': 'output', 'in': 'input' }
-
+_iodict = {'out': 'output', 'in': 'input'}
 
 
-class Component (Container):
+class Component(Container):
     """This is the base class for all objects containing Traits that are \
     accessible to the OpenMDAO framework and are "runnable."
     """
@@ -138,16 +133,17 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
 
-        self._exec_state = 'INVALID' # possible values: VALID, INVALID, RUNNING
+        self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
 
         # register callbacks for all of our 'in' traits
-        for name,trait in self.class_traits().items():
+        for name, trait in self.class_traits().items():
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
         # contains validity flag for each io Trait (inputs are valid since they're not connected yet,
         # and outputs are invalid)
-        self._valid_dict = dict([(name,t.iotype=='in') for name,t in self.class_traits().items() if t.iotype])
+        self._valid_dict = dict([(name, t.iotype == 'in') \
+            for name, t in self.class_traits().items() if t.iotype])
 
         # dependency graph between us and our boundaries (bookkeeps connections between our
         # variables and external ones).  This replaces self._depgraph from Container.
@@ -156,7 +152,7 @@ class Component (Container):
         # Components with input CaseIterators will be forced to execute whenever run() is
         # called on them, even if they don't have any invalid inputs or outputs.
         self._num_input_caseiters = 0
-        for name,trait in self.class_traits().items():
+        for name, trait in self.class_traits().items():
             # isinstance(trait.trait_type.klass,ICaseIterator) doesn't work here...
             if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
@@ -256,7 +252,7 @@ class Component (Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
-    def check_config (self):
+    def check_config(self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
         component and may be called explicitly at other times if desired.
@@ -322,8 +318,7 @@ class Component (Container):
             self.configure()
             self._call_configure = False
 
-
-    def _pre_execute (self, force=False):
+    def _pre_execute(self, force=False):
         """Prepares for execution by calling *cpath_updated()* and *check_config()* if
         their "dirty" flags are set, and by requesting that the parent Assembly
         update this Component's invalid inputs.
@@ -336,7 +331,8 @@ class Component (Container):
         if force:
             outs = self.invalidate_deps()
             if (outs is None) or outs:
-                if self.parent: self.parent.child_invalidated(self.name, outs)
+                if self.parent:
+                    self.parent.child_invalidated(self.name, outs)
         else:
             if not self.is_valid():
                 self._call_execute = True
@@ -346,10 +342,11 @@ class Component (Container):
                 # so we need to notify downstream comps so they grab our new outputs
                 outs = self.invalidate_deps()
                 if (outs is None) or outs:
-                    if self.parent: self.parent.child_invalidated(self.name, outs)
+                    if self.parent:
+                        self.parent.child_invalidated(self.name, outs)
 
-        if self.parent is None: # if parent is None, we're not part of an Assembly
-                                # so Variable validity doesn't apply. Just execute.
+        if self.parent is None:  # if parent is None, we're not part of an Assembly
+                                 # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
             valids = self._valid_dict
             for name in self.list_inputs():
@@ -370,8 +367,7 @@ class Component (Container):
             self.check_config()
             self._call_check_config = False
 
-
-    def execute (self):
+    def execute(self):
         """Perform calculations or other actions, assuming that inputs
         have already been set. This must be overridden in derived classes.
         """
@@ -420,7 +416,7 @@ class Component (Container):
 
         pass
 
-    def _post_execute (self):
+    def _post_execute(self):
         """Update output variables and anything else needed after execution.
         Overrides of this function must call this version.  This is only
         called if execute() actually ran.
@@ -436,12 +432,12 @@ class Component (Container):
         self._set_exec_state('VALID')
         self.publish_vars()
 
-    def _post_run (self):
+    def _post_run(self):
         """"Runs at the end of the run function, whether execute() ran or not."""
         pass
 
     @rbac('*', 'owner')
-    def run (self, force=False, ffd_order=0, case_id=''):
+    def run(self, force=False, ffd_order=0, case_id=''):
         """Run this object. This should include fetching input variables if necessary,
         executing, and updating output variables. Do not override this function.
 
@@ -567,7 +563,7 @@ class Component (Container):
         self.config_changed()
         if name not in self._valid_dict:
             if trait.iotype:
-                self._valid_dict[name] = trait.iotype=='in'
+                self._valid_dict[name] = trait.iotype == 'in'
             if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
 
@@ -608,14 +604,14 @@ class Component (Container):
             self._call_execute = True
             return False
         if self.parent is not None:
-            srccomps = [n for n,v in self.get_expr_sources()]
+            srccomps = [n for n, v in self.get_expr_sources()]
             if srccomps:
                 counts = self.parent.exec_counts(srccomps)
-                for count,tup in zip(counts, self._expr_sources):
+                for count, tup in zip(counts, self._expr_sources):
                     if count != tup[1]:
                         self._call_execute = True  # to avoid making this same check unnecessarily later
                         # update the count information since we've got it, to avoid making another call
-                        for i,tup in enumerate(self._expr_sources):
+                        for i, tup in enumerate(self._expr_sources):
                             self._expr_sources[i] = (tup[0], count)
                         return False
         return True
@@ -684,7 +680,7 @@ class Component (Container):
             of inputs with matching *external* connectivity status.
         """
         if self._connected_inputs is None:
-            nset = set([k for k,v in self.items(iotype='in')])
+            nset = set([k for k, v in self.items(iotype='in')])
             self._connected_inputs = self._depgraph.get_connected_inputs()
             nset.update(self._connected_inputs)
             self._input_names = list(nset)
@@ -694,7 +690,7 @@ class Component (Container):
                 return self._input_names
             elif connected is True:
                 return self._connected_inputs
-            else: # connected is False
+            else:  # connected is False
                 return [n for n in self._input_names if n not in self._connected_inputs]
 
         valids = self._valid_dict
@@ -706,7 +702,7 @@ class Component (Container):
         elif connected is False:
             return [n for n in ret if n not in self._connected_inputs]
 
-        return ret # connected is None, valid is not None
+        return ret  # connected is None, valid is not None
 
     def list_outputs(self, valid=None, connected=None):
         """Return a list of names of output values.
@@ -720,7 +716,7 @@ class Component (Container):
             of outputs with matching *external* connectivity status.
         """
         if self._connected_outputs is None:
-            nset = set([k for k,v in self.items(iotype='out')])
+            nset = set([k for k, v in self.items(iotype='out')])
             self._connected_outputs = self._depgraph.get_connected_outputs()
             nset.update(self._connected_outputs)
             self._output_names = list(nset)
@@ -730,7 +726,7 @@ class Component (Container):
                 return self._output_names
             elif connected is True:
                 return self._connected_outputs
-            else: # connected is False
+            else:  # connected is False
                 return [n for n in self._output_names if n not in self._connected_outputs]
 
         valids = self._valid_dict
@@ -742,14 +738,14 @@ class Component (Container):
         elif connected is False:
             return [n for n in ret if n not in self._connected_outputs]
 
-        return ret # connected is None, valid is not None
+        return ret  # connected is None, valid is not None
 
     def list_containers(self):
         """Return a list of names of child Containers."""
         if self._container_names is None:
-            visited = set([id(self),id(self.parent)])
+            visited = set([id(self), id(self.parent)])
             names = []
-            for n,v in self.__dict__.items():
+            for n, v in self.__dict__.items():
                 if is_instance(v, Container) and id(v) not in visited:
                     visited.add(id(v))
                     names.append(n)
@@ -790,7 +786,6 @@ class Component (Container):
         # problem we don't have to undo it
         for valids_update in valid_updates:
             self._valid_dict[valids_update[0]] = valids_update[1]
-
 
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
@@ -835,7 +830,7 @@ class Component (Container):
                                 break
                     if sname in matches:
                         break
-                else: # current tname wasn't matched to anything in self._delegates_
+                else:  # current tname wasn't matched to anything in self._delegates_
                     if hasattr(tdel, '_item_count') and tdel._item_count() > 0:
                         self.raise_exception("target delegate '%s' has no match" % tname,
                                              RuntimeError)
@@ -843,7 +838,7 @@ class Component (Container):
             for sname, tdel in matches.items():
                 delegate = self._delegates_[sname]
                 if hasattr(delegate, 'mimic'):
-                    delegate.mimic(tdel) # use target delegate as target
+                    delegate.mimic(tdel)  # use target delegate as target
 
         # now update any matching inputs from the target
         for inp in target.list_inputs():
@@ -869,7 +864,8 @@ class Component (Container):
         referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
-            self._expr_sources = [(v,0) for u,v in self.get_expr_depends() if v==self.name]
+            self._expr_sources = [(v, 0) \
+                for u, v in self.get_expr_depends() if v == self.name]
         return self._expr_sources
 
     def check_path(self, path, check_dir=False):
@@ -889,7 +885,7 @@ class Component (Container):
         return path
 
     @rbac('owner')
-    def get_abs_directory (self):
+    def get_abs_directory(self):
         """Return absolute path of execution directory."""
         path = self.directory
         if not isabs(path):
@@ -904,7 +900,7 @@ class Component (Container):
 
         return path
 
-    def push_dir (self, directory=None):
+    def push_dir(self, directory=None):
         """Change directory to dir, remembering the current directory for a
         later :meth:`pop_dir`. Returns the new absolute directory path."""
         if not directory:
@@ -921,7 +917,7 @@ class Component (Container):
         self._dir_stack.append(cwd)
         return directory
 
-    def pop_dir (self):
+    def pop_dir(self):
         """Return to previous directory saved by :meth:`push_dir`."""
         try:
             newdir = self._dir_stack.pop()
@@ -930,13 +926,13 @@ class Component (Container):
                                  IndexError)
         os.chdir(newdir)
 
-    def checkpoint (self, outstream, fmt=SAVE_CPICKLE):
+    def checkpoint(self, outstream, fmt=SAVE_CPICKLE):
         """Save sufficient information for a restart. By default, this
         just calls *save()*.
         """
         self.save(outstream, fmt)
 
-    def restart (self, instream):
+    def restart(self, instream):
         """Restore state using a checkpoint file. The checkpoint file is
         typically a delta from a full saved state file. If checkpoint is
         overridden, this should also be overridden.
@@ -997,7 +993,7 @@ class Component (Container):
         # We have to check relative paths like '../somedir' and if
         # we do that after adjusting a parent, things can go bad.
         components = [self]
-        components.extend([obj for n,obj in self.items(recurse=True)
+        components.extend([obj for n, obj in self.items(recurse=True)
                                                if is_instance(obj, Component)])
         try:
             for comp in sorted(components, reverse=True,
@@ -1044,7 +1040,7 @@ class Component (Container):
             for meta, path in fixup_meta:
                 meta.path = path
             for comp, name, path in fixup_fvar:
-                comp.set(name+'.path', path, force=True)
+                comp.set(name + '.path', path, force=True)
 
     def _fix_directory(self, comp, comp_dir, root_dir, require_relpaths,
                        fixup_dirs):
@@ -1116,7 +1112,7 @@ class Component (Container):
                 if isabs(fvar.path):
                     path = relpath(path, comp_dir)
                     fixup_fvar.append((comp, fvarname, fvar.path))
-                    comp.set(fvarname+'.path', path, force=True)
+                    comp.set(fvarname + '.path', path, force=True)
             elif require_relpaths:
                 self.raise_exception(
                     "Can't save, %s path '%s' doesn't start with '%s'."
@@ -1235,7 +1231,7 @@ class Component (Container):
                 top.directory = os.getcwd()
 
                 # Create any missing subdirectories.
-                for component in [c for n,c in top.items(recurse=True)
+                for component in [c for n, c in top.items(recurse=True)
                                               if is_instance(c, Component)]:
                     directory = component.get_abs_directory()
                     if not exists(directory):
@@ -1289,12 +1285,12 @@ class Component (Container):
                     self._list_files(path, package, rel_path, is_input, False,
                                      ftrait.binary, file_list, from_egg)
             if from_egg:
-                for component in [c for n,c in self.items(recurse=False)
+                for component in [c for n, c in self.items(recurse=False)
                                               if is_instance(c, Component)]:
                     path = rel_path
                     if component.directory:
                         # Always use '/' for resources.
-                        path += '/'+component.directory
+                        path += '/' + component.directory
                     component._restore_files(package, path, file_list,
                                              do_copy=False)
             if do_copy:
@@ -1372,8 +1368,8 @@ class Component (Container):
                 dst_dir = dirname(dst_name)
                 self._logger.info('Restoring files in %s', dst_dir)
             if observer is not None:
-                observer.copy(src_name, i/total_files,
-                              completed_bytes/total_bytes)
+                observer.copy(src_name, i / total_files,
+                              completed_bytes / total_bytes)
             if mode == 'symlink':
                 if from_egg:
                     src_path = pkg_resources.resource_filename(package,
@@ -1397,14 +1393,14 @@ class Component (Container):
                 dst.close()
             completed_bytes += size
 
-    def step (self):
+    def step(self):
         """For Components that run other components (e.g., Assembly or Drivers),
         this will run one Component and return. For simple components, it is
         the same as *run()*.
         """
         self.run()
 
-    def stop (self):
+    def stop(self):
         """Stop this component."""
         self._stop = True
 
@@ -1510,8 +1506,13 @@ class Component (Container):
             pub_vars = self._publish_vars.keys()
             if len(pub_vars) > 0:
                 pname = self.get_pathname()
-                lst = [('.'.join([pname, var]), getattr(self, var))
-                       for var in pub_vars]
+                lst = []
+                for var in pub_vars:
+                    key = '.'.join([pname, var])
+                    val = getattr(self, var)
+                    if has_interface(val, IComponent):
+                       val = val.get_attributes()
+                    lst.append((key, val))
                 pub.publish_list(lst)
 
     def get_attributes(self):
@@ -1674,7 +1675,8 @@ class Component (Container):
 
         return attrs
 
-def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no cover
+
+def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
     """prints out validity status of all input and output traits
     for the given object, optionally recursing down to all of its
     Component children as well.
@@ -1684,9 +1686,9 @@ def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no co
         for name, val in comp._valid_dict.items():
             if name not in exclude and (valid is None or val is valid):
                 if '.' in name:  # mark as fake boundary var
-                    result['.'.join([pname,'*%s*'%name])] = val
+                    result['.'.join([pname, '*%s*' % name])] = val
                 else:
-                    result['.'.join([pname,name])] = val
+                    result['.'.join([pname, name])] = val
         if recurse:
             for name in comp.list_containers():
                 obj = getattr(comp, name)
@@ -1694,6 +1696,6 @@ def _show_validity(comp, recurse=True, exclude=set(), valid=None): #pragma no co
                     _show_validity_(obj, recurse, exclude, valid, result)
     result = {}
     _show_validity_(comp, recurse, exclude, valid, result)
-    for name,val in sorted([(n,v) for n,v in result.items()], key=lambda v: v[0]):
-        print '%s: %s' % (name,val)
+    for name, val in sorted([(n, v) for n, v in result.items()], key=lambda v: v[0]):
+        print '%s: %s' % (name, val)
 

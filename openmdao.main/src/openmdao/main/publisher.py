@@ -1,8 +1,8 @@
 
 from threading import RLock
 
-#import json
-import pickle
+import jsonpickle
+#import pickle
 
 try:
     import zmq
@@ -35,7 +35,7 @@ class Publisher(object):
                 try:
                     self._sender.send_multipart([
                         topic,
-                        pickle.dumps(value, -1)
+                        jsonpickle.encode(value)
                     ])
                     if hasattr(self._sender, 'flush'):
                         self._sender.flush()
@@ -46,14 +46,15 @@ class Publisher(object):
     def publish_list(self, items):
         if Publisher.__enabled:
             with self._lock:
-                try: 
+                try:
                     for topic, value in items:
                         if isinstance(topic, unicode):
                             # in case someone snuck in a unicode name
-                            topic = topic.encode('utf-8', errors='backslashreplace')
+                            topic = topic.encode('utf-8',
+                                                 errors='backslashreplace')
                         self._sender.send_multipart([
                             topic,
-                            pickle.dumps(value, -1)
+                            jsonpickle.encode(value)
                         ])
                     if hasattr(self._sender, 'flush'):
                         self._sender.flush()
