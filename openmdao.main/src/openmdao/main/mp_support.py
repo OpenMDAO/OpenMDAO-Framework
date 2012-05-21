@@ -40,6 +40,7 @@ import hashlib
 import inspect
 import logging
 import os
+import signal
 import socket
 import sys
 import threading
@@ -235,12 +236,15 @@ class OpenMDAO_Server(Server):
         current_process()._manager_server = self
         try:
             try:
-                while 1:
+                while not self.stop:
                     try:
                         conn = self.listener.accept()
                     # Hard to cause this to happen.
                     except (OSError, IOError):  #pragma no cover
-                        continue
+                        if self.stop:
+                            break
+                        else:
+                            continue
 
                     address = self.listener.last_accepted
                     if address:
@@ -776,10 +780,27 @@ class OpenMDAO_Server(Server):
     # Will only be seen on remote.
     def shutdown(self, conn):  #pragma no cover
         """ Shutdown this process. """
-        self._logger.debug('received shutdown request, running exit functions')
+        self.stop = 888
+        msg = 'received shutdown request, running exit functions'
+        print msg
+        sys.stdout.flush()
+        self._logger.debug(msg)
+
         # Deprecated, but marginally better than atexit._run_exitfuncs()
         if hasattr(sys, 'exitfunc'):
-            sys.exitfunc()
+            try:
+                sys.exitfunc()
+            except Exception as exc:
+                msg = 'sys.exitfunc(): %s' % exc
+                print msg
+                sys.stdout.flush()
+                self._logger.debug(msg)
+
+        msg = '    exit functions complete'
+        print msg
+        sys.stdout.flush()
+        self._logger.debug(msg)
+
         super(OpenMDAO_Server, self).shutdown(conn)
 
 
@@ -1010,6 +1031,12 @@ class OpenMDAO_Manager(BaseManager):
                     process.join(timeout=1)
                     if process.is_alive():
                         logging.warning('manager still alive after terminate')
+                if process.is_alive():
+                    if sys.platform != 'win32':
+                        os.kill(process.pid. signal.SIGKILL)
+                        process.join(timeout=1)
+                        if process.is_alive():
+                            logging.warning('manager still alive after kill')
 
         state.value = State.SHUTDOWN
         try:

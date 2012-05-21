@@ -18,15 +18,21 @@ openmdao.Menu = function(id, json) {
         html += "</ul>"
         elm.html(html);
 
-        // add indicators and hovers to submenu parents
+        // Add indicators and hovers to submenu parents.
+        // The slides look pretty, but cause problems for Selenium,
+        // so they're disabled when testing.
         elm.find("li").each(function() {
             var header = jQuery(this).children(":first"),
                 menu = jQuery(this).find("ul"),
                 showMenu = function() {
-                    menu.stop(true, true).slideDown();
+                    if (typeof openmdao_test_mode == "undefined") {
+                        menu.stop(true, true).slideDown();
+                    }
                 },
                 hideMenu = function() {
-                    menu.stop(true, true).slideUp();
+                    if (typeof openmdao_test_mode == "undefined") {
+                        menu.stop(true, true).slideUp();
+                    }
                 },
                 settings = {
                     timeout: 500,
@@ -34,18 +40,18 @@ openmdao.Menu = function(id, json) {
                     out: hideMenu
                 };
 
-            // toggle this menu and hide all the others on click
-            //header.click(function() { 
-            //    menu.toggle();
-            //    header.parent().siblings().find("ul").hide();
-            //});
+            // When testing, toggle this menu and hide all the others on click.
+            header.click(function() { 
+                if (typeof openmdao_test_mode != "undefined") {
+                    menu.toggle();
+                    header.parent().siblings().find("ul").hide();
+                }
+            });
 
             if (menu.length > 0) {
                 jQuery("<span>").text("^").appendTo(header);
-                
                 jQuery(this).hoverIntent( settings );
-                
-                menu.find("li").click(function() { menu.toggle(); });                
+                menu.find("li").click(function() { menu.toggle(); });
             }
         });
     }
@@ -58,6 +64,9 @@ openmdao.Menu = function(id, json) {
         }
         if ('onclick' in menu) {
             menuHTML += 'onclick="'+menu.onclick+'" '
+        }
+        if ('id' in menu) {
+            menuHTML += 'id="'+menu.id+'" '
         }
         menuHTML += '>'+menu.text+'</a>'
         
