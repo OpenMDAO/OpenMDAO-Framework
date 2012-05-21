@@ -17,18 +17,18 @@ import networkx as nx
 from openmdao.util.fileutil import find_files, get_module_path
 
 # This is a dict containing all of the entry point groups that OpenMDAO uses to
-# identify plugins, and their corresponding Interface.
-plugin_groups = { 'openmdao.container': 'IContainer',
-                  'openmdao.component': 'IComponent', 
-                  'openmdao.driver': 'IDriver', 
-                  'openmdao.variable': 'IVariable', 
-                  'openmdao.surrogatemodel': 'ISurrogate',
-                  'openmdao.doegenerator': 'IDOEgenerator', 
-                  'openmdao.caseiterator': 'ICaseIterator', 
-                  'openmdao.caserecorder': 'ICaseRecorder', 
-                  'openmdao.architecture': 'IArchitecture', 
-                  'openmdao.optproblem': 'IOptProblem', 
-                  'openmdao.differentiator': 'IDifferentiator',
+# identify plugins, and their corresponding Interfaces.
+plugin_groups = { 'openmdao.container': ['IContainer'],
+                  'openmdao.component': ['IComponent','IContainer'], 
+                  'openmdao.driver': ['IDriver','IComponent','IContainer'], 
+                  'openmdao.variable': ['IVariable'], 
+                  'openmdao.surrogatemodel': ['ISurrogate'],
+                  'openmdao.doegenerator': ['IDOEgenerator'], 
+                  'openmdao.caseiterator': ['ICaseIterator'], 
+                  'openmdao.caserecorder': ['ICaseRecorder'], 
+                  'openmdao.architecture': ['IArchitecture'], 
+                  'openmdao.optproblem': ['IOptProblem','IAssembly','IComponent','IContainer'], 
+                  'openmdao.differentiator': ['IDifferentiator'],
                   }
 
 class StrVisitor(ast.NodeVisitor):
@@ -204,14 +204,15 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         """Update our ifaces metadata based on the contents of the inheritance/implements
         graph.
         """
-        for iface in plugin_groups.values():
-            try:
-                paths = nx.shortest_path(graph, source=iface)
-            except KeyError:
-                continue
-            for cname, cinfo in self.classes.items():
-                if cname in paths:
-                    cinfo.meta.setdefault('ifaces',set()).add(iface)
+        for ifaces in plugin_groups.values():
+            for iface in ifaces:
+                try:
+                    paths = nx.shortest_path(graph, source=iface)
+                except KeyError:
+                    continue
+                for cname, cinfo in self.classes.items():
+                    if cname in paths:
+                        cinfo.meta.setdefault('ifaces',set()).add(iface)
 
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None, startfiles=None):
@@ -279,7 +280,9 @@ class PythonSourceTreeAnalyser(object):
             visitor.update_graph(self.graph)
             
         # now, update ifaces metadata for all of the classinfo objects in the graph
-        ifaces = set(plugin_groups.values())
+        ifaces = set()
+        for lst in plugin_groups.values():
+            ifaces.update(lst)
         for iface in ifaces:
             for inheritor in self.find_inheritors(iface):
                 if inheritor not in ifaces:
