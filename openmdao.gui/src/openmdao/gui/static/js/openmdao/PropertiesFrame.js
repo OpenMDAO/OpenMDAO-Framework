@@ -53,6 +53,17 @@ openmdao.PropertiesFrame = function(id,model) {
             outputs.loadData([]);
         }
     }
+    
+    function handleMessage(message) {
+        if (message.length !== 2 || message[0] !== self.pathname) {
+            debug.warn('Invalid properties data for:',self.pathname,message);
+            debug.warn('message length',message.length,'topic',message[0]);
+        }
+        else {
+            properties = message[1];
+            loadTables(properties);
+        }
+    }
 
     /***********************************************************************
      *  privileged
@@ -61,10 +72,14 @@ openmdao.PropertiesFrame = function(id,model) {
     /** get the specified object from model, load properties into table */
     this.editObject = function(path) {
         if (self.pathname !== path) {
+           if (self.pathname) {
+                model.removeListener(self.pathname, handleMessage);
+            }
             self.pathname = path;
             inputs.pathname = path;
             outputs.pathname = path;
-            model.addListener(self.pathname,loadTables);
+            // listen for messages and update component properties accordingly
+            model.addListener(self.pathname, handleMessage);
         }
         model.getComponent(path, loadTables,
             function(jqXHR, textStatus, errorThrown) {

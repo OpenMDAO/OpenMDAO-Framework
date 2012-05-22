@@ -60,20 +60,13 @@ openmdao.Model=function() {
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
-        if (typeof message == 'string' || message instanceof String) {
+        if (typeof message === 'string' || message instanceof String) {
             message = jQuery.parseJSON(message);
         }
         var topic = message[0],
             callbacks = subscribers[message[0]];
-        if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-            debug.info('handlePubMessage message:', topic, message);
-            debug.info('handlePubMessage callbacks:', callbacks);
-        }
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
-                if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                    debug.info('handlePubMessage callback:', callbacks[i]);
-                }
                 if (typeof callbacks[i] === 'function') {
                     callbacks[i](message);
                 }
@@ -119,7 +112,18 @@ openmdao.Model=function() {
             }
             subscribers[topic] = [ callback ];
         }
-        debug.info('Model.addListener:',topic,'subscribers:',subscribers);
+    };
+
+    /** remove a subscriber (i.e. a function to be called)
+        for messages with the given topic
+    */
+    this.removeListener = function(topic, callback) {
+        if (subscribers.hasOwnProperty(topic)) {
+            var listeners = subscribers[topic];
+            while (listeners.indexOf(callback) !== -1) {
+              listeners.splice(listeners.indexOf(callback), 1);
+            }
+        }
     };
 
    /** notify all generic listeners that something may have changed  */

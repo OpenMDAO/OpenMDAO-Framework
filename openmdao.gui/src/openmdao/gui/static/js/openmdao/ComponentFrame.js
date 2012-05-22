@@ -130,6 +130,17 @@ openmdao.ComponentFrame = function(model,pathname) {
         });
     }
 
+    function handleMessage(message) {
+        if (message.length !== 2 || message[0] !== self.pathname) {
+            debug.warn('Invalid component data for:',self.pathname,message);
+            debug.warn('message length',message.length,'topic',message[0]);
+        }
+        else {
+            properties = message[1];
+            loadData(properties);
+        }
+    }
+            
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -145,23 +156,16 @@ openmdao.ComponentFrame = function(model,pathname) {
     /** get the specified object from model, load properties into tabs */
     this.editObject = function(path) {
         var callback = loadData;
-        if (!self.pathname || self.pathname !== path) {
-            // TODO: STOP LISTENING FOR PREVIOUS PATHNAME
-            // if not already editing this object, create the tabbed panes
+        if (self.pathname !== path) {
+           if (self.pathname) {
+                model.removeListener(self.pathname, handleMessage);
+            }
+
             self.pathname = path;
             callback = loadTabs;    // recreate tabs
 
             // listen for messages and update component properties accordingly
-            model.addListener(self.pathname, function(message) {
-                if (message.length !== 2 || message[0] !== self.pathname) {
-                    debug.warn('Invalid component data:',message);
-                }
-                else {
-                    properties = message[1];
-                    loadData(properties);
-                }
-            });
-
+            model.addListener(self.pathname, handleMessage);
         }
 
         model.getComponent(path, callback,
