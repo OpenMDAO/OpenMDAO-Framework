@@ -10,9 +10,6 @@ jQuery(function() {
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
-        north__size: 40,
-        north__resizable: false,
-        north_showOverflowOnHover: true
     });
 
     // add tabbed pane functionality
@@ -22,8 +19,15 @@ jQuery(function() {
 
     // add gui functionality to designated DOM nodes
     (function() {
+        if (opener && opener.openmdao && opener.openmdao.model ) {
+            openmdao.model = opener.openmdao.model;
+        }
+        else {
+            openmdao.model = new openmdao.Model();
+        }
+        
         var model = openmdao.model;
-
+        
         var code = new openmdao.CodeEditor("code",model);
 
         // create functions to load content into the different panes
