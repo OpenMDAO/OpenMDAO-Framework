@@ -11,9 +11,15 @@ from watchdog.events import FileSystemEventHandler
 
 import openmdao.main.api
 import openmdao.main.datatypes.api
+from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver, \
+                                     IDOEgenerator, ISurrogate, ICaseFilter, ICaseIterator, ICaseRecorder, \
+                                     IArchitecture, IDifferentiator
 
 from openmdao.main.factory import Factory
+from openmdao.main.factorymanager import get_available_types
 from openmdao.util.dep import PythonSourceTreeAnalyser, find_files, plugin_groups
+from openmdao.main.publisher import Publisher
+from openmdao.gui.util import packagedict
 
 
 class PyWatcher(FileSystemEventHandler):
@@ -23,19 +29,38 @@ class PyWatcher(FileSystemEventHandler):
         self.factory = factory
 
     def on_modified(self, event):
+        added_set = set()
+        changed_set = set()
+        deleted_set = set()
         if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
-            self.factory.on_modified(event.src_path)
+            self.factory.on_modified(event.src_path, added_set, changed_set, deleted_set)
+            self.factory.publish_changes(added_set, changed_set, deleted_set)
     
     def on_moved(self, event):
+        added_set = set()
+        changed_set = set()
+        deleted_set = set()
+        
+        publish = False
         if event._src_path and (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
-            self.factory.on_deleted(event._src_path)
+            self.factory.on_deleted(event._src_path, deleted_set)
+            publish = True
         
         if fnmatch.fnmatch(event._dest_path, '*.py'):
-            self.factory.on_modified(event._dest_path)
+            self.factory.on_modified(event._dest_path, added_set, changed_set, deleted_set)
+            publish = True
+            
+        if publish:
+            self.factory.publish_changes(added_set, changed_set, deleted_set)
+
     
     def on_deleted(self, event):
+        added_set = set()
+        changed_set = set()
+        deleted_set = set()
         if event.is_directory or fnmatch.fnmatch(event.src_path, '*.py'):
-            self.factory.on_deleted(event.src_path)
+            self.factory.on_deleted(event.src_path, deleted_set)
+            self.factory.publish_changes(added_set, changed_set, deleted_set)
             
     
 _startmods = [
@@ -50,9 +75,23 @@ _startmods = [
     'vartree',
     ]
 
+plugin_ifaces = set([
+    'IContainer', 
+    'IComponent', 
+    'IAssembly', 
+    'IDriver', 
+    'IDOEgenerator', 
+    'ISurrogate', 
+    'ICaseFilter', 
+    'ICaseIterator', 
+    'ICaseRecorder',
+    'IArchitecture', 
+    'IDifferentiator',
+])
+
 # predicate functions for selecting available types
 def is_plugin(name, meta):
-    return True
+    return 'ifaces' in meta and plugin_ifaces.intersection(meta['ifaces'])
 
 #
 
@@ -109,9 +148,9 @@ class ProjDirFactory(Factory):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
         """
-        typset = set(self.analyzer.graph.nodes()) - self._baseset
-        types = []
         graph = self.analyzer.graph
+        typset = set(graph.nodes()) - self._baseset
+        types = []
         
         for typ in typset:
             meta = graph.node[typ]['classinfo'].meta
@@ -119,7 +158,7 @@ class ProjDirFactory(Factory):
                 types.append((typ, meta))
         return types
 
-    def on_modified(self, fpath):
+    def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
             return
         if fpath in self.analyzer.fileinfo:
@@ -132,10 +171,10 @@ class ProjDirFactory(Factory):
                 finally:
                     sys.path = sys.path[1:]
                 self.imported[fpath] = (m, self.imported[fpath][1])
-            self.on_deleted(fpath)
+            self.on_deleted(fpath, deleted_set)
         visitor = self.analyzer.analyze_file(fpath)
 
-    def on_deleted(self, fpath):
+    def on_deleted(self, fpath, deleted_set):
         if os.path.isdir(fpath):
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_deleted(pyfile)
@@ -145,6 +184,9 @@ class ProjDirFactory(Factory):
             except KeyError:
                 pass
             self.analyzer.remove_file(fpath)
+            
+    def publish_changes(self, added_set, changed_set, deleted_set):
+        tdict = packagedict(get_available_types())
 
     def cleanup(self):
         """If this factory is removed from the FactoryManager during execution, this function

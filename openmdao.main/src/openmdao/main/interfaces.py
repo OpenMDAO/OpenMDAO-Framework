@@ -330,27 +330,6 @@ class IFactory (Interface):
         the FactoryManager prior to the factory being removed from the
         list of active factories.
         """
-
-#class IGeomQueryObject (Interface):
-    #"""A Component representing an object having physical dimensions and
-    #shape that can be queried for geometric information like surfaces, curves,
-    #etc.
-    
-    #The exact API is still to be determined, but will probably be based 
-    #largely on the querying portion of the CAPRI API.
-    
-    #"""
-
-    #modelID = Attribute("Identifies an assembly or a part.")
-
-
-
-#class IGeomModifier (Interface):
-    #"""An interface to a geometry kernel that allows new geometry to be
-    #created and modified.
-    
-    #The API is still to be determined.
-    #"""
     
 class IResourceAllocator (Interface):
     """An object responsible for allocating CPU/disk resources for a particular
@@ -704,7 +683,6 @@ class IHasObjective(IHasObjectives):
     def eval_objective():
         """Returns the value of the evaluated objective."""
 
-
 class IVariable(Interface):
     def validate(obj, name, value):
         """ Validates that the specified value is valid and can be assigned
@@ -719,4 +697,3 @@ def obj_has_interface(obj, *ifaces):
             return True
     return False
     
-

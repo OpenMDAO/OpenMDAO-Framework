@@ -6,8 +6,10 @@ import cmd
 import jsonpickle
 
 from setuptools.command import easy_install
+from zope.interface import implementedBy
+import networkx as nx
+#from enthought.traits.api import HasTraits
 
-from enthought.traits.api import HasTraits
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly, set_as_top
@@ -17,12 +19,10 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import project_from_archive
+from openmdao.main.projdirfactory import ProjDirFactory
 
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
-from zope.interface import implementedBy
-
-import networkx as nx
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
@@ -60,6 +60,7 @@ class ConsoleServer(cmd.Cmd):
         self.exc_info = None
 
         self.files = FileManager('files', publish_updates=True)
+        self.projdirfactory = ProjDirFactory(self.files.root_dir)
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -576,19 +577,20 @@ class ConsoleServer(cmd.Cmd):
     def get_workingtypes(self):
         ''' Return this server's user defined types.
         '''
-        g = self.proj.__dict__.items()
-        for k, v in g:
-            if not k in self.known_types and \
-               ((type(v).__name__ == 'classobj') or \
-                str(v).startswith('<class')):
-                try:
-                    obj = self.proj.__dict__[k]()
-                    if is_instance(obj, HasTraits):
-                        self.known_types.append((k, 'n/a'))
-                except Exception:
-                    # print 'Class', k, 'not included in working types'
-                    pass
-        return packagedict(self.known_types)
+        #g = self.proj.__dict__.items()
+        #for k, v in g:
+            #if not k in self.known_types and \
+               #((type(v).__name__ == 'classobj') or \
+                #str(v).startswith('<class')):
+                #try:
+                    #obj = self.proj.__dict__[k]()
+                    #if is_instance(obj, HasTraits):
+                        #self.known_types.append((k, 'n/a'))
+                #except Exception:
+                    ## print 'Class', k, 'not included in working types'
+                    #pass
+        #return packagedict(self.known_types)
+        return packagedict(self.projdirfactory.get_available_types())
 
     @modifies_model
     def load_project(self, filename):
