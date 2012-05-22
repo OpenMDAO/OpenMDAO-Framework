@@ -60,32 +60,28 @@ openmdao.Model=function() {
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
-        try {
+        if (typeof message == 'string' || message instanceof String) {
             message = jQuery.parseJSON(message);
-            var topic = message[0],
-                callbacks = subscribers[message[0]];
-            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                debug.info('handlePubMessage message:', topic, message);
-                debug.info('handlePubMessage callbacks:', callbacks);
-            }
-            if (callbacks) {
-                for (i = 0; i < callbacks.length; i++) {
-                    if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                        debug.info('handlePubMessage callback:', callbacks[i]);
-                    }
-                    if (typeof callbacks[i] === 'function') {
-                        callbacks[i](message);
-                    }
-                    else {
-                        debug.error('Model: invalid callback for topic:',
-                                    topic,callbacks[i]);
-                    }
+        }
+        var topic = message[0],
+            callbacks = subscribers[message[0]];
+        if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+            debug.info('handlePubMessage message:', topic, message);
+            debug.info('handlePubMessage callbacks:', callbacks);
+        }
+        if (callbacks) {
+            for (i = 0; i < callbacks.length; i++) {
+                if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                    debug.info('handlePubMessage callback:', callbacks[i]);
+                }
+                if (typeof callbacks[i] === 'function') {
+                    callbacks[i](message);
+                }
+                else {
+                    debug.error('Model: invalid callback for topic:',
+                                topic,callbacks[i]);
                 }
             }
-        }
-        catch(err) {
-            debug.error('Model: Error parsing pubstream message',
-                        err, message);
         }
     }
 

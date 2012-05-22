@@ -107,6 +107,7 @@ class DirectoryContext(object):
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+__attributes__ = '__attributes__'
 
 class Component(Container):
     """This is the base class for all objects containing Traits that are \
@@ -1482,10 +1483,17 @@ class Component(Container):
             # TODO: allow wildcard naming at lowest level
             parts = name.split('.')
             if len(parts) == 1:
-                if not hasattr(self, name):
-                    self.raise_exception("%s has no attribute named '%s'"
-                                          % (self.get_pathname(), name),
-                                         NameError)
+                if not name == __attributes__:
+                    if not hasattr(self, name):
+                        self.raise_exception("%s has no attribute named '%s'"
+                                              % (self.get_pathname(), name),
+                                             NameError)
+                    else:
+                        obj = getattr(self, name)
+                        if has_interface(obj, IComponent):
+                           obj.register_published_vars(__attributes__)
+                           return
+
                 if publish:
                     if name in self._publish_vars:
                         self._publish_vars += 1
@@ -1508,10 +1516,12 @@ class Component(Container):
                 pname = self.get_pathname()
                 lst = []
                 for var in pub_vars:
-                    key = '.'.join([pname, var])
-                    val = getattr(self, var)
-                    if has_interface(val, IComponent):
-                       val = val.get_attributes()
+                    if var == __attributes__:
+                        key = pname
+                        val = self.get_attributes()
+                    else:
+                        key = '.'.join([pname, var])
+                        val = getattr(self, var)
                     lst.append((key, val))
                 pub.publish_list(lst)
 

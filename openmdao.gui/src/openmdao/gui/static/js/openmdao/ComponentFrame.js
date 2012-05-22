@@ -146,11 +146,24 @@ openmdao.ComponentFrame = function(model,pathname) {
     this.editObject = function(path) {
         var callback = loadData;
         if (!self.pathname || self.pathname !== path) {
+            // TODO: STOP LISTENING FOR PREVIOUS PATHNAME
             // if not already editing this object, create the tabbed panes
             self.pathname = path;
-            callback = loadTabs;
-            model.addListener(self.pathname,callback);
+            callback = loadTabs;    // recreate tabs
+
+            // listen for messages and update component properties accordingly
+            model.addListener(self.pathname, function(message) {
+                if (message.length !== 2 || message[0] !== self.pathname) {
+                    debug.warn('Invalid component data:',message);
+                }
+                else {
+                    properties = message[1];
+                    loadData(properties);
+                }
+            });
+
         }
+
         model.getComponent(path, callback,
             function(jqXHR, textStatus, errorThrown) {
                 debug.warn('ComponentFrame.editObject() Error:',

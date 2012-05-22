@@ -66,7 +66,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def _write_message(self, message):
         if len(message) == 1:
-            message = pickle.loads(message[0])
+            message = message[0]
             message = make_unicode(message)  # tornado websocket wants unicode
             self.write_message(message)
         elif len(message) == 2:

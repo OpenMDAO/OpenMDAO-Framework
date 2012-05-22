@@ -1,11 +1,11 @@
 /**
  * stuff to do after the code editor is loaded
  */
- 
-    
+
+
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
-    openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+    openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
     openmdao.model = new openmdao.Model();
 
     // set the layout (note: global scope)
@@ -25,10 +25,10 @@ jQuery(function() {
         else {
             openmdao.model = new openmdao.Model();
         }
-        
+
         var model = openmdao.model;
-        
-        var code = new openmdao.CodeEditor("code",model);
+
+        var code = new openmdao.CodeFrame("code",model);
 
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
@@ -39,7 +39,7 @@ jQuery(function() {
 
         function code_fn(path) { code.editFile(path); code_tab.click(); }
 
-        new openmdao.FileTree("ftree", model, code_fn);
+        new openmdao.FileTreeFrame("ftree", model, code_fn);
     })()
 
     jQuery('#code_tab').click();
@@ -47,3 +47,4 @@ jQuery(function() {
     jQuery("body").trigger("layoutresizeall");
 
 });
+
