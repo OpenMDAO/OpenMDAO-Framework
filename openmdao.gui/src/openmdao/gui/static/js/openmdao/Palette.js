@@ -31,7 +31,7 @@ openmdao.Palette = function(id,model) {
     })
     
     // ask model for an update whenever something changes
-    model.addListener('',update)
+    model.addListener('types',update)
 
     /** rebuild the Palette from an XML library list */
     function updatePalette(packages) {

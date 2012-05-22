@@ -161,8 +161,15 @@ class ProjDirFactory(Factory):
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
             return
-        if fpath in self.analyzer.fileinfo:
-            if fpath in self.imported:
+        
+        imported = False
+        if fpath in self.analyzer.fileinfo: # file has been previously scanned
+            visitor = self.analyzer.fileinfo[fpath]
+            self.imported[fpath] = (mod, {})
+            pre_set = set(visitor.classes.keys())
+            
+            if fpath in self.imported:  # file has been previously imported
+                imported = True
                 sys.path = [os.path.dirname(fpath)] + sys.path
                 try:
                     m = reload(self.imported[fpath][0])
@@ -171,22 +178,45 @@ class ProjDirFactory(Factory):
                 finally:
                     sys.path = sys.path[1:]
                 self.imported[fpath] = (m, self.imported[fpath][1])
-            self.on_deleted(fpath, deleted_set)
+            self.on_deleted(fpath, set())
+        else:  # it's a new file
+            pre_set = set()
+
         visitor = self.analyzer.analyze_file(fpath)
+        post_set = set(visitor.classes.keys())
+
+        deleted_set.update(pre_set - post_set)
+        added_set.update(post_set - pre_set)
+        if imported:
+            changed_set.update(pre_set.intersection(post_set))
+        else:
+            changed_set.clear()
 
     def on_deleted(self, fpath, deleted_set):
         if os.path.isdir(fpath):
             for pyfile in find_files(self.watchdir, "*.py"):
-                self.on_deleted(pyfile)
+                self.on_deleted(pyfile, deleted_set)
         else:
             try:
                 del self.imported[fpath]
             except KeyError:
                 pass
+            
+            visitor = self.analyzer.fileinfo[fpath]
+            deleted_set.update(visitor.classes.keys())
+
             self.analyzer.remove_file(fpath)
             
-    def publish_changes(self, added_set, changed_set, deleted_set):
-        tdict = packagedict(get_available_types())
+    def publish_updates(self, added_set, changed_set, deleted_set):
+        publisher = Publisher.get_instance()
+        if publisher:
+            publisher.publish('types', 
+                              [
+                                  packagedict(get_available_types()),
+                                  list(added_set),
+                                  list(changed_set),
+                                  list(deleted_set),
+                              ])
 
     def cleanup(self):
         """If this factory is removed from the FactoryManager during execution, this function
