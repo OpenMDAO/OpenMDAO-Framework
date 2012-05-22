@@ -63,13 +63,11 @@ class ProjDirFactory(Factory):
     def __init__(self, watchdir):
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
-        self.imported = {}  # imported files vs ctor dict
+        self.imported = {}  # imported files vs (module, ctor dict)
         startfiles = [sys.modules['openmdao.main.'+n].__file__.replace('.pyc','.py') 
                           for n in _startmods]
         self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
         self._baseset = set(self.analyzer.graph.nodes())
-        
-        self._typeinfo = {}  # dict of typename vs tuples (ctor, metadata, loaded)
         
         for pyfile in find_files(self.watchdir, "*.py"):
             self.on_modified(pyfile)
@@ -81,13 +79,12 @@ class ProjDirFactory(Factory):
 
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
-        """
+        """Create and return an instance of the specified type, or None if
+        this Factory can't satisfy the request.
         """
         if server is None and res_desc is None and typ in self.analyzer.class_file_map:
             fpath = self.analyzer.class_file_map[typ]
-            if fpath in self.imported:
-                ctor = self.imported[fpath][typ]
-            else:
+            if fpath not in self.imported:
                 modpath = self.analyzer.fileinfo[fpath].modpath
                 sys.path = [os.path.dirname(fpath)] + sys.path
                 try:
@@ -97,15 +94,16 @@ class ProjDirFactory(Factory):
                 finally:
                     sys.path = sys.path[1:]
                 mod = sys.modules[modpath]
-                try:
-                    ctor = getattr(mod, typ.split('.')[-1])
-                except AttributeError, err:
-                    return None
                 visitor = self.analyzer.fileinfo[fpath]
-                self.imported[fpath] = {}
+                self.imported[fpath] = (mod, {})
                 for cname in visitor.classes.keys():
-                    self.imported[fpath][cname] = getattr(mod, cname.split('.')[-1])
+                    self.imported[fpath][1][cname] = getattr(mod, cname.split('.')[-1])
+            try:
+                ctor = self.imported[fpath][1][typ]
+            except KeyError:
+                return None
             return ctor(**ctor_args)
+        return None
 
     def get_available_types(self, predicate=is_plugin):
         """Return a list of available types that cause predicate(classname, metadata) to
@@ -125,6 +123,15 @@ class ProjDirFactory(Factory):
         if os.path.isdir(fpath):
             return
         if fpath in self.analyzer.fileinfo:
+            if fpath in self.imported:
+                sys.path = [os.path.dirname(fpath)] + sys.path
+                try:
+                    m = reload(self.imported[fpath][0])
+                except ImportError as err:
+                    return None
+                finally:
+                    sys.path = sys.path[1:]
+                self.imported[fpath] = (m, self.imported[fpath][1])
             self.on_deleted(fpath)
         visitor = self.analyzer.analyze_file(fpath)
 
@@ -133,6 +140,10 @@ class ProjDirFactory(Factory):
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_deleted(pyfile)
         else:
+            try:
+                del self.imported[fpath]
+            except KeyError:
+                pass
             self.analyzer.remove_file(fpath)
 
     def cleanup(self):

@@ -8,6 +8,7 @@ import os
 from openmdao.util.fileutil import build_directory
 from openmdao.main.projdirfactory import ProjDirFactory, _startmods
 from openmdao.main.driver import Driver
+from openmdao.main.component import Component
 
 _dstruct = {
     "mycomp.py": 
@@ -67,7 +68,7 @@ from openmdao.main.api import Component
 class MyComp2(Component):
     pass
                 """)
-            time.sleep(1.0)
+            time.sleep(2.0)
             types = pdf.get_available_types()
             typenames = [n for n,mdata in types]
             self.assertEqual(set(typenames), set(expected+['mycomp2.MyComp2']))
@@ -81,7 +82,7 @@ class MyComp2(Component):
             
             # now test removal
             os.remove(os.path.join(self.tdir, 'mycomp2.py'))
-            time.sleep(1.0)
+            time.sleep(2.0)
             types = pdf.get_available_types()
             typenames = [n for n,mdata in types]
             self.assertEqual(set(typenames), set(expected))
@@ -99,7 +100,7 @@ class MyDrv(Component):  #old MyDrv was a Driver, new one is just a Component
 class Foo(Component):
     pass
                 """)
-            time.sleep(1.0)
+            time.sleep(2.0)
             expected = ['mydrv.MyDrv', 'mydrv.Foo', 'mycomp.MyComp']
             types = pdf.get_available_types()
             typenames = [n for n,mdata in types]
@@ -113,6 +114,11 @@ class Foo(Component):
                     self.assertEqual(set(meta['ifaces']), set(['IContainer','IComponent']))
                 else:
                     self.fail("type %s was not expected" % typ)
+            
+            # now try creating a MyDrv Component
+            mydrv = pdf.create('mydrv.MyDrv')
+            self.assertFalse(isinstance(mydrv, Driver))
+            self.assertTrue(isinstance(mydrv, Component))
             
         finally:
             pdf.cleanup()
