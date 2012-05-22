@@ -40,9 +40,9 @@ openmdao.Model=function() {
         });
     }
 
-    /** handle an output message, which is just passed on to all subscribers */ 
+    /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
-        var callbacks = subscribers['outstream'];
+        var callbacks = subscribers.outstream;
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
@@ -60,21 +60,19 @@ openmdao.Model=function() {
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
-        debug.info('handlePubMessage subscribers:',message);
-        if (message.indexOf("exec_state")<0) {
-            debug.info('Model pubstream message',message);
-        }
         try {
             message = jQuery.parseJSON(message);
-            var topic = message[0];
+            var topic = message[0],
+                callbacks = subscribers[message[0]];
             if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                debug.info('Model pubstream parsed message',message);
+                debug.info('handlePubMessage message:', topic, message);
+                debug.info('handlePubMessage callbacks:', callbacks);
             }
-            debug.info('handlePubMessage subscribers:',subscribers);
-            var callbacks = subscribers[message[0]];
-            debug.info('handlePubMessage callbacks:',callbacks);
             if (callbacks) {
                 for (i = 0; i < callbacks.length; i++) {
+                    if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                        debug.info('handlePubMessage callback:', callbacks[i]);
+                    }
                     if (typeof callbacks[i] === 'function') {
                         callbacks[i](message);
                     }
@@ -125,12 +123,12 @@ openmdao.Model=function() {
             }
             subscribers[topic] = [ callback ];
         }
-        debug.info('Model.addListener:',topic,subscribers);
+        debug.info('Model.addListener:',topic,'subscribers:',subscribers);
     };
-
 
    /** notify all generic listeners that something may have changed  */
     this.updateListeners = function() {
+        //debug.info('updateListeners',subscribers)
         var callbacks = subscribers[''];
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
@@ -175,7 +173,12 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'project',
             success: callback,
-            error: errorHandler
+            error: errorHandler,
+            complete: function(jqXHR, textStatus) {
+                          if (typeof openmdao_test_mode !== 'undefined') {
+                              openmdao.Util.notify('Save complete: ' +textStatus);
+                          }
+                      }
         });
     };
 
@@ -312,7 +315,7 @@ openmdao.Model=function() {
     };
 
     /** issue the specified command against the model */
-    this.issueCommand = function(cmd, callback, errorHandler) {
+    this.issueCommand = function(cmd, callback, errorHandler, completeHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'command',
@@ -323,7 +326,8 @@ openmdao.Model=function() {
                         }
                         self.updateListeners();
                      },
-            error: errorHandler
+            error: errorHandler,
+            complete: completeHandler
         });
     };
 
@@ -452,7 +456,14 @@ openmdao.Model=function() {
         var path = filepath.replace(/\.py$/g,'').
                             replace(/\\/g,'.').
                             replace(/\//g,'.');
-        self.issueCommand("from "+path+" import *", callback, errorHandler);
+        cmd = 'from '+path+' import *';
+        self.issueCommand(cmd, callback, errorHandler,
+                          function(jqXHR, textStatus) {
+                              if (typeof openmdao_test_mode !== 'undefined') {
+                                  openmdao.Util.notify("'"+cmd+"' complete: "
+                                                       +textStatus);
+                              }
+                          });
     };
 
     /** execute the model */
@@ -464,12 +475,16 @@ openmdao.Model=function() {
             data: { },
             success: function(data, textStatus, jqXHR) {
                          cmd = 'print "'+data.replace('\n','\\n') +'"';
-                         self.issueCommand(cmd);
+                         self.issueCommand(cmd, null, null,
+                                           function(jqXHR, textStatus) {
+                                               if (typeof openmdao_test_mode !== 'undefined') {
+                                                   openmdao.Util.notify('Run complete: '
+                                                                        +textStatus);
+                                               }
+                                           });
                      },
             error: function(jqXHR, textStatus, errorThrown) {
-                       debug.error("Error running model " +
-                                   "(status=" + jqXHR.status+"): " +
-                                   jqXHR.statusText);
+                       debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText);
                        debug.error(jqXHR,textStatus,errorThrown);
                    }
         });
@@ -493,19 +508,19 @@ openmdao.Model=function() {
 
     /** reload the model */
     this.reload = function() {
-        close_websockets('reload');
+        openmdao.Util.closeWebSockets('reload');
         window.location.replace('/workspace/project');
     };
 
     /** exit the model */
     this.close = function() {
-        close_websockets('close');
+        openmdao.Util.closeWebSockets('close');
         window.location.replace('/workspace/close');
     };
 
     /** exit the model */
     this.exit = function() {
-        close_websockets('exit');
+        openmdao.Util.closeWebSockets('exit');
         window.location.replace('/exit');
     };
 

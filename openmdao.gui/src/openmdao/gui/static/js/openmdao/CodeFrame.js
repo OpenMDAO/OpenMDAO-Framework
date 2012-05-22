@@ -1,13 +1,13 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.CodeFrame = function(id,model) {
     openmdao.CodeFrame.prototype.init.call(this,id,'Code');
-    
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-     
+
     // initialize private variables
     var self = this,
         filepath = "",
@@ -21,53 +21,54 @@ openmdao.CodeFrame = function(id,model) {
             textWrapping: false,
             indentUnit: 4,
             parserConfig: {'pythonVersion': 2, 'strictErrors': true},
-            saveFunction: function() { saveFile() }
+            saveFunction: function() { saveFile(); }
         });
-    
+
     // make the parent element (tabbed pane) a drop target for file objects
     editorArea.parent().droppable ({
         accept: '.file .obj',
-        drop: function(ev,ui) { 
+        drop: function(ev,ui) {
             var droppedObject = jQuery(ui.draggable).clone();
             debug.info('CodeFrame drop',droppedObj);
             if (droppedObject.hasClass('file')) {
                 editFile(droppedObject.attr("path"));
-            };
+            }
         }
     });
 
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
         model.setFile(filepath,editor.getCode());
-    };
-    
+    }
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-    
+
     /** get contents of specified file from model, load into editor */
     this.editFile = function(pathname) {
         filepath = pathname;
-        model.getFile(pathname, 
+        model.getFile(pathname,
             // success
             function(contents) {
                 editor.setCode(contents);
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
-                debug.info(textStatus)
-                debug.info(errorThrown)
-                alert("Error editing file: "+jqXHR.statusText)
+                debug.info(textStatus);
+                debug.info(errorThrown);
+                alert("Error editing file: "+jqXHR.statusText);
             }
         );
     };
-    
+
     /** get the pathname for the current file */
     this.getPathname = function() {
         return filepath;
-    };    
-}
+    };
+};
 
 /** set prototype */
 openmdao.CodeFrame.prototype = new openmdao.BaseFrame();
 openmdao.CodeFrame.prototype.constructor = openmdao.CodeFrame;
+

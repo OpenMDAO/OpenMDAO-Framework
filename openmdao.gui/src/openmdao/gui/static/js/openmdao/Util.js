@@ -152,38 +152,109 @@ openmdao.Util = {
     /**
      * prompt for a value
      *
+     * prompt:      prompt string
      * callback:    the function to call with the provided value
+     * baseId:      optional id, default ``get-value``, used for element ids
      */
-    promptForValue: function(prompt,callback) {
+    promptForValue: function(prompt, callback, baseId) {
+        baseId = baseId || 'get-value';
+
         // if the user didn't specify a callback, just return
         if (typeof callback !== 'function') {
             return;
         }
 
-        // Build dialog markup
-        var win = jQuery('<div><p>'+prompt+':</p></div>');
-        var userInput = jQuery('<input type="text" style="width:100%"></input>');
-        userInput.keypress(function(e) {
-            if (e.which === 13) {
-                jQuery(win).dialog('close');
-                callback(jQuery(userInput).val());
-            }
-        });
-        userInput.appendTo(win);
+        var promptId = baseId+'-prompt',
+            inputId = baseId+'-input',
+            okId = baseId+'-ok',
+            element = document.getElementById(baseId),
+            win = null;
+            userInput = null;
 
-        // Display dialog
-        jQuery(win).dialog({
-            'modal': true,
-            'buttons': {
-                'Ok': function() {
-                    jQuery(this).dialog('close');
-                    callback(jQuery(userInput).val());
-                },
-                'Cancel': function() {
-                    jQuery(this).dialog('close');
-                }
+        if (element === null) {
+            // Build dialog markup
+            win = jQuery('<div id="'+baseId+'"><p id="'+promptId+'"></p></div>');
+            userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
+            userInput.appendTo(win);
+            win.dialog({
+                autoOpen: false,
+                modal: true,
+                buttons: [
+                    {
+                        text: 'Ok',
+                        id: okId
+                        // click is defined below.
+                    },
+                    {
+                        text: 'Cancel',
+                        id: baseId+'-cancel',
+                        click: function() {
+                            win.dialog('close');
+                        }
+                    }
+                ]
+            });
+        }
+        else {
+            win = jQuery('#'+baseId);
+            userInput = jQuery('#'+inputId);
+        }
+
+        // Update for current invocation.
+        jQuery('#'+promptId).text(prompt+':');
+        jQuery('#'+inputId).keypress(function(e) {
+            if (e.which === 13) {
+                win.dialog('close');
+                callback(userInput.val());
             }
         });
+        jQuery('#'+okId).click(function() {
+            win.dialog('close');
+            callback(userInput.val());
+        });
+
+        win.dialog('open');
+    },
+
+    /**
+     * Notify user with `msg`.  Typically used when testing to catch
+     * completion of 'background' processing.
+     *
+     * msg:     message to display.
+     * title:   optional title, default ``Note:``.
+     * baseId:  optional id, default ``notify``, used for element ids.
+     */
+    notify: function(msg, title, baseId) {
+        title = title || 'Note:';
+        baseId = baseId || 'notify';
+
+        var msgId = baseId+'-msg',
+            element = document.getElementById(msgId),
+            win = null;
+
+        if (element === null) {
+            win = jQuery('<div id="'+msgId+'"></div>');
+            win.dialog({
+                autoOpen: false,
+                modal: true,
+                title: title,
+                buttons: [
+                    {
+                        text: 'Ok',
+                        id: baseId+'-ok',
+                        click: function() {
+                            win.dialog('close');
+                        }
+                    }
+                ]
+            });
+        }
+        else {
+            win = jQuery('#'+msgId);
+        }
+
+        win.text(msg);
+        win.dialog('open');
     },
 
     /**
@@ -194,7 +265,9 @@ openmdao.Util = {
     dumpProps: function(obj) {
         var prop;
         for (prop in obj) {
-            debug.log(prop + ": " + obj[prop]);
+            if (obj.hasOwnProperty(prop)) {
+                debug.log(prop + ": " + obj[prop]);
+            }
         }
     },
 
@@ -306,26 +379,55 @@ openmdao.Util = {
 
         var socket = null;
 
+        if (!openmdao.sockets) {
+            openmdao.sockets = [];
+        }
+
         function connect_after_delay() {
             tid = setTimeout(connect, delay);
+        }
+
+        function displaySockets() {
+            debug.info('WebSockets:');
+            var i = 0;
+            for (i = 0 ; i < openmdao.sockets.length ; ++i) {
+                debug.info('    '+i+': state '+openmdao.sockets[i].readyState);
+            }
         }
 
         function connect() {
             if (socket === null || socket.readyState > 0) {
                 socket = new WebSocket(addr);
+                openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
-                    debug.info('websocket opened',socket,e,handler);
+                    debug.info('websocket opened '+socket.readyState,socket,e);
+                    displaySockets();
                 };
                 socket.onclose = function (e) {
                     debug.info('websocket closed',socket,e);
+                    displaySockets();
+                    index = openmdao.sockets.indexOf(this);
+                    if (index >= 0) {
+                        openmdao.sockets.splice(index, 1);
+                        if (typeof openmdao_test_mode !== 'undefined') {
+                            if (openmdao.sockets.length === 0) {
+                                openmdao.Util.notify('WebSockets closed');
+                            }
+                        }
+                    }
+                    else {
+                        debug.info('websocket not found!');
+                    }
                     if ((e.code === 1006) && (retry === true)) {
+                        // See RFC 6455 for error code definitions.
                         connect_after_delay();
                     }
                 };
                 socket.onmessage = function(e) {
-                    debug.info('websocket message',socket,e,handler);
+                    //debug.info('websocket message',socket,e);
                     handler(e.data);
                 };
+
                 socket.onerror = function (e) {
                     if (typeof errHandler === 'function') {
                         errHandler(e);
@@ -342,6 +444,40 @@ openmdao.Util = {
         debug.info('Util.openWebSocket returning socket =',socket);
 
         return socket;
+    },
+
+    /** Close all WebSockets. */
+    closeWebSockets: function(reason) {
+        var i = 0;
+       if (openmdao.sockets) {
+          for (i = 0 ; i < openmdao.sockets.length ; ++i) {
+             openmdao.sockets[i].close(1000, reason);
+          }
+       }
+    },
+
+    /** Notify when `nSockets` are open (used for testing). */
+    webSocketsReady: function(nSockets) {
+        function doPoll() {
+            setTimeout(poll, 1000);
+        }
+
+        function poll() {
+            var i = 0;
+            debug.info('polling for '+nSockets+' open WebSockets');
+            if (openmdao.sockets.length >= nSockets) {
+                for (i = 0 ; i < openmdao.sockets.length ; ++i) {
+                    if (openmdao.sockets[i].readyState !== 1) {
+                        debug.info('socket '+i+' not open: '
+                                   +openmdao.sockets[i].readyState);
+                        doPoll();
+                        return;
+                    }
+                }
+                openmdao.Util.notify('WebSockets open');
+            }
+        }
+        poll();
     }
 
 };
