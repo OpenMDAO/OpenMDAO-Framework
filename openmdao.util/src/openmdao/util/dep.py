@@ -215,6 +215,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                     if cname in paths:
                         cinfo.meta.setdefault('ifaces',set()).add(iface)
 
+
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None, startfiles=None):
         # inheritance graph. It's a directed graph with base classes

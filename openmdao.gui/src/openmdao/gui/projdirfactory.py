@@ -18,6 +18,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver,
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
 from openmdao.util.dep import PythonSourceTreeAnalyser, find_files, plugin_groups
+from openmdao.util.fileutil import get_module_path
 from openmdao.main.publisher import Publisher
 from openmdao.gui.util import packagedict
 
@@ -99,7 +100,7 @@ class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
     the set of available types up-to-date as project files change.
     """
-    def __init__(self, watchdir):
+    def __init__(self, watchdir, use_observer=True):
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
         self.imported = {}  # imported files vs (module, ctor dict)
@@ -114,13 +115,21 @@ class ProjDirFactory(Factory):
         for pyfile in find_files(self.watchdir, "*.py"):
             self.on_modified(pyfile, added_set, changed_set, deleted_set)
             
-        self.publish_updates(added_set, changed_set, deleted_set)
+        if use_observer:
+            self.publish_updates(added_set, changed_set, deleted_set)
 
-        self.observer = Observer()
-        self.observer.schedule(PyWatcher(self), path=watchdir, recursive=True)
-        self.observer.daemon = True
-        self.observer.start()
+            self.observer = Observer()
+            self.observer.schedule(PyWatcher(self), path=watchdir, recursive=True)
+            self.observer.daemon = True
+            self.observer.start()
+        else:
+            self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
 
+    def _get_mod_ctors(self, mod, fpath, visitor):
+        self.imported[fpath] = (mod, {})
+        for cname in visitor.classes.keys():
+            self.imported[fpath][1][cname] = getattr(mod, cname.split('.')[-1])
+        
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
         """Create and return an instance of the specified type, or None if
@@ -139,9 +148,7 @@ class ProjDirFactory(Factory):
                     sys.path = sys.path[1:]
                 mod = sys.modules[modpath]
                 visitor = self.analyzer.fileinfo[fpath]
-                self.imported[fpath] = (mod, {})
-                for cname in visitor.classes.keys():
-                    self.imported[fpath][1][cname] = getattr(mod, cname.split('.')[-1])
+                self._get_mod_ctors(mod, fpath, visitor)
             try:
                 ctor = self.imported[fpath][1][typ]
             except KeyError:
@@ -172,7 +179,7 @@ class ProjDirFactory(Factory):
             visitor = self.analyzer.fileinfo[fpath]
             pre_set = set(visitor.classes.keys())
             
-            if fpath in self.imported:  # file has been previously imported
+            if fpath in self.imported:  # we imported it earlier
                 imported = True
                 sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
                 try:
@@ -224,8 +231,9 @@ class ProjDirFactory(Factory):
         """If this factory is removed from the FactoryManager during execution, this function
         will stop the watchdog observer thread.
         """
-        self.observer.stop()
-        self.observer.join()
+        if self.observer:
+            self.observer.stop()
+            self.observer.join()
 
 if __name__ == '__main__':
     import time
