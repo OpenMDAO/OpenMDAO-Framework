@@ -171,6 +171,21 @@ openmdao.Util = {
             win = null;
             userInput = null;
 
+        function handleResponse() {
+            debug.info('Util.handleResponse',userInput,userInput.val(),callback);
+            // close dialog, invoke callback
+            win.dialog('close');
+            // invoke callback
+            if (callback) {
+                callback(userInput.val());
+            }
+            //clear input value
+            userInput.val('');
+            // unbind handlers so they dont get called again
+            jQuery('#'+okId).unbind('click');
+            jQuery('#'+inputId).unbind('keypress.enterkey');
+        }
+
         if (element === null) {
             // Build dialog markup
             win = jQuery('<div id="'+baseId+'"><p id="'+promptId+'"></p></div>');
@@ -190,6 +205,10 @@ openmdao.Util = {
                         id: baseId+'-cancel',
                         click: function() {
                             win.dialog('close');
+                            userInput.val('');
+                            // unbind handlers so they dont get called again
+                            jQuery('#'+okId).unbind('click');
+                            jQuery('#'+inputId).unbind('keypress.enterkey');
                         }
                     }
                 ]
@@ -202,15 +221,33 @@ openmdao.Util = {
 
         // Update for current invocation.
         jQuery('#'+promptId).text(prompt+':');
-        jQuery('#'+inputId).keypress(function(e) {
+
+        jQuery('#'+inputId).bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
                 win.dialog('close');
-                callback(userInput.val());
+                // invoke callback
+                if (callback) {
+                    callback(userInput.val());
+                }
+                //clear input value
+                userInput.val('');
+                // unbind handlers so they dont get called again
+                jQuery('#'+okId).unbind('click');
+                jQuery('#'+inputId).unbind('keypress.enterkey');
             }
         });
-        jQuery('#'+okId).click(function() {
+
+        jQuery('#'+okId).bind('click', function() {
             win.dialog('close');
-            callback(userInput.val());
+            // invoke callback
+            if (callback) {
+                callback(userInput.val());
+            }
+            //clear input value
+            userInput.val('');
+            // unbind handlers so they dont get called again
+            jQuery('#'+okId).unbind('click');
+            jQuery('#'+inputId).unbind('keypress.enterkey');
         });
 
         win.dialog('open');

@@ -91,6 +91,7 @@ openmdao.Model=function() {
         for messages with the given topic
     */
     this.addListener = function(topic, callback) {
+        debug.info('Model.addListener',topic)
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
@@ -382,6 +383,7 @@ openmdao.Model=function() {
 
     /** set the contents of the specified file */
     this.setFile = function(filepath, contents, errorHandler) {
+        debug.info('Model.setFile',filepath,contents)
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
@@ -393,6 +395,7 @@ openmdao.Model=function() {
 
     /** create new folder with  specified path in the model working directory */
     this.createFolder = function(folderpath, errorHandler) {
+        debug.info('Model.createFolder',folderpath)
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+folderpath.replace(/\\/g,'/'),
@@ -404,6 +407,7 @@ openmdao.Model=function() {
 
     /** create new file with  specified path in the model working directory */
     this.newFile = function(folderpath) {
+        debug.info('Model.newFile',folderpath)
         openmdao.Util.promptForValue('Specify a name for the new file',
             function(name) {
                 if (folderpath) {
@@ -423,6 +427,7 @@ openmdao.Model=function() {
 
     /** prompt for name & create a new folder */
     this.newFolder = function(folderpath) {
+        debug.info('Model.newFolder',folderpath)
         openmdao.Util.promptForValue('Specify a name for the new folder',
             function(name) {
                 if (folderpath) {

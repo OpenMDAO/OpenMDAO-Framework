@@ -112,6 +112,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
         var path = filenode.attr('path');
 
+        debug.info('FileTreeFrame.contextMenu',node,path,isFolder,isEmptyFolder);
+
         // now create the menu
         var menu = {};
 
