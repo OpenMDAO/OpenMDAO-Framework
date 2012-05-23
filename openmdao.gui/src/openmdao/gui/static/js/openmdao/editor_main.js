@@ -1,50 +1,41 @@
 /**
- * stuff to do after the code editor is loaded
+ * stuff to do after the code editor page is loaded
  */
-
 
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
-    openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
-    openmdao.model = new openmdao.Model();
+    openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
+    if (opener && opener.openmdao && opener.openmdao.model ) {
+        openmdao.model = opener.openmdao.model;
+    }
+    else {
+        openmdao.model = new openmdao.Model();
+    }
 
     // set the layout (note: global scope)
-    layout = jQuery('body').layout({
-    });
-
-    // add tabbed pane functionality
-    openmdao.TabbedPane("leftcol_tabs");
-    openmdao.TabbedPane("central_tabs");
-    //openmdao.TabbedPane("rightcol_tabs");
+    layout = jQuery('body').layout({});
 
     // add gui functionality to designated DOM nodes
-    (function() {
-        if (opener && opener.openmdao && opener.openmdao.model ) {
-            openmdao.model = opener.openmdao.model;
-        }
-        else {
-            openmdao.model = new openmdao.Model();
-        }
+    openmdao.TabbedPane('leftcol_tabs');
+    openmdao.TabbedPane('central_tabs');
 
-        var model = openmdao.model;
+    var code_tab      = jQuery('#code_tab'),
+        file_tab      = jQuery('#ftree_tab'),
+        central_label = jQuery('#central_label');
 
-        var code = new openmdao.CodeFrame("code",model);
+    var code = new openmdao.CodeFrame('code',openmdao.model);
 
-        // create functions to load content into the different panes
-        // intercept tab clicks to set the adjacent label
-        var central_label = jQuery('#central_label'),
-            code_tab      = jQuery('#code_tab');
+    function code_fn(path) { code.editFile(path); code_tab.click(); }
+    function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800); }
 
-        code_tab.click(function(e) { central_label.text(code.getPathname()); })
+    var ftree = new openmdao.FileTreeFrame('ftree', openmdao.model, code_fn, geom_fn);
 
-        function code_fn(path) { code.editFile(path); code_tab.click(); }
+    code_tab.click(function(e) { central_label.text(code.getPathname()); });
 
-        new openmdao.FileTreeFrame("ftree", model, code_fn);
-    })()
+    // make sure tabbed panes are showing
+    code_tab.click();
+    file_tab.click();
 
-    jQuery('#code_tab').click();
-    jQuery('#ftree_tab').click();
-    jQuery("body").trigger("layoutresizeall");
-
+    jQuery('body').trigger('layoutresizeall');
 });
 

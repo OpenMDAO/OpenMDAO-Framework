@@ -45,9 +45,7 @@ jQuery(function() {
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
-        function prop_fn(path) { prop.editObject(path);   }
-
-        function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800); }
+        function prop_fn(path) { prop.editObject(path); }
         function comp_fn(path) { new openmdao.ComponentFrame(model,path); }
 
         new openmdao.ComponentTreeFrame("otree", model, prop_fn, comp_fn, work_fn, data_fn);

@@ -61,7 +61,12 @@ openmdao.Model=function() {
     */
     function handlePubMessage(message) {
         if (typeof message === 'string' || message instanceof String) {
-            message = jQuery.parseJSON(message);
+            try {
+                message = jQuery.parseJSON(message);
+            }
+            catch(err) {
+                debug.error('Model.handlePubMessage Error:',err,message)
+            }
         }
         var topic = message[0],
             callbacks = subscribers[message[0]];

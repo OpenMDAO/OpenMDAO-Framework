@@ -19,7 +19,7 @@ from openmdao.main.project import project_from_archive
 from openmdao.main.publisher import Publisher
 
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.interfaces import IContainer
+from openmdao.main.interfaces import IContainer, IAssembly
 from zope.interface import implementedBy
 
 from openmdao.gui.util import packagedict, ensure_dir
@@ -342,7 +342,8 @@ class ConsoleServer(cmd.Cmd):
         if pathname and len(pathname) > 0:
             try:
                 asm, root = self.get_container(pathname)
-                dataflow = asm.get_dataflow()
+                if has_interface(asm, IAssembly):
+                    dataflow = asm.get_dataflow()
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
