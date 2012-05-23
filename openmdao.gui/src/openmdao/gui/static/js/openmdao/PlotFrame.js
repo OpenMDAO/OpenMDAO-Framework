@@ -29,18 +29,6 @@ openmdao.PlotFrame = function(id,model,pathname) {
            .appendTo(this.elm);
     plot = jQuery.plot(plot, [ data ], options);
 
-    // subscribe to model for data
-    function plotVariable(pathname) {
-        model.addListener(pathname,function(message) {
-            if (message.length === 2) {
-                var newdata = {};
-                newdata[message[0]] = message[1];
-                updateData(newdata);
-            }
-            updatePlot();
-        });
-    }
-
     /** add new values to the data set, capping the number of points */
     function updateData(newValues) {
         if (!newValues) {
@@ -77,6 +65,20 @@ openmdao.PlotFrame = function(id,model,pathname) {
         plot.resize();          // in case the frame was resized
         plot.setupGrid();
         plot.draw();
+    }
+
+    function messagehandler(message) {
+        if (message.length === 2) {
+            var newdata = {};
+            newdata[message[0]] = message[1];
+            updateData(newdata);
+        }
+        updatePlot();
+    }
+
+    // subscribe to model for data
+    function plotVariable(pathname) {
+        model.addListener(pathname,messagehandler);
     }
 
     // prompt for a new variable to add to the plot
