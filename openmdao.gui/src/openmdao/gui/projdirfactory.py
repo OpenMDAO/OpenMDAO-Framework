@@ -34,7 +34,7 @@ class PyWatcher(FileSystemEventHandler):
         deleted_set = set()
         if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
             self.factory.on_modified(event.src_path, added_set, changed_set, deleted_set)
-            self.factory.publish_changes(added_set, changed_set, deleted_set)
+            self.factory.publish_updates(added_set, changed_set, deleted_set)
     
     def on_moved(self, event):
         added_set = set()
@@ -51,7 +51,7 @@ class PyWatcher(FileSystemEventHandler):
             publish = True
             
         if publish:
-            self.factory.publish_changes(added_set, changed_set, deleted_set)
+            self.factory.publish_updates(added_set, changed_set, deleted_set)
 
     
     def on_deleted(self, event):
@@ -60,7 +60,7 @@ class PyWatcher(FileSystemEventHandler):
         deleted_set = set()
         if event.is_directory or fnmatch.fnmatch(event.src_path, '*.py'):
             self.factory.on_deleted(event.src_path, deleted_set)
-            self.factory.publish_changes(added_set, changed_set, deleted_set)
+            self.factory.publish_updates(added_set, changed_set, deleted_set)
             
     
 _startmods = [
@@ -108,8 +108,13 @@ class ProjDirFactory(Factory):
         self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
         self._baseset = set(self.analyzer.graph.nodes())
         
+        added_set = set()
+        changed_set = set()
+        deleted_set = set()
         for pyfile in find_files(self.watchdir, "*.py"):
-            self.on_modified(pyfile)
+            self.on_modified(pyfile, added_set, changed_set, deleted_set)
+            
+        self.publish_updates(added_set, changed_set, deleted_set)
 
         self.observer = Observer()
         self.observer.schedule(PyWatcher(self), path=watchdir, recursive=True)
@@ -165,18 +170,17 @@ class ProjDirFactory(Factory):
         imported = False
         if fpath in self.analyzer.fileinfo: # file has been previously scanned
             visitor = self.analyzer.fileinfo[fpath]
-            self.imported[fpath] = (mod, {})
             pre_set = set(visitor.classes.keys())
             
             if fpath in self.imported:  # file has been previously imported
                 imported = True
-                sys.path = [os.path.dirname(fpath)] + sys.path
+                sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
                 try:
                     m = reload(self.imported[fpath][0])
                 except ImportError as err:
                     return None
                 finally:
-                    sys.path = sys.path[1:]
+                    sys.path = sys.path[1:]  # restore original sys.path
                 self.imported[fpath] = (m, self.imported[fpath][1])
             self.on_deleted(fpath, set())
         else:  # it's a new file
@@ -189,8 +193,6 @@ class ProjDirFactory(Factory):
         added_set.update(post_set - pre_set)
         if imported:
             changed_set.update(pre_set.intersection(post_set))
-        else:
-            changed_set.clear()
 
     def on_deleted(self, fpath, deleted_set):
         if os.path.isdir(fpath):

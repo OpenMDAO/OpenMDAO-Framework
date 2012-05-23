@@ -6,7 +6,7 @@ import time
 import os
 
 from openmdao.util.fileutil import build_directory
-from openmdao.main.projdirfactory import ProjDirFactory, _startmods
+from openmdao.gui.projdirfactory import ProjDirFactory, _startmods
 from openmdao.main.driver import Driver
 from openmdao.main.component import Component
 
