@@ -19,14 +19,14 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import project_from_archive
-from openmdao.main.projdirfactory import ProjDirFactory
+from openmdao.gui.projdirfactory import ProjDirFactory
 
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import *
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-from openmdao.main.factorymanager import register_class_factory
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
 
 def modifies_model(target):
@@ -61,8 +61,7 @@ class ConsoleServer(cmd.Cmd):
         self.exc_info = None
 
         self.files = FileManager('files', publish_updates=True)
-        self.projdirfactory = ProjDirFactory(self.files.root_dir)
-        register_class_factory(self.projdirfactory)
+        self.projdirfactory = None
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -601,6 +600,10 @@ class ConsoleServer(cmd.Cmd):
         try:
             self.proj = project_from_archive(filename, dest_dir=self.files.getcwd())
             self.proj.activate()
+            if self.projdirfactory:
+                remove_class_factory(self.projdirfactory)
+            self.projdirfactory = ProjDirFactory(self.proj.path)
+            register_class_factory(self.projdirfactory)
         except Exception, err:
             self._error(err, sys.exc_info())
 

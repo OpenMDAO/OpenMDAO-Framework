@@ -48,6 +48,7 @@ class FileManager(object):
 
         if self.publish_updates:
             self.observer = Observer()
+            self.observer.daemon = True
             self.observer.schedule(FilesPublisher(self),
                                    path=self.root_dir,
                                    recursive=True)

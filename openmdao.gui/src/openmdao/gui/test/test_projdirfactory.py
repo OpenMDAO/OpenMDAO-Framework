@@ -43,7 +43,7 @@ class ProjDirFactoryTestCase(unittest.TestCase):
         try:
             sys.path = [self.tdir]+sys.path
             if 'mydrv' in sys.modules:
-                reload(sys.modules['mydrv'])
+                reload(sys.modules['mydrv'])  # in case mydrv was already imported in earlier test
         finally:
             sys.path = sys.path[1:]
         

@@ -117,14 +117,16 @@ class ProjDirFactory(Factory):
             
         if use_observer:
             self.publish_updates(added_set, changed_set, deleted_set)
-
-            self.observer = Observer()
-            self.observer.schedule(PyWatcher(self), path=watchdir, recursive=True)
-            self.observer.daemon = True
-            self.observer.start()
+            self._start_observer()
         else:
             self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
 
+    def _start_observer(self):
+        self.observer = Observer()
+        self.observer.schedule(PyWatcher(self), path=self.watchdir, recursive=True)
+        self.observer.daemon = True
+        self.observer.start()
+        
     def _get_mod_ctors(self, mod, fpath, visitor):
         self.imported[fpath] = (mod, {})
         for cname in visitor.classes.keys():
@@ -156,7 +158,7 @@ class ProjDirFactory(Factory):
             return ctor(**ctor_args)
         return None
 
-    def get_available_types(self, predicate=is_plugin):
+    def get_available_types(self, predicate=lambda n,m: True):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
         """

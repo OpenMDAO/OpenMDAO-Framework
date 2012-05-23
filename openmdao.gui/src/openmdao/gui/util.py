@@ -78,16 +78,20 @@ def filedict(path, key='pathname', root=''):
 def packagedict(types):
     ''' create a nested dict for a package structure
     '''
-    dct={}
-    for typ, meta in types:
-        parent = dct
+    dict={}
+    for typ,meta in types:
+        parent = dict
         nodes = typ.split('.')
-        for node in nodes[:-1]:
-            parent = parent.setdefault(node, {})
-        d = parent.setdefault(nodes[-1], meta.copy())
-        d.update({'path': typ})
-
-    return dct
+        name = nodes[len(nodes)-1]
+        for node in nodes:
+            if node==name:
+                parent[node] = meta.copy()
+                parent[node].update({'path': typ})
+            else:
+                if not node in parent:
+                    parent[node] = {}
+            parent = parent[node]
+    return dict
 
 
 def packageXML(types):

@@ -39,7 +39,7 @@ def register_class_factory(factory):
         
 def remove_class_factory(factory):
     """Remove a Factory from the factory list."""
-    for i,fct in enumerate(_factories):
+    for fct in _factories:
         if fct is factory:
             if hasattr(factory, 'cleanup'):
                 factory.cleanup()

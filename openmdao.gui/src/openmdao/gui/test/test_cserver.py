@@ -2,6 +2,7 @@ import unittest
 import os.path
 import shutil
 import json
+import time
 
 from openmdao.gui.consoleserver import ConsoleServer
 
@@ -27,15 +28,16 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('/optimization_unconstrained.py'.replace('/', os.sep) in files)
         self.assertTrue('/_project_state'.replace('/', os.sep) in files)
 
-        # IMPORT PARABOLOID
-        self.cserver.default('from paraboloid import Paraboloid')
+        ## IMPORT PARABOLOID
+        #self.cserver.default('from paraboloid import Paraboloid')
 
+        time.sleep(3.0)
         working_types = self.cserver.get_workingtypes()
-        self.assertTrue('Paraboloid' in working_types)
+        self.assertTrue('paraboloid' in working_types['simple_1'])
 
-        type_info = working_types['Paraboloid']
-        self.assertEqual(type_info['path'], 'Paraboloid')
-        self.assertEqual(type_info['version'], 'n/a')
+        type_info = working_types['simple_1']['paraboloid']['Paraboloid']
+        self.assertEqual(type_info['path'], 'simple_1.paraboloid.Paraboloid')
+        #self.assertEqual(type_info['version'], 'n/a')
 
         # CREATE ASSEMBLY
         self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly', '')
