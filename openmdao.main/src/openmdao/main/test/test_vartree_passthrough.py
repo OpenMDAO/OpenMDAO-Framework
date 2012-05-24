@@ -7,8 +7,8 @@ class TstContainer(VariableTree):
     dummy1 = Float(1.0) 
 
 class TstComponent(Component):
-    dummy_data = Slot(TstContainer(),iotype='in')
-    dummy_data_out = Slot(TstContainer(),iotype='out')
+    dummy_data = Slot(TstContainer, iotype='in')
+    dummy_data_out = Slot(TstContainer, iotype='out')
     dummyin = Float(iotype='in')
 
     def __init__(self): 
