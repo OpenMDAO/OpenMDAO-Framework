@@ -7,6 +7,7 @@ from enthought.traits.api import Int
 from openmdao.main.api import Assembly, Component, Container, Case
 from openmdao.main.datatypes.api import Slot
 from openmdao.main.interfaces import implements, ICaseIterator
+from openmdao.util.testutil import assert_raises
 
 import zope.interface
 
@@ -121,6 +122,12 @@ class SlotTestCase(unittest.TestCase):
         else:
             self.fail('TypeError expected')
         
+    def test_klass(self):
+        assert_raises(self, 'Slot(object())', globals(), locals(), TypeError,
+                      'klass argument must be a Class or Interface,'
+                      ' not <object ')
+
+
 class MyIface(zope.interface.Interface):
     
     xx = zope.interface.Attribute("some attribute")

@@ -56,7 +56,7 @@ class VariableTree(Container):
     def add(self, name, obj):
         if isinstance(obj, VariableTree):
             if self.trait(name) is None:
-                self.add_trait(name, Slot(VariableTree(), iotype=obj._iotype))
+                self.add_trait(name, Slot(VariableTree, iotype=obj._iotype))
                 self.on_trait_change(self._trait_modified, name)
         elif not isinstance(obj, Variable):
             self.raise_exception("a VariableTree may only contain Variables or other VariableTrees",
