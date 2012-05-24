@@ -19,13 +19,13 @@ class VT(VariableTree):
 
 class VTComp(Component):
 
-    vt_in = Slot(VT, iotype='in')
-    vt_out = Slot(VT, iotype='out')
+    vt_in = Slot(VT(), iotype='in')
+    vt_out = Slot(VT(), iotype='out')
 
     def __init__(self):
         super(VTComp, self).__init__()
-        self.vt_in = VT(4, 2)
-        self.vt_out = VT()
+        self.add('vt_in', VT(4, 2))
+        self.add('vt_out', VT())
 
     def execute(self):
         self.vt_out.x = self.vt_in.x + 1
