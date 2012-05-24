@@ -29,7 +29,7 @@ from openmdao.main.pkg_res_factory import plugin_groups
 from openmdao.main import __version__
 
 #from sphinx.setup_command import BuildDoc
-#import sphinx
+import sphinx
 
 
 def _load_templates():
