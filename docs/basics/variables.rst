@@ -494,8 +494,8 @@ three variables that define two flight conditions:
         """This component contains variables in a VariableTree"""
     
         # create Slots to handle updates to our FlightCondition attributes
-        fcc1 = Slot(FlightCondition(), iotype='in')
-        fcc2 = Slot(FlightCondition(), iotype='out')
+        fcc1 = Slot(FlightCondition, iotype='in')
+        fcc2 = Slot(FlightCondition, iotype='out')
         
         weight = Float(5400.0, iotype='in', units='kg')
         # etc.

@@ -31,7 +31,7 @@ class DumbTrait(Variable):
         return value
 
 class MyContainer(Container):
-    uncertain = Slot(NormalDistribution(), iotype="out")
+    uncertain = Slot(NormalDistribution, iotype="out")
 
     def __init__(self, *args, **kwargs):
         super(MyContainer, self).__init__(*args, **kwargs)
