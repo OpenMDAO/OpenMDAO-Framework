@@ -18,7 +18,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver,
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
 from openmdao.util.dep import PythonSourceTreeAnalyser, find_files, plugin_groups
-from openmdao.util.fileutil import get_module_path
+from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.main.publisher import Publisher
 from openmdao.gui.util import packagedict
 
@@ -141,7 +141,7 @@ class ProjDirFactory(Factory):
             fpath = self.analyzer.class_file_map[typ]
             if fpath not in self.imported:
                 modpath = self.analyzer.fileinfo[fpath].modpath
-                sys.path = [os.path.dirname(fpath)] + sys.path
+                sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
                 try:
                     __import__(modpath)
                 except ImportError as err:
@@ -158,7 +158,7 @@ class ProjDirFactory(Factory):
             return ctor(**ctor_args)
         return None
 
-    def get_available_types(self, predicate=lambda n,m: True):
+    def get_available_types(self, groups=None):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
         """
@@ -166,9 +166,14 @@ class ProjDirFactory(Factory):
         typset = set(graph.nodes()) - self._baseset
         types = []
         
+        if groups is None:
+            ifaces = set([v[0] for v in plugin_groups.values()])
+        else:
+            ifaces = set([v[0] for k,v in plugin_groups.items() if k in groups])
+            
         for typ in typset:
             meta = graph.node[typ]['classinfo'].meta
-            if predicate(typ, meta):
+            if 'ifaces' in meta and ifaces.intersection(meta['ifaces']): 
                 types.append((typ, meta))
         return types
 

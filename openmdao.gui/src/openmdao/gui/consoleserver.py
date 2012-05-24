@@ -226,7 +226,7 @@ class ConsoleServer(cmd.Cmd):
                     comp['pathname'] = k
                     children = self._get_components(v, k)
                 else:
-                    comp['pathname'] = pathname+'.'+ k if pathname else k
+                    comp['pathname'] = '.'.join([pathname, k]) if pathname else k
                     children = self._get_components(v, comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
@@ -601,9 +601,8 @@ class ConsoleServer(cmd.Cmd):
             self.proj = project_from_archive(filename, dest_dir=self.files.getcwd())
             self.proj.activate()
             if self.projdirfactory:
-                remove_class_factory(self.projdirfactory)
+                self.projdirfactory.cleanup()
             self.projdirfactory = ProjDirFactory(self.proj.path)
-            register_class_factory(self.projdirfactory)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -634,8 +633,10 @@ class ConsoleServer(cmd.Cmd):
             parent, root = self.get_container(parentname)
             if parent:
                 try:
-                    if classname in self.proj.__dict__:
-                        parent.add(name, self.proj.__dict__[classname]())
+                    if self.projdirfactory:
+                        obj = self.projdirfactory.create(classname)
+                    if obj:
+                        parent.add(name, obj)
                     else:
                         parent.add(name, create(classname))
                 except Exception, err:

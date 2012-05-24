@@ -94,7 +94,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(len(attributes['Workflow']['workflow']), 0)
 
         # CREATE PARABOLOID
-        self.cserver.add_component('p','Paraboloid','prob')
+        self.cserver.add_component('p','simple_1.paraboloid.Paraboloid','prob')
 
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
@@ -179,7 +179,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         workflow = driver_flow['workflow']
         self.assertEqual(len(workflow), 1)
         self.assertEqual(workflow[0]['pathname'], 'prob.p')
-        self.assertEqual(workflow[0]['type'], 'paraboloid.Paraboloid')
+        self.assertEqual(workflow[0]['type'], 'simple_1.paraboloid.Paraboloid')
 
     def test_execfile(self):
         ''' execfile an input file (with a __main__) and make sure you
