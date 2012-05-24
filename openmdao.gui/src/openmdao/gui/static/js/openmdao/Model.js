@@ -93,9 +93,9 @@ openmdao.Model=function() {
             };
         };
     };
-
-   /** notify all generic listeners that something may have changed  */
-    this.updateListeners = function() {
+    
+    /** notify all generic listeners that something may have changed  */
+    this.updateListeners = function() {        
         //debug.info('updateListeners',subscribers)
         var callbacks = subscribers[''];
         //debug.info('updateListeners',callbacks)
@@ -140,7 +140,12 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'project',
             success: callback,
-            error: errorHandler
+            error: errorHandler,
+            complete: function(jqXHR, textStatus) {
+                          if (typeof openmdao_test_mode != 'undefined') {
+                              openmdao.Util.notify('Save complete: ' +textStatus);
+                          }
+                      }
         })
     }
 
@@ -270,7 +275,7 @@ openmdao.Model=function() {
     }
 
     /** issue the specified command against the model */
-    this.issueCommand = function(cmd, callback, errorHandler) {
+    this.issueCommand = function(cmd, callback, errorHandler, completeHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'command',
@@ -279,9 +284,10 @@ openmdao.Model=function() {
                         if (typeof callback == 'function') {
                             callback(txt)
                         };
-                        self.updateListeners()
+                        self.updateListeners();
                      },
-            error: errorHandler
+            error: errorHandler,
+            complete: completeHandler,
         })
     }
 
@@ -400,7 +406,14 @@ openmdao.Model=function() {
         var path = filepath.replace(/\.py$/g,'').
                             replace(/\\/g,'.').
                             replace(/\//g,'.');
-        self.issueCommand("from "+path+" import *", callback, errorHandler);
+        cmd = 'from '+path+' import *'
+        self.issueCommand(cmd, callback, errorHandler,
+                          function(jqXHR, textStatus) {
+                              if (typeof openmdao_test_mode != 'undefined') {
+                                  openmdao.Util.notify("'"+cmd+"' complete: "
+                                                       +textStatus);
+                              }
+                          });
     }
 
     /** execute the model */
@@ -411,12 +424,19 @@ openmdao.Model=function() {
             url:  'exec',
             data: { },
             success: function(data, textStatus, jqXHR) {
-                         self.issueCommand('print "'+data.replace('\n','\\n') +'"')
+                         self.issueCommand('print "'+data.replace('\n','\\n')+'"',
+                                           null, null,
+                                           function(jqXHR, textStatus) {
+                                               if (typeof openmdao_test_mode != 'undefined') {
+                                                   openmdao.Util.notify('Run complete: '
+                                                                        +textStatus);
+                                               }
+                                           });
                      },
             error: function(jqXHR, textStatus, errorThrown) {
                        debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText)
                        debug.error(jqXHR,textStatus,errorThrown)
-                   }
+                   },
         })
     }
 
@@ -438,34 +458,19 @@ openmdao.Model=function() {
 
     /** reload the model */
     this.reload = function() {
-        if (this.outstream_socket) {
-            this.outstream_socket.close(1000,'reload');
-        }
-        if (this.pubstream_socket) {
-            this.pubstream_socket.close(1000,'reload');
-        }
+        openmdao.Util.closeWebSockets('reload');
         window.location.replace('/workspace/project');
     }
 
     /** exit the model */
     this.close = function() {
-        if (this.outstream_socket) {
-            this.outstream_socket.close(1000,'close');
-        }
-        if (this.pubstream_socket) {
-            this.pubstream_socket.close(1000,'close');
-        }
+        openmdao.Util.closeWebSockets('close');
         window.location.replace('/workspace/close');
     }
 
     /** exit the model */
     this.exit = function() {
-        if (this.outstream_socket) {
-            this.outstream_socket.close(1000,'exit');
-        }
-        if (this.pubstream_socket) {
-            this.pubstream_socket.close(1000,'exit');
-        }
+        openmdao.Util.closeWebSockets('exit');
         window.location.replace('/exit');
     }
 

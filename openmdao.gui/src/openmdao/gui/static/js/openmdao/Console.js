@@ -51,6 +51,13 @@ openmdao.Console = function(id,model) {
                 // failure
                 function(jqXHR, textStatus, errorThrown) {
                     alert('Error issuing command: '+jqXHR.statusText);
+                },
+                // completion
+                function(jqXHR, textStatus) {
+                    if (typeof openmdao_test_mode != 'undefined') {
+                        openmdao.Util.notify("'"+cmd+"' complete: "
+                                             +textStatus);
+                    }
                 }
             );
         }
