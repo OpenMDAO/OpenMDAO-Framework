@@ -18,6 +18,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
 
 
 def _test_console(browser):
+    print "running _test_console..."
     # Check basic console functionality.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -31,9 +32,10 @@ def _test_console(browser):
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
-
+    print "_test_console complete."
 
 def _test_import(browser):
+    print "running _test_import..."
     # Import some files and add components from them.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -125,9 +127,11 @@ def _test_import(browser):
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
+    print "_test_import complete."
 
 
 def _test_menu(browser):
+    print "running _test_menu..."
     # Just click on various main menu buttons.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -153,9 +157,11 @@ def _test_menu(browser):
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
+    print "_test_menu complete."
 
 
 def _test_newfile(browser):
+    print "running _test_newfile..."
     # Creates a file in the GUI.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -199,10 +205,11 @@ f_x = Float(0.0, iotype='out')
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
+    print "_test_newfile complete."
 
 
 if __name__ == '__main__':
-    if True:
+    if False:
         # Run under nose.
         import nose
         sys.argv.append('--cover-package=openmdao.')

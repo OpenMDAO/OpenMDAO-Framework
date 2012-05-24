@@ -119,6 +119,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
     this.disableTextSelection(this.header);
+    this.header.className="DataflowFigureHeader";
 
     this.footer=document.createElement("div");
     this.footer.style.position="absolute";

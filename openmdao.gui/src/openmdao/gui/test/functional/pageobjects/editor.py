@@ -16,7 +16,7 @@ from util import ValuePrompt, NotifierPage
 class UploadPage(BasePageObject):
     """ Pops-up when adding a file. """
 
-    title_prefix = 'OpenMDAO: Upload'
+    title_prefix = 'OpenMDAO: Add File'
 
     filename = InputElement((By.NAME, 'myfile'))
     submit = ButtonElement((By.ID, 'add-button'))
@@ -43,14 +43,14 @@ class EditorPage(BasePageObject):
                            '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[3]/a'))
 
     # File context menu.
-    file_create = ButtonElement((By.XPATH, "//a[(@rel='create')]"))
-    file_add = ButtonElement((By.XPATH, "//a[(@rel='add')]"))
+    file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
+    file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
     file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-    file_rename = ButtonElement((By.XPATH, "//a[(@rel='rename')]"))
-    file_view = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
-    file_edit = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
-    file_import = ButtonElement((By.XPATH, "//a[(@rel='importfile')]"))
-    file_exec = ButtonElement((By.XPATH, "//a[(@rel='execfile')]"))
+    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
+    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+    file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
+    file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
+    file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
     file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
@@ -61,10 +61,10 @@ class EditorPage(BasePageObject):
         super(EditorPage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["files"] = ( By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']" )
+        self.locators["files"] = (By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']")
 
         # Locator is relative to the iframe not the top level window.
-        self.locators["code_input"] = ( By.XPATH, "/html/body" )
+        self.locators["code_input"] = (By.XPATH, "/html/body")
 
     def get_files(self):
         """ Return names in the file tree. """
@@ -83,7 +83,7 @@ class EditorPage(BasePageObject):
                 else:
                     break
         return file_names
-    
+
     def add_file(self, file_path):
         """ Read in `file_path` """
         if file_path.endswith('.pyc'):
@@ -132,7 +132,7 @@ class EditorPage(BasePageObject):
         code_input_element.send_keys(Keys.CONTROL+'s')
 # FIXME: absolute delay for save to complete.
         time.sleep(2)
-        
+
         # Back to main window.
         self.browser.switch_to_default_content()
 
@@ -144,7 +144,8 @@ class EditorPage(BasePageObject):
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
         self('file_import').click()
-        NotifierPage.wait(self.browser, self.port)
+        # took out the following notify for now... it opened on workspace page
+        #NotifierPage.wait(self.browser, self.port)  
 
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """

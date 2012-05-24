@@ -152,7 +152,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         };
 
         // TODO: implement rename()
-        menu.rename = {
+        menu.renameFile = {
             "label"  : 'Rename',
             "action" : function(node) { alert("Rename is not implemented yet, sorry :("); }
         };
@@ -171,11 +171,11 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             };
             // if it's a py file, let them import or execute it
             if (/.py$/.test(path)) {
-                menu.importfile = {
+                menu.importFile = {
                     "label"  : 'Import * from File',
                     "action" : function(node) { model.importFile(path); }
                 };
-                menu.execfile = {
+                menu.execFile = {
                     "label"  : 'Execute File',
                     "action" : function(node) { model.execFile(path); }
                 };

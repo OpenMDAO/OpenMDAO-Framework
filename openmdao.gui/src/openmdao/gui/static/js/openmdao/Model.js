@@ -450,13 +450,7 @@ openmdao.Model=function() {
                             replace(/\\/g,'.').
                             replace(/\//g,'.');
         cmd = 'from '+path+' import *';
-        self.issueCommand(cmd, callback, errorHandler,
-                          function(jqXHR, textStatus) {
-                              if (typeof openmdao_test_mode !== 'undefined') {
-                                  openmdao.Util.notify("'"+cmd+"' complete: "
-                                                       +textStatus);
-                              }
-                          });
+        self.issueCommand(cmd, callback, errorHandler,null);
     };
 
     /** execute the model */
