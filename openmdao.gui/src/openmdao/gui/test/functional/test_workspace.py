@@ -87,15 +87,16 @@ def _test_import(browser):
     workspace_page('libraries_tab').click()
     workspace_page('working_section').click()
 
-    # Make sure there is only one dataflow component.
-    eq( len(workspace_page.get_dataflow_figures()), 1 )
+    # Make sure there are only two dataflow components (top & driver)
+    workspace_page.show_dataflow('top')
+    eq( len(workspace_page.get_dataflow_figures()), 2 )
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
     workspace_page.add_library_item_to_dataflow('Paraboloid', paraboloid_name)
 
-    # Now there should be two.
-    eq( len(workspace_page.get_dataflow_figures()), 2 )
+    # Now there should be three.
+    eq( len(workspace_page.get_dataflow_figures()), 3 )
 
     # Make sure the item added is there with the name we gave it.
     component_names = workspace_page.get_dataflow_component_names()

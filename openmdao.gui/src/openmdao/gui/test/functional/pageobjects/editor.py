@@ -142,7 +142,16 @@ class EditorPage(BasePageObject):
         element = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
-        chain.context_click(element).perform()
+        for i in range(10):
+            try:
+                chain.context_click(element).perform()
+            except StaleElementReferenceException:
+                logging.critical('edit_file: StaleElementReferenceException')
+                element = WebDriverWait(self.browser, 1).until(
+                    lambda browser: browser.find_element_by_xpath(xpath))
+                chain = ActionChains(self.browser)
+            else:
+                break
         self('file_import').click()
         # took out the following notify for now... it opened on workspace page
         #NotifierPage.wait(self.browser, self.port)  
