@@ -93,6 +93,7 @@ openmdao.ConsoleFrame.prototype.constructor = openmdao.ConsoleFrame;
 /** initialize a console in a child window */
 openmdao.PopoutConsoleFrame = function() {
     openmdao.model = opener.openmdao.model;
+    openmdao.model.addWindow(window);
     jQuery('body').append('<div id="console"></div>');
     frame = new openmdao.ConsoleFrame("console",  openmdao.model);
 };

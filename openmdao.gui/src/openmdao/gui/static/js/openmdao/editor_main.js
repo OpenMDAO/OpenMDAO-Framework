@@ -7,6 +7,7 @@ jQuery(function() {
     openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
     if (opener && opener.openmdao && opener.openmdao.model ) {
         openmdao.model = opener.openmdao.model;
+        openmdao.model.addWindow(window);
     }
     else {
         openmdao.model = new openmdao.Model();

@@ -207,14 +207,16 @@ class DataflowHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(json)
 
+
 class EditorHandler(ReqHandler):
-    
+
     @web.authenticated
     def get(self):
         '''Code Editor
         '''
         self.render('workspace/editor.html')
-                    
+
+
 class ExecHandler(ReqHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
@@ -398,15 +400,13 @@ class UploadHandler(ReqHandler):
     @web.authenticated
     def post(self):
         path = self.get_argument('path', default=None)
-        print 'adding file, path=',path
         cserver = self.get_server()
         file = self.request.files['myfile'][0]
         if file:
             filename = file['filename']
             if len(filename) > 0:
                 if path:
-                    filename = os.path.sep.join([path,filename])
-                print 'adding file:',filename
+                    filename = os.path.sep.join([path, filename])
                 cserver.add_file(filename, file['body'])
                 self.render('closewindow.html')
 
@@ -470,3 +470,4 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
+

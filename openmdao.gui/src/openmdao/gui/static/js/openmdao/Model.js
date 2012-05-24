@@ -11,7 +11,8 @@ openmdao.Model=function() {
         outstream_opened = false,
         pubstream_opened = false,
         sockets = {},
-        subscribers = {};
+        subscribers = {},
+        windows = [];
 
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
@@ -138,7 +139,7 @@ openmdao.Model=function() {
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
-                    debug.info('model.updateListeners',callbacks[i])
+                    debug.info('model.updateListeners',callbacks[i]);
                     callbacks[i]();
                 }
                 else {
@@ -501,19 +502,39 @@ openmdao.Model=function() {
     /** reload the model */
     this.reload = function() {
         openmdao.Util.closeWebSockets('reload');
+        self.closeWindows();
         window.location.replace('/workspace/project');
     };
 
     /** exit the model */
     this.close = function() {
         openmdao.Util.closeWebSockets('close');
+        self.closeWindows();
         window.location.replace('/workspace/close');
     };
 
     /** exit the model */
     this.exit = function() {
         openmdao.Util.closeWebSockets('exit');
+        self.closeWindows();
         window.location.replace('/exit');
+    };
+
+    /** add window to window list. */
+    this.addWindow = function(win) {
+        if (! windows) {
+            windows = [];
+        }
+        windows.push(win);
+    };
+
+    /** close all windows on the window list */
+    this.closeWindows = function() {
+        if ( windows) {
+            for (i = 0; i < windows.length; i++) {
+                windows[i].close();
+            }
+        }
     };
 
 };
