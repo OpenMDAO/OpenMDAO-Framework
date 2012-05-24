@@ -262,6 +262,7 @@ class ChainRule(HasTraits):
         using the chain rule. This can be called recursively to handle
         nested assemblies."""
         
+        # Figure out what outputs we need
         scope_name = scope.get_pathname()
         if scope_name not in self.edge_dicts:
             self._find_edges(scope)
@@ -270,7 +271,6 @@ class ChainRule(HasTraits):
         for node in scope.workflow.__iter__():
             
             node_name = node.name
-            #print "processing ", node_name
     
             incoming_deriv_names = {}
             incoming_derivs = {}
