@@ -397,17 +397,23 @@ class UploadHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
+        path = self.get_argument('path', default=None)
+        print 'adding file, path=',path
         cserver = self.get_server()
         file = self.request.files['myfile'][0]
         if file:
             filename = file['filename']
             if len(filename) > 0:
+                if path:
+                    filename = os.path.sep.join([path,filename])
+                print 'adding file:',filename
                 cserver.add_file(filename, file['body'])
                 self.render('closewindow.html')
 
     @web.authenticated
     def get(self):
-        self.render('workspace/upload.html')
+        path = self.get_argument('path', default=None)
+        self.render('workspace/upload.html', path=path)
 
 
 class WorkflowHandler(ReqHandler):

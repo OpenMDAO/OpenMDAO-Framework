@@ -5,7 +5,6 @@
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
     openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
-    debug.info('opener model',opener.openmdao.model);
     if (opener && opener.openmdao && opener.openmdao.model ) {
         openmdao.model = opener.openmdao.model;
     }

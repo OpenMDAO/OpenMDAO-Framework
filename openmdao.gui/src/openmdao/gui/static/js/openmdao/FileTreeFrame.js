@@ -3,14 +3,14 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
     var menu = [  
-                    {   "text": "File",
-                        "items": [
-                            { "text": "New File",      "onclick": "openmdao.model.newFile();" },
-                            { "text": "New Folder",    "onclick": "openmdao.model.newFolder();" },
-                            { "text": "Add File",      "onclick": "openmdao.model.uploadFile();" }
-                        ]
-                    }
-                ];
+        {   "text": "File",
+            "items": [
+                { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
+                { "text": "New Folder", "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
+                { "text": "Add File",   "onclick": "openmdao.FileTreeFrame.prototype.addFile();" }
+            ]
+        }
+    ];
     openmdao.FileTreeFrame.prototype.init.call(this,id,'Files',menu);
 
     /***********************************************************************
@@ -112,40 +112,44 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
         var path = filenode.attr('path');
 
-        debug.info('FileTreeFrame.contextMenu',node,path,isFolder,isEmptyFolder);
-
         // now create the menu
         var menu = {};
 
         // if they clicked on a folder then create new files inside that folder
-        if (isFolder) {
-            menu.create = {
-                "label"  : 'New File',
-                "action" : function(node) { model.newFile(path); }
-            };
-            menu.add = {
-                "label"  : 'Add File',
-                "action" : function(node) { model.uploadFile(path); }
-            };
-            menu.createFolder = {
-                "label"  : 'New Folder',
-                "action" : function(node) { model.newFolder(path); }
-            };
-        }
-        else {
-            menu.create = {
-                "label"  : 'New File',
-                "action" : function(node) { model.newFile(); }
-            };
-            menu.add = {
-                "label"  : 'Add File',
-                "action" : function(node) { model.uploadFile(); }
-            };
-            menu.createFolder = {
-                "label"  : 'New Folder',
-                "action" : function(node) { model.newFolder(); }
-            };
-        }
+        menu.createFile = {
+            "label"  : 'New File',
+            "action" : function(node) { 
+                           if (isFolder) {
+                              openmdao.FileTreeFrame.prototype.newFile(path);
+                           }
+                           else {
+                              openmdao.FileTreeFrame.prototype.newFile();
+                           }
+                       }
+        };
+        menu.createFolder = {
+            "label"  : 'New Folder',
+            "action" : function(node) {
+                           if (isFolder) {
+                               openmdao.FileTreeFrame.prototype.newFolder(path);
+                           }
+                           else {
+                               openmdao.FileTreeFrame.prototype.newFolder();
+                           }
+                       }
+        };
+
+        menu.addFile = {
+            "label"  : 'Add File',
+            "action" : function(node) {
+                           if (isFolder) {
+                               openmdao.FileTreeFrame.prototype.addFile(path);
+                           }
+                           else {
+                               openmdao.FileTreeFrame.prototype.addFile();
+                           }
+                       }
+        };
 
         // TODO: implement rename()
         menu.rename = {
@@ -157,7 +161,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         if (!isFolder) {
             // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
             menu.viewFile = {
-                "label"  : 'View File',
+                "label"  : 'View File (raw)',
                 "action" : function(node) { viewFile(path); }
             };
             // let them edit it (TODO: filter out non-text files?)
@@ -279,3 +283,26 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 /** set prototype */
 openmdao.FileTreeFrame.prototype = new openmdao.BaseFrame();
 openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;
+
+/** create a new file in the current project */
+openmdao.FileTreeFrame.prototype.newFile = function(path) {
+    openmdao.Util.promptForValue('Specify a name for the new file',
+			         function(name) { openmdao.model.newFile(name,path); } );
+};
+
+/** create a new folder in the current project */
+openmdao.FileTreeFrame.prototype.newFolder = function(path) {
+    openmdao.Util.promptForValue('Specify a name for the new folder',
+			         function(name) { openmdao.model.newFolder(name,path); } );
+};
+
+/** add an existing file to the current project */
+openmdao.FileTreeFrame.prototype.addFile = function(path) {
+    if (path) {
+        openmdao.Util.popupWindow('upload?path='+path,'Add File',150,400);
+    }
+    else {
+        openmdao.Util.popupWindow('upload','Add File',150,400);
+    }
+};
+

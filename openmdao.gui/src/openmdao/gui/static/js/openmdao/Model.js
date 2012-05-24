@@ -65,7 +65,7 @@ openmdao.Model=function() {
                 message = jQuery.parseJSON(message);
             }
             catch(err) {
-                debug.error('Model.handlePubMessage Error:',err,message)
+                debug.error('Model.handlePubMessage Error:',err,message);
             }
         }
         var topic = message[0],
@@ -91,7 +91,7 @@ openmdao.Model=function() {
         for messages with the given topic
     */
     this.addListener = function(topic, callback) {
-        debug.info('Model.addListener',topic)
+        debug.info('Model.addListener',topic);
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
@@ -134,11 +134,11 @@ openmdao.Model=function() {
 
    /** notify all generic listeners that something may have changed  */
     this.updateListeners = function() {
-        //debug.info('updateListeners',subscribers)
         var callbacks = subscribers[''];
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
+                    debug.info('model.updateListeners',callbacks[i])
                     callbacks[i]();
                 }
                 else {
@@ -383,7 +383,6 @@ openmdao.Model=function() {
 
     /** set the contents of the specified file */
     this.setFile = function(filepath, contents, errorHandler) {
-        debug.info('Model.setFile',filepath,contents)
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
@@ -395,7 +394,6 @@ openmdao.Model=function() {
 
     /** create new folder with  specified path in the model working directory */
     this.createFolder = function(folderpath, errorHandler) {
-        debug.info('Model.createFolder',folderpath)
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+folderpath.replace(/\\/g,'/'),
@@ -405,43 +403,27 @@ openmdao.Model=function() {
         });
     };
 
-    /** create new file with  specified path in the model working directory */
-    this.newFile = function(folderpath) {
-        debug.info('Model.newFile',folderpath)
-        openmdao.Util.promptForValue('Specify a name for the new file',
-            function(name) {
-                if (folderpath) {
-                    name = folderpath+'/'+name;
-                }
-                var contents = '';
-                if (/.py$/.test(name)) {
-                    contents = '"""\n   '+name+'\n"""\n\n';
-                }
-                if (/.json$/.test(name)) {
-                    contents = '[]';
-                }
-                self.setFile(name,contents);
+    /** create a new file in the model working directory with the specified path  */
+    this.newFile = function(name,folderpath) {
+            if (folderpath) {
+                name = folderpath+'/'+name;
             }
-        );
+            var contents = '';
+            if (/.py$/.test(name)) {
+                contents = '"""\n   '+name+'\n"""\n\n';
+            }
+            if (/.json$/.test(name)) {
+                contents = '[]';
+            }
+            self.setFile(name,contents);
     };
 
     /** prompt for name & create a new folder */
-    this.newFolder = function(folderpath) {
-        debug.info('Model.newFolder',folderpath)
-        openmdao.Util.promptForValue('Specify a name for the new folder',
-            function(name) {
-                if (folderpath) {
-                    name = folderpath+'/'+name;
-                }
-                self.createFolder(name);
+    this.newFolder = function(name,folderpath) {
+            if (folderpath) {
+                name = folderpath+'/'+name;
             }
-        );
-    };
-
-    /** upload a file to the model working directory */
-    this.uploadFile = function() {
-        // TODO: make this an AJAX call so we can updateListeners afterwards
-        openmdao.Util.popupWindow('upload','Add File',150,400);
+            self.createFolder(name);
     };
 
     /** delete file with specified path from the model working directory */
@@ -535,3 +517,4 @@ openmdao.Model=function() {
     };
 
 };
+
