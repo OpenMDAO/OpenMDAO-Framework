@@ -132,7 +132,7 @@ class ChainRule(HasTraits):
         driver_set = scope.workflow.get_names()
         interior_edges = scope._parent._depgraph.get_interior_edges(driver_set)
         
-        needed_edges = set([a for a,b in interior_edges])
+        needed_edges = set([a for a, b in interior_edges])
         
         # Find our minimum set of edges - 2) Outputs connected to objectives
         for _, expr in self._parent.get_objectives().iteritems():
@@ -163,7 +163,7 @@ class ChainRule(HasTraits):
                 if not isinstance(node.driver, Run_Once):
                     raise NotImplementedError('Nested drivers')
                     
-                needed_outputs = [ a for a,b in \
+                needed_outputs = [ a for a, b in \
                                    node.parent._depgraph.var_edges(node_name)]
                 edge_dict[node_name] = needed_outputs
                                          
