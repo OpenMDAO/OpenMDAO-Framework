@@ -187,7 +187,7 @@ openmdao.ComponentFrame = function(model,pathname) {
 
     this.editObject(pathname);
 
-    //model.addListener('',this.update);
+    model.addListener('',this.update);
 };
 
 /** set prototype */

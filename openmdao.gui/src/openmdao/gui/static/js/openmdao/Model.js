@@ -146,7 +146,6 @@ openmdao.Model=function() {
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
-                    debug.info('model.updateListeners',callbacks[i]);
                     callbacks[i]();
                 }
                 else {

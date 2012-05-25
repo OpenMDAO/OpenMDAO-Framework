@@ -108,7 +108,7 @@ openmdao.PropertiesFrame = function(id,model) {
         }
     };
 
-    //model.addListener('',this.update);
+    model.addListener('',this.update);
 };
 
 /** set prototype */
