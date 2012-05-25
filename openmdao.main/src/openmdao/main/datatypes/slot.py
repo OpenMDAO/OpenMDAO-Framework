@@ -35,7 +35,10 @@ class Slot(Variable):
             iszopeiface = issubclass(klass, zope.interface.Interface)
         except TypeError:
             iszopeiface = False
-        
+            if not isclass(klass):
+                raise TypeError('klass argument must be a Class or Interface,'
+                                ' not %s' % klass)
+
         metadata.setdefault( 'copy', 'deep' )
 
         self._allow_none = allow_none
