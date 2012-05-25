@@ -26,13 +26,14 @@ def _test_console(browser):
 
     workspace_page.do_command('dir()')
     expected = ">>> dir()\n['__builtins__', 'path', 'top']"
-    eq( workspace_page.history, expected )
+    eq(workspace_page.history, expected)
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_console complete."
+
 
 def _test_import(browser):
     print "running _test_import..."
@@ -87,20 +88,20 @@ def _test_import(browser):
     workspace_page('libraries_tab').click()
     workspace_page('working_section').click()
 
-    # Make sure there are only two dataflow components (top & driver)
+    # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
-    eq( len(workspace_page.get_dataflow_figures()), 2 )
+    eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
     workspace_page.add_library_item_to_dataflow('Paraboloid', paraboloid_name)
 
     # Now there should be three.
-    eq( len(workspace_page.get_dataflow_figures()), 3 )
+    eq(len(workspace_page.get_dataflow_figures()), 3)
 
     # Make sure the item added is there with the name we gave it.
     component_names = workspace_page.get_dataflow_component_names()
-    if paraboloid_name not in component_names :
+    if paraboloid_name not in component_names:
         raise TestCase.failureException(
             "Expected component name, '%s', to be in list of existing"
             " component names, '%s'" % (paraboloid_name, component_names))
@@ -141,7 +142,7 @@ def _test_menu(browser):
     # Project-Run.
     workspace_page.run()
     expected = 'Executing...\nExecution complete.'
-    eq( workspace_page.history, expected )
+    eq(workspace_page.history, expected)
     top_figure = workspace_page.get_dataflow_figures()[0]
 #FIXME: halo seems to go away now...
 #    eq( top_figure.value_of_css_property('border'), '1px solid rgb(0, 255, 0)' )
@@ -210,13 +211,7 @@ f_x = Float(0.0, iotype='out')
 
 
 if __name__ == '__main__':
-    if False:
-        # Run under nose.
-        import nose
-        sys.argv.append('--cover-package=openmdao.')
-        sys.argv.append('--cover-erase')
-        sys.exit(nose.runmodule())
-    else:
+    if '--nonose' in sys.argv:
         # Run outside of nose.
         from util import setup_chrome, setup_firefox
         setup_server(virtual_display=False)
@@ -226,4 +221,10 @@ if __name__ == '__main__':
         _test_menu(browser)
         _test_newfile(browser)
         teardown_server()
+    else:
+        # Run under nose.
+        import nose
+        sys.argv.append('--cover-package=openmdao.')
+        sys.argv.append('--cover-erase')
+        sys.exit(nose.runmodule())
 
