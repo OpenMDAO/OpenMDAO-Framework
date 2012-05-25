@@ -256,8 +256,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         });
     }
 
-    // listen for 'files' messages and update file data accordingly
-    model.addListener('files', function(message) {
+    function handleMessage(message) {
         if (message.length !== 2 || message[0] !== 'files') {
             debug.warn('Invalid files data:',message);
         }
@@ -265,11 +264,18 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             files = message[1];
             updateFiles(files);
         }
-    });
+    }
+
+    // listen for 'files' messages and update file data accordingly
+    model.addListener('files', handleMessage);
 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
+
+    this.destructor = function() {
+        model.removeListener('files', handleMessage);
+    };
 
     /** update the display, with data from the model */
     this.update = function() {
@@ -287,13 +293,13 @@ openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;
 /** create a new file in the current project */
 openmdao.FileTreeFrame.prototype.newFile = function(path) {
     openmdao.Util.promptForValue('Specify a name for the new file',
-			         function(name) { openmdao.model.newFile(name,path); } );
+                     function(name) { openmdao.model.newFile(name,path); } );
 };
 
 /** create a new folder in the current project */
 openmdao.FileTreeFrame.prototype.newFolder = function(path) {
     openmdao.Util.promptForValue('Specify a name for the new folder',
-			         function(name) { openmdao.model.newFolder(name,path); } );
+                     function(name) { openmdao.model.newFolder(name,path); } );
 };
 
 /** add an existing file to the current project */

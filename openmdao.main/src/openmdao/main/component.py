@@ -109,6 +109,7 @@ _iodict = {'out': 'output', 'in': 'input'}
 
 __attributes__ = '__attributes__'
 
+
 class Component(Container):
     """This is the base class for all objects containing Traits that are \
     accessible to the OpenMDAO framework and are "runnable."
@@ -1491,12 +1492,12 @@ class Component(Container):
                     else:
                         obj = getattr(self, name)
                         if has_interface(obj, IComponent):
-                           obj.register_published_vars(__attributes__)
-                           return
+                            obj.register_published_vars(__attributes__, publish)
+                            return
 
                 if publish:
                     if name in self._publish_vars:
-                        self._publish_vars += 1
+                        self._publish_vars[name] += 1
                     else:
                         self._publish_vars[name] = 1
                 else:

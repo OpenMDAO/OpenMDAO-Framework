@@ -362,8 +362,10 @@ class PublishHandler(ReqHandler):
     @web.authenticated
     def get(self):
         topic = self.get_argument('topic')
+        publish = self.get_argument('publish', default=True)
+        publish = publish in [True, 'true', 'True']
         cserver = self.get_server()
-        cserver.publish(topic)
+        cserver.publish(topic, publish)
 
 
 class PubstreamHandler(ReqHandler):

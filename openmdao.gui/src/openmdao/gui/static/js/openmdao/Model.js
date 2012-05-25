@@ -92,32 +92,31 @@ openmdao.Model=function() {
         for messages with the given topic
     */
     this.addListener = function(topic, callback) {
-        debug.info('Model.addListener',topic);
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
         else {
-            if (topic === 'outstream' && !outstream_opened) {
-                // if outstream socket is not opened yet, open it
-                outstream_opened = true;
-                open_websocket('outstream', handleOutMessage);
-            }
-            else {
-                // if pubstream socket is not opened yet, open it
-                if (!pubstream_opened) {
-                    pubstream_opened = true;
-                    open_websocket('pubstream', handlePubMessage);
-                }
-                // tell server to publish the topic (exec_state is automatic)
-                if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                    jQuery.ajax({
-                        type: 'GET',
-                        url:  'publish',
-                        data: {'topic': topic}
-                    });
-                }
-            }
             subscribers[topic] = [ callback ];
+        }
+        if (topic === 'outstream' && !outstream_opened) {
+            // if outstream socket is not opened yet, open it
+            outstream_opened = true;
+            open_websocket('outstream', handleOutMessage);
+        }
+        else {
+            // if pubstream socket is not opened yet, open it
+            if (!pubstream_opened) {
+                pubstream_opened = true;
+                open_websocket('pubstream', handlePubMessage);
+            }
+            // tell server there's a new subscriber to the topic
+            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                jQuery.ajax({
+                    type: 'GET',
+                    url:  'publish',
+                    data: {'topic': topic, 'publish': true}
+                });
+            }
         }
     };
 
@@ -129,6 +128,14 @@ openmdao.Model=function() {
             var listeners = subscribers[topic];
             while (listeners.indexOf(callback) !== -1) {
               listeners.splice(listeners.indexOf(callback), 1);
+            }
+            // tell server there's one less subscriber to the topic
+            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
+                jQuery.ajax({
+                    type: 'GET',
+                    url:  'publish',
+                    data: {'topic': topic, 'publish': false}
+                });
             }
         }
     };

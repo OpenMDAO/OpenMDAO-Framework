@@ -519,7 +519,7 @@ class ConsoleServer(cmd.Cmd):
         print "Installing", distribution, "from", url
         easy_install.main(["-U", "-f", url, distribution])
 
-    def publish(self, pathname):
+    def publish(self, pathname, publish):
         ''' publish the specified topic
         '''
         if not self.publisher:
@@ -533,6 +533,7 @@ class ConsoleServer(cmd.Cmd):
             parts = pathname.split('.')
             if len(parts) > 0:
                 root = self.proj.__dict__[parts[0]]
-                rest = '.'.join(parts[1:])
-                root.register_published_vars(rest)
+                if root:
+                    rest = '.'.join(parts[1:])
+                    root.register_published_vars(rest, publish)
 

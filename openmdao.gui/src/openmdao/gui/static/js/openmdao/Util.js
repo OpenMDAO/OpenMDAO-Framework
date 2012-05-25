@@ -478,8 +478,6 @@ openmdao.Util = {
 
         connect();
 
-        debug.info('Util.openWebSocket returning socket =',socket);
-
         return socket;
     },
 

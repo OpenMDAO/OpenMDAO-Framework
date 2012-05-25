@@ -53,7 +53,7 @@ openmdao.PropertiesFrame = function(id,model) {
             outputs.loadData([]);
         }
     }
-    
+
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== self.pathname) {
             debug.warn('Invalid properties data for:',self.pathname,message);
@@ -99,6 +99,12 @@ openmdao.PropertiesFrame = function(id,model) {
     this.update = function() {
         if (self.pathname && self.pathname.length>0) {
             self.editObject(self.pathname);
+        }
+    };
+
+    this.destructor = function() {
+        if (self.pathname && self.pathname.length>0) {
+            model.removeListener(self.pathname, handleMessage);
         }
     };
 

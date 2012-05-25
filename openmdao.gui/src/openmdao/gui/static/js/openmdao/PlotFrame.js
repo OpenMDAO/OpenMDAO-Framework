@@ -20,9 +20,8 @@ openmdao.PlotFrame = function(id,model,pathname) {
         interval = 30,
         timer = null,
         maxPoints = 300,
-        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>");
-
-    self.pathname = pathname;
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>"),
+        variables = [];
 
     // create plot in a div inside the element
     plot = jQuery('<div style="height:350px;width:600px;padding:5px;">')
@@ -32,7 +31,7 @@ openmdao.PlotFrame = function(id,model,pathname) {
     /** add new values to the data set, capping the number of points */
     function updateData(newValues) {
         if (!newValues) {
-            debug.error('PlotFrame received bad data for',pathname,newValues);
+            debug.error('PlotFrame received bad data:',newValues);
             return;
         }
         //newValues = jQuery.parseJSON(newValues);
@@ -67,7 +66,7 @@ openmdao.PlotFrame = function(id,model,pathname) {
         plot.draw();
     }
 
-    function messagehandler(message) {
+    function handleMessage(message) {
         if (message.length === 2) {
             var newdata = {};
             newdata[message[0]] = message[1];
@@ -78,7 +77,8 @@ openmdao.PlotFrame = function(id,model,pathname) {
 
     // subscribe to model for data
     function plotVariable(pathname) {
-        model.addListener(pathname,messagehandler);
+        variables.push(pathname);
+        model.addListener(pathname, handleMessage);
     }
 
     // prompt for a new variable to add to the plot
@@ -104,6 +104,13 @@ openmdao.PlotFrame = function(id,model,pathname) {
     /***********************************************************************
      *  privileged
      ***********************************************************************/
+
+    this.destructor = function() {
+        var i =0;
+        for (i = 0 ; i < variables.length ; ++i) {
+            model.removeListener(variables[i], handleMessage);
+        }
+    };
 
     /** nothing to see here, we get our data elsewhere */
     this.update = function() {};

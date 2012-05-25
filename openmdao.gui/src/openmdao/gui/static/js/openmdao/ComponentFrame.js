@@ -140,7 +140,7 @@ openmdao.ComponentFrame = function(model,pathname) {
             loadData(properties);
         }
     }
-            
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -179,6 +179,12 @@ openmdao.ComponentFrame = function(model,pathname) {
         return this;
     };
 
+    this.destructor = function() {
+        if (self.pathname && self.pathname.length>0) {
+            model.removeListener(self.pathname, handleMessage);
+        }
+    };
+
     this.editObject(pathname);
 
     //model.addListener('',this.update);
@@ -187,3 +193,4 @@ openmdao.ComponentFrame = function(model,pathname) {
 /** set prototype */
 openmdao.ComponentFrame.prototype = new openmdao.BaseFrame();
 openmdao.ComponentFrame.prototype.constructor = openmdao.ComponentFrame;
+

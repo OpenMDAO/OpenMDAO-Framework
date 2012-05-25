@@ -1,11 +1,11 @@
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.update = function() {
     // tell all openmdao frames to update themselves
     jQuery.each(this.frames,function(id,frame) {
         frame.update();
     });
-}
+};
 
 openmdao.BaseFrame = function () {
     id:         null;   // the id attribute of the element the frame is built on
@@ -13,7 +13,7 @@ openmdao.BaseFrame = function () {
     par:        null;   // the parent element as a jQuery object
     title:      "";     // the title to be used for this frame
     menu:       null;   // an optional menu
-}
+};
 
 openmdao.BaseFrame.prototype.init = function (id,title,menu) {
 /*  initialize a BaseFrame on the element with the given ID
@@ -36,15 +36,15 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
             openmdao.uniqueID = 1;
         }
         this.id = "BaseFrame"+openmdao.uniqueID;
-    };
+    }
 
     // add to list of frames
-    if (! ('frames' in openmdao)) {
-        openmdao['frames'] = { };
+    if (! openmdao.hasOwnProperty('frames')) {
+        openmdao.frames = { };
     }
     openmdao.frames[this.id] = this;
 
-    // if the elm doesn't exist, create it as a popup 
+    // if the elm doesn't exist, create it as a popup
     if (this.elm && this.elm.length > 0) {
         this.par = this.elm.parent();
     }
@@ -52,24 +52,25 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
         this.par = null;
         this.elm = jQuery('<div id='+this.id+'></div>');
         this.popup(this.title);
-    };
+    }
 
     // delete any existing content and prevent browser context menu
     this.elm.html("")
-            .bind("contextmenu", function(e) { return false; })
+            .bind("contextmenu", function(e) { return false; });
 
     // create menubar and add menu if one has been provided
     if (this.menu) {
         var menuID = this.id+"-menu",
             menuDiv = this.elm.append("<nav2 id='"+menuID+"'>"),
-            popButton = jQuery("<div title='Pop Out' style='position:absolute;top:5px;right:5px;z-index:1001'>*</div>")
-                .click( function() { this.popup(this.title) }.bind(this)
-            )
-        new openmdao.Menu(menuID,this.menu)
-        // FIXME: HACK, add button to make window pop out (TODO: alternately open in new browser window?)
-        menuDiv.append(popButton)
+            style = "style='position:absolute;top:5px;right:5px;z-index:1001'",
+            popButton = jQuery("<div title='Pop Out' "+style+">*</div>");
+        popButton.click( function() { this.popup(this.title); }.bind(this) );
+        new openmdao.Menu(menuID,this.menu);
+        // FIXME: HACK, add button to make window pop out
+        // (TODO: alternately open in new browser window?)
+        menuDiv.append(popButton);
     }
-},
+};
 
 openmdao.BaseFrame.prototype.popup = function (title) {
     /* put this frame in a popup */
@@ -81,39 +82,35 @@ openmdao.BaseFrame.prototype.popup = function (title) {
                  }.bind(this),
         width:   'auto',
         height:  'auto'
-    })
-}
+    });
+};
 
 openmdao.BaseFrame.prototype.setTitle = function (title) {
     if (title) {
-        this.title = title
+        this.title = title;
         this.elm.dialog('option', 'title', title);
     }
-}
-
-openmdao.BaseFrame.prototype.handleMessage = function (json) {
-    debug.info(this.title,'received message',json)
-}
+};
 
 openmdao.BaseFrame.prototype.close = function () {
+    if ((this.hasOwnProperty('destructor')) &&
+        (typeof this.destructor === 'function')) {
+        this.destructor();
+    }
     // assuming I'm a dialog: if I have a parent then re-dock with it, else self-destruct
     if (this.par) {
-        this.elm.dialog('destroy')
-        this.elm.appendTo(this.par)
-        this.elm.show()
+        this.elm.dialog('destroy');
+        this.elm.appendTo(this.par);
+        this.elm.show();
     }
     else {
-        this.elm.dialog('destroy')
+        this.elm.dialog('destroy');
         this.elm.remove(); 
     }
-}
+};
 
 openmdao.BaseFrame.prototype.update = function() {
     // place holder to update contents of the frame (optional)
     //debug.warn('BaseFrame.update - no update function defined for',this)
-}
-
-openmdao.BaseFrame.prototype.destroy = function() {
-    // place holder to clean up subscriptions, etc
-}
+};
 
