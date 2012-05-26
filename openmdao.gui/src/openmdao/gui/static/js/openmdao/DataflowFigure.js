@@ -248,7 +248,13 @@ openmdao.DataflowFigure.prototype.setDimension=function(w,h){
 };
 
 openmdao.DataflowFigure.prototype.setTitle=function(title){
-    this.header.innerHTML= title;
+    if (title.length >0) {
+        this.header.innerHTML= title;
+    }
+    else {
+        this.header.innerHTML= "Globals";
+        this.header.style.fontStyle="italic";
+    }
 };
 
 openmdao.DataflowFigure.prototype.setContent=function(content){
@@ -280,38 +286,41 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         pathname = this.pathname,
         name = this.name;
 
-    // menu header
-    menu.appendMenuItem(new draw2d.MenuItem("<b>"+name+"</b>",null,function(){
-    }));
+    if (name.length > 0) {
+        // menu header
+        menu.appendMenuItem(new draw2d.MenuItem("<b>"+name+"</b>",null,function(){
+        }));
 
-    // properties
-    menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
-        var id = (pathname+'-properties').replace(/\./g,'-');
-        editor = new openmdao.PropertiesFrame(id,model).editObject(pathname);
-    }));
+        // properties
+        menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
+            var id = (pathname+'-properties').replace(/\./g,'-');
+            editor = new openmdao.PropertiesFrame(id,model).editObject(pathname);
+        }));
 
-    // run
-    menu.appendMenuItem(new draw2d.MenuItem("Run",null,function(){
-        var cmd = pathname + '.run();';
-        model.issueCommand(cmd);
-    }));
-
-    // disconnect
-    var asm = openmdao.Util.getPath(pathname);
-    if (asm.length > 0) {
-        menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-            var cmd = asm + '.disconnect("'+name+'");'
-                    + asm + '.config_changed(update_parent=True);';
+        // run
+        menu.appendMenuItem(new draw2d.MenuItem("Run",null,function(){
+            var cmd = pathname + '.run();';
             model.issueCommand(cmd);
         }));
+
+        // disconnect
+        var asm = openmdao.Util.getPath(pathname);
+        if (asm.length > 0) {
+            menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+                var cmd = asm + '.disconnect("'+name+'");'
+                        + asm + '.config_changed(update_parent=True);';
+                model.issueCommand(cmd);
+            }));
+        }
+
+        // remove
+        menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
+            model.removeComponent(pathname);
+        }));
+
+        menu.setZOrder(999999);
     }
 
-    // remove
-    menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
-        model.removeComponent(pathname);
-    }));
-
-    menu.setZOrder(999999);
     return menu;
 };
 
@@ -364,7 +373,7 @@ openmdao.DataflowFigure.prototype.maximize=function(){
 
 /** update dataflow by recreating figures from JSON dataflow data */
 openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
-    if (json.components.length === 0) {
+    if (!json.hasOwnProperty('components')) {
         return;
     }
 
