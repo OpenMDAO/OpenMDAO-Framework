@@ -379,7 +379,7 @@ class ConsoleServer(cmd.Cmd):
         comp, root = self.get_container(pathname)
         if comp:
             try:
-                attr = comp.get_attributes()
+                attr = comp.get_attributes(ioOnly=False)
             except Exception, err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(attr)
@@ -536,4 +536,3 @@ class ConsoleServer(cmd.Cmd):
                 if root:
                     rest = '.'.join(parts[1:])
                     root.register_published_vars(rest, publish)
-

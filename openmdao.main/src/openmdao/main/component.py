@@ -1526,9 +1526,10 @@ class Component(Container):
                     lst.append((key, val))
                 pub.publish_list(lst)
 
-    def get_attributes(self):
-        """ get attributes of component, includes a dictionary of attributes
-            for each interface implemented by the component
+    def get_attributes(self, ioOnly=True):
+        """ get attributes of component. includes inputs and ouputs and, if
+            ioOnly is not true, a dictionary of attributes for each interface
+            implemented by the component
         """
         attrs = {}
 
@@ -1590,99 +1591,100 @@ class Component(Container):
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
-        if has_interface(self, IAssembly):
-            attrs['Dataflow'] = self.get_dataflow()
+        if not ioOnly:
+            if has_interface(self, IAssembly):
+                attrs['Dataflow'] = self.get_dataflow()
 
-        if has_interface(self, IDriver):
-            attrs['Workflow'] = self.get_workflow()
+            if has_interface(self, IDriver):
+                attrs['Workflow'] = self.get_workflow()
 
-        if has_interface(self, IHasCouplingVars):
-            couples = []
-            objs = self.list_coupling_vars()
-            for indep, dep in objs:
-                attr = {}
-                attr['independent'] = indep
-                attr['dependent'] = dep
-                couples.append(attr)
-            attrs['CouplingVars'] = couples
+            if has_interface(self, IHasCouplingVars):
+                couples = []
+                objs = self.list_coupling_vars()
+                for indep, dep in objs:
+                    attr = {}
+                    attr['independent'] = indep
+                    attr['dependent'] = dep
+                    couples.append(attr)
+                attrs['CouplingVars'] = couples
 
-        if has_interface(self, IHasObjectives):
-            objectives = []
-            objs = self.get_objectives()
-            for key in objs.keys():
-                attr = {}
-                attr['name'] = str(key)
-                attr['expr'] = objs[key].text
-                attr['scope'] = objs[key].scope.name
-                objectives.append(attr)
-            attrs['Objectives'] = objectives
+            if has_interface(self, IHasObjectives):
+                objectives = []
+                objs = self.get_objectives()
+                for key in objs.keys():
+                    attr = {}
+                    attr['name'] = str(key)
+                    attr['expr'] = objs[key].text
+                    attr['scope'] = objs[key].scope.name
+                    objectives.append(attr)
+                attrs['Objectives'] = objectives
 
-        if has_interface(self, IHasParameters):
-            parameters = []
-            parms = self.get_parameters()
-            for key, parm in parms.iteritems():
-                attr = {}
-                attr['name']    = str(key)
-                attr['target']  = parm.target
-                attr['low']     = parm.low
-                attr['high']    = parm.high
-                attr['scaler']  = parm.scaler
-                attr['adder']   = parm.adder
-                attr['fd_step'] = parm.fd_step
-                #attr['scope']   = parm.scope.name
-                parameters.append(attr)
-            attrs['Parameters'] = parameters
+            if has_interface(self, IHasParameters):
+                parameters = []
+                parms = self.get_parameters()
+                for key, parm in parms.iteritems():
+                    attr = {}
+                    attr['name']    = str(key)
+                    attr['target']  = parm.target
+                    attr['low']     = parm.low
+                    attr['high']    = parm.high
+                    attr['scaler']  = parm.scaler
+                    attr['adder']   = parm.adder
+                    attr['fd_step'] = parm.fd_step
+                    #attr['scope']   = parm.scope.name
+                    parameters.append(attr)
+                attrs['Parameters'] = parameters
 
-        if has_interface(self, IHasConstraints) or \
-           has_interface(self, IHasEqConstraints):
-            constraints = []
-            cons = self.get_eq_constraints()
-            for key, con in cons.iteritems():
-                attr = {}
-                attr['name']    = str(key)
-                attr['expr']    = str(con)
-                attr['scaler']  = con.scaler
-                attr['adder']   = con.adder
-                constraints.append(attr)
-            attrs['EqConstraints'] = constraints
+            if has_interface(self, IHasConstraints) or \
+               has_interface(self, IHasEqConstraints):
+                constraints = []
+                cons = self.get_eq_constraints()
+                for key, con in cons.iteritems():
+                    attr = {}
+                    attr['name']    = str(key)
+                    attr['expr']    = str(con)
+                    attr['scaler']  = con.scaler
+                    attr['adder']   = con.adder
+                    constraints.append(attr)
+                attrs['EqConstraints'] = constraints
 
-        if has_interface(self, IHasConstraints) or \
-           has_interface(self, IHasIneqConstraints):
-            constraints = []
-            cons = self.get_ineq_constraints()
-            for key, con in cons.iteritems():
-                attr = {}
-                attr['name']    = str(key)
-                attr['expr']    = str(con)
-                attr['scaler']  = con.scaler
-                attr['adder']   = con.adder
-                constraints.append(attr)
-            attrs['IneqConstraints'] = constraints
+            if has_interface(self, IHasConstraints) or \
+               has_interface(self, IHasIneqConstraints):
+                constraints = []
+                cons = self.get_ineq_constraints()
+                for key, con in cons.iteritems():
+                    attr = {}
+                    attr['name']    = str(key)
+                    attr['expr']    = str(con)
+                    attr['scaler']  = con.scaler
+                    attr['adder']   = con.adder
+                    constraints.append(attr)
+                attrs['IneqConstraints'] = constraints
 
-        slots = []
-        for name, value in self.traits().items():
-            if value.is_trait_type(Slot):
-                attr = {}
-                attr['name'] = name
-                attr['klass'] = value.trait_type.klass.__name__
-                inames = []
-                for klass in list(implementedBy(attr['klass'])):
-                    inames.append(klass.__name__)
-                attr['interfaces'] = inames
-                if getattr(self, name) is None:
-                    attr['filled'] = False
-                else:
-                    attr['filled'] = True
-                meta = self.get_metadata(name)
-                if meta:
-                    for field in ['desc']:    # just desc?
-                        if field in meta:
-                            attr[field] = meta[field]
-                        else:
-                            attr[field] = ''
-                    attr['type'] = meta['vartypename']
-                slots.append(attr)
-        attrs['Slots'] = slots
+            slots = []
+            for name, value in self.traits().items():
+                if value.is_trait_type(Slot):
+                    attr = {}
+                    attr['name'] = name
+                    attr['klass'] = value.trait_type.klass.__name__
+                    inames = []
+                    for klass in list(implementedBy(attr['klass'])):
+                        inames.append(klass.__name__)
+                    attr['interfaces'] = inames
+                    if getattr(self, name) is None:
+                        attr['filled'] = False
+                    else:
+                        attr['filled'] = True
+                    meta = self.get_metadata(name)
+                    if meta:
+                        for field in ['desc']:    # just desc?
+                            if field in meta:
+                                attr[field] = meta[field]
+                            else:
+                                attr[field] = ''
+                        attr['type'] = meta['vartypename']
+                    slots.append(attr)
+            attrs['Slots'] = slots
 
         return attrs
 
