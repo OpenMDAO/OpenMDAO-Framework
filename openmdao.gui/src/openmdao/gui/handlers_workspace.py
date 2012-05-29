@@ -39,9 +39,9 @@ class ReqHandler(ReqHandler):
         attributes = {}
         for field in ['head']:
             if field in self.request.arguments.keys():
-                attributes[field]=self.request.arguments[field][0]
+                attributes[field] = self.request.arguments[field][0]
             else:
-                attributes[field]=False
+                attributes[field] = False
         self.render('workspace/base.html', **attributes)
 
     @web.authenticated
@@ -53,9 +53,9 @@ class ReqHandler(ReqHandler):
                 s = self.request.arguments[field][0]
                 s = re.sub(r'^"|"$', '', s)  # strip leading/trailing quotes
                 s = re.sub(r"^'|'$", "", s)  # strip leading/trailing quotes
-                attributes[field]=s
+                attributes[field] = s
             else:
-                attributes[field]=False
+                attributes[field] = False
         self.render('workspace/base.html', **attributes)
 
 
@@ -102,7 +102,7 @@ class CommandHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.content_type = 'text/html'
-        self.write('') # not used for now, could render a form
+        self.write('')  # not used for now, could render a form
 
 
 class ComponentHandler(ReqHandler):
@@ -131,7 +131,7 @@ class ComponentHandler(ReqHandler):
         cserver = self.get_server()
         result = ''
         try:
-            result = cserver.onecmd('del '+name)
+            result = cserver.onecmd('del ' + name)
         except Exception, e:
             print e
             result = sys.exc_info()
@@ -207,14 +207,16 @@ class DataflowHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(json)
 
+
 class EditorHandler(ReqHandler):
-    
+
     @web.authenticated
     def get(self):
         '''Code Editor
         '''
         self.render('workspace/editor.html')
-                    
+
+
 class ExecHandler(ReqHandler):
     ''' if a filename is POST'd, have the cserver execute the file
         otherwise just run() the project
@@ -353,6 +355,19 @@ class PlotHandler(ReqHandler):
         self.write(port)
 
 
+class PublishHandler(ReqHandler):
+    ''' GET: tell the server to publish the specified topic/variable
+    '''
+
+    @web.authenticated
+    def get(self):
+        topic = self.get_argument('topic')
+        publish = self.get_argument('publish', default=True)
+        publish = publish in [True, 'true', 'True']
+        cserver = self.get_server()
+        cserver.publish(topic, publish)
+
+
 class PubstreamHandler(ReqHandler):
     ''' return the url of the zmq publisher server,
     '''
@@ -371,11 +386,7 @@ class TypesHandler(ReqHandler):
     @web.authenticated
     def get(self):
         cserver = self.get_server()
-        types = cserver.get_available_types()
-        try:
-            types['working'] = cserver.get_workingtypes()
-        except Exception, err:
-            print "Error adding working types:", str(err)
+        types = cserver.get_types()
         self.content_type = 'application/javascript'
         self.write(jsonpickle.encode(types))
 
@@ -386,17 +397,21 @@ class UploadHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
+        path = self.get_argument('path', default=None)
         cserver = self.get_server()
         file = self.request.files['myfile'][0]
         if file:
             filename = file['filename']
             if len(filename) > 0:
+                if path:
+                    filename = os.path.sep.join([path, filename])
                 cserver.add_file(filename, file['body'])
                 self.render('closewindow.html')
 
     @web.authenticated
     def get(self):
-        self.render('workspace/upload.html')
+        path = self.get_argument('path', default=None)
+        self.render('workspace/upload.html', path=path)
 
 
 class WorkflowHandler(ReqHandler):
@@ -446,9 +461,11 @@ handlers = [
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
+    web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
+

@@ -21,54 +21,53 @@ class WorkspacePage(BasePageObject):
     title_prefix = 'OpenMDAO:'
 
     # Top.
-    project_menu = ButtonElement((By.ID, 'project-menu'))
-    save_button = ButtonElement((By.ID, 'project-save'))
-    run_button = ButtonElement((By.ID, 'project-run'))
-    reload_button = ButtonElement((By.ID, 'project-reload'))
-    close_button = ButtonElement((By.ID, 'project-close'))
-    exit_button = ButtonElement((By.ID, 'project-exit'))
+    project_menu      = ButtonElement((By.ID, 'project-menu'))
+    save_button       = ButtonElement((By.ID, 'project-save'))
+    run_button        = ButtonElement((By.ID, 'project-run'))
+    reload_button     = ButtonElement((By.ID, 'project-reload'))
+    close_button      = ButtonElement((By.ID, 'project-close'))
+    exit_button       = ButtonElement((By.ID, 'project-exit'))
 
-    view_menu = ButtonElement((By.ID, 'view-menu'))
-    cmdline_button = ButtonElement((By.ID, 'view-cmdline'))
-    console_button = ButtonElement((By.ID, 'view-console'))
-    libraries_button = ButtonElement((By.ID, 'view-libraries'))
-    objects_button = ButtonElement((By.ID, 'view-objects'))
+    view_menu         = ButtonElement((By.ID, 'view-menu'))
+    cmdline_button    = ButtonElement((By.ID, 'view-cmdline'))
+    console_button    = ButtonElement((By.ID, 'view-console'))
+    libraries_button  = ButtonElement((By.ID, 'view-libraries'))
+    objects_button    = ButtonElement((By.ID, 'view-objects'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
-    workflow_button = ButtonElement((By.ID, 'view-workflow'))
-    dataflow_button = ButtonElement((By.ID, 'view-dataflow'))
-    refresh_button = ButtonElement((By.ID, 'view-refresh'))
+    workflow_button   = ButtonElement((By.ID, 'view-workflow'))
+    dataflow_button   = ButtonElement((By.ID, 'view-dataflow'))
+    refresh_button    = ButtonElement((By.ID, 'view-refresh'))
 
-    tools_menu = ButtonElement((By.ID, 'tools-menu'))
-    plotter_button = ButtonElement((By.ID, 'tools-plotter'))
-    addons_button = ButtonElement((By.ID, 'tools-addons'))
-    threedtin_button = ButtonElement((By.ID, 'tools-3dtin'))
-    editor_button = ButtonElement((By.ID, 'tools-editor'))
+    tools_menu        = ButtonElement((By.ID, 'tools-menu'))
+    editor_button     = ButtonElement((By.ID, 'tools-editor'))
+    plotter_button    = ButtonElement((By.ID, 'tools-plotter'))
+    addons_button     = ButtonElement((By.ID, 'tools-addons'))
 
-    help_menu = ButtonElement((By.ID, 'help-menu'))
-    doc_button = ButtonElement((By.ID, 'help-doc'))
+    help_menu         = ButtonElement((By.ID, 'help-menu'))
+    doc_button        = ButtonElement((By.ID, 'help-doc'))
 
-    about_button = ButtonElement((By.ID, 'about-item'))
+    about_button      = ButtonElement((By.ID, 'about-item'))
 
     # Left side.
     objects_tab = ButtonElement((By.ID, 'otree_tab'))
 
     # Object context menu.
     obj_properties = ButtonElement((By.XPATH, "//a[(@rel='properties')]"))
-    obj_dataflow = ButtonElement((By.XPATH, "//a[(@rel='show_dataflow')]"))
-    obj_workflow = ButtonElement((By.XPATH, "//a[(@rel='show_workflow')]"))
-    obj_run = ButtonElement((By.XPATH, "//a[(@rel='run')]"))
-    obj_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
-    obj_remove = ButtonElement((By.XPATH, "//a[(@rel='remove')]"))
+    obj_dataflow   = ButtonElement((By.XPATH, "//a[(@rel='show_dataflow')]"))
+    obj_workflow   = ButtonElement((By.XPATH, "//a[(@rel='show_workflow')]"))
+    obj_run        = ButtonElement((By.XPATH, "//a[(@rel='run')]"))
+    obj_toggle     = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
+    obj_remove     = ButtonElement((By.XPATH, "//a[(@rel='remove')]"))
 
     # Center.
     dataflow_tab = ButtonElement((By.ID, 'dataflow_tab'))
     workflow_tab = ButtonElement((By.ID, 'workflow_tab'))
-    code_tab = ButtonElement((By.ID, 'code_tab'))
+    code_tab     = ButtonElement((By.ID, 'code_tab'))
 
     # Right side.
-    properties_tab = ButtonElement((By.ID, 'properties_tab'))
+    properties_tab  = ButtonElement((By.ID, 'properties_tab'))
 
-    libraries_tab = ButtonElement((By.ID, 'palette_tab'))
+    libraries_tab   = ButtonElement((By.ID, 'palette_tab'))
     working_section = ButtonElement((By.XPATH,
                             "//div[(@id='palette')]//div[(@title='working')]"))
     openmdao_section = ButtonElement((By.XPATH,
@@ -76,7 +75,7 @@ class WorkspacePage(BasePageObject):
     # Bottom.
     history = TextElement((By.ID, 'history'))
     command = InputElement((By.ID, 'command'))
-    submit = ButtonElement((By.ID, 'command-button'))
+    submit  = ButtonElement((By.ID, 'command-button'))
 
     def __init__(self, browser, port):
         super(WorkspacePage, self).__init__(browser, port)
@@ -190,18 +189,18 @@ class WorkspacePage(BasePageObject):
 
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
-        return self.browser.find_elements_by_class_name('DataflowComponentFigure')
+        return self.browser.find_elements_by_class_name('DataflowFigure')
 
     def get_dataflow_component_names(self):
         """ Return names of dataflow components. """
         dataflow_component_headers = \
-            self.browser.find_elements_by_class_name('DataflowComponentFigureHeader')
+            self.browser.find_elements_by_class_name('DataflowFigureHeader')
         names = []
 
         for i in range(len(dataflow_component_headers)):
             for retry in range(10):  # This has had issues...
                 try:
-                    names.append(self.browser.find_elements_by_class_name('DataflowComponentFigureHeader')[i].text)
+                    names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
                 except StaleElementReferenceException:
                     logging.critical('get_dataflow_component_names: StaleElementReferenceException')
                 else:

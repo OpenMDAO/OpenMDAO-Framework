@@ -1,7 +1,7 @@
+import sys
 
 from threading import RLock
 
-#import json
 import pickle
 
 try:
@@ -25,18 +25,17 @@ class Publisher(object):
         else:
             self._sender = sock
         self._lock = RLock()
+        self.enc = sys.getdefaultencoding()
 
     def publish(self, topic, value):
         if Publisher.__enabled:
             if isinstance(topic, unicode):
-                # in case someone snuck in a unicode name
-                topic = topic.encode('utf-8', errors='backslashreplace')
+                # zmq doesn't like unicode
+                topic = topic.encode(self.enc, errors='backslashreplace')
+            value = pickle.dumps(value, -1)
             with self._lock:
                 try:
-                    self._sender.send_multipart([
-                        topic,
-                        pickle.dumps(value, -1)
-                    ])
+                    self._sender.send_multipart([topic, value])
                     if hasattr(self._sender, 'flush'):
                         self._sender.flush()
                 except Exception, err:
@@ -46,17 +45,15 @@ class Publisher(object):
     def publish_list(self, items):
         if Publisher.__enabled:
             with self._lock:
-                try: 
+                try:
                     for topic, value in items:
                         if isinstance(topic, unicode):
-                            # in case someone snuck in a unicode name
-                            topic = topic.encode('utf-8', errors='backslashreplace')
-                        self._sender.send_multipart([
-                            topic,
-                            pickle.dumps(value, -1)
-                        ])
-                    if hasattr(self._sender, 'flush'):
-                        self._sender.flush()
+                            # zmq doesn't like unicode
+                            topic = topic.encode(self.enc, errors='backslashreplace')
+                        value = pickle.dumps(value, -1)
+                        self._sender.send_multipart([topic, value])
+                        if hasattr(self._sender, 'flush'):
+                            self._sender.flush()
                 except Exception, err:
                     print 'Publisher - Error publishing list %s, %s' % \
                           (topic, err)

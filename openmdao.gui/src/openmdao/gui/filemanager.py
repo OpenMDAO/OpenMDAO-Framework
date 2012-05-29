@@ -106,9 +106,13 @@ class FileManager(object):
         ''' create directory in working directory
             (does nothing if directory already exists)
         '''
-        dirpath = os.getcwd()+'/'+str(dirname)
-        if not os.path.isdir(dirpath):
-            os.makedirs(dirpath)
+        try:
+            dirpath = os.getcwd()+'/'+str(dirname)
+            if not os.path.isdir(dirpath):
+                os.makedirs(dirpath)
+            return str(True)
+        except Exception, err:
+            return str(err)
 
     def write_file(self, filename, contents):
         ''' write contents to file in working directory
