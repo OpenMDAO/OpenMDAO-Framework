@@ -28,7 +28,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
                 droppedPath = droppedObject.attr("path"),
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
-                y = Math.round(ui.offset.top - off.top);
+                y = Math.round(ui.offset.top - off.top),
+                bestfig = dataflow.getBestCompartmentFigure(x,y);
             var elem = dataflowDiv[0];
             var zindex = document.defaultView.getComputedStyle(elem,null)
                          .getPropertyValue("z-index");
@@ -39,7 +40,12 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Enter name for new '+droppedName,
                     function(name) {
-                        model.addComponent(droppedPath,name,self.pathname);
+                        if (bestfig) {
+                            model.addComponent(droppedPath,name,bestfig.pathname);
+                        }
+                        else {
+                            model.addComponent(droppedPath,name,self.pathname);
+                        }
                     }
                 );
             }
@@ -54,7 +60,9 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
 
     /** load json dataflow data */
     this.loadData = function(json) {
-        dataflowFig.updateDataflow(json);
+        // FIXME: just having it update itself for now, ignoring json data
+        //dataflowFig.updateDataflow(json);
+        this.update();
     };
 
     /** update dataflow diagram by clearing and rebuilding it */

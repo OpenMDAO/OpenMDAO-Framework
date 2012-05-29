@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowFrame = function(id,model,pathname) {
     openmdao.DataflowFrame.prototype.init.call(this,id,'Dataflow: '+pathname,[]);
@@ -12,6 +12,22 @@ openmdao.DataflowFrame = function(id,model,pathname) {
     var self = this,
         pane = new openmdao.DataflowPane(jQuery('#'+id),model,pathname,'Dataflow');
 
+    function handleMessage(message) {
+        if (message.length !== 2 || message[0] !== self.pathname) {
+            debug.warn('Invalid dataflow data for:',self.pathname,message);
+            debug.warn('message length',message.length,'topic',message[0]);
+        }
+        else {
+            if (message[1].hasOwnProperty('Dataflow')) {
+                var dataflow = message[1].Dataflow;
+                if (dataflow.length === 1) {
+                    dataflow = jQuery.parseJSON(dataflow);
+                }
+                pane.loadData(message[1].Dataflow);
+            }
+        }
+    }
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -23,21 +39,26 @@ openmdao.DataflowFrame = function(id,model,pathname) {
 
     /** set the pathname of the object for which to display the dataflow */
     this.showDataflow = function(path) {
-        if (pane.pathname !== path) {
-            // if not already showing dataflow for this pathname
+        // if not already showing dataflow for this pathname
+        if (path !== self.pathname) {
+            if (self.pathname) {
+                model.removeListener(self.pathname, handleMessage);
+            }
+            self.pathname = path;
             self.setTitle('Dataflow: '+path);
             pane.showDataflow(path);
+            model.addListener(path,handleMessage);
         }
     };
 
     /** get the pathname for the current dataflow */
     this.getPathname = function() {
-        return pane.pathname;
+        return self.pathname;
     };
 
-    // ask model for an update whenever something changes
-    model.addListener('',pane.update);
-}
+    this.showDataflow(pathname);
+
+};
 
 /** set prototype */
 openmdao.DataflowFrame.prototype = new openmdao.BaseFrame();

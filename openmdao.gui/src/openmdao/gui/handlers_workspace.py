@@ -386,11 +386,7 @@ class TypesHandler(ReqHandler):
     @web.authenticated
     def get(self):
         cserver = self.get_server()
-        types = cserver.get_available_types()
-        try:
-            types['working'] = cserver.get_workingtypes()
-        except Exception, err:
-            print "Error adding working types:", str(err)
+        types = cserver.get_types()
         self.content_type = 'application/javascript'
         self.write(jsonpickle.encode(types))
 

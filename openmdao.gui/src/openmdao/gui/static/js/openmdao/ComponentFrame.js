@@ -136,8 +136,7 @@ openmdao.ComponentFrame = function(model,pathname) {
             debug.warn('message length',message.length,'topic',message[0]);
         }
         else {
-            properties = message[1];
-            loadData(properties);
+            loadData(message[1]);
         }
     }
 
@@ -187,7 +186,6 @@ openmdao.ComponentFrame = function(model,pathname) {
 
     this.editObject(pathname);
 
-    model.addListener('',this.update);
 };
 
 /** set prototype */

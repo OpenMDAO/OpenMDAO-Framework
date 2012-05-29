@@ -51,9 +51,6 @@ jQuery(function() {
         new openmdao.ComponentTreeFrame("otree", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.PaletteFrame("palette",  model);
         new openmdao.ConsoleFrame("console",  model);
-
-        // initialize views
-        model.updateListeners();
     }());
 
     // start with objects, workflow & properties visible

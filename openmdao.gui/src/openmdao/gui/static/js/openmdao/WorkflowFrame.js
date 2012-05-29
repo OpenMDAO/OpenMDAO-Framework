@@ -12,37 +12,50 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
     var self = this,
         pane = new openmdao.WorkflowPane(jQuery('#'+id),model,pathname,'Workflow');
 
+    function handleMessage(message) {
+        if (message.length !== 2 || message[0] !== self.pathname) {
+            debug.warn('Invalid component data for:',self.pathname,message);
+            debug.warn('message length',message.length,'topic',message[0]);
+        }
+        else {
+            if (message[1].hasOwnProperty('Workflow')) {
+                pane.loadData(message[1].Workflow);
+            }
+        }
+    }
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
 
     /** update the schematic with data from the model */
     this.update = function() {
-        model.getWorkflow(pane.pathname,
-                          pane.loadData,
-                          function(jqXHR, textStatus, errorThrown) {
-                              pane.pathname = '';
-                              debug.error("Error getting workflow ", jqXHR);
-                          });
+        pane.showWorkflow(self.pathname);
     };
 
     /** set the pathname of the object for which to display the workflow */
     this.showWorkflow = function(path) {
-        if (pane.pathname !== path) {
+        if (path !== self.pathname) {
+           if (self.pathname) {
+                model.removeListener(self.pathname, handleMessage);
+            }
             // if not already showing workflow for this pathname
-            pane.pathname = path;
+            self.pathname = path;
             self.setTitle('Workflow: '+path);
-            this.update();
+            pane.showWorkflow(path);
+            model.addListener(path,handleMessage);
         }
     };
 
     /** get the pathname for the current workflow */
     this.getPathname = function() {
-        return pane.pathname;
+        return self.pathname;
     };
 
-    // ask model for an update whenever something changes
-    model.addListener('',this.update);
+    if (pathname && pathname.length > 0) {
+        this.showWorkflow(pathname);
+    }
+
 };
 
 /** set prototype */

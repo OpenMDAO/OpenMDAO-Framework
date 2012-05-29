@@ -19,7 +19,7 @@ from openmdao.main.project import project_from_archive
 from openmdao.main.publisher import Publisher
 
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.interfaces import IContainer, IAssembly
+from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from zope.interface import implementedBy
 
 from openmdao.gui.util import packagedict, ensure_dir
@@ -27,8 +27,9 @@ from openmdao.gui.filemanager import FileManager
 
 
 def modifies_model(target):
-    ''' decorator for methods that modify the model
-        performs maintenance on root level containers/assemblies
+    ''' decorator for methods that may have modified the model
+        performs maintenance on root level containers/assemblies and
+        publishes the potentially updated components
     '''
 
     def wrapper(self, *args, **kwargs):
@@ -60,6 +61,7 @@ class ConsoleServer(cmd.Cmd):
         self.exc_info = None
         self.publish_updates = publish_updates
         self.publisher = None
+        self._publish_comps = {}
 
         self.files = FileManager('files', publish_updates=publish_updates)
 
@@ -76,7 +78,7 @@ class ConsoleServer(cmd.Cmd):
                 set_as_top(v)
 
     def publish_components(self):
-        ''' publish the current component tree
+        ''' publish the current component tree and subscribed components
         '''
         if not self.publisher:
             try:
@@ -87,6 +89,13 @@ class ConsoleServer(cmd.Cmd):
 
         if self.publisher:
             self.publisher.publish('components', self.get_components())
+            self.publisher.publish('', {'Dataflow': self.get_dataflow('')})
+            for pathname in self._publish_comps:
+                comp, root = self.get_container(pathname)
+                self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
+
+            # this will go away with bret's change
+            self.publisher.publish('types', self.get_types())
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -112,7 +121,6 @@ class ConsoleServer(cmd.Cmd):
         self._hist += [line.strip()]
         return line
 
-    @modifies_model
     def onecmd(self, line):
         self._hist += [line.strip()]
         # Override the onecmd() method so we can trap error returns
@@ -352,7 +360,7 @@ class ConsoleServer(cmd.Cmd):
             for k, v in g:
                 if is_instance(v, Component):
                     components.append({'name': k,
-                                       'pathname': k + '.' + v.get_pathname(),
+                                       'pathname': k,
                                        'type': type(v).__name__,
                                        'valid': v.is_valid()
                                       })
@@ -393,8 +401,13 @@ class ConsoleServer(cmd.Cmd):
         except Exception, err:
             print "error getting value:", err
 
-    def get_available_types(self):
-        return packagedict(get_available_types())
+    def get_types(self):
+        types = packagedict(get_available_types())
+        try:
+            types['working'] = self.get_workingtypes()
+        except Exception, err:
+            print "Error adding working types:", str(err)
+        return types
 
     def get_workingtypes(self):
         ''' Return this server's user defined types.
@@ -522,6 +535,10 @@ class ConsoleServer(cmd.Cmd):
     def publish(self, pathname, publish):
         ''' publish the specified topic
         '''
+        if pathname in ['', 'components', 'files', 'types']:
+            # these topics are published automatically
+            return
+
         if not self.publisher:
             try:
                 self.publisher = Publisher.get_instance()
@@ -531,8 +548,22 @@ class ConsoleServer(cmd.Cmd):
 
         if self.publisher:
             parts = pathname.split('.')
-            if len(parts) > 0:
+            if len(parts) > 1:
                 root = self.proj.__dict__[parts[0]]
                 if root:
                     rest = '.'.join(parts[1:])
                     root.register_published_vars(rest, publish)
+
+            cont, root = self.get_container(pathname)
+            if has_interface(cont, IComponent):
+                if publish:
+                    if pathname in self._publish_comps:
+                        self._publish_comps[pathname] += 1
+                    else:
+                        self._publish_comps[pathname] = 1
+                else:
+                    if pathname in self._publish_comps:
+                        self._publish_comps[pathname] -= 1
+                        if self._publish_comps[pathname] < 1:
+                            del self._publish_comps[pathname]
+

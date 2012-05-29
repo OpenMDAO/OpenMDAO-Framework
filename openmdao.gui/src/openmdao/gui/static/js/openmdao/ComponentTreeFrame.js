@@ -181,7 +181,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
             menu.show_workflow = {
                 "label"  : 'Show Workflow',
                 "action" :  function(node) {
-                                workflow_fn(path);
+                                workflow_fn(path+'.driver');
                             }
             };
         }

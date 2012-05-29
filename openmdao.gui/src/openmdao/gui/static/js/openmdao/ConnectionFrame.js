@@ -117,7 +117,9 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
     };
 
     this.update();
-    model.addListener('',this.update);
+
+    //FIXME: use data in message instead of brute force update
+    model.addListener(pathname,this.update);
 };
 
 /** set prototype */

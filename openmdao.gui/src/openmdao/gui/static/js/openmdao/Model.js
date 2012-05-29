@@ -140,22 +140,6 @@ openmdao.Model=function() {
         }
     };
 
-   /** notify all generic listeners that something may have changed  */
-    this.updateListeners = function() {
-        var callbacks = subscribers[''];
-        if (callbacks) {
-            for (i = 0; i < callbacks.length; i++) {
-                if (typeof callbacks[i] === 'function') {
-                    callbacks[i]();
-                }
-                else {
-                    debug.error('Model: invalid callback for topic:',
-                                topic,callbacks[i]);
-                }
-            }
-        }
-    };
-
     /** get the list of object types that are available for creation */
     this.getTypes = function(callback, errorHandler) {
         if (typeof callback !== 'function') {
@@ -175,8 +159,7 @@ openmdao.Model=function() {
     this.newModel = function() {
         jQuery.ajax({
             type: 'POST',
-            url:  'model',
-            success: self.updateListeners
+            url:  'model'
         });
     };
 
@@ -310,7 +293,6 @@ openmdao.Model=function() {
                         if (typeof callback === 'function') {
                             callback(text);
                         }
-                        self.updateListeners();
             }
         });
     };
@@ -337,7 +319,6 @@ openmdao.Model=function() {
                         if (typeof callback === 'function') {
                             callback(txt);
                         }
-                        self.updateListeners();
                      },
             error: errorHandler,
             complete: completeHandler
@@ -389,23 +370,31 @@ openmdao.Model=function() {
     };
 
     /** set the contents of the specified file */
-    this.setFile = function(filepath, contents, errorHandler) {
+    this.setFile = function(filepath, contents, callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
             data: { 'contents': contents},
-            success: self.updateListeners,
+            success: function(text) {
+                        if (typeof callback === 'function') {
+                            callback(text);
+                        }
+                     },
             error: errorHandler
         });
     };
 
     /** create new folder with  specified path in the model working directory */
-    this.createFolder = function(folderpath, errorHandler) {
+    this.createFolder = function(folderpath, callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+folderpath.replace(/\\/g,'/'),
             data: { 'isFolder': true},
-            success: self.updateListeners,
+            success: function(text) {
+                        if (typeof callback === 'function') {
+                            callback(text);
+                        }
+                     },
             error: errorHandler
         });
     };
@@ -434,17 +423,16 @@ openmdao.Model=function() {
     };
 
     /** delete file with specified path from the model working directory */
-    this.removeFile = function(filepath) {
+    this.removeFile = function(filepath, callback) {
         jQuery.ajax({
             type: 'DELETE',
             url:  'file'+filepath.replace(/\\/g,'/'),
             data: { 'file': filepath },
-            success: self.updateListeners,
+            success: callback,
             error: function(jqXHR, textStatus, errorThrown) {
                         // not sure why this always returns a false error
                        debug.warn("model.removeFile",
                                   jqXHR,textStatus,errorThrown);
-                       self.updateListeners();
                    }
             });
     };
@@ -484,7 +472,7 @@ openmdao.Model=function() {
     };
 
     /** execute the specified file */
-    this.execFile = function(filepath) {
+    this.execFile = function(filepath, callback) {
         // convert to relative path with forward slashes
         var path = filepath.replace(/\\/g,'/');
         if (path[0] === '/') {
@@ -495,7 +483,11 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'exec',
             data: { 'filename': path },
-            success: self.updateListeners
+            success: function(text) {
+                        if (typeof callback === 'function') {
+                            callback(text);
+                        }
+                     }
         });
     };
 
