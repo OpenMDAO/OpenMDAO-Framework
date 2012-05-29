@@ -41,13 +41,14 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
             dataflow.clear();
             figures = {};
             var x = 20, y = 10;
+	    console.log(src_comp);
             conn_list=jQuery.map( data["connections"], function(n){   return n;});
-	    out_list=jQuery.map( data["outputs"], function(n){   return n.name;});
-	    in_list=jQuery.map( data["inputs"], function(n){   return n.name;});
+	    out_list=jQuery.map( data["outputs"], function(n){   return src_comp+'.'+n.name;});
+	    in_list=jQuery.map( data["inputs"], function(n){   return dst_comp+'.'+n.name;});
 
 	    console.log(out_list);
-	    jQuery( "#output_list" ).autocomplete({source: out_list});
-	    jQuery( "#input_list" ).autocomplete({source: in_list});
+	    jQuery( "#output_list" ).autocomplete({source: out_list,minLength:0});
+	    jQuery( "#input_list" ).autocomplete({source: in_list,minLength:0});
 
             for (var i = 0; i <conn_list.length; i++) {conn_list[i]=conn_list[i].split('.')[1];}            
             jQuery.each(data['outputs'], function(idx,outvar) {
@@ -136,10 +137,17 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
     //jQuery("#"+id).html("TEST");
     update();
     jQuery("#"+id).append("<input id='output_list' /><input id='input_list' /><button id='connect_button'>Connect</button>");
-    jQuery( "#output_list" ).click(function() {
-			jQuery( "#output_list" ).autocomplete( "search", "" );
-			jQuery( "#output_list" ).focus();
-			console.log(jQuery( "#output_list" ));
+    jQuery( "#connect_button" ).click(function() {
+			var from=jQuery( "#output_list" ).val();
+			var to = jQuery( "#input_list" ).val();
+			var connections=[[from,to]];
+			var callback = loadData;
+			model.setConnections(pathname,src_comp,dst_comp,connections,callback,
+            function(jqXHR, textStatus, errorThrown) {
+                debug.error(jqXHR,textStatus,errorThrown);
+                self.close();
+            }
+        );
 		});
 
 }
