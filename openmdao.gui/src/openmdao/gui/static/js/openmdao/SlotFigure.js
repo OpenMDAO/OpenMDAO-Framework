@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotFigure=function(myModel,pathname,type,filled){
     this.myModel = myModel;
@@ -44,7 +44,7 @@ openmdao.SlotFigure.prototype.type="SlotFigure";
 openmdao.SlotFigure.prototype.createHTMLElement=function(){
     var circleIMG = "url(/static/images/circle.png)";
 
-    var item=document.createElement("div");    
+    var item=document.createElement("div");
     item.id=this.id;
     item.style.color="black";
     item.style.position="absolute";
@@ -147,7 +147,7 @@ openmdao.SlotFigure.prototype.setDimension=function(w,h){
         this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
     if (this.outputPort!==null) {
-        this.outputPort.setPosition(this.width+5,this.height/2);        
+        this.outputPort.setPosition(this.width+5,this.height/2);
     }
     if (this.inputPort!==null) {
         this.inputPort.setPosition(this.width/2,0);
@@ -214,12 +214,12 @@ openmdao.SlotFigure.prototype.setWorkflow=function(wkflw){
                     var path = openmdao.Util.getPath(oThis.pathname),
                         src  = oThis.name,
                         dst  = request.source.getParent().name;
-                    new openmdao.ConnectionEditor(oThis.myModel,path,src,dst)
+                    new openmdao.ConnectionFrame(oThis.myModel,path,src,dst)
                 };
                 return null;
             }
         }
-        this.addPort(this.outputPort,this.width+5,this.height/2);    
+        this.addPort(this.outputPort,this.width+5,this.height/2);
     };
 };
 
@@ -254,7 +254,7 @@ openmdao.SlotFigure.prototype.getContextMenu=function(){
 
 openmdao.SlotFigure.prototype.onDoubleClick=function(){
     if (this.filled) {
-        new openmdao.ComponentEditor(this.myModel,this.pathname)
+        new openmdao.ComponentFrame(this.myModel,this.pathname)
     }
 };
 

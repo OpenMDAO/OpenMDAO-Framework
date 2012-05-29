@@ -4,9 +4,6 @@ import time
 import traceback
 import subprocess
 
-import jsonpickle
-import cPickle as pickle
-
 from optparse import OptionParser
 
 import zmq
@@ -15,12 +12,27 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
-debug = False
+import cPickle as pickle
+import jsonpickle
+
+debug = True
 
 
 def DEBUG(msg):
     if debug:
-        print '<<<'+str(os.getpid())+'>>> ZMQStreamServer --', msg
+        print '<<<' + str(os.getpid()) + '>>> ZMQStreamServer --', msg
+
+
+def make_unicode(content):
+    if type(content) == str:
+        # Ignore errors even if the string is not proper UTF-8 or has
+        # broken marker bytes.
+        # Python built-in function unicode() can do this.
+        content = unicode(content, "utf-8", errors="ignore")
+    else:
+        # Assume the content object has proper __unicode__() method
+        content = unicode(content)
+    return content
 
 
 class ZMQStreamHandler(websocket.WebSocketHandler):
@@ -28,7 +40,6 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
     '''
 
     def initialize(self, addr):
-        self.enc = sys.getdefaultencoding()
         self.addr = addr
         self.message_count = 0
         self.time_opened = 0
@@ -55,26 +66,23 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def _write_message(self, message):
         if len(message) == 1:
-            try:
-                message = message[0]
-                if not isinstance(message, unicode):
-                    message = message.decode(self.enc, 'replace')
-                self.write_message(message)
-            except Exception, err:
-                DEBUG('Unable to write message to stream:')
-                DEBUG('message:'+message)
-                print err
+            message = message[0]
+            message = make_unicode(message)  # tornado websocket wants unicode
+            self.write_message(message)
         elif len(message) == 2:
+            self.message_count += 1
+            topic = message[0]
+            content = pickle.loads(message[1])
+            
             try:
-                self.message_count += 1
-                topic = message[0]
-                content = pickle.loads(message[1])
-                json = jsonpickle.encode([topic, content])
-                self.write_message(json)
-            except Exception, err:
-                DEBUG('Unable to write JSON to stream:')
-                DEBUG('JSON:'+json)
-                print err
+                number = float(content)
+            except (ValueError, TypeError):
+                message = jsonpickle.encode([topic, content])
+            else:
+                message = jsonpickle.encode([topic, number])
+            
+            message = make_unicode(message)  # tornado websocket wants unicode
+            self.write_message(message)
 
     def on_message(self, message):
         pass
@@ -83,7 +91,7 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
         DEBUG('zmqstream connection closed')
         if debug:
             total_time = time.time() - self.time_opened
-            rate = self.message_count/total_time
+            rate = self.message_count / total_time
             if self.message_count > 0:
                 print '%d messages in %d secs (%d msg/sec)' \
                     % (self.message_count, total_time, rate)
