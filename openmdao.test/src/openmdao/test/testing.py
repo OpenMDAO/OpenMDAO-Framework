@@ -150,8 +150,12 @@ def run_openmdao_suite(argv=None):
         parser = _get_plugin_parser()
         options, argz = parser.parse_known_args(argv) 
         plugin_install(parser, options, argz)
-        
-        
+
+    # Make running the GUI functional tests optional.
+    if '--skip-gui' in args:
+        args.remove('--skip-gui')
+        os.environ['OPENMDAO_SKIP_GUI'] = '1'
+
     # some libs we use call multiprocessing.cpu_count() on import, which can
     # raise NotImplementedError, so try to monkeypatch it here to return 1 if
     # that's the case

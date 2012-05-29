@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotFigure=function(myModel,pathname,type,filled){
     this.myModel = myModel;
@@ -13,11 +13,11 @@ openmdao.SlotFigure=function(myModel,pathname,type,filled){
     draw2d.Node.call(this);
     this.setDimension(100,50);
     this.originalHeight=-1;
-    
+
     // get name for this figure and set title appropriately
     this.name = openmdao.Util.getName(pathname);
     this.setTitle(this.name);
-    
+
     // set the content text to be the type name (in italics)
     var tok = type.split('.');
     if (tok.length > 1) {
@@ -29,13 +29,12 @@ openmdao.SlotFigure=function(myModel,pathname,type,filled){
 
     // do not allow moving (TODO: allow moving)
     this.setCanDrag(false);
-    
+
     if (! this.filled) {
         //this.setColor(new draw2d.Color(0,255,0));
         this.header.style.color="#CC0000"
         this.textarea.style.color="#CC0000"
     }
-    
 };
 
 openmdao.SlotFigure.prototype=new draw2d.Node();
@@ -44,8 +43,8 @@ openmdao.SlotFigure.prototype.type="SlotFigure";
 
 openmdao.SlotFigure.prototype.createHTMLElement=function(){
     var circleIMG = "url(/static/images/circle.png)";
-    
-    var item=document.createElement("div");    
+
+    var item=document.createElement("div");
     item.id=this.id;
     item.style.color="black";
     item.style.position="absolute";
@@ -57,7 +56,7 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     item.style.padding="0px";
     item.style.outline="none";
     item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
-    
+
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
     this.top_left.style.position="absolute";
@@ -74,7 +73,7 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     this.top_right.style.left="0px";
     this.top_right.style.top="0px";
     this.top_right.style.fontSize="2px";
-    
+
     this.bottom_left=document.createElement("div");
     this.bottom_left.style.background=circleIMG+" no-repeat bottom left";
     this.bottom_left.style.position="absolute";
@@ -91,7 +90,7 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     this.bottom_right.style.left="0px";
     this.bottom_right.style.top="0px";
     this.bottom_right.style.fontSize="2px";
-    
+
     this.header=document.createElement("div");
     this.header.style.position="absolute";
     this.header.style.left=this.cornerWidth+"px";
@@ -102,7 +101,7 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
     this.disableTextSelection(this.header);
-    
+
     this.footer=document.createElement("div");
     this.footer.style.position="absolute";
     this.footer.style.left=this.cornerWidth+"px";
@@ -111,7 +110,7 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     this.footer.style.backgroundColor="white";
     this.footer.style.borderBottom="1px solid #666666";
     this.footer.style.fontSize="2px";
-    
+
     this.textarea=document.createElement("div");
     this.textarea.style.position="absolute";
     this.textarea.style.left="0px";
@@ -123,7 +122,7 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     this.textarea.style.overflow="hidden";
     this.textarea.style.fontSize="9pt";
     this.disableTextSelection(this.textarea);
-    
+
     item.appendChild(this.top_left);
     item.appendChild(this.header);
     item.appendChild(this.top_right);
@@ -148,7 +147,7 @@ openmdao.SlotFigure.prototype.setDimension=function(w,h){
         this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
     if (this.outputPort!==null) {
-        this.outputPort.setPosition(this.width+5,this.height/2);        
+        this.outputPort.setPosition(this.width+5,this.height/2);
     }
     if (this.inputPort!==null) {
         this.inputPort.setPosition(this.width/2,0);
@@ -201,7 +200,7 @@ openmdao.SlotFigure.prototype.setWorkflow=function(wkflw){
         this.inputPort.setWorkflow(wkflw);
         this.inputPort.setName("input");
         this.addPort(this.inputPort,this.width/2,0);
-        
+
         this.outputPort=new draw2d.OutputPort();
         this.outputPort.setWorkflow(wkflw);
         this.outputPort.setName("output");
@@ -214,13 +213,13 @@ openmdao.SlotFigure.prototype.setWorkflow=function(wkflw){
                 if (request.source instanceof draw2d.InputPort) {
                     var path = openmdao.Util.getPath(oThis.pathname),
                         src  = oThis.name,
-                        dst  = request.source.getParent().name;            
-                    new openmdao.DataConnectionEditor(oThis.myModel,path,src,dst)
-                };                
+                        dst  = request.source.getParent().name;
+                    new openmdao.ConnectionFrame(oThis.myModel,path,src,dst)
+                };
                 return null;
             }
         }
-        this.addPort(this.outputPort,this.width+5,this.height/2);    
+        this.addPort(this.outputPort,this.width+5,this.height/2);
     };
 };
 
@@ -255,7 +254,7 @@ openmdao.SlotFigure.prototype.getContextMenu=function(){
 
 openmdao.SlotFigure.prototype.onDoubleClick=function(){
     if (this.filled) {
-        new openmdao.ComponentEditor(this.myModel,this.pathname)
+        new openmdao.ComponentFrame(this.myModel,this.pathname)
     }
 };
 

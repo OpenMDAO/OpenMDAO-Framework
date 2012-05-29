@@ -1,6 +1,5 @@
 import os
 import os.path
-import sys
 import shutil
 import tempfile
 import zipfile
@@ -85,7 +84,7 @@ class FileManager(object):
             try:
                 shutil.rmtree(self.root_dir)
             except Exception, err:
-                self._error(err, sys.exc_info())
+                print 'Filemanager: Error cleaning up file directory', err
 
     def get_files(self):
         ''' get a nested dictionary of files in the working directory
@@ -108,9 +107,13 @@ class FileManager(object):
         ''' create directory in working directory
             (does nothing if directory already exists)
         '''
-        dirpath = os.getcwd()+'/'+str(dirname)
-        if not os.path.isdir(dirpath):
-            os.makedirs(dirpath)
+        try:
+            dirpath = os.getcwd()+'/'+str(dirname)
+            if not os.path.isdir(dirpath):
+                os.makedirs(dirpath)
+            return str(True)
+        except Exception, err:
+            return str(err)
 
     def write_file(self, filename, contents):
         ''' write contents to file in working directory

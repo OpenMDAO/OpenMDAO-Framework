@@ -1,8 +1,7 @@
-import getpass
-
-# tornado
 from tornado.web import RequestHandler
 from openmdao.gui.session import TornadoSession
+
+from openmdao.main.rbac import Credentials
 
 
 class ReqHandler(RequestHandler):
@@ -36,13 +35,23 @@ class LoginHandler(ReqHandler):
 
     def get(self):
         # single user scenario, auto-login based on username
-        username = getpass.getuser()
-        self.set_secure_cookie('user', username)
+        server_creds = Credentials()
+        print "server_creds:\n", server_creds
+        self.set_secure_cookie('user', server_creds.user)
         self.redirect('/')
 
     def post(self):
-        print 'Login:', self.get_argument('name')
-        self.set_secure_cookie('user', self.get_argument('name'))
+        server_creds = Credentials()
+        print 'server creds:\n', server_creds
+
+        # single user... only allow same user@host as the server to log in
+        allowed_users = {server_creds.user: server_creds.public_key}
+        encoded = self.get_argument('encoded')
+        client_creds = Credentials.verify(encoded, allowed_users)
+        print 'client creds:\n', client_creds
+
+        if client_creds:
+            self.set_secure_cookie('user', client_creds.user)
         self.redirect('/')
 
 

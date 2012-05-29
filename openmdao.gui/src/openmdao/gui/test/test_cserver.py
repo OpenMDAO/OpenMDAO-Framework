@@ -95,6 +95,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         # CREATE PARABOLOID
         self.cserver.add_component('p','simple_1.paraboloid.Paraboloid','prob')
+        #self.cserver.add_component('p', 'Paraboloid','prob')
 
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
@@ -142,13 +143,13 @@ class ConsoleServerTestCase(unittest.TestCase):
                 self.assertEqual(output['desc'], 'F(x,y)')
         self.assertTrue(found_f_xy)
 
-        # STRUCTURE
-        structure = json.loads(self.cserver.get_structure('prob'))
+        # DATAFLOW
+        dataflow = json.loads(self.cserver.get_dataflow('prob'))
 
-        self.assertEqual(len(structure), 2)
+        self.assertEqual(len(dataflow), 2)
 
-        self.assertTrue('components' in structure)
-        components = structure['components']
+        self.assertTrue('components' in dataflow)
+        components = dataflow['components']
         self.assertEqual(len(components), 2)
         found_p = found_driver = False
         for comp in components:
@@ -166,8 +167,8 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue(found_p)
         self.assertTrue(found_driver)
 
-        self.assertTrue('connections' in structure)
-        connections = structure['connections']
+        self.assertTrue('connections' in dataflow)
+        connections = dataflow['connections']
         self.assertEqual(len(connections), 0)
 
         # WORKFLOW

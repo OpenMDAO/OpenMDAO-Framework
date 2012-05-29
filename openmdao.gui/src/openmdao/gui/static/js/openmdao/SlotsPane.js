@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
     // initialize private variables
@@ -9,16 +9,16 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
         slotsCSS = 'overflow:auto;',
         slotsDiv = jQuery('<div id='+slotsID+' style="'+slotsCSS+'">').appendTo(elm),
         slots = new draw2d.Workflow(slotsID);
-        
+
     self.pathname = pathname;
-    
+
     slotsDiv.css({'background':'gray'});
     //slots.setBackgroundImage( "/static/images/grid_10.png", true);
-        
+
     // make the slots pane droppable
     slotsDiv.droppable ({
         accept: '.objtype',
-        drop: function(ev,ui) { 
+        drop: function(ev,ui) {
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
@@ -41,7 +41,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             };
         }
     });
-    
+
     /** update slots by recreating figures from JSON slots data
      *  TODO: prob just want to iterate through & update existing figures
      */
@@ -51,14 +51,14 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                 type = slot['klass'],
                 filled = slot['filled'],
                 fig;
-                
+
             if (self.pathname) {
                 fig = new openmdao.SlotFigure(model,self.pathname+'.'+name,type,filled);
             }
             else {
                 fig = new openmdao.SlotFigure(model,name,type,filled);
             }
-                    
+
             fig.setTitle(name)
             figures[name] = fig
             fig.setContent('<center>(('+type+'))'+'</center>')
@@ -67,11 +67,11 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                 x = (count-1)*(fig.getWidth()+20)  + 20,
                 y = 20;
             //debug.info('count=',count,'x=',x,'y=',y)
-            slots.addFigure(fig,x,y)            
+            slots.addFigure(fig,x,y)
         })
 
     }
-            
+
     /** update slots diagram */
     this.loadData = function(json) {
         slots.clear()
@@ -80,5 +80,5 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             updateFigures(json,false)
         }
     }
-  
+
 }
