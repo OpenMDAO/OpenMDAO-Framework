@@ -1,4 +1,7 @@
 
+
+
+
 var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
 
 openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
@@ -16,15 +19,18 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
         dataflowID = "#"+id+"-connections",
         dataflowDiv = jQuery('<div id='+dataflowID+'>').appendTo('<div style="background:white">').appendTo('#'+id),
         dataflow = new draw2d.Workflow(dataflowID);
-
+    
     self.pathname = pathname;
     self.src_comp = src_comp;
     self.dst_comp = dst_comp;
-
-    dataflowDiv.css({'background':'gray'});
+    
     //dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
 
     model.addListener('',update)
+    
+    
+     
+
 
     function loadData(data) {
         if (!data || !data['outputs'] || !data['inputs']) {
@@ -35,22 +41,35 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
             dataflow.clear();
             figures = {};
             var x = 20, y = 10;
+            conn_list=jQuery.map( data["connections"], function(n){   return n;});
+	    out_list=jQuery.map( data["outputs"], function(n){   return n.name;});
+	    in_list=jQuery.map( data["inputs"], function(n){   return n.name;});
+
+	    console.log(out_list);
+	    jQuery( "#output_list" ).autocomplete({source: out_list});
+	    jQuery( "#input_list" ).autocomplete({source: in_list});
+
+            for (var i = 0; i <conn_list.length; i++) {conn_list[i]=conn_list[i].split('.')[1];}            
             jQuery.each(data['outputs'], function(idx,outvar) {
+                if (conn_list.contains(outvar['name'])) {
                 var src_name = src_comp+'.'+outvar['name'],
                     src_path = self.pathname+'.'+src_name,
                     fig = new openmdao.VariableFigure(model,src_path,outvar,'output');
                 dataflow.addFigure(fig,x,y);
                 figures[src_name] = fig
                 y = y + fig.height + 10;
+                }
             });
             x = 250, y = 10;
             jQuery.each(data['inputs'], function(idx,invar) {
+                if (conn_list.contains(invar['name'])) {
                 var dst_name = dst_comp+'.'+invar['name'],
                     dst_path = self.pathname+'.'+dst_name,
                     fig = new openmdao.VariableFigure(model,dst_path,invar,'input');
                 dataflow.addFigure(fig,x,y);
                 figures[dst_name] = fig
                 y = y + fig.height + 10;
+                }
             });
             dataflowDiv.css({'height':y+'px','width': x+100+'px'});
 
@@ -98,7 +117,7 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
     /***********************************************************************
      *  privileged
      ***********************************************************************/
-
+    
     /** edit connectiosn between the source and destination objects in the assembly */
     this.editConnections = function(pathname, src_comp, dst_comp) {        
         self.pathname = pathname;
@@ -114,8 +133,14 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
         )
         return this;
     }
-
+    //jQuery("#"+id).html("TEST");
     update();
+    jQuery("#"+id).append("<input id='output_list' /><input id='input_list' /><button id='connect_button'>Connect</button>");
+    jQuery( "#output_list" ).click(function() {
+			jQuery( "#output_list" ).autocomplete( "search", "" );
+			jQuery( "#output_list" ).focus();
+			console.log(jQuery( "#output_list" ));
+		});
 
 }
 
