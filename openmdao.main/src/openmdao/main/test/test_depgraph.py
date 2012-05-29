@@ -168,6 +168,10 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.var_in_edges('@xin'),[])
         self.assertEqual(self.dep.var_in_edges('blah'),[])
 
+    def test_get_interior_edges(self):
+        self.assertEqual(self.dep.get_interior_edges(set(['A', 'B', 'C', 'D'])),
+                         set(self.internal_conns))
+    
     def test_disconnect(self):
         self.dep.disconnect('a') # this should disconnect extern to a and 
                                  # a to B.a, completely removing the
