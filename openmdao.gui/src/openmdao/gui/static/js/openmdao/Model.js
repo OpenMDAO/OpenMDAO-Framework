@@ -400,7 +400,7 @@ openmdao.Model=function() {
     };
 
     /** create a new file in the model working directory with the specified path  */
-    this.newFile = function(name,folderpath) {
+    this.newFile = function(name, folderpath) {
             if (folderpath) {
                 name = folderpath+'/'+name;
             }
@@ -415,7 +415,7 @@ openmdao.Model=function() {
     };
 
     /** prompt for name & create a new folder */
-    this.newFolder = function(name,folderpath) {
+    this.newFolder = function(name, folderpath) {
             if (folderpath) {
                 name = folderpath+'/'+name;
             }
@@ -444,7 +444,7 @@ openmdao.Model=function() {
                             replace(/\\/g,'.').
                             replace(/\//g,'.');
         cmd = 'from '+path+' import *';
-        self.issueCommand(cmd, callback, errorHandler,null);
+        self.issueCommand(cmd, callback, errorHandler, null);
     };
 
     /** execute the model */
@@ -454,16 +454,11 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'exec',
             data: { },
-            success: function(data, textStatus, jqXHR) {
-                         cmd = 'print "'+data.replace('\n','\\n') +'"';
-                         self.issueCommand(cmd, null, null,
-                                           function(jqXHR, textStatus) {
-                                               if (typeof openmdao_test_mode !== 'undefined') {
-                                                   openmdao.Util.notify('Run complete: '
-                                                                        +textStatus);
-                                               }
-                                           });
-                     },
+            success: function(jqXHR, textStatus) {
+                         if (typeof openmdao_test_mode !== 'undefined') {
+                             openmdao.Util.notify('Run complete: '+textStatus);
+                         }
+                      },
             error: function(jqXHR, textStatus, errorThrown) {
                        debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText);
                        debug.error(jqXHR,textStatus,errorThrown);
