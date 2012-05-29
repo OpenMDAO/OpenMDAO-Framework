@@ -1,45 +1,50 @@
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.VariableFigure=function(myModel,pathname,variable,inout){
     this.myModel = myModel;
     this.pathname = pathname;
     this.variable = variable;
     this.inout = inout;
-    if (inout == 'input') {
+    if (inout === 'input') {
         this.outputPort=null;
         this.inputPort=new draw2d.InputPort();
-        if (this.variable['connected']) {
-            this.inputPort.setBackgroundColor(new draw2d.Color(255,0,0))
+        if (this.variable.connected) {
+            this.inputPort.setBackgroundColor(new draw2d.Color(255,0,0));
         }
     }
     else {
         this.outputPort=new draw2d.OutputPort();
         this.inputPort=null;
-        if (this.variable['connected']) {
-            this.outputPort.setBackgroundColor(new draw2d.Color(255,0,0))
+        if (this.variable.connected) {
+            this.outputPort.setBackgroundColor(new draw2d.Color(255,0,0));
         }
     }
     draw2d.Node.call(this);
     this.setDimension(100,30);
     this.originalHeight=-1;
-    
-    var tok = pathname.split('.')
+
+    var tok = pathname.split('.');
     if (tok.length > 1) {
         this.name = tok[tok.length-1];
         if (this.name === 'driver') {
-            this.name = tok[tok.length-2] + '.' + this.name
+            this.name = tok[tok.length-2] + '.' + this.name;
         }
     }
-    else
-        this.name = pathname
-    this.setTitle(this.name)
-    
-    var tok = variable['type'].split('.')
-    if (tok.length > 1)
-        this.setContent('<center><i>'+variable['units']+' ('+tok[tok.length-1]+') </i></center>')
-    else
-        this.setContent('<center><i>'+variable['units']+' ('+tok+') </i></center>')
-        
+    else {
+        this.name = pathname;
+    }
+    this.setTitle(this.name);
+
+    tok = variable.type.split('.');
+    if (tok.length > 1) {
+        this.setContent('<center><i>' + variable.units +
+                        ' (' + tok[tok.length-1] + ') </i></center>');
+    }
+    else {
+        this.setContent('<center><i>' + variable.units +
+                        ' (' + tok + ') </i></center>');
+    }
+
     this.setCanDrag(false);
 };
 
@@ -48,7 +53,7 @@ openmdao.VariableFigure.prototype=new draw2d.Node();
 openmdao.VariableFigure.prototype.type="VariableFigure";
 
 openmdao.VariableFigure.prototype.createHTMLElement=function(){
-    var item=document.createElement("div");    
+    var item=document.createElement("div");
     item.id=this.id;
     item.style.color="black";
     item.style.position="absolute";
@@ -59,8 +64,8 @@ openmdao.VariableFigure.prototype.createHTMLElement=function(){
     item.style.margin="0px";
     item.style.padding="0px";
     item.style.outline="none";
-    item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
-    
+    item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
+
     this.header=document.createElement("div");
     this.header.style.position="absolute";
     this.header.style.left="0px";
@@ -73,7 +78,7 @@ openmdao.VariableFigure.prototype.createHTMLElement=function(){
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
     this.disableTextSelection(this.header);
-    
+
     this.textarea=document.createElement("div");
     this.textarea.style.position="absolute";
     this.textarea.style.left="0px";
@@ -85,7 +90,7 @@ openmdao.VariableFigure.prototype.createHTMLElement=function(){
     this.textarea.style.overflow="hidden";
     this.textarea.style.fontSize="9pt";
     this.disableTextSelection(this.textarea);
-    
+
     item.appendChild(this.header);
     item.appendChild(this.textarea);
     return item;
@@ -115,16 +120,19 @@ openmdao.VariableFigure.prototype.setContent=function(html){
 };
 
 openmdao.VariableFigure.prototype.onDragstart=function(x,y){
-    var _5017=draw2d.Node.prototype.onDragstart.call(this,x,y);
-    if(this.header===null){
+    var dragStarted=draw2d.Node.prototype.onDragstart.call(this,x,y);
+    if (this.header===null){
         return false;
     }
-    if(this.originalHeight==-1){
-        if(this.canDrag===true&&x<parseInt(this.header.style.width)&&y<parseInt(this.header.style.height)){
+    if (this.originalHeight===-1) {
+        if (this.canDrag === true &&
+            x < parseInt(this.header.style.width,10) &&
+            y < parseInt(this.header.style.height,10)) {
             return true;
         }
-    }else{
-        return _5017;
+    }
+    else {
+        return dragStarted;
     }
 };
 
@@ -155,8 +163,8 @@ openmdao.VariableFigure.prototype.setWorkflow=function(wkflw){
             this.addPort(this.outputPort,this.width+5,this.height/2);
             var oThis=this;
             this.outputPort.createCommand = function(request) {
-                if(request.getPolicy() ==draw2d.EditPolicy.CONNECT) {
-                    if( request.source.parentNode.id == request.target.parentNode.id) {
+                if(request.getPolicy() === draw2d.EditPolicy.CONNECT) {
+                    if( request.source.parentNode.id === request.target.parentNode.id) {
                         return null;
                     }
                     if (request.source instanceof draw2d.InputPort) {
@@ -174,10 +182,10 @@ openmdao.VariableFigure.prototype.setWorkflow=function(wkflw){
                         else {
                             oThis.myModel.issueCommand("connect('"+src+"','"+dst+"')");
                         }
-                    };                
+                    }
                     return null;
                 }
-            }
+            };
         }
     }
 };
@@ -185,7 +193,7 @@ openmdao.VariableFigure.prototype.setWorkflow=function(wkflw){
 openmdao.VariableFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu();
     var oThis=this;
-    if (oThis.inout == 'output') {
+    if (oThis.inout === 'output') {
         menu.appendMenuItem(new draw2d.MenuItem("Create Passthrough",null,function(){
             var parent     = openmdao.Util.getPath(oThis.pathname),
                 parentName = openmdao.Util.getName(parent),
