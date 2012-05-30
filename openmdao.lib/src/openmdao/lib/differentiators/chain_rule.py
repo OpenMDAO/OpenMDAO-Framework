@@ -239,7 +239,7 @@ class ChainRule(HasTraits):
         in_edges = []
         out_edges = []
         
-        upscope = self._parent.parent.driver
+        upscope = scope._parent.parent.driver
         scope_name = scope.get_pathname()
         upscope_name = upscope.get_pathname()
         parts = scope_name.split('.')
