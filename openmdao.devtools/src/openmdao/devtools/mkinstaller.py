@@ -255,8 +255,8 @@ def after_install(options, home_dir):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
-            # Only linux needs the modules for doing the GUI unit testing at this time
-            if sys.platform.startswith( "linux" ):
+            # No GUI unit or functional testing on Windows at this time.
+            if sys.platform != 'win32':
                 allreqs = allreqs + guitestreqs 
             
         for req in allreqs:
@@ -314,6 +314,7 @@ def after_install(options, home_dir):
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
     guitest_dists = working_set.resolve([Requirement.parse('openmdao.gui[jsTest]')])
+    guitest_dists.extend(working_set.resolve([Requirement.parse('openmdao.gui[functionalTest]')]))
     guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes-guinames
     
     try:

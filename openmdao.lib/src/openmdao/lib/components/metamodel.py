@@ -295,7 +295,7 @@ class MetaModel(Component):
                     else: 
                         kwargs = {}  
                     
-                    trait_type = surrogate.get_uncertain_value(1.0).__class__()
+                    trait_type = surrogate.get_uncertain_value(1.0).__class__
                     self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
                     
                     self._surrogate_info[name] = (surrogate.__class__(*args,**kwargs), []) # (surrogate,output_history)

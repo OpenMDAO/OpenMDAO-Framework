@@ -1,8 +1,8 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.Palette = function(id,model) {
-    openmdao.Palette.prototype.init.call(this,id,'Libraries',[]);
+openmdao.PaletteFrame = function(id,model) {
+    openmdao.PaletteFrame.prototype.init.call(this,id,'Libraries',[]);
 
     /***********************************************************************
      *  private
@@ -15,20 +15,20 @@ openmdao.Palette = function(id,model) {
     // dropping a filename onto the palette pane means import *
     libs.droppable ({
         accept: '.file',
-        drop: function(ev,ui) { 
-            debug.info('Palette drop: ',ev,ui);
+        drop: function(ev,ui) {
+            debug.info('PaletteFrame drop: ',ev,ui);
             var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('Palette drop: ',droppedObject);
+            debug.info('PaletteFrame drop: ',droppedObject);
             var path = droppedObject.attr("path");
-            debug.info('Palette drop: '+path);
+            debug.info('PaletteFrame drop: '+path);
             if (/.py$/.test(path)) {
                 model.importFile(path);
             }
             else {
                 alert("Not a python file:\n"+path);
-            };
+            }
         }
-    })
+    });
 
     /** rebuild the Palette from an XML library list */
     function updatePalette(packages) {
@@ -36,7 +36,7 @@ openmdao.Palette = function(id,model) {
         var expanded = jQuery('.library-list:visible');
 
         // build the new html
-        var html="<div id='library'>"
+        var html="<div id='library'>";
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name,item);
         });
@@ -46,11 +46,11 @@ openmdao.Palette = function(id,model) {
         libs.html(html);
 
         // make everything draggable
-        jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' })
-        jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree (object tree)
+        jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
+        jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree
 
         // collapse all and add click functionality
-        jQuery('.library-list').hide()
+        jQuery('.library-list').hide();
         jQuery('.library-header').click(function () {
             jQuery(this).next().toggle("normal");
             return false;
@@ -58,16 +58,19 @@ openmdao.Palette = function(id,model) {
 
         // restore previously expanded libraries, if any
         expanded.each(function() {
-            jQuery('.library-list:[title='+this.title+']').show()
+            jQuery('.library-list:[title='+this.title+']').show();
         });
     }
 
     /** build HTML string for a package */
     function packageHTML(name,item) {
-        var html = ''
+        var html = '';
         // if item has a version it's an object type, otherwise it's a package
-        if (item['version'])
-            html+="<div class='objtype' path='"+item['path']+"' title='"+name+"'>"+name+"</div>"
+        if (item.version) {
+            html+="<div class='objtype' path='"+item.path+"' title='"+name+"'>"+
+                   name +
+                  "</div>";
+        }
         else {
             html+="<div class='library-header' title='"+name+"'>";
             html+="<h3>"+name+"</h3>";
@@ -77,8 +80,21 @@ openmdao.Palette = function(id,model) {
                 html+= packageHTML(name,subitem);
             });
             html+="</ul>";
-        };
+        }
         return html;
+    }
+
+
+    function handleMessage(message) {
+        if (message.length !== 2 || message[0] !== 'types') {
+            debug.warn('Invalid types data:',message);
+            debug.warn('message length',message.length,'topic',message[0]);
+        }
+        else {
+            libs.html("<div>Updating...</div>")
+                .effect('highlight',{color:'#ffd'},1000);
+            updatePalette(message[1]);
+        }
     }
 
     /***********************************************************************
@@ -88,15 +104,17 @@ openmdao.Palette = function(id,model) {
     /** update the display, with data from the model */
     this.update = function() {
         libs.html("<div>Updating...</div>")
-            .effect('highlight',{color:'#ffd'},1000)
-        model.getTypes(updatePalette)
-    }
+            .effect('highlight',{color:'#ffd'},1000);
+        model.getTypes(updatePalette);
+    };
+
+    this.update();
 
     // ask model for an update whenever something changes
-    model.addListener('',this.update);
-
-}
+    model.addListener('types',handleMessage);
+};
 
 /** set prototype */
-openmdao.Palette.prototype = new openmdao.BaseFrame();
-openmdao.Palette.prototype.constructor = openmdao.Palette;
+openmdao.PaletteFrame.prototype = new openmdao.BaseFrame();
+openmdao.PaletteFrame.prototype.constructor = openmdao.PaletteFrame;
+

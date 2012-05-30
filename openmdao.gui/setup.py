@@ -39,8 +39,12 @@ setup(name='openmdao.gui',
               'mocker==1.1',
               'zope.testrunner==4.0.4',
               'zope.exceptions==3.6.1'
+          ],
+          'functionalTest': [
+              'selenium==2.20.0',
+              'PyVirtualDisplay==0.1',
           ]
-      },
+      },   
       entry_points="""
       # -*- Entry points: -*-
       """,

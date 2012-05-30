@@ -824,7 +824,30 @@ class Assembly (Component):
                     driver_outputs[j] = names[1]
         
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
-    
+
+    def get_dataflow(self):
+        ''' get the list of components and connections between them
+            that make up the data flow for the given assembly
+        '''
+        components = []
+        connections = []
+        if is_instance(self, Assembly):
+            # list of components (name & type) in the assembly
+            g = self._depgraph._graph
+            for name in nx.algorithms.dag.topological_sort(g):
+                if not name.startswith('@'):
+                    comp = self.get(name)
+                    if is_instance(comp, Component):
+                        components.append({'name': comp.name,
+                                           'pathname': self.get_pathname() + '.' + name,
+                                           'type': type(comp).__name__,
+                                           'valid': comp.is_valid()
+                                          })
+            # list of connections (convert tuples to lists)
+            conntuples = self.list_connections(show_passthrough=False)
+            for connection in conntuples:
+                connections.append(list(connection))
+        return {'components': components, 'connections': connections}
 
 
 def dump_iteration_tree(obj):
@@ -853,5 +876,4 @@ def dump_iteration_tree(obj):
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()
-
 
