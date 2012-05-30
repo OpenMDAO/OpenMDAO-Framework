@@ -22,12 +22,8 @@ from openmdao.gui.projdirfactory import ProjDirFactory
 from openmdao.main.publisher import Publisher
 
 from openmdao.main.mp_support import has_interface, is_instance
-<<<<<<< HEAD
-from openmdao.main.interfaces import *
-=======
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from zope.interface import implementedBy
->>>>>>> 030199340911a1bc74738a60bfc0bac93ec1f460
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
@@ -71,12 +67,8 @@ class ConsoleServer(cmd.Cmd):
         self.publisher = None
         self._publish_comps = {}
 
-<<<<<<< HEAD
-        self.files = FileManager('files', publish_updates=True)
         self.projdirfactory = None
-=======
         self.files = FileManager('files', publish_updates=publish_updates)
->>>>>>> 030199340911a1bc74738a60bfc0bac93ec1f460
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -260,11 +252,7 @@ class ConsoleServer(cmd.Cmd):
                     comp['pathname'] = k
                     children = self._get_components(v, k)
                 else:
-<<<<<<< HEAD
                     comp['pathname'] = '.'.join([pathname, k]) if pathname else k
-=======
-                    comp['pathname'] = pathname + '.' + k if pathname else k
->>>>>>> 030199340911a1bc74738a60bfc0bac93ec1f460
                     children = self._get_components(v, comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
