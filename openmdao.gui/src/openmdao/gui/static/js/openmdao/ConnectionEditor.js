@@ -19,8 +19,8 @@ openmdao.ConnectionEditor = function(model,pathname,src_comp,dst_comp) {
         dataflowID = "#"+id+"-connections",
         dataflowDiv = jQuery('<div id='+dataflowID+'>').appendTo('<div style="background:white">').appendTo('#'+id),
         dataflow = new draw2d.Workflow(dataflowID),
-        output_selector = jQuery("<input id='output_list' class='combobox' </select>"),
-        input_selector = jQuery("<input id='input_list' class='combobox' </select>"),
+        output_selector = jQuery("<input id='output_list' class='combobox' />"),
+        input_selector = jQuery("<input id='input_list' class='combobox' />"),
         connect_button = jQuery("<button id='connect_button'>Connect</button>")
                             .click(function() {
                                 var src = output_selector.val();
