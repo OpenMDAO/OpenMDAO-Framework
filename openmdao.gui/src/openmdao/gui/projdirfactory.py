@@ -226,9 +226,12 @@ class ProjDirFactory(Factory):
     def publish_updates(self, added_set, changed_set, deleted_set):
         publisher = Publisher.get_instance()
         if publisher:
+            types = get_available_types()
+            types['working'] = self.get_available_types()
+            
             publisher.publish('types', 
                               [
-                                  packagedict(get_available_types()),
+                                  packagedict(types),
                                   list(added_set),
                                   list(changed_set),
                                   list(deleted_set),

@@ -71,6 +71,7 @@ openmdao.Model=function() {
         }
         var topic = message[0],
             callbacks = subscribers[message[0]];
+        debug.info(message);
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {

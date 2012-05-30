@@ -29,7 +29,6 @@ from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
-
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
         performs maintenance on root level containers/assemblies and
@@ -99,8 +98,8 @@ class ConsoleServer(cmd.Cmd):
                 comp, root = self.get_container(pathname)
                 self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
 
-            # this will go away with bret's change
-            self.publisher.publish('types', self.get_types())
+            ## this will go away with bret's change
+            #self.publisher.publish('types', self.get_types())
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -443,6 +442,8 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
             self.projdirfactory = ProjDirFactory(self.proj.path)
+            print "created projdirfactory for %s" % self.proj.path
+            
         except Exception, err:
             self._error(err, sys.exc_info())
 
