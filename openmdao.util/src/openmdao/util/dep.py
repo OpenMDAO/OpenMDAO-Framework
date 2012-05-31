@@ -31,6 +31,10 @@ plugin_groups = { 'openmdao.container': ['IContainer'],
                   'openmdao.differentiator': ['IDifferentiator'],
                   }
 
+iface_set = set()
+for ifaces in plugin_groups.values():
+    iface_set.update(ifaces)
+
 class StrVisitor(ast.NodeVisitor):
     def __init__(self):
         ast.NodeVisitor.__init__(self)
@@ -202,19 +206,17 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 graph.add_edge(iface, classname)
     
     def update_ifaces(self, graph):
-        """Update our ifaces metadata based on the contents of the inheritance/implements
-        graph.
+        """Update our ifaces metadata based on the contents of the
+        inheritance/implements graph.
         """
-        for ifaces in plugin_groups.values():
-            for iface in ifaces:
-                try:
-                    paths = nx.shortest_path(graph, source=iface)
-                except KeyError:
-                    continue
-                for cname, cinfo in self.classes.items():
-                    if cname in paths:
-                        cinfo.meta.setdefault('ifaces',[]).append(iface)
-
+        for iface in iface_set:
+            try:
+                paths = nx.shortest_path(graph, source=iface)
+            except KeyError:
+                continue
+            for cname, cinfo in self.classes.items():
+                if cname in paths:
+                    cinfo.meta.setdefault('ifaces',[]).append(iface)
 
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None, startfiles=None):

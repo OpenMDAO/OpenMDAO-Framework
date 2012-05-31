@@ -28,6 +28,7 @@ from zope.interface import implementedBy
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.util.log import logger
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -67,7 +68,10 @@ class ConsoleServer(cmd.Cmd):
         self._publish_comps = {}
 
         self.projdirfactory = None
-        self.files = FileManager('files', publish_updates=publish_updates)
+        try:
+            self.files = FileManager('files', publish_updates=publish_updates)
+        except Exception as err:
+            self._error(err, sys.exc_info())
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -98,13 +102,11 @@ class ConsoleServer(cmd.Cmd):
                 comp, root = self.get_container(pathname)
                 self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
 
-            ## this will go away with bret's change
-            #self.publisher.publish('types', self.get_types())
-
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
         '''
         self.exc_info = exc_info
+        logger.error(str(err))
         print str(err.__class__.__name__), ":", err
 
     def do_trace(self, arg):
@@ -406,12 +408,7 @@ class ConsoleServer(cmd.Cmd):
             print "error getting value:", err
 
     def get_types(self):
-        types = packagedict(get_available_types())
-        try:
-            types['working'] = self.get_workingtypes()
-        except Exception, err:
-            print "Error adding working types:", str(err)
-        return types
+        return packagedict(get_available_types())
 
     def get_workingtypes(self):
         ''' Return this server's user defined types.

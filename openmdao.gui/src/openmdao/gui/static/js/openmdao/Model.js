@@ -94,6 +94,7 @@ openmdao.Model=function() {
         for messages with the given topic
     */
     this.addListener = function(topic, callback) {
+        debug.info('adding listener for' + topic);
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
@@ -109,6 +110,7 @@ openmdao.Model=function() {
             // if pubstream socket is not opened yet, open it
             if (!pubstream_opened) {
                 pubstream_opened = true;
+                debug.info('opening pubstream');
                 open_websocket('pubstream', handlePubMessage);
             }
             // tell server there's a new subscriber to the topic

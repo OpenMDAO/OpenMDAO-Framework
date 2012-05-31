@@ -92,9 +92,8 @@ plugin_ifaces = set([
 
 # predicate functions for selecting available types
 def is_plugin(name, meta):
-    return 'ifaces' in meta and plugin_ifaces.intersection(meta['ifaces'])
+    return plugin_ifaces.intersection(meta.get('ifaces',[]))
 
-#
 
 class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
@@ -115,14 +114,15 @@ class ProjDirFactory(Factory):
             deleted_set = set()
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
+            
+            if use_observer:
+                self._start_observer()
+                logger.error("publishing updates: %s, %s, %s" % (added_set, changed_set,deleted_set))
+                self.publish_updates(added_set, changed_set, deleted_set)
+            else:
+                self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
         except Exception as err:
             logger.error(str(err))
-            
-        if use_observer:
-            self._start_observer()
-            self.publish_updates(added_set, changed_set, deleted_set)
-        else:
-            self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
 
     def _start_observer(self):
         self.observer = Observer()
@@ -165,6 +165,7 @@ class ProjDirFactory(Factory):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
         """
+        logger.error("get_available_types")
         graph = self.analyzer.graph
         typset = set(graph.nodes()) - self._baseset
         types = []
@@ -174,9 +175,12 @@ class ProjDirFactory(Factory):
         else:
             ifaces = set([v[0] for k,v in plugin_groups.items() if k in groups])
         
+        empty = []
         for typ in typset:
+            logger.error("for type %s" % typ)
             meta = graph.node[typ]['classinfo'].meta
-            if 'ifaces' in meta and ifaces.intersection(meta['ifaces']): 
+            if ifaces.intersection(meta.get('ifaces', empty)): 
+                logger.error("adding type %s" % typ)
                 types.append((typ, meta))
         return types
 
@@ -186,6 +190,7 @@ class ProjDirFactory(Factory):
         
         imported = False
         if fpath in self.analyzer.fileinfo: # file has been previously scanned
+            logger.error("file %s is in fileinfo" % fpath)
             visitor = self.analyzer.fileinfo[fpath]
             pre_set = set(visitor.classes.keys())
             
@@ -204,6 +209,8 @@ class ProjDirFactory(Factory):
             pre_set = set()
 
         visitor = self.analyzer.analyze_file(fpath)
+        logger.error("classes found in %s: %s" % (fpath,visitor.classes.keys()))
+
         post_set = set(visitor.classes.keys())
 
         deleted_set.update(pre_set - post_set)
@@ -229,8 +236,10 @@ class ProjDirFactory(Factory):
     def publish_updates(self, added_set, changed_set, deleted_set):
         publisher = Publisher.get_instance()
         if publisher:
+            logger.error("found Publisher")
             types = get_available_types()
             types.extend(self.get_available_types())
+            logger.error("sending types: %s" % self.get_available_types())
             publisher.publish('types', 
                               [
                                   packagedict(types),
@@ -238,6 +247,8 @@ class ProjDirFactory(Factory):
                                   list(changed_set),
                                   list(deleted_set),
                               ])
+        else:
+            logger.error("no Publisher found")
 
     def cleanup(self):
         """If this factory is removed from the FactoryManager during execution, this function
