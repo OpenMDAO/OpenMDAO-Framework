@@ -61,7 +61,7 @@ def filedict(path, key='pathname', root=''):
             'filename'    the name of the file
             'pathname'    the full pathname of the file (default)
     '''
-    dict = {}
+    dct = {}
     for filename in os.listdir(path):
         pathname = os.path.join(path, filename)
         k = locals()[key]
@@ -69,29 +69,31 @@ def filedict(path, key='pathname', root=''):
         if key=='pathname' and l > 0:
             k = k[l:]
         if os.path.isdir(pathname):
-            dict[k] = filedict(pathname, key, root)
+            dct[k] = filedict(pathname, key, root)
         else:
-            dict[k] = os.path.getsize(pathname)
-    return dict
+            dct[k] = os.path.getsize(pathname)
+    return dct
 
 
 def packagedict(types):
     ''' create a nested dict for a package structure
     '''
-    dict={}
+    dct={}
     for typ,meta in types:
-        parent = dict
+        parent = dct
         nodes = typ.split('.')
         name = nodes[len(nodes)-1]
         for node in nodes:
             if node==name:
                 parent[node] = meta.copy()
                 parent[node].update({'path': typ})
+                if 'version' not in meta:
+                    parent[node]['version'] = 'n/a'
             else:
                 if not node in parent:
                     parent[node] = {}
             parent = parent[node]
-    return dict
+    return dct
 
 
 def packageXML(types):

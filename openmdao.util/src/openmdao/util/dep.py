@@ -110,7 +110,7 @@ class _ClassBodyVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name) and node.func.id == 'implements':
             for arg in node.args:
                 if isinstance(arg, ast.Name):
-                    self.metadata.setdefault('ifaces',set()).add(arg.id)
+                    self.metadata.setdefault('ifaces',[]).append(arg.id)
     
     def visit_Assign(self, node):
         if len(self.metadata)==0 and len(node.targets) == 1:
@@ -118,9 +118,9 @@ class _ClassBodyVisitor(ast.NodeVisitor):
             if isinstance(lhs, ast.Name) and lhs.id=='__openmdao_meta__':
                 dct = ast.literal_eval(node.value)
                 dct.setdefault('ifaces', [])
-                dct['ifaces'] = set(dct['ifaces']) # ifaces may be defined by the user as a list, so make it a set
-                dct['ifaces'].update(self.metadata.setdefault('ifaces',[]))
+                dct['ifaces'].extend(self.metadata.setdefault('ifaces',[]))
                 self.metadata.update(dct)
+                #self.metadata['ifaces'] = list(set(self.metadata['ifaces']))
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
@@ -198,7 +198,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
             graph.add_node(classname, classinfo=classinfo)
             for base in classinfo.bases:
                 graph.add_edge(base, classname)
-            for iface in classinfo.meta.setdefault('ifaces', set()):
+            for iface in classinfo.meta.setdefault('ifaces', []):
                 graph.add_edge(iface, classname)
     
     def update_ifaces(self, graph):
@@ -213,7 +213,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                     continue
                 for cname, cinfo in self.classes.items():
                     if cname in paths:
-                        cinfo.meta.setdefault('ifaces',set()).add(iface)
+                        cinfo.meta.setdefault('ifaces',[]).append(iface)
 
 
 class PythonSourceTreeAnalyser(object):
@@ -291,7 +291,7 @@ class PythonSourceTreeAnalyser(object):
         for iface in ifaces:
             for inheritor in self.find_inheritors(iface):
                 if inheritor not in ifaces:
-                    self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',set()).add(iface)
+                    self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',[]).append(iface)
         
     def remove_file(self, fname):
         fvisitor = self.fileinfo[fname]

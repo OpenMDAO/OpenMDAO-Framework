@@ -10,6 +10,7 @@ import shutil
 import warnings
 import itertools
 import string
+import threading
 
 from fnmatch import fnmatch
 from os.path import islink, isdir, join
@@ -284,3 +285,13 @@ def clean_filename(name):
     
     valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
     return ''.join(c if c in valid_chars else '_' for c in name)
+
+
+__dbg_lock_ = threading.RLock()
+
+def dbg_to_file(msg, fname='~/debug.out'):
+    with __dbg_lock_:
+        with open(os.path.expanduser(fname), 'a') as f:
+            f.write(msg)
+            f.write('\n')
+        

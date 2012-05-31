@@ -61,6 +61,8 @@ openmdao.Model=function() {
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
+        debug.info('******* msg ******')
+        debug.info(message);
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
@@ -71,7 +73,6 @@ openmdao.Model=function() {
         }
         var topic = message[0],
             callbacks = subscribers[message[0]];
-        debug.info(message);
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {

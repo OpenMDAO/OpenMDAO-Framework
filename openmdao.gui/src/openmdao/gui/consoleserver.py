@@ -29,6 +29,8 @@ from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
+from openmdao.util.fileutil import dbg_to_file
+
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
         performs maintenance on root level containers/assemblies and
@@ -433,16 +435,18 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, filename):
-        print 'loading project from:', filename
+        dbg_to_file("loading project from %s" % filename)
         self.projfile = filename
         try:
+            if self.proj:
+                self.proj.deactivate()
             self.proj = project_from_archive(filename,
                                              dest_dir=self.files.getcwd())
             self.proj.activate()
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
             self.projdirfactory = ProjDirFactory(self.proj.path)
-            print "created projdirfactory for %s" % self.proj.path
+            dbg_to_file("created projdirfactory for %s" % self.proj.path)
             
         except Exception, err:
             self._error(err, sys.exc_info())

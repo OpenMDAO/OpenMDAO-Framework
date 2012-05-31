@@ -93,7 +93,7 @@ openmdao.PaletteFrame = function(id,model) {
         else {
             libs.html("<div>Updating...</div>")
                 .effect('highlight',{color:'#ffd'},1000);
-            updatePalette(message[1]);
+            updatePalette(message[1][0]);
         }
     }
 

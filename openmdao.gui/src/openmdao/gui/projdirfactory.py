@@ -21,6 +21,7 @@ from openmdao.util.dep import PythonSourceTreeAnalyser, find_files, plugin_group
 from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.main.publisher import Publisher
 from openmdao.gui.util import packagedict
+from openmdao.util.fileutil import dbg_to_file
 
 
 class PyWatcher(FileSystemEventHandler):
@@ -28,16 +29,20 @@ class PyWatcher(FileSystemEventHandler):
     def __init__(self, factory):
         super(PyWatcher, self).__init__()
         self.factory = factory
+        dbg_to_file("PyWatcher: init")
 
     def on_modified(self, event):
+        dbg_to_file("PyWatcher: on_modified")
         added_set = set()
         changed_set = set()
         deleted_set = set()
         if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
             self.factory.on_modified(event.src_path, added_set, changed_set, deleted_set)
             self.factory.publish_updates(added_set, changed_set, deleted_set)
+            dbg_to_file("PyWatcher: update published")
     
     def on_moved(self, event):
+        dbg_to_file("PyWatcher: on_moved")
         added_set = set()
         changed_set = set()
         deleted_set = set()
@@ -53,9 +58,11 @@ class PyWatcher(FileSystemEventHandler):
             
         if publish:
             self.factory.publish_updates(added_set, changed_set, deleted_set)
+            dbg_to_file("PyWatcher: update published")
 
     
     def on_deleted(self, event):
+        dbg_to_file("PyWatcher: on_deleted")
         added_set = set()
         changed_set = set()
         deleted_set = set()
@@ -101,31 +108,39 @@ class ProjDirFactory(Factory):
     the set of available types up-to-date as project files change.
     """
     def __init__(self, watchdir, use_observer=True):
+        dbg_to_file("ProjDirFactory ctor")
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
         self.imported = {}  # imported files vs (module, ctor dict)
         startfiles = [sys.modules['openmdao.main.'+n].__file__.replace('.pyc','.py') 
                           for n in _startmods]
-        self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
-        self._baseset = set(self.analyzer.graph.nodes())
-        
-        added_set = set()
-        changed_set = set()
-        deleted_set = set()
-        for pyfile in find_files(self.watchdir, "*.py"):
-            self.on_modified(pyfile, added_set, changed_set, deleted_set)
+        try:
+            self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
+            self._baseset = set(self.analyzer.graph.nodes())
+            
+            added_set = set()
+            changed_set = set()
+            deleted_set = set()
+            for pyfile in find_files(self.watchdir, "*.py"):
+                self.on_modified(pyfile, added_set, changed_set, deleted_set)
+        except Exception as err:
+            dbg_to_file(str(err))
             
         if use_observer:
-            self.publish_updates(added_set, changed_set, deleted_set)
+            dbg_to_file("using observer")
             self._start_observer()
+            self.publish_updates(added_set, changed_set, deleted_set)
         else:
+            dbg_to_file("NOT using observer")
             self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
 
     def _start_observer(self):
+        dbg_to_file("starting observer for dir %s" % self.watchdir)
         self.observer = Observer()
         self.observer.schedule(PyWatcher(self), path=self.watchdir, recursive=True)
         self.observer.daemon = True
         self.observer.start()
+        dbg_to_file("observer started. watching %s" % self.watchdir)
         
     def _get_mod_ctors(self, mod, fpath, visitor):
         self.imported[fpath] = (mod, {})
@@ -162,6 +177,7 @@ class ProjDirFactory(Factory):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
         """
+        dbg_to_file("ProjDirFactory: get_available_types - groups = %s" % groups)
         graph = self.analyzer.graph
         typset = set(graph.nodes()) - self._baseset
         types = []
@@ -170,14 +186,20 @@ class ProjDirFactory(Factory):
             ifaces = set([v[0] for v in plugin_groups.values()])
         else:
             ifaces = set([v[0] for k,v in plugin_groups.items() if k in groups])
-            
+        
+        dbg_to_file("ifaces = %s" % list(ifaces))
+        dbg_to_file("typset = %s" % list(typset))
+        
         for typ in typset:
             meta = graph.node[typ]['classinfo'].meta
+            dbg_to_file("meta = %s" % meta)
             if 'ifaces' in meta and ifaces.intersection(meta['ifaces']): 
                 types.append((typ, meta))
+        dbg_to_file("returning types: %s" % types)
         return types
 
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
+        dbg_to_file("ProjDirFactory:on_modified: %s" % fpath)
         if os.path.isdir(fpath):
             return
         
@@ -209,6 +231,7 @@ class ProjDirFactory(Factory):
             changed_set.update(pre_set.intersection(post_set))
 
     def on_deleted(self, fpath, deleted_set):
+        dbg_to_file("ProjDirFactory:on_deleted: %s" % fpath)
         if os.path.isdir(fpath):
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_deleted(pyfile, deleted_set)
@@ -224,11 +247,12 @@ class ProjDirFactory(Factory):
             self.analyzer.remove_file(fpath)
             
     def publish_updates(self, added_set, changed_set, deleted_set):
+        dbg_to_file("ProjDirFactory:publish updates")
         publisher = Publisher.get_instance()
         if publisher:
             types = get_available_types()
-            types['working'] = self.get_available_types()
-            
+            types.extend(self.get_available_types())
+            dbg_to_file("publishing types: %s" % types)
             publisher.publish('types', 
                               [
                                   packagedict(types),
