@@ -287,11 +287,11 @@ def clean_filename(name):
     return ''.join(c if c in valid_chars else '_' for c in name)
 
 
-__dbg_lock_ = threading.RLock()
+#__dbg_lock_ = threading.RLock()
 
-def dbg_to_file(msg, fname='~/debug.out'):
-    with __dbg_lock_:
-        with open(os.path.expanduser(fname), 'a') as f:
-            f.write(msg)
-            f.write('\n')
+#def dbg_to_file(msg, fname='~/debug.out'):
+    #with __dbg_lock_:
+        #with open(os.path.expanduser(fname), 'a') as f:
+            #f.write(msg)
+            #f.write('\n')
         

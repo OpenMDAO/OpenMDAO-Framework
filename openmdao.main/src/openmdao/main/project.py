@@ -13,7 +13,7 @@ from pkg_resources import get_distribution, DistributionNotFound
 from openmdao.main.api import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
-from openmdao.util.fileutil import get_module_path, expand_path, dbg_to_file
+from openmdao.util.fileutil import get_module_path, expand_path
 
 from openmdao.main.mp_support import is_instance
 
@@ -141,8 +141,6 @@ class Project(object):
         self.save()
 
         SimulationRoot.chroot(self.path)
-        
-        dbg_to_file("Project started at location %s" % self.path)
 
     @property
     def name(self):

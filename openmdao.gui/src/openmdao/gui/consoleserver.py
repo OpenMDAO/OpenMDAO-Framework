@@ -29,8 +29,6 @@ from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
-from openmdao.util.fileutil import dbg_to_file
-
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
         performs maintenance on root level containers/assemblies and
@@ -418,24 +416,10 @@ class ConsoleServer(cmd.Cmd):
     def get_workingtypes(self):
         ''' Return this server's user defined types.
         '''
-        #g = self.proj.__dict__.items()
-        #for k, v in g:
-            #if not k in self.known_types and \
-               #((type(v).__name__ == 'classobj') or \
-                #str(v).startswith('<class')):
-                #try:
-                    #obj = self.proj.__dict__[k]()
-                    #if is_instance(obj, HasTraits):
-                        #self.known_types.append((k, 'n/a'))
-                #except Exception:
-                    ## print 'Class', k, 'not included in working types'
-                    #pass
-        #return packagedict(self.known_types)
         return packagedict(self.projdirfactory.get_available_types())
 
     @modifies_model
     def load_project(self, filename):
-        dbg_to_file("loading project from %s" % filename)
         self.projfile = filename
         try:
             if self.proj:
@@ -446,7 +430,6 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
             self.projdirfactory = ProjDirFactory(self.proj.path)
-            dbg_to_file("created projdirfactory for %s" % self.proj.path)
             
         except Exception, err:
             self._error(err, sys.exc_info())
