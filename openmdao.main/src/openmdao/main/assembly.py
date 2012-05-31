@@ -839,9 +839,10 @@ class Assembly (Component):
                     comp = self.get(name)
                     if is_instance(comp, Component):
                         components.append({'name': comp.name,
-                                           'pathname': self.get_pathname() + '.' + name,
+                                           'pathname': comp.get_pathname(),
                                            'type': type(comp).__name__,
-                                           'valid': comp.is_valid()
+                                           'valid': comp.is_valid(),
+                                           'is_assembly': is_instance(comp, Assembly)
                                           })
             # list of connections (convert tuples to lists)
             conntuples = self.list_connections(show_passthrough=False)

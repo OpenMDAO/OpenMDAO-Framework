@@ -16,6 +16,28 @@ from elements import ButtonElement, InputElement, TextElement
 from util import abort, ValuePrompt, NotifierPage
 
 
+class DataflowFigure(object):
+    """ Represents elements within a dataflow figure. """
+
+    def __init__(self, root):
+        self.root = root
+
+    @property
+    def border(self):
+        """ Figure border property. """
+        return self.root.value_of_css_property('border')
+
+    @property
+    def name(self):
+        """ Figure name. """
+        return self.root.find_elements_by_class_name('DataflowFigureHeader')[0].text
+
+    @property
+    def top_right(self):
+        """ Figure maximize/minimize button. """
+        return self.root.find_elements_by_class_name('DataflowFigureTopRight')[0]
+
+
 class WorkspacePage(BasePageObject):
 
     title_prefix = 'OpenMDAO:'
@@ -190,6 +212,15 @@ class WorkspacePage(BasePageObject):
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
         return self.browser.find_elements_by_class_name('DataflowFigure')
+
+    def get_dataflow_figure(self, name):
+        """ Return dataflow figure for `name`. """
+        figures = self.browser.find_elements_by_class_name('DataflowFigure')
+        for figure in figures:
+            fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
+            if fig_name == name:
+                return DataflowFigure(figure)
+        return None
 
     def get_dataflow_component_names(self):
         """ Return names of dataflow components. """

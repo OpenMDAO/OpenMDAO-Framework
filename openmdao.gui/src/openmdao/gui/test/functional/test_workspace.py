@@ -1,3 +1,5 @@
+import pkg_resources
+import re
 import sys
 import time
 
@@ -80,9 +82,6 @@ def _test_import(browser):
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
-# FIXME: refresh shouldn't be required.
-    workspace_page('view_menu').click()
-    workspace_page('refresh_button').click()
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
@@ -143,9 +142,8 @@ def _test_menu(browser):
     workspace_page.run()
     expected = 'Executing...\nExecution complete.'
     eq(workspace_page.history, expected)
-    top_figure = workspace_page.get_dataflow_figures()[0]
-#FIXME: halo seems to go away now...
-#    eq( top_figure.value_of_css_property('border'), '1px solid rgb(0, 255, 0)' )
+    top_figure = workspace_page.get_dataflow_figure('top')
+    eq(top_figure.border, '1px solid rgb(0, 255, 0)')
 
 #FIXME: These need to verify that the request has been performed.
     # View menu.
@@ -193,9 +191,6 @@ f_x = Float(0.0, iotype='out')
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
-# FIXME: refresh shouldn't be required.
-    workspace_page('view_menu').click()
-    workspace_page('refresh_button').click()
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
@@ -210,6 +205,71 @@ f_x = Float(0.0, iotype='out')
     print "_test_newfile complete."
 
 
+def _test_maxmin(browser):
+    print "running _test_maxmin..."
+    # Toggles maxmimize/minimize button on assemblies.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Import maxmin.py
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'maxmin.py')
+    editor_page.add_file(file_path)
+    editor_page.import_file('maxmin.py')
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Add MaxMin to 'top'.
+    workspace_page.show_dataflow('top')
+    time.sleep(1)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'top'])
+    workspace_page('libraries_tab').click()
+    workspace_page('working_section').click()
+    workspace_page.add_library_item_to_dataflow('MaxMin', 'maxmin')
+    time.sleep(1)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'maxmin', 'top'])
+
+    # Maximize maxmin.
+    maxmin = workspace_page.get_dataflow_figure('maxmin')
+    background = maxmin.top_right.value_of_css_property('background')
+    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
+    eq(background, 'rgba(0, 0, 0, 0)'
+                   ' url(http://localhost/static/images/circle-plus.png)'
+                   ' no-repeat scroll 100% 0%')
+
+    maxmin.top_right.click()
+    background = maxmin.top_right.value_of_css_property('background')
+    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
+    eq(background, 'rgba(0, 0, 0, 0)'
+                   ' url(http://localhost/static/images/circle-minus.png)'
+                   ' no-repeat scroll 100% 0%')
+    time.sleep(1)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'driver', 'maxmin', 'sub', 'top'])
+
+    # Minimize maxmin.
+    maxmin.top_right.click()
+    background = maxmin.top_right.value_of_css_property('background')
+    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
+    eq(background, 'rgba(0, 0, 0, 0)'
+                   ' url(http://localhost/static/images/circle-plus.png)'
+                   ' no-repeat scroll 100% 0%')
+    time.sleep(1)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'maxmin', 'top'])
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_maxmin complete."
+
+
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
@@ -220,6 +280,7 @@ if __name__ == '__main__':
         _test_import(browser)
         _test_menu(browser)
         _test_newfile(browser)
+        _test_maxmin(browser)
         teardown_server()
     else:
         # Run under nose.
