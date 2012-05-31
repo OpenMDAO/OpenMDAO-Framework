@@ -22,7 +22,7 @@ class ChainRule(HasTraits):
     # Local FD might need a stepsize
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
                              'difference step size.')
-
+    
     def __init__(self):
 
         # This gets set in the callback
@@ -35,6 +35,11 @@ class ChainRule(HasTraits):
         
         self.gradient = {}
         self.hessian = {}
+        
+        # Stores the set of edges for which we need derivatives.
+        # Dictionary key is the scope, since we need to store this for each
+        # assembly recursion level.
+        self.edge_dicts = {}
     
     def setup(self):
         """Sets some dimensions."""
@@ -105,6 +110,189 @@ class ChainRule(HasTraits):
                       for (in1,in2) in product(self.param_names, self.param_names)])
 
 
+    def _find_edges(self, scope):
+        ''' Finds the minimum set of edges for which we need derivatives.
+        These edges contain the inputs and outputs that are in the workflow
+        of the driver, and whose source or target component has derivatives
+        defined. Note that we only need one set of edges for all params.
+        
+        For each scope, we store a dictionary keyed by the components in the
+        workflow. Each component has a tuple that contains the input and
+        output varpaths that are active in the derivative calculation.
+        
+        TODO - As part of this process, we will already need to know of any
+        blocks that must be finite differenced together.
+        '''
+        
+        scope_name = scope.get_pathname()
+        self.edge_dicts[scope_name] = {}
+        edge_dict = self.edge_dicts[scope_name]
+        
+        # Find our minimum set of edges part 1
+        # Inputs and Outputs from interior edges
+        driver_set = scope.workflow.get_names()
+        interior_edges = scope._parent._depgraph.get_interior_edges(driver_set)
+        
+        needed_in_edges = set([b for a, b in interior_edges])
+        needed_edges = set([a for a, b in interior_edges])
+        
+        # Find our minimum set of edges part 2
+        # Inputs connected to parameters
+        needed_in_edges = needed_in_edges.union(set(self.param_names))
+        
+        # Find our minimum set of edges part 3
+        # Outputs connected to objectives
+        for _, expr in self._parent.get_objectives().iteritems():
+            varpaths = expr.get_referenced_varpaths()
+            needed_edges = needed_edges.union(varpaths)
+            
+        # Find our minimum set of edges part 4
+        # Outputs connected to constraints
+        # Note: constraints have a left and right hand side expression.
+        for _, expr in self._parent.get_constraints().iteritems():
+            for item in [expr.lhs, expr.rhs]:
+                varpaths = item.get_referenced_varpaths()
+                needed_edges = needed_edges.union(varpaths)
+                
+        # If we are at a deeper recursion level than the driver's assembly,
+        # then we need to add the upscoped connected edges on the assembly
+        # boundary
+        if scope != self._parent:
+            in_edges, out_edges = self._assembly_edges(scope)
+            needed_edges = needed_edges.union(set(out_edges))
+            needed_in_edges = needed_in_edges.union(set(in_edges))
+        
+        # Loop through each comp in the workflow and assemble our data
+        # structures
+        for node in scope.workflow.__iter__():
+    
+            node_name = node.name
+        
+            # We don't handle nested drivers yet.
+            if isinstance(node, Driver):
+                raise NotImplementedError('Nested drivers')
+            
+            # Assemblies are tricky, but they should be able to calculate all
+            # connected derivatives on their boundary.
+            elif isinstance(node, Assembly):
+                
+                if not isinstance(node.driver, Run_Once):
+                    raise NotImplementedError('Nested drivers')
+                
+                needed_inputs = []
+                for edge in node.parent._depgraph.var_in_edges(node_name):
+                    parts = edge[1].split('.')
+                    edge = '.'.join(parts[1:])
+                    needed_inputs.append(edge)
+                    
+                needed_outputs = []
+                for edge in node.parent._depgraph.var_edges(node_name):
+                    parts = edge[0].split('.')
+                    edge = '.'.join(parts[1:])
+                    needed_outputs.append(edge)
+                    
+                #needed_inputs = [b for a, b in \
+                #                 node.parent._depgraph.var_in_edges(node_name)]
+                #needed_outputs = [a for a, b in \
+                #                  node.parent._depgraph.var_edges(node_name)]
+                edge_dict[node_name] = (needed_inputs, needed_outputs)
+                                         
+            # This component can determine its derivatives. Only
+            # derivatives that are defined should be added to our list of
+            # edges.
+            # NOTE - Derivatives in Functional form
+            elif hasattr(node, 'calculate_first_derivatives'):
+                
+                # Note: if you haven't declared derivatives for some inputs
+                # or outputs, then they are assumed to be zero, and are not
+                # returned.
+                local_inputs = node.derivatives.in_names
+                local_outputs = node.derivatives.out_names
+                
+                needed_inputs = []
+                for name in local_inputs:
+                    full_name = '.'.join([node_name, name])
+                    
+                    if full_name in needed_in_edges:
+                        needed_inputs.append(name)
+                        
+                needed_outputs = []
+                for name in local_outputs:
+                    full_name = '.'.join([node_name, name])
+                    
+                    if full_name in needed_edges:
+                        needed_outputs.append(name)
+                        
+                edge_dict[node_name] = (needed_inputs, needed_outputs)
+                
+            # This component is part of a block that must be finite
+            # differenced. These should provide all derivatives
+            else:
+                raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
+            
+        #print self.edge_dicts
+                
+    def _assembly_edges(self, scope):
+        """ Helper function to return input and output edges for a nested assembly.
+        Called recursively."""
+        
+        in_edges = []
+        out_edges = []
+        
+        upscope = self._parent.parent.driver
+        scope_name = scope.get_pathname()
+        upscope_name = upscope.get_pathname()
+        parts = scope_name.split('.')
+        assembly_name = '.'.join(parts[:-1])
+        
+        # All edges we need are stored in the higher assembly's edge list
+        edge_dict = self.edge_dicts[upscope_name][assembly_name]
+        
+        # assembly inputs
+        for item in edge_dict[0]:
+            
+            # If it has a dot in it, then it's a direct connection to an
+            # interior object by the parent assy bypassing this assy.
+            # TODO: What if we have a VarTree on the boundary?
+            if '.' in item:
+                in_edges.append(item)
+                
+            # Otherwise, real connections on assy boundary
+            else:
+                
+                #find any inputs connected to this assembly input
+                connects = scope._parent._depgraph.connections_to(item)
+                for connect in connects:
+                    if '@bin' in connect[0]:
+                        in_edges.append(connect[1])
+            
+        # assembly outputs
+        for item in edge_dict[1]:
+                    
+            # If it has a dot in it, then it's a direct connection to an
+            # interior object by the parent assy bypassing this assy.
+            # TODO: What if we have a VarTree on the boundary?
+            if '.' in item:
+                out_edges.append(item)
+                
+            # Otherwise, real connections on assy boundary
+            else:
+                
+                #find any inputs connected to this assembly input
+                connects = scope._parent._depgraph.connections_to(item)
+                for connect in connects:
+                    if '@bout' in connect[1]:
+                        out_edges.append(connect[0])
+                
+        # Recurse into even higher subassies
+        if upscope != self._parent:
+            up_in_edges, up_out_edges = self._assembly_edges(upscope)
+            
+            in_edges += up_in_edges
+            out_edges += up_out_edges
+            
+        return in_edges, out_edges
+                 
     def calc_gradient(self):
         """Calculates the gradient vectors for all outputs in this Driver's
         workflow."""
@@ -174,12 +362,16 @@ class ChainRule(HasTraits):
         """Process a workflow calculating all intermediate derivatives
         using the chain rule. This can be called recursively to handle
         nested assemblies."""
+        
+        # Figure out what outputs we need
+        scope_name = scope.get_pathname()
+        if scope_name not in self.edge_dicts:
+            self._find_edges(scope)
 
         # Loop through each comp in the workflow
         for node in scope.workflow.__iter__():
             
             node_name = node.name
-            #print "processing ", node_name
     
             incoming_deriv_names = {}
             incoming_derivs = {}
@@ -201,8 +393,8 @@ class ChainRule(HasTraits):
                 
                 node.calc_derivatives(first=True)
                 
-                local_inputs = node.derivatives.in_names
-                local_outputs = node.derivatives.out_names
+                local_inputs = self.edge_dicts[scope_name][node_name][0]
+                local_outputs = self.edge_dicts[scope_name][node_name][1]
                 local_derivs = node.derivatives.first_derivatives
                 
                 for input_name in local_inputs:
@@ -221,11 +413,6 @@ class ChainRule(HasTraits):
                 
                         sources = node.parent._depgraph.connections_to(full_name)
                         
-                        # This list keeps track of duplicated sources, which
-                        # are a biproduct of a connection to multiple inputs
-                        # across a fake boundary node.
-                        used_sources = []
-                        
                         for source_tuple in sources:
                             
                             source = source_tuple[0]
@@ -237,8 +424,7 @@ class ChainRule(HasTraits):
                             
                             # Only process inputs who are connected to outputs
                             # with derivatives in the chain
-                            if expr_txt and source in derivs and \
-                               source not in used_sources:
+                            if expr_txt and source in derivs:
                                 
                                 # Need derivative of the expression
                                 expr = node.parent._exprmapper.get_expr(expr_txt)
@@ -264,8 +450,6 @@ class ChainRule(HasTraits):
                                 else:
                                     incoming_derivs[full_name] = derivs[source] * \
                                         expr_deriv[source]
-                                    
-                                used_sources.append(source)
                         
                             
                 # CHAIN RULE
@@ -367,7 +551,7 @@ class ChainRule(HasTraits):
             target = '%s.%s' % (name, key)
             if target not in upscope_derivs:
                 upscope_derivs[target] = value
-            
+
 
     def calc_hessian(self, reuse_first=False):
         """Returns the Hessian matrix for all outputs in the Driver's

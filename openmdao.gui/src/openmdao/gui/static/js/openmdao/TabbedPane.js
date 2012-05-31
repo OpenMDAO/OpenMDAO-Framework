@@ -2,7 +2,7 @@
  * a tabbed pane based on a definition list
  */
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.TabbedPane = function(id) {
     jQuery("#"+id+" dl").css({
@@ -11,15 +11,15 @@ openmdao.TabbedPane = function(id) {
         'position': 'relative'
     });
     jQuery("#"+id+" dt").css({
-        'top':'0', 
-        'margin': '0', 
-        'position': 'relative', 
+        'top':'0',
+        'margin': '0',
+        'position': 'relative',
         'float': 'left',
         'display': 'block',
         'width': '75px',
         'height': '20px',
         'text-align': 'center',
-        'border': '1px solid #222', 
+        'border': '1px solid #222',
         'background-color':'#6a6a6a',
         'color': 'white',
         'font-size': '14px'
@@ -32,7 +32,7 @@ openmdao.TabbedPane = function(id) {
         'height': '100%',
         'width': '100%'
     });
-    
+
     jQuery("#"+id+" dd").hide();
     jQuery("#"+id+" dt").click(function() {
         var tgt = jQuery(this).attr("target");

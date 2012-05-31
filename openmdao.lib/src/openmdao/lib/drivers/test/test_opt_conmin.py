@@ -341,7 +341,7 @@ class TestContainer(VariableTree):
     dummy2 = Float(11.0) 
 
 class TestComponent(Component):
-    dummy_data = Slot(TestContainer(),iotype='in')
+    dummy_data = Slot(TestContainer, iotype='in')
     x = Float(iotype='out')
     def __init__(self): 
         super(TestComponent,self).__init__()
