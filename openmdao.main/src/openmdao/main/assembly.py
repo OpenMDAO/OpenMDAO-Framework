@@ -844,7 +844,7 @@ class Assembly (Component):
                                            'valid': comp.is_valid()
                                           })
             # list of connections (convert tuples to lists)
-            conntuples = self.list_connections(show_passthrough=False)
+            conntuples = self.list_connections(show_passthrough=True)
             for connection in conntuples:
                 connections.append(list(connection))
         return {'components': components, 'connections': connections}

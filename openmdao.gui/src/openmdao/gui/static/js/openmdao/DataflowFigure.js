@@ -378,6 +378,8 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
     }
 
     var self=this,
+        src_port = self.getPort("input"),
+        dst_port = self.getPort("output"),
         workflow = this.getWorkflow();
 
     this.setContent('');
@@ -405,28 +407,45 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
     });
 
     jQuery.each(json.connections,function(idx,conn) {
-        // internal connections only
-        if ((conn[0].indexOf('.') > 0) && (conn[1].indexOf('.') > 0)) {
-            var src_name = conn[0].split('.')[0],
-                dst_name = conn[1].split('.')[0],
-                con_name = src_name+'-'+dst_name,
-                src_fig = self.figures[src_name],
-                dst_fig = self.figures[dst_name],
-                con = self.connections[con_name];
+        var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
+            dst_name = conn[1].indexOf('.') < 0 ? '' : conn[1].split('.')[0],
+            con_name = src_name+'-'+dst_name,
+            src_fig = self.figures[src_name],
+            dst_fig = self.figures[dst_name],
+            con = self.connections[con_name];
 
-            if (!con) {
-                con = new draw2d.Connection();
+        if (!con) {
+            con = new draw2d.Connection();
+            if (src_name.length > 0) {
                 con.setSource(src_fig.getPort("output"));
+            }
+            else {
+                con.setSource(src_port);
+                con.setRouter(null);
+                con.setColor(new draw2d.Color(200,200,200));  // light grey
+            }
+            if (dst_name.length > 0) {
                 con.setTarget(dst_fig.getPort("input"));
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+            }
+            else {
+                con.setTarget(dst_port);
+                con.setRouter(null);
+                con.setColor(new draw2d.Color(200,200,200));  // light grey
+            }
+
+            // double click brings up connection frame if between two components
+            if ((src_name.length > 0) && (dst_name.length > 0)) {
+                //con.setCoronaWidth(100);
                 con.onDoubleClick = function() {
                     var frm = new openmdao.ConnectionFrame(self.openmdao_model,
                                               self.pathname,src_name,dst_name);
                 };
-                con.setZOrder(self.getZOrder()+1);
-                workflow.addFigure(con);
-                self.connections[con_name] = con;
             }
+
+            con.setZOrder(self.getZOrder()+1);
+            workflow.addFigure(con);
+            self.connections[con_name] = con;
         }
     });
 
