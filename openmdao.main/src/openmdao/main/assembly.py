@@ -845,7 +845,7 @@ class Assembly (Component):
                                            'is_assembly': is_instance(comp, Assembly)
                                           })
             # list of connections (convert tuples to lists)
-            conntuples = self.list_connections(show_passthrough=False)
+            conntuples = self.list_connections(show_passthrough=True)
             for connection in conntuples:
                 connections.append(list(connection))
         return {'components': components, 'connections': connections}
