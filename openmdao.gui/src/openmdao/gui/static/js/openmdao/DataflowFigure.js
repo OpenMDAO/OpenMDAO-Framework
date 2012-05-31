@@ -1,12 +1,13 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowFigure=function(model,pathname,type,valid){
+openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
     this.openmdao_model = model;
     this.pathname = pathname;
     this.name = openmdao.Util.getName(pathname);
     this.type = type || '';
     this.valid = valid;
+    this.maxmin = maxmin;
 
     this.cornerWidth=15;
     this.cornerHeight=15;
@@ -71,7 +72,13 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     item.style.outline="none";
     item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
 
-    var circleIMG = "url(/static/images/circle.png)";
+    if (this.maxmin == '+') {
+       var circleIMG = "url(/static/images/circle-plus.png)";
+    } else if (this.maxmin == '-') {
+       var circleIMG = "url(/static/images/circle-minus.png)";
+    } else {
+       var circleIMG = "url(/static/images/circle.png)";
+    }
 
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
@@ -90,6 +97,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     this.top_right.style.left="0px";
     this.top_right.style.top="0px";
     this.top_right.style.fontSize="2px";
+    this.top_right.className="DataflowFigureTopRight";
 
     this.bottom_left=document.createElement("div");
     this.bottom_left.style.background=circleIMG+" no-repeat bottom left";
@@ -209,7 +217,8 @@ openmdao.DataflowFigure.prototype.isConnected=function(){
 /** hook into drag start to detect click on max/min button */
 openmdao.DataflowFigure.prototype.onDragstart=function(x,y){
     var dragStarted = draw2d.Node.prototype.onDragstart.call(this,x,y);
-    if (y<this.cornerHeight && x<this.width && x>(this.width-this.cornerWidth)){
+    if ((this.maxmin == '+' || this.maxmin == '-') &&
+        y<this.cornerHeight && x<this.width && x>(this.width-this.cornerWidth)){
         this.toggle();
         return false;
     }
@@ -325,16 +334,22 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.DataflowFigure.prototype.toggle=function(){
-    if (this.height > this.getMinHeight()) {
-        this.minimize();
+    if (this.maxmin == '+') {
+        this.maximize();
     }
     else{
-        this.maximize();
+        this.minimize();
     }
 };
 
 /* show the minimized version of the figure, just a box with the type name */
 openmdao.DataflowFigure.prototype.minimize=function(){
+    if (this.maxmin == '-') {
+        this.maxmin = '+';
+        var circleIMG = "url(/static/images/circle-plus.png)";
+        this.top_right.style.background=circleIMG+" no-repeat top right";
+    }
+
     // remove all child figures
     var self = this,
         workflow = this.getWorkflow();
@@ -362,6 +377,12 @@ openmdao.DataflowFigure.prototype.minimize=function(){
 
 /* show the maximized version of the figure, with subcomponents & connections */
 openmdao.DataflowFigure.prototype.maximize=function(){
+    if (this.maxmin == '+') {
+        this.maxmin = '-';
+        var circleIMG = "url(/static/images/circle-minus.png)";
+        this.top_right.style.background=circleIMG+" no-repeat top right";
+    }
+
     // get child data from model and redraw with child figures
     this.openmdao_model.getDataflow(this.pathname,
         this.updateDataflow.bind(this),
@@ -388,6 +409,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         var name = comp.name,
             type = comp.type,
             valid = comp.valid,
+            maxmin = comp.is_assembly ? '+' : ''
             fig = self.figures[name];
 
         if (!fig) {
@@ -398,7 +420,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 figname = name;
             }
             fig = new openmdao.DataflowFigure(self.openmdao_model,
-                                              figname,type,valid);
+                                              figname, type, valid, maxmin);
             self.figures[name] = fig;
         }
 
