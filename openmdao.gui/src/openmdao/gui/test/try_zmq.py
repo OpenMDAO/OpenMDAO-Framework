@@ -13,7 +13,7 @@ from openmdao.util.network import get_unused_ip_port
 
 from openmdao.gui.zmqservermanager import ZMQServerManager
 from openmdao.gui.outstream import OutStreamRedirector
-from openmdao.gui.util import print_dict, print_list, print_json, RepeatTimer
+from openmdao.gui.util import print_dict, print_list, print_json
 
 
 def run_simple():

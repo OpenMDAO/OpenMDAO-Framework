@@ -9,25 +9,8 @@ import pkg_resources
 from pkg_resources import get_entry_map, get_distribution, working_set
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
     
-import openmdao.main.factory 
-Factory = openmdao.main.factory.Factory
-
-
-
-# This is a dict containing all of the entry point groups that OpenMDAO uses to
-# identify plugins, and their corresponding Interface.
-plugin_groups = { 'openmdao.container': 'IContainer',
-                  'openmdao.component': 'IComponent', 
-                  'openmdao.driver': 'IDriver', 
-                  'openmdao.variable': 'IVariable', 
-                  'openmdao.surrogatemodel': 'ISurrogate',
-                  'openmdao.doegenerator': 'IDOEgenerator', 
-                  'openmdao.caseiterator': 'ICaseIterator', 
-                  'openmdao.caserecorder': 'ICaseRecorder', 
-                  'openmdao.architecture': 'IArchitecture', 
-                  'openmdao.optproblem': 'IOptProblem', 
-                  'openmdao.differentiator': 'IDifferentiator',
-                  }
+from openmdao.main.factory import Factory
+from openmdao.util.dep import plugin_groups
                 
 class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
@@ -83,18 +66,37 @@ class PkgResourcesFactory(Factory):
                             break
         return None
             
+    def _entry_map_info(self, distiter):
+        dct = {}
+        for group in plugin_groups.keys():
+            for dist in distiter:
+                d = dist.get_entry_map(group)
+                for name in d:
+                    lst = dct.setdefault(name, [dist, []])
+                    lst[1].append(group)
+        return dct
+        
     def _get_type_dict(self):
         if self._have_new_types:
-            dct = {}
-            for group in plugin_groups.keys():
-                for dist in working_set:
-                    d = dist.get_entry_map(group)
-                    for name in d:
-                        lst = dct.setdefault(name, [dist, []])
-                        lst[1].append(group)
-            self._entry_pt_classes = dct
+            self._entry_pt_classes = self._entry_map_info(working_set)
         return self._entry_pt_classes
             
+    def _get_meta_info(self, typ_list, groups, typ_dict):
+        distset = set()
+        for name, lst in typ_dict.items():
+            dist = lst[0]
+            distset.add(dist.project_name)
+            ifaces = set()
+            for g in lst[1]:
+                ifaces.update(plugin_groups[g])
+            meta = {
+                'version': dist.version,
+                'ifaces': list(ifaces),
+            }
+            if groups.intersection(lst[1]):
+                typ_list.append((name, meta))
+        return distset
+        
     def get_available_types(self, groups=None):
         """Return a set of tuples of the form (typename, dist_version), one
         for each available plugin type in the given entry point groups.
@@ -107,26 +109,21 @@ class PkgResourcesFactory(Factory):
         groups = set(groups)
         
         typ_dict = self._get_type_dict()
-        distset = set()
-        for name, lst in typ_dict.items():
-            dist = lst[0]
-            distset.add(dist.project_name)
-            for group in lst[1]:
-                if group in groups:
-                    ret.append((name, dist.version))
+        distset = self._get_meta_info(ret, groups, typ_dict)
            
         if self._search_path is None: # self.env has same contents as working_set,
                                       # so don't bother looking through it
             return ret
 
-        # now look in the whole environment
-        for group in groups:
-            for proj in self.env:
-                for dist in self.env[proj]:
-                    if dist.project_name in distset:
-                        break
-                    for name in dist.get_entry_map(group):
-                        ret.append((name, dist.version))
-                            
+        # now look in the whole Environment
+        dists = [] # we want an iterator of newest dist for each project in Environment
+        for proj in self.env:
+            dist = self.env[proj][0]
+            if dist.project_name not in distset:
+                dists.append(dist)
+        
+        typ_dict = self._entry_map_info(dists)
+        dset = self._get_meta_info(ret, groups, typ_dict)
+        
         return ret
 
