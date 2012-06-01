@@ -408,6 +408,7 @@ class UploadHandler(ReqHandler):
                         filename = os.path.sep.join([path, filename])
                     cserver.add_file(filename, file_['body'])
             self.render('closewindow.html')
+                    self.render('closewindow.html')
 
     @web.authenticated
     def get(self):
