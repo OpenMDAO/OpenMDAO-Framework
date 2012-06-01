@@ -533,11 +533,21 @@ openmdao.DataflowFigure.prototype.resize=function(){
     var width, height, i,
         xmin=999999, xmax=0,
         ymin=999999, ymax=0,
-        children = this.getChildren();
+        children = this.getChildren(),
+        inport = null,  inportX = null,
+        outport = null, outportY = null;
 
     for (i=0;i<children.size;i++) {
         child = children.get(i);
         if (child instanceof openmdao.DataflowFigure) {
+            inport = child.getPort("input");
+            if (inport && inport.getAbsoluteX() < inportX) {
+                inportX = inport.getAbsoluteX();
+            }
+            outport = child.getPort("output");
+            if (outport && outport.getAbsoluteY() > outportY) {
+                outportY = outport.getAbsoluteY();
+            }
             x = child.getAbsoluteX();
             if (x < xmin) {
                 xmin = x;
@@ -559,6 +569,13 @@ openmdao.DataflowFigure.prototype.resize=function(){
     width = xmax-xmin+this.margin*2;
     height = ymax-ymin+this.margin*2;
     this.setDimension(width,height);
+
+//    if (inPortX !== null) {
+//        this.inputPort.setPosition(inportY,0);
+//    }
+//    if (outputY !== null) {
+//        this.outputPort.setPosition(this.width+5,outportY);
+//    }
 };
 
 openmdao.DataflowFigure.prototype.setExecState=function(message){

@@ -90,9 +90,14 @@ class ConsoleServer(cmd.Cmd):
         if self.publisher:
             self.publisher.publish('components', self.get_components())
             self.publisher.publish('', {'Dataflow': self.get_dataflow('')})
-            for pathname in self._publish_comps:
+            comps = self._publish_comps.keys()
+            for pathname in comps:
                 comp, root = self.get_container(pathname)
-                self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
+                if comp is None:
+                    del self._publish_comps[pathname]
+                    self.publisher.publish(pathname, {})
+                else:
+                    self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
 
             # this will go away with bret's change
             self.publisher.publish('types', self.get_types())
