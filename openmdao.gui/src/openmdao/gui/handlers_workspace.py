@@ -399,14 +399,15 @@ class UploadHandler(ReqHandler):
     def post(self):
         path = self.get_argument('path', default=None)
         cserver = self.get_server()
-        file = self.request.files['myfile'][0]
-        if file:
-            filename = file['filename']
-            if len(filename) > 0:
-                if path:
-                    filename = os.path.sep.join([path, filename])
-                cserver.add_file(filename, file['body'])
-                self.render('closewindow.html')
+        files = self.request.files['myfile']
+        if files:
+            for file_ in files:
+                filename = file_['filename']
+                if len(filename) > 0:
+                    if path:
+                        filename = os.path.sep.join([path, filename])
+                    cserver.add_file(filename, file_['body'])
+                    self.render('closewindow.html')
 
     @web.authenticated
     def get(self):
