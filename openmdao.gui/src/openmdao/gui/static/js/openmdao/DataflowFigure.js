@@ -385,11 +385,13 @@ openmdao.DataflowFigure.prototype.maximize=function(){
     }
 
     // get child data from model and redraw with child figures
-    this.openmdao_model.getDataflow(this.pathname,
-        this.updateDataflow.bind(this),
+    var self = this;
+    this.openmdao_model.getDataflow(self.pathname, function(json) {
+            self.updateDataflow(json);
+        },
         function(jqXHR, textStatus, errorThrown) {
-            debug.error('Error getting dataflow for',this,jqXHR);
-        }.bind(this)
+            debug.error('Error getting dataflow for',self,jqXHR);
+        }
     );
 };
 
@@ -403,6 +405,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         src_port = self.getPort("input"),
         dst_port = self.getPort("output"),
         workflow = this.getWorkflow();
+
+    if (! workflow) {
+        // this can happen if the figure was deleted from the canvas
+        // while we were waiting for the json data
+        return;
+    }
 
     this.setContent('');
 

@@ -126,6 +126,7 @@ class ConsoleServer(cmd.Cmd):
         self._hist += [line.strip()]
         return line
 
+    @modifies_model
     def onecmd(self, line):
         self._hist += [line.strip()]
         # Override the onecmd() method so we can trap error returns
@@ -138,7 +139,6 @@ class ConsoleServer(cmd.Cmd):
         # Default for empty line is to repeat last command - yuck
         pass
 
-    @modifies_model
     def default(self, line):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
@@ -480,21 +480,13 @@ class ConsoleServer(cmd.Cmd):
             else:
                 print "Error adding component, parent not found:", parentname
         else:
-            self.create(classname, name)
-
-    @modifies_model
-    def create(self, typname, name):
-        ''' create a new object of the given type.
-        '''
-        try:
-            if (typname.find('.') < 0):
-                self.default(name + '=' + typname + '()')
-            else:
-                self.proj.__dict__[name] = create(typname)
-        except Exception, err:
-            self._error(err, sys.exc_info())
-
-        return self.proj.__dict__
+            try:
+                if (classname.find('.') < 0):
+                    self.default(name + '=' + classname + '()')
+                else:
+                    self.proj.__dict__[name] = create(classname)
+            except Exception, err:
+                self._error(err, sys.exc_info())
 
     def cleanup(self):
         ''' Cleanup this server's files.
