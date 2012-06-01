@@ -73,11 +73,11 @@ def _test_import(browser):
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
 
-    # Import * from paraboloid.
-    editor_page.import_file('paraboloid.py')
+    ## Import * from paraboloid.
+    #editor_page.import_file('paraboloid.py')
 
-    # Import * from optimization_unconstrained.
-    editor_page.import_file('optimization_unconstrained.py')
+    ## Import * from optimization_unconstrained.
+    #editor_page.import_file('optimization_unconstrained.py')
 
     # Back to workspace.
     browser.close()
@@ -85,7 +85,7 @@ def _test_import(browser):
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
-    workspace_page('working_section').click()
+    workspace_page.find_palette_button('paraboloid').get(workspace_page).click()
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
@@ -93,7 +93,7 @@ def _test_import(browser):
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
-    workspace_page.add_library_item_to_dataflow('Paraboloid', paraboloid_name)
+    workspace_page.add_library_item_to_dataflow('paraboloid.Paraboloid', paraboloid_name)
 
     # Now there should be three.
     eq(len(workspace_page.get_dataflow_figures()), 3)
@@ -186,7 +186,7 @@ f_x = Float(0.0, iotype='out')
 """)
 
     # Import it.
-    editor_page.import_file('plane.py')
+    #editor_page.import_file('plane.py')
 
     # Back to workspace.
     browser.close()
@@ -195,8 +195,8 @@ f_x = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
-    workspace_page('working_section').click()
-    workspace_page.add_library_item_to_dataflow('Plane', 'plane')
+    workspace_page.find_palette_button('plane').get(workspace_page).click()
+    workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
@@ -218,7 +218,7 @@ def _test_maxmin(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'maxmin.py')
     editor_page.add_file(file_path)
-    editor_page.import_file('maxmin.py')
+    #editor_page.import_file('maxmin.py')
     browser.close()
     browser.switch_to_window(workspace_window)
 
@@ -228,8 +228,8 @@ def _test_maxmin(browser):
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
     workspace_page('libraries_tab').click()
-    workspace_page('working_section').click()
-    workspace_page.add_library_item_to_dataflow('MaxMin', 'maxmin')
+    workspace_page.find_palette_button('maxmin').get(workspace_page).click()
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
