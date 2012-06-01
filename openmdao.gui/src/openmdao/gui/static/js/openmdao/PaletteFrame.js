@@ -108,10 +108,11 @@ openmdao.PaletteFrame = function(id,model) {
         model.getTypes(updatePalette);
     };
 
-    this.update();
-
     // ask model for an update whenever something changes
     model.addListener('types',handleMessage);
+    
+    this.update();
+
 };
 
 /** set prototype */

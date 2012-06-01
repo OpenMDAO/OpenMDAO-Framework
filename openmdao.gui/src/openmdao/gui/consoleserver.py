@@ -410,11 +410,6 @@ class ConsoleServer(cmd.Cmd):
     def get_types(self):
         return packagedict(get_available_types())
 
-    def get_workingtypes(self):
-        ''' Return this server's user defined types.
-        '''
-        return packagedict(self.projdirfactory.get_available_types())
-
     @modifies_model
     def load_project(self, filename):
         self.projfile = filename
@@ -426,7 +421,9 @@ class ConsoleServer(cmd.Cmd):
             self.proj.activate()
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
+                remove_class_factory(self.projdirfactory)
             self.projdirfactory = ProjDirFactory(self.proj.path)
+            register_class_factory(self.projdirfactory)
             
         except Exception, err:
             self._error(err, sys.exc_info())
