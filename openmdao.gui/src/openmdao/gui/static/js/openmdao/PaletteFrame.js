@@ -93,7 +93,7 @@ openmdao.PaletteFrame = function(id,model) {
         else {
             libs.html("<div>Updating...</div>")
                 .effect('highlight',{color:'#ffd'},1000);
-            updatePalette(message[1]);
+            updatePalette(message[1][0]);
         }
     }
 
@@ -108,10 +108,11 @@ openmdao.PaletteFrame = function(id,model) {
         model.getTypes(updatePalette);
     };
 
-    this.update();
-
     // ask model for an update whenever something changes
     model.addListener('types',handleMessage);
+    
+    this.update();
+
 };
 
 /** set prototype */

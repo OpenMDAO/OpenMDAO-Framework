@@ -22,7 +22,7 @@ class Factory(object):
         raise NotImplementedError('create')
     
     def get_available_types(self, groups=None):
-        """Return a set of tuples of the form (typename, dist_version), one
+        """Return a set of tuples of the form (typename, metadata_dict), one
         for each available plugin type in the given entry point groups.
         If groups is *None,* return the set for all openmdao entry point groups.
         """

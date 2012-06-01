@@ -465,9 +465,11 @@ def _find_all_plugins(searchdir):
     dirs = [os.path.dirname(m.__file__) for m in modules]+[searchdir]
     psta = PythonSourceTreeAnalyser(dirs, exclude=_exclude_funct)
     
-    for key, val in plugin_groups.items():
-        dct[key] = set(psta.find_inheritors(val))
-
+    for key, lst in plugin_groups.items():
+        gset = set()
+        for val in lst:
+            gset.update(psta.find_inheritors(val))
+        dct[key] = gset
     return dct
 
 
@@ -1012,15 +1014,15 @@ def plugin_list(parser, options, args=None):
     plugins = set()
     for type in all_types:
         if show_all:
-            plugins.add((type[0], type[1]))
+            plugins.add((type[0], type[1]['version']))
         else:
             name = type[0].split('.')[0]
             if name == 'openmdao':
                 if options.builtin:
-                    plugins.add((type[0], type[1]))
+                    plugins.add((type[0], type[1]['version']))
             else:
                 if options.external:
-                    plugins.add((type[0], type[1]))
+                    plugins.add((type[0], type[1]['version']))
             
     title = "Installed %s %s plugins" % (title_type, title_groups)
     title = title.replace('  ', ' ')
