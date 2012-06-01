@@ -79,7 +79,7 @@ class EditorPage(BasePageObject):
                 try:
                     file_names.append(self.browser.find_elements(*self.locators["files"])[i].text.strip())
                 except StaleElementReferenceException:
-                    logging.critical('get_files: StaleElementReferenceException')
+                    logging.warning('get_files: StaleElementReferenceException')
                 else:
                     break
         return file_names
@@ -146,7 +146,7 @@ class EditorPage(BasePageObject):
             try:
                 chain.context_click(element).perform()
             except StaleElementReferenceException:
-                logging.critical('edit_file: StaleElementReferenceException')
+                logging.warning('import_file: StaleElementReferenceException')
                 element = WebDriverWait(self.browser, 1).until(
                     lambda browser: browser.find_element_by_xpath(xpath))
                 chain = ActionChains(self.browser)
@@ -167,7 +167,7 @@ class EditorPage(BasePageObject):
                 try:
                     chain.double_click(element).perform()
                 except StaleElementReferenceException:
-                    logging.critical('edit_file: StaleElementReferenceException')
+                    logging.warning('edit_file: StaleElementReferenceException')
                     element = WebDriverWait(self.browser, 1).until(
                         lambda browser: browser.find_element_by_xpath(xpath))
                     chain = ActionChains(self.browser)

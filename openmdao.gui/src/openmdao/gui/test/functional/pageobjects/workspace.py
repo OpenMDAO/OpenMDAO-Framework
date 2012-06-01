@@ -16,11 +16,12 @@ from elements import ButtonElement, InputElement, TextElement
 from util import abort, ValuePrompt, NotifierPage
 
 
-class DataflowFigure(object):
+class DataflowFigure(BasePageObject):
     """ Represents elements within a dataflow figure. """
 
-    def __init__(self, root):
-        self.root = root
+    props_button  = ButtonElement((By.XPATH, "//a[text()='Properties']"))
+    run_button    = ButtonElement((By.XPATH, "//a[text()='Run']"))
+    remove_button = ButtonElement((By.XPATH, "//a[text()='Remove']"))
 
     @property
     def border(self):
@@ -36,6 +37,12 @@ class DataflowFigure(object):
     def top_right(self):
         """ Figure maximize/minimize button. """
         return self.root.find_elements_by_class_name('DataflowFigureTopRight')[0]
+
+    def remove(self):
+        """ Remove this component. """
+        chain = ActionChains(self.browser)
+        chain.context_click(self.root).perform()
+        self('remove_button').click()
 
 
 class WorkspacePage(BasePageObject):
@@ -213,13 +220,20 @@ class WorkspacePage(BasePageObject):
         """ Return dataflow figure elements. """
         return self.browser.find_elements_by_class_name('DataflowFigure')
 
-    def get_dataflow_figure(self, name):
-        """ Return dataflow figure for `name`. """
-        figures = self.browser.find_elements_by_class_name('DataflowFigure')
-        for figure in figures:
-            fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
-            if fig_name == name:
-                return DataflowFigure(figure)
+    def get_dataflow_figure(self, name, retries=5):
+        """ Return :class:`DataflowFigure` for `name`. """
+        for retry in range(retries):
+            figures = self.browser.find_elements_by_class_name('DataflowFigure')
+            fig_name = None
+            for figure in figures:
+                try:
+                    fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
+                except StaleElementReferenceException:
+                    logging.warning('get_dataflow_figure: StaleElementReferenceException')
+                else:
+                    if fig_name == name:
+                        return DataflowFigure(self.browser, self.port, figure)
+            time.sleep(0.5)
         return None
 
     def get_dataflow_component_names(self):
@@ -233,13 +247,13 @@ class WorkspacePage(BasePageObject):
                 try:
                     names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
                 except StaleElementReferenceException:
-                    logging.critical('get_dataflow_component_names: StaleElementReferenceException')
+                    logging.warning('get_dataflow_component_names: StaleElementReferenceException')
                 else:
                     break
 
         if len(names) != len(dataflow_component_headers):
-            logging.critical('get_dataflow_component_names:'
-                             ' expecting %d names, got %s',
-                             len(dataflow_component_headers), names)
+            logging.error('get_dataflow_component_names:'
+                          ' expecting %d names, got %s',
+                          len(dataflow_component_headers), names)
         return names
 

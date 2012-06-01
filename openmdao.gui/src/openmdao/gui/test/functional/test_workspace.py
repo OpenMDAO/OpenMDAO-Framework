@@ -270,17 +270,54 @@ def _test_maxmin(browser):
     print "_test_maxmin complete."
 
 
+def _test_connect(browser):
+    print "running _test_connect..."
+    # Connects/disconnects between components.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Import connect.py
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'connect.py')
+    editor_page.add_file(file_path)
+    editor_page.import_file('connect.py')
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Replace 'top' with connect.py's top.
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    workspace_page('libraries_tab').click()
+    workspace_page('working_section').click()
+    workspace_page.add_library_item_to_dataflow('Top', 'top')
+
+    # Connect components.
+    workspace_page.show_dataflow('top')
+    workspace_page.save_project()
+    return
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_connect complete."
+
+
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
         from util import setup_chrome, setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        _test_console(browser)
-        _test_import(browser)
-        _test_menu(browser)
-        _test_newfile(browser)
-        _test_maxmin(browser)
+#        _test_console(browser)
+#        _test_import(browser)
+#        _test_menu(browser)
+#        _test_newfile(browser)
+#        _test_maxmin(browser)
+        _test_connect(browser)
         teardown_server()
     else:
         # Run under nose.
