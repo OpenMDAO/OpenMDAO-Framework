@@ -152,7 +152,7 @@ Queuing Key                    Value     Description
 -----------------------------  --------  ----------------------------------------------
 ``deadline_time``              datetime  Timestamp for when the job must be complete
 -----------------------------  --------  ----------------------------------------------
-``resource_limits``            dict      Job resource limits
+``resource_limits``            dict      Job resource limits (see below)
 -----------------------------  --------  ----------------------------------------------
 ``accounting_id``              string    ID used for job accounting
 -----------------------------  --------  ----------------------------------------------
@@ -213,6 +213,8 @@ Name                Type
 
 Soft limits do not affect scheduling decisions.
 Hard limits may be used for scheduling.
+
+Times are in seconds.
 
 The ``HOME_DIRECTORY`` and ``WORKING_DIRECTORY`` constants in
 :mod:`openmdao.main.resource` may be used as placeholders in path

@@ -368,7 +368,8 @@ class ConsoleServer(cmd.Cmd):
                     components.append({'name': k,
                                        'pathname': k,
                                        'type': type(v).__name__,
-                                       'valid': v.is_valid()
+                                       'valid': v.is_valid(),
+                                       'is_assembly': is_instance(v, Assembly)
                                       })
             dataflow['components'] = components
             dataflow['connections'] = []
