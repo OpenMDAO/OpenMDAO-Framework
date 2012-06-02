@@ -25,7 +25,6 @@ openmdao.Model=function() {
             url:  url,
             success: function(addr) {
                 sockets[url] = openmdao.Util.openWebSocket(addr,handler);
-                debug.info('opened socket at',url,sockets[url]);
             },
             error: function(jqXHR, textStatus, err) {
                 debug.error('Error getting websocket url',jqXHR,textStatus,err);
@@ -36,7 +35,6 @@ openmdao.Model=function() {
     /** close all websockets */
     function close_websockets(reason) {
         jQuery.each(sockets,function(idx,socket) {
-            debug.info('closing websocket',socket);
             socket.close(1000,reason);
         });
     }
@@ -107,7 +105,6 @@ openmdao.Model=function() {
             // if pubstream socket is not opened yet, open it
             if (!pubstream_opened) {
                 pubstream_opened = true;
-                debug.info('opening pubstream');
                 open_websocket('pubstream', handlePubMessage);
             }
             // tell server there's a new subscriber to the topic
