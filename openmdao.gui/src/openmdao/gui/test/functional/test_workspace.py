@@ -278,6 +278,7 @@ if __name__ == '__main__':
         _test_menu(browser)
         _test_newfile(browser)
         _test_properties(browser)
+        _test_maxmin(browser)
         _test_addfiles(browser)
         browser.quit()
         teardown_server()
