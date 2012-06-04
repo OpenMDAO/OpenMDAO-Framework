@@ -482,8 +482,11 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
 
     def cleanup(self):
-        ''' Cleanup this server's files.
+        ''' Cleanup various resources.
         '''
+        if self.projdirfactory:
+            self.projdirfactory.cleanup()
+            remove_class_factory(self.projdirfactory)
         self.files.cleanup()
 
     def get_files(self):
