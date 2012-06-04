@@ -13,6 +13,9 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.path = os.path.dirname(os.path.abspath(__file__))
         self.cserver = ConsoleServer()
 
+    def tearDown(self):
+        self.cserver.cleanup()
+
     def test_simple(self):
         ''' load and inspect the simple example project
         '''
