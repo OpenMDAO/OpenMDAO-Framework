@@ -209,6 +209,36 @@ f_x = Float(0.0, iotype='out')
     project_info_page.delete_project()
     print "_test_newfile complete."
 
+def _test_addfiles(browser):
+    print "running _test_addfiles..."
+
+    # Createsa file in the GUI
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Opens code editor
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+
+    # Get path to  paraboloid file.
+    import openmdao.examples.simple.paraboloid
+    paraboloidPath = openmdao.examples.simple.paraboloid.__file__
+
+    # Get path to optimization_unconstrained file.
+    import openmdao.examples.simple.optimization_unconstrained
+    opt_unconstrainedPath = openmdao.examples.simple.optimization_unconstrained.__file__
+    
+    # Add the files
+    editor_page.add_files((paraboloidPath, opt_unconstrainedPath))
+
+    # Check to make sure the files were added.
+    file_names = editor_page.get_files()
+    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
 
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
@@ -216,10 +246,11 @@ if __name__ == '__main__':
         from util import setup_chrome, setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        _test_console(browser)
-        _test_import(browser)
-        _test_menu(browser)
-        _test_newfile(browser)
+       # _test_console(browser)
+       # _test_import(browser)
+       # _test_menu(browser)
+       # _test_newfile(browser)
+        _test_addfiles(browser)
         teardown_server()
     else:
         # Run under nose.
