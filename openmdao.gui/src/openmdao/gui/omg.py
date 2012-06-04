@@ -129,7 +129,7 @@ class AppServer(object):
             and start the ioloop
         '''
         self.http_server = httpserver.HTTPServer(self.app)
-        self.http_server.listen(self.options.port)
+        self.http_server.listen(self.options.port, address="localhost")
 
         if not self.options.serveronly:
             launch_browser(self.options.port, self.options.browser)
