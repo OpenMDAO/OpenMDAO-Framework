@@ -124,18 +124,18 @@ class _ClassBodyVisitor(ast.NodeVisitor):
                 dct.setdefault('ifaces', [])
                 dct['ifaces'].extend(self.metadata.setdefault('ifaces',[]))
                 self.metadata.update(dct)
-                #self.metadata['ifaces'] = list(set(self.metadata['ifaces']))
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
     Python file.
     """
-    def __init__(self, fname):
+    def __init__(self, fname, tree_analyser):
         ast.NodeVisitor.__init__(self)
         self.fname = os.path.abspath(os.path.expanduser(fname))
         self.modpath = get_module_path(fname)
         self.classes = {}
         self.localnames = {}  # map of local names to package names
+        self.tree_analyser = tree_analyser
         
         # in order to get this to work with the 'ast' lib, I have
         # to read using universal newlines and append a newline
@@ -150,6 +150,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 self.visit(node)
         finally:
             f.close()
+            self.tree_analyser = None
         
     def translate(self, tree_analyzer):
         """Take module pathnames of classes that may be indirect names and
@@ -169,6 +170,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
         bases = [_to_str(b) for b in node.bases]
+        undef_bases = [b for b in bases if b not in self.localnames]
 
         bvisitor = _ClassBodyVisitor()
         bvisitor.visit(node)
@@ -183,7 +185,9 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         is parsed.
         """
         for al in node.names:
-            if al.asname is not None:
+            if al.asname is None:
+                self.localnames[a1.name] = a1.name
+            else:
                 self.localnames[al.asname] = al.name
 
     def visit_ImportFrom(self, node):
@@ -238,9 +242,9 @@ class PythonSourceTreeAnalyser(object):
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
             
         self.exclude = exclude
-        self.modinfo = {}
-        self.fileinfo = {}
-        self.class_file_map = {}
+        self.modinfo = {}  # maps module pathnames to PythonSourceFileAnalyzers
+        self.fileinfo = {} # maps filenames to PythonSourceFileAnalyzers
+        self.class_file_map = {} # map of classname to filename of module containing the class
             
         self._analyze(startfiles)
             
