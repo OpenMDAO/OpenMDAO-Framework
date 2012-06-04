@@ -10,7 +10,7 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
      *  private
      ***********************************************************************/
 
-    // initialize private variables
+    // initialize private variables blah b;ah blsgfjakjsdhfgksjdhfkjsd
     var self = this,
         figures = {},
         dataflowID = id+"-connections",
