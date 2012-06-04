@@ -36,6 +36,8 @@ class PyWatcher(FileSystemEventHandler):
         if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
             self.factory.on_modified(event.src_path, added_set, changed_set, deleted_set)
             self.factory.publish_updates(added_set, changed_set, deleted_set)
+
+    on_created = on_modified
     
     def on_moved(self, event):
         added_set = set()
@@ -54,7 +56,6 @@ class PyWatcher(FileSystemEventHandler):
         if publish:
             self.factory.publish_updates(added_set, changed_set, deleted_set)
 
-    
     def on_deleted(self, event):
         added_set = set()
         changed_set = set()
@@ -117,7 +118,7 @@ class ProjDirFactory(Factory):
             
             if use_observer:
                 self._start_observer()
-                logger.error("publishing updates: %s, %s, %s" % (added_set, changed_set,deleted_set))
+                #logger.error("publishing updates: %s, %s, %s" % (added_set, changed_set,deleted_set))
                 self.publish_updates(added_set, changed_set, deleted_set)
             else:
                 self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
@@ -165,9 +166,11 @@ class ProjDirFactory(Factory):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
         """
-        logger.error("get_available_types")
+        #logger.error("get_available_types")
         graph = self.analyzer.graph
         typset = set(graph.nodes()) - self._baseset
+        #logger.error("self.watchdir = %s" % os.listdir(self.watchdir))
+        #logger.error('groups = %s' % groups)
         types = []
         
         if groups is None:
@@ -177,10 +180,10 @@ class ProjDirFactory(Factory):
         
         empty = []
         for typ in typset:
-            logger.error("for type %s" % typ)
+            #logger.error("for type %s" % typ)
             meta = graph.node[typ]['classinfo'].meta
             if ifaces.intersection(meta.get('ifaces', empty)): 
-                logger.error("adding type %s" % typ)
+                #logger.error("adding type %s" % typ)
                 types.append((typ, meta))
         return types
 
@@ -190,7 +193,7 @@ class ProjDirFactory(Factory):
         
         imported = False
         if fpath in self.analyzer.fileinfo: # file has been previously scanned
-            logger.error("file %s is in fileinfo" % fpath)
+            #logger.error("file %s is in fileinfo" % fpath)
             visitor = self.analyzer.fileinfo[fpath]
             pre_set = set(visitor.classes.keys())
             
@@ -209,7 +212,7 @@ class ProjDirFactory(Factory):
             pre_set = set()
 
         visitor = self.analyzer.analyze_file(fpath)
-        logger.error("classes found in %s: %s" % (fpath,visitor.classes.keys()))
+        #logger.error("classes found in %s: %s" % (fpath,visitor.classes.keys()))
 
         post_set = set(visitor.classes.keys())
 
@@ -236,10 +239,10 @@ class ProjDirFactory(Factory):
     def publish_updates(self, added_set, changed_set, deleted_set):
         publisher = Publisher.get_instance()
         if publisher:
-            logger.error("found Publisher")
+            #logger.error("found Publisher")
             types = get_available_types()
             types.extend(self.get_available_types())
-            logger.error("sending types: %s" % self.get_available_types())
+            #logger.error("sending types: %s" % self.get_available_types())
             publisher.publish('types', 
                               [
                                   packagedict(types),
