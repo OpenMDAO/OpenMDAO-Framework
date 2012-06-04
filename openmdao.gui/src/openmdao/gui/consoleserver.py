@@ -484,10 +484,10 @@ class ConsoleServer(cmd.Cmd):
     def cleanup(self):
         ''' Cleanup various resources.
         '''
-        self.files.cleanup()
         if self.projdirfactory:
             self.projdirfactory.cleanup()
             remove_class_factory(self.projdirfactory)
+        self.files.cleanup()
 
     def get_files(self):
         ''' get a nested dictionary of files
