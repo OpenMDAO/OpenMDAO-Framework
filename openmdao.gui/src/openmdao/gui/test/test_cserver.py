@@ -2,6 +2,7 @@ import unittest
 import os.path
 import shutil
 import json
+import time
 
 from openmdao.gui.consoleserver import ConsoleServer
 
@@ -27,23 +28,28 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('/optimization_unconstrained.py'.replace('/', os.sep) in files)
         self.assertTrue('/_project_state'.replace('/', os.sep) in files)
 
-        # IMPORT PARABOLOID
-        self.cserver.default('from paraboloid import Paraboloid')
+        time.sleep(3.0)
+        types = self.cserver.get_types()
+        self.assertTrue('Paraboloid' in types['paraboloid'])
 
-        working_types = self.cserver.get_workingtypes()
-        self.assertTrue('Paraboloid' in working_types)
+        type_info = types['paraboloid']['Paraboloid']
+        self.assertEqual(type_info['path'], 'paraboloid.Paraboloid')
 
-        type_info = working_types['Paraboloid']
-        self.assertEqual(type_info['path'], 'Paraboloid')
-        self.assertEqual(type_info['version'], 'n/a')
+        components = json.loads(self.cserver.get_components())
 
         # CREATE ASSEMBLY
         self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly', '')
 
+        oldnum = len(components)
         components = json.loads(self.cserver.get_components())
-        self.assertEqual(len(components), 1)
+        self.assertEqual(len(components) - oldnum, 1)
 
-        assembly = components[0]
+        for comp in components:
+            if comp['pathname'] == 'prob':
+                assembly = comp
+                break
+        else:
+            self.fail("prob was not found in component list")
         self.assertEqual(assembly['pathname'], 'prob')
         self.assertEqual(assembly['type'], 'Assembly')
         self.assertEqual(assembly['interfaces'],
@@ -61,9 +67,14 @@ class ConsoleServerTestCase(unittest.TestCase):
            'openmdao.lib.drivers.conmindriver.CONMINdriver', 'prob')
 
         components = json.loads(self.cserver.get_components())
-        self.assertEqual(len(components), 1)
+        self.assertEqual(len(components) - oldnum, 1)
 
-        assembly = components[0]
+        for comp in components:
+            if comp['pathname'] == 'prob':
+                assembly = comp
+                break
+        else:
+            self.fail("prob was not found in component list")
         self.assertEqual(assembly['pathname'], 'prob')
         self.assertEqual(len(assembly['children']), 1)
 
@@ -92,7 +103,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(len(attributes['Workflow']['workflow']), 0)
 
         # CREATE PARABOLOID
-        self.cserver.add_component('p', 'Paraboloid','prob')
+        self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob')
 
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
@@ -169,7 +180,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(len(connections), 0)
 
         # WORKFLOW
-        self.cserver.default('prob.driver.workflow.add("p")')
+        self.cserver.onecmd('prob.driver.workflow.add("p")')
         driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))
         self.assertTrue('pathname' in driver_flow)
         self.assertTrue('type'     in driver_flow)
@@ -199,3 +210,4 @@ class ConsoleServerTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

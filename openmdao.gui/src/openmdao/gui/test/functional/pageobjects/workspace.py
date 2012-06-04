@@ -70,8 +70,8 @@ class WorkspacePage(BasePageObject):
     properties_tab  = ButtonElement((By.ID, 'properties_tab'))
 
     libraries_tab   = ButtonElement((By.ID, 'palette_tab'))
-    working_section = ButtonElement((By.XPATH,
-                            "//div[(@id='palette')]//div[(@title='working')]"))
+    #working_section = ButtonElement((By.XPATH,
+                            #"//div[(@id='palette')]//div[(@title='working')]"))
     openmdao_section = ButtonElement((By.XPATH,
                             "//div[(@id='palette')]//div[(@title='openmdao')]"))
     # Bottom.
@@ -94,6 +94,10 @@ class WorkspacePage(BasePageObject):
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         NotifierPage.wait(browser, port)
 
+    def find_palette_button(self, name):
+        return ButtonElement((By.XPATH,
+                            "//div[(@id='palette')]//div[(@title='%s')]" % name))
+        
     def run(self, timeout=TMO):
         """ Run current component. """
         self('project_menu').click()
