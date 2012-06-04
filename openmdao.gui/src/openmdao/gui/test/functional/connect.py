@@ -8,11 +8,11 @@ from openmdao.lib.datatypes.api import Bool, Enum, Float, Int, Str
 
 class Connectable(Component):
 
-    b_in = Bool(True, iotype='in')
-    e_in = Enum(3, values=(1, 2, 3), iotype='in')
-    f_in = Float(2.781828, iotype='in')
-    i_in = Int(42, iotype='in')
-    s_in = Str('xyzzy', iotype='in')
+    b_in = Bool(iotype='in')
+    e_in = Enum(values=(1, 2, 3), iotype='in')
+    f_in = Float(iotype='in')
+    i_in = Int(iotype='in')
+    s_in = Str(iotype='in')
 
     b_out = Bool(iotype='out')
     e_out = Enum(values=(1, 2, 3), iotype='out')
@@ -38,7 +38,27 @@ class Top(Assembly):
 
 if __name__ == '__main__':
     top = Top()
+
+    top.comp1.b_in = True
+    top.comp1.e_in = 3
+    top.comp1.f_in = 2.781828
+    top.comp1.i_in = 42
+    top.comp1.s_in = 'xyzzy'
+
     for prefix in ('b', 'e', 'f', 'i', 's'):
         top.connect('comp1.'+prefix+'_out', 'comp2.'+prefix+'_in')
+
+    assert top.comp2.b_out == False
+    assert top.comp2.e_out == 1
+    assert top.comp2.f_out == 0.
+    assert top.comp2.i_out == 0
+    assert top.comp2.s_out == ''
+
     top.run()
+
+    assert top.comp2.b_out == True
+    assert top.comp2.e_out == 3
+    assert top.comp2.f_out == 2.781828
+    assert top.comp2.i_out == 42
+    assert top.comp2.s_out == 'xyzzy'
 

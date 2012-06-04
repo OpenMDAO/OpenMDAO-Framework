@@ -296,8 +296,39 @@ def _test_connect(browser):
 
     # Connect components.
     workspace_page.show_dataflow('top')
-    workspace_page.save_project()
-    return
+    comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
+    comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
+    conn_page = workspace_page.connect(comp1, comp2)
+    eq(conn_page.dialog_title, 'Connections: top comp1 to comp2')
+    for prefix in ('b', 'e', 'f', 'i', 's'):
+        conn_page.connect('comp1.'+prefix+'_out', 'comp2.'+prefix+'_in')
+        time.sleep(1)  # Wait for display update.
+    conn_page.close()
+
+    # Set inputs and run.
+    workspace_page.do_command("top.comp1.b_in = True")
+    workspace_page.do_command("top.comp1.e_in = 3")
+    workspace_page.do_command("top.comp1.f_in = 2.781828")
+    workspace_page.do_command("top.comp1.i_in = 42")
+    workspace_page.do_command("top.comp1.s_in = 'xyzzy'")
+    workspace_page.run()
+
+    # Verify outputs.
+    comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
+    editor = comp2.editor_page()
+    eq(editor.dialog_title, 'Connectable: top.comp2')
+    outputs = editor.get_outputs()
+    eq(outputs[0][0], 'b_out')
+    eq(outputs[0][2], 'True')
+    eq(outputs[1][0], 'e_out')
+    eq(outputs[1][2], '3')
+    eq(outputs[2][0], 'f_out')
+    eq(outputs[2][2], '2.781828')
+    eq(outputs[3][0], 'i_out')
+    eq(outputs[3][2], '42')
+    eq(outputs[4][0], 's_out')
+    eq(outputs[4][2], 'xyzzy')
+    editor.close()
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
@@ -312,12 +343,12 @@ if __name__ == '__main__':
         from util import setup_chrome, setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-#        _test_console(browser)
-#        _test_import(browser)
-#        _test_menu(browser)
-#        _test_newfile(browser)
-#        _test_maxmin(browser)
         _test_connect(browser)
+        _test_console(browser)
+        _test_import(browser)
+        _test_maxmin(browser)
+        _test_menu(browser)
+        _test_newfile(browser)
         teardown_server()
     else:
         # Run under nose.

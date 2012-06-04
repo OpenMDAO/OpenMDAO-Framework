@@ -22,15 +22,20 @@ class _BaseElement(object):
         WebDriver locator used to find this element in `page`.
     """
 
-    def __init__(self, page, locator):
+    def __init__(self, page, locator, root=None):
         self._browser = page.browser
         self._locator = locator
+        self._root = page.root
 
     @property
     def element(self):
         """ The element on the page. """
-        return WebDriverWait(self._browser, TMO).until(
-                   lambda browser: browser.find_element(*self._locator))
+        if self._root is None:
+            return WebDriverWait(self._browser, TMO).until(
+                       lambda browser: browser.find_element(*self._locator))
+        else:
+            return WebDriverWait(self._browser, TMO).until(
+                       lambda browser: self._root.find_element(*self._locator))
 
     def is_present(self):
         """ Return True if the element can be found. """

@@ -11,38 +11,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
+from connections import ConnectionsPage
+from dataflow import DataflowFigure
 from editor import EditorPage
 from elements import ButtonElement, InputElement, TextElement
 from util import abort, ValuePrompt, NotifierPage
-
-
-class DataflowFigure(BasePageObject):
-    """ Represents elements within a dataflow figure. """
-
-    props_button  = ButtonElement((By.XPATH, "//a[text()='Properties']"))
-    run_button    = ButtonElement((By.XPATH, "//a[text()='Run']"))
-    remove_button = ButtonElement((By.XPATH, "//a[text()='Remove']"))
-
-    @property
-    def border(self):
-        """ Figure border property. """
-        return self.root.value_of_css_property('border')
-
-    @property
-    def name(self):
-        """ Figure name. """
-        return self.root.find_elements_by_class_name('DataflowFigureHeader')[0].text
-
-    @property
-    def top_right(self):
-        """ Figure maximize/minimize button. """
-        return self.root.find_elements_by_class_name('DataflowFigureTopRight')[0]
-
-    def remove(self):
-        """ Remove this component. """
-        chain = ActionChains(self.browser)
-        chain.context_click(self.root).perform()
-        self('remove_button').click()
 
 
 class WorkspacePage(BasePageObject):
@@ -220,7 +193,7 @@ class WorkspacePage(BasePageObject):
         """ Return dataflow figure elements. """
         return self.browser.find_elements_by_class_name('DataflowFigure')
 
-    def get_dataflow_figure(self, name, retries=5):
+    def get_dataflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`DataflowFigure` for `name`. """
         for retry in range(retries):
             figures = self.browser.find_elements_by_class_name('DataflowFigure')
@@ -229,10 +202,17 @@ class WorkspacePage(BasePageObject):
                 try:
                     fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
                 except StaleElementReferenceException:
-                    logging.warning('get_dataflow_figure: StaleElementReferenceException')
+                    logging.warning('get_dataflow_figure:'
+                                    ' StaleElementReferenceException')
                 else:
                     if fig_name == name:
-                        return DataflowFigure(self.browser, self.port, figure)
+                        fig = DataflowFigure(self.browser, self.port, figure)
+                        if prefix is not None:
+                            if prefix:
+                                fig.pathname = '%s.%s' % (prefix, name)
+                            else:
+                                fig.pathname = name
+                        return fig
             time.sleep(0.5)
         return None
 
@@ -247,7 +227,8 @@ class WorkspacePage(BasePageObject):
                 try:
                     names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
                 except StaleElementReferenceException:
-                    logging.warning('get_dataflow_component_names: StaleElementReferenceException')
+                    logging.warning('get_dataflow_component_names:'
+                                    ' StaleElementReferenceException')
                 else:
                     break
 
@@ -256,4 +237,19 @@ class WorkspacePage(BasePageObject):
                           ' expecting %d names, got %s',
                           len(dataflow_component_headers), names)
         return names
+
+    def connect(self, src, dst):
+        """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
+        chain = ActionChains(self.browser)
+        chain = chain.click_and_hold(src.output_port)
+        # Using root rather than input_port since for some reason
+        # even using a negative Y offset can select the parent's input.
+        chain = chain.move_to_element(dst.root)
+        chain = chain.release(None)
+        chain.perform()
+        parent, dot, srcname = src.pathname.rpartition('.')
+        parent, dot, dstname = dst.pathname.rpartition('.')
+        editor_id = 'DCE-%s-%s-%s' % (parent, srcname, dstname)
+        editor_id = editor_id.replace('.', '-')
+        return ConnectionsPage(self.browser, self.port, (By.ID, editor_id))
 

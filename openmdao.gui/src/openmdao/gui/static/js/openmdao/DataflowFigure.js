@@ -179,11 +179,13 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
         this.inputPort.setWorkflow(wkflw);
         this.inputPort.setName("input");
         this.inputPort.setCanDrag(false);
+        this.inputPort.setId(this.pathname+"-input");
 
         this.outputPort=new draw2d.OutputPort();
         this.outputPort.setWorkflow(wkflw);
         this.outputPort.setName("output");
         this.outputPort.setCanDrag(true);
+        this.outputPort.setId(this.pathname+"-output");
 
         var model = this.openmdao_model,
             name = this.name,
