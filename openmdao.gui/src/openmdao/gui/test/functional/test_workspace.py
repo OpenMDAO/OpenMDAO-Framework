@@ -299,7 +299,6 @@ def _test_maxmin(browser):
     project_info_page.delete_project()
     print "_test_maxmin complete."
 
-
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
