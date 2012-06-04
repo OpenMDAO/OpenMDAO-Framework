@@ -25,7 +25,6 @@ class UploadPage(BasePageObject):
         self.filename = path
         self('submit').click()
 
-
 class EditorPage(BasePageObject):
     """ Code editor window. """
 
@@ -101,6 +100,30 @@ class EditorPage(BasePageObject):
 
         # Go back to the main window.
         self.browser.switch_to_window(main_window_handle)
+
+    def add_files(self, file_paths):
+        modified_file_paths = []
+        for file_path in file_paths:
+            if(file_path.endswith('.pyc')):
+                modified_file_paths.append(file_path[:-1])
+            else:
+                modified_file_paths.append(file_path)
+
+        main_window_handle = self.browser.current_window_handle
+
+
+        # Switch to the Window that pops up.
+
+        for path in modified_file_paths:
+            self('file_menu').click()
+            self('add_button').click()
+            self.browser.switch_to_window('Add File')
+            page = UploadPage(self.browser, self.port)
+            page.upload_file(path)
+
+            # Go back to the main window.
+            self.browser.switch_to_window(main_window_handle)
+
 
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """
