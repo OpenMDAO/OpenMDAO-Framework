@@ -95,9 +95,9 @@ class WorkspacePage(BasePageObject):
         NotifierPage.wait(browser, port)
 
     def find_palette_button(self, name):
-        return ButtonElement((By.XPATH,
-                            "//div[(@id='palette')]//div[(@title='%s')]" % name))
-        
+        path = "//div[(@id='palette')]//div[(@title='%s')]" % name
+        return ButtonElement((By.XPATH, path)).get(self)
+
     def run(self, timeout=TMO):
         """ Run current component. """
         self('project_menu').click()
