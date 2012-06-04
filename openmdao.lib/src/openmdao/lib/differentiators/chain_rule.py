@@ -29,32 +29,32 @@ class ChainRule(HasTraits):
         _parent = None
         
         self.param_names = []
-        self.objective_names = []
-        self.eqconst_names = []
-        self.ineqconst_names = []
+        self.function_names = []
         
         self.gradient = {}
         self.hessian = {}
         
-        # Stores the set of edges for which we need derivatives.
-        # Dictionary key is the scope, since we need to store this for each
+        # Stores the set of edges for which we need derivatives. Dictionary
+        # key is the scope's pathname, since we need to store this for each
         # assembly recursion level.
-        self.edge_dicts = {}
+        self.edge_dicts = OrderedDict()
     
     def setup(self):
         """Sets some dimensions."""
 
         self.param_names = self._parent.get_parameters().keys()
-        self.objective_names = self._parent.get_objectives().keys()
+        objective_names = self._parent.get_objectives().keys()
         
         try:
-            self.ineqconst_names = self._parent.get_ineq_constraints().keys()
+            ineqconst_names = self._parent.get_ineq_constraints().keys()
         except AttributeError:
-            self.ineqconst_names = []
+            ineqconst_names = []
         try:
-            self.eqconst_names = self._parent.get_eq_constraints().keys()
+            eqconst_names = self._parent.get_eq_constraints().keys()
         except AttributeError:
-            self.eqconst_names = []
+            eqconst_names = []
+            
+        self.function_names = objective_names + ineqconst_names + eqconst_names
         
         
     def get_derivative(self, output_name, wrt):
@@ -125,7 +125,7 @@ class ChainRule(HasTraits):
         '''
         
         scope_name = scope.get_pathname()
-        self.edge_dicts[scope_name] = {}
+        self.edge_dicts[scope_name] = OrderedDict()
         edge_dict = self.edge_dicts[scope_name]
         
         # Find our minimum set of edges part 1
@@ -401,55 +401,54 @@ class ChainRule(HasTraits):
                     
                     full_name = '.'.join([node_name, input_name])
 
-                    # Inputs who are hooked directly to the parameters
-                    if full_name == param and \
-                            full_name in derivs:
+                    # Inputs who are hooked directly to the current param
+                    if full_name == param:
                             
                         incoming_deriv_names[input_name] = full_name
                         incoming_derivs[full_name] = derivs[full_name]
                         
+                    # Do nothing for inputs connected to the other params
+                    elif full_name in self.param_names:
+                        pass
+                    
                     # Inputs who are connected to something with a derivative
                     else:
                 
                         sources = node.parent._depgraph.connections_to(full_name)
+                        source = sources[0][0]
+                        target = sources[0][1]
                         
-                        for source_tuple in sources:
-                            
-                            source = source_tuple[0]
-                            expr_txt = node.parent._depgraph.get_source(source_tuple[1])
-                            
-                            # Variables on an assembly boundary
-                            if source[0:4] == '@bin' and source.count('.') < 2:
-                                source = source.replace('@bin.', '')
-                            
-                            # Only process inputs who are connected to outputs
-                            # with derivatives in the chain
-                            if expr_txt and source in derivs:
-                                
-                                # Need derivative of the expression
-                                expr = node.parent._exprmapper.get_expr(expr_txt)
-                                expr_deriv = expr.evaluate_gradient(scope=node.parent,
-                                                                    wrt=source)
-                                
-                                # We also need the derivative of the unit
-                                # conversion factor if there is one
-                                metadata = expr.get_metadata('units')
-                                source_unit = [x[1] for x in metadata if x[0]==source]
-                                if source_unit and source_unit[0]:
-                                    dest_expr = node.parent._exprmapper.get_expr(source_tuple[1])
-                                    metadata = dest_expr.get_metadata('units')
-                                    target_unit = [x[1] for x in metadata if x[0]==source_tuple[1]]
+                        expr_txt = node.parent._depgraph.get_source(target)
+                        
+                        # Variables on an assembly boundary
+                        if source[0:4] == '@bin' and source.count('.') < 2:
+                            source = source.replace('@bin.', '')
+                        
+                        # Need derivative of the expression
+                        expr = node.parent._exprmapper.get_expr(expr_txt)
+                        expr_deriv = expr.evaluate_gradient(scope=node.parent,
+                                                            wrt=source)
+                        
+                        # We also need the derivative of the unit
+                        # conversion factor if there is one
+                        metadata = expr.get_metadata('units')
+                        source_unit = [x[1] for x in metadata if x[0]==source]
+                        if source_unit and source_unit[0]:
+                            dest_expr = node.parent._exprmapper.get_expr(target)
+                            metadata = dest_expr.get_metadata('units')
+                            target_unit = [x[1] for x in metadata if x[0]==target]
 
-                                    expr_deriv[source] = expr_deriv[source] * \
-                                        convert_units(1.0, source_unit[0], target_unit[0])
+                            expr_deriv[source] = expr_deriv[source] * \
+                                convert_units(1.0, source_unit[0], target_unit[0])
 
-                                incoming_deriv_names[input_name] = full_name
-                                if full_name in incoming_derivs:
-                                    incoming_derivs[full_name] += derivs[source] * \
-                                        expr_deriv[source]
-                                else:
-                                    incoming_derivs[full_name] = derivs[source] * \
-                                        expr_deriv[source]
+                        # Store our derivatives to chain them
+                        incoming_deriv_names[input_name] = full_name
+                        if full_name in incoming_derivs:
+                            incoming_derivs[full_name] += derivs[source] * \
+                                expr_deriv[source]
+                        else:
+                            incoming_derivs[full_name] = derivs[source] * \
+                                expr_deriv[source]
                         
                             
                 # CHAIN RULE
