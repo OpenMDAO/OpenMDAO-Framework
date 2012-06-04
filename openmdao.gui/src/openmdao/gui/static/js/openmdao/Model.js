@@ -25,7 +25,6 @@ openmdao.Model=function() {
             url:  url,
             success: function(addr) {
                 sockets[url] = openmdao.Util.openWebSocket(addr,handler);
-                debug.info('opened socket at',url,sockets[url]);
             },
             error: function(jqXHR, textStatus, err) {
                 debug.error('Error getting websocket url',jqXHR,textStatus,err);
@@ -36,7 +35,6 @@ openmdao.Model=function() {
     /** close all websockets */
     function close_websockets(reason) {
         jQuery.each(sockets,function(idx,socket) {
-            debug.info('closing websocket',socket);
             socket.close(1000,reason);
         });
     }

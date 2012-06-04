@@ -2,6 +2,7 @@
 #public symbols
 __all__ = ["ImportFactory"]
 
+import sys
 
 from openmdao.main.factory import Factory
 from openmdao.util.log import logger
@@ -24,7 +25,6 @@ class ImportFactory(Factory):
         name as the module. The module must be importable in the current Python
         environment.
         """
-                
         if server is not None or version is not None:
             return None
         if res_desc is not None and len(res_desc)>0:
@@ -35,8 +35,9 @@ class ImportFactory(Factory):
             cname = parts[-1]
             modname = '.'.join(parts[:-1])
             try:
-                mod = __import__(modname, globals(), locals(), [cname])
-            except ImportError, err:
+                __import__(modname, globals(), locals(), [cname])
+                mod = sys.modules[modname]
+            except (ImportError, KeyError), err:
                 logger.debug(str(err))
                 return None
             try:

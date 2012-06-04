@@ -6,8 +6,10 @@ import cmd
 import jsonpickle
 
 from setuptools.command import easy_install
+from zope.interface import implementedBy
+import networkx as nx
+#from enthought.traits.api import HasTraits
 
-from enthought.traits.api import HasTraits
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly, set_as_top
@@ -15,6 +17,7 @@ from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.main.project import project_from_archive
+from openmdao.gui.projdirfactory import ProjDirFactory
 
 from openmdao.main.publisher import Publisher
 
@@ -24,7 +27,8 @@ from zope.interface import implementedBy
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.util.log import logger
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -63,7 +67,11 @@ class ConsoleServer(cmd.Cmd):
         self.publisher = None
         self._publish_comps = {}
 
-        self.files = FileManager('files', publish_updates=publish_updates)
+        self.projdirfactory = None
+        try:
+            self.files = FileManager('files', publish_updates=publish_updates)
+        except Exception as err:
+            self._error(err, sys.exc_info())
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -90,17 +98,20 @@ class ConsoleServer(cmd.Cmd):
         if self.publisher:
             self.publisher.publish('components', self.get_components())
             self.publisher.publish('', {'Dataflow': self.get_dataflow('')})
-            for pathname in self._publish_comps:
+            comps = self._publish_comps.keys()
+            for pathname in comps:
                 comp, root = self.get_container(pathname)
-                self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
-
-            # this will go away with bret's change
-            self.publisher.publish('types', self.get_types())
+                if comp is None:
+                    del self._publish_comps[pathname]
+                    self.publisher.publish(pathname, {})
+                else:
+                    self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
         '''
         self.exc_info = exc_info
+        logger.error(str(err))
         print str(err.__class__.__name__), ":", err
 
     def do_trace(self, arg):
@@ -121,6 +132,7 @@ class ConsoleServer(cmd.Cmd):
         self._hist += [line.strip()]
         return line
 
+    @modifies_model
     def onecmd(self, line):
         self._hist += [line.strip()]
         # Override the onecmd() method so we can trap error returns
@@ -133,7 +145,6 @@ class ConsoleServer(cmd.Cmd):
         # Default for empty line is to repeat last command - yuck
         pass
 
-    @modifies_model
     def default(self, line):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
@@ -247,7 +258,7 @@ class ConsoleServer(cmd.Cmd):
                     comp['pathname'] = k
                     children = self._get_components(v, k)
                 else:
-                    comp['pathname'] = pathname + '.' + k if pathname else k
+                    comp['pathname'] = '.'.join([pathname, k]) if pathname else k
                     children = self._get_components(v, comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
@@ -362,7 +373,8 @@ class ConsoleServer(cmd.Cmd):
                     components.append({'name': k,
                                        'pathname': k,
                                        'type': type(v).__name__,
-                                       'valid': v.is_valid()
+                                       'valid': v.is_valid(),
+                                       'is_assembly': is_instance(v, Assembly)
                                       })
             dataflow['components'] = components
             dataflow['connections'] = []
@@ -402,38 +414,23 @@ class ConsoleServer(cmd.Cmd):
             print "error getting value:", err
 
     def get_types(self):
-        types = packagedict(get_available_types())
-        try:
-            types['working'] = self.get_workingtypes()
-        except Exception, err:
-            print "Error adding working types:", str(err)
-        return types
-
-    def get_workingtypes(self):
-        ''' Return this server's user defined types.
-        '''
-        g = self.proj.__dict__.items()
-        for k, v in g:
-            if not k in self.known_types and \
-               ((type(v).__name__ == 'classobj') or \
-                str(v).startswith('<class')):
-                try:
-                    obj = self.proj.__dict__[k]()
-                    if is_instance(obj, HasTraits):
-                        self.known_types.append((k, 'n/a'))
-                except Exception:
-                    # print 'Class', k, 'not included in working types'
-                    pass
-        return packagedict(self.known_types)
+        return packagedict(get_available_types())
 
     @modifies_model
     def load_project(self, filename):
-        print 'loading project from:', filename
         self.projfile = filename
         try:
+            if self.proj:
+                self.proj.deactivate()
             self.proj = project_from_archive(filename,
                                              dest_dir=self.files.getcwd())
             self.proj.activate()
+            if self.projdirfactory:
+                self.projdirfactory.cleanup()
+                remove_class_factory(self.projdirfactory)
+            self.projdirfactory = ProjDirFactory(self.proj.path)
+            register_class_factory(self.projdirfactory)
+            
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -465,8 +462,10 @@ class ConsoleServer(cmd.Cmd):
             parent, root = self.get_container(parentname)
             if parent:
                 try:
-                    if classname in self.proj.__dict__:
-                        parent.add(name, self.proj.__dict__[classname]())
+                    if self.projdirfactory:
+                        obj = self.projdirfactory.create(classname)
+                    if obj:
+                        parent.add(name, obj)
                     else:
                         parent.add(name, create(classname))
                 except Exception, err:
@@ -474,21 +473,13 @@ class ConsoleServer(cmd.Cmd):
             else:
                 print "Error adding component, parent not found:", parentname
         else:
-            self.create(classname, name)
-
-    @modifies_model
-    def create(self, typname, name):
-        ''' create a new object of the given type.
-        '''
-        try:
-            if (typname.find('.') < 0):
-                self.default(name + '=' + typname + '()')
-            else:
-                self.proj.__dict__[name] = create(typname)
-        except Exception, err:
-            self._error(err, sys.exc_info())
-
-        return self.proj.__dict__
+            try:
+                if (classname.find('.') < 0):
+                    self.default(name + '=' + classname + '()')
+                else:
+                    self.proj.__dict__[name] = create(classname)
+            except Exception, err:
+                self._error(err, sys.exc_info())
 
     def cleanup(self):
         ''' Cleanup this server's files.
