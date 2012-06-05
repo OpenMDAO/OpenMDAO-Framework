@@ -202,6 +202,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.cserver.execfile('optimization_constrained.py')
         self.cserver.save_project()
 
+        self.cserver.cleanup()
         os.remove(proj_copy)
 
     def tearDown(self):

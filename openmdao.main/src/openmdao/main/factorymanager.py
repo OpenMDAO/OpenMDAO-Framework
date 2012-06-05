@@ -52,7 +52,8 @@ def _cmp(tup1, tup2):
     if s1 < s2: return -1
     elif s1 > s2: return 1
     else: # s1 == s2
-        return cmp(parse_version(tup1[1]), parse_version(tup2[1]))
+        return cmp(parse_version(tup1[1].get('version','')), 
+                   parse_version(tup2[1].get('version','')))
 
 def get_available_types(groups=None):
     """Return a set of tuples of the form (typename, dist_version), one
