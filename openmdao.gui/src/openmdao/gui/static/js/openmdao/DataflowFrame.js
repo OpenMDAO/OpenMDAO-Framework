@@ -12,6 +12,8 @@ openmdao.DataflowFrame = function(id,model,pathname) {
     var self = this,
         pane = new openmdao.DataflowPane(jQuery('#'+id),model,pathname,'Dataflow');
 
+    self.pathname = false;
+
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== self.pathname) {
             debug.warn('Invalid dataflow data for:',self.pathname,message);
@@ -41,7 +43,7 @@ openmdao.DataflowFrame = function(id,model,pathname) {
     this.showDataflow = function(path) {
         // if not already showing dataflow for this pathname
         if (path !== self.pathname) {
-            if (self.pathname) {
+            if (self.pathname !== false) {
                 model.removeListener(self.pathname, handleMessage);
             }
             self.pathname = path;
