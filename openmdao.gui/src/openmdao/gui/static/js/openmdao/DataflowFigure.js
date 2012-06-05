@@ -302,9 +302,14 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         }));
 
         // properties
+        menu.appendMenuItem(new draw2d.MenuItem("Edit",null,function(){
+            cf = new openmdao.ComponentFrame(model,pathname);
+        }));
+
+        // properties
         menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
             var id = (pathname+'-properties').replace(/\./g,'-');
-            editor = new openmdao.PropertiesFrame(id,model).editObject(pathname);
+            pf = new openmdao.PropertiesFrame(id,model).editObject(pathname);
         }));
 
         // run
@@ -447,6 +452,11 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
 
         if (!con) {
             con = new draw2d.Connection();
+            con.setCoronaWidth(10);
+            con.setZOrder(self.getZOrder()+1);
+
+            con.setColor(new draw2d.Color(100,100,100));  // default: dark grey
+
             if (src_name.length > 0) {
                 con.setSource(src_fig.getPort("output"));
             }
@@ -465,16 +475,28 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 con.setColor(new draw2d.Color(200,200,200));  // light grey
             }
 
+            // context menu
+            con.getContextMenu=function(){
+                var menu=new draw2d.Menu();
+                menu.appendMenuItem(new draw2d.MenuItem("Edit Connections",null,
+                    function(){
+                        var cf = new openmdao.ConnectionFrame(self.openmdao_model,
+                                                 self.pathname,src_name,dst_name);
+                    })
+                );
+                menu.setZOrder(self.getZOrder()+2);
+                return menu;
+            };
+
             // double click brings up connection frame if between two components
+            // FIXME: usually doesn't work... DataflowFigure steals the clicks
             if ((src_name.length > 0) && (dst_name.length > 0)) {
-                //con.setCoronaWidth(100);
                 con.onDoubleClick = function() {
-                    var frm = new openmdao.ConnectionFrame(self.openmdao_model,
-                                              self.pathname,src_name,dst_name);
+                    var cf = new openmdao.ConnectionFrame(self.openmdao_model,
+                                             self.pathname,src_name,dst_name);
                 };
             }
 
-            con.setZOrder(self.getZOrder()+1);
             workflow.addFigure(con);
             self.connections[con_name] = con;
         }
