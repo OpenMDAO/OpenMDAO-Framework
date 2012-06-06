@@ -6,16 +6,16 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement
-from component import ComponentPage
+from component import ComponentPage, PropertiesPage
 
 
 class DataflowFigure(BasePageObject):
     """ Represents elements within a dataflow figure. """
 
-    properties_button = ButtonElement((By.XPATH, "//a[text()='Properties']"))
-    run_button        = ButtonElement((By.XPATH, "//a[text()='Run']"))
-    disconnect_button = ButtonElement((By.XPATH, "//a[text()='Disconnect']"))
-    remove_button     = ButtonElement((By.XPATH, "//a[text()='Remove']"))
+    properties_button = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
+    run_button        = ButtonElement((By.XPATH, "../div/a[text()='Run']"))
+    disconnect_button = ButtonElement((By.XPATH, "../div/a[text()='Disconnect']"))
+    remove_button     = ButtonElement((By.XPATH, "../div/a[text()='Remove']"))
 
     @property
     def pathname(self):
@@ -64,7 +64,20 @@ class DataflowFigure(BasePageObject):
         chain.context_click(self.root).perform()
 #FIXME: for some reason the button isn't found.
         self('properties_button').click()
-        return PropertiesPage(self.browser, self.port)
+        props_id = '%s-properties' % self.pathname.replace('.', '-')
+        return PropertiesPage(self.browser, self.port, (By.ID, props_id))
+
+    def run(self):
+        """ Run this component. """
+        chain = ActionChains(self.browser)
+        chain.context_click(self.root).perform()
+        self('run_button').click()
+
+    def disconnect(self):
+        """ Disconnect this component. """
+        chain = ActionChains(self.browser)
+        chain.context_click(self.root).perform()
+        self('disconnect_button').click()
 
     def remove(self):
         """ Remove this component. """

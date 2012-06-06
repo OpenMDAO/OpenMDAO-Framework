@@ -1,48 +1,58 @@
 from selenium.webdriver.common.by import By
 
 from dialog import DialogPage
-from elements import ButtonElement
-
-
-class Grid(object):
-    """ Represents a SlickGrid at `root`. """
-
-    def __init__(self, root):
-        self.grid = root
-
-    def get_data(self):
-        """ Returns a list of rows, each row is a list of columns. """
-        rows = self.grid.find_elements(By.CLASS_NAME, 'slick-row')
-        data = []
-        for row in rows:
-            cols = row.find_elements(By.CLASS_NAME, 'slick-cell')
-            row_data = []
-            for col in cols:
-                row_data.append(col.text)
-            data.append(row_data)
-        return data
+from elements import ButtonElement, GridElement, TextElement
 
 
 class ComponentPage(DialogPage):
     """ Component editor page. """
 
-    inputs_tab   = ButtonElement((By.XPATH, 'dl/dt[1]'))
-    slots_tab    = ButtonElement((By.XPATH, 'dl/dt[2]'))
-    outputs_tab  = ButtonElement((By.XPATH, 'dl/dt[3]'))
+    inputs_tab  = ButtonElement((By.XPATH, 'dl/dt[1]'))
+    slots_tab   = ButtonElement((By.XPATH, 'dl/dt[2]'))
+    outputs_tab = ButtonElement((By.XPATH, 'dl/dt[3]'))
+
+    inputs  = GridElement((By.ID, 'Inputs_props'))
+    outputs = GridElement((By.ID, 'Outputs_props'))
 
     def get_inputs(self):
-        """ Return ``(name, type, value, units, desc, connected)``. """
+        """ Return inputs grid. """
         self('inputs_tab').click()
-        grid = Grid(self.root.find_element_by_id('Inputs_props'))
-        return grid.get_data()
+        return self.inputs
 
-    def set_input(row, value):
-        """ Set input on `row` to `value`. """
+    def set_input(name, value):
+        """ Set input `name` to `value`. """
         self('inputs_tab').click()
+        grid = self.inputs
+        found = []
+        for row in grid.rows:
+            if row[0] == name:
+                row[2] = value
+                return
+            found.append(row[0])
+        raise RuntimeError('%r not found in inputs %s' % (name, found))
 
     def get_outputs(self):
-        """ Return ``(name, type, value, units, desc, connected)``. """
+        """ Return outputs grid. """
         self('outputs_tab').click()
-        grid = Grid(self.root.find_element_by_id('Outputs_props'))
-        return grid.get_data()
+        return self.outputs
+
+
+class PropertiesPage(DialogPage):
+    """ Component properties page. """
+
+    header  = TextElement((By.XPATH, 'h3[1]'))
+    inputs  = GridElement((By.ID, 'Inputs_props'))
+    outputs = GridElement((By.ID, 'Outputs_props'))
+
+    def set_input(name, value):
+        """ Set input `name` to `value`. """
+        self('inputs_tab').click()
+        grid = self.inputs
+        found = []
+        for row in grid.rows:
+            if row[0] == name:
+                row[1] = value
+                return
+            found.append(row[0])
+        raise RuntimeError('%r not found in inputs %s' % (name, found))
 

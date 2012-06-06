@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, \
                                        ElementNotVisibleException
 from basepageobject import TMO
+from grid import Grid
 
 
 class _BaseElement(object):
@@ -90,6 +91,18 @@ class _CheckboxElement(_BaseElement):
         if bool(new_value) != element.is_selected():
             time.sleep(0.1)  # Just some pacing.
             element.click()  # Toggle it.
+
+
+class _GridElement(_BaseElement):
+    """ A SlickGrid. """
+
+    def __init__(self, page, locator):
+        super(_GridElement, self).__init__(page, locator)
+
+    @property
+    def value(self):
+        """ The element's ``value`` attribute is a :class:`Grid`. """
+        return Grid(self._browser, self.element)
 
 
 class _InputElement(_BaseElement):
@@ -175,6 +188,11 @@ class CheckboxElement(BaseElement):
     """ The `value` of this is the selection state. """
     def __init__(self, locator):
         super(CheckboxElement, self).__init__(_CheckboxElement, locator)
+
+class GridElement(BaseElement):
+    """ The `value` of this is a :class:`Grid`. """
+    def __init__(self, locator):
+        super(GridElement, self).__init__(_GridElement, locator)
 
 class InputElement(BaseElement):
     """ A text input field. """
