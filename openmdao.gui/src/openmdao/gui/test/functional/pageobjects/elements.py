@@ -23,7 +23,7 @@ class _BaseElement(object):
         WebDriver locator used to find this element in `page`.
     """
 
-    def __init__(self, page, locator, root=None):
+    def __init__(self, page, locator):
         self._browser = page.browser
         self._locator = locator
         self._root = page.root

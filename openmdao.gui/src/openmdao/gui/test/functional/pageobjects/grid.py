@@ -7,7 +7,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 class Grid(object):
-    """ Represents a SlickGrid at `root`. """
+    """
+    Represents a SlickGrid at `root`.
+    Note that after modifying a cell the grid needs to be re-fetched.
+    """
 
     def __init__(self, browser, root):
         self._browser = browser

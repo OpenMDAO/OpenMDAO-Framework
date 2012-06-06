@@ -19,7 +19,7 @@ class ComponentPage(DialogPage):
         self('inputs_tab').click()
         return self.inputs
 
-    def set_input(name, value):
+    def set_input(self, name, value):
         """ Set input `name` to `value`. """
         self('inputs_tab').click()
         grid = self.inputs
@@ -44,7 +44,7 @@ class PropertiesPage(DialogPage):
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
 
-    def set_input(name, value):
+    def set_input(self, name, value):
         """ Set input `name` to `value`. """
         self('inputs_tab').click()
         grid = self.inputs

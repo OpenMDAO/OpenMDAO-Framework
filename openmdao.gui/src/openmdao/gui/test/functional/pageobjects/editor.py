@@ -10,7 +10,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement
-from util import ValuePrompt, NotifierPage
+from util import ValuePrompt
 
 
 class UploadPage(BasePageObject):

@@ -2,8 +2,6 @@
 Tests of overall workspace functions.
 """
 
-import pkg_resources
-import re
 import sys
 import time
 
@@ -14,7 +12,6 @@ from unittest import TestCase
 
 
 if sys.platform != 'win32':  # No testing on Windows yet.
-    from pageobjects.workspace import NotifierPage
     from util import setup_server, teardown_server, generate, begin, new_project
 
     @with_setup(setup_server, teardown_server)
@@ -64,15 +61,14 @@ def _test_import(browser):
     file_path = openmdao.examples.simple.paraboloid.__file__
     editor_page.add_file(file_path)
 
-#    # Add optimization_unconstrained file.
-#    import openmdao.examples.simple.optimization_unconstrained
-#    file_path = openmdao.examples.simple.optimization_unconstrained.__file__
-#    editor_page.add_file(file_path)
-#
+    # Add optimization_unconstrained file.
+    import openmdao.examples.simple.optimization_unconstrained
+    file_path = openmdao.examples.simple.optimization_unconstrained.__file__
+    editor_page.add_file(file_path)
+
     # Check to make sure the files were added.
     file_names = editor_page.get_files()
-#    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
-    expected_file_names = ['paraboloid.py']
+    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"

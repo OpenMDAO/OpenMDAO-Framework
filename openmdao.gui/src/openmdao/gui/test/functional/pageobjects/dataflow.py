@@ -1,10 +1,7 @@
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 
-from selenium.common.exceptions import StaleElementReferenceException
-
-from basepageobject import BasePageObject, TMO
+from basepageobject import BasePageObject
 from elements import ButtonElement
 from component import ComponentPage, PropertiesPage
 
@@ -62,7 +59,6 @@ class DataflowFigure(BasePageObject):
         """ Return :class:`PropertiesPage` for this component. """
         chain = ActionChains(self.browser)
         chain.context_click(self.root).perform()
-#FIXME: for some reason the button isn't found.
         self('properties_button').click()
         props_id = '%s-properties' % self.pathname.replace('.', '-')
         return PropertiesPage(self.browser, self.port, (By.ID, props_id))
