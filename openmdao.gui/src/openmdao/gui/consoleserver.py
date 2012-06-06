@@ -298,7 +298,7 @@ class ConsoleServer(cmd.Cmd):
                                     'units': units,
                                     'connected': (name in connected)
                                    })
-                conns['outputs'] = outputs
+                conns['outputs'] = sorted(outputs, key=lambda d: d['name'])
 
                 # inputs
                 inputs = []
@@ -315,7 +315,7 @@ class ConsoleServer(cmd.Cmd):
                                    'units': units,
                                    'connected': (name in connected)
                                  })
-                conns['inputs'] = inputs
+                conns['inputs'] = sorted(inputs, key=lambda d: d['name'])
 
                 # connections
                 connections = []

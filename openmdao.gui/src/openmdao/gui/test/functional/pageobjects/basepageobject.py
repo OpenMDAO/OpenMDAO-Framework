@@ -34,9 +34,10 @@ class BasePageObject(object):
     url = None
     title_prefix = None
 
-    def __init__(self, browser, port):
+    def __init__(self, browser, port, root=None):
         self.browser = browser
         self.port = port
+        self.root = root
         # Note that we're testing. This alters some 'pretty' behavior.
         self.browser.execute_script('openmdao_test_mode = true;')
 
