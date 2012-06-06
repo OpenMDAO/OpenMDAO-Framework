@@ -14,7 +14,8 @@ import ast
 
 import networkx as nx
 
-from openmdao.util.fileutil import find_files, get_module_path
+from openmdao.util.fileutil import find_files, get_module_path, find_module
+from openmdao.util.log import logger
 
 # This is a dict containing all of the entry point groups that OpenMDAO uses to
 # identify plugins, and their corresponding Interfaces.
@@ -57,49 +58,30 @@ def _to_str(arg):
     return myvisitor.get_value()
 
 
-def _real_name(name, modinfo):
-    """Given the name of an object, return the full name (including package)
-    from where it is actually defined.
-    """
-    while True:
-        parts = name.rsplit('.', 1)
-        if len(parts) > 1 and parts[0] in modinfo:
-            trans = modinfo[parts[0]].localnames.get(parts[1], parts[1])
-            if trans == name:
-                return trans
-            else:
-                name = trans
-        else:
-            break
-    return name
-
 class ClassInfo(object):
-    def __init__(self, name, bases, decorators,  meta):
+    def __init__(self, name, fname, bases, meta):
         self.name = name
+        self.fname = fname
         self.bases = bases
-        self.decorators = decorators
-        self.entry_points = []
         self.meta = meta
         
-        for dec in decorators:
-            if dec.func.id == 'entry_point':
-                args = [_to_str(a) for a in dec.args]
-                if len(args) == 1:
-                    args.append(name)
-                self.entry_points.append((args[0],args[1],name))
+    #def resolve_true_basenames(self, classes, tree_analyzer):
+        #"""Take module pathnames of base classes that may be an indirect names and
+        #convert them to their true absolute module pathname.  For example,
+        #"from openmdao.main.api import Component" implies the module
+        #path of Component is ``openmdao.main.api.Component``, but inside
+        #of ``openmdao.main.api`` is the import statement 
+        #"from openmdao.main.component import Component," so the true
+        #module pathname of Component is ``openmdao.main.component.Component``.
         
-    def resolve_true_basenames(self, modinfo):
-        """Take module pathnames of base classes that may be an indirect names and
-        convert them to their true absolute module pathname.  For example,
-        "from openmdao.main.api import Component" implies the module
-        path of Component is ``openmdao.main.api.Component``, but inside
-        of ``openmdao.main.api`` is the import statement 
-        "from openmdao.main.component import Component," so the true
-        module pathname of Component is ``openmdao.main.component.Component``.
-        
-        modinfo: list
-        """
-        self.bases = [_real_name(b, modinfo) for b in self.bases]
+        #modinfo: list
+        #"""
+        #old = self.bases
+        #self.bases = []
+        #for base in old:
+            #if base not in classes:
+                #pass
+        #self.bases = [tree_analyzer.real_name(b) for b in self.bases]
         
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -124,66 +106,102 @@ class _ClassBodyVisitor(ast.NodeVisitor):
                 dct.setdefault('ifaces', [])
                 dct['ifaces'].extend(self.metadata.setdefault('ifaces',[]))
                 self.metadata.update(dct)
-                #self.metadata['ifaces'] = list(set(self.metadata['ifaces']))
 
 class PythonSourceFileAnalyser(ast.NodeVisitor):
     """Collects info about imports and class inheritance from a 
     Python file.
     """
-    def __init__(self, fname):
+    def __init__(self, fname, tree_analyser):
         ast.NodeVisitor.__init__(self)
         self.fname = os.path.abspath(os.path.expanduser(fname))
         self.modpath = get_module_path(fname)
         self.classes = {}
         self.localnames = {}  # map of local names to package names
+        self.starimports = []
+        self.unresolved_classes = set()
+        self.tree_analyser = tree_analyser
         
         # in order to get this to work with the 'ast' lib, I have
         # to read using universal newlines and append a newline
         # to the string I read for some files.  The 'compiler' lib
         # didn't have this problem. :(
-        f = open(fname, 'Ur')
+        f = open(self.fname, 'Ur')
         try:
             contents = f.read()
             if len(contents)>0 and contents[-1] != '\n':
                 contents += '\n'
-            for node in ast.walk(ast.parse(contents, fname)):
+            for node in ast.walk(ast.parse(contents, self.fname)):
                 self.visit(node)
         finally:
             f.close()
         
-    def translate(self, tree_analyzer):
-        """Take module pathnames of classes that may be indirect names and
-        convert them to their true absolute module pathname.  For example,
-        "from openmdao.main.api import Component" implies the module
-        path of Component is ``openmdao.main.api.Component``, but inside
-        of ``openmdao.main.api`` is the import statement 
-        "from openmdao.main.component import Component," so the true
-        module pathname of Component is ``openmdao.main.component.Component``.
-        """
-        for classinfo in self.classes.values():
-            classinfo.resolve_true_basenames(tree_analyzer.modinfo)
-            tree_analyzer.class_file_map[classinfo.name] = self.fname
-                            
+        self.update_graph(self.tree_analyser.graph)
+        self.update_ifaces(self.tree_analyser.graph)
+
+        self.tree_analyser = None
+
     def visit_ClassDef(self, node):
         """This executes every time a class definition is parsed."""
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
         bases = [_to_str(b) for b in node.bases]
-
+            
         bvisitor = _ClassBodyVisitor()
         bvisitor.visit(node)
-
-        self.classes[fullname] = ClassInfo(fullname, 
-                                           [self.localnames.get(b,b) for b in bases], 
-                                           node.decorator_list, 
-                                           bvisitor.metadata)
         
+        bases = [self.localnames.get(b,b) for b in bases]
+
+        self.classes[fullname] = ClassInfo(fullname, self.fname, bases, bvisitor.metadata)
+        self.tree_analyser.class_map[fullname] = self.classes[fullname]
+        
+        undef_bases = [b for b in bases if b not in self.classes]
+        while undef_bases:
+            base = undef_bases.pop()
+            cinfo = self.tree_analyser.find_classinfo(base)
+            if cinfo is None:
+                parts = base.rsplit('.', 1)
+                if len(parts) == 1: # no dot, so maybe it came in with a '*' import
+                    trymods = self.starimports[::-1]
+                    basename = base
+                else:
+                    trymods = [parts[0]]
+                    basename = parts[1]
+                    
+                for modname in trymods:
+                    excluded = False
+                    for m in self.tree_analyser.mod_excludes:
+                        if modname.startswith(m):
+                            excluded = True
+                            break
+                    if excluded:
+                        continue
+                    fpath = find_module(modname)
+                    if fpath is not None:
+                        fanalyzer = self.tree_analyser.analyze_file(fpath)
+                        if '.' not in base:
+                            trybase = '.'.join([modname, base])
+                        else:
+                            trybase = base
+                        if trybase in fanalyzer.classes:
+                            break
+                        elif basename in fanalyzer.localnames:
+                            newname = fanalyzer.localnames[basename]
+                            self.tree_analyser.class_map[trybase] = newname
+                            if newname not in self.tree_analyser.class_map:
+                                undef_bases.append(newname)
+                            break
+                else:
+                    logger.error("can't locate python source for class %s" % base)
+                    self.unresolved_classes.add(base)
+
     def visit_Import(self, node):
         """This executes every time an "import foo" style import statement 
         is parsed.
         """
         for al in node.names:
-            if al.asname is not None:
+            if al.asname is None:
+                self.localnames[al.name] = al.name
+            else:
                 self.localnames[al.asname] = al.name
 
     def visit_ImportFrom(self, node):
@@ -191,6 +209,9 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         statement is parsed.
         """
         for al in node.names:
+            if al.name == '*':
+                self.starimports.append(node.module)
+                continue
             if al.asname is None:
                 self.localnames[al.name] = '.'.join([node.module, al.name])
             else:
@@ -201,6 +222,9 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         for classname, classinfo in self.classes.items():
             graph.add_node(classname, classinfo=classinfo)
             for base in classinfo.bases:
+                cinfo = self.tree_analyser.find_classinfo(base)
+                if cinfo:
+                    base = cinfo.name
                 graph.add_edge(base, classname)
             for iface in classinfo.meta.setdefault('ifaces', []):
                 graph.add_edge(iface, classname)
@@ -219,7 +243,9 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                     cinfo.meta.setdefault('ifaces',[]).append(iface)
 
 class PythonSourceTreeAnalyser(object):
-    def __init__(self, startdir=None, exclude=None, startfiles=None):
+    def __init__(self, startdir=None, exclude=None, mod_excludes=None):
+        self.files_count = 0 # number of files analyzed
+        
         # inheritance graph. It's a directed graph with base classes
         # pointing to the classes that inherit from them.  Also includes interfaces
         # pointing to classes that implement them.
@@ -232,80 +258,102 @@ class PythonSourceTreeAnalyser(object):
         else:
             self.startdirs = startdir
             
-        if startfiles is None:
-            startfiles = []
-            
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
+        
+        #self.stopclasses = set(dir(__builtins__))
+        #import enthought.traits.api
+        #self.stopclasses.update(['enthought.traits.api.HasTraits',
+                                 #'enthought.traits.api.TraitType',
+                                 #'enthought.traits.api.Array',
+                                 #'enthought.traits.api.List',
+                                 #'enthought.traits.api.Dict',
+                                 #'enthought.traits.api.Bool',
+                                 #'enthought.traits.api.Instance',
+                                 #'HasTraits', 'TraitType', 'TraitArray'])
+        #if stopclasses is not None:
+            #self.stopclasses.update(stopclasses)
             
         self.exclude = exclude
-        self.modinfo = {}
-        self.fileinfo = {}
-        self.class_file_map = {}
+        self.mod_excludes = set(['enthought.traits.'])
+        if mod_excludes is not None:
+            self.mod_excludes.update(mod_excludes)
             
-        self._analyze(startfiles)
-            
-    def analyze_file(self, pyfile, first_pass=False):
-        myvisitor = PythonSourceFileAnalyser(pyfile)
-        self.modinfo[get_module_path(pyfile)] = myvisitor
-        self.fileinfo[myvisitor.fname] = myvisitor
+        self.modinfo = {}  # maps module pathnames to PythonSourceFileAnalyzers
+        self.fileinfo = {} # maps filenames to (PythonSourceFileAnalyzer, modtime)
+        self.class_map = {} # map of classname to ClassInfo for the class
         
-        if not first_pass:
-            myvisitor.translate(self)
-            myvisitor.update_graph(self.graph)
-            myvisitor.update_ifaces(self.graph)
+        for pyfile in find_files(self.startdirs, "*.py", self.exclude):
+            self.analyze_file(pyfile)
+
+    def dump(self, out):
+        """Dumps the contents of this object for debugging purposes."""
+        out.write("graph edges:\n")
+        for u,v in self.graph.edges():
+            out.write("(%s, %s)\n" % (u,v))
             
+        out.write("\nclasses\n")
+        for k,v in self.class_map.items():
+            if isinstance(v, ClassInfo):
+                v = v.fname
+            out.write("%s:  %s\n" % (k,v))
+        
+        out.write("\nunresolved classes\n")
+        for f, tup in self.fileinfo.items():
+            out.write("%s: %s\n" % (f, list(tup[0].unresolved_classes)))
+            
+        out.write("\n\nFiles examined: %d\n\n" % self.files_count)
+            
+    #def real_name(self, name):
+        #"""Given the name of an object, return the full name (including package)
+        #from where it is actually defined.
+        #"""
+        #while True:
+            #parts = name.rsplit('.', 1)
+            #if len(parts) > 1 and parts[0] in self.modinfo:
+                #trans = self.modinfo[parts[0]].localnames.get(parts[1], parts[1])
+                #if trans == name:
+                    #return trans
+                #else:
+                    #name = trans
+            #else:
+                #break
+        #return name
+
+    def find_classinfo(self, cname):
+        cinfo = cname
+        while True:
+            try:
+                cinfo = self.class_map[cinfo]
+            except KeyError:
+                return None
+            if isinstance(cinfo, ClassInfo):
+                return cinfo
+
+    def analyze_file(self, pyfile):
+        # don't analyze the file again if we've already done it and it hasn't changed
+        if pyfile in self.fileinfo:
+            if os.path.getmtime(pyfile) <= self.fileinfo[pyfile][1]:
+                return self.fileinfo[pyfile][0]
+
+        myvisitor = PythonSourceFileAnalyser(pyfile, self)
+        self.modinfo[get_module_path(pyfile)] = myvisitor
+        self.fileinfo[myvisitor.fname] = (myvisitor, os.path.getmtime(myvisitor.fname))
+        
+        self.files_count += 1
+        
         return myvisitor
         
-    def _analyze(self, startfiles):
-        """Gather import and class inheritance information from
-        the source trees under the specified set of starting 
-        directories.
-        """
-        # if any startfiles were specified, parse them first
-        for pyfile in startfiles:
-            self.analyze_file(pyfile, first_pass=True)
-
-        # gather python files from the specified starting directories
-        # and parse them, extracting class and import information
-        for pyfile in find_files(self.startdirs, "*.py", self.exclude):
-            self.analyze_file(pyfile, first_pass=True)
-            
-        # now translate any indirect imports into absolute module pathnames
-        # NOTE: only indirect imports within the set of specified source
-        #       trees will be fully resolved, i.e., if a file in your set
-        #       of source trees imports
-        #       openmdao.main.api but you don't include openmdao.main in your
-        #       list of source trees, any imports within openmdao.main.api
-        #       won't be included in the translation.  This means that
-        #       openmdao.main.api.Component will not be translated to
-        #       openmdao.main.component.Component like it should.
-        for visitor in self.modinfo.values():
-            visitor.translate(self)
-    
-        # build the inheritance/interface graph
-        for visitor in self.modinfo.values():
-            visitor.update_graph(self.graph)
-            
-        # now, update ifaces metadata for all of the classinfo objects in the graph
-        ifaces = set()
-        for lst in plugin_groups.values():
-            ifaces.update(lst)
-        for iface in ifaces:
-            for inheritor in self.find_inheritors(iface):
-                if inheritor not in ifaces:
-                    self.graph.node[inheritor]['classinfo'].meta.setdefault('ifaces',[]).append(iface)
-        
     def remove_file(self, fname):
-        fvisitor = self.fileinfo[fname]
+        fvisitor = self.fileinfo[fname][0]
         del self.fileinfo[fname]
         del self.modinfo[fvisitor.modpath]
         nodes = []
-        for klass, fpath in self.class_file_map.items():
-            if fpath == fname:
+        for klass, cinfo in self.class_map.items():
+            if cinfo.fname == fname:
                 nodes.append(klass)
         self.graph.remove_nodes_from(nodes)
         for klass in nodes:
-            del self.class_file_map[klass]
+            del self.class_map[klass]
         
     def find_inheritors(self, base):
         """Returns a list of names of classes that inherit from the given base class."""
@@ -316,38 +364,9 @@ class PythonSourceTreeAnalyser(object):
         del paths[base] # don't want the base itself in the list
         return paths.keys()
 
-def py_gen(dname):
-    """generate a list of python files in the given directory and its subdirs, but only 
-    if the subdirs are python package directories.
-    """
-    for path, dirlist, filelist in os.walk(dname):
-        for name in filelist:
-            if name.endswith('.py'):
-                yield join(path, name)
-        # when using os.walk, dirlist can be modified in place to prune the tree, so
-        # use that to remove any subdirs that are not package dirs (i.e. that don't contain an __init__.py file)
-        to_remove = []
-        for d in dirlist:
-            if not os.path.isfile(os.path.join(path,d,'__init__.py')):
-                to_remove.append(d)
-        for d in to_remove[::-1]:
-            dirlist.remove(d)
-    
-def mod_gen(pathlist=None):
-    """Generate tuples of the form (filepath, modpath) for all python modules under the given
-    list of directories.  Files in subdirectories will be ignored if they are not contained in
-    python package directories, i.e., if their directory doesn't contain an __init__.py file.
-    """
-    if pathlist is None:
-        pathlist = sys.path
 
-    for path in pathlist:
-        for name in py_gen(path):
-            dname, fname = os.path.split(name)
-            if fname == '__init__.py':
-                mpath = '.'.join(dname[len(path)+1:].split(os.sep))
-                if mpath:
-                    yield (name, mpath)
-            else:
-                yield (name, '.'.join(name[:-3][len(path)+1:].split(os.sep)))
-
+if __name__ == '__main__':
+    psta = PythonSourceTreeAnalyser()
+    for f in sys.argv[1:]:
+        psta.analyze_file(f)
+    psta.dump(sys.stdout)

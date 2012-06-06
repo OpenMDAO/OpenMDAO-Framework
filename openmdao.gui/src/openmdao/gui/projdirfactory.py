@@ -64,19 +64,6 @@ class PyWatcher(FileSystemEventHandler):
             self.factory.on_deleted(event.src_path, deleted_set)
             self.factory.publish_updates(added_set, changed_set, deleted_set)
             
-    
-_startmods = [
-    'api',
-    'datatypes.api',
-    'component',
-    'container',
-    'driver',
-    'arch',
-    'assembly',
-    'variable',
-    'vartree',
-    ]
-
 plugin_ifaces = set([
     'IContainer', 
     'IComponent', 
@@ -104,10 +91,8 @@ class ProjDirFactory(Factory):
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
         self.imported = {}  # imported files vs (module, ctor dict)
-        startfiles = [sys.modules['openmdao.main.'+n].__file__.replace('.pyc','.py') 
-                          for n in _startmods]
         try:
-            self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
+            self.analyzer = PythonSourceTreeAnalyser()
             self._baseset = set(self.analyzer.graph.nodes())
             
             added_set = set()
@@ -144,7 +129,7 @@ class ProjDirFactory(Factory):
         if server is None and res_desc is None and typ in self.analyzer.class_file_map:
             fpath = self.analyzer.class_file_map[typ]
             if fpath not in self.imported:
-                modpath = self.analyzer.fileinfo[fpath].modpath
+                modpath = self.analyzer.fileinfo[fpath][0].modpath
                 sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
                 try:
                     __import__(modpath)
@@ -153,7 +138,7 @@ class ProjDirFactory(Factory):
                 finally:
                     sys.path = sys.path[1:]
                 mod = sys.modules[modpath]
-                visitor = self.analyzer.fileinfo[fpath]
+                visitor = self.analyzer.fileinfo[fpath][0]
                 self._get_mod_ctors(mod, fpath, visitor)
             try:
                 ctor = self.imported[fpath][1][typ]
@@ -194,7 +179,7 @@ class ProjDirFactory(Factory):
         imported = False
         if fpath in self.analyzer.fileinfo: # file has been previously scanned
             #logger.error("file %s is in fileinfo" % fpath)
-            visitor = self.analyzer.fileinfo[fpath]
+            visitor = self.analyzer.fileinfo[fpath][0]
             pre_set = set(visitor.classes.keys())
             
             if fpath in self.imported:  # we imported it earlier
@@ -231,7 +216,7 @@ class ProjDirFactory(Factory):
             except KeyError:
                 pass
             
-            visitor = self.analyzer.fileinfo[fpath]
+            visitor = self.analyzer.fileinfo[fpath][0]
             deleted_set.update(visitor.classes.keys())
 
             self.analyzer.remove_file(fpath)
