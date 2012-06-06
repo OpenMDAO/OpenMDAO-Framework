@@ -82,17 +82,15 @@ def packagedict(types):
     for typ,meta in types:
         parent = dct
         nodes = typ.split('.')
-        name = nodes[len(nodes)-1]
-        for node in nodes:
-            if node==name:
-                parent[node] = meta.copy()
-                parent[node].update({'path': typ})
-                if 'version' not in meta:
-                    parent[node]['version'] = 'n/a'
-            else:
-                if not node in parent:
-                    parent[node] = {}
+        name = nodes[-1]
+        for node in nodes[:-1]:
+            if not node in parent:
+                parent[node] = {}
             parent = parent[node]
+        parent[name] = meta.copy()
+        parent[name].update({'path': typ})
+        if 'version' not in meta:
+            parent[name]['version'] = 'n/a'
     return dct
 
 

@@ -11,6 +11,7 @@ from os.path import islink, isdir, join
 from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
 import ast
+import time
 
 import networkx as nx
 
@@ -65,23 +66,6 @@ class ClassInfo(object):
         self.bases = bases
         self.meta = meta
         
-    #def resolve_true_basenames(self, classes, tree_analyzer):
-        #"""Take module pathnames of base classes that may be an indirect names and
-        #convert them to their true absolute module pathname.  For example,
-        #"from openmdao.main.api import Component" implies the module
-        #path of Component is ``openmdao.main.api.Component``, but inside
-        #of ``openmdao.main.api`` is the import statement 
-        #"from openmdao.main.component import Component," so the true
-        #module pathname of Component is ``openmdao.main.component.Component``.
-        
-        #modinfo: list
-        #"""
-        #old = self.bases
-        #self.bases = []
-        #for base in old:
-            #if base not in classes:
-                #pass
-        #self.bases = [tree_analyzer.real_name(b) for b in self.bases]
         
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -287,38 +271,30 @@ class PythonSourceTreeAnalyser(object):
 
     def dump(self, out):
         """Dumps the contents of this object for debugging purposes."""
-        out.write("graph edges:\n")
-        for u,v in self.graph.edges():
-            out.write("(%s, %s)\n" % (u,v))
+        if '-edges' in sys.argv:
+            out.write("\ngraph edges:\n")
+            for u,v in self.graph.edges():
+                out.write("(%s, %s)\n" % (u,v))
             
-        out.write("\nclasses\n")
-        for k,v in self.class_map.items():
-            if isinstance(v, ClassInfo):
-                v = v.fname
-            out.write("%s:  %s\n" % (k,v))
+        if '-classes' in sys.argv:
+            out.write("\nclasses\n")
+            for k,v in self.class_map.items():
+                if isinstance(v, ClassInfo):
+                    v = v.fname
+                out.write("%s:  %s\n" % (k,v))
         
-        out.write("\nunresolved classes\n")
-        for f, tup in self.fileinfo.items():
-            out.write("%s: %s\n" % (f, list(tup[0].unresolved_classes)))
-            
+        if '-unresolved' in sys.argv:
+            out.write("\nunresolved classes\n")
+            for f, tup in self.fileinfo.items():
+                out.write("%s: %s\n" % (f, list(tup[0].unresolved_classes)))
+        
+        if '-files' in sys.argv:
+            out.write('\nfiles:\n')
+            for f in self.fileinfo.keys():
+                out.write("%s\n" % os.path.relpath(f))
+                
         out.write("\n\nFiles examined: %d\n\n" % self.files_count)
             
-    #def real_name(self, name):
-        #"""Given the name of an object, return the full name (including package)
-        #from where it is actually defined.
-        #"""
-        #while True:
-            #parts = name.rsplit('.', 1)
-            #if len(parts) > 1 and parts[0] in self.modinfo:
-                #trans = self.modinfo[parts[0]].localnames.get(parts[1], parts[1])
-                #if trans == name:
-                    #return trans
-                #else:
-                    #name = trans
-            #else:
-                #break
-        #return name
-
     def find_classinfo(self, cname):
         cinfo = cname
         while True:
@@ -349,8 +325,13 @@ class PythonSourceTreeAnalyser(object):
         del self.modinfo[fvisitor.modpath]
         nodes = []
         for klass, cinfo in self.class_map.items():
-            if cinfo.fname == fname:
-                nodes.append(klass)
+            if isinstance(cinfo, ClassInfo):
+                if cinfo.fname == fname:
+                    nodes.append(klass)
+            else:
+                modname = get_module_path(fname)+'.'
+                if klass.startswith(modname) or cinfo.startswith(modname):
+                    nodes.append(klass)
         self.graph.remove_nodes_from(nodes)
         for klass in nodes:
             del self.class_map[klass]
@@ -365,8 +346,15 @@ class PythonSourceTreeAnalyser(object):
         return paths.keys()
 
 
-if __name__ == '__main__':
+def main():
+    stime = time.time()
     psta = PythonSourceTreeAnalyser()
     for f in sys.argv[1:]:
-        psta.analyze_file(f)
+        if f[0] != '-':
+            psta.analyze_file(f)
     psta.dump(sys.stdout)
+    sys.stdout.write("elapsed time: %s seconds\n\n" % (time.time() - stime))
+
+
+if __name__ == '__main__':
+    main()
