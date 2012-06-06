@@ -2,7 +2,6 @@ import sys
 import os
 import shutil
 import subprocess
-import atexit
 import time
 from socket import gethostname
 from optparse import OptionParser
