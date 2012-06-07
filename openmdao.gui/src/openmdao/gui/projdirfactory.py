@@ -89,7 +89,7 @@ class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
     the set of available types up-to-date as project files change.
     """
-    def __init__(self, watchdir, use_observer=True):
+    def __init__(self, watchdir, use_observer=True, observer=None):
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
         self.imported = {}  # imported files vs (module, ctor dict)
@@ -104,18 +104,24 @@ class ProjDirFactory(Factory):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
             
             if use_observer:
-                self._start_observer()
+                self._start_observer(observer)
                 self.publish_updates(added_set, changed_set, deleted_set)
             else:
                 self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
         except Exception as err:
             logger.error(str(err))
 
-    def _start_observer(self):
-        self.observer = Observer()
+    def _start_observer(self, observer):
+        if observer is None:
+            self.observer = Observer()
+            self._ownsobserver = True
+        else:
+            self.observer = observer
+            self._ownsobserver = False
         self.observer.schedule(PyWatcher(self), path=self.watchdir, recursive=True)
-        self.observer.daemon = True
-        self.observer.start()
+        if self._ownsobserver:
+            self.observer.daemon = True
+            self.observer.start()
         
     def _get_mod_ctors(self, mod, fpath, visitor):
         self.imported[fpath] = (mod, {})
@@ -244,7 +250,7 @@ class ProjDirFactory(Factory):
         """If this factory is removed from the FactoryManager during execution, this function
         will stop the watchdog observer thread.
         """
-        if self.observer:
+        if self.observer and self._ownsobserver:
             self.observer.stop()
             self.observer.join()
 
