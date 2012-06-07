@@ -428,7 +428,8 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-            self.projdirfactory = ProjDirFactory(self.proj.path)
+            self.projdirfactory = ProjDirFactory(self.proj.path, 
+                                                 observer=self.files.observer)
             register_class_factory(self.projdirfactory)
             
         except Exception, err:
