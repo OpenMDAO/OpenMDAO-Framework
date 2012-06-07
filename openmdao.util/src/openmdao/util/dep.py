@@ -138,7 +138,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         self.classes[fullname] = ClassInfo(fullname, self.fname, bases, bvisitor.metadata)
         self.tree_analyser.class_map[fullname] = self.classes[fullname]
         
-        undef_bases = [b for b in bases if b not in self.classes]
+        undef_bases = [b for b in bases if b not in self.classes and not b in __builtins__]
         while undef_bases:
             base = undef_bases.pop()
             cinfo = self.tree_analyser.find_classinfo(base)
@@ -244,23 +244,11 @@ class PythonSourceTreeAnalyser(object):
             
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
         
-        #self.stopclasses = set(dir(__builtins__))
-        #import enthought.traits.api
-        #self.stopclasses.update(['enthought.traits.api.HasTraits',
-                                 #'enthought.traits.api.TraitType',
-                                 #'enthought.traits.api.Array',
-                                 #'enthought.traits.api.List',
-                                 #'enthought.traits.api.Dict',
-                                 #'enthought.traits.api.Bool',
-                                 #'enthought.traits.api.Instance',
-                                 #'HasTraits', 'TraitType', 'TraitArray'])
-        #if stopclasses is not None:
-            #self.stopclasses.update(stopclasses)
-            
         self.exclude = exclude
-        self.mod_excludes = set(['enthought.traits.'])
-        if mod_excludes is not None:
-            self.mod_excludes.update(mod_excludes)
+        if mod_excludes is None:
+            self.mod_excludes = set(['enthought.'])
+        else:
+            self.mod_excludes = mod_excludes
             
         self.modinfo = {}  # maps module pathnames to PythonSourceFileAnalyzers
         self.fileinfo = {} # maps filenames to (PythonSourceFileAnalyzer, modtime)
@@ -278,15 +266,22 @@ class PythonSourceTreeAnalyser(object):
             
         if '-classes' in sys.argv:
             out.write("\nclasses\n")
-            for k,v in self.class_map.items():
-                if isinstance(v, ClassInfo):
-                    v = v.fname
-                out.write("%s:  %s\n" % (k,v))
-        
+            for f, tup in self.fileinfo.items():
+                out.write("%s\n" % os.path.relpath(f))
+                for item,cinfo in tup[0].classes.items():
+                    out.write("\t%s" % item)
+                    if '-inherit' in sys.argv:
+                        out.write(" --> %s\n" % cinfo.bases)
+                    else:
+                        out.write("\n")
+                
         if '-unresolved' in sys.argv:
             out.write("\nunresolved classes\n")
             for f, tup in self.fileinfo.items():
-                out.write("%s: %s\n" % (f, list(tup[0].unresolved_classes)))
+                if tup[0].unresolved_classes:
+                    out.write("%s\n" % os.path.relpath(f))
+                    for item in tup[0].unresolved_classes:
+                        out.write("\t%s\n" % item)
         
         if '-files' in sys.argv:
             out.write('\nfiles:\n')
