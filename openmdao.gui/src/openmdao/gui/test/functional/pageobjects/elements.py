@@ -53,6 +53,10 @@ class _BaseElement(object):
         except (NoSuchElementException, ElementNotVisibleException):
             return False
 
+    def value_of_css_property(self, name):
+        """ Return value for the the CSS property `name`. """
+        return self.element.value_of_css_property(name)
+
 
 class _ButtonElement(_BaseElement):
     """ Basically something to ``click``. """

@@ -50,14 +50,14 @@ def _test_maxmin(browser):
 
     # Maximize maxmin.
     maxmin = workspace_page.get_dataflow_figure('maxmin')
-    background = maxmin.top_right.value_of_css_property('background')
+    background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
     eq(background, 'rgba(0, 0, 0, 0)'
                    ' url(http://localhost/static/images/circle-plus.png)'
                    ' no-repeat scroll 100% 0%')
 
-    maxmin.top_right.click()
-    background = maxmin.top_right.value_of_css_property('background')
+    maxmin('top_right').click()
+    background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
     eq(background, 'rgba(0, 0, 0, 0)'
                    ' url(http://localhost/static/images/circle-minus.png)'
@@ -67,8 +67,8 @@ def _test_maxmin(browser):
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
     # Minimize maxmin.
-    maxmin.top_right.click()
-    background = maxmin.top_right.value_of_css_property('background')
+    maxmin('top_right').click()
+    background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
     eq(background, 'rgba(0, 0, 0, 0)'
                    ' url(http://localhost/static/images/circle-plus.png)'
@@ -117,24 +117,24 @@ def _test_connect(browser):
         time.sleep(0.5)  # Wait for display update.
     conn_page.close()
 
-    # Set inputs.
+    # Set inputs (re-fetch required after updating).
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     props = comp1.properties_page()
     eq(props.header, 'Connectable: top.comp1')
     inputs = props.inputs
-    eq(inputs[0][0], 'b_in')
+    eq(inputs[0].value, ['b_in', 'False'])
     inputs[0][1] = 'True'
     inputs = props.inputs
-    eq(inputs[2][0], 'e_in')
+    eq(inputs[2].value, ['e_in', '1'])
     inputs[2][1] = '3'
     inputs = props.inputs
-    eq(inputs[3][0], 'f_in')
+    eq(inputs[3].value, ['f_in', '0.0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
-    eq(inputs[5][0], 'i_in')
+    eq(inputs[5].value, ['i_in', '0'])
     inputs[5][1] = '42'
     inputs = props.inputs
-    eq(inputs[6][0], 's_in')
+    eq(inputs[6].value, ['s_in', ''])
     inputs[6][1] = "'xyzzy'"
     props.close()
 
@@ -146,16 +146,15 @@ def _test_connect(browser):
     editor = comp2.editor_page()
     eq(editor.dialog_title, 'Connectable: top.comp2')
     outputs = editor.get_outputs()
-    eq(outputs[0][0], 'b_out')
-    eq(outputs[0][2], 'True')
-    eq(outputs[1][0], 'e_out')
-    eq(outputs[1][2], '3')
-    eq(outputs[2][0], 'f_out')
-    eq(outputs[2][2], '2.781828')
-    eq(outputs[3][0], 'i_out')
-    eq(outputs[3][2], '42')
-    eq(outputs[4][0], 's_out')
-    eq(outputs[4][2], 'xyzzy')
+    expected = [
+        ['b_out', 'bool',  'True',     '', 'true', '', ''],
+        ['e_out', 'int',   '3',        '', 'true', '', ''],
+        ['f_out', 'float', '2.781828', '', 'true', '', ''],
+        ['i_out', 'int',   '42',       '', 'true', '', ''],
+        ['s_out', 'str',   'xyzzy',    '', 'true', '', '']
+    ]
+    for i, row in enumerate(outputs.value):
+        eq(row, expected[i])
     editor.close()
 
     # Clean up.
