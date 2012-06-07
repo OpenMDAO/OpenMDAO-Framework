@@ -2,13 +2,18 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 
 from basepageobject import BasePageObject
-from elements import ButtonElement
+from elements import ButtonElement, TextElement
 from component import ComponentPage, PropertiesPage
 
 
 class DataflowFigure(BasePageObject):
     """ Represents elements within a dataflow figure. """
 
+    name = TextElement((By.CLASS_NAME, 'DataflowFigureHeader'))
+    top_right = ButtonElement((By.CLASS_NAME, 'DataflowFigureTopRight'))
+
+    # Context menu.
+    edit_button       = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
     properties_button = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
     run_button        = ButtonElement((By.XPATH, "../div/a[text()='Run']"))
     disconnect_button = ButtonElement((By.XPATH, "../div/a[text()='Disconnect']"))
@@ -38,20 +43,14 @@ class DataflowFigure(BasePageObject):
         """ Figure border property. """
         return self.root.value_of_css_property('border')
 
-    @property
-    def name(self):
-        """ Figure name. """
-        return self.root.find_elements_by_class_name('DataflowFigureHeader')[0].text
-
-    @property
-    def top_right(self):
-        """ Figure maximize/minimize button. """
-        return self.root.find_elements_by_class_name('DataflowFigureTopRight')[0]
-
-    def editor_page(self):
+    def editor_page(self, double_click=True):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)
-        chain.double_click(self.root).perform()
+        if double_click:
+            chain.double_click(self.root).perform()
+        else:
+            chain.context_click(self.root).perform()
+            self('edit_button').click()
         editor_id = 'CE-%s' % self.pathname.replace('.', '-')
         return ComponentPage(self.browser, self.port, (By.ID, editor_id))
 
