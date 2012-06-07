@@ -7,7 +7,7 @@ import os
 import sys
 
 from openmdao.util.fileutil import build_directory
-from openmdao.gui.projdirfactory import ProjDirFactory, _startmods
+from openmdao.gui.projdirfactory import ProjDirFactory
 from openmdao.main.driver import Driver
 from openmdao.main.component import Component
 
@@ -55,21 +55,14 @@ class ProjDirFactoryTestCase(unittest.TestCase):
         pdf = ProjDirFactory(self.tdir)
         try:
             expected = ['mydrv.MyDrv', 'mydrv.MyDrv2', 'mycomp.MyComp']
-            types = pdf.get_available_types()
-            typenames = [n for n, mdata in types]
+            types = dict(pdf.get_available_types())
+            typenames = types.keys()
             self.assertEqual(set(typenames), set(expected))
-            for typ, meta in types:
-                if typ == 'mydrv.MyDrv' or typ == 'mydrv.MyDrv2':
-                    self.assertEqual(set(meta['ifaces']), set(['IContainer', 'IComponent', 'IDriver']))
-                elif typ == 'mycomp.MyComp':
-                    self.assertEqual(set(meta['ifaces']), set(['IContainer', 'IComponent']))
-                else:
-                    self.fail("type %s was not expected" % typ)
-            self.assertEqual(len(pdf.analyzer.fileinfo), 2 + len(_startmods))
-            self.assertEqual(len(pdf.analyzer.modinfo), 2 + len(_startmods))
-            self.assertTrue('mydrv.MyDrv' in pdf.analyzer.class_file_map)
-            self.assertTrue('mydrv.MyDrv2' in pdf.analyzer.class_file_map)
-            self.assertTrue('mycomp.MyComp' in pdf.analyzer.class_file_map)
+            self.assertEqual(set(types['mydrv.MyDrv']['ifaces']), set(['IContainer', 'IComponent', 'IDriver']))
+            self.assertEqual(set(types['mycomp.MyComp']['ifaces']), set(['IContainer', 'IComponent']))
+            self.assertTrue('mydrv.MyDrv' in pdf.analyzer.class_map)
+            self.assertTrue('mydrv.MyDrv2' in pdf.analyzer.class_map)
+            self.assertTrue('mycomp.MyComp' in pdf.analyzer.class_map)
 
             # now try creating a MyDrv
             mydrv = pdf.create('mydrv.MyDrv')
@@ -84,26 +77,19 @@ class MyComp2(Component):
     pass
                 """)
             time.sleep(2.0)
-            types = pdf.get_available_types()
-            typenames = [n for n, mdata in types]
+            types = dict(pdf.get_available_types())
+            typenames = types.keys()
             self.assertEqual(set(typenames), set(expected + ['mycomp2.MyComp2']))
-            for typ, meta in types:
-                if typ == 'mycomp2.MyComp2':
-                    self.assertEqual(set(meta['ifaces']), set(['IContainer', 'IComponent']))
-
-            self.assertEqual(len(pdf.analyzer.fileinfo), 3 + len(_startmods))
-            self.assertEqual(len(pdf.analyzer.modinfo), 3 + len(_startmods))
-            self.assertTrue('mycomp2.MyComp2' in pdf.analyzer.class_file_map)
+            self.assertEqual(set(types['mycomp2.MyComp2']['ifaces']), set(['IContainer', 'IComponent']))
+            self.assertTrue('mycomp2.MyComp2' in pdf.analyzer.class_map)
 
             # now test removal
             os.remove(os.path.join(self.tdir, 'mycomp2.py'))
             time.sleep(2.0)
-            types = pdf.get_available_types()
-            typenames = [n for n, mdata in types]
+            types = dict(pdf.get_available_types())
+            typenames = types.keys()
             self.assertEqual(set(typenames), set(expected))
-            self.assertEqual(len(pdf.analyzer.fileinfo), 2 + len(_startmods))
-            self.assertEqual(len(pdf.analyzer.modinfo), 2 + len(_startmods))
-            self.assertTrue('mycomp2.MyComp2' not in pdf.analyzer.class_file_map)
+            self.assertTrue('mycomp2.MyComp2' not in pdf.analyzer.class_map)
 
             # now try modifying an existing file
             with open(os.path.join(self.tdir, 'mydrv.py'), 'w') as f:
@@ -117,22 +103,16 @@ class Foo(Component):
                 """)
             time.sleep(2.0)
             expected = ['mydrv.MyDrv', 'mydrv.Foo', 'mycomp.MyComp']
-            types = pdf.get_available_types()
-            typenames = [n for n, mdata in types]
+            types = dict(pdf.get_available_types())
+            typenames = types.keys()
             self.assertEqual(set(typenames), set(expected))
-            for typ, meta in types:
-                if typ == 'mydrv.MyDrv':
-                    self.assertEqual(set(meta['ifaces']), set(['IContainer', 'IComponent']))
-                elif typ == 'mydrv.Foo':
-                    self.assertEqual(set(meta['ifaces']), set(['IContainer', 'IComponent']))
-                elif typ == 'mycomp.MyComp':
-                    self.assertEqual(set(meta['ifaces']), set(['IContainer', 'IComponent']))
-                else:
-                    self.fail("type %s was not expected" % typ)
+            self.assertEqual(set(types['mycomp.MyComp']['ifaces']), set(['IContainer', 'IComponent']))
+            self.assertEqual(set(types['mydrv.MyDrv']['ifaces']), set(['IContainer', 'IComponent']))
+            self.assertEqual(set(types['mydrv.Foo']['ifaces']), set(['IContainer', 'IComponent']))
 
             # now try creating a MyDrv Component
             mydrv = pdf.create('mydrv.MyDrv')
-            self.assertFalse(isinstance(mydrv, Driver))
+            self.assertNotEqual(type(mydrv).mro()[1].__name__, 'Driver')
             self.assertTrue(isinstance(mydrv, Component))
 
         finally:

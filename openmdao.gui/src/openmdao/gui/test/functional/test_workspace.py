@@ -206,6 +206,37 @@ f_x = Float(0.0, iotype='out')
     print "_test_newfile complete."
 
 
+def _test_properties(browser):
+    print "running _test_properties..."
+    # Checks right-hand side properties display.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Check default 'top'.
+    workspace_page.select_object('top')
+    time.sleep(0.5)
+    eq(workspace_page.props_header, 'Assembly: top')
+    inputs = workspace_page.props_inputs
+    eq(inputs.value, [['directory',     ''],
+                      ['force_execute', 'False']])
+
+    # Check default 'top.driver'.
+    workspace_page.expand_object('top')
+    workspace_page.select_object('top.driver')
+    time.sleep(0.5)
+    eq(workspace_page.props_header, 'Run_Once: top.driver')
+    inputs = workspace_page.props_inputs
+    eq(inputs.value, [['directory',     ''],
+                      ['force_execute', 'True'],
+                      ['printvars',     '[]']])
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_properties complete."
+
+
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
@@ -216,6 +247,7 @@ if __name__ == '__main__':
         _test_import(browser)
         _test_menu(browser)
         _test_newfile(browser)
+        _test_properties(browser)
         teardown_server()
     else:
         # Run under nose.

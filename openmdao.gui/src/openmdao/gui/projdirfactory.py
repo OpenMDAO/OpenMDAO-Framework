@@ -64,19 +64,6 @@ class PyWatcher(FileSystemEventHandler):
             self.factory.on_deleted(event.src_path, deleted_set)
             self.factory.publish_updates(added_set, changed_set, deleted_set)
             
-    
-_startmods = [
-    'api',
-    'datatypes.api',
-    'component',
-    'container',
-    'driver',
-    'arch',
-    'assembly',
-    'variable',
-    'vartree',
-    ]
-
 plugin_ifaces = set([
     'IContainer', 
     'IComponent', 
@@ -91,6 +78,8 @@ plugin_ifaces = set([
     'IDifferentiator',
 ])
 
+
+
 # predicate functions for selecting available types
 def is_plugin(name, meta):
     return plugin_ifaces.intersection(meta.get('ifaces',[]))
@@ -100,14 +89,12 @@ class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
     the set of available types up-to-date as project files change.
     """
-    def __init__(self, watchdir, use_observer=True):
+    def __init__(self, watchdir, use_observer=True, observer=None):
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
         self.imported = {}  # imported files vs (module, ctor dict)
-        startfiles = [sys.modules['openmdao.main.'+n].__file__.replace('.pyc','.py') 
-                          for n in _startmods]
         try:
-            self.analyzer = PythonSourceTreeAnalyser(startfiles=startfiles)
+            self.analyzer = PythonSourceTreeAnalyser()
             self._baseset = set(self.analyzer.graph.nodes())
             
             added_set = set()
@@ -117,19 +104,24 @@ class ProjDirFactory(Factory):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
             
             if use_observer:
-                self._start_observer()
-                #logger.error("publishing updates: %s, %s, %s" % (added_set, changed_set,deleted_set))
+                self._start_observer(observer)
                 self.publish_updates(added_set, changed_set, deleted_set)
             else:
                 self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
         except Exception as err:
             logger.error(str(err))
 
-    def _start_observer(self):
-        self.observer = Observer()
+    def _start_observer(self, observer):
+        if observer is None:
+            self.observer = Observer()
+            self._ownsobserver = True
+        else:
+            self.observer = observer
+            self._ownsobserver = False
         self.observer.schedule(PyWatcher(self), path=self.watchdir, recursive=True)
-        self.observer.daemon = True
-        self.observer.start()
+        if self._ownsobserver:
+            self.observer.daemon = True
+            self.observer.start()
         
     def _get_mod_ctors(self, mod, fpath, visitor):
         self.imported[fpath] = (mod, {})
@@ -141,10 +133,12 @@ class ProjDirFactory(Factory):
         """Create and return an instance of the specified type, or None if
         this Factory can't satisfy the request.
         """
-        if server is None and res_desc is None and typ in self.analyzer.class_file_map:
-            fpath = self.analyzer.class_file_map[typ]
+        if server is None and res_desc is None and typ in self.analyzer.class_map:
+            fpath = self.analyzer.class_map[typ].fname
+            modpath = self.analyzer.fileinfo[fpath][0].modpath
+            if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1] and modpath in sys.modules:
+                reload(sys.modules[modpath])
             if fpath not in self.imported:
-                modpath = self.analyzer.fileinfo[fpath].modpath
                 sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
                 try:
                     __import__(modpath)
@@ -153,8 +147,9 @@ class ProjDirFactory(Factory):
                 finally:
                     sys.path = sys.path[1:]
                 mod = sys.modules[modpath]
-                visitor = self.analyzer.fileinfo[fpath]
+                visitor = self.analyzer.fileinfo[fpath][0]
                 self._get_mod_ctors(mod, fpath, visitor)
+            
             try:
                 ctor = self.imported[fpath][1][typ]
             except KeyError:
@@ -166,11 +161,8 @@ class ProjDirFactory(Factory):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
         """
-        #logger.error("get_available_types")
         graph = self.analyzer.graph
         typset = set(graph.nodes()) - self._baseset
-        #logger.error("self.watchdir = %s" % os.listdir(self.watchdir))
-        #logger.error('groups = %s' % groups)
         types = []
         
         if groups is None:
@@ -180,11 +172,12 @@ class ProjDirFactory(Factory):
         
         empty = []
         for typ in typset:
-            #logger.error("for type %s" % typ)
-            meta = graph.node[typ]['classinfo'].meta
-            if ifaces.intersection(meta.get('ifaces', empty)): 
-                #logger.error("adding type %s" % typ)
-                types.append((typ, meta))
+            if typ.startswith('openmdao.'):
+                continue
+            if 'classinfo' in graph.node[typ]:
+                meta = graph.node[typ]['classinfo'].meta
+                if ifaces.intersection(meta.get('ifaces', empty)): 
+                    types.append((typ, meta))
         return types
 
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
@@ -193,26 +186,28 @@ class ProjDirFactory(Factory):
         
         imported = False
         if fpath in self.analyzer.fileinfo: # file has been previously scanned
-            #logger.error("file %s is in fileinfo" % fpath)
-            visitor = self.analyzer.fileinfo[fpath]
+            visitor = self.analyzer.fileinfo[fpath][0]
             pre_set = set(visitor.classes.keys())
             
             if fpath in self.imported:  # we imported it earlier
                 imported = True
                 sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
                 try:
-                    m = reload(self.imported[fpath][0])
+                    reload(self.imported[fpath][0])
                 except ImportError as err:
                     return None
                 finally:
                     sys.path = sys.path[1:]  # restore original sys.path
-                self.imported[fpath] = (m, self.imported[fpath][1])
-            self.on_deleted(fpath, set())
+                #self.imported[fpath] = (m, self.imported[fpath][1])
+            elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
+                modpath = get_module_path(fpath)
+                if modpath in sys.modules:
+                    reload(sys.modules[modpath])
+            self.on_deleted(fpath, set()) # clean up old refs
         else:  # it's a new file
             pre_set = set()
 
         visitor = self.analyzer.analyze_file(fpath)
-        #logger.error("classes found in %s: %s" % (fpath,visitor.classes.keys()))
 
         post_set = set(visitor.classes.keys())
 
@@ -231,7 +226,7 @@ class ProjDirFactory(Factory):
             except KeyError:
                 pass
             
-            visitor = self.analyzer.fileinfo[fpath]
+            visitor = self.analyzer.fileinfo[fpath][0]
             deleted_set.update(visitor.classes.keys())
 
             self.analyzer.remove_file(fpath)
@@ -239,10 +234,8 @@ class ProjDirFactory(Factory):
     def publish_updates(self, added_set, changed_set, deleted_set):
         publisher = Publisher.get_instance()
         if publisher:
-            #logger.error("found Publisher")
             types = get_available_types()
             types.extend(self.get_available_types())
-            #logger.error("sending types: %s" % self.get_available_types())
             publisher.publish('types', 
                               [
                                   packagedict(types),
@@ -257,7 +250,7 @@ class ProjDirFactory(Factory):
         """If this factory is removed from the FactoryManager during execution, this function
         will stop the watchdog observer thread.
         """
-        if self.observer:
+        if self.observer and self._ownsobserver:
             self.observer.stop()
             self.observer.join()
 
