@@ -12,6 +12,7 @@ from os.path import normpath, dirname, exists, isfile, abspath
 from token import NAME, OP
 import ast
 import time
+import __builtin__
 
 import networkx as nx
 
@@ -37,26 +38,23 @@ iface_set = set()
 for ifaces in plugin_groups.values():
     iface_set.update(ifaces)
 
-class StrVisitor(ast.NodeVisitor):
-    def __init__(self):
-        ast.NodeVisitor.__init__(self)
-        self.parts = []
 
-    def visit_Name(self, node):
-        self.parts.append(node.id)
-        
-    def visit_Str(self, node):
-        self.parts.append(node.s)
-        
-    def get_value(self):
-        return '.'.join(self.parts)
-
-def _to_str(arg):
+def _to_str(node):
     """Take groups of Name nodes or a Str node and convert to a string."""
-    myvisitor = StrVisitor()
-    for node in ast.walk(arg):
-        myvisitor.visit(node)
-    return myvisitor.get_value()
+    if isinstance(node, ast.Name):
+        return node.id
+    val = node.value
+    parts = [node.attr]
+    while True:
+        if isinstance(val, ast.Attribute):
+            parts.append(val.attr)
+            val = val.value
+        elif isinstance(val, ast.Name):
+            parts.append(val.id)
+            break
+        else:  # it's more than just a simple dotted name
+            return None
+    return '.'.join(parts[::-1])
 
 
 class ClassInfo(object):
@@ -65,7 +63,6 @@ class ClassInfo(object):
         self.fname = fname
         self.bases = bases
         self.meta = meta
-        
         
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -138,7 +135,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         self.classes[fullname] = ClassInfo(fullname, self.fname, bases, bvisitor.metadata)
         self.tree_analyser.class_map[fullname] = self.classes[fullname]
         
-        undef_bases = [b for b in bases if b not in self.classes and not b in __builtins__]
+        undef_bases = [b for b in bases if b not in self.classes and not hasattr(__builtin__,b)]
         while undef_bases:
             base = undef_bases.pop()
             cinfo = self.tree_analyser.find_classinfo(base)
@@ -154,7 +151,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                 for modname in trymods:
                     excluded = False
                     for m in self.tree_analyser.mod_excludes:
-                        if modname.startswith(m):
+                        if m == modname or modname.startswith(m+'.'):
                             excluded = True
                             break
                     if excluded:
@@ -171,7 +168,8 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                         elif basename in fanalyzer.localnames:
                             newname = fanalyzer.localnames[basename]
                             self.tree_analyser.class_map[trybase] = newname
-                            if newname not in self.tree_analyser.class_map:
+                            if newname not in self.tree_analyser.class_map and \
+                               newname not in self.unresolved_classes:
                                 undef_bases.append(newname)
                             break
                 else:
@@ -225,6 +223,7 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
             for cname, cinfo in self.classes.items():
                 if cname in paths:
                     cinfo.meta.setdefault('ifaces',[]).append(iface)
+                    cinfo.meta['ifaces'] = list(set(cinfo.meta['ifaces']))
 
 class PythonSourceTreeAnalyser(object):
     def __init__(self, startdir=None, exclude=None, mod_excludes=None):
@@ -244,50 +243,38 @@ class PythonSourceTreeAnalyser(object):
             
         self.startdirs = [os.path.expandvars(os.path.expanduser(d)) for d in self.startdirs]
         
-        self.exclude = exclude
         if mod_excludes is None:
-            self.mod_excludes = set(['enthought.'])
+            self.mod_excludes = set(['enthought','zope','ast'])
         else:
             self.mod_excludes = mod_excludes
-            
+    
         self.modinfo = {}  # maps module pathnames to PythonSourceFileAnalyzers
         self.fileinfo = {} # maps filenames to (PythonSourceFileAnalyzer, modtime)
         self.class_map = {} # map of classname to ClassInfo for the class
         
-        for pyfile in find_files(self.startdirs, "*.py", self.exclude):
+        for pyfile in find_files(self.startdirs, "*.py", exclude):
             self.analyze_file(pyfile)
 
-    def dump(self, out):
+    def dump(self, out, options):
         """Dumps the contents of this object for debugging purposes."""
-        if '-edges' in sys.argv:
-            out.write("\ngraph edges:\n")
-            for u,v in self.graph.edges():
-                out.write("(%s, %s)\n" % (u,v))
-            
-        if '-classes' in sys.argv:
-            out.write("\nclasses\n")
-            for f, tup in self.fileinfo.items():
-                out.write("%s\n" % os.path.relpath(f))
+        for f, tup in self.fileinfo.items():
+            out.write("%s\n" % os.path.relpath(f))
+            if options.showclasses and tup[0].classes:
+                out.write("   classes:\n")
                 for item,cinfo in tup[0].classes.items():
-                    out.write("\t%s" % item)
-                    if '-inherit' in sys.argv:
-                        out.write(" --> %s\n" % cinfo.bases)
-                    else:
-                        out.write("\n")
-                
-        if '-unresolved' in sys.argv:
-            out.write("\nunresolved classes\n")
-            for f, tup in self.fileinfo.items():
-                if tup[0].unresolved_classes:
-                    out.write("%s\n" % os.path.relpath(f))
-                    for item in tup[0].unresolved_classes:
-                        out.write("\t%s\n" % item)
+                    out.write("      %s\n" % item)
+                    if options.showbases and cinfo.bases and cinfo.bases != ['object']:
+                        out.write("         bases:\n")
+                        for base in cinfo.bases:
+                            if base in tup[0].unresolved_classes:
+                                out.write("            ???(%s)\n" % base)
+                            else:
+                                out.write("            %s\n" % base)
+                    if options.showifaces and cinfo.meta.get('ifaces'):
+                        out.write("         interfaces:\n")
+                        for iface in cinfo.meta['ifaces']:
+                            out.write("            %s\n" % iface)
         
-        if '-files' in sys.argv:
-            out.write('\nfiles:\n')
-            for f in self.fileinfo.keys():
-                out.write("%s\n" % os.path.relpath(f))
-                
         out.write("\n\nFiles examined: %d\n\n" % self.files_count)
             
     def find_classinfo(self, cname):
@@ -342,12 +329,29 @@ class PythonSourceTreeAnalyser(object):
 
 
 def main():
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("-c", "--classes", action='store_true', dest='showclasses',
+                        help="show classes found")
+    parser.add_argument("-b","--bases", action="store_true", dest="showbases",
+                        help="show base classes (only works if --classes is active)")
+    parser.add_argument("-i","--interfaces", action="store_true", dest="showifaces",
+                        help="show interfaces of classes (only works if --classes is active)")
+    parser.add_argument('files', metavar='fname', type=str, nargs='+',
+                        help='a file or directory to be scanned')
+    
+    options = parser.parse_args()
+    
     stime = time.time()
     psta = PythonSourceTreeAnalyser()
-    for f in sys.argv[1:]:
-        if f[0] != '-':
+    for f in options.files:
+        f = os.path.abspath(os.path.expanduser(f))
+        if os.path.isdir(f):
+            for pyfile in find_files(f, "*.py", exclude=lambda n: 'test' in n.split(os.sep)):
+                psta.analyze_file(pyfile)
+        else:
             psta.analyze_file(f)
-    psta.dump(sys.stdout)
+    psta.dump(sys.stdout, options)
     sys.stdout.write("elapsed time: %s seconds\n\n" % (time.time() - stime))
 
 
