@@ -188,7 +188,7 @@ openmdao.Util = {
 
         if (element === null) {
             // Build dialog markup
-            win = jQuery('<div id="'+baseId+'"><p id="'+promptId+'"></p></div>');
+            win = jQuery('<div id="'+baseId+'"><div id="'+promptId+'" /></div>');
             userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
             userInput.appendTo(win);
             win.dialog({
@@ -220,7 +220,7 @@ openmdao.Util = {
         }
 
         // Update for current invocation.
-        jQuery('#'+promptId).text(prompt+':');
+        jQuery('#'+promptId).html(prompt+':');
 
         jQuery('#'+inputId).bind('keypress.enterkey', function(e) {
             if (e.which === 13) {

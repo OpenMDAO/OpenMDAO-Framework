@@ -35,9 +35,11 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
             debug.info(droppedName,'dropped on workflow',self.pathname,bestfig);
             if (droppedObject.hasClass('objtype')) {
                 if (bestfig instanceof openmdao.WorkflowFigure) {
-                    parent = openmdao.Util.getPath(bestfig.pathname);
-                    openmdao.Util.promptForValue('Specify a name for the new '+droppedName,
-                        function(name) {
+                    var parent = openmdao.Util.getPath(bestfig.pathname),
+                        prompt = 'Specify a name for the new '+droppedName+'<br>'+
+                                 '(It will be added to '+parent+' and to <br>'+
+                                 'the workflow of '+ bestfig.pathname+')';
+                    openmdao.Util.promptForValue(prompt, function(name) {
                             model.addComponent(droppedPath,name,parent, function() {
                                 // if successful, then add to workflow as well
                                 cmd = bestfig.pathname+'.workflow.add("'+name+'")';
