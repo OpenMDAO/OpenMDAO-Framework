@@ -5,13 +5,102 @@
 {% end %}
 
 {% block body %}
-    Select a file:
-    <form method="POST" enctype="multipart/form-data" action="upload">
-        <input type="file" name="myfile" multiple="true" class='button'/>
-        <br/>
-        {% if path %}
-        <input type="hidden" name="path" value="{{ path }}" />
-        {% end %}
-        <input id="add-button" type="submit" value="Add Files" class='button' />
-    </form>
+        Select a file:
+                    <script type='text/javascript'>
+
+                        var files = {};
+                        
+                        function addRow(fileName, fileSize)
+                        {
+                            var table = document.all("filedisplay");
+                            var newRow = table.insertRow(table.rows.length);
+                            var newCell = newRow.insertCell();
+                            newCell.innerHTML = '<input type="checkbox" name=' + fileName + ' checked="checked" onclick="deleteRow(this)"/>' + fileName + ' ' + fileSize;
+                        }
+
+                        function deleteRow(src)
+                        {   
+                            var fileName = src.name
+                            var oRow = src.parentElement.parentElement;  
+                                
+                                //once the row reference is obtained, delete it passing in its rowIndex   
+                            document.all("filedisplay").deleteRow(oRow.rowIndex);  
+                            delete files[fileName];
+                        }
+
+                        function uploadFiles()
+                        {
+                            var formData = new FormData();
+                            for (var fileName in files)
+                            {
+                                  formData.append('file', files[fileName]);
+                            }
+
+                            // now post a new XHR request
+                            var xhr = new XMLHttpRequest();
+                            xhr.open('POST', 'upload');
+                            xhr.onload = function () {
+                                  if (xhr.status === 200) {
+                                          console.log('all done: ' + xhr.status);
+                                  } else {
+                                                    console.log('Something went terribly wrong...');
+                                                      }
+                            };
+
+                            xhr.send(formData);
+                        }
+                        
+                        function addFile(file_)
+                        {
+                            if(!(file_.name in files))
+                            {
+                                files[file_.name] = file_;
+                                addRow(file_.name, file_.size);
+                            }
+                        }
+
+                        function addFiles(fileList)
+{
+                            for(i=0; i<fileList.length; i++)
+                            {
+                                addFile(fileList[i]);
+                            }
+}
+
+                        /*dropArea.addEventListener("dragleave", function (evt) {
+                            var target = evt.target;
+
+                            if (target && target === dropArea) {
+                                this.className = "";
+                            }
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                        }, false);
+
+                        dropArea.addEventListener("dragenter", function (evt) {
+                            this.className = "over";
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                        }, false);
+
+                        dropArea.addEventListener("dragover", function (evt) {
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                        }, false);
+
+                        dropArea.addEventListener("drop", function (evt) {
+                            traverseFiles(evt.dataTransfer.files);
+                            this.className = "";
+                            evt.preventDefault();
+                                evt.stopPropagation();
+                                }, false);*/
+
+                    </script>
+                    <input type="file" name="myfile" multiple="true" class='button' onchange="addFiles(this.files)"/>
+                    <table id="filedisplay"></table>
+            <br/>
+            {% if path %}
+                <input type="hidden" name="path" value="{{ path }}" />
+            {% end %}
+            <input id="add-button" type="button" value="Add Files" class='button' onclick="uploadFiles()"/>
 {% end %}
