@@ -22,7 +22,7 @@ Name                  Output Type
 
 The recorders are interchangeable, so you can use any of them in a slot that can accept them. All
 drivers contain a slot that can accept a list of case recorders. Why a list? It's so you can have the same
-case data recorded in multiple ways if you want to. For example, you could use the ``DumpCaseRecorder`` to 
+case data recorded in multiple ways if you want to. For example, you could use the DumpCaseRecorder to 
 output data to the screen and use the DBCaseRecorder to save the same data to a database. 
 
 Each driver determines what it needs to write to the recorders in its list. 

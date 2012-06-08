@@ -294,7 +294,7 @@ of the objective and constraints. Hessian calculation is expensive and scales n-
 of parameters. When NEWSUMT calculates the Hessian internally, it's using some approximations to speed
 the calculation. Thus, it might be advisable to use NEWSUMT's gradient calculation.
 
-Now let's try the ``COBYLAdriver``.
+Now let's try the COBYLAdriver.
 
 ::
 
