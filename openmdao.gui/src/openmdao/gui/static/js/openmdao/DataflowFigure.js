@@ -30,9 +30,8 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
 
     this.defaultBackgroundColor=new draw2d.Color(255,255,255);
     this.highlightBackgroundColor=new draw2d.Color(250,250,200);
-    this.setBackgroundColor(this.defaultBackgroundColor);
+
     this.setDimension(this.getMinWidth(),this.getMinHeight());
-    this.horizontal = true;
 
     // do not allow moving or resizing
     this.setCanDrag(false);
@@ -42,17 +41,27 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
     this.connections = {};
     this.margin = 20;
 
-    // set color based on valid status
-    if (this.valid === true) {
-        this.setColor(new draw2d.Color(0,255,0));
+    if (this.pathname === '') {
+        // global dataflow figure is transparent with no border
+        this.html.style.border = 'none';
     }
-    else if (this.valid === false) {
-        this.setColor(new draw2d.Color(255,0,0));
+    else {
+        // set background color
+        this.setBackgroundColor(this.defaultBackgroundColor);
+        
+        // set initial color based on valid status
+        if (this.valid === true) {
+            this.setColor(new draw2d.Color(0,255,0));
+        }
+        else if (this.valid === false) {
+            this.setColor(new draw2d.Color(255,0,0));
+        }
+
+        // listen for changes to valid status due to execution
+        topic = pathname+'.exec_state';
+        model.addListener(topic,this.setExecState.bind(this));
     }
 
-    // set color based on execution status
-    topic = pathname+'.exec_state';
-    model.addListener(topic,this.setExecState.bind(this));
 };
 
 openmdao.DataflowFigure.prototype=new draw2d.CompartmentFigure();
@@ -166,12 +175,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         item.appendChild(this.footer);
         item.appendChild(this.bottom_right);
     }
-    else {
-//        item.style.borderColor = 'transparent';
-//        item.style.backgroundColor == 'transparent';
-        elm.css({ 'background-color': 'transparent', 
-                  'border-color': 'transparent' });
-    }
 
     return item;
 };
@@ -184,7 +187,7 @@ openmdao.DataflowFigure.prototype.onDoubleClick=function(){
 /** hook into setWorkflow to add input & ouput ports */
 openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
     draw2d.Node.prototype.setWorkflow.call(this,wkflw);
-    if(wkflw!==null && this.inputPort===null){
+    if (wkflw !== null && this.pathname !=='' && this.inputPort === null) {
         this.inputPort=new draw2d.InputPort();
         this.inputPort.setWorkflow(wkflw);
         this.inputPort.setName("input");
