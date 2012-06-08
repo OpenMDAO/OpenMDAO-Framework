@@ -7,7 +7,7 @@ Choosing an Optimizer
 ======================
 
 When the initial versions of OpenMDAO were released, the standard library only contained
-two optimizers: the gradient optimizer ``CONMIN``, and the genetic optimizer ``genetic``.
+two optimizers: the gradient optimizer CONMIN, and the genetic optimizer Genetic.
 OpenMDAO now includes several optimizers, provides access to a few more optimizers as plugins,
 and will continue to benefit from community contributions. Let's walk through how you can 
 use these different optimizers on the paraboloid example problem. 
@@ -36,8 +36,8 @@ The following tables summarizes the optimizers that are currently included in Op
 
 Any of these optimizers can be added to your model by importing it from ``openmdao.lib.drivers.api``. Which
 optimizer should you use? The answer is highly problem dependent. For example, if your problem has equality
-constraints, then you can use only the ``SLSQPdriver`` unless you can rewrite your equality constraint as a
-pair of inequality constraints. Similarly, ``COBYLAdriver``  is a gradient free optimization, which might be
+constraints, then you can use only the SLSQPdriver unless you can rewrite your equality constraint as a
+pair of inequality constraints. Similarly, COBYLAdriver is a gradient-free optimization, which might be
 suitable if you want to avoid finite difference calculations. 
 
 In the example below, you will have the opportunity to try out all of the OpenMDAO optimizers on the
@@ -149,16 +149,17 @@ blocks of lines are commented out in this code. Most of these contain settings f
 Settings are usually very specific to an optimizer, so we'll want to take care that only the lines for
 the optimizer we are using are active. The parameters, objective(s), and constraints(s) can all stay the
 same when you swap in a new optimizer, provided they are supported (e.g., equality constraints are only
-supported by ``SLSQPdriver``.) Also, we will sometimes slot a FiniteDifference differentiator, though that
-line of code is currently commented out. Some optimizers, like ``CONMINdriver``, have their own finite 
+supported by SLSQPdriver.) Also, we will sometimes slot a FiniteDifference differentiator, though that
+line of code is currently commented out. Some optimizers, like CONMINdriver, have their own finite 
 difference capability. Others, like ``SLSQ_driver``, do not and use the one from OpenMDAO. Regardless, 
-since we're using the ``ParaboloidDerivative`` component, which contains the analytical derivatives, 
+since we're using the ParaboloidDerivative component, which contains the analytical derivatives, 
 all of the finite difference calculations will use the FDAD (Finite Difference with Analytical 
 Derivatives) approach. So even if the optimizer is trying to do finite differences, OpenMDAO will 
 use the analytic derivatives that are provided to speed up the optimization.
 
-So first, let's run :download:`demo_opt.py <../../examples/openmdao.examples.simple/openmdao/examples/simple/demo_opt.py>`. 
-This first case is the constrained optimization of the paraboloid using CONMIN's internal finite difference calculation.
+So first, let's run :download:`demo_opt.py
+<../../examples/openmdao.examples.simple/openmdao/examples/simple/demo_opt.py>`.  This first case is the
+constrained optimization of the paraboloid using CONMIN's internal finite difference calculation.
 
 Note that the sample results presented here are representative of what you should see, but they
 may differ depending on your system architecture.
@@ -293,7 +294,7 @@ of the objective and constraints. Hessian calculation is expensive and scales n-
 of parameters. When NEWSUMT calculates the Hessian internally, it's using some approximations to speed
 the calculation. Thus, it might be advisable to use NEWSUMT's gradient calculation.
 
-Now let's try the ``COBYLAdriver``.
+Now let's try the COBYLAdriver.
 
 ::
 
@@ -345,12 +346,12 @@ Run ``demo_opt.py``:
     Minimum found at (7.166661, -7.833339)
     Elapsed time:  0.0184278488159 seconds
     
-This results in seven more function executions and a better minimum (although the value of the minimum
-is cut off in our printout because of the print display resolution -- you can make it more explicit
-with a specified-width format, like ``%.15f``). COBYLA needed three times the number of function evaluations as CONMIN, but
-it got to a much better value, and it does not exhibit any hyper-sensitivity with respect to its
-settings. Note also that COBYLA's elapsed time is still lower. The optimizer seems to have less
-overhead, which affects the total wall time for trivial functions like our paraboloid. But that overhead won't matter
+This results in seven more function executions and a better minimum (although the value of the minimum is cut
+off in our printout because of the print display resolution -- you can make it more explicit with a
+specified-width format, like ``%.15f``). COBYLA needed three times the number of function evaluations as
+CONMIN, but it got to a much better value, and it does not exhibit any hyper-sensitivity with respect to its
+settings. Note also that COBYLA's elapsed time is still lower. The optimizer seems to have less overhead,
+which affects the total wall time for trivial functions like our paraboloid. But that overhead won't matter
 for real analyses that have any appreciable computational cost. 
 
 Next up is SLSQP. This optimizer requires a gradient but has no internal finite difference calculations,
@@ -384,7 +385,7 @@ Now, let's run ``demo_opt.py``:
     Elapsed time:  0.00905513763428 seconds
 
 The SLSQP driver performs incredibly well on this problem! It gets the closest to the minimum with the least
-number of function executions and in the quickest wall time. It's also our only optimizer  that can directly
+number of function executions and in the quickest wall time. It's also our only optimizer that can directly
 handle equality constraints, so let's try one. We already know that the solution to our constrained problem
 lies along the constraint. We could express this as an equality constraint and expect that the same solution
 would be reached. The equality constraint was included in ``demo_opt.py``, so comment and uncomment as such:
@@ -418,7 +419,7 @@ And now for something completely different, let's try the Genetic optimizer.
                 # Create Optimizer instance
                 self.add('driver', Genetic())
                 
-``Genetic`` is currently our only evolutionary algorithm optimizer. As such, it has some
+Genetic is currently our only evolutionary algorithm optimizer. As such, it has some
 settings that are quite different:
                 
 ::
@@ -434,8 +435,8 @@ settings that are quite different:
                 self.selection_method = 'rank'
                 
 These are mostly the default values, although ``selection_method`` was changed to ``'rank'`` because
-it seemed to give better answers for this problem. ``Genetic`` doesn't use any gradient 
-information, so we don't need to worry about finite difference calculations here. Also, ``Genetic`` doesn't handle any kind of
+it seemed to give better answers for this problem. Genetic doesn't use any gradient 
+information, so we don't need to worry about finite difference calculations here. Also, Genetic doesn't handle any kind of
 constraints, so we'll only be able to play around with the unconstrained problem.
 
 ::
@@ -466,21 +467,20 @@ different results.
 Optimizers from Plugins
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-If you would like to choose from even more optimizers, look at the official
-plugins repository. This repository generally contains OpenMDAO plugins that are wrappers of
-other existing external applications which could not be included in OpenMDAO. Some of these may
-be commercial products (like Nastran), but others may be open source packages. Most of 
-the time, the plugin contains just the OpenMDAO wrapper file, and you will need to procure and
-install the application on its own. Presently, the official plugins repository contains two
-optimizers.  ``ipopt_wrapper`` is a wrapper for the `IPOPT <https://projects.coin-or.org/Ipopt>`_ 
-interior point optimizer. ``pyopt_driver`` is a wrapper for the `pyOpt <http://www.pyopt.org/>`_
-optimization framework. You should definitely check out pyOpt because it contains more than 15
-optimization algorithms, most of which aren't in OpenMDAO. Roughly half of them are included in
-the pyOpt installation, while the other half are commercial and require a separate installation
-of the optimization code. Some of the pyOpt's optimizers include ALPSO (Augmented Lagrangian
-Particle Swarm Optimizer), SNOPT (Sparse NOnlinear OPTimizer), and the famous NSGA2. To install
-the ``pyopt_driver``, type the following in an activated OpenMDAO environment at your operating
-system prompt:
+If you would like to choose from even more optimizers, look at the official plugins repository. This
+repository generally contains OpenMDAO plugins that are wrappers of other existing external applications which
+could not be included in OpenMDAO. Some of these may be commercial products (like Nastran), but others may be
+open source packages. Most of  the time, the plugin contains just the OpenMDAO wrapper file, and you will need
+to procure and install the application on its own. Presently, the official plugins repository contains two
+optimizers.  The ``ipopt_wrapper`` optimizer is a wrapper for the `IPOPT
+<https://projects.coin-or.org/Ipopt>`_  interior point optimizer, while ``pyopt_driver`` is a wrapper for the
+`pyOpt <http://www.pyopt.org/>`_ optimization framework. You should definitely check out pyOpt because it
+contains more than 15 optimization algorithms, most of which aren't in OpenMDAO. Roughly half of them are
+included in the pyOpt installation, while the other half are commercial and require a separate installation of
+the optimization code. Some of the pyOpt's optimizers include ALPSO (Augmented Lagrangian Particle Swarm
+Optimizer), SNOPT (Sparse NOnlinear OPTimizer), and the famous NSGA2 (Non Sorting Genetic Algorithm II). To
+install the ``pyopt_driver``, type the following in an activated OpenMDAO environment at your operating system
+prompt:
 
 ::
 

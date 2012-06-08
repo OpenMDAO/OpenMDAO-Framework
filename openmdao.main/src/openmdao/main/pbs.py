@@ -273,7 +273,9 @@ class PBS_Server(ObjServer):
         If 'error_path' is not specified, use stdout.
 
         If 'native_specification' is specified, it is added to the `qsub`
-        command just before the name of the generated script.
+        command just before the name of the generated script. If it contains
+        a ``select`` clause, then that will prevent generation of a ``select``
+        clause related to 'min_cpus'.
 
         Some resource limits are also handled:
 
@@ -333,6 +335,8 @@ class PBS_Server(ObjServer):
             base = os.path.basename(resource_desc['remote_command'])
         script_name = '%s%s' % (base, suffix)
 
+        native_specification = resource_desc.get('native_specification', [])
+
         with open(script_name, 'w') as script:
             if sys.platform == 'win32':  # pragma no cover
                 script.write('@echo off\n')
@@ -379,7 +383,12 @@ class PBS_Server(ObjServer):
                 elif key == 'job_environment':
                     env = value
                 elif key == 'min_cpus':
-                    script.write('%s -l select=%d:ncpus=1\n' % (prefix, value))
+                    # Only write select clause if not in 'native_specification'.
+                    for arg in native_specification:
+                        if 'select' in arg:
+                            break
+                    else:
+                        script.write('%s -l select=%d:ncpus=1\n' % (prefix, value))
                 elif key == 'email':
                     script.write('%s -M %s\n' % (prefix, ','.join(value)))
                 elif key == 'email_on_started':
@@ -449,8 +458,7 @@ class PBS_Server(ObjServer):
             os.chmod(script_name, 0700)
 
         # Add 'escape' clause.
-        if 'native_specification' in resource_desc:
-            cmd.extend(resource_desc['native_specification'])
+        cmd.extend(native_specification)
 
         cmd.append(os.path.join('.', script_name))
         self._logger.info('%r', ' '.join(cmd))

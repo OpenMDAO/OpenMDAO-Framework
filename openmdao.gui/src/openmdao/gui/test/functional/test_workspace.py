@@ -248,6 +248,7 @@ if __name__ == '__main__':
         _test_menu(browser)
         _test_newfile(browser)
         _test_properties(browser)
+        browser.quit()
         teardown_server()
     else:
         # Run under nose.
