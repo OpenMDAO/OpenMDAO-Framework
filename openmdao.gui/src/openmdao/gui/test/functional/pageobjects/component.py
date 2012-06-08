@@ -7,9 +7,10 @@ from elements import ButtonElement, GridElement, TextElement
 class ComponentPage(DialogPage):
     """ Component editor page. """
 
-    inputs_tab  = ButtonElement((By.XPATH, 'dl/dt[1]'))
-    slots_tab   = ButtonElement((By.XPATH, 'dl/dt[2]'))
-    outputs_tab = ButtonElement((By.XPATH, 'dl/dt[3]'))
+    dataflow_tab = ButtonElement((By.XPATH, "dl/dt[text()='Dataflow']"))
+    inputs_tab   = ButtonElement((By.XPATH, "dl/dt[text()='Inputs']"))
+    slots_tab    = ButtonElement((By.XPATH, "dl/dt[text()='Slots']"))
+    outputs_tab  = ButtonElement((By.XPATH, "dl/dt[text()='Outputs']"))
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))

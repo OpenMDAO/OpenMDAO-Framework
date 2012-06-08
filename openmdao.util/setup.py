@@ -46,5 +46,6 @@ setup(name='openmdao.util',
       add_reqs=openmdao.util.addreqs:add_reqs
       mkpseudo=openmdao.util.mkpseudo:mkpseudo
       envdump=openmdao.util.envirodump:envdump
+      pstadump=openmdao.util.dep:main
       """
     )

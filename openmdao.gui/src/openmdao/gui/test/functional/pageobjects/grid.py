@@ -24,11 +24,15 @@ class Grid(object):
             self._rows = [GridRow(self._browser, row) for row in rows]
         return self._rows
 
-    def __getitem__(self, index):
-        return self.rows[index]
+    @property
+    def value(self):
+        return [row.value for row in self.rows]
 
     def __len__(self):
         return len(self.rows)
+
+    def __getitem__(self, index):
+        return self.rows[index]
 
 
 class GridRow(object):
@@ -45,6 +49,13 @@ class GridRow(object):
             cells = self._root.find_elements(By.CLASS_NAME, 'slick-cell')
             self._cells = [GridCell(self._browser, cell) for cell in cells]
         return self._cells
+
+    @property
+    def value(self):
+        return [cell.value for cell in self.cells]
+
+    def __len__(self):
+        return len(self.cells)
 
     def __getitem__(self, index):
         return self.cells[index].value
