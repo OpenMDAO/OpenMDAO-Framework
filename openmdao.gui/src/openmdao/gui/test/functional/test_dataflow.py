@@ -2,6 +2,7 @@
 Tests of dataflow functions.
 """
 
+import logging
 import pkg_resources
 import re
 import sys
@@ -9,6 +10,8 @@ import time
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
+
+from selenium.common.exceptions import StaleElementReferenceException
 
 
 if sys.platform != 'win32':  # No testing on Windows yet.
@@ -103,7 +106,15 @@ def _test_connect(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page('libraries_tab').click()
-    workspace_page.find_palette_button('connect').click()
+    for retry in range(5):
+        try:
+            workspace_page.find_palette_button('connect').click()
+        except StaleElementReferenceException:
+            logging.warning('StaleElementReferenceException in _test_connect')
+        else:
+            break
+    else:
+        raise RuntimeError('Too many StaleElementReferenceExceptions')
     workspace_page.add_library_item_to_dataflow('connect.Top', 'top')
 
     # Connect components.
@@ -172,6 +183,7 @@ if __name__ == '__main__':
         browser = setup_chrome()
         _test_connect(browser)
         _test_maxmin(browser)
+        browser.quit()
         teardown_server()
     else:
         # Run under nose.
