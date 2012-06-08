@@ -16,6 +16,7 @@ from openmdao.lib.differentiators.chain_rule import ChainRule
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
 from openmdao.main.interfaces import implements, IDifferentiator, ISolver
+from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.units import convert_units
 from openmdao.util.decorators import stub_if_missing_deps
 
@@ -180,7 +181,7 @@ class Analytic(ChainRule):
 
         # Traverse the workflow
         self._find_edges(scope, dscope)
-        scope_name = scope.get_pathname()
+        scope_name = dscope.get_pathname()
         
         if head:
             head = '%s.' % head
@@ -192,6 +193,7 @@ class Analytic(ChainRule):
             
             # For assemblies, we need to traverse their workflows too
             node = scope.parent.get(name)
+            
             if isinstance(node, Assembly):
 
                 # Assembly inputs are also counted as unknowns. This makes
@@ -201,9 +203,18 @@ class Analytic(ChainRule):
                     input_full = "%s%s.%s" % (head, name, input_name)
                     self.var_list.append(input_full)
                     
-                assy_scope_name = node.get_pathname()
+                node_scope_name = node.get_pathname()
                 self._edge_counter(node.driver, node.driver, index,
-                                   assy_scope_name)
+                                   node_scope_name)
+                
+            elif isinstance(node, Driver):
+                
+                if not has_interface(node, ISolver):
+                    msg = "Only nested solvers are supported"
+                    raise NotImplementedError(msg)
+                
+                node_scope_name = node.get_pathname()
+                self._edge_counter(scope, node, index, head)
             
             # Save the names for all our unknowns while we are here
             for output_name in edges[index]:
@@ -243,10 +254,17 @@ class Analytic(ChainRule):
              
             node_name = node.name
             
-            # We don't handle nested drivers yet.
+            # So far, we only handle nested solvers.
             if isinstance(node, Driver):
-                raise NotImplementedError('Nested drivers')
+                if not has_interface(node, ISolver):
+                    msg = "Only nested solvers are supported"
+                    raise NotImplementedError(msg)
              
+                # Recurse
+                i_eq = self._assemble_direct(ascope, node, i_eq, head)
+                
+                # Coupled sensitivity from the solver constraint
+                
             # Recurse into assemblies.
             elif isinstance(node, Assembly):
                  

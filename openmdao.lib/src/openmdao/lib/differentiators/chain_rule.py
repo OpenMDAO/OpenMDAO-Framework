@@ -7,7 +7,7 @@ from ordereddict import OrderedDict
 from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float
-from openmdao.main.interfaces import implements, IDifferentiator
+from openmdao.main.interfaces import implements, IDifferentiator, IDriver
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
 from openmdao.main.numpy_fallback import array
@@ -177,13 +177,16 @@ class ChainRule(HasTraits):
         
         # Loop through each comp in the workflow and assemble our data
         # structures
-        for node in scope.workflow.__iter__():
+        for node in dscope.workflow.__iter__():
     
             node_name = node.name
         
-            # We don't handle nested drivers yet.
+            # We don't handle nested drivers yet...
+            # ... though the Analytic differentiator can handle solvers
             if isinstance(node, Driver):
-                raise NotImplementedError('Nested drivers')
+                
+                # There are no connections on an ISolver
+                edge_dict[node_name] = ([], [])
             
             # Assemblies are tricky, but they should be able to calculate all
             # connected derivatives on their boundary.
