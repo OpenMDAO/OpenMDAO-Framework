@@ -11,11 +11,10 @@ import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
-from selenium.common.exceptions import StaleElementReferenceException
-
 
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import setup_server, teardown_server, generate, begin, new_project
+    from selenium.common.exceptions import StaleElementReferenceException
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
