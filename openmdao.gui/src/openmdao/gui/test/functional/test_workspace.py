@@ -299,17 +299,17 @@ def _test_maxmin(browser):
     project_info_page.delete_project()
     print "_test_maxmin complete."
 
-
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
         from util import setup_chrome, setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-       # _test_console(browser)
-       # _test_import(browser)
-       # _test_menu(browser)
-       # _test_newfile(browser)
+        _test_console(browser)
+        _test_import(browser)
+        _test_menu(browser)
+        _test_newfile(browser)
+        _test_maxmin(browser)
         _test_addfiles(browser)
         teardown_server()
     else:

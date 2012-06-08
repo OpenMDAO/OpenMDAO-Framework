@@ -103,4 +103,10 @@
                 <input type="hidden" name="path" value="{{ path }}" />
             {% end %}
             <input id="add-button" type="button" value="Add Files" class='button' onclick="uploadFiles()"/>
+        <input type="file" name="myfile" multiple="true" class='button'/>
+        <br/>
+        {% if path %}
+        <input type="hidden" name="path" value="{{ path }}" />
+        {% end %}
+        <input id="add-button" type="submit" value="Add Files" class='button' />
 {% end %}
