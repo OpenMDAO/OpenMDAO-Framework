@@ -110,7 +110,7 @@ class ChainRule(HasTraits):
                       for (in1,in2) in product(self.param_names, self.param_names)])
 
 
-    def _find_edges(self, scope):
+    def _find_edges(self, scope, dscope):
         ''' Finds the minimum set of edges for which we need derivatives.
         These edges contain the inputs and outputs that are in the workflow
         of the driver, and whose source or target component has derivatives
@@ -120,22 +120,35 @@ class ChainRule(HasTraits):
         workflow. Each component has a tuple that contains the input and
         output varpaths that are active in the derivative calculation.
         
+        A separate driver scope (dscope) can also be specified for drivers
+        that are not the top driver ('driver') in the assembly's workflow.
+        
         TODO - As part of this process, we will already need to know of any
         blocks that must be finite differenced together.
         '''
         
-        scope_name = scope.get_pathname()
+        scope_name = dscope.get_pathname()
         self.edge_dicts[scope_name] = OrderedDict()
         edge_dict = self.edge_dicts[scope_name]
         
         # Find our minimum set of edges part 1
         # Inputs and Outputs from interior edges
-        driver_set = scope.workflow.get_names()
+        driver_set = dscope.workflow.get_names()
         interior_edges = scope._parent._depgraph.get_interior_edges(driver_set)
         
         needed_in_edges = set([b for a, b in interior_edges])
-        needed_edges = set([a for a, b in interior_edges])
+        needed_edge_exprs = set([a for a, b in interior_edges])
         
+        # Output edges are expressions, so we need to find the referenced
+        # variables
+        
+        needed_edges = []
+        for edge in needed_edge_exprs:
+            expr = scope._parent._exprmapper.get_expr(edge)
+            needed_edges.append(expr.refs().pop())
+            
+        needed_edges = set(needed_edges)
+            
         # Find our minimum set of edges part 2
         # Inputs connected to parameters
         needed_in_edges = needed_in_edges.union(set(self.param_names))
@@ -186,8 +199,10 @@ class ChainRule(HasTraits):
                     needed_inputs.append(edge)
                     
                 needed_outputs = []
-                for edge in node.parent._depgraph.var_edges(node_name):
-                    parts = edge[0].split('.')
+                for edge_expr in node.parent._depgraph.var_edges(node_name):
+                    expr = node._parent._exprmapper.get_expr(edge_expr[0])
+                    edge = expr.refs().pop()
+                    parts = edge.split('.')
                     edge = '.'.join(parts[1:])
                     needed_outputs.append(edge)
                     
@@ -366,7 +381,7 @@ class ChainRule(HasTraits):
         # Figure out what outputs we need
         scope_name = scope.get_pathname()
         if scope_name not in self.edge_dicts:
-            self._find_edges(scope)
+            self._find_edges(scope, scope)
 
         # Loop through each comp in the workflow
         for node in scope.workflow.__iter__():
@@ -415,15 +430,16 @@ class ChainRule(HasTraits):
                     else:
                 
                         sources = node.parent._depgraph.connections_to(full_name)
-                        source = sources[0][0]
+                        expr_txt = sources[0][0]
                         target = sources[0][1]
                         
-                        expr_txt = node.parent._depgraph.get_source(target)
-                        
                         # Variables on an assembly boundary
-                        if source[0:4] == '@bin' and source.count('.') < 2:
-                            source = source.replace('@bin.', '')
+                        if expr_txt[0:4] == '@bin':
+                            expr_txt = expr_txt.replace('@bin.', '')
                         
+                        expr = node.parent._exprmapper.get_expr(expr_txt)
+                        source = expr.refs().pop()
+                            
                         # Need derivative of the expression
                         expr = node.parent._exprmapper.get_expr(expr_txt)
                         expr_deriv = expr.evaluate_gradient(scope=node.parent,
@@ -477,20 +493,20 @@ class ChainRule(HasTraits):
         name = scope.name
         
         for item in scope._depgraph.var_edges('@xin'):
-            src = item[0].replace('@xin.','')
+            src_expr = item[0].replace('@xin.','')
+            expr = scope._exprmapper.get_expr(src_expr)
+            src = expr.refs().pop()
             upscope_src = src.replace('parent.','')
-            dest = item[1]
             
             # Real connections on boundary
-            if dest.count('.') < 2:
-                dest = dest.split('.')[1]
+            dest = item[1]
+            dest = dest.split('.')[1]
+            dest_txt = dest.replace('@bin.','')
                 
             # Differentiate all expressions
-            dest_txt = dest.replace('@bin.','')
-            expr_txt = scope._depgraph.get_source(dest_txt)
-            expr = scope._exprmapper.get_expr(expr_txt)
             expr_deriv = expr.evaluate_gradient(scope=scope,
                                                 wrt=src)
+            
             # We also need the derivative of the unit
             # conversion factor if there is one
             metadata = expr.get_metadata('units')

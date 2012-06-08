@@ -15,7 +15,7 @@ from openmdao.lib.datatypes.api import Enum, Bool
 from openmdao.lib.differentiators.chain_rule import ChainRule
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
-from openmdao.main.interfaces import implements, IDifferentiator
+from openmdao.main.interfaces import implements, IDifferentiator, ISolver
 from openmdao.units import convert_units
 from openmdao.util.decorators import stub_if_missing_deps
 
@@ -94,32 +94,15 @@ class Analytic(ChainRule):
         # Parent class method assembles all of our driver connections
         super(Analytic, self).setup()
         
-        # Traverses the workflow
-        self._find_edges(self._parent)
-        
         # Direct mode: count outputs
         # Adjoint mode: count inputs
         index = 0 if self.mode == 'adjoint' else 1
         
-        n_var = 0
         self.var_list = []
-        scope = self._parent
-        scope_name = scope.get_pathname()
-        
-        # Number of unknowns = number of edges in our edge_dict
-        for edge_dict in self.edge_dicts.values():
-            for name, edges in edge_dict.iteritems():
-                n_var += len(edges[index])
-                
-                # Assemblies are counted in their own scope, so skip them
-                comp = scope.parent.get(name)
-                if isinstance(comp, Assembly):
-                    continue
-                
-                # Save the names for all our unknowns while we are here
-                for output_name in edges[index]:
-                    output_full = "%s.%s" % (name, output_name)
-                    self.var_list.append(output_full)
+
+        # Count recursively to get n_var and var_list
+        self._edge_counter(self._parent, self._parent, index)
+        n_var = len(self.var_list)
                 
         n_param = len(self.param_names)
         n_eq = len(self.function_names)
@@ -191,28 +174,75 @@ class Analytic(ChainRule):
                         
             i_eq += 1
         
+    def _edge_counter(self, scope, dscope, index, head=''):
+        """Helper function to count edges in the edge dicts, called
+        recursively for assy or driver scopes."""
+
+        # Traverse the workflow
+        self._find_edges(scope, dscope)
+        scope_name = scope.get_pathname()
+        
+        if head:
+            head = '%s.' % head
+            
+        index_bar = 0 if index==1 else 1
+            
+        # Number of unknowns = number of edges in our edge_dict
+        for name, edges in self.edge_dicts[scope_name].iteritems():
+            
+            # For assemblies, we need to traverse their workflows too
+            node = scope.parent.get(name)
+            if isinstance(node, Assembly):
+
+                # Assembly inputs are also counted as unknowns. This makes
+                # recursion easier so that you don't have to query out of
+                # scope.
+                for input_name in edges[index_bar]:
+                    input_full = "%s%s.%s" % (head, name, input_name)
+                    self.var_list.append(input_full)
+                    
+                assy_scope_name = node.get_pathname()
+                self._edge_counter(node.driver, node.driver, index,
+                                   assy_scope_name)
+            
+            # Save the names for all our unknowns while we are here
+            for output_name in edges[index]:
+                output_full = "%s%s.%s" % (head, name, output_name)
+                self.var_list.append(output_full)
+                
+        
     def calc_gradient(self):
         """Calculates the gradient vectors for all outputs in this Driver's
         workflow."""
         
+        # This stuff only needs to run once
         if self._parent not in self.edge_dicts:
             self.setup()
-            
+        
+        # Assemble matrices for problem every run
         if self.mode == 'direct':
-            self._assemble_direct()
+            ascope = self._parent.parent
+            dscope = self._parent
+            self._assemble_direct(ascope, dscope)
         
         self._solve()
         
         
-    def _assemble_direct(self):
-        """Assembles the system matrices for the direct problem."""
+    def _assemble_direct(self, ascope, dscope, eq_num=0, head=''):
+        """Assembles the system matrices for the direct problem.
+        This is meant to be called recursively, with the assembly scope,
+        driver scope, and current equation number as inputs."""
         
-        scope = self._parent
-        scope_name = scope.get_pathname()
+        scope_name = dscope.get_pathname()
         
-        i_eq = 0
-        for node in scope.workflow.__iter__():
+        if head:
+            head = '%s.' % head
+            
+        i_eq = eq_num
+        for node in dscope.workflow.__iter__():
              
+            node_name = node.name
+            
             # We don't handle nested drivers yet.
             if isinstance(node, Driver):
                 raise NotImplementedError('Nested drivers')
@@ -222,16 +252,118 @@ class Analytic(ChainRule):
                  
                 if not isinstance(node.driver, Run_Once):
                     raise NotImplementedError('Nested drivers')
+                
+                edge_dict = self.edge_dicts[scope_name][node_name]
+                
+                # Assembly inputs are unknowns, so they get equations
+                for input_name in edge_dict[0]:
+                    
+                    self.LHS[i_eq][i_eq] = 1.0
+                    input_full = "%s.%s" % (node_name, input_name)
+                
+                    # Assy input conected to parameter goes in RHS
+                    if input_full in self.param_names:
+                         
+                        i_param = self.param_names.index(input_full)
+                         
+                        self.RHS[i_eq][i_param] = \
+                            local_derivs[output_name][input_name]
+                         
+                    # Assy Input connected to other outputs goes in LHS
+                    else:
+                        
+                        sources = ascope._depgraph.connections_to(input_full)
+
+                        expr_txt = sources[0][0]
+                        target = sources[0][1]
+                        
+                        expr = ascope._exprmapper.get_expr(expr_txt)
+                        source = expr.refs().pop()
+                        
+                        # Variables on an assembly boundary
+                        if source[0:4] == '@bin' and source.count('.') < 2:
+                            source = source.replace('@bin.', '')
+                        
+                        # Need derivative of the expression
+                        expr_deriv = expr.evaluate_gradient(scope=ascope,
+                                                            wrt=source)
+                        
+                        # We also need the derivative of the unit
+                        # conversion factor if there is one
+                        metadata = expr.get_metadata('units')
+                        source_unit = [x[1] for x in metadata if x[0]==source]
+                        if source_unit and source_unit[0]:
+                            dest_expr = ascope._exprmapper.get_expr(target)
+                            metadata = dest_expr.get_metadata('units')
+                            target_unit = [x[1] for x in metadata if x[0]==target]
+
+                            expr_deriv[source] = expr_deriv[source] * \
+                                convert_units(1.0, source_unit[0], target_unit[0])
+
+                        # Chain together deriv from var connection and comp
+                        i_var = self.var_list.index("%s%s" % (head, source))
+                         
+                        self.LHS[i_eq][i_var] = -expr_deriv[source]
                  
-                raise NotImplementedError('Nested drivers')
-                #self._recurse_assy(node, derivs, param)
+                    i_eq += 1
+                
+                # Recurse
+                assy_scope_name = node.get_pathname()
+                i_eq = self._assemble_direct(node, node.driver, i_eq, 
+                                             assy_scope_name)
                                       
+                # Assembly outputs are unknowns, so they get equations
+                sub_scope = ascope.get(node_name)
+                for output_name in edge_dict[1]:
+                    
+                    self.LHS[i_eq][i_eq] = 1.0
+                    output_full = "%s.%s" % (node_name, output_name)
+                
+                    sources = sub_scope._depgraph.connections_to(output_name)
+                    for connect in sources:
+                        if '@bout' in connect[1]:
+                            expr_txt = connect[0]
+                            target = connect[1]
+                            break
+                    
+                    # Variables on an assembly boundary
+                    if target[0:5] == '@bout':
+                        target = target.replace('@bout.', '')
+                    
+                    expr = sub_scope._exprmapper.get_expr(expr_txt)
+                    source = expr.refs().pop()
+                    
+                    # Need derivative of the expression
+                    expr_deriv = expr.evaluate_gradient(scope=sub_scope,
+                                                        wrt=source)
+                    
+                    # We also need the derivative of the unit
+                    # conversion factor if there is one
+                    metadata = expr.get_metadata('units')
+                    source_unit = [x[1] for x in metadata if x[0]==source]
+                    if source_unit and source_unit[0]:
+                        dest_expr = sub_scope._exprmapper.get_expr(target)
+                        metadata = dest_expr.get_metadata('units')
+                        target_unit = [x[1] for x in metadata if x[0]==target]
+
+                        expr_deriv[source] = expr_deriv[source] * \
+                            convert_units(1.0, source_unit[0], target_unit[0])
+
+                    # Chain together deriv from var connection and comp
+                    i_var = self.var_list.index("%s%s.%s" % (head, 
+                                                             node_name, 
+                                                             source))
+                     
+                    self.LHS[i_eq][i_var] = -expr_deriv[source]
+                 
+                    i_eq += 1
+                
+
             # This component can determine its derivatives.
             elif hasattr(node, 'calculate_first_derivatives'):
                  
                 node.calc_derivatives(first=True)
              
-                node_name = node.name
                 edge_dict = self.edge_dicts[scope_name][node_name]
                 local_derivs = node.derivatives.first_derivatives
                  
@@ -257,22 +389,20 @@ class Analytic(ChainRule):
                         # Input connected to other outputs goes in LHS
                         else:
                             
-                            sources = scope.parent._depgraph.connections_to(input_full)
+                            sources = ascope._depgraph.connections_to(input_full)
 
-                            source = sources[0][0]
+                            expr_txt = sources[0][0]
                             target = sources[0][1]
                             
-                            i_var = self.var_list.index(source)
-                             
-                            expr_txt = scope.parent._depgraph.get_source(target)
-                            
                             # Variables on an assembly boundary
-                            #if source[0:4] == '@bin' and source.count('.') < 2:
-                            #    source = source.replace('@bin.', '')
+                            if expr_txt[0:4] == '@bin':
+                                expr_txt = expr_txt.replace('@bin.', '')
                             
+                            expr = ascope._exprmapper.get_expr(expr_txt)
+                            source = expr.refs().pop()
+                                
                             # Need derivative of the expression
-                            expr = scope.parent._exprmapper.get_expr(expr_txt)
-                            expr_deriv = expr.evaluate_gradient(scope=scope.parent,
+                            expr_deriv = expr.evaluate_gradient(scope=ascope,
                                                                 wrt=source)
                             
                             # We also need the derivative of the unit
@@ -280,7 +410,7 @@ class Analytic(ChainRule):
                             metadata = expr.get_metadata('units')
                             source_unit = [x[1] for x in metadata if x[0]==source]
                             if source_unit and source_unit[0]:
-                                dest_expr = scope.parent._exprmapper.get_expr(target)
+                                dest_expr = ascope._exprmapper.get_expr(target)
                                 metadata = dest_expr.get_metadata('units')
                                 target_unit = [x[1] for x in metadata if x[0]==target]
 
@@ -288,12 +418,16 @@ class Analytic(ChainRule):
                                     convert_units(1.0, source_unit[0], target_unit[0])
 
                             # Chain together deriv from var connection and comp
+                            i_var = self.var_list.index("%s%s" % (head, source))
+                             
                             self.LHS[i_eq][i_var] = \
                                 -local_derivs[output_name][input_name] * \
                                  expr_deriv[source]
                      
                     i_eq += 1
             
+        return i_eq
+    
     def _solve(self):
         """Solve the linear system.
         

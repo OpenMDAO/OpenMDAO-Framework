@@ -236,23 +236,23 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.driver.add_objective(obj)
         self.top.driver.add_constraint(con)
         
-        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('1.0*comp1.y1', 'comp2.x1')
         self.top.connect('comp1.y2', 'comp3.x1')
         self.top.connect('comp2.y1', 'comp4.x1')
         self.top.connect('comp3.y1', 'comp4.x2')
-        self.top.connect('comp4.y1', 'comp5.x1')
-        self.top.connect('comp4.y2', 'comp5.x2')
-        self.top.connect('comp4.y3', 'comp5.x3')
+        self.top.connect('2.0*comp4.y1', 'comp5.x1')
+        self.top.connect('2.0*comp4.y2', 'comp5.x2')
+        self.top.connect('2.0*comp4.y3', 'comp5.x3')
     
         self.top.comp1.x1 = 2.0
         self.top.run()
         self.top.driver.differentiator.calc_gradient()
         
         grad = self.top.driver.differentiator.get_gradient(obj)
-        assert_rel_error(self, grad[0], 313.0, .001)
+        assert_rel_error(self, grad[0], 626.0, .001)
         
         grad = self.top.driver.differentiator.get_gradient('comp5.y1-comp3.y1>0')
-        assert_rel_error(self, grad[0], -313.0+10.5, .001)
+        assert_rel_error(self, grad[0], -626.0+10.5, .001)
     
     def test_large_dataflow_nested_assys(self):
         
@@ -303,20 +303,27 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.driver.add_objective(obj)
         self.top.driver.add_constraint(con)
         
+        self.top.nest1.add('real_c2_x1', Float(iotype='in', desc='I am really here'))
         self.top.nest1.add('real_c3_x1', Float(iotype='in', desc='I am really here'))
+        self.top.nest1.add('real_c4_y1', Float(iotype='out', desc='I am really here'))
         self.top.nest1.add('real_c4_y2', Float(iotype='out', desc='I am really here'))
+        self.top.nest1.add('real_c4_y3', Float(iotype='out', desc='I am really here'))
     
-        self.top.connect('comp1.y1', 'nest1.comp2.x1')
         #self.top.connect('comp1.y1', 'nest1.comp2.x1')
+        self.top.connect('comp1.y1', 'nest1.real_c2_x1')
         self.top.connect('comp1.y2', 'nest1.real_c3_x1')
+        self.top.nest1.connect('real_c2_x1', 'comp2.x1')
         self.top.nest1.connect('real_c3_x1', 'comp3.x1')
         self.top.nest1.connect('comp2.y1', 'comp4.x1')
         self.top.nest1.connect('comp3.y1', 'comp4.x2')
+        self.top.nest1.connect('comp4.y1', 'real_c4_y1')
         self.top.nest1.connect('comp4.y2', 'real_c4_y2')
+        self.top.nest1.connect('comp4.y3', 'real_c4_y3')
+        self.top.connect('nest1.real_c4_y1', 'comp5.x1')
         self.top.connect('nest1.real_c4_y2', 'comp5.x2')
-        self.top.connect('nest1.comp4.y1', 'comp5.x1')
-        self.top.connect('nest1.comp4.y3', 'comp5.x3')
-        #self.top.connect('nest1.comp4.y2 + 1.0*nest1.comp4.y3', 'comp5.x3')
+        self.top.connect('nest1.real_c4_y3', 'comp5.x3')
+        #self.top.connect('nest1.comp4.y1', 'comp5.x1')
+        #self.top.connect('nest1.comp4.y3', 'comp5.x3')
     
         self.top.comp1.x1 = 2.0
         self.top.run()
@@ -440,8 +447,15 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.nest1.add('comp2', CompInch())
         self.top.add('comp3', CompFoot())
         
-        self.top.connect('comp1.y', 'nest1.comp2.x')
-        self.top.connect('nest1.comp2.y', 'comp3.x')
+        self.top.nest1.add('nestx', Float(iotype='in', units='inch', desc='Legit connection'))
+        self.top.nest1.add('nesty', Float(iotype='out', units='inch', desc='Legit connection'))
+        
+        #self.top.connect('comp1.y', 'nest1.comp2.x')
+        self.top.connect('1.0*comp1.y', 'nest1.nestx')
+        self.top.nest1.connect('nestx', 'comp2.x')
+        #self.top.connect('nest1.comp2.y', 'comp3.x')
+        self.top.nest1.connect('comp2.y', 'nesty')
+        self.top.connect('1.0*nest1.nesty', 'comp3.x')
         
         self.top.add('driver', Driv())
         self.top.driver.workflow.add(['comp1', 'nest1', 'comp3'])
@@ -450,10 +464,23 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.driver.differentiator = ChainRule()
         
         obj = 'comp3.y'
-        con = 'nest1.comp2.y>0'
+        con = 'nest1.nesty>0'
         self.top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
         self.top.driver.add_objective(obj)
         self.top.driver.add_constraint(con)
+        
+        self.top.comp1.x = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 8.0, .001)
+        grad = self.top.driver.differentiator.get_gradient(con)
+        assert_rel_error(self, grad[0], -48.0, .001)
+        
+        # Testing conversion at this boundary (ft instead of inch)
+        self.top.nest1.add('nestx', Float(iotype='in', units='ft', desc='Legit connection'))
+        self.top.nest1.add('nesty', Float(iotype='out', units='inch', desc='Legit connection'))
         
         self.top.comp1.x = 1.0
         self.top.run()
