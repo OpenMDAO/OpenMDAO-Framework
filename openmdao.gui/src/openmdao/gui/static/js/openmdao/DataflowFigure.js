@@ -60,6 +60,12 @@ openmdao.DataflowFigure.prototype=new draw2d.CompartmentFigure();
 openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     var item=draw2d.CompartmentFigure.prototype.createHTMLElement.call(this);
 
+    // assign class and data used by jstree as a drop target
+    var elm = jQuery(item);
+    elm.addClass("DataflowFigure");
+    elm.data('name',this.name);
+    elm.data('pathname',this.pathname);
+
     item.id=this.id;
     item.style.color="black";
     item.style.position="absolute";
@@ -72,98 +78,101 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     item.style.outline="none";
     item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
 
-    var circleIMG;
-    if (this.maxmin === '+') {
-       circleIMG = "url(/static/images/circle-plus.png)";
-    } else if (this.maxmin === '-') {
-       circleIMG = "url(/static/images/circle-minus.png)";
-    } else {
-       circleIMG = "url(/static/images/circle.png)";
+    if (this.pathname !== '') {
+        var circleIMG;
+        if (this.maxmin === '+') {
+           circleIMG = "url(/static/images/circle-plus.png)";
+        } else if (this.maxmin === '-') {
+           circleIMG = "url(/static/images/circle-minus.png)";
+        } else {
+           circleIMG = "url(/static/images/circle.png)";
+        }
+
+        this.top_left=document.createElement("div");
+        this.top_left.style.background=circleIMG+" no-repeat top left";
+        this.top_left.style.position="absolute";
+        this.top_left.style.width=this.cornerWidth+"px";
+        this.top_left.style.height=this.cornerHeight+"px";
+        this.top_left.style.left="0px";
+        this.top_left.style.top="0px";
+        this.top_left.style.fontSize="2px";
+
+        this.top_right=document.createElement("div");
+        this.top_right.style.background=circleIMG+" no-repeat top right";
+        this.top_right.style.position="absolute";
+        this.top_right.style.width=this.cornerWidth+"px";
+        this.top_right.style.height=this.cornerHeight+"px";
+        this.top_right.style.left="0px";
+        this.top_right.style.top="0px";
+        this.top_right.style.fontSize="2px";
+        this.top_right.className="DataflowFigureTopRight";
+
+        this.bottom_left=document.createElement("div");
+        this.bottom_left.style.background=circleIMG+" no-repeat bottom left";
+        this.bottom_left.style.position="absolute";
+        this.bottom_left.style.width=this.cornerWidth+"px";
+        this.bottom_left.style.height=this.cornerHeight+"px";
+        this.bottom_left.style.left="0px";
+        this.bottom_left.style.top="0px";
+        this.bottom_left.style.fontSize="2px";
+
+        this.bottom_right=document.createElement("div");
+        this.bottom_right.style.background=circleIMG+" no-repeat bottom right";
+        this.bottom_right.style.position="absolute";
+        this.bottom_right.style.width=this.cornerWidth+"px";
+        this.bottom_right.style.height=this.cornerHeight+"px";
+        this.bottom_right.style.left="0px";
+        this.bottom_right.style.top="0px";
+        this.bottom_right.style.fontSize="2px";
+
+        this.header=document.createElement("div");
+        this.header.style.position="absolute";
+        this.header.style.left=this.cornerWidth+"px";
+        this.header.style.top="0px";
+        this.header.style.height=(this.cornerHeight)+"px";
+        this.header.style.backgroundColor="#CCCCCC";
+        this.header.style.borderTop="3px solid #666666";
+        this.header.style.fontSize="9px";
+        this.header.style.textAlign="center";
+        this.disableTextSelection(this.header);
+        this.header.className="DataflowFigureHeader";
+
+        this.footer=document.createElement("div");
+        this.footer.style.position="absolute";
+        this.footer.style.left=this.cornerWidth+"px";
+        this.footer.style.top="0px";
+        this.footer.style.height=(this.cornerHeight)+"px";
+        this.footer.style.backgroundColor="white";
+        this.footer.style.borderBottom="1px solid #666666";
+        this.footer.style.fontSize="2px";
+
+        this.contentArea=document.createElement("div");
+        this.contentArea.style.position="absolute";
+        this.contentArea.style.left="0px";
+        this.contentArea.style.top=this.cornerHeight+"px";
+        this.contentArea.style.backgroundColor="white";
+        this.contentArea.style.borderTop="2px solid #666666";
+        this.contentArea.style.borderLeft="1px solid #666666";
+        this.contentArea.style.borderRight="1px solid #666666";
+        this.contentArea.style.overflow="hidden";
+        this.contentArea.style.fontSize="9pt";
+        this.disableTextSelection(this.contentArea);
+
+        item.appendChild(this.top_left);
+        item.appendChild(this.header);
+        item.appendChild(this.top_right);
+        item.appendChild(this.contentArea);
+        item.appendChild(this.bottom_left);
+        item.appendChild(this.footer);
+        item.appendChild(this.bottom_right);
+    }
+    else {
+//        item.style.borderColor = 'transparent';
+//        item.style.backgroundColor == 'transparent';
+        elm.css({ 'background-color': 'transparent', 
+                  'border-color': 'transparent' });
     }
 
-    this.top_left=document.createElement("div");
-    this.top_left.style.background=circleIMG+" no-repeat top left";
-    this.top_left.style.position="absolute";
-    this.top_left.style.width=this.cornerWidth+"px";
-    this.top_left.style.height=this.cornerHeight+"px";
-    this.top_left.style.left="0px";
-    this.top_left.style.top="0px";
-    this.top_left.style.fontSize="2px";
-
-    this.top_right=document.createElement("div");
-    this.top_right.style.background=circleIMG+" no-repeat top right";
-    this.top_right.style.position="absolute";
-    this.top_right.style.width=this.cornerWidth+"px";
-    this.top_right.style.height=this.cornerHeight+"px";
-    this.top_right.style.left="0px";
-    this.top_right.style.top="0px";
-    this.top_right.style.fontSize="2px";
-    this.top_right.className="DataflowFigureTopRight";
-
-    this.bottom_left=document.createElement("div");
-    this.bottom_left.style.background=circleIMG+" no-repeat bottom left";
-    this.bottom_left.style.position="absolute";
-    this.bottom_left.style.width=this.cornerWidth+"px";
-    this.bottom_left.style.height=this.cornerHeight+"px";
-    this.bottom_left.style.left="0px";
-    this.bottom_left.style.top="0px";
-    this.bottom_left.style.fontSize="2px";
-
-    this.bottom_right=document.createElement("div");
-    this.bottom_right.style.background=circleIMG+" no-repeat bottom right";
-    this.bottom_right.style.position="absolute";
-    this.bottom_right.style.width=this.cornerWidth+"px";
-    this.bottom_right.style.height=this.cornerHeight+"px";
-    this.bottom_right.style.left="0px";
-    this.bottom_right.style.top="0px";
-    this.bottom_right.style.fontSize="2px";
-
-    this.header=document.createElement("div");
-    this.header.style.position="absolute";
-    this.header.style.left=this.cornerWidth+"px";
-    this.header.style.top="0px";
-    this.header.style.height=(this.cornerHeight)+"px";
-    this.header.style.backgroundColor="#CCCCCC";
-    this.header.style.borderTop="3px solid #666666";
-    this.header.style.fontSize="9px";
-    this.header.style.textAlign="center";
-    this.disableTextSelection(this.header);
-    this.header.className="DataflowFigureHeader";
-
-    this.footer=document.createElement("div");
-    this.footer.style.position="absolute";
-    this.footer.style.left=this.cornerWidth+"px";
-    this.footer.style.top="0px";
-    this.footer.style.height=(this.cornerHeight)+"px";
-    this.footer.style.backgroundColor="white";
-    this.footer.style.borderBottom="1px solid #666666";
-    this.footer.style.fontSize="2px";
-
-    this.contentArea=document.createElement("div");
-    this.contentArea.style.position="absolute";
-    this.contentArea.style.left="0px";
-    this.contentArea.style.top=this.cornerHeight+"px";
-    this.contentArea.style.backgroundColor="white";
-    this.contentArea.style.borderTop="2px solid #666666";
-    this.contentArea.style.borderLeft="1px solid #666666";
-    this.contentArea.style.borderRight="1px solid #666666";
-    this.contentArea.style.overflow="hidden";
-    this.contentArea.style.fontSize="9pt";
-    this.disableTextSelection(this.contentArea);
-
-    // assign class and data used by jstree as a drop target
-    var elm = jQuery(item);
-    elm.addClass("DataflowFigure");
-    elm.data('name',this.name);
-    elm.data('pathname',this.pathname);
-
-    item.appendChild(this.top_left);
-    item.appendChild(this.header);
-    item.appendChild(this.top_right);
-    item.appendChild(this.contentArea);
-    item.appendChild(this.bottom_left);
-    item.appendChild(this.footer);
-    item.appendChild(this.bottom_right);
     return item;
 };
 
@@ -240,7 +249,7 @@ openmdao.DataflowFigure.prototype.onFigureDrop=function(figure){
 /** set dimensions and relocate ports accordingly */
 openmdao.DataflowFigure.prototype.setDimension=function(w,h){
     draw2d.CompartmentFigure.prototype.setDimension.call(this,w,h);
-    if(this.top_left!==null){
+    if(this.hasOwnProperty('top_left') && this.top_left!==null){
         this.top_right.style.left=(this.width-this.cornerWidth)+"px";
         this.bottom_right.style.left=(this.width-this.cornerWidth)+"px";
         this.bottom_right.style.top=(this.height-this.cornerHeight)+"px";
@@ -251,26 +260,24 @@ openmdao.DataflowFigure.prototype.setDimension=function(w,h){
         this.footer.style.width=(this.width-this.cornerWidth*2+1)+"px";
         this.footer.style.top=(this.height-this.cornerHeight-1)+"px";
     }
-    if (this.outputPort!==null) {
+    if (this.hasOwnProperty('outputPort') && this.outputPort!==null) {
         this.outputPort.setPosition(this.width+5,this.height/2);
     }
-    if (this.inputPort!==null) {
+    if (this.hasOwnProperty('inputPort') && this.inputPort!==null) {
         this.inputPort.setPosition(this.width/2,0);
     }
 };
 
 openmdao.DataflowFigure.prototype.setTitle=function(title){
-    if (title.length >0) {
+    if (title.length > 0 && this.hasOwnProperty('header')) {
         this.header.innerHTML= title;
-    }
-    else {
-        this.header.innerHTML= "Globals";
-        this.header.style.fontStyle="italic";
     }
 };
 
 openmdao.DataflowFigure.prototype.setContent=function(content){
-    this.contentArea.innerHTML=content;
+    if (this.hasOwnProperty('contentArea')) {
+        this.contentArea.innerHTML=content;
+    }
 };
 
 openmdao.DataflowFigure.prototype.getMinWidth=function(){
