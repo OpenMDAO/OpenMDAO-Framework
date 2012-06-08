@@ -390,7 +390,6 @@ class TypesHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(jsonpickle.encode(types))
 
-
 class UploadHandler(ReqHandler):
     ''' file upload utility
     '''
@@ -399,7 +398,7 @@ class UploadHandler(ReqHandler):
     def post(self):
         path = self.get_argument('path', default=None)
         cserver = self.get_server()
-        files = self.request.files['myfile']
+        files = self.request.files['file']
         if files:
             for file_ in files:
                 filename = file_['filename']
@@ -407,7 +406,7 @@ class UploadHandler(ReqHandler):
                     if path:
                         filename = os.path.sep.join([path, filename])
                     cserver.add_file(filename, file_['body'])
-            self.render('closewindow.html')
+        self.render('closewindow.html')
 
     @web.authenticated
     def get(self):
