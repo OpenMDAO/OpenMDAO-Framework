@@ -26,10 +26,9 @@ with the first-order Taylor series expansion whenever the optimizer initiates
 a finite difference estimation of the gradient. This is called *Finite
 Difference with Analytical Derivatives* (FFAD). It provides an efficient 
 way of calculating gradients for mixed models -- models with components 
-that can provide derivatives and those that
-cannot. Via FFAD you can specify gradients (first
+that can provide derivatives and those that cannot. Via FFAD you can specify gradients (first
 derivatives) and Hessians (second derivatives) in mixed models. Not all optimizers 
-will use gradients or hessians, so they only get calculated if requested by an optimizer. 
+will use gradients or Hessians, so they only get calculated if requested by an optimizer. 
 
 Four steps are involved in specifying derivatives for a component:
 
@@ -100,7 +99,7 @@ We need to add an ``__init__`` method that defines derivatives between the input
         self.derivatives.declare_second_derivative('f_xy', 'x', 'y')
         self.derivatives.declare_second_derivative('f_xy', 'y', 'y')
 
-The ``super`` command executes the parent's ``__init__`` function. **This is
+The *super* command executes the parent's ``__init__`` function. **This is
 required for the component to behave properly in OpenMDAO, so don't forget to
 include it.**
 
@@ -148,7 +147,7 @@ component with derivatives. We put this model in a file called
 *Benchmarking*
 ~~~~~~~~~~~~~~
 
-Sometimes it is useful to know how many times your component executes, and
+Sometimes it is useful to know how many times your component executes and
 how many times it calculates its derivatives. OpenMDAO provides this
 information for every component through a pair of counters: ``exec_count``
 is incremented whenever a component executes, and ``derivative_exec_count``
@@ -180,7 +179,7 @@ example shows how they can be accessed and used.
 Here, we've printed out the number of function and derivative executions for
 the paraboloid examples, both without and with analytical derivatives.
 Because this model is a simple equation, the advantage of using the
-analytical derivative aren't evident in a comparison of the clock time, but
+analytical derivative isn't evident in a comparison of the clock time, but
 the number of functional executions is much lower when you have them, at a
 cost of a small number of derivative evaluations.
         
