@@ -7,9 +7,11 @@ from ordereddict import OrderedDict
 from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float
-from openmdao.main.interfaces import implements, IDifferentiator, IDriver
+from openmdao.main.interfaces import implements, IDifferentiator, IDriver, \
+                                     ISolver
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
+from openmdao.main.mp_support import has_interface
 from openmdao.main.numpy_fallback import array
 from openmdao.units import convert_units
 
@@ -167,6 +169,37 @@ class ChainRule(HasTraits):
                 varpaths = item.get_referenced_varpaths()
                 needed_edges = needed_edges.union(varpaths)
                 
+        # Find our minimum set of edges part 5
+        # If we are collecting edges for a solver-type driver, then we need
+        # to add in the independents and dependents
+        if has_interface(dscope, ISolver):
+            
+            params = dscope.get_parameters().keys()
+            
+            deps = []
+            indeps = []
+            for expr, constr in dscope.get_eq_constraints().iteritems():
+                
+                item1 = constr.lhs.get_referenced_varpaths()
+                item2 = constr.rhs.get_referenced_varpaths()
+                comps = list(item1.union(item2))
+                    
+                if comps[0] in params:
+                    indep = comps[0]
+                    dep = comps[1]
+                elif comps[1] in params:
+                    indep = comps[1]
+                    dep = comps[0]
+                else:
+                    msg = "No independent in solver equation."
+                    raise NotImplementedError(msg)
+                
+                deps.append(dep)
+                indeps.append(indep)
+            
+            needed_edges = needed_edges.union(set(deps))
+            needed_in_edges = needed_in_edges.union(set(indeps))
+        
         # If we are at a deeper recursion level than the driver's assembly,
         # then we need to add the upscoped connected edges on the assembly
         # boundary

@@ -239,7 +239,8 @@ class Analytic(ChainRule):
         self._solve()
         
         
-    def _assemble_direct(self, ascope, dscope, eq_num=0, head=''):
+    def _assemble_direct(self, ascope, dscope, eq_num=0, head='', 
+                         solver_conns=None):
         """Assembles the system matrices for the direct problem.
         This is meant to be called recursively, with the assembly scope,
         driver scope, and current equation number as inputs."""
@@ -260,10 +261,31 @@ class Analytic(ChainRule):
                     msg = "Only nested solvers are supported"
                     raise NotImplementedError(msg)
              
-                # Recurse
-                i_eq = self._assemble_direct(ascope, node, i_eq, head)
+                # Assemble a dictionary of the couplings that this solver iterates.
+                params = node.get_parameters().keys()
                 
-                # Coupled sensitivity from the solver constraint
+                solver_dict = {}
+                for expr, constr in node.get_eq_constraints().iteritems():
+                    
+                    item1 = constr.lhs.get_referenced_varpaths()
+                    item2 = constr.rhs.get_referenced_varpaths()
+                    comps = list(item1.union(item2))
+                        
+                    if comps[0] in params:
+                        indep = comps[0]
+                        dep = comps[1]
+                    elif comps[1] in params:
+                        indep = comps[1]
+                        dep = comps[0]
+                    else:
+                        msg = "No independent in solver equation."
+                        raise NotImplementedError(msg)
+                    
+                    solver_dict[indep] = dep
+                    
+                # Recurse
+                i_eq = self._assemble_direct(ascope, node, i_eq, head, solver_dict)
+                    
                 
             # Recurse into assemblies.
             elif isinstance(node, Assembly):
@@ -394,7 +416,7 @@ class Analytic(ChainRule):
                      
                     # Each input provides a term for LHS or RHS
                     for input_name in edge_dict[0]:
-                         
+                        
                         # Direct connection to parameter goes in RHS
                         input_full = "%s.%s" % (node_name, input_name)
                         if input_full in self.param_names:
@@ -404,6 +426,16 @@ class Analytic(ChainRule):
                             self.RHS[i_eq][i_param] = \
                                 local_derivs[output_name][input_name]
                              
+                        # Input is a dependent in a solver loop
+                        elif solver_conns is not None and \
+                             input_full in solver_conns:
+                            
+                            source = solver_conns[input_full]
+                            i_dep = self.var_list.index(source)
+                             
+                            self.LHS[i_eq][i_dep] = \
+                                -local_derivs[output_name][input_name]
+                            
                         # Input connected to other outputs goes in LHS
                         else:
                             
