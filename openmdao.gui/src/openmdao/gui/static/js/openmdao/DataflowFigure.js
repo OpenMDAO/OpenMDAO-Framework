@@ -337,8 +337,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         var asm = openmdao.Util.getPath(pathname);
         if (asm.length > 0) {
             menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-                var cmd = asm + '.disconnect("'+name+'");'
-                        + asm + '.config_changed(update_parent=True);';
+                var cmd = asm + '.disconnect("'+name+'");';
                 model.issueCommand(cmd);
             }));
         }
@@ -373,38 +372,38 @@ openmdao.DataflowFigure.prototype.minimize=function(){
         self.maxmin = '+';
         var circleIMG = "url(/static/images/circle-plus.png)";
         self.top_right.style.background=circleIMG+" no-repeat top right";
-    }
 
-    jQuery.each(self.figures,function(name,fig) {
-        fig.minimize();
-        self.removeChild(fig);
-        workflow.removeFigure(fig);
-    });
-    self.figures = {};
+        jQuery.each(self.figures,function(name,fig) {
+            fig.minimize();
+            self.removeChild(fig);
+            workflow.removeFigure(fig);
+        });
+        self.figures = {};
 
-    jQuery.each(self.connections,function(name,conn) {
-        workflow.removeFigure(conn);
-    });
-    self.connections = {};
+        jQuery.each(self.connections,function(name,conn) {
+            workflow.removeFigure(conn);
+        });
+        self.connections = {};
 
-    if (self.inputsFigure !== null) {
-        debug.info('DataflowFigure.minimize()',self.pathname,'removing inputs',self.inputsFigure);
-        workflow.removeFigure(self.inputsFigure);
-        self.removeChild(self.inputsFigure);
-    }
+        if (self.inputsFigure !== null) {
+            debug.info('DataflowFigure.minimize()',self.pathname,'removing inputs',self.inputsFigure);
+            workflow.removeFigure(self.inputsFigure);
+            self.removeChild(self.inputsFigure);
+        }
 
-    if (self.outputsFigure !== null) {
-        debug.info('DataflowFigure.minimize()',self.pathname,'removing outputs',self.outputsFigure);
-        workflow.removeFigure(self.outputsFigure);
-        self.removeChild(self.outputsFigure);
-    }
+        if (self.outputsFigure !== null) {
+            debug.info('DataflowFigure.minimize()',self.pathname,'removing outputs',self.outputsFigure);
+            workflow.removeFigure(self.outputsFigure);
+            self.removeChild(self.outputsFigure);
+        }
 
-    self.setContent(self.contentHTML);
-    self.setDimension(self.getMinWidth(),self.getMinHeight());
+        self.setContent(self.contentHTML);
+        self.setDimension(self.getMinWidth(),self.getMinHeight());
 
-    var parent = self.getParent();
-    if (parent instanceof openmdao.DataflowFigure) {
-        parent.layout();
+        var parent = self.getParent();
+        if (parent instanceof openmdao.DataflowFigure) {
+            parent.layout();
+        }
     }
 };
 
@@ -659,20 +658,21 @@ openmdao.DataflowFigure.prototype.resize=function(){
         margin = this.margin;
 
     if (this.pathname !== '') {
-        var barWidth = 1;
         // add the inputs figure
-        this.inputsFigure.setDimension(width - 2*margin, barWidth);
+        this.inputsFigure.setDimension(width - 2*margin, 1);
         this.inputsFigure.html.style.border = 'none';
         this.addChild(this.inputsFigure);
-        workflow.addFigure(this.inputsFigure, x0 + margin,
-                                              y0 + this.cornerHeight + 2);
+        workflow.addFigure(this.inputsFigure,
+                           x0 + margin,
+                           y0 + this.cornerHeight + 2);
 
         // add the outputs figure
-        this.outputsFigure.setDimension(barWidth, height - this.cornerHeight - margin);
+        this.outputsFigure.setDimension(1, height - this.cornerHeight - margin);
         this.outputsFigure.html.style.border = 'none';
         this.addChild(this.outputsFigure);
-        workflow.addFigure(this.outputsFigure, x0 + width - barWidth - 2,
-                                               y0 + this.cornerHeight + barWidth);
+        workflow.addFigure(this.outputsFigure,
+                           x0 + width - 2,
+                           y0 + this.cornerHeight);
     }
 
     this.setDimension(width,height);
