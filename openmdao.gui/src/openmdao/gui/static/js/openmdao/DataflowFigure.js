@@ -482,12 +482,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         if (!con) {
             con = new draw2d.Connection();
             con.setCoronaWidth(10);
-            con.setZOrder(self.getZOrder()+1);
 
             con.setColor(new draw2d.Color(100,100,100));  // default: dark grey
 
             if (src_name.length > 0) {
                 con.setSource(src_fig.getPort("output"));
+                con.setZOrder(self.getZOrder()+2);
             }
             else {
                 src_port = new draw2d.OutputPort();
@@ -499,10 +499,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 con.setSource(src_port);
                 con.setRouter(null);
                 con.setColor(new draw2d.Color(200,200,200));  // light grey
+                con.setZOrder(self.getZOrder()+1);
             }
             if (dst_name.length > 0) {
                 con.setTarget(dst_fig.getPort("input"));
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+                con.setZOrder(self.getZOrder()+2);
             }
             else {
                 dst_port = new draw2d.InputPort();
@@ -512,8 +514,10 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 dst_port.setId(con_name);
                 self.outputsFigure.addPort(dst_port,0,0);
                 con.setTarget(dst_port);
+                con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                 con.setRouter(null);
                 con.setColor(new draw2d.Color(200,200,200));  // light grey
+                con.setZOrder(self.getZOrder());
             }
 
             // context menu
@@ -525,7 +529,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                                                  self.pathname,src_name,dst_name);
                     })
                 );
-                menu.setZOrder(self.getZOrder()+2);
+                menu.setZOrder(self.getZOrder()+3);
                 return menu;
             };
 
@@ -648,8 +652,8 @@ openmdao.DataflowFigure.prototype.resize=function(){
             }
         }
     }
-    width = xmax-xmin+this.margin*2;
-    height = ymax-ymin+this.margin*2;
+    width  = xmax-xmin+this.margin*2 + this.cornerWidth;
+    height = ymax-ymin+this.margin*2 + this.cornerHeight;
 
     var workflow = this.getWorkflow(),
         margin = this.margin;
