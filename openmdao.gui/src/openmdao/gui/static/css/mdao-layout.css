@@ -34,7 +34,8 @@ ul {
   margin: 0;
   float: left;
   height: 100%;
-  overflow: auto;
+  /*overflow: auto;*/
+  overflow: hidden;
 }
 
 /* menus */
@@ -153,7 +154,8 @@ dl {
   margin: 0;
 }
 
-#otree, #ftree, #propertieseditor, #palette {
+/*#otree, #ftree, #propertieseditor, #palette {*/
+#otree, #ftree, #propertieseditor {
   height: 100%;
   width: 100%;
 }

@@ -80,10 +80,10 @@ def unique_shortnames(names):
     of dotted names is assumed to be unique.
     """
     looking = set(names)
-    dct = dict([(n,n.split('.')[::-1]) for n in names])
+    dct = dict([(n,n.split('.')) for n in names])
     level = 1
     while looking:
-        shorts = dict([(n, '.'.join(dct[n][:level][::-1])) for n in looking])
+        shorts = dict([(n, '.'.join(dct[n][len(n)-level:len(n)])) for n in looking])
         shortcounts = dict([(s,0) for n,s in shorts.items()])
         for n,shrt in shorts.items():
             shortcounts[shrt] += 1
@@ -97,73 +97,15 @@ def unique_shortnames(names):
 def packagedict(types):
     ''' create a nested dict for a package structure
     '''
-    #metacolumns = [
-        #('version', 'Version'),
-        #('ifaces', 'Interfaces'),
-    #]
-    #dct = { 
-        #'aaData': [], 
-        #'aoColumns': [],
-        #'aoColumnDefs': [
-            #{ 'bVisible': False, 'aTargets': [1,2,3] },
-        #],
-    #}
-    #dct['aoColumns'].append({'sTitle': 'Class'})
-    #dct['aoColumns'].append({'sTitle': 'Module Path'})
-    #for k,v in metacolumns:
-        #dct['aoColumns'].append({'sTitle': v})
-
     dct = {}
     namedict = unique_shortnames([t[0] for t in types])
     
     for typ,meta in types:
-        dct[namedict[typ]] = meta
-        #dct['aaData'].append([namedict[typ],typ]+[meta[k] for k,v in metacolumns])
-        
-    #dct['bPaginate'] = False
-    #dct['sScrollY'] = '100%'
-    #dct['bScrollCollapse'] = True
-    #dct['bJQueryUI'] = True
+        m = meta.copy()
+        m['modpath'] = typ
+        dct[namedict[typ]] = m
     
     return dct
-
-#def packageXML(types):
-    #''' create an XML representation of a package structure
-    #'''
-    #xml = '<?xml version=\"1.0\"?>\n'
-    #xml = xml + '<response>\n'
-    #typeTree = Element("Types")
-    ## get the installed types
-    #for t in types:
-        #path = t[0].split('.')
-        #last = path[len(path)-1]
-        #parent = typeTree
-        #for node in path:
-            #if not node==last:
-                ## it's a package name, see if we have it already
-                #existingElem = None
-                #packages = parent.findall('Package')
-                #for p in packages:
-                    #if p.get("name") == node:
-                        #existingElem = p
-                ## set the parent to this package
-                #if existingElem is None:
-                    #pkgElem = SubElement(parent, "Package")
-                    #pkgElem.set("name", node)
-                    #parent = pkgElem
-                #else:
-                    #parent = existingElem
-            #else:
-                ## it's the class name, add it under current package
-                #typeElem = SubElement(parent, "Type")
-                #typeElem.set("name", node)
-                #typeElem.set("path", t[0])
-    ## get the "working" types
-    #pkgElem = SubElement(typeTree, "Package")
-    #pkgElem.set("name", "working")
-    #xml = xml + tostring(typeTree)
-    #xml = xml + '</response>\n'
-    #return xml
 
 
 def launch_browser(port, preferred_browser=None):
