@@ -9,6 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, \
                                        ElementNotVisibleException
 from basepageobject import TMO
+from grid import Grid
 
 
 class _BaseElement(object):
@@ -25,12 +26,17 @@ class _BaseElement(object):
     def __init__(self, page, locator):
         self._browser = page.browser
         self._locator = locator
+        self._root = page.root
 
     @property
     def element(self):
         """ The element on the page. """
-        return WebDriverWait(self._browser, TMO).until(
-                   lambda browser: browser.find_element(*self._locator))
+        if self._root is None:
+            return WebDriverWait(self._browser, TMO).until(
+                       lambda browser: browser.find_element(*self._locator))
+        else:
+            return WebDriverWait(self._browser, TMO).until(
+                       lambda browser: self._root.find_element(*self._locator))
 
     def is_present(self):
         """ Return True if the element can be found. """
@@ -46,6 +52,10 @@ class _BaseElement(object):
             return self.element.is_displayed()
         except (NoSuchElementException, ElementNotVisibleException):
             return False
+
+    def value_of_css_property(self, name):
+        """ Return value for the the CSS property `name`. """
+        return self.element.value_of_css_property(name)
 
 
 class _ButtonElement(_BaseElement):
@@ -85,6 +95,18 @@ class _CheckboxElement(_BaseElement):
         if bool(new_value) != element.is_selected():
             time.sleep(0.1)  # Just some pacing.
             element.click()  # Toggle it.
+
+
+class _GridElement(_BaseElement):
+    """ A SlickGrid. """
+
+    def __init__(self, page, locator):
+        super(_GridElement, self).__init__(page, locator)
+
+    @property
+    def value(self):
+        """ The element's ``value`` attribute is a :class:`Grid`. """
+        return Grid(self._browser, self.element)
 
 
 class _InputElement(_BaseElement):
@@ -170,6 +192,11 @@ class CheckboxElement(BaseElement):
     """ The `value` of this is the selection state. """
     def __init__(self, locator):
         super(CheckboxElement, self).__init__(_CheckboxElement, locator)
+
+class GridElement(BaseElement):
+    """ The `value` of this is a :class:`Grid`. """
+    def __init__(self, locator):
+        super(GridElement, self).__init__(_GridElement, locator)
 
 class InputElement(BaseElement):
     """ A text input field. """

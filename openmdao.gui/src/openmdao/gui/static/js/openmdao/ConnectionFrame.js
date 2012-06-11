@@ -14,23 +14,18 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
     var self = this,
         figures = {},
         dataflowID = id+"-connections",
-        output_selector = jQuery("<input id='output_list' class='combobox' />")
-                        .appendTo(self.elm),
-        input_selector = jQuery("<input id='input_list' class='combobox' />")
-                        .appendTo(self.elm),
+        output_selector = jQuery("<input id='output_list' class='combobox' />"),
+        input_selector = jQuery("<input id='input_list' class='combobox' />"),
         connect_button = jQuery("<button id='connect_button'>Connect</button>")
                         .click(function() {
                             var src = output_selector.val();
                             var dst = input_selector.val();
                             model.issueCommand(self.pathname+".connect('"+src+"','"+dst+"')");
-                        })
+                        }),
+        dataflowCSS = 'overflow:auto; background:grey;',
+        dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
                         .appendTo(self.elm),
-        wrapperDiv = jQuery('<div style="background:grey;height:100%;width:100%;overflow:auto" />')
-                        .appendTo(self.elm),
-        dataflowDiv = jQuery('<div id='+dataflowID+'/>')
-                        .appendTo(wrapperDiv),
         dataflow = new draw2d.Workflow(dataflowID);
-
 
     self.elm.append(output_selector);
     self.elm.append(input_selector);
@@ -40,7 +35,33 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
     self.src_comp = src_comp;
     self.dst_comp = dst_comp;
 
-    //dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
+    self.showAllVariables = false;  // only show connected variables by default
+
+    // create context menu for toggling the showAllVariables option
+    dataflow.getContextMenu=function(){
+        var menu=new draw2d.Menu();
+        if (self.showAllVariables) {
+            menu.appendMenuItem(new draw2d.MenuItem("Show Connections Only",null,
+                function(){
+                    self.showAllVariables = false;
+                    self.update();
+                })
+            );
+        }
+        else {
+            menu.appendMenuItem(new draw2d.MenuItem("Show All Variables",null,
+                function(){
+                    self.showAllVariables = true;
+                    self.update();
+                })
+            );
+        }
+        return menu;
+    };
+
+    // plain grey background
+    dataflow.setBackgroundImage(null);
+    dataflowDiv.css({'background-color':'grey'});
 
     function loadData(data) {
         if (!data || !data.outputs || !data.inputs) {
@@ -61,7 +82,7 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
                 conn_list[i]=conn_list[i].split('.')[1];
             }
             jQuery.each(data.outputs, function(idx,outvar) {
-                if (conn_list.contains(outvar.name)) {
+                if (self.showAllVariables || conn_list.contains(outvar.name)) {
                     var src_name = src_comp+'.'+outvar.name,
                         src_path = self.pathname+'.'+src_name,
                         fig = new openmdao.VariableFigure(model,src_path,outvar,'output');
@@ -74,7 +95,7 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
             x = 250;
             y = 10;
             jQuery.each(data.inputs, function(idx,invar) {
-                if (conn_list.contains(invar.name)) {
+                if (self.showAllVariables || conn_list.contains(invar.name)) {
                     var dst_name = dst_comp+'.'+invar.name,
                         dst_path = self.pathname+'.'+dst_name,
                         fig = new openmdao.VariableFigure(model,dst_path,invar,'input');
@@ -99,13 +120,13 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
                     c.setTarget(dst_port);
                     c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                     c.setRouter(new draw2d.BezierConnectionRouter());
+                    c.setCoronaWidth(10);
                     c.getContextMenu=function(){
                         var menu=new draw2d.Menu();
                         var oThis=this;
                         menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
                                 var asm = self.pathname,
-                                    cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'");'
-                                        + asm + '.config_changed(update_parent=True);';
+                                    cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'")';
                                 model.issueCommand(cmd);
                             })
                         );
@@ -119,7 +140,7 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
                 // TODO: show passthroughs somehow
             });
 
-            // update the output & input slectors to current outputs & inputs
+            // update the output & input selectors to current outputs & inputs
             output_selector.html('');
 
             //jQuery.each(out_list,function (idx,name) {

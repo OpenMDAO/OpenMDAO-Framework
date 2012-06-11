@@ -1,5 +1,7 @@
-import pkg_resources
-import re
+"""
+Tests of overall workspace functions.
+"""
+
 import sys
 import time
 
@@ -10,7 +12,6 @@ from unittest import TestCase
 
 
 if sys.platform != 'win32':  # No testing on Windows yet.
-    from pageobjects.workspace import NotifierPage
     from util import setup_server, teardown_server, generate, begin, new_project
 
     @with_setup(setup_server, teardown_server)
@@ -85,7 +86,7 @@ def _test_import(browser):
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
-    workspace_page.find_palette_button('paraboloid').get(workspace_page).click()
+    workspace_page.find_palette_button('paraboloid').click()
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
@@ -93,8 +94,8 @@ def _test_import(browser):
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
-    workspace_page.add_library_item_to_dataflow('paraboloid.Paraboloid', paraboloid_name)
-
+    workspace_page.add_library_item_to_dataflow('paraboloid.Paraboloid',
+                                                paraboloid_name)
     # Now there should be three.
     eq(len(workspace_page.get_dataflow_figures()), 3)
 
@@ -195,7 +196,7 @@ f_x = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
-    workspace_page.find_palette_button('plane').get(workspace_page).click()
+    workspace_page.find_palette_button('plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
@@ -205,69 +206,35 @@ f_x = Float(0.0, iotype='out')
     print "_test_newfile complete."
 
 
-def _test_maxmin(browser):
-    print "running _test_maxmin..."
-    # Toggles maxmimize/minimize button on assemblies.
+def _test_properties(browser):
+    print "running _test_properties..."
+    # Checks right-hand side properties display.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    # Import maxmin.py
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'maxmin.py')
-    editor_page.add_file(file_path)
-    #editor_page.import_file('maxmin.py')
-    browser.close()
-    browser.switch_to_window(workspace_window)
+    # Check default 'top'.
+    workspace_page.select_object('top')
+    time.sleep(0.5)
+    eq(workspace_page.props_header, 'Assembly: top')
+    inputs = workspace_page.props_inputs
+    eq(inputs.value, [['directory',     ''],
+                      ['force_execute', 'False']])
 
-    # Add MaxMin to 'top'.
-    workspace_page.show_dataflow('top')
-    time.sleep(1)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'top'])
-    workspace_page('libraries_tab').click()
-    workspace_page.find_palette_button('maxmin').get(workspace_page).click()
-    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
-    time.sleep(1)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'maxmin', 'top'])
-
-    # Maximize maxmin.
-    maxmin = workspace_page.get_dataflow_figure('maxmin')
-    background = maxmin.top_right.value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-plus.png)'
-                   ' no-repeat scroll 100% 0%')
-
-    maxmin.top_right.click()
-    background = maxmin.top_right.value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-minus.png)'
-                   ' no-repeat scroll 100% 0%')
-    time.sleep(1)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'driver', 'maxmin', 'sub', 'top'])
-
-    # Minimize maxmin.
-    maxmin.top_right.click()
-    background = maxmin.top_right.value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-plus.png)'
-                   ' no-repeat scroll 100% 0%')
-    time.sleep(1)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'maxmin', 'top'])
-
+    # Check default 'top.driver'.
+    workspace_page.expand_object('top')
+    workspace_page.select_object('top.driver')
+    time.sleep(0.5)
+    eq(workspace_page.props_header, 'Run_Once: top.driver')
+    inputs = workspace_page.props_inputs
+    eq(inputs.value, [['directory',     ''],
+                      ['force_execute', 'True'],
+                      ['printvars',     '[]']])
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
-    print "_test_maxmin complete."
+    print "_test_properties complete."
 
 
 if __name__ == '__main__':
@@ -280,7 +247,8 @@ if __name__ == '__main__':
         _test_import(browser)
         _test_menu(browser)
         _test_newfile(browser)
-        _test_maxmin(browser)
+        _test_properties(browser)
+        browser.quit()
         teardown_server()
     else:
         # Run under nose.

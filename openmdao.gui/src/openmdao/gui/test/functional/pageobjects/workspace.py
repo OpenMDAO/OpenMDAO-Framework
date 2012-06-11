@@ -11,31 +11,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
+from connections import ConnectionsPage
+from dataflow import DataflowFigure
 from editor import EditorPage
-from elements import ButtonElement, InputElement, TextElement
+from elements import ButtonElement, InputElement, GridElement, TextElement
 from util import abort, ValuePrompt, NotifierPage
-
-
-class DataflowFigure(object):
-    """ Represents elements within a dataflow figure. """
-
-    def __init__(self, root):
-        self.root = root
-
-    @property
-    def border(self):
-        """ Figure border property. """
-        return self.root.value_of_css_property('border')
-
-    @property
-    def name(self):
-        """ Figure name. """
-        return self.root.find_elements_by_class_name('DataflowFigureHeader')[0].text
-
-    @property
-    def top_right(self):
-        """ Figure maximize/minimize button. """
-        return self.root.find_elements_by_class_name('DataflowFigureTopRight')[0]
 
 
 class WorkspacePage(BasePageObject):
@@ -87,9 +67,12 @@ class WorkspacePage(BasePageObject):
     code_tab     = ButtonElement((By.ID, 'code_tab'))
 
     # Right side.
-    properties_tab  = ButtonElement((By.ID, 'properties_tab'))
+    properties_tab = ButtonElement((By.ID, 'properties_tab'))
+    props_header   = TextElement((By.XPATH, "//div[@id='propertieseditor']/h3"))
+    props_inputs   = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[1]"))
+    props_outputs  = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[2]"))
 
-    libraries_tab   = ButtonElement((By.ID, 'palette_tab'))
+    libraries_tab = ButtonElement((By.ID, 'palette_tab'))
     #working_section = ButtonElement((By.XPATH,
                             #"//div[(@id='palette')]//div[(@title='working')]"))
     openmdao_section = ButtonElement((By.XPATH,
@@ -115,9 +98,9 @@ class WorkspacePage(BasePageObject):
         NotifierPage.wait(browser, port)
 
     def find_palette_button(self, name):
-        return ButtonElement((By.XPATH,
-                            "//div[(@id='palette')]//div[(@title='%s')]" % name))
-        
+        path = "//div[(@id='palette')]//div[(@title='%s')]" % name
+        return ButtonElement((By.XPATH, path)).get(self)
+
     def run(self, timeout=TMO):
         """ Run current component. """
         self('project_menu').click()
@@ -176,6 +159,22 @@ class WorkspacePage(BasePageObject):
             values.append(element.get_attribute(attribute))
         return values
 
+    def select_object(self, component_name):
+        """ Select `component_name`. """
+        self('objects_tab').click()
+        xpath = "//div[@id='otree']//li[(@path='%s')]//a" % component_name
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+
+    def expand_object(self, component_name):
+        """ Expands `component_name`. """
+        self('objects_tab').click()
+        xpath = "//div[@id='otree']//li[(@path='%s')]//ins" % component_name
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+
     def show_dataflow(self, component_name):
         """ Show dataflow of `component_name`. """
         self('objects_tab').click()
@@ -210,6 +209,10 @@ class WorkspacePage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         page.set_value(instance_name)
+        # Check that the prompt is gone so we can distinguish a prompt problem
+        # from a dataflow update problem.
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: not browser.find_element(*page('prompt')._locator).is_displayed())
         WebDriverWait(self.browser, TMO).until(
             lambda browser: instance_name in self.get_dataflow_component_names())
 
@@ -217,33 +220,80 @@ class WorkspacePage(BasePageObject):
         """ Return dataflow figure elements. """
         return self.browser.find_elements_by_class_name('DataflowFigure')
 
-    def get_dataflow_figure(self, name):
-        """ Return dataflow figure for `name`. """
-        figures = self.browser.find_elements_by_class_name('DataflowFigure')
-        for figure in figures:
-            fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
-            if fig_name == name:
-                return DataflowFigure(figure)
+    def get_dataflow_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`DataflowFigure` for `name`. """
+        for retry in range(retries):
+            figures = self.browser.find_elements_by_class_name('DataflowFigure')
+            fig_name = None
+            for figure in figures:
+                try:
+                    fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
+                except StaleElementReferenceException:
+                    logging.warning('get_dataflow_figure:'
+                                    ' StaleElementReferenceException')
+                else:
+                    if fig_name == name:
+                        fig = DataflowFigure(self.browser, self.port, figure)
+                        if prefix is not None:
+                            if prefix:
+                                fig.pathname = '%s.%s' % (prefix, name)
+                            else:
+                                fig.pathname = name
+                        return fig
+            time.sleep(0.5)
         return None
 
     def get_dataflow_component_names(self):
         """ Return names of dataflow components. """
-        dataflow_component_headers = \
-            self.browser.find_elements_by_class_name('DataflowFigureHeader')
         names = []
+
+        # Assume there should be at least 1, wait for number to not change.
+        n_found = 0
+        for retry in range(10):
+            dataflow_component_headers = \
+                self.browser.find_elements_by_class_name('DataflowFigureHeader')
+            if dataflow_component_headers:
+                n_headers = len(dataflow_component_headers)
+                if n_found:
+                    if n_headers == n_found:
+                        break
+                n_found = n_headers
+        else:
+            logging.error('get_dataflow_component_names: n_found %s', n_found)
+            return names
 
         for i in range(len(dataflow_component_headers)):
             for retry in range(10):  # This has had issues...
                 try:
                     names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
                 except StaleElementReferenceException:
-                    logging.critical('get_dataflow_component_names: StaleElementReferenceException')
+                    logging.warning('get_dataflow_component_names:'
+                                    ' StaleElementReferenceException')
+                except IndexError:
+                    logging.warning('get_dataflow_component_names:'
+                                    ' IndexError for i=%s, headers=%s',
+                                    i, len(dataflow_component_headers))
                 else:
                     break
 
         if len(names) != len(dataflow_component_headers):
-            logging.critical('get_dataflow_component_names:'
-                             ' expecting %d names, got %s',
-                             len(dataflow_component_headers), names)
+            logging.error('get_dataflow_component_names:'
+                          ' expecting %d names, got %s',
+                          len(dataflow_component_headers), names)
         return names
+
+    def connect(self, src, dst):
+        """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
+        chain = ActionChains(self.browser)
+        chain = chain.click_and_hold(src.output_port)
+        # Using root rather than input_port since for some reason
+        # even using a negative Y offset can select the parent's input.
+        chain = chain.move_to_element(dst.root)
+        chain = chain.release(None)
+        chain.perform()
+        parent, dot, srcname = src.pathname.rpartition('.')
+        parent, dot, dstname = dst.pathname.rpartition('.')
+        editor_id = 'DCE-%s-%s-%s' % (parent, srcname, dstname)
+        editor_id = editor_id.replace('.', '-')
+        return ConnectionsPage(self.browser, self.port, (By.ID, editor_id))
 

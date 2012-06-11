@@ -298,7 +298,7 @@ class ConsoleServer(cmd.Cmd):
                                     'units': units,
                                     'connected': (name in connected)
                                    })
-                conns['outputs'] = outputs
+                conns['outputs'] = sorted(outputs, key=lambda d: d['name'])
 
                 # inputs
                 inputs = []
@@ -315,7 +315,7 @@ class ConsoleServer(cmd.Cmd):
                                    'units': units,
                                    'connected': (name in connected)
                                  })
-                conns['inputs'] = inputs
+                conns['inputs'] = sorted(inputs, key=lambda d: d['name'])
 
                 # connections
                 connections = []
@@ -428,7 +428,8 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-            self.projdirfactory = ProjDirFactory(self.proj.path)
+            self.projdirfactory = ProjDirFactory(self.proj.path, 
+                                                 observer=self.files.observer)
             register_class_factory(self.projdirfactory)
             
         except Exception, err:
@@ -482,8 +483,11 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
 
     def cleanup(self):
-        ''' Cleanup this server's files.
+        ''' Cleanup various resources.
         '''
+        if self.projdirfactory:
+            self.projdirfactory.cleanup()
+            remove_class_factory(self.projdirfactory)
         self.files.cleanup()
 
     def get_files(self):
