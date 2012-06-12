@@ -11,6 +11,7 @@ from openmdao.main.interfaces import implements, IDifferentiator, IDriver, \
                                      ISolver
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
+from openmdao.main.container import find_name
 from openmdao.main.mp_support import has_interface
 from openmdao.main.numpy_fallback import array
 from openmdao.units import convert_units
@@ -643,4 +644,4 @@ class ChainRule(HasTraits):
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         name = find_name(self._parent, self)
-        self._parent.raise_exception("%s: %s" % (name,msg), exception_class)
+        self._parent.raise_exception("%s: %s" % (name, msg), exception_class)

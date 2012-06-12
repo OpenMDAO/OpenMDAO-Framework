@@ -459,6 +459,50 @@ class AnalyticTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient(obj)
         assert_rel_error(self, grad[0], 0.08660, .001)
         
+    def test_simple_coupled_adjoint(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y2 = 0.5*sin(x1) - 0.5*x1*y1']
+        deriv1 = ['dy2_dx1 = 0.5*cos(x1) - 0.5*y1',
+                  'dy2_dy1 = -0.5*x1']
+        
+        exp2 = ['y1 = x2*x2*y2']
+        deriv2 = ['dy1_dx2 = 2.0*y2*x2',
+                  'dy1_dy2 = x2*x2']
+        
+        self.top.add('driver', Driv())
+    
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        #self.top.add('comp1', ExecComp(exp1))
+        #self.top.add('comp2', ExecComp(exp2))
+        self.top.add('solver', BroydenSolver())
+            
+        self.top.driver.workflow.add(['solver'])
+        self.top.solver.workflow.add(['comp1', 'comp2'])
+        self.top.connect('comp1.y2', 'comp2.y2')
+        
+        # Solver setup
+        self.top.solver.add_parameter('comp1.y1', low=-1.e99, high=1.e99)
+        self.top.solver.add_constraint('comp2.y1 = comp1.y1')
+        
+        # Top driver setup
+        self.top.driver.differentiator = Analytic()
+        self.top.driver.differentiator.mode = 'adjoint'
+        obj = 'comp2.y1'
+        self.top.driver.add_parameter('comp1.x1', low=-100., high=100., fd_step=.001)
+        #self.top.driver.add_parameter('comp2.x2', low=-100., high=100., fd_step=.0001)
+        self.top.driver.add_objective(obj)
+    
+        self.top.comp1.x1 = 1.0
+        self.top.comp2.x2 = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 0.08660, .001)
+        
 if __name__ == '__main__':
     unittest.main()
 
