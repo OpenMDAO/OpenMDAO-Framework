@@ -37,7 +37,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             var elem = dataflowDiv[0];
             var zindex = document.defaultView.getComputedStyle(elem,null)
                          .getPropertyValue("z-index");
-            debug.info(droppedName,'(path=',droppedPath,') ',
+            debug.info(droppedName,'(modpath=',droppedPath,') ',
                        'dropped on dataflow:',self.pathname,
                        'z-index',dataflowDiv.css('z-index'),
                        'zIndex',dataflowDiv.css('zIndex'));
