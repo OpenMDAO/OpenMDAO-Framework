@@ -190,14 +190,21 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         """This executes every time a "from foo import bar" style import
         statement is parsed.
         """
+        # need the following to handle relative imports
+        if node.level == 0:
+            module = node.module
+        else:
+            parts = self.modpath.split('.')
+            module = '.'.join(parts[0:len(parts)-node.level]+[node.module])
+
         for al in node.names:
             if al.name == '*':
-                self.starimports.append(node.module)
+                self.starimports.append(module)
                 continue
             if al.asname is None:
-                self.localnames[al.name] = '.'.join([node.module, al.name])
+                self.localnames[al.name] = '.'.join([module, al.name])
             else:
-                self.localnames[al.asname] = '.'.join([node.module, al.name])
+                self.localnames[al.asname] = '.'.join([module, al.name])
                 
     def update_graph(self, graph):
         """Update the inheritance/implements graph."""
