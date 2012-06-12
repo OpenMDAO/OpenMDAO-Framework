@@ -492,7 +492,7 @@ class AnalyticTestCase(unittest.TestCase):
         self.top.driver.differentiator.mode = 'adjoint'
         obj = 'comp2.y1'
         self.top.driver.add_parameter('comp1.x1', low=-100., high=100., fd_step=.001)
-        #self.top.driver.add_parameter('comp2.x2', low=-100., high=100., fd_step=.0001)
+        self.top.driver.add_parameter('comp2.x2', low=-100., high=100., fd_step=.0001)
         self.top.driver.add_objective(obj)
     
         self.top.comp1.x1 = 1.0

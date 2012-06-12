@@ -252,10 +252,7 @@ class Analytic(ChainRule):
         # Assemble matrices for problem every run
         ascope = self._parent.parent
         dscope = self._parent
-        if self.mode == 'direct':
-            self._assemble_direct(ascope, dscope)
-        else:
-            self._assemble_adjoint(ascope, dscope)
+        self._assemble_direct(ascope, dscope)
             
         self._solve()
         
@@ -270,6 +267,9 @@ class Analytic(ChainRule):
         
         if head:
             head = '%s.' % head
+            
+        if solver_conns is None:
+            solver_conns = []
             
         i_eq = eq_num
         for node in dscope.workflow.__iter__():
@@ -398,134 +398,16 @@ class Analytic(ChainRule):
                 edge_dict = self.edge_dicts[scope_name][node_name]
                 local_derivs = node.derivatives.first_derivatives
                  
-                # Each output gives us an equation
-                for output_name in edge_dict[1]:
-                     
-                    self.LHS[i_eq][i_eq] = 1.0
-                    output_full = "%s.%s" % (node_name, output_name)
-                     
-                    # Each input provides a term for LHS or RHS
-                    for input_name in edge_dict[0]:
-                        
-                        # Direct connection to parameter goes in RHS
-                        input_full = "%s.%s" % (node_name, input_name)
-                        if input_full in self.param_names:
-                             
-                            i_param = self.param_names.index(input_full)
-                             
-                            self.RHS[i_eq][i_param] = \
-                                local_derivs[output_name][input_name]
-                             
-                        # Input is a dependent in a solver loop
-                        elif solver_conns is not None and \
-                             input_full in solver_conns:
-                            
-                            source = solver_conns[input_full]
-                            i_dep = self.var_list.index(source)
-                             
-                            self.LHS[i_eq][i_dep] = \
-                                -local_derivs[output_name][input_name]
-                            
-                        # Input connected to other outputs goes in LHS
-                        else:
-                            
-                            sources = ascope._depgraph.connections_to(input_full)
-
-                            expr_txt = sources[0][0]
-                            target = sources[0][1]
-                            
-                            # Variables on an assembly boundary
-                            if expr_txt[0:4] == '@bin':
-                                expr_txt = expr_txt.replace('@bin.', '')
-                            
-                            # Need derivative of the expression
-                            source, expr_deriv = self._d_conn(expr_txt, target, 
-                                                              ascope)
-
-                            # Chain together deriv from var connection and comp
-                            i_var = self.var_list.index("%s%s" % (head, source))
-                             
-                            self.LHS[i_eq][i_var] = \
-                                -local_derivs[output_name][input_name] * \
-                                 expr_deriv[source]
-                     
-                    i_eq += 1
-            
-        return i_eq
-    
-    def _assemble_adjoint(self, ascope, dscope, eq_num=0, head='', 
-                         solver_conns=None):
-        """Assembles the system matrices for the direct problem.
-        This is meant to be called recursively, with the assembly scope,
-        driver scope, and current equation number as inputs."""
-        
-        scope_name = dscope.get_pathname()
-        
-        if head:
-            head = '%s.' % head
-            
-        i_eq = eq_num
-        for node in dscope.workflow.__iter__():
-             
-            node_name = node.name
-            
-            # So far, we only handle nested solvers.
-            if isinstance(node, Driver):
-                if not has_interface(node, ISolver):
-                    msg = "Only nested solvers are supported"
-                    raise NotImplementedError(msg)
-             
-                # Assemble a dictionary of the couplings that this solver iterates.
-                params = node.get_parameters().keys()
-                
-                solver_dict = {}
-                for expr, constr in node.get_eq_constraints().iteritems():
-                    
-                    item1 = constr.lhs.get_referenced_varpaths()
-                    item2 = constr.rhs.get_referenced_varpaths()
-                    comps = list(item1.union(item2))
-                        
-                    if comps[0] in params:
-                        indep = comps[0]
-                        dep = comps[1]
-                    elif comps[1] in params:
-                        indep = comps[1]
-                        dep = comps[0]
-                    else:
-                        msg = "No independent in solver equation."
-                        raise NotImplementedError(msg)
-                    
-                    solver_dict[indep] = dep
-                    
-                # Recurse
-                i_eq = self._assemble_adjoint(ascope, node, i_eq, head, solver_dict)
-                    
-                
-            # Recurse into assemblies.
-            elif isinstance(node, Assembly):
-                 
-                if not isinstance(node.driver, Run_Once):
-                    raise NotImplementedError('Nested drivers')
-                
-                edge_dict = self.edge_dicts[scope_name][node_name]
-                
-                # Assembly inputs are unknowns, so they get equations
+                # Calculate derivatives of incoming connections
+                # I moved this out of the double loop so that it isn't
+                # repeated needlessly x(num_outputs)
+                conn_data = {}
                 for input_name in edge_dict[0]:
-                    
-                    self.LHS[i_eq][i_eq] = 1.0
                     input_full = "%s.%s" % (node_name, input_name)
+                    
+                    if input_full not in self.param_names and \
+                       input_full not in solver_conns:
                 
-                    # Assy input conected to parameter goes in RHS
-                    if input_full in self.param_names:
-                         
-                        i_param = self.param_names.index(input_full)
-                         
-                        self.RHS[i_eq][i_param] = \
-                            local_derivs[output_name][input_name]
-                         
-                    # Assy Input connected to other outputs goes in LHS
-                    else:
-                        
                         sources = ascope._depgraph.connections_to(input_full)
 
                         expr_txt = sources[0][0]
@@ -542,55 +424,8 @@ class Analytic(ChainRule):
                         # Chain together deriv from var connection and comp
                         i_var = self.var_list.index("%s%s" % (head, source))
                          
-                        self.LHS[i_var][i_eq] = -expr_deriv[source]
-                 
-                    i_eq += 1
-                
-                # Recurse
-                assy_scope_name = node.get_pathname()
-                i_eq = self._assemble_adjoint(node, node.driver, i_eq, 
-                                             assy_scope_name)
-                                      
-                # Assembly outputs are unknowns, so they get equations
-                sub_scope = ascope.get(node_name)
-                for output_name in edge_dict[1]:
-                    
-                    self.LHS[i_eq][i_eq] = 1.0
-                    output_full = "%s.%s" % (node_name, output_name)
-                
-                    sources = sub_scope._depgraph.connections_to(output_name)
-                    for connect in sources:
-                        if '@bout' in connect[1]:
-                            expr_txt = connect[0]
-                            target = connect[1]
-                            break
-                    
-                    # Variables on an assembly boundary
-                    if target[0:5] == '@bout':
-                        target = target.replace('@bout.', '')
-                    
-                    # Need derivative of the expression
-                    source, expr_deriv = self._d_conn(expr_txt, target, 
-                                                      sub_scope)
-                    
-                    # Chain together deriv from var connection and comp
-                    i_var = self.var_list.index("%s%s.%s" % (head, 
-                                                             node_name, 
-                                                             source))
-                     
-                    self.LHS[i_var][i_eq] = -expr_deriv[source]
-                 
-                    i_eq += 1
-                
+                        conn_data[input_full] = (i_var, expr_deriv[source])
 
-            # This component can determine its derivatives.
-            elif hasattr(node, 'calculate_first_derivatives'):
-                 
-                node.calc_derivatives(first=True)
-             
-                edge_dict = self.edge_dicts[scope_name][node_name]
-                local_derivs = node.derivatives.first_derivatives
-                 
                 # Each output gives us an equation
                 for output_name in edge_dict[1]:
                      
@@ -610,37 +445,24 @@ class Analytic(ChainRule):
                                 local_derivs[output_name][input_name]
                              
                         # Input is a dependent in a solver loop
-                        elif solver_conns is not None and \
-                             input_full in solver_conns:
+                        elif input_full in solver_conns:
                             
                             source = solver_conns[input_full]
                             i_dep = self.var_list.index(source)
                              
-                            self.LHS[i_dep][i_eq] = \
+                            self.LHS[i_eq][i_dep] = \
                                 -local_derivs[output_name][input_name]
                             
                         # Input connected to other outputs goes in LHS
                         else:
                             
-                            sources = ascope._depgraph.connections_to(input_full)
-
-                            expr_txt = sources[0][0]
-                            target = sources[0][1]
+                            # Already calculated connection deriatives
+                            i_var = conn_data[input_full][0]
+                            expr_deriv = conn_data[input_full][1]
                             
-                            # Variables on an assembly boundary
-                            if expr_txt[0:4] == '@bin':
-                                expr_txt = expr_txt.replace('@bin.', '')
-                            
-                            # Need derivative of the expression
-                            source, expr_deriv = self._d_conn(expr_txt, target, 
-                                                              ascope)
-
-                            # Chain together deriv from var connection and comp
-                            i_var = self.var_list.index("%s%s" % (head, source))
-                             
-                            self.LHS[i_var][i_eq] = \
+                            self.LHS[i_eq][i_var] = \
                                 -local_derivs[output_name][input_name] * \
-                                 expr_deriv[source]
+                                 expr_deriv
                      
                     i_eq += 1
             
@@ -680,8 +502,8 @@ class Analytic(ChainRule):
         """
         
         if self.mode=='adjoint':
-            total_derivs = linalg.solve(self.LHS, self.EQS.T)
-            self.gradient = self.EQS_zero + dot(total_derivs, self.RHS.T)
+            total_derivs = linalg.solve(self.LHS.T, self.EQS.T)
+            self.gradient = self.EQS_zero + dot(total_derivs.T, self.RHS)
         else:
             total_derivs = linalg.solve(self.LHS, self.RHS)
             self.gradient = self.EQS_zero + dot(self.EQS, total_derivs)
