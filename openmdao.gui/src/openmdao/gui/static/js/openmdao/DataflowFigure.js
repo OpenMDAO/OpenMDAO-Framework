@@ -69,6 +69,13 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
 
 openmdao.DataflowFigure.prototype=new draw2d.CompartmentFigure();
 
+/** clean up (to be called after being removed from workflow/canvas) */
+openmdao.DataflowFigure.prototype.destroy=function(){
+    // remove listener
+    topic = this.pathname+'.exec_state';
+    this.openmdao_model.removeListener(topic,this.setExecState.bind(this));
+};
+
 openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     var item=draw2d.CompartmentFigure.prototype.createHTMLElement.call(this);
 
@@ -377,6 +384,7 @@ openmdao.DataflowFigure.prototype.minimize=function(){
             fig.minimize();
             self.removeChild(fig);
             workflow.removeFigure(fig);
+            fig.destroy();
         });
         self.figures = {};
 
