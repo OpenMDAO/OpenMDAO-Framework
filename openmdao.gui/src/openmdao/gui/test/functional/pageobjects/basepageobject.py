@@ -12,11 +12,16 @@ class BasePageObject(object):
     PageObject abstracts the details of page element layout and low-level
     operations so that tests can be higher level and more robust.
 
-    browser:
+    browser: :class:`WebDriver`
         Browser-appropriate WebDriver.
 
     port: int
         Port on ``localhost`` to use.
+
+    root: :class:`WebElement`
+        Optional 'root' element of page. If not ``None``, then page
+        elements are found by serching from this point rather than the
+        entire browser page.
 
     Elements on this page should be subclasses of :class:`BaseElement` which
     implements the Python descriptor protocol.
