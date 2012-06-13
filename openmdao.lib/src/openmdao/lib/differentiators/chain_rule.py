@@ -4,12 +4,15 @@ Derivatives (CRND) method.
 
 from ordereddict import OrderedDict
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float
-from openmdao.main.interfaces import implements, IDifferentiator
+from openmdao.main.interfaces import implements, IDifferentiator, ISolver
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
+from openmdao.main.container import find_name
+from openmdao.main.mp_support import has_interface
 from openmdao.main.numpy_fallback import array
 from openmdao.units import convert_units
 
@@ -19,6 +22,7 @@ class ChainRule(HasTraits):
 
     implements(IDifferentiator)
     
+    # pylint: disable-msg=E1101
     # Local FD might need a stepsize
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
                              'difference step size.')
@@ -29,32 +33,32 @@ class ChainRule(HasTraits):
         _parent = None
         
         self.param_names = []
-        self.objective_names = []
-        self.eqconst_names = []
-        self.ineqconst_names = []
+        self.function_names = []
         
         self.gradient = {}
         self.hessian = {}
         
-        # Stores the set of edges for which we need derivatives.
-        # Dictionary key is the scope, since we need to store this for each
+        # Stores the set of edges for which we need derivatives. Dictionary
+        # key is the scope's pathname, since we need to store this for each
         # assembly recursion level.
-        self.edge_dicts = {}
+        self.edge_dicts = OrderedDict()
     
     def setup(self):
         """Sets some dimensions."""
 
         self.param_names = self._parent.get_parameters().keys()
-        self.objective_names = self._parent.get_objectives().keys()
+        objective_names = self._parent.get_objectives().keys()
         
         try:
-            self.ineqconst_names = self._parent.get_ineq_constraints().keys()
+            ineqconst_names = self._parent.get_ineq_constraints().keys()
         except AttributeError:
-            self.ineqconst_names = []
+            ineqconst_names = []
         try:
-            self.eqconst_names = self._parent.get_eq_constraints().keys()
+            eqconst_names = self._parent.get_eq_constraints().keys()
         except AttributeError:
-            self.eqconst_names = []
+            eqconst_names = []
+            
+        self.function_names = objective_names + ineqconst_names + eqconst_names
         
         
     def get_derivative(self, output_name, wrt):
@@ -107,10 +111,10 @@ class ChainRule(HasTraits):
         """
         
         return array([self.hessian[in1][in2][output_name] \
-                      for (in1,in2) in product(self.param_names, self.param_names)])
+               for (in1,in2) in product(self.param_names, self.param_names)])
 
 
-    def _find_edges(self, scope):
+    def _find_edges(self, scope, dscope):
         ''' Finds the minimum set of edges for which we need derivatives.
         These edges contain the inputs and outputs that are in the workflow
         of the driver, and whose source or target component has derivatives
@@ -120,22 +124,35 @@ class ChainRule(HasTraits):
         workflow. Each component has a tuple that contains the input and
         output varpaths that are active in the derivative calculation.
         
+        A separate driver scope (dscope) can also be specified for drivers
+        that are not the top driver ('driver') in the assembly's workflow.
+        
         TODO - As part of this process, we will already need to know of any
         blocks that must be finite differenced together.
         '''
         
-        scope_name = scope.get_pathname()
-        self.edge_dicts[scope_name] = {}
+        scope_name = dscope.get_pathname()
+        self.edge_dicts[scope_name] = OrderedDict()
         edge_dict = self.edge_dicts[scope_name]
         
         # Find our minimum set of edges part 1
         # Inputs and Outputs from interior edges
-        driver_set = scope.workflow.get_names()
+        driver_set = dscope.workflow.get_names()
         interior_edges = scope._parent._depgraph.get_interior_edges(driver_set)
         
         needed_in_edges = set([b for a, b in interior_edges])
-        needed_edges = set([a for a, b in interior_edges])
+        needed_edge_exprs = set([a for a, b in interior_edges])
         
+        # Output edges are expressions, so we need to find the referenced
+        # variables
+        
+        needed_edges = []
+        for edge in needed_edge_exprs:
+            expr = scope._parent._exprmapper.get_expr(edge)
+            needed_edges.append(expr.refs().pop())
+            
+        needed_edges = set(needed_edges)
+            
         # Find our minimum set of edges part 2
         # Inputs connected to parameters
         needed_in_edges = needed_in_edges.union(set(self.param_names))
@@ -154,6 +171,37 @@ class ChainRule(HasTraits):
                 varpaths = item.get_referenced_varpaths()
                 needed_edges = needed_edges.union(varpaths)
                 
+        # Find our minimum set of edges part 5
+        # If we are collecting edges for a solver-type driver, then we need
+        # to add in the independents and dependents
+        if has_interface(dscope, ISolver):
+            
+            params = dscope.get_parameters().keys()
+            
+            deps = []
+            indeps = []
+            for expr, constr in dscope.get_eq_constraints().iteritems():
+                
+                item1 = constr.lhs.get_referenced_varpaths()
+                item2 = constr.rhs.get_referenced_varpaths()
+                comps = list(item1.union(item2))
+                    
+                if comps[0] in params:
+                    indep = comps[0]
+                    dep = comps[1]
+                elif comps[1] in params:
+                    indep = comps[1]
+                    dep = comps[0]
+                else:
+                    msg = "No independent in solver equation."
+                    raise NotImplementedError(msg)
+                
+                deps.append(dep)
+                indeps.append(indep)
+            
+            needed_edges = needed_edges.union(set(deps))
+            needed_in_edges = needed_in_edges.union(set(indeps))
+        
         # If we are at a deeper recursion level than the driver's assembly,
         # then we need to add the upscoped connected edges on the assembly
         # boundary
@@ -164,13 +212,16 @@ class ChainRule(HasTraits):
         
         # Loop through each comp in the workflow and assemble our data
         # structures
-        for node in scope.workflow.__iter__():
+        for node in dscope.workflow.__iter__():
     
             node_name = node.name
         
-            # We don't handle nested drivers yet.
+            # We don't handle nested drivers yet...
+            # ... though the Analytic differentiator can handle solvers
             if isinstance(node, Driver):
-                raise NotImplementedError('Nested drivers')
+                
+                # There are no connections on an ISolver
+                edge_dict[node_name] = ([], [])
             
             # Assemblies are tricky, but they should be able to calculate all
             # connected derivatives on their boundary.
@@ -186,8 +237,10 @@ class ChainRule(HasTraits):
                     needed_inputs.append(edge)
                     
                 needed_outputs = []
-                for edge in node.parent._depgraph.var_edges(node_name):
-                    parts = edge[0].split('.')
+                for edge_expr in node.parent._depgraph.var_edges(node_name):
+                    expr = node._parent._exprmapper.get_expr(edge_expr[0])
+                    edge = expr.refs().pop()
+                    parts = edge.split('.')
                     edge = '.'.join(parts[1:])
                     needed_outputs.append(edge)
                     
@@ -228,7 +281,8 @@ class ChainRule(HasTraits):
             # This component is part of a block that must be finite
             # differenced. These should provide all derivatives
             else:
-                raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
+                msg = 'CRND cannot Finite Difference subblocks yet.'
+                raise NotImplementedError(msg)
             
         #print self.edge_dicts
                 
@@ -239,7 +293,7 @@ class ChainRule(HasTraits):
         in_edges = []
         out_edges = []
         
-        upscope = self._parent.parent.driver
+        upscope = scope._parent.parent.driver
         scope_name = scope.get_pathname()
         upscope_name = upscope.get_pathname()
         parts = scope_name.split('.')
@@ -366,7 +420,7 @@ class ChainRule(HasTraits):
         # Figure out what outputs we need
         scope_name = scope.get_pathname()
         if scope_name not in self.edge_dicts:
-            self._find_edges(scope)
+            self._find_edges(scope, scope)
 
         # Loop through each comp in the workflow
         for node in scope.workflow.__iter__():
@@ -375,6 +429,7 @@ class ChainRule(HasTraits):
     
             incoming_deriv_names = {}
             incoming_derivs = {}
+            ascope = node.parent
             
             # We don't handle nested drivers yet.
             if isinstance(node, Driver):
@@ -401,55 +456,57 @@ class ChainRule(HasTraits):
                     
                     full_name = '.'.join([node_name, input_name])
 
-                    # Inputs who are hooked directly to the parameters
-                    if full_name == param and \
-                            full_name in derivs:
+                    # Inputs who are hooked directly to the current param
+                    if full_name == param:
                             
                         incoming_deriv_names[input_name] = full_name
                         incoming_derivs[full_name] = derivs[full_name]
                         
+                    # Do nothing for inputs connected to the other params
+                    elif full_name in self.param_names:
+                        pass
+                    
                     # Inputs who are connected to something with a derivative
                     else:
                 
-                        sources = node.parent._depgraph.connections_to(full_name)
+                        sources = ascope._depgraph.connections_to(full_name)
+                        expr_txt = sources[0][0]
+                        target = sources[0][1]
                         
-                        for source_tuple in sources:
+                        # Variables on an assembly boundary
+                        if expr_txt[0:4] == '@bin':
+                            expr_txt = expr_txt.replace('@bin.', '')
+                        
+                        expr = ascope._exprmapper.get_expr(expr_txt)
+                        source = expr.refs().pop()
                             
-                            source = source_tuple[0]
-                            expr_txt = node.parent._depgraph.get_source(source_tuple[1])
-                            
-                            # Variables on an assembly boundary
-                            if source[0:4] == '@bin' and source.count('.') < 2:
-                                source = source.replace('@bin.', '')
-                            
-                            # Only process inputs who are connected to outputs
-                            # with derivatives in the chain
-                            if expr_txt and source in derivs:
-                                
-                                # Need derivative of the expression
-                                expr = node.parent._exprmapper.get_expr(expr_txt)
-                                expr_deriv = expr.evaluate_gradient(scope=node.parent,
-                                                                    wrt=source)
-                                
-                                # We also need the derivative of the unit
-                                # conversion factor if there is one
-                                metadata = expr.get_metadata('units')
-                                source_unit = [x[1] for x in metadata if x[0]==source]
-                                if source_unit and source_unit[0]:
-                                    dest_expr = node.parent._exprmapper.get_expr(source_tuple[1])
-                                    metadata = dest_expr.get_metadata('units')
-                                    target_unit = [x[1] for x in metadata if x[0]==source_tuple[1]]
+                        # Need derivative of the expression
+                        expr = ascope._exprmapper.get_expr(expr_txt)
+                        expr_deriv = expr.evaluate_gradient(scope=ascope,
+                                                            wrt=source)
+                        
+                        # We also need the derivative of the unit
+                        # conversion factor if there is one
+                        metadata = expr.get_metadata('units')
+                        source_unit = [x[1] for x in metadata if x[0] == source]
+                        if source_unit and source_unit[0]:
+                            dest_expr = ascope._exprmapper.get_expr(target)
+                            metadata = dest_expr.get_metadata('units')
+                            target_unit = [x[1] for x in metadata \
+                                           if x[0] == target]
 
-                                    expr_deriv[source] = expr_deriv[source] * \
-                                        convert_units(1.0, source_unit[0], target_unit[0])
+                            expr_deriv[source] = expr_deriv[source] * \
+                                convert_units(1.0, source_unit[0], 
+                                              target_unit[0])
 
-                                incoming_deriv_names[input_name] = full_name
-                                if full_name in incoming_derivs:
-                                    incoming_derivs[full_name] += derivs[source] * \
-                                        expr_deriv[source]
-                                else:
-                                    incoming_derivs[full_name] = derivs[source] * \
-                                        expr_deriv[source]
+                        # Store our derivatives to chain them
+                        incoming_deriv_names[input_name] = full_name
+                        if full_name in incoming_derivs:
+                            incoming_derivs[full_name] += derivs[source] * \
+                                expr_deriv[source]
+                        else:
+                            incoming_derivs[full_name] = derivs[source] * \
+                                expr_deriv[source]
                         
                             
                 # CHAIN RULE
@@ -459,14 +516,17 @@ class ChainRule(HasTraits):
                     full_output_name = '.'.join([node_name, output_name])
                     derivs[full_output_name] = 0.0
                     
-                    for input_name, full_input_name in incoming_deriv_names.iteritems():
+                    for input_name, full_input_name in \
+                        incoming_deriv_names.iteritems():
+                        
                         derivs[full_output_name] += \
                             local_derivs[output_name][input_name] * \
                             incoming_derivs[full_input_name]
                             
             # This component must be finite differenced.
             else:
-                raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
+                msg = 'CRND cannot Finite Difference subblocks yet.'
+                raise NotImplementedError(msg)
             
 
     def _recurse_assy(self, scope, upscope_derivs, upscope_param):
@@ -478,36 +538,38 @@ class ChainRule(HasTraits):
         name = scope.name
         
         for item in scope._depgraph.var_edges('@xin'):
-            src = item[0].replace('@xin.','')
+            src_expr = item[0].replace('@xin.','')
+            expr = scope._exprmapper.get_expr(src_expr)
+            src = expr.refs().pop()
             upscope_src = src.replace('parent.','')
-            dest = item[1]
             
             # Real connections on boundary
-            if dest.count('.') < 2:
-                dest = dest.split('.')[1]
+            dest = item[1]
+            dest = dest.split('.')[1]
+            dest_txt = dest.replace('@bin.','')
                 
             # Differentiate all expressions
-            dest_txt = dest.replace('@bin.','')
-            expr_txt = scope._depgraph.get_source(dest_txt)
-            expr = scope._exprmapper.get_expr(expr_txt)
             expr_deriv = expr.evaluate_gradient(scope=scope,
                                                 wrt=src)
+            
             # We also need the derivative of the unit
             # conversion factor if there is one
             metadata = expr.get_metadata('units')
-            source_unit = [x[1] for x in metadata if x[0]==src]
+            source_unit = [x[1] for x in metadata if x[0] == src]
             if source_unit and source_unit[0]:
                 dest_expr = scope._exprmapper.get_expr(dest_txt)
                 metadata = dest_expr.get_metadata('units')
-                target_unit = [x[1] for x in metadata if x[0]==dest_txt]
+                target_unit = [x[1] for x in metadata if x[0] == dest_txt]
 
                 expr_deriv[src] = expr_deriv[src] * \
-                              convert_units(1.0, source_unit[0], target_unit[0])
+                           convert_units(1.0, source_unit[0], target_unit[0])
 
             if dest in local_derivs:    
-                local_derivs[dest] += upscope_derivs[upscope_src]*expr_deriv[src]
+                local_derivs[dest] += \
+                    upscope_derivs[upscope_src]*expr_deriv[src]
             else:
-                local_derivs[dest] = upscope_derivs[upscope_src]*expr_deriv[src]
+                local_derivs[dest] = \
+                    upscope_derivs[upscope_src]*expr_deriv[src]
         
         param = upscope_param.split('.')
         if param[0] == name:
@@ -592,4 +654,4 @@ class ChainRule(HasTraits):
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         name = find_name(self._parent, self)
-        self._parent.raise_exception("%s: %s" % (name,msg), exception_class)
+        self._parent.raise_exception("%s: %s" % (name, msg), exception_class)

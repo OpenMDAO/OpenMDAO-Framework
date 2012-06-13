@@ -1,5 +1,5 @@
 """
-Test of the Chain Rule differentiator.
+Test of the Analytic differentiator.
 """
 
 import unittest
@@ -7,13 +7,15 @@ from nose import SkipTest
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.datatypes.api import Float, Int
-from openmdao.lib.differentiators.chain_rule import ChainRule
+from openmdao.lib.differentiators.analytic import Analytic
+from openmdao.lib.differentiators.api import FiniteDifference
+from openmdao.lib.drivers.api import FixedPointIterator, BroydenSolver
 from openmdao.main.api import ComponentWithDerivatives, Assembly, set_as_top
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.hasparameters import HasParameters
-from openmdao.test.execcomp import ExecCompWithDerivatives
+from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.decorators import add_delegate
 
@@ -134,7 +136,7 @@ class Assy(Assembly):
         self.add('driver', Driv())
         self.driver.workflow.add(['comp'])
         
-        self.driver.differentiator = ChainRule()
+        self.driver.differentiator = Analytic()
         
         self.driver.add_objective('comp.y')
         self.driver.add_objective('comp.v')
@@ -146,8 +148,8 @@ class Assy(Assembly):
         self.driver.add_constraint('comp.x + comp.y + 2.0*comp.u < 30.0', name="Con1")
         self.driver.add_constraint('comp.x + comp.y + 3.0*comp.u = 100.0', name="ConE")
         
-class ChainRuleTestCase(unittest.TestCase):
-    """ Test of the Chain Rule differentiator. """
+class AnalyticTestCase(unittest.TestCase):
+    """ Test of the Analytic differentiator. """
 
     def setUp(self):
         self.model = Assy()
@@ -228,7 +230,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.add('driver', Driv())
         self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
         
-        self.top.driver.differentiator = ChainRule()
+        self.top.driver.differentiator = Analytic()
         
         obj = 'comp5.y1'
         con = 'comp5.y1-comp3.y1 > 0'
@@ -295,7 +297,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.driver.workflow.add(['comp1', 'nest1', 'comp5'])
         self.top.nest1.driver.workflow.add(['comp2', 'comp3', 'comp4'])
         
-        self.top.driver.differentiator = ChainRule()
+        self.top.driver.differentiator = Analytic()
         
         obj = 'comp5.y1'
         con = 'comp5.y1-nest1.comp3.y1 > 0'
@@ -335,84 +337,6 @@ class ChainRuleTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient('comp5.y1-nest1.comp3.y1>0')
         assert_rel_error(self, grad[0], -313.0+10.5, .001)
     
-    def test_find_edges(self):
-        # Verifies that we don't chain derivatives for inputs that are
-        # connected in a parent assembly, but are not germain to our subassy
-        # derivative.
-        
-        self.top = set_as_top(Assembly())
-    
-        exp1 = ['y1 = 2.0*x1**2',
-                'y2 = 3.0*x1']
-        deriv1 = ['dy1_dx1 = 4.0*x1',
-                  'dy2_dx1 = 3.0']
-    
-        exp2 = ['y1 = 0.5*x1']
-        deriv2 = ['dy1_dx1 = 0.5']
-        
-        exp3 = ['y1 = 3.5*x1']
-        deriv3 = ['dy1_dx1 = 3.5']
-    
-        exp4 = ['y1 = x1 + 2.0*x2',
-                'y2 = 3.0*x1',
-                'y3 = x1*x2']
-        deriv4 = ['dy1_dx1 = 1.0',
-                  'dy1_dx2 = 2.0',
-                  'dy2_dx1 = 3.0',
-                  'dy2_dx2 = 0.0',
-                  'dy3_dx1 = x2',
-                  'dy3_dx2 = x1']
-        
-        exp5 = ['y1 = x1 + 3.0*x2 + 2.0*x3']
-        deriv5 = ['dy1_dx1 = 1.0',
-                  'dy1_dx2 = 3.0',
-                  'dy1_dx3 = 2.0']
-        
-        self.top.add('nest1', Assembly())
-        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
-        self.top.nest1.add('driver', Driv())
-        self.top.nest1.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
-        self.top.nest1.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
-        self.top.nest1.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
-        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
-        
-        self.top.driver.workflow.add(['comp1', 'nest1', 'comp5'])
-        self.top.nest1.driver.workflow.add(['comp2', 'comp3', 'comp4'])
-        
-        self.top.nest1.driver.differentiator = ChainRule()
-        
-        obj = 'comp4.y1'
-        con = 'comp3.y1-comp3.y1 > 0'
-        self.top.nest1.driver.add_parameter('comp2.x1', low=-50., high=50., fd_step=.0001)
-        self.top.nest1.driver.add_objective(obj)
-        self.top.nest1.driver.add_constraint(con)
-        
-        self.top.nest1.add('real_c3_x1', Float(iotype='in', desc='I am really here'))
-        self.top.nest1.add('real_c4_y2', Float(iotype='out', desc='I am really here'))
-    
-        self.top.connect('comp1.y1', 'nest1.comp2.x1')
-        #self.top.connect('comp1.y1', 'nest1.comp2.x1')
-        self.top.connect('comp1.y2', 'nest1.real_c3_x1')
-        self.top.nest1.connect('real_c3_x1', 'comp3.x1')
-        self.top.nest1.connect('comp2.y1', 'comp4.x1')
-        self.top.nest1.connect('comp3.y1', 'comp4.x2')
-        self.top.nest1.connect('comp4.y2', 'real_c4_y2')
-        self.top.connect('nest1.real_c4_y2', 'comp5.x2')
-        self.top.connect('nest1.comp4.y1', 'comp5.x1')
-        self.top.connect('nest1.comp4.y3', 'comp5.x3')
-        #self.top.connect('nest1.comp4.y2 + 1.0*nest1.comp4.y3', 'comp5.x3')
-    
-        self.top.comp1.x1 = 2.0
-        self.top.run()
-        self.top.nest1.driver.differentiator.calc_gradient()
-        
-        edge_dict = self.top.nest1.driver.differentiator.edge_dicts['nest1.driver']
-        self.assertTrue('x1' in edge_dict['comp2'][0])
-        self.assertTrue('x1' not in edge_dict['comp3'][0])
-        self.assertTrue('y1' in edge_dict['comp4'][1])
-        self.assertTrue('y2' not in edge_dict['comp4'][1])
-
-        
     def test_simple_units(self):
         
         self.top = set_as_top(Assembly())
@@ -425,7 +349,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.add('driver', Driv())
         self.top.driver.workflow.add(['comp1', 'comp2'])
         
-        self.top.driver.differentiator = ChainRule()
+        self.top.driver.differentiator = Analytic()
         
         obj = 'comp2.y'
         self.top.driver.add_parameter('comp1.x', low=-50., high=50., fd_step=.0001)
@@ -461,7 +385,7 @@ class ChainRuleTestCase(unittest.TestCase):
         self.top.driver.workflow.add(['comp1', 'nest1', 'comp3'])
         self.top.nest1.driver.workflow.add(['comp2'])
         
-        self.top.driver.differentiator = ChainRule()
+        self.top.driver.differentiator = Analytic()
         
         obj = 'comp3.y'
         con = 'nest1.nesty>0'
@@ -491,21 +415,148 @@ class ChainRuleTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient(con)
         assert_rel_error(self, grad[0], -48.0, .001)
         
-    #def test_reset_state(self):
+    def test_simple_coupled(self):
         
-        #raise SkipTest("Test not needed yet.")
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y2 = 0.5*sin(x1) - 0.5*x1*y1']
+        deriv1 = ['dy2_dx1 = 0.5*cos(x1) - 0.5*y1',
+                  'dy2_dy1 = -0.5*x1']
         
-        #self.model.driver.form = 'central'
-        #self.model.comp.x = 1.0
-        #self.model.comp.u = 1.0
-        #self.model.run()
-        #self.model.driver.differentiator.calc_gradient()
-        #assert_rel_error(self, self.model.comp.u,
-                              #0.99, .0001)
-        #self.model.driver.differentiator.reset_state()
-        #assert_rel_error(self, self.model.comp.u,
-                              #1.0, .0001)
-
+        exp2 = ['y1 = x2*x2*y2']
+        deriv2 = ['dy1_dx2 = 2.0*y2*x2',
+                  'dy1_dy2 = x2*x2']
+        
+        self.top.add('driver', Driv())
+    
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        #self.top.add('comp1', ExecComp(exp1))
+        #self.top.add('comp2', ExecComp(exp2))
+        self.top.add('solver', BroydenSolver())
+            
+        self.top.driver.workflow.add(['solver'])
+        self.top.solver.workflow.add(['comp1', 'comp2'])
+        self.top.connect('comp1.y2', 'comp2.y2')
+        
+        # Solver setup
+        self.top.solver.add_parameter('comp1.y1', low=-1.e99, high=1.e99)
+        self.top.solver.add_constraint('comp2.y1 = comp1.y1')
+        
+        # Top driver setup
+        #self.top.driver.differentiator = FiniteDifference()
+        self.top.driver.differentiator = Analytic()
+        obj = 'comp2.y1'
+        self.top.driver.add_parameter('comp1.x1', low=-100., high=100., fd_step=.001)
+        #self.top.driver.add_parameter('comp2.x2', low=-100., high=100., fd_step=.0001)
+        self.top.driver.add_objective(obj)
+    
+        self.top.comp1.x1 = 1.0
+        self.top.comp2.x2 = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 0.08660, .001)
+        
+    def test_simple_coupled_adjoint(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y2 = 0.5*sin(x1) - 0.5*x1*y1']
+        deriv1 = ['dy2_dx1 = 0.5*cos(x1) - 0.5*y1',
+                  'dy2_dy1 = -0.5*x1']
+        
+        exp2 = ['y1 = x2*x2*y2']
+        deriv2 = ['dy1_dx2 = 2.0*y2*x2',
+                  'dy1_dy2 = x2*x2']
+        
+        self.top.add('driver', Driv())
+    
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        #self.top.add('comp1', ExecComp(exp1))
+        #self.top.add('comp2', ExecComp(exp2))
+        self.top.add('solver', BroydenSolver())
+            
+        self.top.driver.workflow.add(['solver'])
+        self.top.solver.workflow.add(['comp1', 'comp2'])
+        self.top.connect('comp1.y2', 'comp2.y2')
+        
+        # Solver setup
+        self.top.solver.add_parameter('comp1.y1', low=-1.e99, high=1.e99)
+        self.top.solver.add_constraint('comp2.y1 = comp1.y1')
+        
+        # Top driver setup
+        self.top.driver.differentiator = Analytic()
+        self.top.driver.differentiator.mode = 'adjoint'
+        obj = 'comp2.y1'
+        self.top.driver.add_parameter('comp1.x1', low=-100., high=100., fd_step=.001)
+        self.top.driver.add_parameter('comp2.x2', low=-100., high=100., fd_step=.0001)
+        self.top.driver.add_objective(obj)
+    
+        self.top.comp1.x1 = 1.0
+        self.top.comp2.x2 = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 0.08660, .001)
+        
+    def test_medium_coupled(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp0 = ['y=x']
+        deriv0 = ['dy_dx = 1.0']
+        
+        exp1 = ['y2 = 0.5*sin(x1) - 0.5*x1*y1']
+        deriv1 = ['dy2_dx1 = 0.5*cos(x1) - 0.5*y1',
+                  'dy2_dy1 = -0.5*x1']
+        
+        exp2 = ['y1 = x2*x2*y2']
+        deriv2 = ['dy1_dx2 = 2.0*y2*x2',
+                  'dy1_dy2 = x2*x2']
+        
+        exp4 = ['y=3.0*x']
+        deriv4 = ['dy_dx = 3.0']
+        
+        self.top.add('driver', Driv())
+    
+        self.top.add('comp0', ExecCompWithDerivatives(exp0, deriv0))
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp4, deriv4))
+        #self.top.add('comp1', ExecComp(exp1))
+        #self.top.add('comp2', ExecComp(exp2))
+        self.top.add('solver', BroydenSolver())
+            
+        self.top.driver.workflow.add(['solver'])
+        self.top.solver.workflow.add(['comp0', 'comp1', 'comp2', 'comp3'])
+        self.top.connect('comp0.y', 'comp1.x1')
+        self.top.connect('comp1.y2', 'comp2.y2')
+        self.top.connect('comp2.y1', 'comp3.x')
+        
+        # Solver setup
+        self.top.solver.add_parameter('comp1.y1', low=-1.e99, high=1.e99)
+        self.top.solver.add_constraint('comp2.y1 = comp1.y1')
+        
+        # Top driver setup
+        #self.top.driver.differentiator = FiniteDifference()
+        self.top.driver.differentiator = Analytic()
+        obj = 'comp3.y'
+        self.top.driver.add_parameter('comp0.x', low=-100., high=100., fd_step=.001)
+        self.top.driver.add_objective(obj)
+    
+        self.top.comp0.x = 1.0
+        self.top.comp2.x2 = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 3.0*0.08660, .001)
+        
+        
 if __name__ == '__main__':
     unittest.main()
 
