@@ -172,11 +172,13 @@ class ProjDirFactory(Factory):
         
         empty = []
         for typ in typset:
-            if typ.startswith('openmdao.'):
+            if typ.startswith('openmdao.'): # don't include any standard lib types
                 continue
             if 'classinfo' in graph.node[typ]:
                 meta = graph.node[typ]['classinfo'].meta
-                if ifaces.intersection(meta.get('ifaces', empty)): 
+                if ifaces.intersection(meta.get('ifaces', empty)):
+                    meta = meta.copy()
+                    meta['modpath'] = typ
                     types.append((typ, meta))
         return types
 

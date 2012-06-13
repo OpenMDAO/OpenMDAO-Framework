@@ -302,6 +302,11 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
+class ISolver(IComponent):
+    """An interface for drivers that are solvers. 
+    """
+    
+    pass
 
 class IAssembly(IComponent):
     """An interface for objects that contain a driver and its workflow components."""
