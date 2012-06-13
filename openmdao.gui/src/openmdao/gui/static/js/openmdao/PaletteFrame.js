@@ -59,7 +59,6 @@ openmdao.PaletteFrame = function(id,model) {
                  { 'bVisible': false, 'aTargets': [1,2,3] },
              ],
         });
-        //new FixedHeader( dtable );  // doesn't work with dataTable scrolling yet :(
         
         // make everything draggable
         jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
