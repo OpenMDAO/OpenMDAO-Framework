@@ -98,7 +98,7 @@ class WorkspacePage(BasePageObject):
         NotifierPage.wait(browser, port)
 
     def find_palette_button(self, name):
-        path = "//div[(@id='palette')]//div[(@title='%s')]" % name
+        path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
         return ButtonElement((By.XPATH, path)).get(self)
 
     def run(self, timeout=TMO):
@@ -187,7 +187,8 @@ class WorkspacePage(BasePageObject):
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
-        xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
+        #xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
+        xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
         WebDriverWait(self.browser, TMO).until(

@@ -25,7 +25,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
-                droppedPath = droppedObject.attr("path"),
+                droppedPath = droppedObject.attr("modpath"),
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top),
@@ -33,7 +33,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             var elem = dataflowDiv[0];
             var zindex = document.defaultView.getComputedStyle(elem,null)
                          .getPropertyValue("z-index");
-            debug.info(droppedName,'(path=',droppedPath,') ',
+            debug.info(droppedName,'(modpath=',droppedPath,') ',
                        'dropped on dataflow:',self.pathname,
                        'z-index',dataflowDiv.css('z-index'),
                        'zIndex',dataflowDiv.css('zIndex'));

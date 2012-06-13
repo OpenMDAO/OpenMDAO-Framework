@@ -75,8 +75,8 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
                 x = 20,
                 y = 10,
                 conn_list = jQuery.map(data.connections, function(n){return n;}),
-	            out_list  = jQuery.map(data.outputs, function(n){return src_comp+'.'+n.name;}),
-	            in_list   = jQuery.map(data.inputs, function(n){return dst_comp+'.'+n.name;});
+                out_list  = jQuery.map(data.outputs, function(n){return src_comp+'.'+n.name;}),
+                in_list   = jQuery.map(data.inputs, function(n){return dst_comp+'.'+n.name;});
 
             for (i = 0; i <conn_list.length; i++) {
                 conn_list[i]=conn_list[i].split('.')[1];

@@ -29,7 +29,7 @@ def _test_maxmin(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    # Import maxmin.py
+    # Add maxmin.py to project
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
@@ -44,7 +44,7 @@ def _test_maxmin(browser):
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
     workspace_page('libraries_tab').click()
-    workspace_page.find_palette_button('maxmin').click()
+    workspace_page.find_palette_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
@@ -107,7 +107,7 @@ def _test_connect(browser):
     workspace_page('libraries_tab').click()
     for retry in range(5):
         try:
-            workspace_page.find_palette_button('connect').click()
+            workspace_page.find_palette_button('Top').click()
         except StaleElementReferenceException:
             logging.warning('StaleElementReferenceException in _test_connect')
         else:
