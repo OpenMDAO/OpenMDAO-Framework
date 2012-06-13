@@ -21,7 +21,8 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.util.decorators import add_delegate
-from openmdao.main.interfaces import IHasParameters, IHasObjectives, IHasConstraints, implements
+from openmdao.main.interfaces import IHasParameters, IHasObjectives, \
+                                     IHasConstraints, implements
 
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
 class SensitivityDriver(DriverUsesDerivatives):
