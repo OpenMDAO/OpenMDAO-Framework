@@ -23,10 +23,6 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         accept: '.objtype',
         drop: function(ev,ui) {
             // get the object that was dropped and where it was dropped
-            debug.info("drop: ev")
-            debug.info(ev)
-            debug.info("drop: ui")
-            debug.info(ui)
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath"),
