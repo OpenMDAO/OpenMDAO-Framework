@@ -281,7 +281,10 @@ openmdao.Model=function() {
             parent = '';
         }
 
-        if (/driver/.test(typepath)&&(openmdao.Util['$'+name])){openmdao.Util['$'+name]();return;}
+        if (/driver/.test(typepath) && (openmdao.Util['$'+name])) {
+            openmdao.Util['$'+name]();
+            return;
+        }
 
         jQuery.ajax({
             type: 'POST',
