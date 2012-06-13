@@ -3,22 +3,47 @@
 
 # pylint: disable-msg=E0611,F0401
 try:
-    from numpy import array, zeros, dot, linalg
+    from numpy import zeros, dot, linalg
 except ImportError as err:
+    import logging
     logging.warn("In %s: %r" % (__file__, err))
-    
-    # to keep class decl from barfing before being stubbed out
-    array = lambda *args, **kwargs: None 
-    zeros = lambda *args, **kwargs: None 
     
 from openmdao.lib.datatypes.api import Enum, Bool
 from openmdao.lib.differentiators.chain_rule import ChainRule
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
 from openmdao.main.interfaces import implements, IDifferentiator, ISolver
-from openmdao.main.mp_support import is_instance, has_interface
+from openmdao.main.mp_support import has_interface
 from openmdao.units import convert_units
 from openmdao.util.decorators import stub_if_missing_deps
+
+
+def _d_conn(expr_txt, target, ascope):
+    """ Evaluates the derivative of a source-target variable connection.
+    This includes the derivative of the expression as well as the
+    derivative of the unit conversion factor."""
+    
+    expr = ascope._exprmapper.get_expr(expr_txt)
+    source = expr.refs().pop()
+        
+    # Need derivative of the expression
+    expr_deriv = expr.evaluate_gradient(scope=ascope,
+                                        wrt=source)
+    
+    # We also need the derivative of the unit
+    # conversion factor if there is one
+    metadata = expr.get_metadata('units')
+    source_unit = [x[1] for x in metadata if x[0] == source]
+    if source_unit and source_unit[0]:
+        dest_expr = ascope._exprmapper.get_expr(target)
+        metadata = dest_expr.get_metadata('units')
+        target_unit = [x[1] for x in metadata if x[0] == target]
+
+        expr_deriv[source] = expr_deriv[source] * \
+            convert_units(1.0, source_unit[0], target_unit[0])
+        
+    return source, expr_deriv
+
 
 @stub_if_missing_deps('numpy')
 class Analytic(ChainRule):
@@ -27,6 +52,7 @@ class Analytic(ChainRule):
 
     implements(IDifferentiator)
     
+    # pylint: disable-msg=E1101
     mode = Enum('direct', ['direct', 'adjoint'], iotype = 'in',
                  desc='Coose forward or adjoint mode')
     
@@ -57,12 +83,6 @@ class Analytic(ChainRule):
         
         # Bookkeeping index/name
         self.var_list = []
-        
-    def _mode_changed(self, oldval, newval):
-        ''' Need to rerun setup if we switch between Direct and Adjoint
-        modes.'''
-        
-        self.setup()
         
     def get_derivative(self, output_name, wrt):
         """Returns the derivative of output_name with respect to wrt.
@@ -134,7 +154,7 @@ class Analytic(ChainRule):
         # Objectives first
         i_eq = 0
         wrt = self.var_list + self.param_names
-        for obj_name, expr in self._parent.get_objectives().iteritems():
+        for expr in self._parent.get_objectives().values():
             
             obj_grad = expr.evaluate_gradient(scope=self._parent.parent,
                                                   wrt=wrt)
@@ -153,8 +173,7 @@ class Analytic(ChainRule):
             i_eq += 1
             
         # Constraints next
-        for con_name, constraint in \
-            self._parent.get_constraints().iteritems():
+        for constraint in self._parent.get_constraints().values():
             
             lhs, rhs, comparator, _ = \
                 constraint.evaluate_gradient(scope=self._parent.parent,
@@ -201,7 +220,7 @@ class Analytic(ChainRule):
         if head:
             head = '%s.' % head
             
-        index_bar = 0 if index==1 else 1
+        index_bar = 0 if index == 1 else 1
             
         # Number of unknowns = number of edges in our edge_dict
         for name, edges in self.edge_dicts[scope_name].iteritems():
@@ -282,11 +301,12 @@ class Analytic(ChainRule):
                     msg = "Only nested solvers are supported"
                     raise NotImplementedError(msg)
              
-                # Assemble a dictionary of the couplings that this solver iterates.
+                # Assemble a dictionary of the couplings that this solver
+                # iterates.
                 params = node.get_parameters().keys()
                 
                 solver_dict = {}
-                for expr, constr in node.get_eq_constraints().iteritems():
+                for constr in node.get_eq_constraints().values():
                     
                     item1 = constr.lhs.get_referenced_varpaths()
                     item2 = constr.rhs.get_referenced_varpaths()
@@ -305,9 +325,9 @@ class Analytic(ChainRule):
                     solver_dict[indep] = dep
                     
                 # Recurse
-                i_eq = self._assemble_direct(ascope, node, i_eq, head, solver_dict)
+                i_eq = self._assemble_direct(ascope, node, i_eq, head, 
+                                             solver_dict)
                     
-                
             # Recurse into assemblies.
             elif isinstance(node, Assembly):
                  
@@ -343,8 +363,8 @@ class Analytic(ChainRule):
                             expr_txt = expr_txt.replace('@bin.', '')
                         
                         # Need derivative of the expression
-                        source, expr_deriv = self._d_conn(expr_txt, target, 
-                                                          ascope)
+                        source, expr_deriv = _d_conn(expr_txt, target, 
+                                                     ascope)
                         
                         # Chain together deriv from var connection and comp
                         i_var = self.var_list.index("%s%s" % (head, source))
@@ -363,7 +383,6 @@ class Analytic(ChainRule):
                 for output_name in edge_dict[1]:
                     
                     self.LHS[i_eq][i_eq] = 1.0
-                    output_full = "%s.%s" % (node_name, output_name)
                 
                     sources = sub_scope._depgraph.connections_to(output_name)
                     for connect in sources:
@@ -377,8 +396,8 @@ class Analytic(ChainRule):
                         target = target.replace('@bout.', '')
                     
                     # Need derivative of the expression
-                    source, expr_deriv = self._d_conn(expr_txt, target, 
-                                                      sub_scope)
+                    source, expr_deriv = _d_conn(expr_txt, target, 
+                                                 sub_scope)
                     
                     # Chain together deriv from var connection and comp
                     i_var = self.var_list.index("%s%s.%s" % (head, 
@@ -418,8 +437,8 @@ class Analytic(ChainRule):
                             expr_txt = expr_txt.replace('@bin.', '')
                         
                         # Need derivative of the expression
-                        source, expr_deriv = self._d_conn(expr_txt, target, 
-                                                          ascope)
+                        source, expr_deriv = _d_conn(expr_txt, target, 
+                                                     ascope)
                         
                         # Chain together deriv from var connection and comp
                         i_var = self.var_list.index("%s%s" % (head, source))
@@ -430,7 +449,6 @@ class Analytic(ChainRule):
                 for output_name in edge_dict[1]:
                      
                     self.LHS[i_eq][i_eq] = 1.0
-                    output_full = "%s.%s" % (node_name, output_name)
                      
                     # Each input provides a term for LHS or RHS
                     for input_name in edge_dict[0]:
@@ -468,32 +486,6 @@ class Analytic(ChainRule):
             
         return i_eq
     
-    def _d_conn(self, expr_txt, target, ascope):
-        """ Evaluates the derivative of a source-target variable connection.
-        This includes the derivative of the expression as well as the
-        derivative of the unit conversion factor."""
-        
-        expr = ascope._exprmapper.get_expr(expr_txt)
-        source = expr.refs().pop()
-            
-        # Need derivative of the expression
-        expr_deriv = expr.evaluate_gradient(scope=ascope,
-                                            wrt=source)
-        
-        # We also need the derivative of the unit
-        # conversion factor if there is one
-        metadata = expr.get_metadata('units')
-        source_unit = [x[1] for x in metadata if x[0]==source]
-        if source_unit and source_unit[0]:
-            dest_expr = ascope._exprmapper.get_expr(target)
-            metadata = dest_expr.get_metadata('units')
-            target_unit = [x[1] for x in metadata if x[0]==target]
-
-            expr_deriv[source] = expr_deriv[source] * \
-                convert_units(1.0, source_unit[0], target_unit[0])
-            
-        return source, expr_deriv
-    
     def _solve(self):
         """Solve the linear system.
         
@@ -501,7 +493,7 @@ class Analytic(ChainRule):
         Adjoint mode: solves for d(obj,constr)/dx
         """
         
-        if self.mode=='adjoint':
+        if self.mode == 'adjoint':
             total_derivs = linalg.solve(self.LHS.T, self.EQS.T)
             self.gradient = self.EQS_zero + dot(total_derivs.T, self.RHS)
         else:

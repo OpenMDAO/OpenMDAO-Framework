@@ -4,11 +4,11 @@ Derivatives (CRND) method.
 
 from ordereddict import OrderedDict
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float
-from openmdao.main.interfaces import implements, IDifferentiator, IDriver, \
-                                     ISolver
+from openmdao.main.interfaces import implements, IDifferentiator, ISolver
 from openmdao.main.api import Driver, Assembly
 from openmdao.main.assembly import Run_Once
 from openmdao.main.container import find_name
@@ -22,6 +22,7 @@ class ChainRule(HasTraits):
 
     implements(IDifferentiator)
     
+    # pylint: disable-msg=E1101
     # Local FD might need a stepsize
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
                              'difference step size.')
@@ -110,7 +111,7 @@ class ChainRule(HasTraits):
         """
         
         return array([self.hessian[in1][in2][output_name] \
-                      for (in1,in2) in product(self.param_names, self.param_names)])
+               for (in1,in2) in product(self.param_names, self.param_names)])
 
 
     def _find_edges(self, scope, dscope):
@@ -280,7 +281,8 @@ class ChainRule(HasTraits):
             # This component is part of a block that must be finite
             # differenced. These should provide all derivatives
             else:
-                raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
+                msg = 'CRND cannot Finite Difference subblocks yet.'
+                raise NotImplementedError(msg)
             
         #print self.edge_dicts
                 
@@ -427,6 +429,7 @@ class ChainRule(HasTraits):
     
             incoming_deriv_names = {}
             incoming_derivs = {}
+            ascope = node.parent
             
             # We don't handle nested drivers yet.
             if isinstance(node, Driver):
@@ -466,7 +469,7 @@ class ChainRule(HasTraits):
                     # Inputs who are connected to something with a derivative
                     else:
                 
-                        sources = node.parent._depgraph.connections_to(full_name)
+                        sources = ascope._depgraph.connections_to(full_name)
                         expr_txt = sources[0][0]
                         target = sources[0][1]
                         
@@ -474,25 +477,27 @@ class ChainRule(HasTraits):
                         if expr_txt[0:4] == '@bin':
                             expr_txt = expr_txt.replace('@bin.', '')
                         
-                        expr = node.parent._exprmapper.get_expr(expr_txt)
+                        expr = ascope._exprmapper.get_expr(expr_txt)
                         source = expr.refs().pop()
                             
                         # Need derivative of the expression
-                        expr = node.parent._exprmapper.get_expr(expr_txt)
-                        expr_deriv = expr.evaluate_gradient(scope=node.parent,
+                        expr = ascope._exprmapper.get_expr(expr_txt)
+                        expr_deriv = expr.evaluate_gradient(scope=ascope,
                                                             wrt=source)
                         
                         # We also need the derivative of the unit
                         # conversion factor if there is one
                         metadata = expr.get_metadata('units')
-                        source_unit = [x[1] for x in metadata if x[0]==source]
+                        source_unit = [x[1] for x in metadata if x[0] == source]
                         if source_unit and source_unit[0]:
-                            dest_expr = node.parent._exprmapper.get_expr(target)
+                            dest_expr = ascope._exprmapper.get_expr(target)
                             metadata = dest_expr.get_metadata('units')
-                            target_unit = [x[1] for x in metadata if x[0]==target]
+                            target_unit = [x[1] for x in metadata \
+                                           if x[0] == target]
 
                             expr_deriv[source] = expr_deriv[source] * \
-                                convert_units(1.0, source_unit[0], target_unit[0])
+                                convert_units(1.0, source_unit[0], 
+                                              target_unit[0])
 
                         # Store our derivatives to chain them
                         incoming_deriv_names[input_name] = full_name
@@ -511,14 +516,17 @@ class ChainRule(HasTraits):
                     full_output_name = '.'.join([node_name, output_name])
                     derivs[full_output_name] = 0.0
                     
-                    for input_name, full_input_name in incoming_deriv_names.iteritems():
+                    for input_name, full_input_name in \
+                        incoming_deriv_names.iteritems():
+                        
                         derivs[full_output_name] += \
                             local_derivs[output_name][input_name] * \
                             incoming_derivs[full_input_name]
                             
             # This component must be finite differenced.
             else:
-                raise NotImplementedError('CRND cannot Finite Difference subblocks yet.')
+                msg = 'CRND cannot Finite Difference subblocks yet.'
+                raise NotImplementedError(msg)
             
 
     def _recurse_assy(self, scope, upscope_derivs, upscope_param):
@@ -547,19 +555,21 @@ class ChainRule(HasTraits):
             # We also need the derivative of the unit
             # conversion factor if there is one
             metadata = expr.get_metadata('units')
-            source_unit = [x[1] for x in metadata if x[0]==src]
+            source_unit = [x[1] for x in metadata if x[0] == src]
             if source_unit and source_unit[0]:
                 dest_expr = scope._exprmapper.get_expr(dest_txt)
                 metadata = dest_expr.get_metadata('units')
-                target_unit = [x[1] for x in metadata if x[0]==dest_txt]
+                target_unit = [x[1] for x in metadata if x[0] == dest_txt]
 
                 expr_deriv[src] = expr_deriv[src] * \
-                              convert_units(1.0, source_unit[0], target_unit[0])
+                           convert_units(1.0, source_unit[0], target_unit[0])
 
             if dest in local_derivs:    
-                local_derivs[dest] += upscope_derivs[upscope_src]*expr_deriv[src]
+                local_derivs[dest] += \
+                    upscope_derivs[upscope_src]*expr_deriv[src]
             else:
-                local_derivs[dest] = upscope_derivs[upscope_src]*expr_deriv[src]
+                local_derivs[dest] = \
+                    upscope_derivs[upscope_src]*expr_deriv[src]
         
         param = upscope_param.split('.')
         if param[0] == name:
