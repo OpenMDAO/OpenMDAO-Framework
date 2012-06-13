@@ -86,7 +86,7 @@ def _test_import(browser):
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
-    workspace_page.find_palette_button('paraboloid').click()
+    workspace_page.find_palette_button('Paraboloid').click()
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
@@ -179,11 +179,11 @@ from openmdao.lib.datatypes.api import Float
 
 class Plane(Component):
 
-x1 = Float(0.0, iotype='in')
-x2 = Float(0.0, iotype='in')
-x3 = Float(0.0, iotype='in')
+    x1 = Float(0.0, iotype='in')
+    x2 = Float(0.0, iotype='in')
+    x3 = Float(0.0, iotype='in')
 
-f_x = Float(0.0, iotype='out')
+    f_x = Float(0.0, iotype='out')
 """)
 
     # Import it.
@@ -196,7 +196,7 @@ f_x = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
-    workspace_page.find_palette_button('plane').click()
+    workspace_page.find_palette_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.

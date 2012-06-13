@@ -10,9 +10,11 @@ openmdao.PaletteFrame = function(id,model) {
 
     // initialize private variables
     var self = this,
-        libs = jQuery('<div>').appendTo("#"+id);
+        palette = jQuery('#'+id),
+        libs = jQuery('<div>').appendTo(palette);
 
     // dropping a filename onto the palette pane means import *
+    /*
     libs.droppable ({
         accept: '.file',
         drop: function(ev,ui) {
@@ -29,61 +31,46 @@ openmdao.PaletteFrame = function(id,model) {
             }
         }
     });
-
-    /** rebuild the Palette from an XML library list */
+    */
+    /** rebuild the Palette from a JSON library list of tuples of the form (libname, meta_dict) */
     function updatePalette(packages) {
         // remember what is expanded
-        var expanded = jQuery('.library-list:visible');
+        //var expanded = jQuery('.library-list:visible');
 
         // build the new html
         var html="<div id='library'>";
+        html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
+        // headers: Class, Module Path, Version, Interfaces
+        html += '<thead><tr><th></th><th></th><th></th><th></th></tr></thead><tbody>';
         jQuery.each(packages, function(name,item) {
-            html+= packageHTML(name,item);
+            html+= packageHTML(name, item);
         });
-        html+="</div>";
+        html+="</tbody></table></div>";
 
         // replace old html
         libs.html(html);
-
+        
+        var dtable = palette.find('#objtypetable').dataTable({
+            'bPaginate': false,
+            'bjQueryUI': true,
+            'sScrollY': '500px',
+            'bScrollCollapse': true,
+            'aoColumnDefs': [
+                 { 'bVisible': false, 'aTargets': [1,2,3] },
+             ],
+        });
+        
         // make everything draggable
         jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
         jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree
-
-        // collapse all and add click functionality
-        jQuery('.library-list').hide();
-        jQuery('.library-header').click(function () {
-            jQuery(this).next().toggle("normal");
-            return false;
-        });
-
-        // restore previously expanded libraries, if any
-        expanded.each(function() {
-            jQuery('.library-list:[title='+this.title+']').show();
-        });
     }
 
     /** build HTML string for a package */
     function packageHTML(name,item) {
-        var html = '';
-        // if item has a version it's an object type, otherwise it's a package
-        if (item.version) {
-            html+="<div class='objtype' path='"+item.path+"' title='"+name+"'>"+
-                   name +
-                  "</div>";
-        }
-        else {
-            html+="<div class='library-header' title='"+name+"'>";
-            html+="<h3>"+name+"</h3>";
-            html+="</div>";
-            html+="<ul class='library-list' title='"+name+"'>";
-            jQuery.each(item, function(name,subitem) {
-                html+= packageHTML(name,subitem);
-            });
-            html+="</ul>";
-        }
+        var html = "<tr><td class='objtype' modpath="+item.modpath+">"+name+"</td><td>"+
+                   item.modpath+"</td><td>"+item.version+"</td><td>"+item.ifaces+"</td></tr>";
         return html;
     }
-
 
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== 'types') {
