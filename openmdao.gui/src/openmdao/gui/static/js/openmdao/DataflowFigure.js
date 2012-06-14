@@ -393,14 +393,16 @@ openmdao.DataflowFigure.prototype.minimize=function(){
         });
         self.connections = {};
 
-        if (self.inputsFigure !== null) {
+        if (self.inputsFigure) {
             workflow.removeFigure(self.inputsFigure);
             self.removeChild(self.inputsFigure);
+            self.inputsFigure = null;
         }
 
-        if (self.outputsFigure !== null) {
+        if (self.outputsFigure) {
             workflow.removeFigure(self.outputsFigure);
             self.removeChild(self.outputsFigure);
+            self.outputsFigure = null;
         }
 
         self.setContent(self.contentHTML);
@@ -415,6 +417,10 @@ openmdao.DataflowFigure.prototype.minimize=function(){
 
 /* show the maximized version of the figure, with subcomponents & connections */
 openmdao.DataflowFigure.prototype.maximize=function(){
+    // make sure we are minimized first
+    this.minimize();
+
+    // toggle the maxmin button
     if (this.maxmin === '+') {
         this.maxmin = '-';
         var circleIMG = "url(/static/images/circle-minus.png)";
@@ -586,7 +592,7 @@ openmdao.DataflowFigure.prototype.layout=function() {
     });
 
     // add some room for incoming arrowheads
-    if (self.inputsFigure.getPorts().size > 0) {
+    if (self.inputsFigure && self.inputsFigure.getPorts().size > 0) {
         y = y + self.cornerHeight;
     }
 
@@ -676,24 +682,24 @@ openmdao.DataflowFigure.prototype.resize=function(){
 
     width  = xmax-xmin+this.margin*2;
     height = ymax-ymin+this.margin*2 + this.cornerHeight;
-    
-    if (this.inputsFigure.getPorts().size > 0) {
+
+    if (this.inputsFigure && this.inputsFigure.getPorts().size > 0) {
         height = height + this.cornerHeight;
     }
 
-    if (this.outputsFigure.getPorts().size > 0) {
+    if (this.outputsFigure && this.outputsFigure.getPorts().size > 0) {
         width = width + this.cornerWidth;
     }
-    
+
     this.setDimension(width,height);
 
-    if (this.inputsFigure !== null) {
+    if (this.inputsFigure) {
         this.inputsFigure.setDimension(width - 2*this.margin, 1);
         this.inputsFigure.setPosition(x0 + this.margin,
                                       y0 + this.cornerHeight + 2);
     }
 
-    if (this.outputsFigure !== null) {
+    if (this.outputsFigure) {
         this.outputsFigure.setDimension(1, height - this.cornerHeight - this.margin);
         this.outputsFigure.setPosition(x0 + width - 2,
                                        y0 + this.cornerHeight);
