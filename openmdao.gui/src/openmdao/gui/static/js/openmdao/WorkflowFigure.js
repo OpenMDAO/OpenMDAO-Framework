@@ -32,6 +32,7 @@ openmdao.WorkflowFigure=function(model,flowpath,pathname,driver){
     this.setCanDrag(false);
     this.setResizeable(false);
 };
+
 openmdao.WorkflowFigure.prototype=new draw2d.CompartmentFigure();
 openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     var item=draw2d.CompartmentFigure.prototype.createHTMLElement.call(this);

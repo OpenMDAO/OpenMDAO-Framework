@@ -41,7 +41,8 @@ openmdao.PaletteFrame = function(id,model) {
         var html="<div id='library'>";
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
         // headers: Class, Module Path, Version, Interfaces
-        html += '<thead><tr><th></th><th></th><th></th><th></th></tr></thead><tbody>';
+        html += '<thead><tr><th></th><th></th><th></th><th></th></tr></thead><tbody>'
+        html += '<div class="ui-widget"><label for="objtt-select">Search: </label><input id="objtt-select"></div>';
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name, item);
         });
@@ -55,9 +56,46 @@ openmdao.PaletteFrame = function(id,model) {
             'bjQueryUI': true,
             'sScrollY': '500px',
             'bScrollCollapse': true,
+            'bFilter': true,    // make sure filtering is still turned on
             'aoColumnDefs': [
                  { 'bVisible': false, 'aTargets': [1,2,3] },
              ],
+            'sDom': 'lrtip'   // removes the built-in filter field
+        });
+        
+        // here's the default list of filters for the library
+        var selections = [
+                    "in project",
+                    "Component",
+                    "Driver",
+                    "Solver",
+                    "Assembly",
+                    "Surrogate",
+                    "DOEgenerator"
+                ];
+        var input_obj = jQuery('#objtt-select')
+        input_obj.autocomplete({
+           source: function(term, response_cb) {
+               response_cb(selections);
+           },
+           select: function(event, ui) {
+               input_obj.value = ui.item.value;
+               ent = jQuery.Event('keypress.enterkey');
+               ent.target = input_obj;
+               ent.which = 13;
+               input_obj.trigger(ent);
+           },
+           position: { my: "right top", at: "left top" },
+           delay: 0
+        });
+        input_obj.bind('keypress.enterkey', function(e) {
+            if (e.which === 13) {
+                dtable.fnFilter( e.target.value );
+                if (selections.indexOf(e.target.value) == -1) {
+                   selections.push(e.target.value);
+                }
+                input_obj.autocomplete('close');
+            }
         });
         
         // make everything draggable
