@@ -266,14 +266,12 @@ def _test_properties(browser):
     project_info_page.delete_project()
     print "_test_properties complete."
 
-
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
         from util import setup_chrome, setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-<<<<<<< HEAD
         _test_console(browser)
         _test_import(browser)
         _test_menu(browser)
@@ -282,13 +280,6 @@ if __name__ == '__main__':
         _test_maxmin(browser)
         _test_addfiles(browser)
         browser.quit()
-=======
-       # _test_console(browser)
-       # _test_import(browser)
-       # _test_menu(browser)
-       # _test_newfile(browser)
-        _test_addfiles(browser)
->>>>>>> Updated editor.py and test_workspace.py
         teardown_server()
     else:
         # Run under nose.
