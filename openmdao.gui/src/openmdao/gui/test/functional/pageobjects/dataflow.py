@@ -43,6 +43,11 @@ class DataflowFigure(BasePageObject):
         """ Figure border property. """
         return self.root.value_of_css_property('border')
 
+    @property
+    def background_color(self):
+        """ Figure background-color property. """
+        return self.root.value_of_css_property('background-color')
+
     def editor_page(self, double_click=True):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)

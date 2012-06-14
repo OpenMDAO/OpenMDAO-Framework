@@ -29,6 +29,11 @@ def _test_maxmin(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
+    # verify that the globals figure is invisible
+    globals_figure = workspace_page.get_dataflow_figure('')
+    eq(globals_figure.border, '0px none rgb(0, 0, 0)')
+    eq(globals_figure.background_color, 'rgba(0, 0, 0, 0)')
+
     # Add maxmin.py to project
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
@@ -123,7 +128,7 @@ def _test_connect(browser):
     conn_page = workspace_page.connect(comp1, comp2)
     eq(conn_page.dialog_title, 'Connections: top comp1 to comp2')
     for prefix in ('b', 'e', 'f', 'i', 's'):
-        conn_page.connect('comp1.'+prefix+'_out', 'comp2.'+prefix+'_in')
+        conn_page.connect('comp1.' + prefix + '_out', 'comp2.' + prefix + '_in')
         time.sleep(0.5)  # Wait for display update.
     conn_page.close()
 
@@ -177,7 +182,7 @@ def _test_connect(browser):
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
-        from util import setup_chrome, setup_firefox
+        from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
         _test_connect(browser)
@@ -190,4 +195,3 @@ if __name__ == '__main__':
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-
