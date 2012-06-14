@@ -394,13 +394,11 @@ openmdao.DataflowFigure.prototype.minimize=function(){
         self.connections = {};
 
         if (self.inputsFigure !== null) {
-            debug.info('DataflowFigure.minimize()',self.pathname,'removing inputs',self.inputsFigure);
             workflow.removeFigure(self.inputsFigure);
             self.removeChild(self.inputsFigure);
         }
 
         if (self.outputsFigure !== null) {
-            debug.info('DataflowFigure.minimize()',self.pathname,'removing outputs',self.outputsFigure);
             workflow.removeFigure(self.outputsFigure);
             self.removeChild(self.outputsFigure);
         }
@@ -475,8 +473,15 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         workflow.addFigure(fig,0,0);
     });
 
-    this.inputsFigure = new draw2d.Node();
-    this.outputsFigure = new draw2d.Node();
+    self.inputsFigure = new draw2d.Node();
+    self.inputsFigure.html.style.border = 'none';
+    self.addChild(self.inputsFigure);
+    workflow.addFigure(self.inputsFigure,0,0);
+
+    self.outputsFigure = new draw2d.Node();
+    self.outputsFigure.html.style.border = 'none';
+    self.addChild(this.outputsFigure);
+    workflow.addFigure(self.outputsFigure,0,0);
 
     jQuery.each(json.connections,function(idx,conn) {
         var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
@@ -508,6 +513,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 con.setColor(new draw2d.Color(200,200,200));  // light grey
                 con.setZOrder(self.getZOrder()+1);
             }
+
             if (dst_name.length > 0) {
                 con.setTarget(dst_fig.getPort("input"));
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
@@ -662,25 +668,16 @@ openmdao.DataflowFigure.prototype.resize=function(){
     width  = xmax-xmin+this.margin*2 + this.cornerWidth;
     height = ymax-ymin+this.margin*2 + this.cornerHeight;
 
-    var workflow = this.getWorkflow(),
-        margin = this.margin;
+    if (this.inputsFigure !== null) {
+        this.inputsFigure.setDimension(width - 2*this.margin, 1);
+        this.inputsFigure.setPosition(x0 + this.margin,
+                                      y0 + this.cornerHeight + 2);
+    }
 
-    if (this.pathname !== '') {
-        // add the inputs figure
-        this.inputsFigure.setDimension(width - 2*margin, 1);
-        this.inputsFigure.html.style.border = 'none';
-        this.addChild(this.inputsFigure);
-        workflow.addFigure(this.inputsFigure,
-                           x0 + margin,
-                           y0 + this.cornerHeight + 2);
-
-        // add the outputs figure
-        this.outputsFigure.setDimension(1, height - this.cornerHeight - margin);
-        this.outputsFigure.html.style.border = 'none';
-        this.addChild(this.outputsFigure);
-        workflow.addFigure(this.outputsFigure,
-                           x0 + width - 2,
-                           y0 + this.cornerHeight);
+    if (this.outputsFigure !== null) {
+        this.outputsFigure.setDimension(1, height - this.cornerHeight - this.margin);
+        this.outputsFigure.setPosition(x0 + width - 2,
+                                       y0 + this.cornerHeight);
     }
 
     this.setDimension(width,height);

@@ -66,7 +66,6 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
 
     /** load json dataflow data */
     this.loadData = function(json) {
-        debug.info('DataflowPane.loadData dataflowFig:',dataflowFig);
         // FIXME: just having it update itself for now, ignoring json data
         //dataflowFig.updateDataflow(json);
         this.update();
@@ -74,10 +73,9 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
 
     /** update by deleting existing dataflow and creating a new one */
     this.update = function() {
-        debug.info('DataflowPane.update dataflowFig:',dataflowFig);
         if (dataflowFig !== null) {
+            // need to minimize & destroy figures to get rid of listeners
             dataflowFig.minimize();
-            debug.info('DataflowPane.update CLEAR dataflowFig:',dataflowFig);
             dataflow.clear();
             dataflowFig.destroy();
         }
