@@ -175,7 +175,6 @@ openmdao.Util = {
             debug.info('Util.handleResponse',userInput,userInput.val(),callback);
             // close dialog, invoke callback
             win.dialog('close');
-            // invoke callback
             if (callback) {
                 callback(userInput.val());
             }
@@ -203,13 +202,7 @@ openmdao.Util = {
                     {
                         text: 'Cancel',
                         id: baseId+'-cancel',
-                        click: function() {
-                            win.dialog('close');
-                            userInput.val('');
-                            // unbind handlers so they dont get called again
-                            jQuery('#'+okId).unbind('click');
-                            jQuery('#'+inputId).unbind('keypress.enterkey');
-                        }
+                        click: handleResponse
                     }
                 ]
             });
@@ -224,30 +217,12 @@ openmdao.Util = {
 
         jQuery('#'+inputId).bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
-                win.dialog('close');
-                // invoke callback
-                if (callback) {
-                    callback(userInput.val());
-                }
-                //clear input value
-                userInput.val('');
-                // unbind handlers so they dont get called again
-                jQuery('#'+okId).unbind('click');
-                jQuery('#'+inputId).unbind('keypress.enterkey');
+                handleResponse();
             }
         });
 
         jQuery('#'+okId).bind('click', function() {
-            win.dialog('close');
-            // invoke callback
-            if (callback) {
-                callback(userInput.val());
-            }
-            //clear input value
-            userInput.val('');
-            // unbind handlers so they dont get called again
-            jQuery('#'+okId).unbind('click');
-            jQuery('#'+inputId).unbind('keypress.enterkey');
+            handleResponse();
         });
 
         win.dialog('open');
@@ -297,7 +272,7 @@ openmdao.Util = {
     /**
      * show the properties of an object on the log (debug only)
      *
-     * obj:     the object for which properties are to be displayed
+     * obj: the object for which properties are to be displayed
      */
     dumpProps: function(obj) {
         var prop;
@@ -344,17 +319,6 @@ openmdao.Util = {
             for (i = 0; i < l; i += 1) {
                 purge(d.childNodes[i]);
             }
-        }
-    },
-
-    /**
-     * refresh n times (for debugging memory leak)
-     */
-    refreshX: function(n) {
-        if (n > 0) {
-            model.updateListeners();
-            n = n-1;
-            setTimeout( "openmdao.Util.refreshX("+n+")", 2000 );
         }
     },
 
@@ -437,12 +401,12 @@ openmdao.Util = {
                 socket = new WebSocket(addr);
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
-                    debug.info('websocket opened '+socket.readyState,socket,e);
-                    displaySockets();
+                    //debug.info('websocket opened '+socket.readyState,socket,e);
+                    //displaySockets();
                 };
                 socket.onclose = function (e) {
-                    debug.info('websocket closed',socket,e);
-                    displaySockets();
+                    //debug.info('websocket closed',socket,e);
+                    //displaySockets();
                     index = openmdao.sockets.indexOf(this);
                     if (index >= 0) {
                         openmdao.sockets.splice(index, 1);

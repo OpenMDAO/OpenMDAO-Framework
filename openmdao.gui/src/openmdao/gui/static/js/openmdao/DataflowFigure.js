@@ -568,8 +568,8 @@ openmdao.DataflowFigure.prototype.layout=function() {
     var self = this,
         connected = [],
         unconnected = [],
-        x0=this.getAbsoluteX(),
-        y0=this.getAbsoluteY(),
+        x0 = this.getAbsoluteX(),
+        y0 = this.getAbsoluteY(),
         margin = this.margin,
         x = x0 + margin,
         y = y0 + margin + this.cornerHeight,
@@ -584,6 +584,11 @@ openmdao.DataflowFigure.prototype.layout=function() {
             unconnected.push(fig);
         }
     });
+
+    // add some room for incoming arrowheads
+    if (self.inputsFigure.getPorts().size > 0) {
+        y = y + self.cornerHeight;
+    }
 
     // connected components are laid out diagonally (top left to bottom right)
     jQuery.each(connected,function(idx,fig) {
@@ -608,9 +613,11 @@ openmdao.DataflowFigure.prototype.layout=function() {
         }
     });
 
+    // resize
     self.resize();
 
-    jQuery.each(self.connections,function(name,conn) {
+    // line up assembly inputs and outputs with their component ports
+    jQuery.each(self.connections, function(name,conn) {
         var src_port = conn.getSource(),
             dst_port = conn.getTarget();
 
@@ -627,6 +634,7 @@ openmdao.DataflowFigure.prototype.layout=function() {
         }
     });
 
+    // layout parent to accomodate new size
     var parent = self.getParent();
     if (parent instanceof openmdao.DataflowFigure) {
         parent.layout();
@@ -665,8 +673,19 @@ openmdao.DataflowFigure.prototype.resize=function(){
             }
         }
     }
-    width  = xmax-xmin+this.margin*2 + this.cornerWidth;
+
+    width  = xmax-xmin+this.margin*2;
     height = ymax-ymin+this.margin*2 + this.cornerHeight;
+    
+    if (this.inputsFigure.getPorts().size > 0) {
+        height = height + this.cornerHeight;
+    }
+
+    if (this.outputsFigure.getPorts().size > 0) {
+        width = width + this.cornerWidth;
+    }
+    
+    this.setDimension(width,height);
 
     if (this.inputsFigure !== null) {
         this.inputsFigure.setDimension(width - 2*this.margin, 1);
@@ -679,8 +698,6 @@ openmdao.DataflowFigure.prototype.resize=function(){
         this.outputsFigure.setPosition(x0 + width - 2,
                                        y0 + this.cornerHeight);
     }
-
-    this.setDimension(width,height);
 };
 
 openmdao.DataflowFigure.prototype.setExecState=function(message){
