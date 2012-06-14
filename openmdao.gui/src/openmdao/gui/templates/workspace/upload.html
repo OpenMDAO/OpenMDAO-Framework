@@ -7,7 +7,7 @@
 {% block body %}
     <div id="file-prompt">
         <div id="drop-area">
-            <div id="drop-text">Drop Files Here!</div>
+            <div id="drop-text">Drop Files Here</div>
         </div>
         <input id="select-area" type="file" name="myfile" class='button' multiple="true"/>
         <table id="listing"></table>
@@ -43,6 +43,9 @@
         div#drop-text
         {
             position:relative;
+            font-weight:bold;
+            font-size:16pt;
+            color:white;
             text-align:center;
         }
 
