@@ -86,7 +86,7 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["objects"] = ( By.XPATH, "//div[@id='otree']//li[@path]" )
+        self.locators["objects"] = (By.XPATH, "//div[@id='otree']//li[@path]")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, 2*TMO).until(
@@ -228,6 +228,14 @@ class WorkspacePage(BasePageObject):
             fig_name = None
             for figure in figures:
                 try:
+                    header = figure.find_elements_by_class_name('DataflowFigureHeader')
+                    if len(header) == 0:
+                        # the outermost figure (globals) has no header or name
+                        if name == '' and prefix is None:
+                            fig = DataflowFigure(self.browser, self.port, figure)
+                            return fig
+                        else:
+                            continue
                     fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
                 except StaleElementReferenceException:
                     logging.warning('get_dataflow_figure:'
@@ -297,4 +305,3 @@ class WorkspacePage(BasePageObject):
         editor_id = 'DCE-%s-%s-%s' % (parent, srcname, dstname)
         editor_id = editor_id.replace('.', '-')
         return ConnectionsPage(self.browser, self.port, (By.ID, editor_id))
-

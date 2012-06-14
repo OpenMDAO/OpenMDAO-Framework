@@ -148,7 +148,7 @@ def _test_menu(browser):
 
 #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('cmdline', 'console', 'libraries', 'objects',
+    for item in ('console', 'libraries', 'objects',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
