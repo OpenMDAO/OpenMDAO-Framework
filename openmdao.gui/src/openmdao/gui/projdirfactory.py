@@ -178,7 +178,7 @@ class ProjDirFactory(Factory):
                 meta = graph.node[typ]['classinfo'].meta
                 if ifaces.intersection(meta.get('ifaces', empty)):
                     meta = meta.copy()
-                    meta['modpath'] = typ
+                    meta['_context'] = 'In Project'
                     types.append((typ, meta))
         return types
 
