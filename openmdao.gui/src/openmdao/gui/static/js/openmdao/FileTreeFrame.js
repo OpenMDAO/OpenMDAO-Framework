@@ -7,7 +7,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             "items": [
                 { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
                 { "text": "New Folder", "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
-                { "text": "Add File",   "onclick": "openmdao.FileTreeFrame.prototype.addFile();" }
+                { "text": "Add Files",   "onclick": "openmdao.FileTreeFrame.prototype.addFile();" }
             ]
         }
     ];
@@ -140,7 +140,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         };
 
         menu.addFile = {
-            "label"  : 'Add File',
+            "label"  : 'Add Files',
             "action" : function(node) {
                            if (isFolder) {
                                openmdao.FileTreeFrame.prototype.addFile(path);
