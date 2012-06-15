@@ -6,7 +6,7 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Container, Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
-from openmdao.main.datatypes.api import Float, Slot, File
+from openmdao.main.datatypes.api import Float, Slot, File, List
 from openmdao.main.case import flatten_obj
 
 class DumbVT3(VariableTree):
@@ -299,6 +299,48 @@ class NamespaceTestCase(unittest.TestCase):
                          set([('foo.vt2.vt3.a',1.),('foo.vt2.vt3.b',12.),
                               ('foo.vt2.x',-1.),('foo.vt2.y',-2.),
                               ('foo.v1',1.),('foo.v2',2.)]))
+    
+        
+class ListConnectTestCase(unittest.TestCase):
+
+    def test_connect(self):
+        class Vars(VariableTree):   
+                f1 = Float()
+                f2 = Float()
+
+        class TestAsm(Assembly):
+        
+            f_in = Float(iotype='in')
+        
+            def configure(self):
+                self.add('c2', TestComponent2())
+                self.driver.workflow.add('c2')
+        
+                # Construct list with only one element for demo purposes
+                self.c2.vtlist = [Vars()]
+                self.connect('f_in', 'c2.vtlist[0].f1')
+                self.c2.vtlist[0].f2 = 90
+        
+                self.create_passthrough('c2.f_out')
+
+        class TestComponent2(Component):
+        
+            vtlist = List(trait=Vars, value=[], iotype='in')
+            f_out = Float(iotype='out')
+        
+            def execute(self):
+                self.f_out = self.vtlist[0].f1 + self.vtlist[0].f2
+
+        top = set_as_top(Assembly())
+        # Init of model
+        test_asm = TestAsm()
+        top.add('asm', test_asm)
+        top.driver.workflow.add('asm')
+        test_asm.f_in = 10
+    
+        test_asm.run()
+    
+        self.assertEqual(100, test_asm.f_out)
     
     
 if __name__ == "__main__":
