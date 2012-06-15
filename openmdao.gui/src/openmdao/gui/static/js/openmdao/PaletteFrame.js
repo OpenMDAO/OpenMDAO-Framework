@@ -41,7 +41,7 @@ openmdao.PaletteFrame = function(id,model) {
         var html="<div id='library'>";
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
         // headers: Class, Module Path, Version, Interfaces
-        html += '<thead><tr><th></th><th></th><th></th><th></th></tr></thead><tbody>';
+        html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>';
         html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name, item);
@@ -58,7 +58,7 @@ openmdao.PaletteFrame = function(id,model) {
             'bScrollCollapse': true,
             'bFilter': true,    // make sure filtering is still turned on
             'aoColumnDefs': [
-                 { 'bVisible': false, 'aTargets': [1,2,3] }
+                 { 'bVisible': false, 'aTargets': [1,2,3,4] }
              ],
             'sDom': 'lrtp'   // removes the built-in filter field and bottom info (default is lfrtip)
         });
@@ -106,7 +106,8 @@ openmdao.PaletteFrame = function(id,model) {
     /** build HTML string for a package */
     function packageHTML(name,item) {
         var html = "<tr><td class='objtype' modpath="+item.modpath+">"+name+"</td><td>"+
-                   item.modpath+"</td><td>"+item.version+"</td><td>"+item.ifaces+"</td></tr>";
+                   item.modpath+"</td><td>"+item.version+"</td><td>"+
+                   item._context+"</td><td>"+item.ifaces+"</td></tr>";
         return html;
     }
 
