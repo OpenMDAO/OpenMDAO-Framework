@@ -10,7 +10,7 @@ from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Float
 from openmdao.main.interfaces import implements, IDifferentiator, ISolver
 from openmdao.main.api import Driver, Assembly
-from openmdao.main.assembly import Run_Once
+from openmdao.main.driver import Run_Once
 from openmdao.main.container import find_name
 from openmdao.main.mp_support import has_interface
 from openmdao.main.numpy_fallback import array

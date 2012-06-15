@@ -71,7 +71,7 @@ setup(name='openmdao.main',
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       
       [openmdao.driver]
-      openmdao.main.assembly.Run_Once = openmdao.main.assembly:Run_Once
+      openmdao.main.driver.Run_Once = openmdao.main.driver:Run_Once
       
       [openmdao.variable]
       openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot

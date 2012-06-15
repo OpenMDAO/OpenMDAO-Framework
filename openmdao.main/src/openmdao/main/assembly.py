@@ -21,7 +21,7 @@ from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.slot import Slot
-from openmdao.main.driver import Driver
+from openmdao.main.driver import Driver, Run_Once
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.expreval import ConnectedExprEvaluator
@@ -82,18 +82,6 @@ class PassthroughProperty(Variable):
             self._vals[obj] = {}
         self._vals[obj][name] = self._trait.validate(obj, name, value)
 
-class Run_Once(Driver):
-    """An assembly starts with a bare driver that just executes the workflow
-    a single time. The only difference between this and the Driver base class
-    is that record_case is called at the conclusion of the workflow execution.
-    """
-
-    def execute(self):
-        ''' Call parent, then record cases.'''
-        
-        super(Run_Once, self).execute()
-        self.record_case()
-        
         
 class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
