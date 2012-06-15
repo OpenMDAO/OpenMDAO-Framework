@@ -205,7 +205,45 @@ class Plane(Component):
     project_info_page.delete_project()
     print "_test_newfile complete."
 
+def _test_addfiles(browser):
+    print "running _test_addfiles..."
 
+    # Creates a file in the GUI
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Opens code editor
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+        
+    main_window_handle = editor_page.browser.current_window_handle
+
+    upload_page = editor_page.add_files()
+
+    # Get path to  paraboloid file.
+    import openmdao.examples.simple.paraboloid
+    paraboloidPath = openmdao.examples.simple.paraboloid.__file__
+
+    # Get path to optimization_unconstrained file.
+    import openmdao.examples.simple.optimization_unconstrained
+    opt_unconstrainedPath = openmdao.examples.simple.optimization_unconstrained.__file__
+    
+    # Add the files
+    upload_page.select_files((paraboloidPath[:len(paraboloidPath)-1], 
+        opt_unconstrainedPath[:len(opt_unconstrainedPath)-1]))
+   
+    upload_page.upload_files()
+
+    browser.switch_to_window(main_window_handle)
+    # Check to make sure the files were added.
+    file_names = editor_page.get_files()
+    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+    
 def _test_properties(browser):
     print "running _test_properties..."
     # Checks right-hand side properties display.
@@ -236,7 +274,6 @@ def _test_properties(browser):
     project_info_page.delete_project()
     print "_test_properties complete."
 
-
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
@@ -248,6 +285,7 @@ if __name__ == '__main__':
         _test_menu(browser)
         _test_newfile(browser)
         _test_properties(browser)
+        _test_addfiles(browser)
         browser.quit()
         teardown_server()
     else:
