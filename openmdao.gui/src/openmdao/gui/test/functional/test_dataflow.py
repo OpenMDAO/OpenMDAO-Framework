@@ -31,7 +31,10 @@ def _test_maxmin(browser):
 
     # verify that the globals figure is invisible
     globals_figure = workspace_page.get_dataflow_figure('')
-    eq(globals_figure.border, '0px none rgb(0, 0, 0)')
+    if sys.platform == 'darwin':
+        eq(globals_figure.border, 'none')
+    else:
+        eq(globals_figure.border, '0px none rgb(0, 0, 0)')
     eq(globals_figure.background_color, 'rgba(0, 0, 0, 0)')
 
     # Add maxmin.py to project
@@ -59,16 +62,20 @@ def _test_maxmin(browser):
     maxmin = workspace_page.get_dataflow_figure('maxmin')
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-plus.png)'
-                   ' no-repeat scroll 100% 0%')
+    if sys.platform == 'darwin':
+        bg = '%s %s' % ('url(http://localhost/static/images/circle-plus.png)',
+                        'no-repeat 100% 0%')
+    else:
+        bg = '%s %s %s' % ('rgba(0, 0, 0, 0)',
+                           'url(http://localhost/static/images/circle-plus.png)',
+                           'no-repeat scroll 100% 0%')
+    eq(background, bg)
 
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-minus.png)'
-                   ' no-repeat scroll 100% 0%')
+    bg = bg.replace('circle-plus', 'circle-minus')
+    eq(background, bg)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
@@ -77,9 +84,8 @@ def _test_maxmin(browser):
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-plus.png)'
-                   ' no-repeat scroll 100% 0%')
+    bg = bg.replace('circle-minus', 'circle-plus')
+    eq(background, bg)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
