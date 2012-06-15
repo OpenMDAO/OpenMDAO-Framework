@@ -1,10 +1,8 @@
 
-var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
+openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
     var id = ('DCE-'+pathname+'-'+src_comp+'-'+dst_comp).replace(/\./g,'-');
-    openmdao.ConnectionFrame.prototype.init.call(this, id,
-        'Connections: '+openmdao.Util.getName(pathname)+' '+src_comp+' to '+dst_comp);
 
     /***********************************************************************
      *  private
@@ -24,12 +22,12 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
                         }),
         dataflowCSS = 'overflow:auto; background:grey;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
-                        .appendTo(self.elm),
+                        .appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID);
 
-    self.elm.append(output_selector);
-    self.elm.append(input_selector);
-    self.elm.append(connect_button);
+    elm.append(output_selector);
+    elm.append(input_selector);
+    elm.append(connect_button);
 
     self.pathname = pathname;
     self.src_comp = src_comp;
@@ -75,15 +73,15 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
                 x = 20,
                 y = 10,
                 conn_list = jQuery.map(data.connections, function(n){return n;}),
-                out_list  = jQuery.map(data.outputs, function(n){return src_comp+'.'+n.name;}),
-                in_list   = jQuery.map(data.inputs, function(n){return dst_comp+'.'+n.name;});
+                out_list  = jQuery.map(data.outputs, function(n){return self.src_comp+'.'+n.name;}),
+                in_list   = jQuery.map(data.inputs, function(n){return self.dst_comp+'.'+n.name;});
 
             for (i = 0; i <conn_list.length; i++) {
                 conn_list[i]=conn_list[i].split('.')[1];
             }
             jQuery.each(data.outputs, function(idx,outvar) {
                 if (self.showAllVariables || conn_list.contains(outvar.name)) {
-                    var src_name = src_comp+'.'+outvar.name,
+                    var src_name = self.src_comp+'.'+outvar.name,
                         src_path = self.pathname+'.'+src_name,
                         fig = new openmdao.VariableFigure(model,src_path,outvar,'output');
                     dataflow.addFigure(fig,x,y);
@@ -96,7 +94,7 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
             y = 10;
             jQuery.each(data.inputs, function(idx,invar) {
                 if (self.showAllVariables || conn_list.contains(invar.name)) {
-                    var dst_name = dst_comp+'.'+invar.name,
+                    var dst_name = self.dst_comp+'.'+invar.name,
                         dst_path = self.pathname+'.'+dst_name,
                         fig = new openmdao.VariableFigure(model,dst_path,invar,'input');
                     dataflow.addFigure(fig,x,y);
@@ -171,22 +169,17 @@ openmdao.ConnectionFrame = function(model,pathname,src_comp,dst_comp) {
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
 
-        var callback = loadData;
-        model.getConnections(pathname, src_comp, dst_comp, callback,
+        model.getConnections(pathname, src_comp, dst_comp, loadData,
             function(jqXHR, textStatus, errorThrown) {
                 debug.error(jqXHR,textStatus,errorThrown);
                 self.close();
             }
         );
-        return this;
     };
-
-    this.update();
-
-    //FIXME: use data in message instead of brute force update
-    model.addListener(pathname,this.update);
+    
+    this.editConnections(pathname, src_comp, dst_comp);
 };
 
 /** set prototype */
-openmdao.ConnectionFrame.prototype = new openmdao.BaseFrame();
-openmdao.ConnectionFrame.prototype.constructor = openmdao.ConnectionFrame;
+openmdao.ConnectionsPane.prototype = new openmdao.BaseFrame();
+openmdao.ConnectionsPane.prototype.constructor = openmdao.ConnectionsPane;

@@ -222,7 +222,7 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
                     var path = openmdao.Util.getPath(pathname),
                         src  = name,
                         dst  = request.source.getParent().name;
-                    frame = new openmdao.ConnectionFrame(model,path,src,dst);
+                    frame = new openmdao.ConnectionsFrame(model,path,src,dst);
                 }
                 return null;
             }
@@ -544,7 +544,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 var menu=new draw2d.Menu();
                 menu.appendMenuItem(new draw2d.MenuItem("Edit Connections",null,
                     function(){
-                        var cf = new openmdao.ConnectionFrame(self.openmdao_model,
+                        var cf = new openmdao.ConnectionsFrame(self.openmdao_model,
                                                  self.pathname,src_name,dst_name);
                     })
                 );
@@ -556,7 +556,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             // FIXME: usually doesn't work... DataflowFigure steals the clicks
             if ((src_name.length > 0) && (dst_name.length > 0)) {
                 con.onDoubleClick = function() {
-                    var cf = new openmdao.ConnectionFrame(self.openmdao_model,
+                    var cf = new openmdao.ConnectionsFrame(self.openmdao_model,
                                              self.pathname,src_name,dst_name);
                 };
             }
