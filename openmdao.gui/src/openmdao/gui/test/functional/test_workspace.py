@@ -208,7 +208,7 @@ class Plane(Component):
 def _test_addfiles(browser):
     print "running _test_addfiles..."
 
-    # Createsa file in the GUI
+    # Creates a file in the GUI
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
@@ -216,6 +216,10 @@ def _test_addfiles(browser):
     # Opens code editor
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
+        
+    main_window_handle = editor_page.browser.current_window_handle
+
+    upload_page = editor_page.add_files()
 
     # Get path to  paraboloid file.
     import openmdao.examples.simple.paraboloid
@@ -226,8 +230,12 @@ def _test_addfiles(browser):
     opt_unconstrainedPath = openmdao.examples.simple.optimization_unconstrained.__file__
     
     # Add the files
-    editor_page.add_files((paraboloidPath, opt_unconstrainedPath))
+    upload_page.select_files((paraboloidPath[:len(paraboloidPath)-1], 
+        opt_unconstrainedPath[:len(opt_unconstrainedPath)-1]))
+   
+    upload_page.upload_files()
 
+    browser.switch_to_window(main_window_handle)
     # Check to make sure the files were added.
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
@@ -235,6 +243,7 @@ def _test_addfiles(browser):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
+    
 
 def _test_properties(browser):
     print "running _test_properties..."

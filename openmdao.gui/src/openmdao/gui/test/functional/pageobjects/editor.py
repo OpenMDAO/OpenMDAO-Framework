@@ -1,6 +1,7 @@
 import logging
 import time
 
+import selenium
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -9,9 +10,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement
+from elements import ButtonElement, InputElement, CheckboxElement 
 from util import ValuePrompt
-
 
 class UploadPage(BasePageObject):
     """ Pops-up when adding a file. """
@@ -24,6 +24,16 @@ class UploadPage(BasePageObject):
     def upload_file(self, path):
         self.filename = path
         self('submit').click()
+
+    def upload_files(self):
+        self('submit').click()
+    
+    def select_file(self, path):
+        self.filename = path
+
+    def select_files(self, paths):
+        for path in paths:
+            self.select_file(path)
 
 class EditorPage(BasePageObject):
     """ Code editor window. """
@@ -100,29 +110,12 @@ class EditorPage(BasePageObject):
 
         # Go back to the main window.
         self.browser.switch_to_window(main_window_handle)
-    
-    def add_files(self, file_paths):
-        modified_file_paths = []
-        for file_path in file_paths:
-            if(file_path.endswith('.pyc')):
-                modified_file_paths.append(file_path[:-1])
-            else:
-                modified_file_paths.append(file_path)
-
-        main_window_handle = self.browser.current_window_handle
-
-
-        # Switch to the Window that pops up.
-
-        for path in modified_file_paths:
-            self('file_menu').click()
-            self('add_button').click()
-            self.browser.switch_to_window('Add File')
-            page = UploadPage(self.browser, self.port)
-            page.upload_file(path)
-
-            # Go back to the main window.
-            self.browser.switch_to_window(main_window_handle)
+   
+    def add_files(self):
+        self('file_menu').click()
+        self('add_button').click()
+        self.browser.switch_to_window('Add File')
+        return UploadPage.verify(self.browser, self.port)
 
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """

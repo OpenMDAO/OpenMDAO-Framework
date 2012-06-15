@@ -110,7 +110,7 @@
             var table = document.all("listing");
             var newRow = table.insertRow(table.rows.length);
             var newCell = newRow.insertCell();
-            newCell.innerHTML = '<input type="checkbox" name=' + fileName + ' checked="checked" onclick="deleteRow(this)"/>' + fileName + ' ' + fileSize;
+            newCell.innerHTML = '<input type="checkbox" name=' + fileName + ' checked="checked" onclick="deleteRow(this)"/>' + fileName + ' ' + fileSize + ' bytes';
         }
 
         function deleteRow(src)
