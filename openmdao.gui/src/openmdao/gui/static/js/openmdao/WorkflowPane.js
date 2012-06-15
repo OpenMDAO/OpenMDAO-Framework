@@ -26,7 +26,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
-                droppedPath = droppedObject.attr("path"),
+                droppedPath = droppedObject.attr("modpath"),
                 off = workflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top),
@@ -59,6 +59,11 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                     else {
                         debug.info(droppedPath,'was not dropped on a driver', bestfig);
                     }
+                }
+                else {
+                   debug.info('fell through and did nothing!');
+                   debug.info('bestfig');
+                   debug.info(bestfig);
                 }
             }
             else {
