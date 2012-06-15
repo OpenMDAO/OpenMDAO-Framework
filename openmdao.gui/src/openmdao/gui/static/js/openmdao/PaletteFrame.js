@@ -42,7 +42,7 @@ openmdao.PaletteFrame = function(id,model) {
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
         // headers: Class, Module Path, Version, Interfaces
         html += '<thead><tr><th></th><th></th><th></th><th></th></tr></thead><tbody>';
-        html += '<div class="ui-widget"><label for="objtt-select">Search: </label><input id="objtt-select"></div>';
+        html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name, item);
         });
@@ -60,7 +60,7 @@ openmdao.PaletteFrame = function(id,model) {
             'aoColumnDefs': [
                  { 'bVisible': false, 'aTargets': [1,2,3] }
              ],
-            'sDom': 'lrtip'   // removes the built-in filter field
+            'sDom': 'lrtp'   // removes the built-in filter field and bottom info (default is lfrtip)
         });
         
         // here's the default list of filters for the library
@@ -73,7 +73,7 @@ openmdao.PaletteFrame = function(id,model) {
                     "Surrogate",
                     "DOEgenerator"
                 ];
-        var input_obj = jQuery('#objtt-select');
+        var input_obj = palette.find('#objtt-select');
         input_obj.autocomplete({
            source: function(term, response_cb) {
                response_cb(selections);
