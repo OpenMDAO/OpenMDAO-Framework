@@ -390,7 +390,6 @@ class TypesHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(jsonpickle.encode(types))
 
-
 class UploadHandler(ReqHandler):
     ''' file upload utility
     '''

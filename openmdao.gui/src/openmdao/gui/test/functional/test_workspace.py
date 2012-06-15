@@ -244,7 +244,6 @@ def _test_addfiles(browser):
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
     
-
 def _test_properties(browser):
     print "running _test_properties..."
     # Checks right-hand side properties display.
@@ -274,7 +273,6 @@ def _test_properties(browser):
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_properties complete."
-
 
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
