@@ -638,10 +638,14 @@ class Assembly (Component):
         invalids = []
         
         if compname is not None:
+            pred = self._exprmapper._exprgraph.pred
             if exprs:
-                exprs = ['.'.join([compname, n]) for n in exprs]
+                ex = ['.'.join([compname, n]) for n in exprs]
+                exprs = []
+                for e in ex:
+                    exprs.extend([expr for expr in self._exprmapper.find_referring_exprs(e)
+                                  if expr in pred])
             else:
-                pred = self._exprmapper._exprgraph.pred
                 exprs = [expr for expr in self._exprmapper.find_referring_exprs(compname)
                              if expr in pred]
         for expr in exprs:
