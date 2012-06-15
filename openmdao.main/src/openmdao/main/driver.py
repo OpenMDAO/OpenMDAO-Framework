@@ -412,3 +412,16 @@ class Driver(Component):
                   })
         return ret
 
+
+class Run_Once(Driver):
+    """An assembly starts with a bare driver that just executes the workflow
+    a single time. The only difference between this and the Driver base class
+    is that record_case is called at the conclusion of the workflow execution.
+    """
+
+    def execute(self):
+        ''' Call parent, then record cases.'''
+        
+        super(Run_Once, self).execute()
+        self.record_case()
+        
