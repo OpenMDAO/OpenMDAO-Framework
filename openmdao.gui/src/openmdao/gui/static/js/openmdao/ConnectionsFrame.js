@@ -2,7 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
-    var id = ('connections-'+pathname).replace(/\./g,'-');
+    var id = ('ConnectionsFrame-'+pathname).replace(/\./g,'-');
     openmdao.ConnectionsFrame.prototype.init.call(this, id,
         'Connections: '+openmdao.Util.getName(pathname));
 
@@ -12,14 +12,21 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     // initialize private variables
     var self = this,
-        components_css = 'overflow:auto; background:grey;',
+        components_css = 'overflow:none; background:grey;',
         components_div = jQuery('<div id='+id+' style="'+components_css+'">')
-                        .appendTo(self.elm),
-        src_selector = jQuery("<input id='srccmp_list' class='combobox' />")
-                        .appendTo(components_div),
-        dst_selector = jQuery("<input id='dstcmp_list' class='combobox' />")
-                        .appendTo(components_div),
-        connections_div = null,
+            .appendTo(self.elm),
+        html = '<table cellpadding="0" cellspacing="0" border="0">'
+             +        '<tr><td>Source Component:</td><td>Target Component:</td></tr>'
+             +        '<tr><td><input id="src_list" class="combobox" /></td>'
+             +        '    <td><input id="dst_list" class="combobox" /></td></tr>'
+             + '</table>',
+        components = jQuery(html)
+            .appendTo(components_div),
+        src_selector = components_div.find('#src_list'),
+        dst_selector = components_div.find('#dst_list'),
+        connections_css = 'height:auto;width:auto;background:grey;position:absolute',
+        connections_div = jQuery('<div style="'+connections_css+'">')
+            .appendTo(components_div),
         connections_pane = null;
 
     self.pathname = null;
@@ -29,61 +36,51 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     function editConnections(pathname, src_comp, dst_comp) {
         if (src_comp && dst_comp) {
             if (connections_pane === null) {
-                connections_div = jQuery('<div style="overflow:auto; background:grey;">');
-                self.elm.append(connections_div);
                 connections_pane = new openmdao.ConnectionsPane(connections_div,
                                            model, pathname, src_comp, dst_comp);
-                components_div.append(connections_pane);
+                connections_div.append(connections_pane);
             }
             else {
                 connections_pane.editConnections(pathname, src_comp, dst_comp);
             }
         }
         else {
+            // remove connections pane if src & dest components are not selected
             if (connections_pane !== null) {
                 connections_pane = null;
-                connections_div.remove();
+                connections_div.html('');
             }
         }
     }
 
-    src_selector.autocomplete({
-       select: function(event, ui) {
-           src_selector.value = ui.item.value;
-           ent = jQuery.Event('keypress.enterkey');
-           ent.target = src_selector;
-           ent.which = 13;
-           src_selector.trigger(ent);
-       },
-       delay: 0,
-       minLength: 0
-    });
-    src_selector.bind('keypress.enterkey', function(e) {
-        if (e.which === 13) {
-            src_selector.autocomplete('close');
-            self.src_comp = e.target.value;
-            editConnections(self.pathname, self.src_comp, self.dst_comp);
-        }
-    });
+    function bindEnterKey(selector) {
+        selector.autocomplete({
+           select: function(event, ui) {
+               selector.value = ui.item.value;
+               ent = jQuery.Event('keypress.enterkey');
+               ent.target = selector;
+               ent.which = 13;
+               selector.trigger(ent);
+           },
+           delay: 0,
+           minLength: 0
+        });
+        selector.bind('keypress.enterkey', function(e) {
+            if (e.which === 13) {
+                selector.autocomplete('close');
+                if (selector === src_selector) {
+                    self.src_comp = e.target.value;
+                }
+                else {
+                    self.dst_comp = e.target.value;
+                }
+                editConnections(self.pathname, self.src_comp, self.dst_comp);
+            }
+        });
+    }
 
-    dst_selector.autocomplete({
-       select: function(event, ui) {
-           dst_selector.value = ui.item.value;
-           ent = jQuery.Event('keypress.enterkey');
-           ent.target = dst_selector;
-           ent.which = 13;
-           dst_selector.trigger(ent);
-       },
-       delay: 0,
-       minLength: 0
-    });
-    dst_selector.bind('keypress.enterkey', function(e) {
-        if (e.which === 13) {
-            dst_selector.autocomplete('close');
-            self.dst_comp = e.target.value;
-            editConnections(self.pathname, self.src_comp, self.dst_comp);
-        }
-    });
+    bindEnterKey(src_selector);
+    bindEnterKey(dst_selector);
 
     function loadData(data) {
         if (!data || !data.Dataflow || !data.Dataflow.components) {
@@ -94,19 +91,19 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             comp_list = jQuery.map(data.Dataflow.components,
                                    function(comp,idx){ return comp.name; });
 
-            // update the output & input selectors to current outputs & inputs
+            // update the output & input selectors with component list
             src_selector.html('');
-
-            //jQuery.each(out_list,function (idx,name) {
-            //    src_selector.append('<option value="'+name+'">'+name+'</option>');
-            //});
             src_selector.autocomplete({source: comp_list});
 
             dst_selector.html('');
-            //jQuery.each(in_list,function (idx,name) {
+            dst_selector.autocomplete({source: comp_list});
+
+            //jQuery.each(comp_list,function (idx,name) {
+            //    src_selector.append('<option value="'+name+'">'+name+'</option>');
+            //});
+            //jQuery.each(comp_list,function (idx,name) {
             //    dst_selector.append('<option value="'+name+'">'+name+'</option>');
             //});
-            dst_selector.autocomplete({source: comp_list});
         }
 
         if (self.src_comp) {
@@ -167,9 +164,6 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     };
 
     this.editObject(pathname);
-
-    //FIXME: use data in message instead of brute force update
-    model.addListener(pathname,this.update);
 };
 
 /** set prototype */

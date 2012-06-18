@@ -2,7 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
-    var id = ('DCE-'+pathname+'-'+src_comp+'-'+dst_comp).replace(/\./g,'-');
+    var id = ('ConnectionsPane-'+pathname+'-'+src_comp+'-'+dst_comp).replace(/\./g,'-');
 
     /***********************************************************************
      *  private
@@ -11,27 +11,36 @@ openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
     // initialize private variables
     var self = this,
         figures = {},
-        dataflowID = id+"-connections",
-        output_selector = jQuery("<input id='output_list' class='combobox' />"),
-        input_selector = jQuery("<input id='input_list' class='combobox' />"),
-        connect_button = jQuery("<button id='connect_button'>Connect</button>")
-                        .click(function() {
-                            var src = output_selector.val();
-                            var dst = input_selector.val();
-                            model.issueCommand(self.pathname+".connect('"+src+"','"+dst+"')");
-                        }),
-        dataflowCSS = 'overflow:auto; background:grey;',
+        dataflowID  = id + '-dataflow',
+        dataflowCSS = 'overflow:none; background:grey; position:static;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
-                        .appendTo(elm),
-        dataflow = new draw2d.Workflow(dataflowID);
+            .appendTo(elm),
+        dataflow = new draw2d.Workflow(dataflowID),
+        html = '<table cellpadding="0" cellspacing="0" border="0">'
+             +        '<tr><td>Source Variable:</td><td>Target Variable:</td></tr>'
+             +        '<tr><td><input  id="src_list" class="combobox" /></td>'
+             +        '    <td><input  id="dst_list" class="combobox" /></td>'
+             +        '    <td><button id="connect_button" class="combobox">Connect</button></td>'
+             +        '</tr>'
+             + '</table>',
+        selectorsCSS = 'overflow:none; background:grey; position:static;',
+        selectors = jQuery('<div style="'+selectorsCSS+'">').html(html);
+        
+        
+elm.append(selectors);
+var
+        src_selector = selectors.find('#src_list'),
+        dst_selector = selectors.find('#dst_list'),
+        connect_button = selectors.find('#connect_button')
+                        .click(function() {
+                            var src = src_selector.val();
+                            var dst = dst_selector.val();
+                            model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
+                        });
 
-    elm.append(output_selector);
-    elm.append(input_selector);
-    elm.append(connect_button);
-
-    self.pathname = pathname;
-    self.src_comp = src_comp;
-    self.dst_comp = dst_comp;
+debug.info('ConnectionsPane dataflow:',dataflow);
+debug.info('ConnectionsPane x:',dataflow.getX(),', y',dataflow.getY());
+debug.info('ConnectionsPane absolute x:',dataflow.getAbsoluteX(),', y',dataflow.getAbsoluteY());
 
     self.showAllVariables = false;  // only show connected variables by default
 
@@ -84,7 +93,8 @@ openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
                     var src_name = self.src_comp+'.'+outvar.name,
                         src_path = self.pathname+'.'+src_name,
                         fig = new openmdao.VariableFigure(model,src_path,outvar,'output');
-                    dataflow.addFigure(fig,x,y);
+                    dataflow.addFigure(fig);
+                    fig.setPosition(x,y);
                     figures[src_name] = fig;
                     y = y + fig.height + 10;
                 }
@@ -97,7 +107,8 @@ openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
                     var dst_name = self.dst_comp+'.'+invar.name,
                         dst_path = self.pathname+'.'+dst_name,
                         fig = new openmdao.VariableFigure(model,dst_path,invar,'input');
-                    dataflow.addFigure(fig,x,y);
+                    dataflow.addFigure(fig);
+                    fig.setPosition(x,y);
                     figures[dst_name] = fig;
                     y = y + fig.height + 10;
                 }
@@ -139,18 +150,18 @@ openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
             });
 
             // update the output & input selectors to current outputs & inputs
-            output_selector.html('');
+            src_selector.html('');
 
             //jQuery.each(out_list,function (idx,name) {
-            //    output_selector.append('<option value="'+name+'">'+name+'</option>');
+            //    src_selector.append('<option value="'+name+'">'+name+'</option>');
             //});
-            output_selector.autocomplete({ source: out_list ,minLength:0});
+            src_selector.autocomplete({ source: out_list ,minLength:0});
 
-            input_selector.html('');
+            dst_selector.html('');
             //jQuery.each(in_list,function (idx,name) {
-            //    input_selector.append('<option value="'+name+'">'+name+'</option>');
+            //    dst_selector.append('<option value="'+name+'">'+name+'</option>');
             //});
-            input_selector.autocomplete({ source: in_list ,minLength:0});
+            dst_selector.autocomplete({ source: in_list ,minLength:0});
         }
     }
 
@@ -176,7 +187,7 @@ openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
             }
         );
     };
-    
+
     this.editConnections(pathname, src_comp, dst_comp);
 };
 
