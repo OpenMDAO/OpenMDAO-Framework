@@ -1,0 +1,93 @@
+Manual tests for upload.html
+1. Testing div#file-prompt
+2. Testing div#drop-area
+3. Testing div#select-area
+4. Testing file dropping
+5. Testing unselecting files
+6. Testing uploading files
+
+1. Testing div#file-prompt
+    1.a Open a dialogue on the system that will allow for dragging files from one window to another.
+    1.b Select a file(s) and drag the files into any area of the broswer below the "choose files" element.
+        1.b.1 If a dashed container with instructional text appears, proceed to 1.c
+        1.b.2 If a dashed container with instructional test does not appear, terminate testing.
+    1.c Drag the file over the "choose files" element.
+        1.c.1 If a dashed container of instructional text is still visible, proceed to 1.d
+        1.c.2 If a dashed container of instructional text is no longer visible, terminate testing.
+    1.d Drag the file over the dashed container of instructional text.
+        1.d.1 If a dashed container of instructional text is still visible, proceed to 1.e
+        1.d.2 If a dashed container of instructional text is no longer visible, terminate testing.
+    1.e Drag the file(s) outside of the browser.
+        1.e.1 If a dashed container of the instructional text is no longer visible, proceed to 2.
+        1.e.2 If a dashed container of instructional text is still visible, terminate testing.
+
+2. Testing div#drop-area
+    2.a Repeat 1.a
+    2.b Select a file(s) and drag the files into any area of the broswer above the "choose files" element.
+        2.b.1 Repeat 1.b.1 but proceed to 2.c
+        2.b.2 Repeat 1.b.2
+    2.c Repeat 1.c
+        2.c.1 Repeat 1.c.1, but proceed to 2.d
+        2.c.2 Repeat 1.c.2
+    2.d Drag the file(s) into any area of the browser below the "choose files" element.
+        2.d.1 Repeat 1.d.1, but proceed 2.e
+        2.d.2 Repeat 1.d.2
+    2.e Repeat 1.e
+        2.e.2 Repeat 1.e.1, but proceed to 3
+        2.e.2 Repeat 1.e.2
+
+3. Testing div#select-area
+    3.a Repeat 2.a
+    3.b Select a file(s) and drag the files into "choose files" element.
+        3.b.1 Repeat 2.b.1 but proceed to 3.c
+        3.b.2 Repeat 2.b.2
+    3.c Repeat 2.d
+        3.c.1 Repeat 2.d.1, but proceed to 3.d
+        3.c.2 Repeat 2.d.2
+    3.d Repeat 1.d
+        3.d.1 Repeat 1.d.1, but proceed 3.e
+        3.d.2 Repeat 1.d.2
+    3.e Repeat 2.e
+        3.e.2 Repeat 2.e.1, but proceed to 4
+        3.e.2 Repeat 2.e.2
+
+4. Testing file dropping
+    4.1 Dropping files into div#drop-area
+        4.1.a Open a dialogue on the system that will allow for dragging files from one window to another.
+        4.1.b Select a file(s) and drag the files into any area of the browser. 
+        4.1.c Drag the file(s) over the instructional text.
+        4.1.d Drop the file(s) over the instructional text.
+            4.1.d.1 If a list of items, each item having a checkbox, the filename, and file size in bytes appear, proceed to 4.2
+            4.1.d.2 Terminate testing
+    4.2 Dropping files into div#select-area
+        4.2.a Repeat 4.1.a
+        4.2.b Select file(s) that have not been dropped into the browser.
+        4.2.c Drag the file(s) into any area of the browser.
+        4.2.d Repeat 4.1.c
+        4.2.e Repeat 4.1.d
+            4.2.e.1 Repeat 4.1.d.1 but proceed to 5
+            4.2.e.2 Repeat 4.1.d.2
+
+5. Testing unselecting files
+    5.a Click any checkbox.
+        5.a.1 If the row that contained the checkbox is no long visible, proceed to 6.
+        5.a.2 Terminate testing.
+
+6. Testing uploading files
+    6.a Note all of the files that are still listed.    
+    6.b Click the "add files" button.
+        6.b.1 If the window closes, proceed to 6.b.2
+        6.b.2 If all of the noted files are now visible in the file tree of the code editor, proceed to 6.b.4
+        6.b.3 Terminate testing.
+        6.b.4 All tests have passed. Testing is complete.
+
+
+
+
+
+
+
+
+                    
+
+

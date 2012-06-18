@@ -93,7 +93,7 @@ class _CheckboxElement(_BaseElement):
     def value(self, new_value):
         element = self.element
         if bool(new_value) != element.is_selected():
-            time.sleep(0.1)  # Just some pacing.
+            time.sleep(1)  # Just some pacing.
             element.click()  # Toggle it.
 
 
