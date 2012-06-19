@@ -35,7 +35,9 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         dataflow = new draw2d.Workflow(dataflowID),
         // variable selectors and connect button
         variablesHTML = '<div style="'+connectionsCSS+'"><table>'
-                      +        '<tr><td>Source Variable:</td><td>Target Variable:</td></tr>'
+                      +        '<tr><td>Source Variable:</td>'
+                      +        '    <td>Target Variable:</td>'
+                      +        '</tr>'
                       +        '<tr><td><input  id="src_list" /></td>'
                       +        '    <td><input  id="dst_list" /></td>'
                       +        '    <td><button id="connect" class="button">Connect</button></td>'
@@ -66,7 +68,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             menu.appendMenuItem(new draw2d.MenuItem("Show Connections Only",null,
                 function(){
                     showAllVariables = false;
-                    self.update();
+                    showConnections();
                 })
             );
         }
@@ -74,13 +76,12 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             menu.appendMenuItem(new draw2d.MenuItem("Show All Variables",null,
                 function(){
                     showAllVariables = true;
-                    self.update();
+                    showConnections();
                 })
             );
         }
         return menu;
     };
-
 
     function bindEnterKey(selector) {
         selector.autocomplete({
@@ -103,7 +104,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                 else {
                     self.dst_comp = e.target.value;
                 }
-                editConnections(self.pathname, self.src_comp, self.dst_comp);
+                showConnections();
             }
         });
     }
@@ -134,7 +135,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         if (self.dst_comp) {
             dst_cmp_selector.val(self.dst_comp);
         }
-        editConnections(self.pathname, self.src_comp, self.dst_comp);
+        showConnections();
     }
 
     function loadConnectionData(data) {
@@ -166,8 +167,9 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     y = y + fig.height + 10;
                 }
             });
+            var end_outputs = y;
 
-            x = 250;
+            x = 220;
             y = 10;
             jQuery.each(data.inputs, function(idx,invar) {
                 if (showAllVariables || conn_list.contains(invar.name)) {
@@ -180,12 +182,14 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     y = y + fig.height + 10;
                 }
             });
-            
-            dataflowDiv.height(y+'px');
-            connectionsDiv.height(y+'px');
+            var end_inputs = y;
+
+            var height = Math.max(end_inputs, end_outputs, 25) + 'px';
+            dataflowDiv.height(height);
+            connectionsDiv.height(height);
             connectionsDiv.show();
             variablesDiv.show();
-            
+
             jQuery.each(data.connections,function(idx,conn) {
                 // internal connections
                 if ((conn[0].indexOf('.') > 0) && (conn[1].indexOf('.') > 0)) {
@@ -230,13 +234,10 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     }
 
     /** edit connections between the source and destination objects in the assembly */
-    function editConnections(pathname, src_comp, dst_comp) {
-        if (src_comp && dst_comp) {
-            self.pathname = pathname;
-            self.src_comp = src_comp;
-            self.dst_comp = dst_comp;
-
-            model.getConnections(pathname, src_comp, dst_comp, loadConnectionData,
+    function showConnections() {
+        if (self.src_comp && self.dst_comp) {
+            model.getConnections(self.pathname, self.src_comp, self.dst_comp,
+                loadConnectionData,
                 function(jqXHR, textStatus, errorThrown) {
                     debug.error(jqXHR,textStatus,errorThrown);
                     self.close();
@@ -283,7 +284,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
         self.src_comp = src_comp;
         self.dst_comp = dst_comp;
-    
+
         model.getComponent(path, loadData,
             function(jqXHR, textStatus, errorThrown) {
                 debug.warn('ConnectionsFrame.editAssembly() Error:',

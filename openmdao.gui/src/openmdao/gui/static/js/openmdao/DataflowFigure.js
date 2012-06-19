@@ -222,7 +222,7 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
                     var path = openmdao.Util.getPath(pathname),
                         src  = name,
                         dst  = request.source.getParent().name;
-                    frame = new openmdao.ConnectionsFrame(model,path,src,dst);
+                    var f = new openmdao.ConnectionsFrame(model,path,src,dst);
                 }
                 return null;
             }
@@ -331,23 +331,30 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         // properties
         menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
             var id = (pathname+'-properties').replace(/\./g,'-');
-            pf = new openmdao.PropertiesFrame(id,model).editObject(pathname);
+            f = new openmdao.PropertiesFrame(id,model).editObject(pathname);
         }));
+
+        // connections (internal) or disconnect (external)
+        if (this.maxmin === '-') {
+            menu.appendMenuItem(new draw2d.MenuItem("Connections",null,function(){
+                var f = new openmdao.ConnectionsFrame(model, pathname);
+            }));
+        }
+        else {
+            var asm = openmdao.Util.getPath(pathname);
+            if (asm.length > 0) {
+                menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+                    var cmd = asm + '.disconnect("'+name+'");';
+                    model.issueCommand(cmd);
+                }));
+            }
+        }
 
         // run
         menu.appendMenuItem(new draw2d.MenuItem("Run",null,function(){
             var cmd = pathname + '.run();';
             model.issueCommand(cmd);
         }));
-
-        // disconnect
-        var asm = openmdao.Util.getPath(pathname);
-        if (asm.length > 0) {
-            menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-                var cmd = asm + '.disconnect("'+name+'");';
-                model.issueCommand(cmd);
-            }));
-        }
 
         // remove
         menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
@@ -544,7 +551,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 var menu=new draw2d.Menu();
                 menu.appendMenuItem(new draw2d.MenuItem("Edit Connections",null,
                     function(){
-                        var cf = new openmdao.ConnectionsFrame(self.openmdao_model,
+                        var f = new openmdao.ConnectionsFrame(self.openmdao_model,
                                                  self.pathname,src_name,dst_name);
                     })
                 );
@@ -556,7 +563,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             // FIXME: usually doesn't work... DataflowFigure steals the clicks
             if ((src_name.length > 0) && (dst_name.length > 0)) {
                 con.onDoubleClick = function() {
-                    var cf = new openmdao.ConnectionsFrame(self.openmdao_model,
+                    var f = new openmdao.ConnectionsFrame(self.openmdao_model,
                                              self.pathname,src_name,dst_name);
                 };
             }
