@@ -32,6 +32,31 @@ openmdao.PaletteFrame = function(id,model) {
         }
     });
     */
+    function getElementTop(elem) {
+       var yPos = 0;
+       var scrolls = 0;
+       var count = 0;
+       var oldop = elem.offsetParent;
+       while(elem && !isNaN(elem.offsetTop)) {
+          if (elem.scrollTop) {
+            scrolls += elem.scrollTop;
+          }
+          if (elem.offsetParent) {
+             if(elem.offsetParent != oldop){
+                oldop = elem.offsetParent;
+                yPos += elem.offsetTop;
+                debug.info("level "+String(count)+": offsetTop: "+String(elem.offsetTop)+", scrollTop: "+String(elem.scrollTop))
+             }
+          }
+          else {
+             yPos += elem.offsetTop;
+          }
+          elem = elem.parentNode;
+          count += 1;
+       }
+       return yPos-scrolls;
+    }
+    
     /** rebuild the Palette from a JSON library list of tuples of the form (libname, meta_dict) */
     function updatePalette(packages) {
         // remember what is expanded
@@ -66,12 +91,18 @@ openmdao.PaletteFrame = function(id,model) {
         // here's the default list of filters for the library
         var selections = [
                     "In Project",
+                    "Architecture",
+                    "Assembly",
+                    "CaseRecorder",
+                    "CaseIterator",
                     "Component",
+                    "Differentiator",
+                    "DOEgenerator",
                     "Driver",
                     "Solver",
-                    "Assembly",
                     "Surrogate",
-                    "DOEgenerator"
+                    "UncertainVariable",
+                    "Variable"
                 ];
         var input_obj = palette.find('#objtt-select');
         input_obj.autocomplete({
@@ -97,6 +128,53 @@ openmdao.PaletteFrame = function(id,model) {
                 input_obj.autocomplete('close');
             }
         });
+        
+        var contextMenu = jQuery("<ul id='lib-cmenu' class='context-menu'>")
+                          .appendTo(dtable);
+
+        contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
+            var top = 0, etop = ev.pageY;
+            debug.info('View Docs context event:');
+            dtable.find('.objtype').each(function() {
+               debug.info(this.getAttribute('modpath'));
+                if (!isNaN(this.offsetTop)) {
+                   top = this.offsetTop;
+                   debug.info('offsetTop: '+String(this.offsetTop));
+                   debug.info('scrollTop: '+String(this.scrollTop));
+                  if (top < etop) {
+                      debug.info('*****');
+                  }
+                }
+               debug.info('getElementTop: '+String(getElementTop(this)));
+               debug.info('$(this).offset');
+               debug.info($(this.parentNode).offset);
+               debug.info('$(this).position');
+               debug.info($(this.parentNode).position);
+               //top = getElementTop(this);
+               if ($(this).offset) {
+                  top = $(this).offset().top;
+                  if (top < etop) {
+                      debug.info('*****');
+                  }
+               }
+               //debug.info($(this).position());
+            });
+            //contextMenu.hide();
+            //debug.info('element position:');
+            //debug.info(document.elementFromPoint(ev.PageX, ev.PageY));
+            //contextMenu.show();
+            debug.info(ev);
+            //debug.info("tab position:")
+            //debug.info(dtable.position());
+            //debug.info('offset')
+            //debug.info(dtable.offset());
+            debug.info('target.offsetTop: '+String(ev.target.offsetTop));
+        }));
+        contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
+            debug.info('View Metadata context event:');
+            debug.info(ev);
+        }));
+        ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
         
         // make everything draggable
         jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
