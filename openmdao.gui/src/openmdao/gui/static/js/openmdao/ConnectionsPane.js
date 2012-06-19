@@ -12,29 +12,25 @@ openmdao.ConnectionsPane = function(elm,model,pathname,src_comp,dst_comp) {
     var self = this,
         figures = {},
         dataflowID  = id + '-dataflow',
-        dataflowCSS = 'overflow:none; background:grey; position:static;',
+        dataflowCSS = 'background:grey; position:static; width:100%',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
             .appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID),
-        html = '<table cellpadding="0" cellspacing="0" border="0">'
+        html = '<table style="background:grey; position:static;">'
              +        '<tr><td>Source Variable:</td><td>Target Variable:</td></tr>'
              +        '<tr><td><input  id="src_list" class="combobox" /></td>'
              +        '    <td><input  id="dst_list" class="combobox" /></td>'
              +        '    <td><button id="connect_button" class="combobox">Connect</button></td>'
              +        '</tr>'
              + '</table>',
-        selectorsCSS = 'overflow:none; background:grey; position:static;',
-        selectors = jQuery('<div style="'+selectorsCSS+'">').html(html);
-        
-        
-elm.append(selectors);
-var
-        src_selector = selectors.find('#src_list'),
-        dst_selector = selectors.find('#dst_list'),
+        selectors = jQuery(html)
+            .appendTo(elm),
+        src_var_selector = selectors.find('#src_list'),
+        dst_var_selector = selectors.find('#dst_list'),
         connect_button = selectors.find('#connect_button')
                         .click(function() {
-                            var src = src_selector.val();
-                            var dst = dst_selector.val();
+                            var src = src_var_selector.val();
+                            var dst = dst_var_selector.val();
                             model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
                         });
 
@@ -150,18 +146,18 @@ debug.info('ConnectionsPane absolute x:',dataflow.getAbsoluteX(),', y',dataflow.
             });
 
             // update the output & input selectors to current outputs & inputs
-            src_selector.html('');
+            src_var_selector.html('');
 
             //jQuery.each(out_list,function (idx,name) {
-            //    src_selector.append('<option value="'+name+'">'+name+'</option>');
+            //    src_var_selector.append('<option value="'+name+'">'+name+'</option>');
             //});
-            src_selector.autocomplete({ source: out_list ,minLength:0});
+            src_var_selector.autocomplete({ source: out_list ,minLength:0});
 
-            dst_selector.html('');
+            dst_var_selector.html('');
             //jQuery.each(in_list,function (idx,name) {
-            //    dst_selector.append('<option value="'+name+'">'+name+'</option>');
+            //    dst_var_selector.append('<option value="'+name+'">'+name+'</option>');
             //});
-            dst_selector.autocomplete({ source: in_list ,minLength:0});
+            dst_var_selector.autocomplete({ source: in_list ,minLength:0});
         }
     }
 
