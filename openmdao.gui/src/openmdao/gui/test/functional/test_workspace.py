@@ -5,6 +5,8 @@ Tests of overall workspace functions.
 import sys
 import time
 
+import pkg_resources
+
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -57,13 +59,11 @@ def _test_import(browser):
     editor_page = workspace_page.open_editor()
 
     # Add paraboloid file.
-    import openmdao.examples.simple.paraboloid
-    file_path = openmdao.examples.simple.paraboloid.__file__
+    file_path = pkg_resources.resource_filename('openmdao.examples.simple', 'paraboloid.py')
     editor_page.add_file(file_path)
 
     # Add optimization_unconstrained file.
-    import openmdao.examples.simple.optimization_unconstrained
-    file_path = openmdao.examples.simple.optimization_unconstrained.__file__
+    file_path = pkg_resources.resource_filename('openmdao.examples.simple', 'optimization_unconstrained.py')
     editor_page.add_file(file_path)
 
     # Check to make sure the files were added.
@@ -220,17 +220,13 @@ def _test_addfiles(browser):
     upload_page = editor_page.add_files()
 
     # Get path to  paraboloid file.
-    import openmdao.examples.simple.paraboloid
-    paraboloidPath = openmdao.examples.simple.paraboloid.__file__
+    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple', 'paraboloid.py')
 
     # Get path to optimization_unconstrained file.
-    import openmdao.examples.simple.optimization_unconstrained
-    opt_unconstrainedPath = openmdao.examples.simple.optimization_unconstrained.__file__
+    opt_unconstrainedPath = pkg_resources.resource_filename('openmdao.examples.simple', 'optimization_unconstrained.py')
     
     # Add the files
-    upload_page.select_files((paraboloidPath[:len(paraboloidPath)-1], 
-        opt_unconstrainedPath[:len(opt_unconstrainedPath)-1]))
-   
+    upload_page.select_files((paraboloidPath, opt_unconstrainedPath))
     upload_page.upload_files()
 
     # Check to make sure the files were added.
