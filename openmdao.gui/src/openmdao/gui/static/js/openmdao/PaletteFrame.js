@@ -62,8 +62,8 @@ openmdao.PaletteFrame = function(id,model) {
         // build the new html
         var html="<div id='library'>";
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
-        // headers: Class, Module Path, Version, Interfaces
-        html += '<thead><tr><th>Name</th><th>ModulePath</th><th>Version</th><th>Context</th><th>Interfaces</th></tr></thead><tbody>';
+        // headers: ClassName, Module Path, Version, Context, Interfaces
+        html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>';
         html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name, item);
@@ -138,18 +138,12 @@ openmdao.PaletteFrame = function(id,model) {
             var event_top = ev.target.offsetParent.offsetTop;
             objtypes.each(function(i, elem) {
                otop = getElementTop(elem);
+               // need to check offsetHeight to skip invisible entries
                if (elem.offsetHeight > 0 && otop <= event_top && (otop+elem.offsetHeight)>=event_top) {
                   match = elem;
                   return false; // break out of loop
                }
-               //if (otop >= event_top) {
-                  //match = objtypes[i-1];
-                  //return false; // break out of loop
-               //}
             });
-            //if (match===0 && event_top >= otop) { // check for last entry in table
-               //match = objtypes[objtypes.length-1];
-            //}
             return match;
         }
         
@@ -161,29 +155,21 @@ openmdao.PaletteFrame = function(id,model) {
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
             debug.info('View Metadata context event:');
             debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
-            debug.info(ev);
             var match = _findMatch(ev);
             var win = jQuery('<div></div>');
-            var table = jQuery('<table>');
-            var hrow = jQuery('<tr></tr>');
-            dtable.find('th').each(function() {
-               debug.info("th "+this.innerText);
-               hrow.append('<th>'+this.innerText+'</th>');
-            });
-            var row = jQuery('<tr></tr>');
-            jQuery(match.parentNode).find('td').each(function() {
-               debug.info('td '+this.innerText);
-               row.append('<td>'+this.innerText+'</td>');
-            });
-            debug.info('table');
-            debug.info(table);
-            table.append(hrow);
-            table.append(row);
+            var table = jQuery('<table cellpadding=5px>');
+            table.append('<tr><th></th><th></th></tr>')
+            var hdata = ['name','modpath','version','context','ifaces'];
+            var data = dtable.fnGetData(match.parentNode);
+            for (var i=1; i<data.length; i++) {
+               table.append('<tr><td>'+hdata[i]+'</td><td>'+data[i]+'</td></tr>');
+            }
             win.append(table);
             
             // Display dialog
             jQuery(win).dialog({
-                'title': 'Metadata for '+match.innerText,
+                title: match.innerText+' Metadata',
+                width: 'auto'
             });
         }));
         ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
