@@ -588,12 +588,12 @@ def plugin_docs(parser, options, args=None):  # pragma no cover
     if options.plugin_dist_name is None:
         view_docs(options.browser)
     else:
-        url = _plugin_docs(options.plugin_dist_name)
+        url = find_docs_url(options.plugin_dist_name)
         wb = webbrowser.get(options.browser)
         wb.open(url)
 
 
-def _plugin_docs(plugin_name):
+def find_docs_url(plugin_name):
     """Returns a url for the Sphinx docs for the named plugin.
     The plugin must be importable in the current environment.
     

@@ -149,12 +149,11 @@ openmdao.PaletteFrame = function(id,model) {
         
         contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
             debug.info('View Docs context event:');
-            debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
-            debug.info(ev);
+            //debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
         }));
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
             debug.info('View Metadata context event:');
-            debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
+            //debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
             var match = _findMatch(ev);
             var win = jQuery('<div></div>');
             var table = jQuery('<table cellpadding=5px>');

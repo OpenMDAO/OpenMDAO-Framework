@@ -26,7 +26,7 @@ from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager
 from openmdao.gui.zmqservermanager import ZMQServerManager
 
-from openmdao.gui.handlers import LoginHandler, LogoutHandler, ExitHandler
+from openmdao.gui.handlers import LoginHandler, LogoutHandler, ExitHandler, DocsHandler
 import openmdao.gui.handlers_projectdb as proj
 import openmdao.gui.handlers_workspace as wksp
 
@@ -54,6 +54,7 @@ class App(web.Application):
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
+            web.url(r'/docs/(.*)',  DocsHandler),
             web.url(r'/',       web.RedirectHandler, {'url':'/projects', 'permanent':False})
         ]
         handlers.extend(proj.handlers)

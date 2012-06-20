@@ -76,3 +76,8 @@ class ExitHandler(ReqHandler):
     def get(self):
         self.application.exit()
         self.render('closewindow.html')
+
+        
+class DocsHandler(ReqHandler):
+    ''' retrieve docs for a plugin '''
+    
