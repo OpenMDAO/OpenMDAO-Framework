@@ -235,6 +235,11 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
     }));
 
     // properties
+    menu.appendMenuItem(new draw2d.MenuItem("Edit",null,function(){
+        cf = new openmdao.ComponentFrame(model,pathname);
+    }));
+
+    // properties
     menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
         var id = (pathname+'-properties').replace(/\./g,'-');
         editor = new openmdao.PropertiesFrame(id,model).editObject(pathname);

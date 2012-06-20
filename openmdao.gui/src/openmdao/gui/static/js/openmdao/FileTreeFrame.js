@@ -169,12 +169,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 "label"  : 'Edit File',
                 "action" : function(node) { editFile(path); }
             };
-            // if it's a py file, let them import or execute it
+            // if it's a py file, let them execute it
             if (/.py$/.test(path)) {
-                menu.importFile = {
-                    "label"  : 'Import * from File',
-                    "action" : function(node) { model.importFile(path); }
-                };
                 menu.execFile = {
                     "label"  : 'Execute File',
                     "action" : function(node) { model.execFile(path); }
