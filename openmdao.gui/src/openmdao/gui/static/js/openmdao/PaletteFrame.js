@@ -35,38 +35,35 @@ openmdao.PaletteFrame = function(id,model) {
     function getElementTop(elem) {
        var yPos = 0;
        var scrolls = 0;
-       var count = 0;
-       var oldop = elem.offsetParent;
+       var firstElemWithOSP = 0;
        while(elem && !isNaN(elem.offsetTop)) {
-          if (elem.scrollTop) {
-            scrolls += elem.scrollTop;
-          }
-          if (elem.offsetParent) {
-             if(elem.offsetParent != oldop){
-                oldop = elem.offsetParent;
-                yPos += elem.offsetTop;
-                debug.info("level "+String(count)+": offsetTop: "+String(elem.offsetTop)+", scrollTop: "+String(elem.scrollTop))
-             }
-          }
-          else {
-             yPos += elem.offsetTop;
+          //if (elem.scrollTop) {
+             //debug.info('<'+elem.tagName+'> scrollTop: '+elem.scrollTop);
+          //}
+          scrolls += elem.scrollTop;
+          if (firstElemWithOSP === 0 && elem.offsetParent) {
+             firstElemWithOSP = elem;
+             //debug.info('firstOSP');
           }
           elem = elem.parentNode;
-          count += 1;
+       }
+       
+       elem = firstElemWithOSP;
+       while(elem && !isNaN(elem.offsetTop)) {
+          //debug.info('<'+elem.tagName+'> offsetTop: '+elem.offsetTop);
+          yPos += elem.offsetTop;
+          elem = elem.offsetParent;
        }
        return yPos-scrolls;
     }
     
     /** rebuild the Palette from a JSON library list of tuples of the form (libname, meta_dict) */
     function updatePalette(packages) {
-        // remember what is expanded
-        //var expanded = jQuery('.library-list:visible');
-
         // build the new html
         var html="<div id='library'>";
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
         // headers: Class, Module Path, Version, Interfaces
-        html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>';
+        html += '<thead><tr><th>Name</th><th>ModulePath</th><th>Version</th><th>Context</th><th>Interfaces</th></tr></thead><tbody>';
         html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name, item);
@@ -132,53 +129,68 @@ openmdao.PaletteFrame = function(id,model) {
         var contextMenu = jQuery("<ul id='lib-cmenu' class='context-menu'>")
                           .appendTo(dtable);
 
-        contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
-            var top = 0, etop = ev.pageY;
-            debug.info('View Docs context event:');
-            dtable.find('.objtype').each(function() {
-               debug.info(this.getAttribute('modpath'));
-                if (!isNaN(this.offsetTop)) {
-                   top = this.offsetTop;
-                   debug.info('offsetTop: '+String(this.offsetTop));
-                   debug.info('scrollTop: '+String(this.scrollTop));
-                  if (top < etop) {
-                      debug.info('*****');
-                  }
-                }
-               debug.info('getElementTop: '+String(getElementTop(this)));
-               debug.info('$(this).offset');
-               debug.info($(this.parentNode).offset);
-               debug.info('$(this).position');
-               debug.info($(this.parentNode).position);
-               //top = getElementTop(this);
-               if ($(this).offset) {
-                  top = $(this).offset().top;
-                  if (top < etop) {
-                      debug.info('*****');
-                  }
+        var objtypes = dtable.find('.objtype');
+        
+        // given a click event, find the table entry that corresponds
+        // to that location. Returns the matching element.
+        function _findMatch(ev) {
+            var otop = 0, match=0;
+            var event_top = ev.target.offsetParent.offsetTop;
+            objtypes.each(function(i, elem) {
+               otop = getElementTop(elem);
+               if (elem.offsetHeight > 0 && otop <= event_top && (otop+elem.offsetHeight)>=event_top) {
+                  match = elem;
+                  return false; // break out of loop
                }
-               //debug.info($(this).position());
+               //if (otop >= event_top) {
+                  //match = objtypes[i-1];
+                  //return false; // break out of loop
+               //}
             });
-            //contextMenu.hide();
-            //debug.info('element position:');
-            //debug.info(document.elementFromPoint(ev.PageX, ev.PageY));
-            //contextMenu.show();
+            //if (match===0 && event_top >= otop) { // check for last entry in table
+               //match = objtypes[objtypes.length-1];
+            //}
+            return match;
+        }
+        
+        contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
+            debug.info('View Docs context event:');
+            debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
             debug.info(ev);
-            //debug.info("tab position:")
-            //debug.info(dtable.position());
-            //debug.info('offset')
-            //debug.info(dtable.offset());
-            debug.info('target.offsetTop: '+String(ev.target.offsetTop));
         }));
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
             debug.info('View Metadata context event:');
+            debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
             debug.info(ev);
+            var match = _findMatch(ev);
+            var win = jQuery('<div></div>');
+            var table = jQuery('<table>');
+            var hrow = jQuery('<tr></tr>');
+            dtable.find('th').each(function() {
+               debug.info("th "+this.innerText);
+               hrow.append('<th>'+this.innerText+'</th>');
+            });
+            var row = jQuery('<tr></tr>');
+            jQuery(match.parentNode).find('td').each(function() {
+               debug.info('td '+this.innerText);
+               row.append('<td>'+this.innerText+'</td>');
+            });
+            debug.info('table');
+            debug.info(table);
+            table.append(hrow);
+            table.append(row);
+            win.append(table);
+            
+            // Display dialog
+            jQuery(win).dialog({
+                'title': 'Metadata for '+match.innerText,
+            });
         }));
         ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
         
         // make everything draggable
-        jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
-        jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree
+        objtypes.draggable({ helper: 'clone', appendTo: 'body' });
+        objtypes.addClass('jstree-draggable'); // allow drop on jstree
     }
 
     /** build HTML string for a package */
