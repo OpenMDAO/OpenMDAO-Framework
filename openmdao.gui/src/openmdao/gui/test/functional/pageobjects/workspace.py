@@ -302,6 +302,6 @@ class WorkspacePage(BasePageObject):
         chain.perform()
         parent, dot, srcname = src.pathname.rpartition('.')
         parent, dot, dstname = dst.pathname.rpartition('.')
-        editor_id = 'DCE-%s-%s-%s' % (parent, srcname, dstname)
+        editor_id = 'ConnectionsFrame-%s' % (parent)
         editor_id = editor_id.replace('.', '-')
         return ConnectionsPage(self.browser, self.port, (By.ID, editor_id))

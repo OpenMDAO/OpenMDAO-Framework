@@ -78,6 +78,7 @@ openmdao.VariableFigure.prototype.createHTMLElement=function(){
     this.header.style.fontSize="9px";
     this.header.style.textAlign="center";
     this.disableTextSelection(this.header);
+    this.header.className="VariableFigureHeader";
 
     this.textarea=document.createElement("div");
     this.textarea.style.position="absolute";

@@ -17,14 +17,14 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                        +        '<tr><td>Source Component:</td>'
                        +            '<td>Target Component:</td>'
                        +        '</tr>'
-                       +        '<tr><td><input id="src_list" /></td>'
-                       +            '<td><input id="dst_list" /></td>'
+                       +        '<tr><td><input id="srccmp_list" /></td>'
+                       +            '<td><input id="dstcmp_list" /></td>'
                        +        '</tr>'
                        + '</table></div>',
         componentsDiv = jQuery(componentsHTML)
             .appendTo(self.elm),
-        src_cmp_selector = componentsDiv.find('#src_list'),
-        dst_cmp_selector = componentsDiv.find('#dst_list'),
+        src_cmp_selector = componentsDiv.find('#srccmp_list'),
+        dst_cmp_selector = componentsDiv.find('#dstcmp_list'),
         // dataflow diagram
         connectionsCSS = 'background:grey; position:static; width:100%;overflow-x:hidden;overflow-y:auto',
         connectionsDiv = jQuery('<div style="'+connectionsCSS+'">')
@@ -38,15 +38,15 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
-                      +        '<tr><td><input  id="src_list" /></td>'
-                      +        '    <td><input  id="dst_list" /></td>'
+                      +        '<tr><td><input  id="srcvar_list" /></td>'
+                      +        '    <td><input  id="dstvar_list" /></td>'
                       +        '    <td><button id="connect" class="button">Connect</button></td>'
                       +        '</tr>'
                       + '</table></div>',
         variablesDiv = jQuery(variablesHTML)
             .appendTo(self.elm),
-        src_var_selector = variablesDiv.find('#src_list'),
-        dst_var_selector = variablesDiv.find('#dst_list'),
+        src_var_selector = variablesDiv.find('#srcvar_list'),
+        dst_var_selector = variablesDiv.find('#dstvar_list'),
         connect_button = variablesDiv.find('#connect')
                         .click(function() {
                             var src = src_var_selector.val();
@@ -60,8 +60,8 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     // plain background, non-selectable
     dataflow.setBackgroundImage(null);
     dataflowDiv.css({'background-color':'transparent','position':'absolute','width':'100%'});
-    dataflowDiv.on('selectstart dragstart',function(evt){ evt.preventDefault(); return false; })
-        
+    dataflowDiv.on('selectstart dragstart',function(evt){ evt.preventDefault(); return false; });
+
     // create context menu for toggling the showAllVariables option
     dataflow.getContextMenu=function(){
         var menu=new draw2d.Menu();
