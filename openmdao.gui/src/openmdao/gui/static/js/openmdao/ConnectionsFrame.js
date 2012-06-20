@@ -57,10 +57,11 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     self.pathname = null;
 
-    // plain grey background
+    // plain background, non-selectable
     dataflow.setBackgroundImage(null);
-    dataflowDiv.css({'background-color':'grey','position':'absolute','width':'100%'});
-
+    dataflowDiv.css({'background-color':'transparent','position':'absolute','width':'100%'});
+    dataflowDiv.on('selectstart dragstart',function(evt){ evt.preventDefault(); return false; })
+        
     // create context menu for toggling the showAllVariables option
     dataflow.getContextMenu=function(){
         var menu=new draw2d.Menu();
