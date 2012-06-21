@@ -21,7 +21,7 @@ from openmdao.main.numpy_fallback import zeros
 from enthought.traits.api import HasTraits
 from zope.interface import implements, Attribute, Interface
 
-from openmdao.lib.datatypes.api import Int, Enum
+from openmdao.lib.datatypes.api import Int, Enum, Bool
 from openmdao.main.interfaces import implements
 from openmdao.util.decorators import stub_if_missing_deps
 
@@ -51,6 +51,8 @@ class FiniteDifferenceGenerator(HasTraits):
     form = Enum("CENTRAL", [ "CENTRAL", "FORWARD", "BACKWARD" ],
                 desc="Form of finite difference used")
     
+    skip_baseline = Bool(False, desc="Set to True to skip running the baseline case.")
+    
     def __init__(self, driver):
         super(FiniteDifferenceGenerator, self).__init__()
         self.driver = driver
@@ -73,7 +75,8 @@ class FiniteDifferenceGenerator(HasTraits):
             delta[ i ] =  param.fd_step
             
         # baseline case
-        if not ( self.form == "CENTRAL" and self.order % 2 == 1 ) :
+        if not ( self.form == "CENTRAL" and self.order % 2 == 1 ) and \
+           not (self.form != "CENTRAL" and self.skip_baseline):
             yield baseline
 
         if self.form == "FORWARD" :
@@ -91,7 +94,7 @@ class FiniteDifferenceGenerator(HasTraits):
             for iparam in range( self.num_parameters ):
                 mask[ iparam ] = 1.0
                 for i in range( self.order ):
-                    var_val = baseline + ( offset + i ) * mask * delta
+                    var_val = baseline + ( offset + i ) * delta * mask
                     yield var_val
                 mask[ iparam ] = 0.0
         else: # for central form
@@ -99,12 +102,12 @@ class FiniteDifferenceGenerator(HasTraits):
                 mask[ iparam ] = 1.0
                 if self.order % 2 == 1 :
                     for i in range( self.order + 1 ):
-                        var_val = baseline + ( offset + i ) * mask * delta
+                        var_val = baseline + ( offset + i ) * delta * mask
                         yield var_val
                 else:
                     for i in range( self.order + 1 ):
                         if ( offset + i ) != 0 :
-                            var_val = baseline + ( offset + i ) * mask * delta
+                            var_val = baseline + ( offset + i ) * delta * mask
                             yield var_val
                 mask[ iparam ] = 0.0
 
