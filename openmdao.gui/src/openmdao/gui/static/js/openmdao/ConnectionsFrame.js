@@ -17,16 +17,16 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                        +        '<tr><td>Source Component:</td>'
                        +            '<td>Target Component:</td>'
                        +        '</tr>'
-                       +        '<tr><td><input id="srccmp_list" /></td>'
-                       +            '<td><input id="dstcmp_list" /></td>'
+                       +        '<tr><td><input id="src_cmp_list" /></td>'
+                       +            '<td><input id="dst_cmp_list" /></td>'
                        +        '</tr>'
                        + '</table></div>',
         componentsDiv = jQuery(componentsHTML)
             .appendTo(self.elm),
-        src_cmp_selector = componentsDiv.find('#srccmp_list'),
-        dst_cmp_selector = componentsDiv.find('#dstcmp_list'),
+        src_cmp_selector = componentsDiv.find('#src_cmp_list'),
+        dst_cmp_selector = componentsDiv.find('#dst_cmp_list'),
         // dataflow diagram
-        connectionsCSS = 'background:grey; position:static; width:100%;overflow-x:hidden;overflow-y:auto',
+        connectionsCSS = 'background:grey; position:static; width:100%;',
         connectionsDiv = jQuery('<div style="'+connectionsCSS+'">')
             .appendTo(self.elm),
         dataflowID  = id + '-dataflow',
@@ -38,15 +38,15 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                       +        '<tr><td>Source Variable:</td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
-                      +        '<tr><td><input  id="srcvar_list" /></td>'
-                      +        '    <td><input  id="dstvar_list" /></td>'
+                      +        '<tr><td><input  id="src_var_list" /></td>'
+                      +        '    <td><input  id="dst_var_list" /></td>'
                       +        '    <td><button id="connect" class="button">Connect</button></td>'
                       +        '</tr>'
                       + '</table></div>',
         variablesDiv = jQuery(variablesHTML)
             .appendTo(self.elm),
-        src_var_selector = variablesDiv.find('#srcvar_list'),
-        dst_var_selector = variablesDiv.find('#dstvar_list'),
+        src_var_selector = variablesDiv.find('#src_var_list'),
+        dst_var_selector = variablesDiv.find('#dst_var_list'),
         connect_button = variablesDiv.find('#connect')
                         .click(function() {
                             var src = src_var_selector.val();
@@ -236,7 +236,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     /** edit connections between the source and destination objects in the assembly */
     function showConnections() {
-        if (self.src_comp && self.dst_comp) {
+        if (self.src_comp !== null && self.dst_comp !== null) {
             model.getConnections(self.pathname, self.src_comp, self.dst_comp,
                 loadConnectionData,
                 function(jqXHR, textStatus, errorThrown) {

@@ -7,8 +7,6 @@ import jsonpickle
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
-import networkx as nx
-#from enthought.traits.api import HasTraits
 
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
@@ -23,12 +21,12 @@ from openmdao.main.publisher import Publisher
 
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
-from zope.interface import implementedBy
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 from openmdao.util.log import logger
+
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -120,7 +118,6 @@ class ConsoleServer(cmd.Cmd):
         if self.exc_info:
             exc_type, exc_value, exc_traceback = self.exc_info
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            traceback.print_tb(exc_traceback, limit=30)
         else:
             print "No trace available."
 
@@ -249,7 +246,6 @@ class ConsoleServer(cmd.Cmd):
             container or dictionary.  the name of the root container, if
             specified, is prepended to all pathnames
         '''
-
         comps = []
         for k, v in cont.items():
             if is_instance(v, Component):
@@ -285,7 +281,10 @@ class ConsoleServer(cmd.Cmd):
             try:
                 # outputs
                 outputs = []
-                src = asm.get(src_name)
+                if src_name:
+                    src = asm
+                else:
+                    src = asm.get(src_name)
                 connected = src.list_outputs(connected=True)
                 for name in src.list_outputs():
                     units = ''
@@ -302,7 +301,10 @@ class ConsoleServer(cmd.Cmd):
 
                 # inputs
                 inputs = []
-                dst = asm.get(dst_name)
+                if dst_name:
+                    dst = asm
+                else:
+                    dst = asm.get(dst_name)
                 connected = dst.list_inputs(connected=True)
                 for name in dst.list_inputs():
                     units = ''
@@ -328,29 +330,6 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(conns)
-
-    def set_connections(self, pathname, src_name, dst_name, connections):
-        ''' set connections between src and dst components in the given
-            assembly
-        '''
-        asm, root = self.get_container(pathname)
-        if asm:
-            try:
-                conntuples = asm.list_connections(show_passthrough=False)
-                # disconnect any connections that are not in the new set
-                for src, dst in conntuples:
-                    if src.startswith(src_name + ".") and \
-                       dst.startswith(dst_name + "."):
-                        if [src, dst] not in connections:
-                            print "disconnecting", src, dst
-                            asm.disconnect(src, dst)
-                # connect stuff in new set that is not already connected
-                for src, dst in connections:
-                    if (src, dst) not in conntuples:
-                        print "connecting", src, dst
-                        asm.connect(src, dst)
-            except Exception, err:
-                self._error(err, sys.exc_info())
 
     def get_dataflow(self, pathname):
         ''' get the structure of the specified assembly, or of the global
@@ -428,10 +407,9 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-            self.projdirfactory = ProjDirFactory(self.proj.path, 
+            self.projdirfactory = ProjDirFactory(self.proj.path,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -561,4 +539,3 @@ class ConsoleServer(cmd.Cmd):
                         self._publish_comps[pathname] -= 1
                         if self._publish_comps[pathname] < 1:
                             del self._publish_comps[pathname]
-
