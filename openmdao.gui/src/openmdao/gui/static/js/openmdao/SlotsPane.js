@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
     // initialize private variables
@@ -31,14 +31,14 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             debug.info(droppedName,'dropped on slots:',self.pathname,'z-index',slotsDiv.css('z-index'),'zIndex',slotsDiv.css('zIndex'));
             if (droppedObject.hasClass('objtype')) {
                 openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
-                    model.addComponent(droppedPath,name,self.pathname)
-                })
-			}
+                    model.addComponent(droppedPath,name,self.pathname);
+                });
+            }
             else if (droppedObject.hasClass('obj')) {
-				var cmd = self.pathname+'='+droppedPath;
-				debug.info('SlotsPane:',cmd);
-				model.issueCommand(cmd);
-            };
+                var cmd = self.pathname+'='+droppedPath;
+                debug.info('SlotsPane:',cmd);
+                model.issueCommand(cmd);
+            }
         }
     });
 
@@ -47,9 +47,9 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
      */
     function updateFigures(json) {
         jQuery.each(json, function(idx,slot) {
-            var name = slot['name'],
-                type = slot['klass'],
-                filled = slot['filled'],
+            var name = slot.name,
+                type = slot.klass,
+                filled = slot.filled,
                 fig;
 
             if (self.pathname) {
@@ -59,26 +59,25 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                 fig = new openmdao.SlotFigure(model,name,type,filled);
             }
 
-            fig.setTitle(name)
-            figures[name] = fig
-            fig.setContent('<center>(('+type+'))'+'</center>')
+            fig.setTitle(name);
+            figures[name] = fig;
+            fig.setContent('<center>(('+type+'))'+'</center>');
             // TODO: flexible grid layout (adjusting for size)
             var count = Object.keys(figures).length,
                 x = (count-1)*(fig.getWidth()+20)  + 20,
                 y = 20;
             //debug.info('count=',count,'x=',x,'y=',y)
-            slots.addFigure(fig,x,y)
-        })
-
+            slots.addFigure(fig,x,y);
+        });
     }
 
     /** update slots diagram */
     this.loadData = function(json) {
-        slots.clear()
-        figures = {}
+        slots.clear();
+        figures = {};
         if (Object.keys(json).length > 0) {
-            updateFigures(json,false)
+            updateFigures(json,false);
         }
-    }
+    };
 
-}
+};

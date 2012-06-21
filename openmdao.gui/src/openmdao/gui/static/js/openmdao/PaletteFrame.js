@@ -2,7 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.PaletteFrame = function(id,model) {
-    openmdao.PaletteFrame.prototype.init.call(this,id,'Libraries',[]);
+    openmdao.PaletteFrame.prototype.init.call(this,id,'Library',[]);
 
     /***********************************************************************
      *  private
@@ -13,30 +13,8 @@ openmdao.PaletteFrame = function(id,model) {
         palette = jQuery('#'+id),
         libs = jQuery('<div>').appendTo(palette);
 
-    // dropping a filename onto the palette pane means import *
-    /*
-    libs.droppable ({
-        accept: '.file',
-        drop: function(ev,ui) {
-            debug.info('PaletteFrame drop: ',ev,ui);
-            var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('PaletteFrame drop: ',droppedObject);
-            var path = droppedObject.attr("path");
-            debug.info('PaletteFrame drop: '+path);
-            if (/.py$/.test(path)) {
-                model.importFile(path);
-            }
-            else {
-                alert("Not a python file:\n"+path);
-            }
-        }
-    });
-    */
     /** rebuild the Palette from a JSON library list of tuples of the form (libname, meta_dict) */
     function updatePalette(packages) {
-        // remember what is expanded
-        //var expanded = jQuery('.library-list:visible');
-
         // build the new html
         var html="<div id='library'>";
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
@@ -50,7 +28,7 @@ openmdao.PaletteFrame = function(id,model) {
 
         // replace old html
         libs.html(html);
-        
+
         var dtable = palette.find('#objtypetable').dataTable({
             'bPaginate': false,
             'bjQueryUI': true,
@@ -62,7 +40,7 @@ openmdao.PaletteFrame = function(id,model) {
              ],
             'sDom': 'lrtp'   // removes the built-in filter field and bottom info (default is lfrtip)
         });
-        
+
         // here's the default list of filters for the library
         var selections = [
                     "In Project",
@@ -97,7 +75,7 @@ openmdao.PaletteFrame = function(id,model) {
                 input_obj.autocomplete('close');
             }
         });
-        
+
         // make everything draggable
         jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
         jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree
@@ -135,8 +113,8 @@ openmdao.PaletteFrame = function(id,model) {
     };
 
     // ask model for an update whenever something changes
-    model.addListener('types',handleMessage);
-    
+    model.addListener('types', handleMessage);
+
     this.update();
 
 };

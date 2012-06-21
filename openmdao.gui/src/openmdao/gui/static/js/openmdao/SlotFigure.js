@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotFigure=function(myModel,pathname,type,filled){
     this.myModel = myModel;
@@ -24,7 +24,7 @@ openmdao.SlotFigure=function(myModel,pathname,type,filled){
         this.setContent('<center><i>'+tok[tok.length-1]+'</i></center>');
     }
     else {
-        this.setContent('<center><i>'+type+''+'</i></center>');
+        this.setContent('<center><i>'+String(type)+'</i></center>');
     }
 
     // do not allow moving (TODO: allow moving)
@@ -32,8 +32,8 @@ openmdao.SlotFigure=function(myModel,pathname,type,filled){
 
     if (! this.filled) {
         //this.setColor(new draw2d.Color(0,255,0));
-        this.header.style.color="#CC0000"
-        this.textarea.style.color="#CC0000"
+        this.header.style.color="#CC0000";
+        this.textarea.style.color="#CC0000";
     }
 };
 
@@ -55,7 +55,7 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     item.style.margin="0px";
     item.style.padding="0px";
     item.style.outline="none";
-    item.style.zIndex=""+draw2d.Figure.ZOrderBaseIndex;
+    item.style.zIndex=String(draw2d.Figure.ZOrderBaseIndex);
 
     this.top_left=document.createElement("div");
     this.top_left.style.background=circleIMG+" no-repeat top left";
@@ -171,8 +171,9 @@ openmdao.SlotFigure.prototype.onDragstart=function(x,y){
         this.toggle();
         return false;
     }
-    if(this.originalHeight==-1){
-        if(this.canDrag===true&&x<parseInt(this.header.style.width)&&y<parseInt(this.header.style.height)){
+    if(this.originalHeight===-1){
+        if(this.canDrag===true && x<parseInt(this.header.style.width,10) &&
+                                  y<parseInt(this.header.style.height,10)) {
             return true;
         }
     }else{
@@ -206,25 +207,25 @@ openmdao.SlotFigure.prototype.setWorkflow=function(wkflw){
         this.outputPort.setName("output");
         var oThis=this;
         this.outputPort.createCommand = function(request) {
-            if(request.getPolicy() == draw2d.EditPolicy.CONNECT) {
-                if( request.source.parentNode.id == request.target.parentNode.id) {
+            if(request.getPolicy() === draw2d.EditPolicy.CONNECT) {
+                if( request.source.parentNode.id === request.target.parentNode.id) {
                     return null;
                 }
                 if (request.source instanceof draw2d.InputPort) {
                     var path = openmdao.Util.getPath(oThis.pathname),
                         src  = oThis.name,
-                        dst  = request.source.getParent().name;
-                    new openmdao.ConnectionFrame(oThis.myModel,path,src,dst)
-                };
+                        dst  = request.source.getParent().name,
+                        f = openmdao.ConnectionsFrame(oThis.myModel,path,src,dst);
+                }
                 return null;
             }
-        }
+        };
         this.addPort(this.outputPort,this.width+5,this.height/2);
-    };
+    }
 };
 
 openmdao.SlotFigure.prototype.toggle=function(){
-    if(this.originalHeight==-1){
+    if(this.originalHeight === -1){
         this.originalHeight=this.height;
         this.setDimension(this.width,this.cornerHeight*2);
         this.setResizeable(false);
@@ -254,7 +255,7 @@ openmdao.SlotFigure.prototype.getContextMenu=function(){
 
 openmdao.SlotFigure.prototype.onDoubleClick=function(){
     if (this.filled) {
-        new openmdao.ComponentFrame(this.myModel,this.pathname)
+        var f = new openmdao.ComponentFrame(this.myModel,this.pathname);
     }
 };
 
