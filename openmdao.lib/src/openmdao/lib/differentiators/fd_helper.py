@@ -5,18 +5,23 @@ on it."""
 #import StringIO
 from copy import deepcopy
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.drivers.distributioncasedriver import \
          DistributionCaseDriver, FiniteDifferenceGenerator
 
 
 class FDhelper(object):
+    ''' An object that takes a subsection of a model and performs a finite
+    difference. The cases are run with a point distribution generator. Thus,
+    we can take advantage of multiprocessing if it is available.
+    '''
     
     def __init__(self, model, comps, wrt, outs, stepsize=1.0e-6, order=1,
                  form='CENTRAL'):
         ''' Takes a model and a list of component names in that model. The
-        model is pickled and unpickled to create a copy. All but the needed
-        comps are removed from the model.
+        model is deepcopiesto create a copy. All but the needed comps are
+        removed from the model.
         
         model: Assembly
             Parent assembly of the components we want to finite difference
@@ -74,7 +79,7 @@ class FDhelper(object):
         gen.form = form
         gen.order = order
         
-    def run(self, init_vals):
+    def run(self, input_dict, output_dict):
         """ Performs finite difference of our submodel with respect to wrt.
         Variables are intialized with init_vals. 
         
@@ -84,15 +89,46 @@ class FDhelper(object):
         """
         
         # Set all initial values
-        for varname, value in init_vals.iteritems():
+        for varname, value in input_dict.iteritems():
             self.model.set(varname, value)
             
         self.model.driver.recorders = [ListCaseRecorder()]
         
+        if self.model.driver.distribution_generator.form != 'CENTRAL':
+            self.model.driver.distribution_generator.skip_baseline = True
+            
         # Calculate finite differences.
         # FFAD mode is supported.
         self.model.driver.calc_derivatives(first=True)
         self.model.run()
         
         # Return all needed derivatives
-        print self.model.driver.recorders[0]
+        cases = self.model.driver.recorders[0].cases
+        
+        icase = 0
+        derivs = {}
+        for wrt, val in self.model.driver.get_parameters().iteritems():
+            
+            derivs[wrt] = {}
+            if self.model.driver.distribution_generator.form == 'CENTRAL':
+                
+                delx = cases[icase][wrt] - cases[icase+1][wrt]
+                for out in self.model.driver.case_outputs:
+                    
+                    derivs[wrt][out] = \
+                        (cases[icase][out] - cases[icase+1][out])/delx
+                        
+                    
+                icase += 2
+                
+            else:
+                
+                delx = cases[icase][wrt] - input_dict[wrt]
+                for out in self.model.driver.case_outputs:
+                    
+                    derivs[wrt][out] = \
+                        (cases[icase][out] - output_dict[out])/delx
+                        
+                icase += 1
+                
+        return derivs

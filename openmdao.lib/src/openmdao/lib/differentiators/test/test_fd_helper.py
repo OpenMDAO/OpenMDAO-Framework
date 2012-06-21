@@ -7,6 +7,7 @@ import unittest
 from openmdao.lib.differentiators.fd_helper import FDhelper
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
+from openmdao.util.testutil import assert_rel_error
 
 class FDHelperTestCase(unittest.TestCase):
     """ Test of the finite difference helper object. """
@@ -61,17 +62,52 @@ class FDHelperTestCase(unittest.TestCase):
         self.top.connect('comp4.y2', 'comp5.x2')
         self.top.connect('comp4.y3', 'comp5.x3')
     
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', \
+                                      'comp4', 'comp5'])
         self.top.comp1.x1 = 2.0
         self.top.run()
         
-        comps = ['comp3', 'comp4']
-        wrt = ['comp3.x1']
+        comps = ['comp2', 'comp3', 'comp4']
+        wrt = ['comp2.x1', 'comp3.x1']
         outs = ['comp4.y1', 'comp4.y2', 'comp4.y3']
         fd = FDhelper(self.top, comps, wrt, outs)
         
-        val_dict = {}
-        val_dict['comp3.x1'] = 100
-        fd.run(val_dict)
+        input_dict = {}
+        for item in wrt:
+            input_dict[item] = self.top.get(item)
+            
+        output_dict = {}
+        for item in outs:
+            output_dict[item] = self.top.get(item)
+                
+        derivs = fd.run(input_dict, output_dict)
+        
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y1'], 0.5, .001)
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y2'], 1.5, .001)
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y3'], 10.5, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y1'], 7.0, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y2'], 0.0, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y3'], 14.0, .001)
+
+        fd.model.driver.distribution_generator.form = 'FORWARD'
+        derivs = fd.run(input_dict, output_dict)
+        
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y1'], 0.5, .001)
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y2'], 1.5, .001)
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y3'], 10.5, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y1'], 7.0, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y2'], 0.0, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y3'], 14.0, .001)
+
+        fd.model.driver.distribution_generator.form = 'BACKWARD'
+        derivs = fd.run(input_dict, output_dict)
+        
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y1'], 0.5, .001)
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y2'], 1.5, .001)
+        assert_rel_error(self, derivs['comp2.x1']['comp4.y3'], 10.5, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y1'], 7.0, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y2'], 0.0, .001)
+        assert_rel_error(self, derivs['comp3.x1']['comp4.y3'], 14.0, .001)
 
 if __name__ == "__main__":
     unittest.main()
