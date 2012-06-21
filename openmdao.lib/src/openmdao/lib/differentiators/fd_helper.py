@@ -83,9 +83,11 @@ class FDhelper(object):
         """ Performs finite difference of our submodel with respect to wrt.
         Variables are intialized with init_vals. 
         
-        init_vals: dict( string : value )
-            Dictionary of all input variables for the coponents in this
-            subsection of the model.
+        input_dict: dict( string : value )
+            Dictionary of baseline values for input paramters
+            
+        input_dict: dict( string : value )
+            Dictionary of baseline values for desired outputs
         """
         
         # Set all initial values
