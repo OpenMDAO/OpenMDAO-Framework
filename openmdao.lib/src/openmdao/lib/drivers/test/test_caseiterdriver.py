@@ -58,6 +58,7 @@ class DrivenComponent(Component):
 
     rosen_suzuki = Float(0., iotype='out')
     sum_y = Float(0., iotype='out')
+    extra = Float(1.5, iotype='out')
 
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
@@ -202,6 +203,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.sequential = True
 
         try:
@@ -263,6 +265,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
 
         if retry:
@@ -296,6 +299,8 @@ class TestCase(unittest.TestCase):
                                  rosen_suzuki(case['driven.x']))
                 self.assertEqual(case['driven.sum_y'],
                                  sum(case['driven.y']))
+                self.assertEqual(case['driven.extra'],
+                                 1.5)
 
     def test_save_load(self):
         logging.debug('')
@@ -328,6 +333,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
 
         self.model.run()
 
@@ -353,6 +359,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
+        self.model.driver.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY'
 
         self.model.run()
@@ -371,6 +378,7 @@ class TestCase(unittest.TestCase):
 
         # Check resoponse to no iterator set.
         self.model.driver.recorders = [ListCaseRecorder()]
+        self.model.driver.printvars = ['driven.extra']
         try:
             self.model.run()
         except ValueError as exc:
