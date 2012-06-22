@@ -25,7 +25,7 @@ class ChainRule(HasTraits):
     # pylint: disable-msg=E1101
     # Local FD might need a stepsize
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
-                             'difference step size.')
+                             'difference step size to use.')
     
     def __init__(self):
 
