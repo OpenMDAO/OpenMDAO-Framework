@@ -218,9 +218,10 @@ def _test_connections(browser):
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
 
-    workspace_page.show_dataflow('sim')
+    workspace_page.expand_object('sim')
+    time.sleep(1)
+    workspace_page.show_dataflow('sim.vehicle')
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
-    vehicle('top_right').click()
 
     conn_page = vehicle.connections_page()
     eq(conn_page.dialog_title, 'Connections: vehicle')
@@ -250,7 +251,7 @@ def _test_connections(browser):
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
-    conn_page.connect_vars('transmission.RPM','engine.RPM')
+    conn_page.connect_vars('transmission.RPM', 'engine.RPM')
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
 
@@ -258,7 +259,29 @@ def _test_connections(browser):
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
-    conn_page.connect_vars('transmission.torque_ratio','chassis.torque_ratio')
+    conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    conn_page.source_component = '\n'
+    conn_page.destination_component = 'transmission\n'
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 0)
+
+    conn_page.connect_vars('current_gear', 'transmission.current_gear')
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    conn_page.source_component = 'chassis\n'
+    conn_page.destination_component = '\n'
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    chassis = workspace_page.get_dataflow_figure('chassis', 'sim.vehicle')
+    chassis.disconnect()
+    eq(len(conn_page.get_variable_figures()), 0)
+
+    conn_page.connect_vars('chassis.acceleration', 'acceleration')
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
 

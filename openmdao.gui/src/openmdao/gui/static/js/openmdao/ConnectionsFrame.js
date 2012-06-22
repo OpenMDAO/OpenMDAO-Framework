@@ -52,6 +52,8 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                             var src = src_var_selector.val();
                             var dst = dst_var_selector.val();
                             model.issueCommand(self.pathname+'.connect("'+src+'","'+dst+'")');
+                            src_var_selector.val('');
+                            dst_var_selector.val('');
                         }),
        showAllVariables = false;  // only show connected variables by default
 
