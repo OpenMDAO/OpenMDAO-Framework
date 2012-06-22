@@ -17,13 +17,13 @@ ul {
   margin: 0;
   float: left;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 #central {
   margin: 0;
   float: left;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 #central_label {
   margin: 0;
@@ -34,7 +34,6 @@ ul {
   margin: 0;
   float: left;
   height: 100%;
-  /*overflow: auto;*/
   overflow: hidden;
 }
 
