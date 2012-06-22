@@ -593,7 +593,7 @@ def plugin_docs(parser, options, args=None):  # pragma no cover
         wb.open(url)
 
 
-def find_docs_url(plugin_name):
+def find_docs_url(plugin_name=None, build_if_needed=True):
     """Returns a url for the Sphinx docs for the named plugin.
     The plugin must be importable in the current environment.
     
@@ -648,7 +648,7 @@ def find_docs_url(plugin_name):
         else:  # it's a developer version, so use locally built docs
             htmldir = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
-            if not os.path.isfile(os.path.join(htmldir, 'index.html')):
+            if not os.path.isfile(os.path.join(htmldir, 'index.html')) and build_if_needed:
                 #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao', 'build_docs'])

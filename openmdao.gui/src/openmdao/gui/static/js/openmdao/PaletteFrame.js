@@ -149,7 +149,10 @@ openmdao.PaletteFrame = function(id,model) {
         
         contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
             debug.info('View Docs context event:');
-            //debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
+            modpath = _findMatch(ev).getAttribute('modpath');
+            url = '/plugindocs/'+modpath+'/';
+            debug.info('url = '+url);
+            openmdao.Util.popupWindow(url, 'Docs for '+modpath);
         }));
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
             debug.info('View Metadata context event:');
