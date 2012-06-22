@@ -14,6 +14,7 @@ from openmdao.main.datatypes.api import Bool, Dict, Enum, Int, Slot
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, ICaseRecorder, ICaseFilter
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -576,6 +577,19 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append((case, seqno))
         else:
+            
+            # Additional user-requested variables
+            for printvar in self.printvars:
+    
+                if  '*' in printvar:
+                    printvars = self._get_all_varpaths(printvar)
+                else:
+                    printvars = [printvar]
+    
+                for var in printvars:
+                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    case.add_output(var, val)
+
             for recorder in self.recorders:
                 recorder.record(case)
 

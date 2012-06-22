@@ -3,7 +3,7 @@
 .. _`using-CONMIN`:
 
 
-Building a Model - Unconstrained Optimization using CONMIN
+Building a Model - Unconstrained Optimization
 ===========================================================
 
 Your next task is to build a model that finds the minimum value for the Paraboloid component. 
