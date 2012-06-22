@@ -587,16 +587,8 @@ class CaseIterDriverBase(Driver):
                     printvars = [printvar]
     
                 for var in printvars:
-                    iotype = self.parent.get_metadata(var, 'iotype')
-                    if iotype == 'in':
-                        val = ExprEvaluator(var, scope=self.parent).evaluate()
-                        case.add_input(var, val)
-                    elif iotype == 'out':
-                        val = ExprEvaluator(var, scope=self.parent).evaluate()
-                        case.add_output(var, val)
-                    else:
-                        msg = "%s is not an input or output" % var
-                        self.raise_exception(msg, ValueError)
+                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    case.add_output(var, val)
 
             for recorder in self.recorders:
                 recorder.record(case)
