@@ -169,22 +169,44 @@ openmdao.VariableFigure.prototype.setWorkflow=function(wkflw){
                         return null;
                     }
                     if (request.source instanceof draw2d.InputPort) {
-                        var parent     = openmdao.Util.getPath(oThis.pathname),
-                            parentName = openmdao.Util.getName(parent),
-                            parentAssm = openmdao.Util.getPath(parent),
-                            dstName    = request.source.getParent().name,
-                            dstPath    = openmdao.Util.getPath(request.source.getParent().pathname),
-                            dstParent  = openmdao.Util.getName(dstPath),
-                            src = parentName + "." + oThis.name,
+                        var srcName       = openmdao.Util.getName(oThis.pathname),
+                            srcParent     = openmdao.Util.getPath(oThis.pathname),
+                            srcParentName = openmdao.Util.getName(srcParent),
+                            srcParentPath = openmdao.Util.getPath(srcParent),
+                            dstFigure     = request.source.getParent(),
+                            dstName       = openmdao.Util.getName(dstFigure.pathname),
+                            dstParent     = openmdao.Util.getPath(dstFigure.pathname),
+                            dstParentName = openmdao.Util.getName(dstParent),
+                            dstParentPath = openmdao.Util.getPath(dstParent),
+                            asm = null,
+                            src = null,
+                            dst = null;
+
+                        if (srcParentPath === dstParentPath) {
+                            // both vars are in components of a common assembly
+                            asm = srcParentPath;
+                            src = srcParentName + "." + srcName;
                             dst = dstParent + "." + dstName;
-                        if (parentAssm.length > 0) {
-                            oThis.myModel.issueCommand(parentAssm+".connect('"+src+"','"+dst+"')");
                         }
-                        else {
-                            oThis.myModel.issueCommand("connect('"+src+"','"+dst+"')");
+                        else if (srcParent === dstParentPath) {
+                            // this is an assembly var, connecting to a comp var
+                            asm = srcParent;
+                            src = srcName;
+                            dst = dstParentName + "." + dstName;
                         }
+                        else if (srcParentPath === dstParent) {
+                            // this is a comp var, connecting to a assembly var
+                            asm = srcParentPath;
+                            src = srcParentName + "." + srcName;
+                            dst = dstName;
+                        }
+                        else  {
+                            alert("Can't connect",oThis.pathname,'to',dstFigure.pathname);
+                            return false;
+                        }
+                        oThis.myModel.issueCommand(asm+".connect('"+src+"','"+dst+"')");
                     }
-                    return null;
+                    return true;
                 }
             };
         }

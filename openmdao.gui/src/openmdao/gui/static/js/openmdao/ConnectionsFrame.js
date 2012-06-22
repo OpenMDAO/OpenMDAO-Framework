@@ -140,7 +140,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     }
 
     function loadConnectionData(data) {
-        if (!data || !data.outputs || !data.inputs) {
+        if (!data || !data.sources || !data.destinations) {
             // don't have what we need, probably something got deleted
             self.close();
         }
@@ -150,18 +150,27 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             var i = 0,
                 x = 15,
                 y = 10,
-                conn_list = jQuery.map(data.connections, function(n){return n;}),
-                out_list  = jQuery.map(data.outputs, function(n){return self.src_comp+'.'+n.name;}),
-                in_list   = jQuery.map(data.inputs, function(n){return self.dst_comp+'.'+n.name;});
+                conn_list = jQuery.map(data.connections, function(n) {
+                    return n;
+                }),
+                src_list  = jQuery.map(data.sources, function(n) {
+                    return self.src_comp ? self.src_comp+'.'+n.name : n.name;
+                }),
+                dst_list   = jQuery.map(data.destinations, function(n) {
+                    return self.dst_comp ? self.dst_comp+'.'+n.name : n.name;
+                });
 
             for (i = 0; i <conn_list.length; i++) {
-                conn_list[i]=conn_list[i].split('.')[1];
+                if (conn_list[i].indexOf('.') >= 0) {
+                    conn_list[i]=conn_list[i].split('.')[1];
+                }
             }
-            jQuery.each(data.outputs, function(idx,outvar) {
-                if (showAllVariables || conn_list.contains(outvar.name)) {
-                    var src_name = self.src_comp+'.'+outvar.name,
+
+            jQuery.each(data.sources, function(idx,srcvar) {
+                if (showAllVariables || conn_list.contains(srcvar.name)) {
+                    var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name,
                         src_path = self.pathname+'.'+src_name,
-                        fig = new openmdao.VariableFigure(model,src_path,outvar,'output');
+                        fig = new openmdao.VariableFigure(model,src_path,srcvar,'output');
                     dataflow.addFigure(fig);
                     fig.setPosition(x,y);
                     figures[src_name] = fig;
@@ -172,11 +181,11 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
             x = 220;
             y = 10;
-            jQuery.each(data.inputs, function(idx,invar) {
-                if (showAllVariables || conn_list.contains(invar.name)) {
-                    var dst_name = self.dst_comp+'.'+invar.name,
+            jQuery.each(data.destinations, function(idx,dstvar) {
+                if (showAllVariables || conn_list.contains(dstvar.name)) {
+                    var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name,
                         dst_path = self.pathname+'.'+dst_name,
-                        fig = new openmdao.VariableFigure(model,dst_path,invar,'input');
+                        fig = new openmdao.VariableFigure(model,dst_path,dstvar,'input');
                     dataflow.addFigure(fig);
                     fig.setPosition(x,y);
                     figures[dst_name] = fig;
@@ -192,45 +201,40 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             variablesDiv.show();
 
             jQuery.each(data.connections,function(idx,conn) {
-                // internal connections
-                if ((conn[0].indexOf('.') > 0) && (conn[1].indexOf('.') > 0)) {
-                    var src_name = conn[0],
-                        dst_name = conn[1],
-                        src_fig = figures[src_name],
-                        dst_fig = figures[dst_name],
-                        src_port = src_fig.getPort("output"),
-                        dst_port = dst_fig.getPort("input");
-                    c = new draw2d.Connection();
-                    c.setSource(src_port);
-                    c.setTarget(dst_port);
-                    c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
-                    c.setRouter(new draw2d.BezierConnectionRouter());
-                    c.setCoronaWidth(10);
-                    c.getContextMenu=function(){
-                        var menu=new draw2d.Menu();
-                        var oThis=this;
-                        menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-                                var asm = self.pathname,
-                                    cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'")';
-                                model.issueCommand(cmd);
-                            })
-                        );
-                        return menu;
-                    };
-                    dataflow.addFigure(c);
-                    src_port.setBackgroundColor(new draw2d.Color(0,0,0));
-                    dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
-                }
-                // TODO: handle connections to parent assembly vars (e.g. Vehicle.velocity)
-                // TODO: show passthroughs somehow
+                var src_name = conn[0],
+                    dst_name = conn[1],
+                    src_fig = figures[src_name],
+                    dst_fig = figures[dst_name],
+                    src_port = src_fig.getPort("output"),
+                    dst_port = dst_fig.getPort("input");
+                c = new draw2d.Connection();
+                c.setSource(src_port);
+                c.setTarget(dst_port);
+                c.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+                c.setRouter(new draw2d.BezierConnectionRouter());
+                c.setCoronaWidth(10);
+                c.getContextMenu=function(){
+                    var menu=new draw2d.Menu();
+                    var oThis=this;
+                    menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
+                            var asm = self.pathname,
+                                cmd = asm + '.disconnect("'+src_name+'","'+dst_name+'")';
+                            model.issueCommand(cmd);
+                        })
+                    );
+                    return menu;
+                };
+                dataflow.addFigure(c);
+                src_port.setBackgroundColor(new draw2d.Color(0,0,0));
+                dst_port.setBackgroundColor(new draw2d.Color(0,0,0));
             });
 
             // update the output & input selectors to current outputs & inputs
             src_var_selector.html('');
-            src_var_selector.autocomplete({ source: out_list ,minLength:0});
+            src_var_selector.autocomplete({ source: src_list ,minLength:0});
 
             dst_var_selector.html('');
-            dst_var_selector.autocomplete({ source: in_list ,minLength:0});
+            dst_var_selector.autocomplete({ source: dst_list ,minLength:0});
         }
     }
 

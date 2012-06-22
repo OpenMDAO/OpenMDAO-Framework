@@ -273,58 +273,89 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(comps)
 
     def get_connections(self, pathname, src_name, dst_name):
-        ''' get list of src outputs, dst inputs and connections between them
+        ''' get list of source variables, destination variables and the
+            connections between them
         '''
         conns = {}
         asm, root = self.get_container(pathname)
         if asm:
             try:
                 # outputs
-                outputs = []
+                sources = []
                 if src_name:
-                    src = asm
-                else:
                     src = asm.get(src_name)
+                else:
+                    src = asm
                 connected = src.list_outputs(connected=True)
                 for name in src.list_outputs():
                     units = ''
                     meta = src.get_metadata(name)
                     if meta and 'units' in meta:
                         units = meta['units']
-                    outputs.append({'name': name,
+                    sources.append({'name': name,
                                     'type': type(src.get(name)).__name__,
                                     'valid': src.get_valid([name])[0],
                                     'units': units,
                                     'connected': (name in connected)
                                    })
-                conns['outputs'] = sorted(outputs, key=lambda d: d['name'])
+                # connections to assembly can be passthrough (input to input)
+                if src == asm:
+                    connected = src.list_inputs(connected=True)
+                    for name in src.list_inputs():
+                        units = ''
+                        meta = src.get_metadata(name)
+                        if meta and 'units' in meta:
+                            units = meta['units']
+                        sources.append({'name': name,
+                                        'type': type(src.get(name)).__name__,
+                                        'valid': src.get_valid([name])[0],
+                                        'units': units,
+                                        'connected': (name in connected)
+                                       })
+                conns['sources'] = sorted(sources, key=lambda d: d['name'])
 
                 # inputs
-                inputs = []
+                dests = []
                 if dst_name:
-                    dst = asm
-                else:
                     dst = asm.get(dst_name)
+                else:
+                    dst = asm
                 connected = dst.list_inputs(connected=True)
                 for name in dst.list_inputs():
                     units = ''
                     meta = dst.get_metadata(name)
                     if meta and 'units' in meta:
                         units = meta['units']
-                    inputs.append({'name': name,
-                                   'type': type(dst.get(name)).__name__,
-                                   'valid': dst.get_valid([name])[0],
-                                   'units': units,
-                                   'connected': (name in connected)
-                                 })
-                conns['inputs'] = sorted(inputs, key=lambda d: d['name'])
+                    dests.append({'name': name,
+                                  'type': type(dst.get(name)).__name__,
+                                  'valid': dst.get_valid([name])[0],
+                                  'units': units,
+                                  'connected': (name in connected)
+                                })
+                # connections to assembly can be passthrough (output to output)
+                if dst == asm:
+                    connected = dst.list_outputs(connected=True)
+                    for name in dst.list_outputs():
+                        units = ''
+                        meta = dst.get_metadata(name)
+                        if meta and 'units' in meta:
+                            units = meta['units']
+                        dests.append({'name': name,
+                                      'type': type(dst.get(name)).__name__,
+                                      'valid': dst.get_valid([name])[0],
+                                      'units': units,
+                                      'connected': (name in connected)
+                                     })
+                conns['destinations'] = sorted(dests, key=lambda d: d['name'])
 
                 # connections
                 connections = []
-                conntuples = asm.list_connections(show_passthrough=False)
+                conntuples = asm.list_connections(show_passthrough=True)
                 for src, dst in conntuples:
-                    if src.startswith(src_name + ".") and \
-                       dst.startswith(dst_name + "."):
+                    if (src_name and src.startswith(src_name + ".") \
+                       or (not src_name and src.find('.') < 0)) and \
+                       (dst_name and dst.startswith(dst_name + ".") \
+                       or (not dst_name and dst.find('.') < 0)):
                         connections.append([src, dst])
                 conns['connections'] = connections
             except Exception, err:
