@@ -279,6 +279,7 @@ def _test_connections(browser):
 
     chassis = workspace_page.get_dataflow_figure('chassis', 'sim.vehicle')
     chassis.disconnect()
+    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
@@ -300,9 +301,9 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-#        _test_connect(browser)
+        _test_connect(browser)
         _test_connections(browser)
-#        _test_maxmin(browser)
+        _test_maxmin(browser)
         browser.quit()
         teardown_server()
     else:
