@@ -218,17 +218,20 @@ def _test_connections(browser):
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
 
+    # show dataflow for vehicle
     workspace_page.expand_object('sim')
     time.sleep(1)
     workspace_page.show_dataflow('sim.vehicle')
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
 
+    # no connections between assembly vars
     conn_page = vehicle.connections_page()
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '')
     eq(conn_page.destination_component, '')
     eq(len(conn_page.get_variable_figures()), 0)
 
+    # one connection between transmission and engine (RPM)
     conn_page.source_component = 'transmission\n'
     conn_page.destination_component = 'engine\n'
     time.sleep(1)
@@ -236,6 +239,7 @@ def _test_connections(browser):
     eq(conn_page.destination_variable, '')
     eq(len(conn_page.get_variable_figures()), 2)
 
+    # two connections between engine and chassis
     conn_page.source_component = 'engine\n'
     conn_page.destination_component = 'chassis\n'
     time.sleep(1)
@@ -243,47 +247,61 @@ def _test_connections(browser):
     eq(conn_page.destination_variable, '')
     eq(len(conn_page.get_variable_figures()), 4)
 
+    # disconnect transmission
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
 
+    # now there are no connections between transmission and engine
     conn_page.source_component = 'transmission\n'
     conn_page.destination_component = 'engine\n'
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
+    # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
 
+    # no connections between transmission and chassis
     conn_page.destination_component = 'chassis\n'
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
+    # reconnect transmission torque torque to chassis torque
     conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
 
+    # no connections between vehicle assembly and transmission
     conn_page.source_component = '\n'
     conn_page.destination_component = 'transmission\n'
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
+    # connect assembly variable to component variable
     conn_page.connect_vars('current_gear', 'transmission.current_gear')
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
 
+    # one connection from chassis component to vehicle assembly
     conn_page.source_component = 'chassis\n'
     conn_page.destination_component = '\n'
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
 
+    # disconnect chassis
+    conn_page.close()
     chassis = workspace_page.get_dataflow_figure('chassis', 'sim.vehicle')
     chassis.disconnect()
+    vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
+    conn_page = vehicle.connections_page()
     time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
+    # connect component variable to assembly variable
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
     time.sleep(1)
+    conn_page.source_component = 'chassis\n'
     eq(len(conn_page.get_variable_figures()), 2)
 
     conn_page.close()
