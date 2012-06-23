@@ -172,7 +172,6 @@ openmdao.Util = {
             userInput = null;
 
         function handleResponse() {
-            debug.info('Util.handleResponse',userInput,userInput.val(),callback);
             // close dialog, invoke callback
             win.dialog('close');
             if (callback) {
