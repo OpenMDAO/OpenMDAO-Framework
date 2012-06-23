@@ -316,7 +316,8 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
     var menu=new draw2d.Menu(),
         model = this.openmdao_model,
         pathname = this.pathname,
-        name = this.name;
+        name = this.name,
+        connections = this.connections;
 
     if (name.length > 0) {
         // menu header
@@ -335,7 +336,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         }));
 
         // connections (internal) or disconnect (external)
-        if (this.maxmin === '-') {
+        if ((this.maxmin === '-') || (Object.keys(connections).length > 0)) {
             menu.appendMenuItem(new draw2d.MenuItem("Connections",null,function(){
                 var f = new openmdao.ConnectionsFrame(model, pathname);
             }));
