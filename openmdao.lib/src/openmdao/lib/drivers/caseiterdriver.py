@@ -534,6 +534,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.debug('    run next case')
                 self._seqno += 1
                 in_use = self._run_case(case, self._seqno, server)
+                
         return in_use
 
     def _run_case(self, case, seqno, server, rerun=False):
@@ -544,6 +545,20 @@ class CaseIterDriverBase(Driver):
             case.retries = 0
         case.msg = None
         case.parent_uuid = self._case_id
+
+        # Additional user-requested variables
+        # These must be added here so that the outputs are in the cases
+        # before they are in the server list.
+        for printvar in self.printvars:
+
+            if  '*' in printvar:
+                printvars = self._get_all_varpaths(printvar)
+            else:
+                printvars = [printvar]
+
+            for var in printvars:
+                val = ExprEvaluator(var, scope=self.parent).evaluate()
+                case.add_output(var, val)
 
         try:
             for event in self.get_events(): 
@@ -578,18 +593,6 @@ class CaseIterDriverBase(Driver):
             self._rerun.append((case, seqno))
         else:
             
-            # Additional user-requested variables
-            for printvar in self.printvars:
-    
-                if  '*' in printvar:
-                    printvars = self._get_all_varpaths(printvar)
-                else:
-                    printvars = [printvar]
-    
-                for var in printvars:
-                    val = ExprEvaluator(var, scope=self.parent).evaluate()
-                    case.add_output(var, val)
-
             for recorder in self.recorders:
                 recorder.record(case)
 
