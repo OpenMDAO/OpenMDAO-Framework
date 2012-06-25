@@ -40,7 +40,8 @@ openmdao.CodeFrame = function(id,model) {
 
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
-        model.setFile(filepath,editor.getValue());
+	console.log(editor.getValue());
+        model.setFile(filepath,editor.session.doc.getValue());
     }
 
     /***********************************************************************
