@@ -842,7 +842,7 @@ def update_libpath(options=None):
             print "\nThe 'activate' file has been updated with new values" \
                   " added to %s" % libpathvname
             print "You must deactivate and reactivate your virtual environment"
-            print "for thechanges to take effect\n"
+            print "for the changes to take effect\n"
 
     
 # This requires Internet connectivity to github.

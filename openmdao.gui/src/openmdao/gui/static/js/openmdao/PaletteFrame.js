@@ -120,8 +120,8 @@ openmdao.PaletteFrame = function(id,model) {
             var event_top = ev.target.offsetParent.offsetTop;
             objtypes.each(function(i, elem) {
                otop = getElementTop(elem);
-               // need to check offsetHeight to skip invisible entries
-               if (elem.offsetHeight > 0 && otop <= event_top && (otop+elem.offsetHeight)>=event_top) {
+               // elemoffsetHeight = 0 for invisible entries
+               if (otop <= event_top && (otop+elem.offsetHeight)>=event_top) {
                   match = elem;
                   return false; // break out of loop
                }
@@ -131,10 +131,15 @@ openmdao.PaletteFrame = function(id,model) {
         
         contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
             debug.info('View Docs context event:');
-            modpath = _findMatch(ev).getAttribute('modpath');
-            url = '/plugindocs/'+modpath+'/';
+            var modpath = _findMatch(ev).getAttribute('modpath');
+            var url = '/docs/plugins/'+modpath; //+'/#'+modpath.split(".").join("-")+'-py';
+            var parts = modpath.split('.')
+            var cname = parts.pop()
+            //var url = '/docs/_modules/'+parts.join('/')+'.html#'+cname
             debug.info('url = '+url);
-            openmdao.Util.popupWindow(url, 'Docs for '+modpath);
+            //openmdao.Util.popupWindow(url, 'Docs for '+modpath, 600, 800);
+            window.open(url, 'Docs for '+modpath);
+            //window.open('/docs/plugins/openmdao.lib.drivers.doedriver.DOEdriver/#openmdao-lib-architectures-co-py', 'Docs for '+modpath);
         }));
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
             debug.info('View Metadata context event:');

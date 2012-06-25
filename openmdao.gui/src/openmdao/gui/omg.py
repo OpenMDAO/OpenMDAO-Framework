@@ -73,8 +73,8 @@ class App(web.Application):
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
+            web.url(r'/docs/plugins/(.*)',  PluginDocsHandler, { 'route': '/docs/plugins/' }),
             web.url(r'/docs/(.*)',  doc_handler, doc_handler_options ),
-            web.url(r'/plugindocs/(.*)',  PluginDocsHandler, { 'route': '/plugindocs/' }),
             web.url(r'/',       web.RedirectHandler, { 'url':'/projects', 'permanent':False })
         ]
         handlers.extend(proj.handlers)
