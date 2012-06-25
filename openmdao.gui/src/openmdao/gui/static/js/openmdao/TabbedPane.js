@@ -30,7 +30,8 @@ openmdao.TabbedPane = function(id) {
         'left': '0',
         'top': '25px',
         'height': '100%',
-        'width': '100%'
+        'width': '100%',
+        'overflow' : 'auto'
     });
 
     jQuery("#"+id+" dd").hide();

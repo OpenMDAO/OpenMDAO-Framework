@@ -162,31 +162,16 @@ class ComponentsHandler(ReqHandler):
 
 
 class ConnectionsHandler(ReqHandler):
-    ''' get/set connections between two components in an assembly
+    ''' get connections between two components in an assembly
     '''
-
-    @web.authenticated
-    def post(self, pathname):
-        result = ''
-        try:
-            src_name = self.get_argument('src_name')
-            dst_name = self.get_argument('dst_name')
-            connections = self.get_argument('connections')
-            cserver = self.get_server()
-            cserver.set_connections(pathname, src_name, dst_name, connections)
-        except Exception, e:
-            print e
-            result = sys.exc_info()
-        self.content_type = 'text/html'
-        self.write(result)
 
     @web.authenticated
     def get(self, pathname):
         cserver = self.get_server()
         connects = {}
         try:
-            src_name = self.get_argument('src_name')
-            dst_name = self.get_argument('dst_name')
+            src_name = self.get_argument('src_name', default=None)
+            dst_name = self.get_argument('dst_name', default=None)
             connects = cserver.get_connections(pathname, src_name, dst_name)
         except Exception, e:
             print e
@@ -390,6 +375,7 @@ class TypesHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(jsonpickle.encode(types))
 
+
 class UploadHandler(ReqHandler):
     ''' file upload utility
     '''
@@ -470,4 +456,3 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
-

@@ -5,6 +5,8 @@ Tests of overall workspace functions.
 import sys
 import time
 
+import pkg_resources
+
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -57,13 +59,13 @@ def _test_import(browser):
     editor_page = workspace_page.open_editor()
 
     # Add paraboloid file.
-    import openmdao.examples.simple.paraboloid
-    file_path = openmdao.examples.simple.paraboloid.__file__
+    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'paraboloid.py')
     editor_page.add_file(file_path)
 
     # Add optimization_unconstrained file.
-    import openmdao.examples.simple.optimization_unconstrained
-    file_path = openmdao.examples.simple.optimization_unconstrained.__file__
+    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'optimization_unconstrained.py')
     editor_page.add_file(file_path)
 
     # Check to make sure the files were added.
@@ -73,12 +75,6 @@ def _test_import(browser):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
-
-    ## Import * from paraboloid.
-    #editor_page.import_file('paraboloid.py')
-
-    ## Import * from optimization_unconstrained.
-    #editor_page.import_file('optimization_unconstrained.py')
 
     # Back to workspace.
     browser.close()
@@ -146,9 +142,9 @@ def _test_menu(browser):
     top_figure = workspace_page.get_dataflow_figure('top')
     eq(top_figure.border, '1px solid rgb(0, 255, 0)')
 
-#FIXME: These need to verify that the request has been performed.
+    #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('cmdline', 'console', 'libraries', 'objects',
+    for item in ('console', 'libraries', 'objects',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
@@ -205,10 +201,10 @@ class Plane(Component):
     project_info_page.delete_project()
     print "_test_newfile complete."
 
+
 def _test_addfiles(browser):
     print "running _test_addfiles..."
-
-    # Creates a file in the GUI
+    # Adds multiple files to the project.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
@@ -216,34 +212,39 @@ def _test_addfiles(browser):
     # Opens code editor
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-        
-    main_window_handle = editor_page.browser.current_window_handle
+    editor_window = browser.current_window_handle
 
     upload_page = editor_page.add_files()
 
     # Get path to  paraboloid file.
-    import openmdao.examples.simple.paraboloid
-    paraboloidPath = openmdao.examples.simple.paraboloid.__file__
+    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                     'paraboloid.py')
 
     # Get path to optimization_unconstrained file.
-    import openmdao.examples.simple.optimization_unconstrained
-    opt_unconstrainedPath = openmdao.examples.simple.optimization_unconstrained.__file__
-    
+    optPath = pkg_resources.resource_filename('openmdao.examples.simple',
+                                              'optimization_unconstrained.py')
+
     # Add the files
-    upload_page.select_files((paraboloidPath[:len(paraboloidPath)-1], 
-        opt_unconstrainedPath[:len(opt_unconstrainedPath)-1]))
-   
+    upload_page.select_files((paraboloidPath, optPath))
     upload_page.upload_files()
 
-    browser.switch_to_window(main_window_handle)
     # Check to make sure the files were added.
+    browser.switch_to_window(editor_window)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
-    
+
+    # Clean up.
+    browser.switch_to_window(workspace_window)
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_addfiles complete."
+
+
 def _test_properties(browser):
     print "running _test_properties..."
     # Checks right-hand side properties display.
@@ -277,15 +278,16 @@ def _test_properties(browser):
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
-        from util import setup_chrome, setup_firefox
+        # tests should be in alpha order as that's how they will run under nose
+        from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
+        _test_addfiles(browser)
         _test_console(browser)
         _test_import(browser)
         _test_menu(browser)
         _test_newfile(browser)
         _test_properties(browser)
-        _test_addfiles(browser)
         browser.quit()
         teardown_server()
     else:
@@ -294,4 +296,3 @@ if __name__ == '__main__':
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-

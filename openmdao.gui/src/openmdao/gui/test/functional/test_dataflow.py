@@ -29,6 +29,14 @@ def _test_maxmin(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
+    # verify that the globals figure is invisible
+    globals_figure = workspace_page.get_dataflow_figure('')
+    if sys.platform == 'darwin':
+        eq(globals_figure.border, 'none')
+    else:
+        eq(globals_figure.border, '0px none rgb(0, 0, 0)')
+    eq(globals_figure.background_color, 'rgba(0, 0, 0, 0)')
+
     # Add maxmin.py to project
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
@@ -54,16 +62,20 @@ def _test_maxmin(browser):
     maxmin = workspace_page.get_dataflow_figure('maxmin')
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-plus.png)'
-                   ' no-repeat scroll 100% 0%')
+    if sys.platform == 'darwin':
+        bg = '%s %s' % ('url(http://localhost/static/images/circle-plus.png)',
+                        'no-repeat 100% 0%')
+    else:
+        bg = '%s %s %s' % ('rgba(0, 0, 0, 0)',
+                           'url(http://localhost/static/images/circle-plus.png)',
+                           'no-repeat scroll 100% 0%')
+    eq(background, bg)
 
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-minus.png)'
-                   ' no-repeat scroll 100% 0%')
+    bg = bg.replace('circle-plus', 'circle-minus')
+    eq(background, bg)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
@@ -72,9 +84,8 @@ def _test_maxmin(browser):
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, 'rgba(0, 0, 0, 0)'
-                   ' url(http://localhost/static/images/circle-plus.png)'
-                   ' no-repeat scroll 100% 0%')
+    bg = bg.replace('circle-minus', 'circle-plus')
+    eq(background, bg)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
@@ -121,9 +132,10 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
-    eq(conn_page.dialog_title, 'Connections: top comp1 to comp2')
+    eq(conn_page.dialog_title, 'Connections: top')
     for prefix in ('b', 'e', 'f', 'i', 's'):
-        conn_page.connect('comp1.'+prefix+'_out', 'comp2.'+prefix+'_in')
+        conn_page.connect_vars('comp1.' + prefix + '_out',
+                               'comp2.' + prefix + '_in')
         time.sleep(0.5)  # Wait for display update.
     conn_page.close()
 
@@ -174,13 +186,141 @@ def _test_connect(browser):
     print "_test_connect complete."
 
 
+def _test_connections(browser):
+    print "running _test_connections..."
+    # Check connection frame functionality.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    filename = pkg_resources.resource_filename('openmdao.examples.enginedesign',
+                                               'vehicle_singlesim.py')
+    editor_page.add_file(filename)
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Replace 'top' with VehicleSim.
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    workspace_page('libraries_tab').click()
+    for retry in range(2):
+        try:
+            workspace_page.find_palette_button('VehicleSim').click()
+        except StaleElementReferenceException:
+            logging.warning('StaleElementReferenceException in _test_connect')
+        else:
+            break
+    else:
+        raise RuntimeError('Too many StaleElementReferenceExceptions')
+    asm_name = 'sim'
+    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+                                                asm_name)
+
+    # show dataflow for vehicle
+    workspace_page.expand_object('sim')
+    time.sleep(1)
+    workspace_page.show_dataflow('sim.vehicle')
+    vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
+
+    # no connections between assembly vars
+    conn_page = vehicle.connections_page()
+    eq(conn_page.dialog_title, 'Connections: vehicle')
+    eq(conn_page.source_component, '')
+    eq(conn_page.destination_component, '')
+    eq(len(conn_page.get_variable_figures()), 0)
+
+    # one connection between transmission and engine (RPM)
+    conn_page.source_component = 'transmission\n'
+    conn_page.destination_component = 'engine\n'
+    time.sleep(1)
+    eq(conn_page.source_variable, '')
+    eq(conn_page.destination_variable, '')
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    # two connections between engine and chassis
+    conn_page.source_component = 'engine\n'
+    conn_page.destination_component = 'chassis\n'
+    time.sleep(1)
+    eq(conn_page.source_variable, '')
+    eq(conn_page.destination_variable, '')
+    eq(len(conn_page.get_variable_figures()), 4)
+
+    # disconnect transmission
+    tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
+    tranny.disconnect()
+
+    # now there are no connections between transmission and engine
+    conn_page.source_component = 'transmission\n'
+    conn_page.destination_component = 'engine\n'
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 0)
+
+    # reconnect transmission RPM to engine RPM
+    conn_page.connect_vars('transmission.RPM', 'engine.RPM')
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    # no connections between transmission and chassis
+    conn_page.destination_component = 'chassis\n'
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 0)
+
+    # reconnect transmission torque torque to chassis torque
+    conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    # no connections between vehicle assembly and transmission
+    conn_page.source_component = '\n'
+    conn_page.destination_component = 'transmission\n'
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 0)
+
+    # connect assembly variable to component variable
+    conn_page.connect_vars('current_gear', 'transmission.current_gear')
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    # one connection from chassis component to vehicle assembly
+    conn_page.source_component = 'chassis\n'
+    conn_page.destination_component = '\n'
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    # disconnect chassis
+    conn_page.close()
+    chassis = workspace_page.get_dataflow_figure('chassis', 'sim.vehicle')
+    chassis.disconnect()
+    vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
+    conn_page = vehicle.connections_page()
+    time.sleep(1)
+    eq(len(conn_page.get_variable_figures()), 0)
+
+    # connect component variable to assembly variable
+    conn_page.connect_vars('chassis.acceleration', 'acceleration')
+    time.sleep(1)
+    conn_page.source_component = 'chassis\n'
+    eq(len(conn_page.get_variable_figures()), 2)
+
+    conn_page.close()
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_connections complete."
+
+
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
-        from util import setup_chrome, setup_firefox
+        from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
         _test_connect(browser)
+        _test_connections(browser)
         _test_maxmin(browser)
         browser.quit()
         teardown_server()
@@ -190,4 +330,3 @@ if __name__ == '__main__':
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-

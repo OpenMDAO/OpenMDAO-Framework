@@ -1,3 +1,4 @@
+.
 .. index:: branch; working on
 
 .. _Working-on-Your-Branch:
