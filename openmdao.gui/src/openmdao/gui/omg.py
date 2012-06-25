@@ -66,6 +66,7 @@ class App(web.Application):
             idxpath = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
             doc_handler = web.StaticFileHandler
+            logger.error('root = %s' % idxpath)
             doc_handler_options = { 'path': idxpath, 'default_filename': 'index.html' }
             
         handlers = [

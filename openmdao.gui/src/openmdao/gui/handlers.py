@@ -93,38 +93,42 @@ class PluginDocsHandler(StaticFileHandler):
         return True
     
     def initialize(self, route):
+        logger.error('request.path = %s' % self.request.path)
         rpath = self.request.path[len(route):].strip('/')
         parts = rpath.split('/',1)
         self.cname = parts[0] + os.sep
         self.added = ''
+        logger.error('rpath = %s' % rpath)
+        logger.error('cname = %s' % parts[0])
         if len(parts) == 1:
             with self._plugin_lock:
                 if self._cname_valid(parts[0]) and parts[0] not in self._plugin_map:
                     url = find_docs_url(parts[0], build_if_needed=False)
+                    logger.error('url = %s' % url)
                     if self.cname.startswith('openmdao.'):
                         root = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                             '_build', 'html')
                         if url.startswith('file://'):
                             url = url[7:]
-                            self.addedadded = os.path.dirname(url)[len(root)+1:]
+                            self.added = os.path.dirname(url)[len(root)+1:]
                     else:
                         root = os.path.dirname(url)
                     default = os.path.basename(url)
                     self._plugin_map[parts[0]] = (root, default, self.added)
 
-        logger.error('rpath = %s' % rpath)
-        logger.error('cname = %s' % parts[0])
         logger.error('plugin_map = %s' % pprint.pformat(self._plugin_map))
-        path, default, self.added = self._plugin_map[parts[0]]
-        logger.error('path = %s' % path)
+        root, default, self.added = self._plugin_map[parts[0]]
+        logger.error('root = %s' % root)
+        logger.error('default = %s' % default.split('#',1)[0])
+        logger.error('self.added = %s' % self.added)
         
-        super(PluginDocsHandler, self).initialize(path, default.split('#',1)[0])
+        super(PluginDocsHandler, self).initialize(root, default.split('#',1)[0])
     
     def get(self, path, include_body=True):
         logger.error('self.root = %s' % self.root)
         if path.startswith(self.cname):
-            logger.error('get: path = %s' % path[len(self.cname):])
-            super(PluginDocsHandler, self).get(self.added, os.path.join(path[len(self.cname):]), 
+            logger.error('get: path = %s' % os.path.join(self.added, path[len(self.cname):]))
+            super(PluginDocsHandler, self).get(os.path.join(self.added, path[len(self.cname):]), 
                                                include_body)
         else:
             logger.error('get: path = %s' % path)
