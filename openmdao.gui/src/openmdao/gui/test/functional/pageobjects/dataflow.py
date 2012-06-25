@@ -72,7 +72,7 @@ class DataflowFigure(BasePageObject):
     def connections_page(self):
         """ Return :class:`ConnectionsPage` for this component. """
         chain = ActionChains(self.browser)
-        chain.move_to_element_with_offset(self.root,10,10).context_click(None).perform()
+        chain.move_to_element_with_offset(self.root,15,15).context_click(None).perform()
         self('connections_button').click()
         frame_id = 'ConnectionsFrame-%s' % self.pathname.replace('.', '-')
         return ConnectionsPage(self.browser, self.port, (By.ID, frame_id))
