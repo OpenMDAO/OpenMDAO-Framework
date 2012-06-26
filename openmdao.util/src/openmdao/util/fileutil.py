@@ -14,7 +14,7 @@ import threading
 
 from fnmatch import fnmatch
 from os.path import islink, isdir, join
-from os.path import normpath, dirname, exists, isfile, abspath
+from os.path import normpath, dirname, basename, exists, isfile, abspath
 
 class DirContext(object):
     """Supports using the 'with' statement in place of try-finally for
@@ -182,7 +182,7 @@ def get_module_path(fpath):
     """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of ``__init__.py`` files)
     """
-    pnames = [os.path.splitext(os.path.basename(fpath))[0]]
+    pnames = [os.path.splitext(basename(fpath))[0]]
     path = os.path.dirname(os.path.abspath(fpath))
     while os.path.isfile(os.path.join(path, '__init__.py')):
             path, pname = os.path.split(path)
@@ -285,3 +285,8 @@ def clean_filename(name):
     
     valid_chars = "-_.()%s%s" % (string.ascii_letters, string.digits)
     return ''.join(c if c in valid_chars else '_' for c in name)
+
+
+def is_dev_build():
+    return basename(get_ancestor_dir(sys.executable, 2)) == 'devenv'
+
