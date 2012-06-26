@@ -20,7 +20,7 @@ def view_docs(browser=None):
         # look for docs online
         import openmdao.util.releaseinfo
         version = openmdao.util.releaseinfo.__version__
-        idxpath = 'http://openmdao.org/downloads/%s/docs' % version
+        idxpath = 'http://openmdao.org/releases/%s/docs' % version
         
         import webbrowser
         wb = webbrowser.get(browser)
