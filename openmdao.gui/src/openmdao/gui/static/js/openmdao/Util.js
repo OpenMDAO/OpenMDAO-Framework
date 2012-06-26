@@ -56,7 +56,6 @@ openmdao.Util = {
     popupWindow: function(url,title,h,w) {
         LeftPosition = (screen.width) ? (screen.width-w)/2 : 10;
         TopPosition = (screen.height) ? (screen.height-h)/2 : 10;
-        
         var settings = 'height='+h+',width='+w+',top='+TopPosition+',left='+LeftPosition+
                        ',resizable=no,scrollbars=no,toolbar=no,menubar=no'+
                        ',location=no,directories=no,status=no';

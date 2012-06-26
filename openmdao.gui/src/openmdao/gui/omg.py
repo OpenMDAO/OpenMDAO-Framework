@@ -21,7 +21,6 @@ from tornado import httpserver, web
 # openmdao
 from openmdao.util.network import get_unused_ip_port
 from openmdao.util.fileutil import get_ancestor_dir
-from openmdao.util.log import logger
 
 from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.projectdb import Projects
@@ -66,7 +65,6 @@ class App(web.Application):
             idxpath = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
             doc_handler = web.StaticFileHandler
-            logger.error('root = %s' % idxpath)
             doc_handler_options = { 'path': idxpath, 'default_filename': 'index.html' }
             
         handlers = [

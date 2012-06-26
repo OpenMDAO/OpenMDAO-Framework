@@ -13,25 +13,22 @@ openmdao.PaletteFrame = function(id,model) {
         palette = jQuery('#'+id),
         libs = jQuery('<div>').appendTo(palette);
 
+    /** find the actual top of the given element, taking visibility and 
+        scrolling into account */
     function getElementTop(elem) {
        var yPos = 0;
        var scrolls = 0;
        var firstElemWithOSP = 0;
        while(elem && !isNaN(elem.offsetTop)) {
-          //if (elem.scrollTop) {
-             //debug.info('<'+elem.tagName+'> scrollTop: '+elem.scrollTop);
-          //}
           scrolls += elem.scrollTop;
           if (firstElemWithOSP === 0 && elem.offsetParent) {
              firstElemWithOSP = elem;
-             //debug.info('firstOSP');
           }
           elem = elem.parentNode;
        }
        
        elem = firstElemWithOSP;
        while(elem && !isNaN(elem.offsetTop)) {
-          //debug.info('<'+elem.tagName+'> offsetTop: '+elem.offsetTop);
           yPos += elem.offsetTop;
           elem = elem.offsetParent;
        }
@@ -132,18 +129,13 @@ openmdao.PaletteFrame = function(id,model) {
         contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
             debug.info('View Docs context event:');
             var modpath = _findMatch(ev).getAttribute('modpath');
-            var url = '/docs/plugins/'+modpath; //+'/#'+modpath.split(".").join("-")+'-py';
+            var url = '/docs/plugins/'+modpath;
             var parts = modpath.split('.')
             var cname = parts.pop()
-            //var url = '/docs/_modules/'+parts.join('/')+'.html#'+cname
-            debug.info('url = '+url);
-            //openmdao.Util.popupWindow(url, 'Docs for '+modpath, 600, 800);
             window.open(url, 'Docs for '+modpath);
-            //window.open('/docs/plugins/openmdao.lib.drivers.doedriver.DOEdriver/#openmdao-lib-architectures-co-py', 'Docs for '+modpath);
         }));
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
             debug.info('View Metadata context event:');
-            //debug.info('match is: '+_findMatch(ev).getAttribute('modpath'));
             var match = _findMatch(ev);
             var win = jQuery('<div></div>');
             var table = jQuery('<table cellpadding=5px>');

@@ -167,13 +167,3 @@ def launch_browser(port, preferred_browser=None):
         print "Opened in", browser.name
     else:
         print "Couldn't launch browser: " + str(browser)
-
-        
-def modpath2href(modpath):
-    """Converts a module path of the form abc.def.MyClass to
-    an href of the form abc/def.html#MyClass
-    """
-    classparts = modpath.split('.')
-    urlparts = ['_modules']+classparts[:-1]
-    return os.sep.join(urlparts)+'.html#'+classparts[-1]
-    
