@@ -227,8 +227,8 @@ def _test_connections(browser):
     # no connections between assembly vars
     conn_page = vehicle.connections_page()
     eq(conn_page.dialog_title, 'Connections: vehicle')
-    eq(conn_page.source_component, '')
-    eq(conn_page.destination_component, '')
+    eq(conn_page.source_component, '<Assembly>')
+    eq(conn_page.destination_component, '<Assembly>')
     eq(len(conn_page.get_variable_figures()), 0)
 
     # one connection between transmission and engine (RPM)
