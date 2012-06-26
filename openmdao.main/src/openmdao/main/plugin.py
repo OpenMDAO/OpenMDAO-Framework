@@ -442,34 +442,10 @@ def _find_all_plugins(searchdir):
     plugin group name, e.g., openmdao.component, openmdao.variable, etc.
     """
     dct = {}
-    modnames = ['openmdao.main', 
-                'openmdao.lib.datatypes', 
-                'openmdao.lib.components',
-                'openmdao.lib.drivers',
-                'openmdao.lib.surrogatemodels',
-                'openmdao.lib.doegenerators',
-                'openmdao.lib.differentiators',
-                'openmdao.lib.optproblems',
-                'openmdao.lib.casehandlers',
-                'openmdao.lib.architectures']
-    
-    modules = []
-    for mod in modnames:
-        try:
-            __import__(mod)
-        except ImportError:
-            print 'skipping import of %s' % mod
-        else:
-            modules.append(sys.modules[mod])
-            
-    dirs = [os.path.dirname(m.__file__) for m in modules]+[searchdir]
-    psta = PythonSourceTreeAnalyser(dirs, exclude=_exclude_funct)
+    psta = PythonSourceTreeAnalyser(searchdir, exclude=_exclude_funct)
     
     for key, lst in plugin_groups.items():
-        gset = set()
-        for val in lst:
-            gset.update(psta.find_inheritors(val))
-        dct[key] = gset
+        dct[key] = set(psta.find_inheritors(lst[0]))
     return dct
 
 
