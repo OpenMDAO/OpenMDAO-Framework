@@ -99,10 +99,9 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             }
         });
 
-        // process new selector value
+        // process new selector value when selector loses focus
         selector.bind('blur', function(e) {
-            debug.info('blur:',selector,e);
-            
+
             selector.autocomplete('close');
 
             if (e.target.value === '' || e.target.value === assemblyKey) {
@@ -110,7 +109,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                 selector.css(assemblyCSS);
             }
 
-            if (selector === src_cmp_selector) {
+            if (selector.attr('id') === src_cmp_selector.attr('id')) {
                 if (e.target.value === assemblyKey) {
                     self.src_comp = '';
                 }
@@ -120,7 +119,6 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     }
                     else {
                         selector.val(self.src_comp);
-                        debug.info('src_comp:',self.src_comp);
                     }
                 }
             }
@@ -134,7 +132,6 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                     }
                     else {
                         selector.val(self.dst_comp);
-                        debug.info('dst_comp:',self.dst_comp);
                     }
                 }
             }
@@ -164,7 +161,12 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             minLength: 0
         });
 
-
+        // set enter key to trigger blur (remove focus)
+        selector.bind('keypress.enterkey', function(e) {
+            if (e.which === 13) {
+                selector.blur();
+            }
+        });
     }
 
     setupSelector(src_cmp_selector);
