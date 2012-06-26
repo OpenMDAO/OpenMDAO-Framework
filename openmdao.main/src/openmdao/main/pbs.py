@@ -180,7 +180,8 @@ class PBS_Allocator(FactoryAllocator):
         """
         server = super(PBS_Allocator, self).deploy(name, resource_desc,
                                                    criteria)
-        server.configure(self.accounting_id)
+        if server is not None:
+            server.configure(self.accounting_id)
         return server
 
 

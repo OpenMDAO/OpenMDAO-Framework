@@ -90,6 +90,7 @@ def _test_import(browser):
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
+    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # Drag element into workspace.

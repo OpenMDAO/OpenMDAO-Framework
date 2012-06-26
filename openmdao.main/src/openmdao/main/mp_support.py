@@ -787,19 +787,16 @@ class OpenMDAO_Server(Server):
         self._logger.debug(msg)
 
         # Deprecated, but marginally better than atexit._run_exitfuncs()
+        # Don't try to log here, logging shuts-down via atexit.
         if hasattr(sys, 'exitfunc'):
             try:
                 sys.exitfunc()
             except Exception as exc:
-                msg = 'sys.exitfunc(): %s' % exc
-                print msg
+                print 'sys.exitfunc(): %s' % exc
                 sys.stdout.flush()
-                self._logger.debug(msg)
 
-        msg = '    exit functions complete'
-        print msg
+        print '    exit functions complete'
         sys.stdout.flush()
-        self._logger.debug(msg)
 
         super(OpenMDAO_Server, self).shutdown(conn)
 
