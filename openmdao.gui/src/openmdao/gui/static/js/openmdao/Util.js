@@ -49,31 +49,53 @@ openmdao.Util = {
      * open a popup window to view a URL
      *
      * url:     the url to open in the new window
-     * title:   the title of the window (FIXME: doesn't work)
-     * h:       the height of the window
-     * w:       the width of the window
+     * title:   the title of the window
+     * options: window options
      */
-    popupWindow: function(url,title,h,w) {
-        LeftPosition = (screen.width) ? (screen.width-w)/2 : 10;
-        TopPosition = (screen.height) ? (screen.height-h)/2 : 10;
-        var settings = 'height='+h+',width='+w+',top='+TopPosition+',left='+LeftPosition+
-                       ',resizable=no,scrollbars=no,toolbar=no,menubar=no'+
-                       ',location=no,directories=no,status=no';
-        return window.open(url,title,settings);
+    popupWindow: function(url,title,options) {
+        var specs = {
+            height:     3/4*screen.height,
+            width:      1/2*screen.width,
+            top:        10,
+            left:       10,
+            location:   0,
+            menubar:    0,
+            resizable:  1,
+            scrollbars: 0,
+            status:     1,
+            titlebar:   1,
+            toolbar:    0
+        },
+        spec_string = '',
+        spec = null,
+        win = null;
+
+        if (options) {
+            jQuery.extend(specs, options);
+        }
+
+        for (spec in specs) {
+            if (specs.hasOwnProperty(spec)) {
+                if (spec_string.length > 0) {
+                    spec_string = spec_string + ',';
+                }
+                spec_string = spec_string + spec + '=' + specs[spec];
+            }
+        }
+
+        win = window.open(url, title, spec_string);
+        win.document.title = title;
     },
 
     /**
      * open a popup window to view HTML
      *
-     * url:     the url to open in the new window
-     * title:   the title of the window (FIXME: doesn't work)
-     * h:       the height of the window
-     * w:       the width of the window
+     * html:    the html to display in the new window
+     * title:   the title of the window
+     * options: window options
      */
-    htmlWindow: function(html,name,h,w) {
-        h = h || 600;
-        w = w || 800;
-        var win =  window.open('',name,'width='+w+',height='+h);
+    htmlWindow: function(html,title,options) {
+        var win =  openmdao.Util.popupWindow('',title,options);
         win.document.open();
         win.document.write(html);
         win.document.close();
@@ -84,13 +106,11 @@ openmdao.Util = {
      *
      * title:   the title of the window
      * script:  script to initialize the window
-     * h:       the height of the window
-     * w:       the width of the window
+     * options: window options
      */
-    popupScript: function (title,init_script,h,w) {
-        h = h || 600;
-        w = w || 800;
-        return openmdao.Util.popupWindow("/workspace/base?head_script='"+init_script+"'",title,h,w);
+    popupScript: function (title,script,options) {
+        var url = "/workspace/base?head_script='"+script+"'",
+            win = openmdao.Util.popupWindow(url,title,options);
     },
 
 

@@ -7,7 +7,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             "items": [
                 { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
                 { "text": "New Folder", "onclick": "openmdao.FileTreeFrame.prototype.newFolder();" },
-                { "text": "Add Files",   "onclick": "openmdao.FileTreeFrame.prototype.addFile();" }
+                { "text": "Add Files",  "onclick": "openmdao.FileTreeFrame.prototype.addFile();" }
             ]
         }
     ];
@@ -67,7 +67,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
     /** display the file in a new window (probably not in a useful format) */
     function viewFile(pathname) {
-        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname,600,800);
+        openmdao.Util.popupWindow('file'+pathname.replace(/\\/g,'/'),pathname);
     }
 
 
@@ -300,11 +300,21 @@ openmdao.FileTreeFrame.prototype.newFolder = function(path) {
 
 /** add an existing file to the current project */
 openmdao.FileTreeFrame.prototype.addFile = function(path) {
+    var win = jQuery('window'),
+        height  = 150,
+        width   = 400,
+        options = {
+            'height' : height,
+            'width'  : width,
+            'top'    : screen.availHeight/2 - height/2,
+            'left'   : screen.availWidth/2  - width/2
+        };
+
     if (path) {
-        openmdao.Util.popupWindow('upload?path='+path,'Add File',150,400);
+        openmdao.Util.popupWindow('upload?path='+path,'Add File',options);
     }
     else {
-        openmdao.Util.popupWindow('upload','Add File',150,400);
+        openmdao.Util.popupWindow('upload','Add File',options);
     }
 };
 

@@ -25,6 +25,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             .appendTo(self.elm),
         src_cmp_selector = componentsDiv.find('#src_cmp_list'),
         dst_cmp_selector = componentsDiv.find('#dst_cmp_list'),
+        component_list = [],
         // dataflow diagram
         connectionsCSS = 'background:grey; position:static; width:100%;',
         connectionsDiv = jQuery('<div style="'+connectionsCSS+'">')
@@ -55,7 +56,10 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
                             src_var_selector.val('');
                             dst_var_selector.val('');
                         }),
-       showAllVariables = false;  // only show connected variables by default
+        assemblyKey = '<Assembly>',
+        assemblyCSS = {'font-style':'italic', 'opacity':'0.5'},
+        normalCSS = {'font-style':'normal', 'opacity':'1.0'},
+        showAllVariables = false;  // only show connected variables by default
 
     self.pathname = null;
 
@@ -86,34 +90,85 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
         return menu;
     };
 
-    function bindEnterKey(selector) {
-        selector.autocomplete({
-           select: function(event, ui) {
-               selector.value = ui.item.value;
-               ent = jQuery.Event('keypress.enterkey');
-               ent.target = selector;
-               ent.which = 13;
-               selector.trigger(ent);
-           },
-           delay: 0,
-           minLength: 0
-        });
-        selector.bind('keypress.enterkey', function(e) {
-            if (e.which === 13) {
-                selector.autocomplete('close');
-                if (selector === src_cmp_selector) {
-                    self.src_comp = e.target.value;
-                }
-                else {
-                    self.dst_comp = e.target.value;
-                }
-                showConnections();
+    function setupSelector(selector) {
+        // if selector gains focus with assemblyKey then clear it
+        selector.focus(function() {
+            selector = jQuery(this);
+            if (selector.val() === assemblyKey) {
+                selector.val('').css(normalCSS);
             }
         });
+
+        // process new selector value
+        selector.bind('blur', function(e) {
+            debug.info('blur:',selector,e);
+            
+            selector.autocomplete('close');
+
+            if (e.target.value === '' || e.target.value === assemblyKey) {
+                selector.val(assemblyKey);
+                selector.css(assemblyCSS);
+            }
+
+            if (selector === src_cmp_selector) {
+                if (e.target.value === assemblyKey) {
+                    self.src_comp = '';
+                }
+                else {
+                    if (jQuery.inArray(e.target.value, component_list) >= 0) {
+                        self.src_comp = e.target.value;
+                    }
+                    else {
+                        selector.val(self.src_comp);
+                        debug.info('src_comp:',self.src_comp);
+                    }
+                }
+            }
+            else {
+                if (e.target.value === assemblyKey) {
+                    self.dst_comp = '';
+                }
+                else {
+                    if (jQuery.inArray(e.target.value, component_list) >= 0) {
+                        self.dst_comp = e.target.value;
+                    }
+                    else {
+                        selector.val(self.dst_comp);
+                        debug.info('dst_comp:',self.dst_comp);
+                    }
+                }
+            }
+
+            if (e.target.value === '' || e.target.value === assemblyKey) {
+                selector.val(assemblyKey);
+                selector.css(assemblyCSS);
+            }
+
+            showConnections();
+        });
+
+        // set autocomplete to trigger blur (remove focus)
+        selector.autocomplete({
+            select: function(event, ui) {
+                if (ui.item.value === '') {
+                    selector.val(assemblyKey);
+                    selector.css(assemblyCSS);
+                }
+                else {
+                    selector.val(ui.item.value);
+                    selector.css(normalCSS);
+                }
+                selector.blur();
+            },
+            delay: 0,
+            minLength: 0
+        });
+
+
     }
 
-    bindEnterKey(src_cmp_selector);
-    bindEnterKey(dst_cmp_selector);
+    setupSelector(src_cmp_selector);
+    setupSelector(dst_cmp_selector);
 
     function loadData(data) {
         if (!data || !data.Dataflow || !data.Dataflow.components) {
@@ -121,22 +176,33 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
             self.close();
         }
         else {
-            comp_list = jQuery.map(data.Dataflow.components,
+            component_list = jQuery.map(data.Dataflow.components,
                                    function(comp,idx){ return comp.name; });
+            component_list.push(assemblyKey);
 
             // update the output & input selectors with component list
             src_cmp_selector.html('');
-            src_cmp_selector.autocomplete({source: comp_list});
+            src_cmp_selector.autocomplete({source: component_list});
 
             dst_cmp_selector.html('');
-            dst_cmp_selector.autocomplete({source: comp_list});
+            dst_cmp_selector.autocomplete({source: component_list});
         }
 
         if (self.src_comp) {
             src_cmp_selector.val(self.src_comp);
+            src_cmp_selector.css(normalCSS);
+        }
+        else {
+            src_cmp_selector.val(assemblyKey);
+            src_cmp_selector.css(assemblyCSS);
         }
         if (self.dst_comp) {
             dst_cmp_selector.val(self.dst_comp);
+            dst_cmp_selector.css(normalCSS);
+        }
+        else {
+            dst_cmp_selector.val(assemblyKey);
+            dst_cmp_selector.css(assemblyCSS);
         }
         showConnections();
     }

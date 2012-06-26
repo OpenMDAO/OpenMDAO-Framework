@@ -524,7 +524,6 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 self.inputsFigure.addPort(src_port,0,0);
                 con.setSource(src_port);
                 con.setRouter(null);
-                con.setColor(new draw2d.Color(200,200,200));  // light grey
                 con.setZOrder(self.getZOrder()+1);
             }
 
@@ -543,8 +542,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 con.setTarget(dst_port);
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                 con.setRouter(null);
-                con.setColor(new draw2d.Color(200,200,200));  // light grey
-                con.setZOrder(self.getZOrder());
+                con.setZOrder(self.getZOrder()+1);
             }
 
             // context menu

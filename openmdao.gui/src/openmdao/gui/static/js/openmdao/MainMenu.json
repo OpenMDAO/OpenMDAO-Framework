@@ -22,15 +22,14 @@
     },
     { "text": "Tools", "id": "tools-menu",
       "items": [
-        { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor', 768, 1024)"},
-        { "text": "Plotter",       "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"},
-        { "text": "Plugins",       "id": "tools-plugins",   "onclick": "openmdao.Util.popupWindow('addons','Addons',575,540)"}
+        { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor')"},
+        { "text": "Plotter",       "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"}
       ]
     },
     { "text": "Help", "id": "help-menu",
       "items": [
-        { "text": "Documentation", "id": "help-doc",        "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','',768,1024);"}
+        { "text": "Documentation", "id": "help-doc",        "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','');"}
       ]
     },
-    { "text": "About",             "id": "about-item",      "onclick": "openmdao.Util.popupWindow('http://openmdao.org/','',768,1024);"}
+    { "text": "About",             "id": "about-item",      "onclick": "openmdao.Util.popupWindow('http://openmdao.org/','');"}
 ]
