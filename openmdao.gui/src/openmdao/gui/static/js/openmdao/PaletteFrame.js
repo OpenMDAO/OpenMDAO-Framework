@@ -13,12 +13,35 @@ openmdao.PaletteFrame = function(id,model) {
         palette = jQuery('#'+id),
         libs = jQuery('<div>').appendTo(palette);
 
+    /** find the actual top of the given element, taking visibility and 
+        scrolling into account */
+    function getElementTop(elem) {
+       var yPos = 0;
+       var scrolls = 0;
+       var firstElemWithOSP = 0;
+       while(elem && !isNaN(elem.offsetTop)) {
+          scrolls += elem.scrollTop;
+          if (firstElemWithOSP === 0 && elem.offsetParent) {
+             firstElemWithOSP = elem;
+          }
+          elem = elem.parentNode;
+       }
+       
+       elem = firstElemWithOSP;
+       while(elem && !isNaN(elem.offsetTop)) {
+          yPos += elem.offsetTop;
+          elem = elem.offsetParent;
+       }
+       return yPos-scrolls;
+    }
+    
+
     /** rebuild the Palette from a JSON library list of tuples of the form (libname, meta_dict) */
     function updatePalette(packages) {
         // build the new html
         var html="<div id='library'>";
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
-        // headers: Class, Module Path, Version, Interfaces
+        // headers: ClassName, Module Path, Version, Context, Interfaces
         html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>';
         html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
         jQuery.each(packages, function(name,item) {
@@ -44,12 +67,18 @@ openmdao.PaletteFrame = function(id,model) {
         // here's the default list of filters for the library
         var selections = [
                     "In Project",
+                    "Architecture",
+                    "Assembly",
+                    "CaseRecorder",
+                    "CaseIterator",
                     "Component",
+                    "Differentiator",
+                    "DOEgenerator",
                     "Driver",
                     "Solver",
-                    "Assembly",
                     "Surrogate",
-                    "DOEgenerator"
+                    "UncertainVariable",
+                    "Variable"
                 ];
         var input_obj = palette.find('#objtt-select');
         input_obj.autocomplete({
@@ -75,10 +104,60 @@ openmdao.PaletteFrame = function(id,model) {
                 input_obj.autocomplete('close');
             }
         });
+        
+        var contextMenu = jQuery("<ul id='lib-cmenu' class='context-menu'>")
+                          .appendTo(dtable);
 
+        var objtypes = dtable.find('.objtype');
+        
+        // given a click event, find the table entry that corresponds
+        // to that location. Returns the matching element.
+        function _findMatch(ev) {
+            var otop = 0, match=0;
+            var event_top = ev.target.offsetParent.offsetTop;
+            objtypes.each(function(i, elem) {
+               otop = getElementTop(elem);
+               // elemoffsetHeight = 0 for invisible entries
+               if (otop <= event_top && (otop+elem.offsetHeight)>=event_top) {
+                  match = elem;
+                  return false; // break out of loop
+               }
+            });
+            return match;
+        }
+        
+        contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
+            debug.info('View Docs context event:');
+            var modpath = _findMatch(ev).getAttribute('modpath');
+            var url = '/docs/plugins/'+modpath;
+            var parts = modpath.split('.')
+            var cname = parts.pop()
+            window.open(url, 'Docs for '+modpath);
+        }));
+        contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
+            debug.info('View Metadata context event:');
+            var match = _findMatch(ev);
+            var win = jQuery('<div></div>');
+            var table = jQuery('<table cellpadding=5px>');
+            table.append('<tr><th></th><th></th></tr>')
+            var hdata = ['name','modpath','version','context','ifaces'];
+            var data = dtable.fnGetData(match.parentNode);
+            for (var i=1; i<data.length; i++) {
+               table.append('<tr><td>'+hdata[i]+'</td><td>'+data[i]+'</td></tr>');
+            }
+            win.append(table);
+            
+            // Display dialog
+            jQuery(win).dialog({
+                title: match.innerText+' Metadata',
+                width: 'auto'
+            });
+        }));
+        ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
+        
         // make everything draggable
-        jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
-        jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree
+        objtypes.draggable({ helper: 'clone', appendTo: 'body' });
+        objtypes.addClass('jstree-draggable'); // allow drop on jstree
     }
 
     /** build HTML string for a package */

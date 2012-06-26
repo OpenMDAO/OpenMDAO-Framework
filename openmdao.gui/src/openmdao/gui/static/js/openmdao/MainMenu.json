@@ -29,7 +29,7 @@
     },
     { "text": "Help", "id": "help-menu",
       "items": [
-        { "text": "Documentation", "id": "help-doc",        "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','',768,1024);"}
+        { "text": "Documentation", "id": "help-doc",        "onclick": "window.open('/docs/');"}
       ]
     },
     { "text": "About",             "id": "about-item",      "onclick": "openmdao.Util.popupWindow('http://openmdao.org/','',768,1024);"}

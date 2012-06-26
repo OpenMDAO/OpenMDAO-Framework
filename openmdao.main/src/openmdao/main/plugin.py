@@ -566,12 +566,12 @@ def plugin_docs(parser, options, args=None):  # pragma no cover
     if options.plugin_dist_name is None:
         view_docs(options.browser)
     else:
-        url = _plugin_docs(options.plugin_dist_name)
+        url = find_docs_url(options.plugin_dist_name)
         wb = webbrowser.get(options.browser)
         wb.open(url)
 
 
-def _plugin_docs(plugin_name):
+def find_docs_url(plugin_name=None, build_if_needed=True):
     """Returns a url for the Sphinx docs for the named plugin.
     The plugin must be importable in the current environment.
     
@@ -626,7 +626,7 @@ def _plugin_docs(plugin_name):
         else:  # it's a developer version, so use locally built docs
             htmldir = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
-            if not os.path.isfile(os.path.join(htmldir, 'index.html')):
+            if not os.path.isfile(os.path.join(htmldir, 'index.html')) and build_if_needed:
                 #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao', 'build_docs'])
@@ -820,7 +820,7 @@ def update_libpath(options=None):
             print "\nThe 'activate' file has been updated with new values" \
                   " added to %s" % libpathvname
             print "You must deactivate and reactivate your virtual environment"
-            print "for thechanges to take effect\n"
+            print "for the changes to take effect\n"
 
     
 # This requires Internet connectivity to github.

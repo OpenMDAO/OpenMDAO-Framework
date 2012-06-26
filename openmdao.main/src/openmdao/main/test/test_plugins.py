@@ -10,8 +10,8 @@ from subprocess import check_call, STDOUT
 
 from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, \
                                  plugin_build_docs, plugin_makedist, \
-                                 plugin_list, _plugin_docs, plugin_install, \
-                                 find_all_plugins
+                                 plugin_list, plugin_install, \
+                                 find_all_plugins, find_docs_url
 from openmdao.util.fileutil import find_files
 from openmdao.util.testutil import assert_raises
 
@@ -166,7 +166,7 @@ class PluginsTestCase(unittest.TestCase):
             argv = ['docs', 'foobar']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
-            url = _plugin_docs(options.plugin_dist_name)
+            url = find_docs_url(options.plugin_dist_name)
             expected = os.path.join(self.tdir, 'foobar', 'src', 'foobar',
                                     'sphinx_build', 'html', 'index.html')
             self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
@@ -385,14 +385,14 @@ class PluginsTestCase(unittest.TestCase):
         argv = ['docs', 'no-such-plugin']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
-        code = '_plugin_docs(options.plugin_dist_name)'
+        code = 'find_docs_url(options.plugin_dist_name)'
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Can't locate package/module 'no-such-plugin'")
 
         argv = ['docs', 'subprocess']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
-        url = _plugin_docs(options.plugin_dist_name)
+        url = find_docs_url(options.plugin_dist_name)
         expected = os.path.join(os.path.dirname(sys.modules['subprocess'].__file__),
                                 'sphinx_build', 'html', 'index.html')
         self.assertEqual(url, expected)
