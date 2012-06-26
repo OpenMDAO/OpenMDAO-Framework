@@ -20,13 +20,14 @@ from tornado import httpserver, web
 
 # openmdao
 from openmdao.util.network import get_unused_ip_port
+from openmdao.util.fileutil import get_ancestor_dir, is_dev_build
 
 from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.projectdb import Projects
 from openmdao.gui.session import TornadoSessionManager
 from openmdao.gui.zmqservermanager import ZMQServerManager
 
-from openmdao.gui.handlers import LoginHandler, LogoutHandler, ExitHandler
+from openmdao.gui.handlers import LoginHandler, LogoutHandler, ExitHandler, PluginDocsHandler
 import openmdao.gui.handlers_projectdb as proj
 import openmdao.gui.handlers_workspace as wksp
 
@@ -43,18 +44,34 @@ def get_user_dir():
     ensure_dir(user_dir)
     return user_dir
 
-
 class App(web.Application):
     ''' openmdao web application
         extends tornado web app with URL mappings, settings and server manager
     '''
 
     def __init__(self, secret=None):
+        # locate the docs, so that the /docs url will point to the appropriate
+        # docs, either for the current release or the current development build
+        if is_dev_build():
+            idxpath = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs',
+                                   '_build', 'html')
+            doc_handler = web.StaticFileHandler
+            doc_handler_options = { 'path': idxpath, 'default_filename': 'index.html' }
+        else:
+            # look for docs online
+            import openmdao.util.releaseinfo
+            version = openmdao.util.releaseinfo.__version__
+            idxpath = 'http://openmdao.org/releases/%s/docs/index.html' % version
+            doc_handler = web.RedirectHandler
+            doc_handler_options = { 'url': idxpath, 'permanent': False }
+            
         handlers = [
             web.url(r'/login',  LoginHandler),
             web.url(r'/logout', LogoutHandler),
             web.url(r'/exit',   ExitHandler),
-            web.url(r'/',       web.RedirectHandler, {'url':'/projects', 'permanent':False})
+            web.url(r'/docs/plugins/(.*)',  PluginDocsHandler, { 'route': '/docs/plugins/' }),
+            web.url(r'/docs/(.*)',  doc_handler, doc_handler_options ),
+            web.url(r'/',       web.RedirectHandler, { 'url':'/projects', 'permanent':False })
         ]
         handlers.extend(proj.handlers)
         handlers.extend(wksp.handlers)

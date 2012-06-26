@@ -28,7 +28,7 @@
     },
     { "text": "Help", "id": "help-menu",
       "items": [
-        { "text": "Documentation", "id": "help-doc",        "onclick": "openmdao.Util.popupWindow('http://openmdao.org/docs','');"}
+        { "text": "User Guide",    "id": "help-doc",        "onclick": "openmdao.Util.popupWindow('/docs/');"}
       ]
     },
     { "text": "About",             "id": "about-item",      "onclick": "openmdao.Util.popupWindow('http://openmdao.org/','');"}
