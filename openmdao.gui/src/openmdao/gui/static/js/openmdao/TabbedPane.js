@@ -2,7 +2,7 @@
  * a tabbed pane based on a definition list
  */
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.TabbedPane = function(id) {
     jQuery("#"+id+" dl").css({
@@ -31,6 +31,7 @@ openmdao.TabbedPane = function(id) {
         'top': '25px',
         'height': '100%',
         'width': '100%',
+        'min-height': '400px',
         'overflow' : 'auto'
     });
 
@@ -42,4 +43,4 @@ openmdao.TabbedPane = function(id) {
         jQuery("#"+tgt).show();
         jQuery(this).addClass("tab_here");
     });
-}
+};
