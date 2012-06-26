@@ -437,7 +437,7 @@ def _exclude_funct(path):
 #
 # FIXME: this still needs some work, but for testing purposes it's ok for now
 #
-def _find_all_plugins(searchdir):
+def find_all_plugins(searchdir):
     """Return a dict containing lists of each plugin type found, keyed by
     plugin group name, e.g., openmdao.component, openmdao.variable, etc.
     """
@@ -445,13 +445,15 @@ def _find_all_plugins(searchdir):
     psta = PythonSourceTreeAnalyser(searchdir, exclude=_exclude_funct)
     
     for key, lst in plugin_groups.items():
-        dct[key] = set(psta.find_inheritors(lst[0]))
+        epset = set(psta.find_inheritors(lst[0]))
+        if epset:
+            dct[key] = epset 
     return dct
 
 
 def _get_entry_points(startdir):
     """ Return formatted list of entry points. """
-    plugins = _find_all_plugins(startdir)
+    plugins = find_all_plugins(startdir)
     entrypoints = StringIO.StringIO()
     for key,val in plugins.items():
         epts = []
