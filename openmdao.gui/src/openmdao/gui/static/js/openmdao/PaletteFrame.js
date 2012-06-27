@@ -40,10 +40,10 @@ openmdao.PaletteFrame = function(id,model) {
     function updatePalette(packages) {
         // build the new html
         var html="<div id='library'>";
+        html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
         html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
         // headers: ClassName, Module Path, Version, Context, Interfaces
         html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>';
-        html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name, item);
         });
@@ -55,13 +55,13 @@ openmdao.PaletteFrame = function(id,model) {
         var dtable = palette.find('#objtypetable').dataTable({
             'bPaginate': false,
             'bjQueryUI': true,
-            'sScrollY': '500px',
+            'sScrollY': '600px',
             'bScrollCollapse': true,
             'bFilter': true,    // make sure filtering is still turned on
             'aoColumnDefs': [
                  { 'bVisible': false, 'aTargets': [1,2,3,4] }
              ],
-            'sDom': 'lrtp'   // removes the built-in filter field and bottom info (default is lfrtip)
+            'sDom': '<"H"lr>t<"F">'   // removes the built-in filter field and bottom info (default is lfrtip)
         });
 
         // here's the default list of filters for the library

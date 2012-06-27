@@ -12,9 +12,10 @@ class UtilsTestCase(unittest.TestCase):
 
     def test_unique_shortnames(self):
         
-        lst = ['a.b.c.foo', 'x.y.z.foo', 'a.b.z', 'aa.bb.cc']
+        lst = ['a.b.c.foo', 'x.y.z.foo', 'a.b.z', 'aa.bb.cc',
+               'openmdao.lib.components.expected_improvement_multiobj.MultiObjExpectedImprovement']
         dct = unique_shortnames(lst)
-        self.assertEqual(set(dct.values()), set(['cc', 'z', 'c.foo', 'z.foo']))
+        self.assertEqual(set(dct.values()), set(['cc', 'z', 'c.foo', 'z.foo','MultiObjExpectedImprovement']))
     
 
 if __name__ == "__main__":
