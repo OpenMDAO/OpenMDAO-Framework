@@ -77,7 +77,7 @@ openmdao.PaletteFrame = function(id,model) {
                     "Driver",
                     "Solver",
                     "Surrogate",
-                    "UncertainVariable",
+                    //"UncertainVariable",
                     "Variable"
                 ];
         var input_obj = palette.find('#objtt-select');
