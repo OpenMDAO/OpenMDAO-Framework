@@ -425,6 +425,8 @@ openmdao.DataflowFigure.prototype.minimize=function(){
 
 /* show the maximized version of the figure, with subcomponents & connections */
 openmdao.DataflowFigure.prototype.maximize=function(){
+    debug.info(this.pathname,'maximize()');
+
     // make sure we are minimized first
     this.minimize();
 
@@ -448,6 +450,8 @@ openmdao.DataflowFigure.prototype.maximize=function(){
 
 /** update dataflow by recreating figures from JSON dataflow data */
 openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
+    debug.info(this.pathname,'updateDataflow() figures:',this.figures,json);
+
     if (!json.hasOwnProperty('components')) {
         return;
     }
@@ -471,6 +475,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             maxmin = comp.is_assembly ? '+' : '',
             fig = self.figures[name];
 
+        debug.info(self.pathname,'figures:',self.figures,'name:',name,'fig:',self.figures[name]);
+        debug.info('keys:',Object.keys(self.figures),'figures:',self.figures);
+        for (var key in self.figures) {
+            debug.info(self.figures,'key:',key,'fig',self.figures[key]);
+        }
+
         if (!fig) {
             if (self.pathname) {
                 figname = self.pathname+'.'+name;
@@ -481,10 +491,11 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             fig = new openmdao.DataflowFigure(self.openmdao_model,
                                               figname, type, valid, maxmin);
             self.figures[name] = fig;
+            self.addChild(fig);
+            workflow.addFigure(fig,0,0);
         }
 
-        self.addChild(fig);
-        workflow.addFigure(fig,0,0);
+        if (fig.maxmin === '-' || self.pathname ==='') { fig.maximize(); }
     });
 
     self.inputsFigure = new draw2d.Node();
