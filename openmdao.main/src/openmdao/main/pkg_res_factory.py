@@ -10,7 +10,7 @@ from pkg_resources import get_entry_map, get_distribution, working_set
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
     
 from openmdao.main.factory import Factory
-from openmdao.util.dep import plugin_groups
+from openmdao.util.dep import plugin_groups, find_module, PythonSourceTreeAnalyser
                 
 class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
@@ -25,6 +25,7 @@ class PkgResourcesFactory(Factory):
         self._groups = copy.copy(groups)
         self._search_path = search_path
         self.env = Environment(search_path)
+        self.tree_analyser = PythonSourceTreeAnalyser()
             
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
@@ -70,10 +71,10 @@ class PkgResourcesFactory(Factory):
         dct = {}
         for group in plugin_groups.keys():
             for dist in distiter:
-                d = dist.get_entry_map(group)
-                for name in d:
-                    lst = dct.setdefault(name, [dist, []])
+                for name, value in dist.get_entry_map(group).items():
+                    lst = dct.setdefault(name, [dist, [], set()])
                     lst[1].append(group)
+                    lst[2].add(value.module_name)
         return dct
         
     def _get_type_dict(self):
@@ -85,14 +86,24 @@ class PkgResourcesFactory(Factory):
         distset = set()
         for name, lst in typ_dict.items():
             dist = lst[0]
+            modules = lst[2]
             distset.add(dist.project_name)
             ifaces = set()
             for g in lst[1]:
                 ifaces.update(plugin_groups[g])
+                
             meta = {
                 'version': dist.version,
-                'ifaces': list(ifaces),
+                'ifaces': set(ifaces),
             }
+            
+            for modname in modules:
+                fpath = find_module(modname)
+                if fpath is not None:
+                    fanalyzer = self.tree_analyser.analyze_file(fpath)
+                    meta['ifaces'].update(self.tree_analyser.get_interfaces(name))
+                    
+            meta['ifaces'] = list(meta['ifaces'])
             if groups.intersection(lst[1]):
                 typ_list.append((name, meta))
         return distset
