@@ -66,6 +66,8 @@ from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                need_proxy, Credentials, \
                                get_credentials, set_credentials
 
+from openmdao.util.log import LOG_DEBUG2, LOG_DEBUG3
+
 from openmdao.util.publickey import decode_public_key, encode_public_key, \
                                     get_key_pair, HAVE_PYWIN32, \
                                     pk_encrypt, pk_decrypt
@@ -350,9 +352,8 @@ class OpenMDAO_Server(Server):
 
         This version supports dynamic proxy generation and credential checking.
         """
-        self._logger.debug('starting server thread to service %r, %s',
-                           threading.current_thread().name,
-                           keytype(self._authkey))
+        self._logger.log(LOG_DEBUG2, 'starting server thread to service %r, %s',
+                         threading.current_thread().name, keytype(self._authkey))
         recv = conn.recv
         send = conn.send
         id_to_obj = self.id_to_obj
@@ -381,9 +382,10 @@ class OpenMDAO_Server(Server):
                     raise RuntimeError(msg)
 
                 ident, methodname, args, kwds, credentials = request
-#                self._logger.debug('request %s %s %s',
-#                                   ident, methodname, credentials)
-#                self._logger.debug('id_to_obj:\n%s', self.debug_info(conn))
+                self._logger.log(LOG_DEBUG3, 'request %s %s', ident, methodname)
+#                self._logger.log(LOG_DEBUG3, 'credentials %s', credentials)
+#                self._logger.log(LOG_DEBUG3, 'id_to_obj:\n%s',
+#                                 self.debug_info(conn))
 
                 # Decode and verify valid credentials.
                 try:
@@ -435,15 +437,15 @@ class OpenMDAO_Server(Server):
                                            credentials)
                 if methodname != 'echo':
                     # 'echo' is used for performance tests, keepalives, etc.
-                    self._logger.debug("Invoke %s %s '%s'",
+                    self._logger.log(LOG_DEBUG2, "Invoke %s %s '%s'",
                                        methodname, role, credentials)
-#                    self._logger.debug('       %s %s', args, kwds)
+                    self._logger.log(LOG_DEBUG3, '       %s %s', args, kwds)
 
                 # Invoke function.
                 try:
                     try:
                         res = function(*args, **kwds)
-#                        self._logger.debug('       res %r', res)
+                        self._logger.log(LOG_DEBUG3, '       res %r', res)
                     except AttributeError as exc:
                         if isinstance(obj, BaseProxy) and \
                            methodname == '__getattribute__':
@@ -467,7 +469,7 @@ class OpenMDAO_Server(Server):
                     orig_traceback = traceback.format_exc()
                     try:
                         fallback_func = self.fallback_mapping[methodname]
-                        self._logger.debug('Fallback %s', methodname)
+                        self._logger.log(LOG_DEBUG2, 'Fallback %s', methodname)
                         result = fallback_func(self, conn, ident, obj,
                                                *args, **kwds)
                         msg = ('#RETURN', result)
@@ -611,7 +613,8 @@ class OpenMDAO_Server(Server):
                 # Create proxy for proxy.
                 typeid = res._token.typeid
                 proxyid = make_typeid(res)
-                self._logger.debug('Creating proxy for proxy %s', proxyid)
+                self._logger.log(LOG_DEBUG2, 'Creating proxy for proxy %s',
+                                 proxyid)
                 if proxyid not in self.registry:
                     self.registry[proxyid] = (None, None, None, _auto_proxy)
             else:
@@ -644,8 +647,8 @@ class OpenMDAO_Server(Server):
             if typeid:
                 rident, rexposed = self.create(conn, proxyid, res)
                 token = Token(typeid, self.address, rident)
-                self._logger.debug('Returning proxy for %s at %s',
-                                   typeid, self.address)
+                self._logger.log(LOG_DEBUG2, 'Returning proxy for %s at %s',
+                                 typeid, self.address)
                 if self._key_pair is None:
                     pubkey = None
                 else:
@@ -710,7 +713,7 @@ class OpenMDAO_Server(Server):
             keys = self.id_to_obj.keys()
             keys.sort()
             for ident in keys:
-                if ident != 0:
+                if ident != '0':
                     obj = self.id_to_obj[ident][0]
                     if isinstance(obj, BaseProxy):
                         obj_str = '%s proxy for %s %s' \
@@ -784,7 +787,7 @@ class OpenMDAO_Server(Server):
         msg = 'received shutdown request, running exit functions'
         print msg
         sys.stdout.flush()
-        self._logger.debug(msg)
+        self._logger.info(msg)
 
         # Deprecated, but marginally better than atexit._run_exitfuncs()
         # Don't try to log here, logging shuts-down via atexit.
@@ -858,12 +861,15 @@ class OpenMDAO_Manager(BaseManager):
                                self._allowed_hosts, self._allowed_users,
                                self._allow_tunneling)
 
-    def start(self, cwd=None):
+    def start(self, cwd=None, log_level=logging.DEBUG):
         """
         Spawn a server process for this manager object.
 
         cwd: string
             Directory to start in.
+
+        log_level: int
+            Initial root logging level for the server process.
 
         This version retrieves the server's public key.
         """
@@ -890,7 +896,7 @@ class OpenMDAO_Manager(BaseManager):
             args=(registry, self._address, self._authkey,
                   self._serializer, self._name, self._allowed_hosts,
                   self._allowed_users, self._allow_tunneling,
-                  writer, credentials, cwd),
+                  writer, credentials, cwd, log_level),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -944,7 +950,7 @@ class OpenMDAO_Manager(BaseManager):
     @classmethod
     def _run_server(cls, registry, address, authkey, serializer, name,
                     allowed_hosts, allowed_users, allow_tunneling,
-                    writer, credentials, cwd=None): #pragma no cover
+                    writer, credentials, cwd, log_level): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
@@ -977,7 +983,7 @@ class OpenMDAO_Manager(BaseManager):
 
                 # Reset logging.
                 logging.root.handlers = []
-                logging.basicConfig(level=logging.NOTSET,
+                logging.basicConfig(level=log_level,
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
                     filename='openmdao_log.txt', filemode='w')

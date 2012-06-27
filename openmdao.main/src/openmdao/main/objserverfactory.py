@@ -30,6 +30,7 @@ from openmdao.main.rbac import get_credentials, set_credentials, \
 from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
+from openmdao.util.log import LOG_DEBUG2
 from openmdao.util.publickey import make_private, read_authorized_keys, \
                                     write_authorized_keys, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT, DEV_NULL
@@ -80,6 +81,7 @@ class ObjServerFactory(Factory):
         self._allowed_types = allowed_types or ObjServerFactory._allowed_types
         self._managers = {}
         self._logger = logging.getLogger(name)
+        self._logger.setLevel(logging.DEBUG)
         self._logger.info('PID: %d, %r, allow_shell %s', os.getpid(),
                           keytype(self._authkey), allow_shell)
         self.host = platform.node()
@@ -94,6 +96,7 @@ class ObjServerFactory(Factory):
         Returns the :class:`ResourceAllocationManager` instance.
         Used by :meth:`ResourceAllocationManager.add_remotes`.
         """
+        self._logger.debug('get_ram')
         from openmdao.main.resource import ResourceAllocationManager
         return ResourceAllocationManager._get_instance()
 
@@ -179,7 +182,7 @@ class ObjServerFactory(Factory):
         self._logger.debug('get_available_types %s', groups)
         types = get_available_types(groups)
         for typname, version in types:
-            self._logger.debug('    %s %s', typname, version)
+            self._logger.log(LOG_DEBUG2, '    %s %s', typname, version)
         return types
 
     @rbac(('owner', 'user'))
@@ -257,10 +260,11 @@ class ObjServerFactory(Factory):
                         pkg_resources.resource_filename('openmdao.main',
                                                         'objserverfactory.py')
             owner = get_credentials()
-            self._logger.debug('%s starting server %r in dir %s',
-                               owner, name, root_dir)
+            self._logger.log(LOG_DEBUG2, '%s starting server %r in dir %s',
+                             owner, name, root_dir)
             try:
-                manager.start(cwd=root_dir)
+                manager.start(cwd=root_dir,
+                              log_level=self._logger.getEffectiveLevel())
             finally:
                 if orig_main is not None:  #pragma no cover
                     sys.modules['__main__'].__file__ = orig_main
@@ -278,7 +282,8 @@ class ObjServerFactory(Factory):
         else:
             obj = server
 
-        self._logger.debug('create returning %r at %r', obj, obj._token.address)
+        self._logger.log(LOG_DEBUG2, 'create returning %r at %r',
+                         obj, obj._token.address)
         return obj
 
 
@@ -346,6 +351,12 @@ class ObjServer(object):
             from enthought.traits.trait_numeric import AbstractArray
             dummy = AbstractArray()
 
+    @rbac(('owner', 'user'))
+    def set_log_level(self, level):
+        """ Set logging level to `level`. """
+        self._logger.info('log_level %s', level)
+        self._logger.setLevel(level)
+
     @rbac('*')
     def echo(self, *args):
         """
@@ -362,12 +373,12 @@ class ObjServer(object):
         using the specified package version, server location, and resource
         description. All arguments are passed to :meth:`factorymanager.create`.
         """
-        self._logger.info('create typname %r, version %r server %s,'
-                          ' res_desc %s, args %s', typname, version, server,
-                          res_desc, ctor_args)
+        self._logger.debug('create typname %r, version %r server %s,'
+                           ' res_desc %s, args %s', typname, version, server,
+                           res_desc, ctor_args)
         if typname in self._allowed_types:
             obj = create(typname, version, server, res_desc, **ctor_args)
-            self._logger.info('    returning %s', obj)
+            self._logger.log(LOG_DEBUG2, '    returning %s', obj)
             return obj
         else:
             raise TypeError('%r is not an allowed type' % typname)

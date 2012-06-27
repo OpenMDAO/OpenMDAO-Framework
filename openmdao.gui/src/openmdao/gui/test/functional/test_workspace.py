@@ -236,6 +236,7 @@ def _test_addfiles(browser):
 
     # Check to make sure the files were added.
     browser.switch_to_window(editor_window)
+    time.sleep(1)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):

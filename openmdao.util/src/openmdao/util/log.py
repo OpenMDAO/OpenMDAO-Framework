@@ -51,6 +51,9 @@ LOG_WARNING  = logging.WARNING
 LOG_ERROR    = logging.ERROR
 LOG_CRITICAL = logging.CRITICAL
 
+LOG_DEBUG2 = logging.DEBUG - 2  # Protocol debug, etc.
+LOG_DEBUG3 = logging.DEBUG - 3  # Even lower-level stuff.
+
 if sys.platform == 'win32' and current_process().name != 'MainProcess':
     _mode = 'a'  # Avoid mangling by subprocesses.
 else:
@@ -79,6 +82,10 @@ logging.addLevelName(logging.INFO,     'I')
 logging.addLevelName(logging.WARNING,  'W')
 logging.addLevelName(logging.ERROR,    'E')
 logging.addLevelName(logging.CRITICAL, 'C')
+
+logging.addLevelName(LOG_DEBUG2, 'D2')
+logging.addLevelName(LOG_DEBUG3, 'D3')
+
 
 logger = logging.getLogger('')
 
