@@ -96,5 +96,6 @@ openmdao.PopoutConsoleFrame = function() {
     openmdao.model.addWindow(window);
     jQuery('body').append('<div id="console"></div>');
     frame = new openmdao.ConsoleFrame("console",  openmdao.model);
+    window.document.title='OpenMDAO Console';
 };
 
