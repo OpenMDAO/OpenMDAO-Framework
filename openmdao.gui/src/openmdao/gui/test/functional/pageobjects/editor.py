@@ -73,9 +73,6 @@ class EditorPage(BasePageObject):
         self.locators = {}
         self.locators["files"] = (By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']")
 
-        # Locator is relative to the iframe not the top level window.
-        self.locators["code_input"] = (By.XPATH, "/html/body")
-
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
@@ -136,12 +133,9 @@ class EditorPage(BasePageObject):
 
         self.edit_file(filename)
 
-        # Switch to editor iframe.
-        self.browser.switch_to_frame(0)  # No identifying name or ID.
+        # Switch to editor textarea
         code_input_element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(*self.locators['code_input']))
-        WebDriverWait(self.browser, TMO).until(
-            lambda browser: code_input_element.text)
+            lambda browser: browser.find_element_by_css_selector('textarea'))
 # FIXME: absolute delay for editor to get ready.
 #        Problem is Firefox sometimes sends arrow key to scrollbar.
 #        Sadly this didn't completely fix the issue.

@@ -201,10 +201,11 @@ from openmdao.lib.datatypes.api import Float
 class Plane(Component):
 
     x1 = Float(0.0, iotype='in')
-    x2 = Float(0.0, iotype='in')
-    x3 = Float(0.0, iotype='in')
+# subsequent lines will be auto-indented by ace editor
+x2 = Float(0.0, iotype='in')
+x3 = Float(0.0, iotype='in')
 
-    f_x = Float(0.0, iotype='out')
+f_x = Float(0.0, iotype='out')
 """)
 
     # Back to workspace.
@@ -306,12 +307,12 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        #_test_addfiles(browser)
-        #_test_console(browser)
-        #_test_import(browser)
-        #_test_menu(browser)
+        _test_addfiles(browser)
+        _test_console(browser)
+        _test_import(browser)
+        _test_menu(browser)
         _test_newfile(browser)
-        #_test_properties(browser)
+        _test_properties(browser)
         browser.quit()
         teardown_server()
     else:
