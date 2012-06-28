@@ -172,14 +172,22 @@ def _test_newfile(browser):
 
     # test the 'ok' and 'cancel' buttons on the new file dialog
     dlg = editor_page.new_file_dialog()
-    dlg.set_text('ok_file')
+    dlg.set_text('ok_file1')
     dlg.click_ok()
-    time.sleep(0.5)
+    time.sleep(1.0)
+
+    dlg = editor_page.new_file_dialog()
     dlg.set_text('cancel_file')
     dlg.click_cancel()
     time.sleep(1.0)
+
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('ok_file2')
+    dlg.click_ok()
+    time.sleep(1.0)
+
     file_names = editor_page.get_files()
-    expected_file_names = ['ok_file']
+    expected_file_names = ['ok_file1', 'ok_file2']
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
@@ -298,12 +306,12 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        _test_addfiles(browser)
-        _test_console(browser)
-        _test_import(browser)
-        _test_menu(browser)
+        #_test_addfiles(browser)
+        #_test_console(browser)
+        #_test_import(browser)
+        #_test_menu(browser)
         _test_newfile(browser)
-        _test_properties(browser)
+        #_test_properties(browser)
         browser.quit()
         teardown_server()
     else:

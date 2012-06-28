@@ -36,10 +36,10 @@ class ValuePrompt(BasePageObject):
         self.value = text
 
     def click_ok(self):
-        self.ok_button.click()
+        self('ok_button').click()
 
     def click_cancel(self):
-        self.cancel_button.click()
+        self('cancel_button').click()
 
 
 class NotifierPage(BasePageObject):

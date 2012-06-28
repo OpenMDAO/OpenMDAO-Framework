@@ -131,7 +131,7 @@ class EditorPage(BasePageObject):
         self('file_menu').click()
         self('newfile_button').click()
 
-        page = self.new_file_dialog()
+        page = ValuePrompt(self.browser, self.port)
         page.set_value(filename)
 
         self.edit_file(filename)
