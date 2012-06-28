@@ -13,19 +13,20 @@ openmdao.CodeFrame = function(id,model) {
         filepath = "",
         editorID = id+'-textarea',
         editorArea = jQuery('<pre id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height);
-	
-	var editor = ace.edit(editorID);
-	
-	//editor.setTheme("ace/theme/chrome");
-	editor.getSession().setMode("ace/mode/python");
         
-	
+    var editor = ace.edit(editorID);
+        
+    //editor.setTheme("ace/theme/chrome");
+    editor.getSession().setMode("ace/mode/python");
+        
+    var win = jQuery('<div id="writepromptdialog">You have modified a class that already has instances in the model. Do you want to continue?</div>').appendTo("#"+id)
+    
     editor.commands.addCommand({
-	name: "save",
-	bindKey: {win: "Ctrl-S", mac: "Command-S"},
-	exec: function() {saveFile();}
+        name: "save",
+        bindKey: {win: "Ctrl-S", mac: "Command-S"},
+        exec: function() {saveFile();}
     });    
-    	
+            
     // make the parent element (tabbed pane) a drop target for file objects
     editorArea.parent().droppable ({
         accept: '.file .obj',
@@ -40,7 +41,7 @@ openmdao.CodeFrame = function(id,model) {
 
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
-	console.log(editor.getValue());
+        console.log(editor.getValue());
         model.setFile(filepath,editor.session.doc.getValue());
     }
 
@@ -55,8 +56,8 @@ openmdao.CodeFrame = function(id,model) {
             // success
             function(contents) {
                 //editor.setValue(contents);
-		editor.session.doc.setValue(contents);
-		editor.navigateFileStart();
+                editor.session.doc.setValue(contents);
+                editor.navigateFileStart();
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {

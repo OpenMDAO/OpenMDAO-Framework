@@ -92,7 +92,6 @@ class ProjDirFactory(Factory):
     def __init__(self, watchdir, use_observer=True, observer=None):
         super(ProjDirFactory, self).__init__()
         self.watchdir = watchdir
-        self.imported = {}  # imported files vs (module, ctor dict)
         try:
             self.analyzer = PythonSourceTreeAnalyser()
             
@@ -122,11 +121,6 @@ class ProjDirFactory(Factory):
             self.observer.daemon = True
             self.observer.start()
         
-    def _get_mod_ctors(self, mod, fpath, visitor):
-        self.imported[fpath] = (mod, {})
-        for cname in visitor.classes.keys():
-            self.imported[fpath][1][cname] = getattr(mod, cname.split('.')[-1])
-        
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
         """Create and return an instance of the specified type, or None if
@@ -137,7 +131,7 @@ class ProjDirFactory(Factory):
             modpath = self.analyzer.fileinfo[fpath][0].modpath
             if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1] and modpath in sys.modules:
                 reload(sys.modules[modpath])
-            if fpath not in self.imported:
+            elif modpath not in sys.modules:
                 sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
                 try:
                     __import__(modpath)
@@ -145,12 +139,10 @@ class ProjDirFactory(Factory):
                     return None
                 finally:
                     sys.path = sys.path[1:]
-                mod = sys.modules[modpath]
-                visitor = self.analyzer.fileinfo[fpath][0]
-                self._get_mod_ctors(mod, fpath, visitor)
+            mod = sys.modules[modpath]
             
             try:
-                ctor = self.imported[fpath][1][typ]
+                ctor = getattr(mod, typ[len(modpath)+1:])
             except KeyError:
                 return None
             return ctor(**ctor_args)
@@ -189,16 +181,16 @@ class ProjDirFactory(Factory):
             visitor = self.analyzer.fileinfo[fpath][0]
             pre_set = set(visitor.classes.keys())
             
-            if fpath in self.imported:  # we imported it earlier
+            modpath = get_module_path(fpath)
+            if modpath in sys.modules:
                 imported = True
                 sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
                 try:
-                    reload(self.imported[fpath][0])
+                    reload(sys.modules[modpath])
                 except ImportError as err:
                     return None
                 finally:
                     sys.path = sys.path[1:]  # restore original sys.path
-                #self.imported[fpath] = (m, self.imported[fpath][1])
             elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
                 modpath = get_module_path(fpath)
                 if modpath in sys.modules:
@@ -221,11 +213,6 @@ class ProjDirFactory(Factory):
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_deleted(pyfile, deleted_set)
         else:
-            try:
-                del self.imported[fpath]
-            except KeyError:
-                pass
-            
             visitor = self.analyzer.fileinfo[fpath][0]
             deleted_set.update(visitor.classes.keys())
 

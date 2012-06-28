@@ -6,6 +6,9 @@ import jsonpickle
 from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
+from openmdao.gui.projdirfactory import ProjDirFactory
+from openmdao.main.factorymanager import factories
+
 
 
 class AddOnsHandler(ReqHandler):
@@ -228,6 +231,10 @@ class ExecHandler(ReqHandler):
             self.content_type = 'text/html'
             self.write(result)
 
+def _get_projdirfactory():
+    for f in factories:
+        if isinstance(f, ProjDirFactory):
+            return f
 
 class FileHandler(ReqHandler):
     ''' get/set the specified file/folder
@@ -240,8 +247,23 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
-            contents = self.get_argument('contents', default='')
-            self.write(str(cserver.write_file(filename, contents)))
+            force = self.get_argument('force', default=False)
+            if not force and filename.endswith('.py'):
+                pdf = _get_projdirfactory()
+                if pdf:
+                    info = pdf.analyzer.fileinfo.get(filename)
+                    if info and info.modpath in sys.modules: # changed file has already been imported
+                        
+            # if file is a .py file AND file is already in projdirfactory AND file has instantiated classes
+            # scan file for class changes
+            # if found:
+            #       perform class update
+            #       self.write(str(cserver.write_file(filename, contents)))
+            #   else:
+            #       self.send_error(409)
+            else:
+                contents = self.get_argument('contents', default='')
+                self.write(str(cserver.write_file(filename, contents)))
 
     @web.authenticated
     def delete(self, filename):
