@@ -85,7 +85,7 @@ def unique_shortnames(names):
     dct = dict([(n, n.split('.')) for n in names])
     level = 1
     while looking:
-        shorts = dict([(n, '.'.join(dct[n][len(n) - level:len(n)])) for n in looking])
+        shorts = dict([(n, '.'.join(dct[n][len(dct[n]) - level:len(dct[n])])) for n in looking])
         shortcounts = dict([(s, 0) for n, s in shorts.items()])
         for n, shrt in shorts.items():
             shortcounts[shrt] += 1
