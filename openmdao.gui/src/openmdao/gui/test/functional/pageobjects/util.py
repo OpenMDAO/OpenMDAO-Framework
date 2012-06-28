@@ -11,6 +11,7 @@ from elements import ButtonElement, InputElement, TextElement
 # Set this True on fatal driver errors.
 _ABORT = False
 
+
 def abort(value=None):
     """ Return current abort status and optionally update it. """
     global _ABORT
@@ -29,7 +30,16 @@ class ValuePrompt(BasePageObject):
     cancel_button = ButtonElement((By.ID, 'get-value-cancel'))
 
     def set_value(self, value):
-        self.value = value+Keys.RETURN
+        self.value = value + Keys.RETURN
+
+    def set_text(self, text):
+        self.value = text
+
+    def click_ok(self):
+        self.ok_button.click()
+
+    def click_cancel(self):
+        self.cancel_button.click()
 
 
 class NotifierPage(BasePageObject):

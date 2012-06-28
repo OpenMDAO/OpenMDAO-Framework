@@ -68,6 +68,8 @@ def _test_import(browser):
                                                 'optimization_unconstrained.py')
     editor_page.add_file(file_path)
 
+    time.sleep(1.0)
+
     # Check to make sure the files were added.
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
@@ -168,6 +170,21 @@ def _test_newfile(browser):
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
 
+    # test the 'ok' and 'cancel' buttons on the new file dialog
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('ok_file')
+    dlg.click_ok()
+    time.sleep(0.5)
+    dlg.set_text('cancel_file')
+    dlg.click_cancel()
+    time.sleep(1.0)
+    file_names = editor_page.get_files()
+    expected_file_names = ['ok_file']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+
     # Create the file (code editor automatically indents).
     editor_page.new_file('plane.py', """
 from openmdao.main.api import Component
@@ -181,9 +198,6 @@ class Plane(Component):
 
     f_x = Float(0.0, iotype='out')
 """)
-
-    # Import it.
-    #editor_page.import_file('plane.py')
 
     # Back to workspace.
     browser.close()
@@ -227,6 +241,8 @@ def _test_addfiles(browser):
     # Add the files
     upload_page.select_files((paraboloidPath, optPath))
     upload_page.upload_files()
+
+    time.sleep(1.0)
 
     # Check to make sure the files were added.
     browser.switch_to_window(editor_window)

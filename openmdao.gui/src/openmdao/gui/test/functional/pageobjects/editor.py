@@ -1,7 +1,6 @@
 import logging
 import time
 
-import selenium
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -10,8 +9,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement, CheckboxElement 
+from elements import ButtonElement, InputElement
 from util import ValuePrompt
+
 
 class UploadPage(BasePageObject):
     """ Pops-up when adding a file. """
@@ -27,13 +27,14 @@ class UploadPage(BasePageObject):
 
     def upload_files(self):
         self('submit').click()
-    
+
     def select_file(self, path):
         self.filename = path
 
     def select_files(self, paths):
         for path in paths:
             self.select_file(path)
+
 
 class EditorPage(BasePageObject):
     """ Code editor window. """
@@ -110,19 +111,27 @@ class EditorPage(BasePageObject):
 
         # Go back to the main window.
         self.browser.switch_to_window(main_window_handle)
-   
+
     def add_files(self):
         self('file_menu').click()
         self('add_button').click()
         self.browser.switch_to_window('Add File')
         return UploadPage.verify(self.browser, self.port)
 
+    def new_file_dialog(self):
+        """ bring up the new file dialog """
+        self('file_menu').click()
+        self('newfile_button').click()
+
+        page = ValuePrompt(self.browser, self.port)
+        return page
+
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
         self('newfile_button').click()
 
-        page = ValuePrompt(self.browser, self.port)
+        page = self.new_file_dialog()
         page.set_value(filename)
 
         self.edit_file(filename)
@@ -144,32 +153,12 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(code)
         # Control-S to save.
-        code_input_element.send_keys(Keys.CONTROL+'s')
+        code_input_element.send_keys(Keys.CONTROL + 's')
 # FIXME: absolute delay for save to complete.
         time.sleep(2)
 
         # Back to main window.
         self.browser.switch_to_default_content()
-
-    def import_file(self, filename):
-        """ Import from `filename`. """
-        xpath = "//a[(@path='/%s')]" % filename
-        element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath(xpath))
-        chain = ActionChains(self.browser)
-        for i in range(10):
-            try:
-                chain.context_click(element).perform()
-            except StaleElementReferenceException:
-                logging.warning('import_file: StaleElementReferenceException')
-                element = WebDriverWait(self.browser, 1).until(
-                    lambda browser: browser.find_element_by_xpath(xpath))
-                chain = ActionChains(self.browser)
-            else:
-                break
-        self('file_import').click()
-        # took out the following notify for now... it opened on workspace page
-        #NotifierPage.wait(self.browser, self.port)  
 
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
