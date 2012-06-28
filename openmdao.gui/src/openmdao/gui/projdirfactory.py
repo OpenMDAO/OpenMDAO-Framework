@@ -82,7 +82,7 @@ plugin_ifaces = set([
 
 # predicate functions for selecting available types
 def is_plugin(name, meta):
-    return plugin_ifaces.intersection(meta.get('ifaces',[]))
+    return len(plugin_ifaces.intersection(meta.get('ifaces',[]))) > 0
 
 
 class ProjDirFactory(Factory):
@@ -95,7 +95,6 @@ class ProjDirFactory(Factory):
         self.imported = {}  # imported files vs (module, ctor dict)
         try:
             self.analyzer = PythonSourceTreeAnalyser()
-            self._baseset = set(self.analyzer.graph.nodes())
             
             added_set = set()
             changed_set = set()
@@ -162,7 +161,7 @@ class ProjDirFactory(Factory):
         return True.
         """
         graph = self.analyzer.graph
-        typset = set(graph.nodes()) - self._baseset
+        typset = set(graph.nodes())
         types = []
         
         if groups is None:
@@ -170,13 +169,12 @@ class ProjDirFactory(Factory):
         else:
             ifaces = set([v[0] for k,v in plugin_groups.items() if k in groups])
         
-        empty = []
         for typ in typset:
             if typ.startswith('openmdao.'): # don't include any standard lib types
                 continue
             if 'classinfo' in graph.node[typ]:
                 meta = graph.node[typ]['classinfo'].meta
-                if ifaces.intersection(meta.get('ifaces', empty)):
+                if ifaces.intersection(self.analyzer.get_interfaces(typ)):
                     meta = meta.copy()
                     meta['_context'] = 'In Project'
                     types.append((typ, meta))
