@@ -72,7 +72,7 @@ class PkgResourcesFactory(Factory):
         for group in plugin_groups.keys():
             for dist in distiter:
                 for name, value in dist.get_entry_map(group).items():
-                    lst = dct.setdefault(name, [dist, [], set()])
+                    lst = dct.setdefault(name, (dist, [], set()))
                     lst[1].append(group)
                     lst[2].add(value.module_name)
         return dct

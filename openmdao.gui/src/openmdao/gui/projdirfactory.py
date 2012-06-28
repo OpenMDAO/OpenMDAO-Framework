@@ -82,7 +82,7 @@ plugin_ifaces = set([
 
 # predicate functions for selecting available types
 def is_plugin(name, meta):
-    return plugin_ifaces.intersection(meta.get('ifaces',[]))
+    return len(plugin_ifaces.intersection(meta.get('ifaces',[]))) > 0
 
 
 class ProjDirFactory(Factory):
