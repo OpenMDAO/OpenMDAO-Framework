@@ -1,6 +1,8 @@
 
 from random import gauss, weibullvariate, uniform
 
+from openmdao.main.interfaces import IUncertainVariable, implements
+
 try:
     # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
     from math import gamma
@@ -16,6 +18,8 @@ from openmdao.util.decorators import stub_if_missing_deps
 
 class UncertainDistribution(object):
     """Base class for uncertain variables."""
+    
+    implements(IUncertainVariable)
     
     default_val_method = 'expected'
     

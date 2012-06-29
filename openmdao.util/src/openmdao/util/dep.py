@@ -56,13 +56,32 @@ def _to_str(node):
             return None
     return '.'.join(parts[::-1])
 
+# the following are interfaces that get added via the add_delegate decorator
+_delegate_ifaces = {
+    'HasParameters': 'IHasParameters',
+    'HasConstraints': 'IHasConstraints',
+    'HasEqConstraints': 'IHasEqConstraints',
+    'HasInEqConstraints': 'IHasInEqConstraints',
+    'HasObjective': 'IHasObjective',
+    'HasObjectives': 'IHasObjectives',
+    'HasStopConditions': 'IHasStopConditions',
+    'HasEvents': 'IHasEvents',
+    'HasCouplingVars': 'IHasCouplingVars',
+    }
 
 class ClassInfo(object):
-    def __init__(self, name, fname, bases, meta):
+    def __init__(self, name, fname, bases, meta, decorators):
         self.name = name
         self.fname = fname
         self.bases = bases
         self.meta = meta
+        
+        ifaces = meta.setdefault('ifaces', [])
+        for dec in decorators:
+            if dec.func.id == 'add_delegate':
+                for arg in [_to_str(a) for a in dec.args]:
+                    if arg in _delegate_ifaces:
+                        ifaces.append(_delegate_ifaces[arg])
         
 class _ClassBodyVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -132,7 +151,8 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         
         bases = [self.localnames.get(b,b) for b in bases]
 
-        self.classes[fullname] = ClassInfo(fullname, self.fname, bases, bvisitor.metadata)
+        self.classes[fullname] = ClassInfo(fullname, self.fname, bases, bvisitor.metadata,
+                                           node.decorator_list)
         self.tree_analyser.class_map[fullname] = self.classes[fullname]
         
         undef_bases = [b for b in bases if b not in self.classes and not hasattr(__builtin__,b)]
@@ -334,6 +354,14 @@ class PythonSourceTreeAnalyser(object):
         del paths[base] # don't want the base itself in the list
         return paths.keys()
 
+    def get_interfaces(self, classname):
+        ifaces = set()
+        klass = self.find_classinfo(classname)
+        if klass:
+            ifaces.update(klass.meta['ifaces'])
+            for base in klass.bases:
+                ifaces.update(self.get_interfaces(base))
+        return ifaces
 
 def main():
     from argparse import ArgumentParser
