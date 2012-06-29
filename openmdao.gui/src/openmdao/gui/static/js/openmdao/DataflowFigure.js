@@ -313,7 +313,8 @@ openmdao.DataflowFigure.prototype.setBackgroundColor=function(color){
 
 /** context menu */
 openmdao.DataflowFigure.prototype.getContextMenu=function(){
-    var menu=new draw2d.Menu(),
+    var self = this,
+        menu = new draw2d.Menu(),
         model = this.openmdao_model,
         pathname = this.pathname,
         name = this.name,
@@ -359,6 +360,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // remove
         menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
+            self.minimize();
             model.removeComponent(pathname);
         }));
 

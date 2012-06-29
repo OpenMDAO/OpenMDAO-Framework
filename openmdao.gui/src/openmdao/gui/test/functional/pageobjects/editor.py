@@ -1,3 +1,4 @@
+import sys
 import logging
 import time
 
@@ -147,7 +148,10 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(code)
         # Control-S to save.
-        code_input_element.send_keys(Keys.CONTROL + 's')
+        if sys.platform == 'darwin':
+            code_input_element.send_keys(Keys.COMMAND + 's')
+        else:
+            code_input_element.send_keys(Keys.CONTROL + 's')
 # FIXME: absolute delay for save to complete.
         time.sleep(2)
 
