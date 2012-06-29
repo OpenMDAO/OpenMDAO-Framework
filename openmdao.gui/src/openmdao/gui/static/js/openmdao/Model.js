@@ -380,7 +380,12 @@ openmdao.Model=function() {
     };
 
     /** set the contents of the specified file */
-    this.setFile = function(filepath, contents, force, callback, errorHandler) {
+    this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
+        debug.info("model.setFile");
+        debug.info("force")
+        debug.info(force)
+        debug.info('handler409')
+        debug.info(handler409)
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
@@ -392,22 +397,7 @@ openmdao.Model=function() {
                      },
             error: errorHandler,
             statusCode: {
-               409: function(jqXHR, textStatus, errorThrown) {
-                        var win = jQuery('<div>You have modified a class that already has instances in the model. Do you want to continue?</div>')
-                        jQuery(win).dialog({
-                            'modal': true,
-                            'title': 'Overwrite Existing Classes',
-                            'buttons': {
-                                'Overwrite': function() {
-                                    jQuery(this).dialog('close');
-                                    self.setFile(filepath, contents, true, callback, errorHandler);
-                                },
-                                'Cancel': function() {
-                                    jQuery(this).dialog('close');
-                                }
-                            }
-                        });
-                    }
+                409: handler409
              },
         });
     };

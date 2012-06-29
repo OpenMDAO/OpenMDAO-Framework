@@ -9,13 +9,16 @@ __all__ = [ "create", "register_class_factory", "get_available_types" ]
 
 
 import os
+import threading
 
 from pkg_resources import parse_version
 
 from openmdao.main.importfactory import ImportFactory
 from openmdao.main.pkg_res_factory import PkgResourcesFactory, plugin_groups
+from openmdao.util.log import logger
 
 factories = []
+_factory_lock = threading.Lock()
 typeset = set()  # set of all types that have been created
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
@@ -37,17 +40,23 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
 
 def register_class_factory(factory):
     """Add a Factory to the factory list."""
-    if factory not in factories:
-        factories.append(factory)
+    global factories
+    with _factory_lock:
+        if factory not in factories:
+            logger.error("adding new factory: %s" % factory)
+            factories.append(factory)
         
 def remove_class_factory(factory):
     """Remove a Factory from the factory list."""
-    for fct in factories:
-        if fct is factory:
-            if hasattr(factory, 'cleanup'):
-                factory.cleanup()
-            factories.remove(factory)
-            return
+    global factories
+    with _factory_lock:
+        for fct in factories:
+            if fct is factory:
+                if hasattr(factory, 'cleanup'):
+                    factory.cleanup()
+                logger.error("removing factory: %s" % factory)
+                factories.remove(factory)
+                return
 
 def _cmp(tup1, tup2):
     s1 = tup1[0].lower()

@@ -19,8 +19,6 @@ openmdao.CodeFrame = function(id,model) {
     //editor.setTheme("ace/theme/chrome");
     editor.getSession().setMode("ace/mode/python");
         
-    var win = jQuery('<div id="writepromptdialog">You have modified a class that already has instances in the model. Do you want to continue?</div>').appendTo("#"+id)
-    
     editor.commands.addCommand({
         name: "save",
         bindKey: {win: "Ctrl-S", mac: "Command-S"},
@@ -39,10 +37,28 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
+    function handle409(jqXHR, textStatus, errorThrown) {
+        var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>')
+        jQuery(win).dialog({
+            'modal': true,
+            'title': 'Overwrite Existing Classes',
+            'buttons': {
+                'Overwrite': function() {
+                    jQuery(this).dialog('close');
+                    self.saveFile(true);  // force a save
+                },
+                'Cancel': function() {
+                    jQuery(this).dialog('close');
+                }
+            }
+        });
+    }
+
     /** tell the model to save the current contents to current filepath */
-    function saveFile() {
+    function saveFile(force) {
+        debug.info("saveFile:  force = "+force)
         console.log(editor.getValue());
-        model.setFile(filepath,editor.session.doc.getValue());
+        model.setFile(filepath,editor.session.doc.getValue(),force,null,null,handle409);
     }
 
     /***********************************************************************

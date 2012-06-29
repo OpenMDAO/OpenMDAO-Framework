@@ -7,9 +7,8 @@ from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projdirfactory import ProjDirFactory
-from openmdao.main.factorymanager import factories
 
-
+from openmdao.util.log import logger
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -231,10 +230,6 @@ class ExecHandler(ReqHandler):
             self.content_type = 'text/html'
             self.write(result)
 
-def _get_projdirfactory():
-    for f in factories:
-        if isinstance(f, ProjDirFactory):
-            return f
 
 class FileHandler(ReqHandler):
     ''' get/set the specified file/folder
@@ -248,22 +243,17 @@ class FileHandler(ReqHandler):
             self.write(cserver.ensure_dir(filename))
         else:
             force = self.get_argument('force', default=False)
+            logger.error("filename = %s" % filename)
+            logger.error("force = %s" % force)
             if not force and filename.endswith('.py'):
-                pdf = _get_projdirfactory()
-                if pdf:
-                    info = pdf.analyzer.fileinfo.get(filename)
-                    if info and info.modpath in sys.modules: # changed file has already been imported
-                        
-            # if file is a .py file AND file is already in projdirfactory AND file has instantiated classes
-            # scan file for class changes
-            # if found:
-            #       perform class update
-            #       self.write(str(cserver.write_file(filename, contents)))
-            #   else:
-            #       self.send_error(409)
-            else:
-                contents = self.get_argument('contents', default='')
-                self.write(str(cserver.write_file(filename, contents)))
+                ret = cserver.file_classes_changed(filename)
+                logger.error("ret = %s" % ret)
+                if ret:
+                    logger.error("sending 409")
+                    self.send_error(409)  # user will be prompted to overwrite classes
+                    return
+            contents = self.get_argument('contents', default='')
+            self.write(str(cserver.write_file(filename, contents)))
 
     @web.authenticated
     def delete(self, filename):
@@ -322,7 +312,7 @@ class OutstreamHandler(ReqHandler):
 
 class ProjectHandler(ReqHandler):
     ''' GET:  load model fom the given project archive,
-              or reload remebered project for session if no file given
+              or reload remembered project for session if no file given
 
         POST: save project archive of the current project
     '''
@@ -406,6 +396,7 @@ class UploadHandler(ReqHandler):
     def post(self):
         path = self.get_argument('path', default=None)
         cserver = self.get_server()
+        logger.error("files = %s" % self.request.files.keys())
         files = self.request.files['file']
         if files:
             for file_ in files:
