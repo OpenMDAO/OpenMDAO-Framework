@@ -425,12 +425,7 @@ openmdao.DataflowFigure.prototype.minimize=function(){
 
 /* show the maximized version of the figure, with subcomponents & connections */
 openmdao.DataflowFigure.prototype.maximize=function(){
-    debug.info(this.pathname,'maximize()');
-
-    // make sure we are minimized first
-    this.minimize();
-
-    // toggle the maxmin button
+    // ensure the maxmin button is set to maximized
     if (this.maxmin === '+') {
         this.maxmin = '-';
         var circleIMG = "url(/static/images/circle-minus.png)";
@@ -450,8 +445,6 @@ openmdao.DataflowFigure.prototype.maximize=function(){
 
 /** update dataflow by recreating figures from JSON dataflow data */
 openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
-    debug.info(this.pathname,'updateDataflow() figures:',this.figures,json);
-
     if (!json.hasOwnProperty('components')) {
         return;
     }
@@ -475,12 +468,6 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             maxmin = comp.is_assembly ? '+' : '',
             fig = self.figures[name];
 
-        debug.info(self.pathname,'figures:',self.figures,'name:',name,'fig:',self.figures[name]);
-        debug.info('keys:',Object.keys(self.figures),'figures:',self.figures);
-        for (var key in self.figures) {
-            debug.info(self.figures,'key:',key,'fig',self.figures[key]);
-        }
-
         if (!fig) {
             if (self.pathname) {
                 figname = self.pathname+'.'+name;
@@ -495,18 +482,25 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             workflow.addFigure(fig,0,0);
         }
 
-        if (fig.maxmin === '-' || self.pathname ==='') { fig.maximize(); }
+        if (fig.maxmin === '-' || self.pathname ==='') {
+            fig.maximize();
+        }
     });
 
-    self.inputsFigure = new draw2d.Node();
-    self.inputsFigure.html.style.border = 'none';
-    self.addChild(self.inputsFigure);
-    workflow.addFigure(self.inputsFigure,0,0);
+    if (!self.inputsFigure) {
+        self.inputsFigure = new draw2d.Node();
+        self.inputsFigure.html.style.border = 'none';
+        self.addChild(self.inputsFigure);
+        workflow.addFigure(self.inputsFigure,0,0);
+    }
 
-    self.outputsFigure = new draw2d.Node();
-    self.outputsFigure.html.style.border = 'none';
-    self.addChild(this.outputsFigure);
-    workflow.addFigure(self.outputsFigure,0,0);
+
+    if (!self.outputsFigure) {
+        self.outputsFigure = new draw2d.Node();
+        self.outputsFigure.html.style.border = 'none';
+        self.addChild(this.outputsFigure);
+        workflow.addFigure(self.outputsFigure,0,0);
+    }
 
     jQuery.each(json.connections,function(idx,conn) {
         var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
@@ -583,6 +577,37 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         }
     });
 
+    // remove any component figures that are not in the updated data
+    jQuery.each(self.figures,function(name,fig){
+        var found = false;
+        jQuery.each(json.components, function(idx,comp) {
+            if (comp.name === name) {
+                found = true;
+            }
+        });
+        if (!found) {
+            workflow.removeFigure(fig);
+            self.removeChild(fig);
+            delete self.figures[name];
+        }
+    });
+
+    jQuery.each(self.connections,function(name,fig){
+        var found = false;
+        jQuery.each(json.connections, function(idx,conn) {
+            var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
+                dst_name = conn[1].indexOf('.') < 0 ? '' : conn[1].split('.')[0],
+                con_name = src_name+'-'+dst_name;
+            if (con_name === name) {
+                found = true;
+            }
+        });
+        if (!found) {
+            workflow.removeFigure(fig);
+            delete self.connections[name];
+        }
+    });
+
     this.layout();
 };
 
@@ -645,16 +670,18 @@ openmdao.DataflowFigure.prototype.layout=function() {
             dst_port = conn.getTarget();
 
         if (src_port.getName() === name) {
-            var srcX = src_port.getAbsoluteX(),
-                dstX = dst_port.getAbsoluteX();
-            src_port.setPosition(dstX-srcX,0);
+            // source port is on the assembly
+            var dstX = dst_port.getAbsoluteX(),
+                X0 = self.inputsFigure.getAbsoluteX();
+            src_port.setPosition(dstX-X0,0);
         }
 
         if (dst_port.getName() === name) {
+            // destination port is on the assembly
             var srcY = src_port.getAbsoluteY(),
-                dstY = dst_port.getAbsoluteY();
-            dst_port.setPosition(0,srcY-dstY);
-        }
+                Y0 = self.outputsFigure.getAbsoluteY();
+            dst_port.setPosition(0,srcY-Y0);
+      }
     });
 
     // layout parent to accomodate new size

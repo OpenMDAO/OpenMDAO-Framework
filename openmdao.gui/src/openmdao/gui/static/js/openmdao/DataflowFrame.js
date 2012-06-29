@@ -25,7 +25,6 @@ openmdao.DataflowFrame = function(id,model,pathname) {
                 if (typeof dataflow === 'string') {
                     dataflow = jQuery.parseJSON(dataflow);
                 }
-                debug.info('DataflowFrame.handleMessage()',message[0],dataflow);
                 pane.loadData(dataflow);
             }
         }
