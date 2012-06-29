@@ -187,41 +187,47 @@ openmdao.Util = {
         var promptId = baseId+'-prompt',
             inputId = baseId+'-input',
             okId = baseId+'-ok',
+            cancelId = baseId + '-cancel',
             element = document.getElementById(baseId),
             win = null;
             userInput = null;
 
-        function handleResponse() {
-            // close dialog, invoke callback
+        function handleResponse(ok) {
+            // close dialog
             win.dialog('close');
-            if (callback) {
+            // if response was 'Ok' then invoke the callback
+            if (ok && callback) {
                 callback(userInput.val());
             }
             //clear input value
             userInput.val('');
-            // unbind handlers so they dont get called again
-            jQuery('#'+okId).unbind('click');
-            jQuery('#'+inputId).unbind('keypress.enterkey');
         }
 
         if (element === null) {
-            // Build dialog markup
+            // Build dialog
             win = jQuery('<div id="'+baseId+'"><div id="'+promptId+'" /></div>');
+
             userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
+            userInput.bind('keypress.enterkey', function(e) {
+                if (e.which === 13) {
+                    handleResponse(true);
+                }
+            });
             userInput.appendTo(win);
+
             win.dialog({
                 autoOpen: false,
                 modal: true,
                 buttons: [
                     {
                         text: 'Ok',
-                        id: okId
-                        // click is defined below.
+                        id: okId,
+                        click: function() { handleResponse(true); }
                     },
                     {
                         text: 'Cancel',
-                        id: baseId+'-cancel',
-                        click: handleResponse
+                        id: cancelId,
+                        click: function() { handleResponse(false); }
                     }
                 ]
             });
@@ -233,16 +239,6 @@ openmdao.Util = {
 
         // Update for current invocation.
         jQuery('#'+promptId).html(prompt+':');
-
-        jQuery('#'+inputId).bind('keypress.enterkey', function(e) {
-            if (e.which === 13) {
-                handleResponse();
-            }
-        });
-
-        jQuery('#'+okId).bind('click', function() {
-            handleResponse();
-        });
 
         win.dialog('open');
     },
