@@ -12,16 +12,10 @@ Current version: |version|
    optimization/index
    surrogate/index
    mdao/index
-
-.. toctree:: 
-   :maxdepth: 1
-   
    complex/index
    concurrent
    srcdocs/index
    licenses/index
-   
-  
 
 =========================
 OpenMDAO Developer Guide
