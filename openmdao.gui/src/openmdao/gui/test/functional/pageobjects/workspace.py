@@ -305,3 +305,27 @@ class WorkspacePage(BasePageObject):
         editor_id = 'ConnectionsFrame-%s' % (parent)
         editor_id = editor_id.replace('.', '-')
         return ConnectionsPage(self.browser, self.port, (By.ID, editor_id))
+
+    def hide_left(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')
+        toggler.click()
+
+    def show_left(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-closed')
+        toggler.click()
+
+    def hide_right(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-east-open')
+        toggler.click()
+
+    def show_right(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-east-closed')
+        toggler.click()
+
+    def hide_console(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-south-open')
+        toggler.click()
+
+    def show_console(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-south-closed')
+        toggler.click()
