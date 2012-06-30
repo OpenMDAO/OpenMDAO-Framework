@@ -3,6 +3,7 @@ import threading
 import time
 
 from nose import SkipTest
+from nose.tools import eq_ as eq
 
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
@@ -212,8 +213,8 @@ class WorkspacePage(BasePageObject):
         page.set_value(instance_name)
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
-        WebDriverWait(self.browser, TMO).until(
-            lambda browser: not browser.find_element(*page('prompt')._locator).is_displayed())
+        time.sleep(0.25)
+        eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
         WebDriverWait(self.browser, TMO).until(
             lambda browser: instance_name in self.get_dataflow_component_names())
 
