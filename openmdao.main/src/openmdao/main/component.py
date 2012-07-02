@@ -1545,6 +1545,9 @@ class Component(Container):
                 connected_inputs = self._depgraph.get_connected_inputs()
                 connected_outputs = self._depgraph.get_connected_outputs()
 
+#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_inputs:',connected_inputs
+#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_outputs:',connected_outputs
+            
             for vname in self.list_inputs():
                 v = self.get(vname)
                 attr = {}
@@ -1562,9 +1565,10 @@ class Component(Container):
                                 attr[field] = ''
                     attr['connected'] = ''
                     if vname in connected_inputs:
+                        connections = self._depgraph.connections_to(vname)
+#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() input',vname,'connections:',connections
                         # there can be only one connection to an input
-                        attr['connected'] = [src for src, dst in \
-                            self._depgraph.connections_to(vname)][0].replace('@xin.', '')
+                        attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
                 inputs.append(attr)
             attrs['Inputs'] = inputs
 
@@ -1586,8 +1590,9 @@ class Component(Container):
                                 attr[field] = ''
                     attr['connected'] = ''
                     if vname in connected_outputs:
-                        attr['connected'] = str([dst for src, dst in \
-                            self._depgraph.connections_to(vname)]).replace('@xout.', '')
+                        connections = self._depgraph.connections_to(vname)
+#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() output',vname,'connections:',connections
+                        attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 

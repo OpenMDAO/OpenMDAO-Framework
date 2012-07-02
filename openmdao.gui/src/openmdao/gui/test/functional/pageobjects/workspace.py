@@ -3,6 +3,7 @@ import threading
 import time
 
 from nose import SkipTest
+from nose.tools import eq_ as eq
 
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
@@ -86,7 +87,7 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["objects"] = ( By.XPATH, "//div[@id='otree']//li[@path]" )
+        self.locators["objects"] = (By.XPATH, "//div[@id='otree']//li[@path]")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, 2*TMO).until(
@@ -212,8 +213,8 @@ class WorkspacePage(BasePageObject):
         page.set_value(instance_name)
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
-        WebDriverWait(self.browser, TMO).until(
-            lambda browser: not browser.find_element(*page('prompt')._locator).is_displayed())
+        time.sleep(0.25)
+        eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
         WebDriverWait(self.browser, TMO).until(
             lambda browser: instance_name in self.get_dataflow_component_names())
 
@@ -228,6 +229,14 @@ class WorkspacePage(BasePageObject):
             fig_name = None
             for figure in figures:
                 try:
+                    header = figure.find_elements_by_class_name('DataflowFigureHeader')
+                    if len(header) == 0:
+                        # the outermost figure (globals) has no header or name
+                        if name == '' and prefix is None:
+                            fig = DataflowFigure(self.browser, self.port, figure)
+                            return fig
+                        else:
+                            continue
                     fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
                 except StaleElementReferenceException:
                     logging.warning('get_dataflow_figure:'
@@ -294,7 +303,30 @@ class WorkspacePage(BasePageObject):
         chain.perform()
         parent, dot, srcname = src.pathname.rpartition('.')
         parent, dot, dstname = dst.pathname.rpartition('.')
-        editor_id = 'DCE-%s-%s-%s' % (parent, srcname, dstname)
+        editor_id = 'ConnectionsFrame-%s' % (parent)
         editor_id = editor_id.replace('.', '-')
         return ConnectionsPage(self.browser, self.port, (By.ID, editor_id))
 
+    def hide_left(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')
+        toggler.click()
+
+    def show_left(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-closed')
+        toggler.click()
+
+    def hide_right(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-east-open')
+        toggler.click()
+
+    def show_right(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-east-closed')
+        toggler.click()
+
+    def hide_console(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-south-open')
+        toggler.click()
+
+    def show_console(self):
+        toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-south-closed')
+        toggler.click()

@@ -49,31 +49,53 @@ openmdao.Util = {
      * open a popup window to view a URL
      *
      * url:     the url to open in the new window
-     * title:   the title of the window (FIXME: doesn't work)
-     * h:       the height of the window
-     * w:       the width of the window
+     * title:   the title of the window
+     * options: window options
      */
-    popupWindow: function(url,title,h,w) {
-        LeftPosition = (screen.width) ? (screen.width-w)/2 : 10;
-        TopPosition = (screen.height) ? (screen.height-h)/2 : 10;
-        var settings = 'height='+h+',width='+w+',top='+TopPosition+',left='+LeftPosition+
-                       ',resizable=no,scrollbars=no,toolbar=no,menubar=no'+
-                       ',location=no,directories=no,status=no';
-        return window.open(url,title,settings);
+    popupWindow: function(url,title,options) {
+        var specs = {
+            height:     3/4*screen.height,
+            width:      1/2*screen.width,
+            top:        10,
+            left:       10,
+            location:   0,
+            menubar:    0,
+            resizable:  1,
+            scrollbars: 0,
+            status:     1,
+            titlebar:   1,
+            toolbar:    0
+        },
+        spec_string = '',
+        spec = null,
+        win = null;
+
+        if (options) {
+            jQuery.extend(specs, options);
+        }
+
+        for (spec in specs) {
+            if (specs.hasOwnProperty(spec)) {
+                if (spec_string.length > 0) {
+                    spec_string = spec_string + ',';
+                }
+                spec_string = spec_string + spec + '=' + specs[spec];
+            }
+        }
+
+        win = window.open(url, title, spec_string);
+        win.document.title = title;
     },
 
     /**
      * open a popup window to view HTML
      *
-     * url:     the url to open in the new window
-     * title:   the title of the window (FIXME: doesn't work)
-     * h:       the height of the window
-     * w:       the width of the window
+     * html:    the html to display in the new window
+     * title:   the title of the window
+     * options: window options
      */
-    htmlWindow: function(html,name,h,w) {
-        h = h || 600;
-        w = w || 800;
-        var win =  window.open('',name,'width='+w+',height='+h);
+    htmlWindow: function(html,title,options) {
+        var win =  openmdao.Util.popupWindow('',title,options);
         win.document.open();
         win.document.write(html);
         win.document.close();
@@ -84,13 +106,11 @@ openmdao.Util = {
      *
      * title:   the title of the window
      * script:  script to initialize the window
-     * h:       the height of the window
-     * w:       the width of the window
+     * options: window options
      */
-    popupScript: function (title,init_script,h,w) {
-        h = h || 600;
-        w = w || 800;
-        return openmdao.Util.popupWindow("/workspace/base?head_script='"+init_script+"'",title,h,w);
+    popupScript: function (title,script,options) {
+        var url = "/workspace/base?head_script='"+script+"'",
+            win = openmdao.Util.popupWindow(url,title,options);
     },
 
 
@@ -167,88 +187,50 @@ openmdao.Util = {
         var promptId = baseId+'-prompt',
             inputId = baseId+'-input',
             okId = baseId+'-ok',
+            cancelId = baseId + '-cancel',
             element = document.getElementById(baseId),
             win = null;
             userInput = null;
 
-        function handleResponse() {
-            debug.info('Util.handleResponse',userInput,userInput.val(),callback);
-            // close dialog, invoke callback
+        function handleResponse(ok) {
+            // close dialog
             win.dialog('close');
-            // invoke callback
-            if (callback) {
+            // if response was 'Ok' then invoke the callback
+            if (ok && callback) {
                 callback(userInput.val());
             }
-            //clear input value
-            userInput.val('');
-            // unbind handlers so they dont get called again
-            jQuery('#'+okId).unbind('click');
-            jQuery('#'+inputId).unbind('keypress.enterkey');
+            // remove from DOM
+            win.remove();
         }
 
-        if (element === null) {
-            // Build dialog markup
-            win = jQuery('<div id="'+baseId+'"><p id="'+promptId+'"></p></div>');
-            userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
-            userInput.appendTo(win);
-            win.dialog({
-                autoOpen: false,
-                modal: true,
-                buttons: [
-                    {
-                        text: 'Ok',
-                        id: okId
-                        // click is defined below.
-                    },
-                    {
-                        text: 'Cancel',
-                        id: baseId+'-cancel',
-                        click: function() {
-                            win.dialog('close');
-                            userInput.val('');
-                            // unbind handlers so they dont get called again
-                            jQuery('#'+okId).unbind('click');
-                            jQuery('#'+inputId).unbind('keypress.enterkey');
-                        }
-                    }
-                ]
-            });
-        }
-        else {
-            win = jQuery('#'+baseId);
-            userInput = jQuery('#'+inputId);
-        }
+        win = jQuery('<div id="'+baseId+'"><div id="'+promptId+'" /></div>');
 
-        // Update for current invocation.
-        jQuery('#'+promptId).text(prompt+':');
-
-        jQuery('#'+inputId).bind('keypress.enterkey', function(e) {
+        userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
+        userInput.bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
-                win.dialog('close');
-                // invoke callback
-                if (callback) {
-                    callback(userInput.val());
-                }
-                //clear input value
-                userInput.val('');
-                // unbind handlers so they dont get called again
-                jQuery('#'+okId).unbind('click');
-                jQuery('#'+inputId).unbind('keypress.enterkey');
+                handleResponse(true);
             }
+        });
+        userInput.appendTo(win);
+
+        win.dialog({
+            autoOpen: false,
+            modal: true,
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: okId,
+                    click: function() { handleResponse(true); }
+                },
+                {
+                    text: 'Cancel',
+                    id: cancelId,
+                    click: function() { handleResponse(false); }
+                }
+            ]
         });
 
-        jQuery('#'+okId).bind('click', function() {
-            win.dialog('close');
-            // invoke callback
-            if (callback) {
-                callback(userInput.val());
-            }
-            //clear input value
-            userInput.val('');
-            // unbind handlers so they dont get called again
-            jQuery('#'+okId).unbind('click');
-            jQuery('#'+inputId).unbind('keypress.enterkey');
-        });
+        jQuery('#'+promptId).html(prompt+':');
 
         win.dialog('open');
     },
@@ -297,7 +279,7 @@ openmdao.Util = {
     /**
      * show the properties of an object on the log (debug only)
      *
-     * obj:     the object for which properties are to be displayed
+     * obj: the object for which properties are to be displayed
      */
     dumpProps: function(obj) {
         var prop;
@@ -344,17 +326,6 @@ openmdao.Util = {
             for (i = 0; i < l; i += 1) {
                 purge(d.childNodes[i]);
             }
-        }
-    },
-
-    /**
-     * refresh n times (for debugging memory leak)
-     */
-    refreshX: function(n) {
-        if (n > 0) {
-            model.updateListeners();
-            n = n-1;
-            setTimeout( "openmdao.Util.refreshX("+n+")", 2000 );
         }
     },
 
@@ -437,12 +408,12 @@ openmdao.Util = {
                 socket = new WebSocket(addr);
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
-                    debug.info('websocket opened '+socket.readyState,socket,e);
-                    displaySockets();
+                    //debug.info('websocket opened '+socket.readyState,socket,e);
+                    //displaySockets();
                 };
                 socket.onclose = function (e) {
-                    debug.info('websocket closed',socket,e);
-                    displaySockets();
+                    //debug.info('websocket closed',socket,e);
+                    //displaySockets();
                     index = openmdao.sockets.indexOf(this);
                     if (index >= 0) {
                         openmdao.sockets.splice(index, 1);

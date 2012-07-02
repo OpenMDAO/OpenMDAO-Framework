@@ -9,7 +9,7 @@ Testing
 By default, your top level ``devenv/bin`` directory will contain a script
 called ``openmdao`` that has a subcommand called "test" that uses a Python 
 package called `nose
-<http://readthedocs.org/docs/nose/en/latest/>`_ to run all of the unit
+<http://nose.readthedocs.org/en/latest/>`_ to run all of the unit
 tests for any package that you specify. For example, to run the full set
 of openmdao unit tests, type:
 

@@ -27,7 +27,7 @@ jQuery(function() {
     var code = new openmdao.CodeFrame('code', openmdao.model);
 
     function code_fn(path) { code.editFile(path); code_tab.click(); }
-    function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry',600,800); }
+    function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry'); }
 
     var ftree = new openmdao.FileTreeFrame('ftree', openmdao.model, code_fn, geom_fn);
 

@@ -5,6 +5,8 @@ Tests of overall workspace functions.
 import sys
 import time
 
+import pkg_resources
+
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -57,14 +59,16 @@ def _test_import(browser):
     editor_page = workspace_page.open_editor()
 
     # Add paraboloid file.
-    import openmdao.examples.simple.paraboloid
-    file_path = openmdao.examples.simple.paraboloid.__file__
+    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'paraboloid.py')
     editor_page.add_file(file_path)
 
     # Add optimization_unconstrained file.
-    import openmdao.examples.simple.optimization_unconstrained
-    file_path = openmdao.examples.simple.optimization_unconstrained.__file__
+    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'optimization_unconstrained.py')
     editor_page.add_file(file_path)
+
+    time.sleep(1.0)
 
     # Check to make sure the files were added.
     file_names = editor_page.get_files()
@@ -73,12 +77,6 @@ def _test_import(browser):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
-
-    ## Import * from paraboloid.
-    #editor_page.import_file('paraboloid.py')
-
-    ## Import * from optimization_unconstrained.
-    #editor_page.import_file('optimization_unconstrained.py')
 
     # Back to workspace.
     browser.close()
@@ -147,9 +145,9 @@ def _test_menu(browser):
     top_figure = workspace_page.get_dataflow_figure('top')
     eq(top_figure.border, '1px solid rgb(0, 255, 0)')
 
-#FIXME: These need to verify that the request has been performed.
+    #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('cmdline', 'console', 'libraries', 'objects',
+    for item in ('console', 'libraries', 'objects',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
@@ -173,6 +171,29 @@ def _test_newfile(browser):
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
 
+    # test the 'ok' and 'cancel' buttons on the new file dialog
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('ok_file1')
+    dlg.click_ok()
+    time.sleep(1.0)
+
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('cancel_file')
+    dlg.click_cancel()
+    time.sleep(1.0)
+
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('ok_file2')
+    dlg.click_ok()
+    time.sleep(1.0)
+
+    file_names = editor_page.get_files()
+    expected_file_names = ['ok_file1', 'ok_file2']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+
     # Create the file (code editor automatically indents).
     editor_page.new_file('plane.py', """
 from openmdao.main.api import Component
@@ -181,14 +202,12 @@ from openmdao.lib.datatypes.api import Float
 class Plane(Component):
 
     x1 = Float(0.0, iotype='in')
-    x2 = Float(0.0, iotype='in')
-    x3 = Float(0.0, iotype='in')
+# subsequent lines will be auto-indented by ace editor
+x2 = Float(0.0, iotype='in')
+x3 = Float(0.0, iotype='in')
 
-    f_x = Float(0.0, iotype='out')
+f_x = Float(0.0, iotype='out')
 """)
-
-    # Import it.
-    #editor_page.import_file('plane.py')
 
     # Back to workspace.
     browser.close()
@@ -206,6 +225,7 @@ class Plane(Component):
     project_info_page.delete_project()
     print "_test_newfile complete."
 
+
 def _test_addfiles(browser):
     print "running _test_addfiles..."
     # Adds multiple files to the project.
@@ -221,18 +241,18 @@ def _test_addfiles(browser):
     upload_page = editor_page.add_files()
 
     # Get path to  paraboloid file.
-    import openmdao.examples.simple.paraboloid
-    paraboloidPath = openmdao.examples.simple.paraboloid.__file__
+    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                     'paraboloid.py')
 
     # Get path to optimization_unconstrained file.
-    import openmdao.examples.simple.optimization_unconstrained
-    opt_unconstrainedPath = openmdao.examples.simple.optimization_unconstrained.__file__
-    
+    optPath = pkg_resources.resource_filename('openmdao.examples.simple',
+                                              'optimization_unconstrained.py')
+
     # Add the files
-    upload_page.select_files((paraboloidPath[:len(paraboloidPath)-1], 
-        opt_unconstrainedPath[:len(opt_unconstrainedPath)-1]))
-   
+    upload_page.select_files((paraboloidPath, optPath))
     upload_page.upload_files()
+
+    time.sleep(1.0)
 
     # Check to make sure the files were added.
     browser.switch_to_window(editor_window)
@@ -243,13 +263,14 @@ def _test_addfiles(browser):
         raise TestCase.failureException(
             "Expected file names, '%s', should match existing file names, '%s'"
             % (expected_file_names, file_names))
-    
+
     # Clean up.
     browser.switch_to_window(workspace_window)
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_addfiles complete."
+
 
 def _test_properties(browser):
     print "running _test_properties..."
@@ -284,7 +305,8 @@ def _test_properties(browser):
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
-        from util import setup_chrome, setup_firefox
+        # tests should be in alpha order as that's how they will run under nose
+        from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
         _test_addfiles(browser)
@@ -301,4 +323,3 @@ if __name__ == '__main__':
         sys.argv.append('--cover-package=openmdao.')
         sys.argv.append('--cover-erase')
         sys.exit(nose.runmodule())
-

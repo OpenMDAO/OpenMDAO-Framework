@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from basepageobject import BasePageObject
 from elements import ButtonElement, TextElement
 from component import ComponentPage, PropertiesPage
+from connections import ConnectionsPage
 
 
 class DataflowFigure(BasePageObject):
@@ -13,11 +14,12 @@ class DataflowFigure(BasePageObject):
     top_right = ButtonElement((By.CLASS_NAME, 'DataflowFigureTopRight'))
 
     # Context menu.
-    edit_button       = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
-    properties_button = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
-    run_button        = ButtonElement((By.XPATH, "../div/a[text()='Run']"))
-    disconnect_button = ButtonElement((By.XPATH, "../div/a[text()='Disconnect']"))
-    remove_button     = ButtonElement((By.XPATH, "../div/a[text()='Remove']"))
+    edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
+    properties_button  = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
+    connections_button = ButtonElement((By.XPATH, "../div/a[text()='Connections']"))
+    disconnect_button  = ButtonElement((By.XPATH, "../div/a[text()='Disconnect']"))
+    run_button         = ButtonElement((By.XPATH, "../div/a[text()='Run']"))
+    remove_button      = ButtonElement((By.XPATH, "../div/a[text()='Remove']"))
 
     @property
     def pathname(self):
@@ -31,17 +33,22 @@ class DataflowFigure(BasePageObject):
     @property
     def input_port(self):
         """ Input port element, `pathname` must be set previously. """
-        return self.root.find_element_by_id(self.pathname+'-input')
+        return self.root.find_element_by_id(self.pathname + '-input')
 
     @property
     def output_port(self):
         """ Output port element, `pathname` must be set previously. """
-        return self.root.find_element_by_id(self.pathname+'-output')
+        return self.root.find_element_by_id(self.pathname + '-output')
 
     @property
     def border(self):
         """ Figure border property. """
         return self.root.value_of_css_property('border')
+
+    @property
+    def background_color(self):
+        """ Figure background-color property. """
+        return self.root.value_of_css_property('background-color')
 
     def editor_page(self, double_click=True):
         """ Return :class:`ComponentPage` for this component. """
@@ -62,6 +69,14 @@ class DataflowFigure(BasePageObject):
         props_id = '%s-properties' % self.pathname.replace('.', '-')
         return PropertiesPage(self.browser, self.port, (By.ID, props_id))
 
+    def connections_page(self):
+        """ Return :class:`ConnectionsPage` for this component. """
+        chain = ActionChains(self.browser)
+        chain.move_to_element_with_offset(self.root,15,15).context_click(None).perform()
+        self('connections_button').click()
+        frame_id = 'ConnectionsFrame-%s' % self.pathname.replace('.', '-')
+        return ConnectionsPage(self.browser, self.port, (By.ID, frame_id))
+
     def run(self):
         """ Run this component. """
         chain = ActionChains(self.browser)
@@ -71,7 +86,7 @@ class DataflowFigure(BasePageObject):
     def disconnect(self):
         """ Disconnect this component. """
         chain = ActionChains(self.browser)
-        chain.context_click(self.root).perform()
+        chain.move_to_element_with_offset(self.root,2,2).context_click(None).perform()
         self('disconnect_button').click()
 
     def remove(self):
@@ -79,4 +94,3 @@ class DataflowFigure(BasePageObject):
         chain = ActionChains(self.browser)
         chain.context_click(self.root).perform()
         self('remove_button').click()
-

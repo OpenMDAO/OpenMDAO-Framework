@@ -7,8 +7,6 @@ import jsonpickle
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
-import networkx as nx
-#from enthought.traits.api import HasTraits
 
 from openmdao.main.factorymanager import create, get_available_types
 from openmdao.main.component import Component
@@ -23,12 +21,12 @@ from openmdao.main.publisher import Publisher
 
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
-from zope.interface import implementedBy
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 from openmdao.util.log import logger
+
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -120,7 +118,6 @@ class ConsoleServer(cmd.Cmd):
         if self.exc_info:
             exc_type, exc_value, exc_traceback = self.exc_info
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            traceback.print_tb(exc_traceback, limit=30)
         else:
             print "No trace available."
 
@@ -249,7 +246,6 @@ class ConsoleServer(cmd.Cmd):
             container or dictionary.  the name of the root container, if
             specified, is prepended to all pathnames
         '''
-
         comps = []
         for k, v in cont.items():
             if is_instance(v, Component):
@@ -277,80 +273,94 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(comps)
 
     def get_connections(self, pathname, src_name, dst_name):
-        ''' get list of src outputs, dst inputs and connections between them
+        ''' get list of source variables, destination variables and the
+            connections between them
         '''
         conns = {}
         asm, root = self.get_container(pathname)
         if asm:
             try:
                 # outputs
-                outputs = []
-                src = asm.get(src_name)
+                sources = []
+                if src_name:
+                    src = asm.get(src_name)
+                else:
+                    src = asm
                 connected = src.list_outputs(connected=True)
                 for name in src.list_outputs():
                     units = ''
                     meta = src.get_metadata(name)
                     if meta and 'units' in meta:
                         units = meta['units']
-                    outputs.append({'name': name,
+                    sources.append({'name': name,
                                     'type': type(src.get(name)).__name__,
                                     'valid': src.get_valid([name])[0],
                                     'units': units,
                                     'connected': (name in connected)
                                    })
-                conns['outputs'] = sorted(outputs, key=lambda d: d['name'])
+                # connections to assembly can be passthrough (input to input)
+                if src == asm:
+                    connected = src.list_inputs(connected=True)
+                    for name in src.list_inputs():
+                        units = ''
+                        meta = src.get_metadata(name)
+                        if meta and 'units' in meta:
+                            units = meta['units']
+                        sources.append({'name': name,
+                                        'type': type(src.get(name)).__name__,
+                                        'valid': src.get_valid([name])[0],
+                                        'units': units,
+                                        'connected': (name in connected)
+                                       })
+                conns['sources'] = sorted(sources, key=lambda d: d['name'])
 
                 # inputs
-                inputs = []
-                dst = asm.get(dst_name)
+                dests = []
+                if dst_name:
+                    dst = asm.get(dst_name)
+                else:
+                    dst = asm
                 connected = dst.list_inputs(connected=True)
                 for name in dst.list_inputs():
                     units = ''
                     meta = dst.get_metadata(name)
                     if meta and 'units' in meta:
                         units = meta['units']
-                    inputs.append({'name': name,
-                                   'type': type(dst.get(name)).__name__,
-                                   'valid': dst.get_valid([name])[0],
-                                   'units': units,
-                                   'connected': (name in connected)
-                                 })
-                conns['inputs'] = sorted(inputs, key=lambda d: d['name'])
+                    dests.append({'name': name,
+                                  'type': type(dst.get(name)).__name__,
+                                  'valid': dst.get_valid([name])[0],
+                                  'units': units,
+                                  'connected': (name in connected)
+                                })
+                # connections to assembly can be passthrough (output to output)
+                if dst == asm:
+                    connected = dst.list_outputs(connected=True)
+                    for name in dst.list_outputs():
+                        units = ''
+                        meta = dst.get_metadata(name)
+                        if meta and 'units' in meta:
+                            units = meta['units']
+                        dests.append({'name': name,
+                                      'type': type(dst.get(name)).__name__,
+                                      'valid': dst.get_valid([name])[0],
+                                      'units': units,
+                                      'connected': (name in connected)
+                                     })
+                conns['destinations'] = sorted(dests, key=lambda d: d['name'])
 
                 # connections
                 connections = []
-                conntuples = asm.list_connections(show_passthrough=False)
+                conntuples = asm.list_connections(show_passthrough=True)
                 for src, dst in conntuples:
-                    if src.startswith(src_name + ".") and \
-                       dst.startswith(dst_name + "."):
+                    if (src_name and src.startswith(src_name + ".") \
+                       or (not src_name and src.find('.') < 0)) and \
+                       (dst_name and dst.startswith(dst_name + ".") \
+                       or (not dst_name and dst.find('.') < 0)):
                         connections.append([src, dst])
                 conns['connections'] = connections
             except Exception, err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(conns)
-
-    def set_connections(self, pathname, src_name, dst_name, connections):
-        ''' set connections between src and dst components in the given
-            assembly
-        '''
-        asm, root = self.get_container(pathname)
-        if asm:
-            try:
-                conntuples = asm.list_connections(show_passthrough=False)
-                # disconnect any connections that are not in the new set
-                for src, dst in conntuples:
-                    if src.startswith(src_name + ".") and \
-                       dst.startswith(dst_name + "."):
-                        if [src, dst] not in connections:
-                            print "disconnecting", src, dst
-                            asm.disconnect(src, dst)
-                # connect stuff in new set that is not already connected
-                for src, dst in connections:
-                    if (src, dst) not in conntuples:
-                        print "connecting", src, dst
-                        asm.connect(src, dst)
-            except Exception, err:
-                self._error(err, sys.exc_info())
 
     def get_dataflow(self, pathname):
         ''' get the structure of the specified assembly, or of the global
@@ -428,10 +438,9 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-            self.projdirfactory = ProjDirFactory(self.proj.path, 
+            self.projdirfactory = ProjDirFactory(self.proj.path,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -561,4 +570,3 @@ class ConsoleServer(cmd.Cmd):
                         self._publish_comps[pathname] -= 1
                         if self._publish_comps[pathname] < 1:
                             del self._publish_comps[pathname]
-
