@@ -211,6 +211,7 @@ class ProjDirFactory(Factory):
             logger.critical('ProjDirFactory.on_modified: %r', fpath)
             imported = False
             if fpath in self.analyzer.fileinfo: # file has been previously scanned
+                logger.critical('    %s vs. %s', os.path.getmtime(fpath), self.analyzer.fileinfo[fpath][1])
                 visitor = self.analyzer.fileinfo[fpath][0]
                 pre_set = set(visitor.classes.keys())
             
@@ -232,16 +233,18 @@ class ProjDirFactory(Factory):
                         reload(sys.modules[modpath])
                 self.on_deleted(fpath, set()) # clean up old refs
             else:  # it's a new file
+                logger.critical('    new file')
                 pre_set = set()
 
             visitor = self.analyzer.analyze_file(fpath)
-
             post_set = set(visitor.classes.keys())
 
             deleted_set.update(pre_set - post_set)
             added_set.update(post_set - pre_set)
             if imported:
                 changed_set.update(pre_set.intersection(post_set))
+            logger.critical('    pre_set %s', pre_set)
+            logger.critical('    post_set %s', post_set)
             logger.critical('    done')
 
     def on_deleted(self, fpath, deleted_set):
@@ -258,7 +261,6 @@ class ProjDirFactory(Factory):
             
                 visitor = self.analyzer.fileinfo[fpath][0]
                 deleted_set.update(visitor.classes.keys())
-
                 self.analyzer.remove_file(fpath)
             logger.critical('    done')
             

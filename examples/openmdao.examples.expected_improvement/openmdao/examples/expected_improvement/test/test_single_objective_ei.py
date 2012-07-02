@@ -1,6 +1,7 @@
 """
 Test for single criteria EI example.
 """
+import logging
 import os.path
 import unittest
 import random
@@ -58,6 +59,8 @@ class SingleObjectiveEITest(unittest.TestCase):
             
             errors.append((analysis.branin_meta_model.f_xy.mu - z)/z*100)
         avg_error = sum(errors)/float(len(errors))
+        logging.info('#errors %s, sum(errors) %s, avg_error %s',
+                     len(errors), sum(errors), avg_error)
         self.assertTrue(avg_error <= 35)
         
 if __name__=="__main__": #pragma: no cover
