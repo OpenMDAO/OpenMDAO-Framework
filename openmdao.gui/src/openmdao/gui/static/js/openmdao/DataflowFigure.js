@@ -360,7 +360,6 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // remove
         menu.appendMenuItem(new draw2d.MenuItem("Remove",null,function(){
-            self.minimize();
             model.removeComponent(pathname);
         }));
 
@@ -588,6 +587,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             }
         });
         if (!found) {
+            fig.minimize();
             workflow.removeFigure(fig);
             self.removeChild(fig);
             delete self.figures[name];
