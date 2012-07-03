@@ -968,21 +968,25 @@ class OpenMDAO_Manager(BaseManager):
             if cwd is not None:
                 os.chdir(cwd)
 
-                # Reset stdout & stderr.
+                # Cleanup cloned logging environment.
                 for handler in logging._handlerList:
                     try:
                         handler.flush()
                     except AttributeError:
-                        h = handler()
+                        h = handler()  # WeakRef
                         if h:
                             h.flush()
+                del logging.root.handlers[:]
+                del logging._handlerList[:]
+                logging._handlers.clear()
+
+                # Reset stdout & stderr.
                 sys.stdout.flush()
                 sys.stderr.flush()
                 sys.stdout = open('stdout', 'w')
                 sys.stderr = open('stderr', 'w')
 
                 # Reset logging.
-                logging.root.handlers = []
                 logging.basicConfig(level=log_level,
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',

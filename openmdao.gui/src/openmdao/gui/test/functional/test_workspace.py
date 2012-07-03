@@ -84,6 +84,7 @@ def _test_import(browser):
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
+    time.sleep(1)
     workspace_page.find_palette_button('Paraboloid').click()
 
     # Make sure there are only two dataflow figures (top & driver)
@@ -216,6 +217,7 @@ f_x = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
+    time.sleep(1)
     workspace_page.find_palette_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
