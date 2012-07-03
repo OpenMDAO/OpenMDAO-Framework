@@ -23,7 +23,7 @@ openmdao.Util = {
 
     /**
      * function to block all input on the page
-     * (by covering it with a semi-transparnet div)
+     * (by covering it with a semi-transparent div)
      */
     toggle_screen: function() {
         var id = '_smokescreen_',
@@ -34,7 +34,7 @@ openmdao.Util = {
             el.style.cssText='position:fixed;top:0px;left:0px;'+
                              'height:100%;width:100%;'+
                              'background:#EEE;opacity:.4;' +
-                             'z-index:999;display:none';
+                             'z-index:99999;display:none';
             document.body.appendChild(el);
         }
         if (el.style.display === 'block') {
