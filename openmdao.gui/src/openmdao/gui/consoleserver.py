@@ -181,6 +181,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             print "Execution failed: No 'top' assembly was found."
 
+    @modifies_model
     def execfile(self, filename):
         ''' execfile in server's globals.
         '''

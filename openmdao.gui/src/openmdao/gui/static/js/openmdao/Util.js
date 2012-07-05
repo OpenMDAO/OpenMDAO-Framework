@@ -23,7 +23,7 @@ openmdao.Util = {
 
     /**
      * function to block all input on the page
-     * (by covering it with a semi-transparnet div)
+     * (by covering it with a semi-transparent div)
      */
     toggle_screen: function() {
         var id = '_smokescreen_',
@@ -34,7 +34,7 @@ openmdao.Util = {
             el.style.cssText='position:fixed;top:0px;left:0px;'+
                              'height:100%;width:100%;'+
                              'background:#EEE;opacity:.4;' +
-                             'z-index:999;display:none';
+                             'z-index:99999;display:none';
             document.body.appendChild(el);
         }
         if (el.style.display === 'block') {
@@ -187,62 +187,50 @@ openmdao.Util = {
         var promptId = baseId+'-prompt',
             inputId = baseId+'-input',
             okId = baseId+'-ok',
+            cancelId = baseId + '-cancel',
             element = document.getElementById(baseId),
             win = null;
             userInput = null;
 
-        function handleResponse() {
-            // close dialog, invoke callback
+        function handleResponse(ok) {
+            // close dialog
             win.dialog('close');
-            if (callback) {
+            // if response was 'Ok' then invoke the callback
+            if (ok && callback) {
                 callback(userInput.val());
             }
-            //clear input value
-            userInput.val('');
-            // unbind handlers so they dont get called again
-            jQuery('#'+okId).unbind('click');
-            jQuery('#'+inputId).unbind('keypress.enterkey');
+            // remove from DOM
+            win.remove();
         }
 
-        if (element === null) {
-            // Build dialog markup
-            win = jQuery('<div id="'+baseId+'"><div id="'+promptId+'" /></div>');
-            userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
-            userInput.appendTo(win);
-            win.dialog({
-                autoOpen: false,
-                modal: true,
-                buttons: [
-                    {
-                        text: 'Ok',
-                        id: okId
-                        // click is defined below.
-                    },
-                    {
-                        text: 'Cancel',
-                        id: baseId+'-cancel',
-                        click: handleResponse
-                    }
-                ]
-            });
-        }
-        else {
-            win = jQuery('#'+baseId);
-            userInput = jQuery('#'+inputId);
-        }
+        win = jQuery('<div id="'+baseId+'"><div id="'+promptId+'" /></div>');
 
-        // Update for current invocation.
-        jQuery('#'+promptId).html(prompt+':');
-
-        jQuery('#'+inputId).bind('keypress.enterkey', function(e) {
+        userInput = jQuery('<input type="text" id="'+inputId+'" style="width:100%"></input>');
+        userInput.bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
-                handleResponse();
+                handleResponse(true);
             }
         });
+        userInput.appendTo(win);
 
-        jQuery('#'+okId).bind('click', function() {
-            handleResponse();
+        win.dialog({
+            autoOpen: false,
+            modal: true,
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: okId,
+                    click: function() { handleResponse(true); }
+                },
+                {
+                    text: 'Cancel',
+                    id: cancelId,
+                    click: function() { handleResponse(false); }
+                }
+            ]
         });
+
+        jQuery('#'+promptId).html(prompt+':');
 
         win.dialog('open');
     },
