@@ -9,10 +9,33 @@ openmdao.CodeFrame = function(id,model) {
      ***********************************************************************/
 
     // initialize private variables
+    
+	uiBarID=id+'-uiBar';
+	uiBar= jQuery('<div id="'+uiBarID+'">').appendTo("#"+id).width(screen.width).height(15);	
+	
+	saveID=	uiBarID+'-save';
+	findID=	uiBarID+'-find';
+	replaceID=	uiBarID+'-replace';
+	replaceAllID=	uiBarID+'-replaceAll';
+	undoID=uiBarID+'-undo';
+	
+	jQuery("<button id='"+saveID+"'>Save</button>").button({icons: {primary:'ui-icon-disk'}}).css({height:'25px'}).appendTo("#"+uiBarID);    
+	jQuery("<button id='"+findID+"'>Find</button>").button({icons: {primary:'ui-icon-search'}}).css({height:'25px'}).appendTo("#"+uiBarID);    
+	jQuery("<button id='"+replaceID+"'>Replace</button>").button({icons: {primary:'ui-icon-search'}}).css({height:'25px'}).appendTo("#"+uiBarID);  
+	jQuery("<button id='"+replaceAllID+"'>Replace All</button>").button({icons: {primary:'ui-icon-search'}}).css({height:'25px'}).appendTo("#"+uiBarID);  	
+	jQuery("<button id='"+undoID+"'>Undo</button>").button({icons: {primary:'ui-icon-arrowrefresh-1-n'}}).css({height:'25px'}).appendTo("#"+uiBarID);  	
+	
+	jQuery("#"+saveID).click(function() { saveFile(); });
+	jQuery("#"+findID).click(function() { editor.commands.commands.find.exec(editor); });
+	jQuery("#"+replaceID).click(function() { editor.commands.commands.replace.exec(editor); });
+	jQuery("#"+replaceAllID).click(function() { editor.commands.commands.replaceall.exec(editor); });
+	jQuery("#"+undoID).click(function() { editor.commands.commands.undo.exec(editor); });
+	
     var self = this,
         filepath = "",
         editorID = id+'-textarea',
         editorArea = jQuery('<pre id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height);
+	
 	
 	var editor = ace.edit(editorID);
 	
@@ -57,6 +80,8 @@ openmdao.CodeFrame = function(id,model) {
                 //editor.setValue(contents);
 		editor.session.doc.setValue(contents);
 		editor.navigateFileStart();
+		var UndoManager = require("ace/undomanager").UndoManager;
+		editor.getSession().setUndoManager(new UndoManager());
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
