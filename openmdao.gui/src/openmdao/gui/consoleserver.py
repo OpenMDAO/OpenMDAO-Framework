@@ -440,7 +440,6 @@ class ConsoleServer(cmd.Cmd):
                 remove_class_factory(self.projdirfactory)
             self.projdirfactory = ProjDirFactory(self.proj.path,
                                                  observer=self.files.observer)
-            logger.error("registering projdirfactory")
             register_class_factory(self.projdirfactory)
         except Exception, err:
             self._error(err, sys.exc_info())
@@ -520,7 +519,6 @@ class ConsoleServer(cmd.Cmd):
     def write_file(self, filename, contents):
         ''' write contents to file
         '''
-        logger.error("consoleserver: write_file")
         return self.files.write_file(filename, contents)
 
     def add_file(self, filename, contents):
@@ -576,30 +574,15 @@ class ConsoleServer(cmd.Cmd):
     def file_classes_changed(self, filename):
         pdf = None
         for f in factories:
-            logger.error("factory: %s" % f)
             if isinstance(f, ProjDirFactory):
                 pdf = f
                 break
-        #pdf = _get_projdirfactory()
-        logger.error("pdf = %s" % pdf)
-        logger.error("proj dir = %s" % self.proj.path)
-        logger.error("filename (cserver side) = %s" % filename)
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
             info = pdf.analyzer.fileinfo.get(filename,(None,None))[0]
-            logger.error("info = %s" % info)
-            if info:
-                logger.error("info.classes = %s" % info.classes.keys())
-                logger.error("info.modpath = %s" % info.modpath)
-                for m in sys.modules:
-                    if info.modpath in m:
-                        logger.error("%s in sys.modules" % m)
-                logger.error("info.modpath in sys.modules? %s" % (info.modpath in sys.modules))
             # if changed file contained classes and has already been imported..
             if info and len(info.classes)>0 and info.modpath in sys.modules: 
-                logger.error("returning True from file_classes_changed")
                 return True
-        logger.error("returning False from file_classes_changed")
         return False
 

@@ -242,14 +242,10 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
-            force = self.get_argument('force', default=False)
-            logger.error("filename = %s" % filename)
-            logger.error("force = %s" % force)
+            force = int(self.get_argument('force', default=0))
             if not force and filename.endswith('.py'):
                 ret = cserver.file_classes_changed(filename)
-                logger.error("ret = %s" % ret)
                 if ret:
-                    logger.error("sending 409")
                     self.send_error(409)  # user will be prompted to overwrite classes
                     return
             contents = self.get_argument('contents', default='')

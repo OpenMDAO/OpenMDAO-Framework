@@ -381,11 +381,6 @@ openmdao.Model=function() {
 
     /** set the contents of the specified file */
     this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
-        debug.info("model.setFile");
-        debug.info("force")
-        debug.info(force)
-        debug.info('handler409')
-        debug.info(handler409)
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
