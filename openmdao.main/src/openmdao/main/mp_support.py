@@ -66,7 +66,8 @@ from openmdao.main.rbac import AccessController, RoleError, check_role, \
                                need_proxy, Credentials, \
                                get_credentials, set_credentials
 
-from openmdao.util.log import LOG_DEBUG2, LOG_DEBUG3
+from openmdao.util.log import install_remote_handler, remove_remote_handlers, \
+                              logging_port, LOG_DEBUG2, LOG_DEBUG3
 
 from openmdao.util.publickey import decode_public_key, encode_public_key, \
                                     get_key_pair, HAVE_PYWIN32, \
@@ -788,6 +789,7 @@ class OpenMDAO_Server(Server):
         print msg
         sys.stdout.flush()
         self._logger.info(msg)
+        remove_remote_handlers()
 
         # Deprecated, but marginally better than atexit._run_exitfuncs()
         # Don't try to log here, logging shuts-down via atexit.
@@ -889,14 +891,24 @@ class OpenMDAO_Manager(BaseManager):
         else:
             registry = self._registry
 
+        # Flush logs before cloning.
+        for handler in logging._handlerList:
+            try:
+                handler.flush()
+            except AttributeError:
+                h = handler()  # WeakRef
+                if h:
+                    h.flush()
+
         # Spawn process which runs a server.
         credentials = get_credentials()
+        log_port = logging_port('localhost', 'localhost')
         self._process = Process(
             target=type(self)._run_server,
             args=(registry, self._address, self._authkey,
                   self._serializer, self._name, self._allowed_hosts,
                   self._allowed_users, self._allow_tunneling,
-                  writer, credentials, cwd, log_level),
+                  writer, credentials, cwd, log_port, log_level),
             )
         ident = ':'.join(str(i) for i in self._process._identity)
         self._process.name = type(self).__name__  + '-' + ident
@@ -950,7 +962,7 @@ class OpenMDAO_Manager(BaseManager):
     @classmethod
     def _run_server(cls, registry, address, authkey, serializer, name,
                     allowed_hosts, allowed_users, allow_tunneling,
-                    writer, credentials, cwd, log_level): #pragma no cover
+                    writer, credentials, cwd, log_port, log_level): #pragma no cover
         """
         Create a server, report its address and public key, and run it.
         """
@@ -969,13 +981,6 @@ class OpenMDAO_Manager(BaseManager):
                 os.chdir(cwd)
 
                 # Cleanup cloned logging environment.
-                for handler in logging._handlerList:
-                    try:
-                        handler.flush()
-                    except AttributeError:
-                        h = handler()  # WeakRef
-                        if h:
-                            h.flush()
                 del logging.root.handlers[:]
                 del logging._handlerList[:]
                 logging._handlers.clear()
@@ -991,6 +996,10 @@ class OpenMDAO_Manager(BaseManager):
                     datefmt='%b %d %H:%M:%S',
                     format='%(asctime)s %(levelname)s %(name)s: %(message)s',
                     filename='openmdao_log.txt', filemode='w')
+
+                # Connect to remote logging server.
+                if log_port:
+                    install_remote_handler('localhost', log_port, name)
 
             # Create server.
             server = cls._Server(registry, address, authkey, serializer, name,

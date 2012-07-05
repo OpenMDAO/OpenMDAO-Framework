@@ -356,6 +356,7 @@ class ObjServer(object):
         """ Set logging level to `level`. """
         self._logger.info('log_level %s', level)
         self._logger.setLevel(level)
+        logging.getLogger().setLevel(level)
 
     @rbac('*')
     def echo(self, *args):
@@ -483,7 +484,7 @@ class ObjServer(object):
         self._check_path(egg_filename, 'load_model')
         if self.tlo:
             self.tlo.pre_delete()
-        self.tlo = Container.load_from_eggfile(egg_filename)
+        self.tlo = Container.load_from_eggfile(egg_filename, log=self._logger)
         return self.tlo
 
     @rbac('owner')
