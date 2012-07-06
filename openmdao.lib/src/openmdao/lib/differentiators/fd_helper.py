@@ -20,7 +20,7 @@ class FDhelper(object):
     def __init__(self, model, comps, wrt, outs, stepsize=1.0e-6, order=1,
                  form='CENTRAL'):
         ''' Takes a model and a list of component names in that model. The
-        model is deepcopiesto create a copy. All but the needed comps are
+        model is deepcopied to create a copy. All but the needed comps are
         removed from the model.
         
         model: Assembly
@@ -134,3 +134,14 @@ class FDhelper(object):
                 icase += 1
                 
         return derivs
+    
+    def list_wrt(self):
+        """ Returns a list of variable paths that we are differencing with
+        respect to.
+        """
+        return self.model.driver.get_parameters().keys()
+
+    def list_outs(self):
+        """ Returns a list of variable paths that we are differencing.
+        """
+        return self.model.driver.case_outputs
