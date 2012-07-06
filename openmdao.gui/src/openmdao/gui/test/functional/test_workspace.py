@@ -84,10 +84,12 @@ def _test_import(browser):
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
+    time.sleep(1)
     workspace_page.find_palette_button('Paraboloid').click()
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
+    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # Drag element into workspace.
@@ -215,6 +217,7 @@ f_x = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
+    time.sleep(2)
     workspace_page.find_palette_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
@@ -255,6 +258,7 @@ def _test_addfiles(browser):
 
     # Check to make sure the files were added.
     browser.switch_to_window(editor_window)
+    time.sleep(1)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):
