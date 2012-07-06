@@ -9,10 +9,12 @@ openmdao.CodeFrame = function(id,model) {
      ***********************************************************************/
 
     // initialize private variables
-    
-	uiBarID=id+'-uiBar';
-	uiBar= jQuery('<div id="'+uiBarID+'">').appendTo("#"+id).width(screen.width).height(15);	
 	
+	uiBarID=id+'-uiBar';
+	uiparent=jQuery("#"+id).parent();
+	uiparent.css({overflow:'hidden',position:'absolute'});
+	uiBar= jQuery('<div id="'+uiBarID+'">').prependTo(uiparent).width(screen.width).height(15);	
+
 	saveID=	uiBarID+'-save';
 	findID=	uiBarID+'-find';
 	replaceID=	uiBarID+'-replace';
@@ -34,9 +36,7 @@ openmdao.CodeFrame = function(id,model) {
     var self = this,
         filepath = "",
         editorID = id+'-textarea',
-        editorArea = jQuery('<pre id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height);
-	
-	
+        editorArea = jQuery('<pre id="'+editorID+'">').css({position:'absolute',overflow:'hidden'}).appendTo("#"+id);
 	var editor = ace.edit(editorID);
 	
 	//editor.setTheme("ace/theme/chrome");
@@ -79,6 +79,8 @@ openmdao.CodeFrame = function(id,model) {
             function(contents) {
                 //editor.setValue(contents);
 		editor.session.doc.setValue(contents);
+		self.resize();
+		editor.resize();
 		editor.navigateFileStart();
 		var UndoManager = require("ace/undomanager").UndoManager;
 		editor.getSession().setUndoManager(new UndoManager());
@@ -91,7 +93,13 @@ openmdao.CodeFrame = function(id,model) {
             }
         );
     };
-
+    
+    // method to resize the Ace code pane
+    this.resize = function() {
+    editorArea.width(jQuery(window).width()-210);
+    editorArea.height(jQuery(window).height()-75);
+    };
+    
     /** get the pathname for the current file */
     this.getPathname = function() {
         return filepath;
