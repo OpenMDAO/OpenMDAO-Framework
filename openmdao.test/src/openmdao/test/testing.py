@@ -10,6 +10,7 @@ from openmdao.main.resource import ResourceAllocationManager
 
 import atexit
 
+
 # Code based on Python 2.7 atexit.py
 def _run_exitfuncs():
     """
@@ -222,7 +223,7 @@ def run_openmdao_suite(argv=None):
     except NotImplementedError:
         multiprocessing.cpu_count = lambda: 1
     
-    _trace_atexit()
+#    _trace_atexit()
     nose.run_exit(argv=args)
 
 if __name__ == '__main__':

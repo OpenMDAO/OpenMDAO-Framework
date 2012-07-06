@@ -30,7 +30,8 @@ from openmdao.main.rbac import get_credentials, set_credentials, \
 from openmdao.main.releaseinfo import __version__
 
 from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
-from openmdao.util.log import LOG_DEBUG2
+from openmdao.util.log import install_remote_handler, remove_remote_handlers, \
+                              logging_port, LOG_DEBUG2
 from openmdao.util.publickey import make_private, read_authorized_keys, \
                                     write_authorized_keys, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT, DEV_NULL
@@ -722,7 +723,8 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
 
 def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
                  allowed_hosts=None, allowed_users=None, allow_shell=False,
-                 allowed_types=None, timeout=None, tunnel=False, resources=None):
+                 allowed_types=None, timeout=None, tunnel=False,
+                 resources=None, log_prefix=None):
     """
     Start an :class:`ObjServerFactory` service in a separate process
     in the current directory.
@@ -771,6 +773,10 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
 
     resources: string
         Filename for resource configuration.
+
+    log_prefix: string
+        Name used to identify remote remote logging messages from server.
+        Implies that the local process will be receiving the messages.
 
     Returns ``(server_proc, config_filename)``.
     """
@@ -836,6 +842,13 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
             logging.warning("Can't make types.allow private")
         args.extend(['--types', 'types.allow'])
 
+    if log_prefix is not None:
+        log_host = socket.gethostname()
+        log_port = logging_port(log_host, log_host)
+        args.extend(['--log-host', log_host, '--log-port', str(log_port)])
+        if log_prefix:  # Could be null (for default).
+            args.extend(['--log-prefix', log_prefix])
+
     proc = ShellProc(args, stdout=server_out, stderr=STDOUT)
 
     try:
@@ -884,7 +897,7 @@ def main():  #pragma no cover
     """
     OpenMDAO factory service process.
 
-    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--address=address][--port=number][--prefix=name][--tunnel][--resources=filename]
+    Usage: python objserverfactory.py [--allow-public][--allow-shell][--hosts=filename][--types=filename][--users=filename][--address=address][--port=number][--prefix=name][--tunnel][--resources=filename][--log-host=hostname][--log-port=number][--log-prefix=string]
 
     --allow-public:
         Allows access by anyone from any allowed host. Use with care!
@@ -940,6 +953,15 @@ def main():  #pragma no cover
         Filename for resource configuration. If not specified then the
         default of ``~/.openmdao/resources.cfg`` will be used.
 
+    --log-host: string
+        Hostname to send remote log messages to.
+
+    --log-port: int
+        Port on `log-host` to send remote log messages to.
+
+    --log-prefix: string
+        Prefix to apply to remote log messages. Default is ``pid@host``.
+
     If ``prefix.key`` exists, it is read for an authorization key string.
     Otherwise public key authorization and encryption is used.
 
@@ -972,6 +994,12 @@ def main():  #pragma no cover
                            ' from a local SSH tunnel')
     parser.add_option('--resources', action='store', type='str',
                       default=None, help='Filename for resource configuration')
+    parser.add_option('--log-host', action='store', type='str',
+                      default=None, help='hostname for remote log messages')
+    parser.add_option('--log-port', action='store', type='int',
+                      default=None, help='port for remote log messages')
+    parser.add_option('--log-prefix', action='store', type='str',
+                      default=None, help='prefix for remote log messages')
 
     options, arguments = parser.parse_args()
     if arguments:
@@ -980,6 +1008,9 @@ def main():  #pragma no cover
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
+    if options.log_host and options.log_port:
+        install_remote_handler(options.log_host, int(options.log_port),
+                               options.log_prefix)
 
     server_key = options.prefix+'.key'
     server_cfg = options.prefix+'.cfg'
@@ -1155,6 +1186,7 @@ def _sigterm_handler(signum, frame):  #pragma no cover
 
 def _cleanup():  #pragma no cover
     """ Cleanup in preparation to shut down. """
+    remove_remote_handlers()
     keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
     if not keep_dirs and os.path.exists(_SERVER_CFG):
         os.remove(_SERVER_CFG)
