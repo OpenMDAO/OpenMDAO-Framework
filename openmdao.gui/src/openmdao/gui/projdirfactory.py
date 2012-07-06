@@ -146,15 +146,12 @@ class ProjDirFactory(Factory):
         """
         if server is None and res_desc is None and typ in self.analyzer.class_map:
             with self._lock:
-                logger.critical('ProjDirFactory.create: %r', typ)
                 fpath = self.analyzer.class_map[typ].fname
                 modpath = self.analyzer.fileinfo[fpath][0].modpath
                 if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1] and modpath in sys.modules:
-                    logger.critical('    reload %r', fpath)
                     reload(sys.modules[modpath])
                 if fpath not in self.imported:
                     sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
-                    logger.critical('    import %r', modpath)
                     try:
                         __import__(modpath)
                     except ImportError as err:
@@ -168,9 +165,7 @@ class ProjDirFactory(Factory):
                 try:
                     ctor = self.imported[fpath][1][typ]
                 except KeyError:
-                    logger.critical('    KeyError %r', fpath)
                     return None
-                logger.critical('    ctor %r', ctor)
                 return ctor(**ctor_args)
         return None
 
@@ -179,7 +174,6 @@ class ProjDirFactory(Factory):
         return True.
         """
         with self._lock:
-            logger.critical('ProjDirFactory.get_available_types: %r', groups)
             graph = self.analyzer.graph
             typset = set(graph.nodes())
             types = []
@@ -205,17 +199,14 @@ class ProjDirFactory(Factory):
             return
         
         with self._lock:
-            logger.critical('ProjDirFactory.on_modified: %r', fpath)
             imported = False
             if fpath in self.analyzer.fileinfo: # file has been previously scanned
-                logger.critical('    %s vs. %s', os.path.getmtime(fpath), self.analyzer.fileinfo[fpath][1])
                 visitor = self.analyzer.fileinfo[fpath][0]
                 pre_set = set(visitor.classes.keys())
             
                 if fpath in self.imported:  # we imported it earlier
                     imported = True
                     sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
-                    logger.critical('    reload')
                     try:
                         reload(self.imported[fpath][0])
                     except ImportError as err:
@@ -226,11 +217,9 @@ class ProjDirFactory(Factory):
                 elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
                     modpath = get_module_path(fpath)
                     if modpath in sys.modules:
-                        logger.critical('    reload %r', modpath)
                         reload(sys.modules[modpath])
                 self.on_deleted(fpath, set()) # clean up old refs
             else:  # it's a new file
-                logger.critical('    new file')
                 pre_set = set()
 
             visitor = self.analyzer.analyze_file(fpath)
@@ -240,13 +229,9 @@ class ProjDirFactory(Factory):
             added_set.update(post_set - pre_set)
             if imported:
                 changed_set.update(pre_set.intersection(post_set))
-            logger.critical('    pre_set %s', pre_set)
-            logger.critical('    post_set %s', post_set)
-            logger.critical('    done')
 
     def on_deleted(self, fpath, deleted_set):
         with self._lock:
-            logger.critical('ProjDirFactory.on_deleted: %r', fpath)
             if os.path.isdir(fpath):
                 for pyfile in find_files(self.watchdir, "*.py"):
                     self.on_deleted(pyfile, deleted_set)
@@ -259,7 +244,6 @@ class ProjDirFactory(Factory):
                 visitor = self.analyzer.fileinfo[fpath][0]
                 deleted_set.update(visitor.classes.keys())
                 self.analyzer.remove_file(fpath)
-            logger.critical('    done')
             
     def publish_updates(self, added_set, changed_set, deleted_set):
         publisher = Publisher.get_instance()
