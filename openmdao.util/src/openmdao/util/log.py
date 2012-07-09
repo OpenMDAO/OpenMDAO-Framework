@@ -350,7 +350,7 @@ class _RemoteHandler(logging.handlers.SocketHandler):  # pragma no cover
 
     def __init__(self, host, port, prefix):
         self.prefix = prefix
-        super(_RemoteHandler, self).__init__(host, port)
+        logging.handlers.SocketHandler.__init__(self, host, port)
 
     def handle(self, record):
         """
@@ -361,7 +361,7 @@ class _RemoteHandler(logging.handlers.SocketHandler):  # pragma no cover
         record.prefix = self.prefix
         record.msg = record.getMessage()
         record.args = None
-        super(_RemoteHandler, self).handle(record)
+        logging.handlers.SocketHandler.handle(self, record)
 
 
 def logging_port(server_host, client_host):
