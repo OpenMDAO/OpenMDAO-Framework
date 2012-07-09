@@ -225,7 +225,10 @@ class WorkspacePage(BasePageObject):
     def get_dataflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`DataflowFigure` for `name`. """
         for retry in range(retries):
+            time.sleep(0.5)
             figures = self.browser.find_elements_by_class_name('DataflowFigure')
+            if not figures:
+                continue
             fig_name = None
             for figure in figures:
                 try:
@@ -250,7 +253,6 @@ class WorkspacePage(BasePageObject):
                             else:
                                 fig.pathname = name
                         return fig
-            time.sleep(0.5)
         return None
 
     def get_dataflow_component_names(self):

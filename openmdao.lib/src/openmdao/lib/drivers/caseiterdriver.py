@@ -3,6 +3,7 @@
 
 """
 
+import logging
 import os.path
 import Queue
 import sys
@@ -610,6 +611,11 @@ class CaseIterDriverBase(Driver):
             # Clear egg re-use indicator.
             server_info['egg_file'] = None
             self._logger.debug('%r using %r', name, server_info['name'])
+            if self._logger.level == logging.NOTSET:
+                # By default avoid lots of protocol messages.
+                server.set_log_level(logging.DEBUG)
+            else:
+                server.set_log_level(self._logger.level)
 
         request_q = Queue.Queue()
 

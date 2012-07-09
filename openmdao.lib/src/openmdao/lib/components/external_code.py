@@ -3,6 +3,7 @@
 """
 
 import glob
+import logging
 import os.path
 import shutil
 import stat
@@ -280,6 +281,12 @@ class ExternalCode(ComponentWithDerivatives):
         self._server, server_info = RAM.allocate(rdesc)
         if self._server is None:
             self.raise_exception('Server allocation failed :-(', RuntimeError)
+
+        if self._logger.level == logging.NOTSET:
+            # By default avoid lots of protocol messages.
+            self._server.set_log_level(logging.DEBUG)
+        else:
+            self._server.set_log_level(self._logger.level)
 
         return_code = -88888888
         error_msg = ''
