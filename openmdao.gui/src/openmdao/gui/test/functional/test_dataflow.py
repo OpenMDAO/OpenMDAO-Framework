@@ -52,6 +52,7 @@ def _test_maxmin(browser):
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
     workspace_page('libraries_tab').click()
+    time.sleep(1)
     workspace_page.find_palette_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
     time.sleep(1)

@@ -77,6 +77,7 @@ class FileManager(object):
         ''' Stop observer and cleanup the file directory.
         '''
         if self.observer:
+            self.observer.unschedule_all()
             self.observer.stop()
             self.observer.join()
         os.chdir(self.orig_dir)
