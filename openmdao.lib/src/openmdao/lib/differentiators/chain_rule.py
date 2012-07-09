@@ -225,7 +225,6 @@ class ChainRule(HasTraits):
             # Finite-differenced blocks come in as lists.
             if isinstance(node_name, list):
                 node_list = node_name
-                node_name = str(node_name)
             else:
                 node_list = [node_name]
                 
@@ -274,11 +273,11 @@ class ChainRule(HasTraits):
                         var = '.'.join(parts[1:])
                         needed_outputs.append(var)
 
-                edge_dict[node_name] = (needed_inputs, needed_outputs)
+                edge_dict[item] = (needed_inputs, needed_outputs)
 
         # Cache are finite differentiator helper objects.
         if scope_name not in self.fdhelpers:
-            self._cache_fd(scope_name)
+            self._cache_fd(dscope)
                     
         #print self.edge_dicts
         #print needed_edges
@@ -371,9 +370,11 @@ class ChainRule(HasTraits):
         scope_name = dscope.get_pathname()
         self.dworkflow[scope_name] = workflow_list
         
-    def _cache_fd(self, scope_name):
+    def _cache_fd(self, dscope):
         """ Create and save the finite difference helper objects.
         """
+        
+        scope_name = dscope.get_pathname()
         
         self.fdhelpers[scope_name] = {}
         edge_dict = self.edge_dicts[scope_name]
@@ -384,11 +385,14 @@ class ChainRule(HasTraits):
                 wrt = []
                 outs = []
                 for compname in comps:
-        
-                    wrt = wrt + edge_dict[compname][0]
-                    outs = outs + edge_dict[compname][1]
                     
-                self.fdhelpers[scope_name][comps] = FDhelper(comps, wrt, outs)
+                    wrt = wrt + ['%s.%s' % (compname, a) \
+                                 for a in edge_dict[compname][0]]
+                    outs = outs + ['%s.%s' % (compname, a) \
+                                 for a in edge_dict[compname][1]]
+                    
+                self.fdhelpers[scope_name][str(comps)] = \
+                    FDhelper(dscope.parent, comps, wrt, outs)
         
         
     def calc_gradient(self):

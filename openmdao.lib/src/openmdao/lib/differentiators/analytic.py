@@ -300,14 +300,14 @@ class Analytic(ChainRule):
             # difference together.
             if isinstance(node_name, list):
                 
-                fd = self.fdhelpers[scope_name][node_name]
+                fd = self.fdhelpers[scope_name][str(node_name)]
                 
                 input_dict = {}
-                for item in fd.wrt():
+                for item in fd.list_wrt():
                     input_dict[item] = dscope.parent.get(item)
                     
                 output_dict = {}
-                for item in fd.outs():
+                for item in fd.list_outs():
                     output_dict[item] = dscope.parent.get(item)
                         
                 local_derivs = fd.run(input_dict, output_dict)
@@ -432,80 +432,81 @@ class Analytic(ChainRule):
             # This component can determine its derivatives.
             else:
                  
+                node_name = [node_name]
                 node.calc_derivatives(first=True)
                 local_derivs = node.derivatives.first_derivatives
                  
             # The following executes for components with derivatives and
             # blocks that are finite-differenced
+            for item in node_name:
+                edge_dict = self.edge_dicts[scope_name][item]
                 
-            edge_dict = self.edge_dicts[scope_name][node_name]
-            
-            # Calculate derivatives of incoming connections
-            # I moved this out of the double loop so that it isn't
-            # repeated needlessly x(num_outputs)
-            conn_data = {}
-            for input_name in edge_dict[0]:
-                input_full = "%s.%s" % (node_name, input_name)
-                
-                if input_full not in self.param_names and \
-                   input_full not in solver_conns:
-            
-                    sources = ascope._depgraph.connections_to(input_full)
-
-                    expr_txt = sources[0][0]
-                    target = sources[0][1]
-                    
-                    # Variables on an assembly boundary
-                    if expr_txt[0:4] == '@bin':
-                        expr_txt = expr_txt.replace('@bin.', '')
-                    
-                    # Need derivative of the expression
-                    source, expr_deriv = _d_conn(expr_txt, target, 
-                                                 ascope)
-                    
-                    # Chain together deriv from var connection and comp
-                    i_var = self.var_list.index("%s%s" % (head, source))
-                     
-                    conn_data[input_full] = (i_var, expr_deriv[source])
-
-            # Each output gives us an equation
-            for output_name in edge_dict[1]:
-                 
-                self.LHS[i_eq][i_eq] = 1.0
-                 
-                # Each input provides a term for LHS or RHS
+                # Calculate derivatives of incoming connections
+                # I moved this out of the double loop so that it isn't
+                # repeated needlessly x(num_outputs)
+                conn_data = {}
                 for input_name in edge_dict[0]:
+                    input_full = "%s.%s" % (item, input_name)
                     
-                    # Direct connection to parameter goes in RHS
-                    input_full = "%s.%s" % (node_name, input_name)
-                    if input_full in self.param_names:
-                         
-                        i_param = self.param_names.index(input_full)
-                         
-                        self.RHS[i_eq][i_param] = \
-                            local_derivs[output_name][input_name]
-                         
-                    # Input is a dependent in a solver loop
-                    elif input_full in solver_conns:
+                    if input_full not in self.param_names and \
+                       input_full not in solver_conns:
+                
+                        sources = ascope._depgraph.connections_to(input_full)
+                        print input_full, sources
+                        expr_txt = sources[0][0]
+                        target = sources[0][1]
                         
-                        source = solver_conns[input_full]
-                        i_dep = self.var_list.index(source)
+                        # Variables on an assembly boundary
+                        if expr_txt[0:4] == '@bin':
+                            expr_txt = expr_txt.replace('@bin.', '')
+                        
+                        # Need derivative of the expression
+                        source, expr_deriv = _d_conn(expr_txt, target, 
+                                                     ascope)
+                        
+                        # Chain together deriv from var connection and comp
+                        i_var = self.var_list.index("%s%s" % (head, source))
                          
-                        self.LHS[i_eq][i_dep] = \
-                            -local_derivs[output_name][input_name]
+                        conn_data[input_full] = (i_var, expr_deriv[source])
+    
+                # Each output gives us an equation
+                for output_name in edge_dict[1]:
+                     
+                    self.LHS[i_eq][i_eq] = 1.0
+                     
+                    # Each input provides a term for LHS or RHS
+                    for input_name in edge_dict[0]:
                         
-                    # Input connected to other outputs goes in LHS
-                    else:
-                        
-                        # Already calculated connection deriatives
-                        i_var = conn_data[input_full][0]
-                        expr_deriv = conn_data[input_full][1]
-                        
-                        self.LHS[i_eq][i_var] = \
-                            -local_derivs[output_name][input_name] * \
-                             expr_deriv
-                 
-                i_eq += 1
+                        # Direct connection to parameter goes in RHS
+                        input_full = "%s.%s" % (item, input_name)
+                        if input_full in self.param_names:
+                             
+                            i_param = self.param_names.index(input_full)
+                             
+                            self.RHS[i_eq][i_param] = \
+                                local_derivs[output_name][input_name]
+                             
+                        # Input is a dependent in a solver loop
+                        elif input_full in solver_conns:
+                            
+                            source = solver_conns[input_full]
+                            i_dep = self.var_list.index(source)
+                             
+                            self.LHS[i_eq][i_dep] = \
+                                -local_derivs[output_name][input_name]
+                            
+                        # Input connected to other outputs goes in LHS
+                        else:
+                            
+                            # Already calculated connection deriatives
+                            i_var = conn_data[input_full][0]
+                            expr_deriv = conn_data[input_full][1]
+                            
+                            self.LHS[i_eq][i_var] = \
+                                -local_derivs[output_name][input_name] * \
+                                 expr_deriv
+                     
+                    i_eq += 1
             
         return i_eq
     
