@@ -148,7 +148,7 @@ class IterateUntil(Driver):
     
     def start_iteration(self):
         """ Code executed before the iteration """
-        self.iterations = 0
+        self.iteration = 0
     
     def continue_iteration(self): 
         
