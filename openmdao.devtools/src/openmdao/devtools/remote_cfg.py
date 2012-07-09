@@ -6,7 +6,6 @@ import time
 import socket
 import pprint
 
-import ConfigParser
 from multiprocessing import Process
 
 from openmdao.devtools.ec2 import run_on_ec2
@@ -165,7 +164,8 @@ def run_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs, do
     
     print '\nResult Summary:  Host, Return Code'
     for k,v in summary.items():
-        print '  %s, %s' % (k, v)
+        status = _check_test_output(k)
+        print '  %s, %s %s' % (k, v, status)
         
     hours, mins, secs = get_times(t1, t2)
     print '\n\nElapsed time:',
@@ -191,7 +191,6 @@ def collect_host_processes(processes, done_functs=()):
         of remaining processes still (possibly) running.
     """
     summary = {}
-    retcode = 0
     processes = processes[:]
     while len(processes) > 0:
         time.sleep(10)
@@ -204,6 +203,27 @@ def collect_host_processes(processes, done_functs=()):
                 break
             
     return summary
+
+def _check_test_output(host):
+    """ Look for final test status ('OK' or 'FAILED'). """
+    run_out = os.path.join('host_results', host, 'run.out')
+    if not os.path.exists(run_out):
+        return ''
+
+    with open(run_out, 'r') as inp:
+        lines = inp.readlines()
+
+    i = len(lines)-1
+    while i >= 0:
+        line = lines[i]
+        if 'OK' in line:
+            return 'OK'
+        elif 'FAILED' in line:
+            j = line.index('FAILED')
+            return line[j:].strip()
+        i -= 1
+
+    return ''
 
 def start_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
     """Start up a different process for each host in options.hosts. Hosts can
