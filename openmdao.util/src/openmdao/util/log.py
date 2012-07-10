@@ -487,13 +487,16 @@ class _LogHandler(SocketServer.StreamRequestHandler):
 
     def handle(self):
         """ Handle log requests until connection closed. """
-        # An initial 'unused' connection wil be made by the client to see
+        # An initial 'unused' connection will be made by the client to see
         # if it can connect. We reduce logging noise by ignoring these.
         conn = self.connection
         peer = None
 
         while True:
-            data = conn.recv(4)
+            try:
+                data = conn.recv(4)
+            except Exception:
+                return  # Typically [Errno 10054] on Windows.
             if len(data) < 4:
                 break
 
