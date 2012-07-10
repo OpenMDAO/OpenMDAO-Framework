@@ -52,43 +52,72 @@ def _test_maxmin(browser):
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
     workspace_page('libraries_tab').click()
+    time.sleep(1)
     workspace_page.find_palette_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
 
+    workspace_page.hide_left()
+    workspace_page.hide_right()
+    workspace_page.hide_console()
+
+    # minimized and maximized styles for top right corner of dataflow figures
+    if sys.platform == 'darwin':
+        bg_min = '%s %s' % ('url(http://localhost/static/images/circle-plus.png)',
+                            'no-repeat 100% 0%')
+    else:
+        bg_min = '%s %s %s' % ('rgba(0, 0, 0, 0)',
+                               'url(http://localhost/static/images/circle-plus.png)',
+                               'no-repeat scroll 100% 0%')
+    bg_max = bg_min.replace('circle-plus', 'circle-minus')
+
     # Maximize maxmin.
     maxmin = workspace_page.get_dataflow_figure('maxmin')
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    if sys.platform == 'darwin':
-        bg = '%s %s' % ('url(http://localhost/static/images/circle-plus.png)',
-                        'no-repeat 100% 0%')
-    else:
-        bg = '%s %s %s' % ('rgba(0, 0, 0, 0)',
-                           'url(http://localhost/static/images/circle-plus.png)',
-                           'no-repeat scroll 100% 0%')
-    eq(background, bg)
+    eq(background, bg_min)
 
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    bg = bg.replace('circle-plus', 'circle-minus')
-    eq(background, bg)
+
+    eq(background, bg_max)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
-    # Minimize maxmin.
-    maxmin('top_right').click()
+    sub = workspace_page.get_dataflow_figure('sub')
+    sub('top_right').click()
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
+
+    # issue a command and make sure maxmin is still maximized
+    workspace_page.show_console()
+    time.sleep(0.5)
+    workspace_page.do_command('dir()')
     background = maxmin('top_right').value_of_css_property('background')
     background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    bg = bg.replace('circle-minus', 'circle-plus')
-    eq(background, bg)
+    eq(background, bg_max)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'maxmin', 'top'])
+       ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
+
+    # Minimize sub
+    sub('top_right').click()
+    background = sub('top_right').value_of_css_property('background')
+    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
+    eq(background, bg_min)
+    time.sleep(1)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'driver', 'maxmin', 'sub', 'top'])
+
+    # remove maxmin and make sure it'c children are removed as well
+    maxmin.remove()
+    time.sleep(1)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'top'])
 
     # Clean up.
     projects_page = workspace_page.close_workspace()

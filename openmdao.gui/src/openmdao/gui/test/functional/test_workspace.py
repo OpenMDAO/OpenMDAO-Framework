@@ -68,6 +68,8 @@ def _test_import(browser):
                                                 'optimization_unconstrained.py')
     editor_page.add_file(file_path)
 
+    time.sleep(1.0)
+
     # Check to make sure the files were added.
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
@@ -82,10 +84,12 @@ def _test_import(browser):
 
     # Go into Libraries/working section.
     workspace_page('libraries_tab').click()
+    time.sleep(1)
     workspace_page.find_palette_button('Paraboloid').click()
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
+    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # Drag element into workspace.
@@ -168,6 +172,29 @@ def _test_newfile(browser):
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
 
+    # test the 'ok' and 'cancel' buttons on the new file dialog
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('ok_file1')
+    dlg.click_ok()
+    time.sleep(1.0)
+
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('cancel_file')
+    dlg.click_cancel()
+    time.sleep(1.0)
+
+    dlg = editor_page.new_file_dialog()
+    dlg.set_text('ok_file2')
+    dlg.click_ok()
+    time.sleep(1.0)
+
+    file_names = editor_page.get_files()
+    expected_file_names = ['ok_file1', 'ok_file2']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
+
     # Create the file (code editor automatically indents).
     editor_page.new_file('plane.py', """
 from openmdao.main.api import Component
@@ -176,14 +203,12 @@ from openmdao.lib.datatypes.api import Float
 class Plane(Component):
 
     x1 = Float(0.0, iotype='in')
-    x2 = Float(0.0, iotype='in')
-    x3 = Float(0.0, iotype='in')
+# subsequent lines will be auto-indented by ace editor
+x2 = Float(0.0, iotype='in')
+x3 = Float(0.0, iotype='in')
 
-    f_x = Float(0.0, iotype='out')
+f_x = Float(0.0, iotype='out')
 """)
-
-    # Import it.
-    #editor_page.import_file('plane.py')
 
     # Back to workspace.
     browser.close()
@@ -192,6 +217,7 @@ class Plane(Component):
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
+    time.sleep(2)
     workspace_page.find_palette_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
@@ -228,8 +254,11 @@ def _test_addfiles(browser):
     upload_page.select_files((paraboloidPath, optPath))
     upload_page.upload_files()
 
+    time.sleep(1.0)
+
     # Check to make sure the files were added.
     browser.switch_to_window(editor_window)
+    time.sleep(1)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):

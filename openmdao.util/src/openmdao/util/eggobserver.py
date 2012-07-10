@@ -1,6 +1,8 @@
 
 __all__ = ('EggObserver',)
 
+from openmdao.util.log import LOG_DEBUG2
+
 
 class EggObserver(object):
     """
@@ -28,13 +30,13 @@ class EggObserver(object):
         path: string
             Name of file being analyzed.
         """
-        self.logger.debug("    analyzing '%s'", path)
+        self.logger.log(LOG_DEBUG2, "    analyzing '%s'", path)
         if self.observer is not None:
             proceed = True
             try:
                 proceed = self.observer('analyze', path, -1, -1)
             except Exception as exc:
-                self.logger.debug('Exception calling observer: %s', exc)
+                self.logger.log(LOG_DEBUG2, 'Exception calling observer: %s', exc)
             else:
                 if not proceed:
                     raise RuntimeError('Aborted by observer.')
@@ -53,14 +55,14 @@ class EggObserver(object):
         byte_fraction: float
             Fraction of total bytes processed.
         """
-        self.logger.debug("    adding '%s'", path)
+        self.logger.log(LOG_DEBUG2, "    adding '%s'", path)
         if self.observer is not None:
             proceed = True
             try:
                 proceed = self.observer('add', path, file_fraction,
                                         byte_fraction)
             except Exception as exc:
-                self.logger.debug('Exception calling observer: %s', exc)
+                self.logger.log(LOG_DEBUG2, 'Exception calling observer: %s', exc)
             else:
                 if not proceed:
                     raise RuntimeError('Aborted by observer.')
@@ -79,14 +81,14 @@ class EggObserver(object):
         byte_fraction: float
             Fraction of total bytes processed.
         """
-        self.logger.debug("    copying '%s'", path)
+        self.logger.log(LOG_DEBUG2, "    copying '%s'", path)
         if self.observer is not None:
             proceed = True
             try:
                 proceed = self.observer('copy', path, file_fraction,
                                         byte_fraction)
             except Exception as exc:
-                self.logger.debug('Exception calling observer: %s', exc)
+                self.logger.log(LOG_DEBUG2, 'Exception calling observer: %s', exc)
             else:
                 if not proceed:
                     raise RuntimeError('Aborted by observer.')
@@ -105,14 +107,14 @@ class EggObserver(object):
         byte_fraction: float
             Fraction of total bytes processed.
         """
-        self.logger.debug("    extracting '%s'", path)
+        self.logger.log(LOG_DEBUG2, "    extracting '%s'", path)
         if self.observer is not None:
             proceed = True
             try:
                 proceed = self.observer('extract', path, file_fraction,
                                         byte_fraction)
             except Exception as exc:
-                self.logger.debug('Exception calling observer: %s', exc)
+                self.logger.log(LOG_DEBUG2, 'Exception calling observer: %s', exc)
             else:
                 if not proceed:
                     raise RuntimeError('Aborted by observer.')
@@ -128,7 +130,7 @@ class EggObserver(object):
             try:
                 self.observer('complete', path, 1, 1)
             except Exception as exc:
-                self.logger.debug('Exception calling observer: %s', exc)
+                self.logger.log(LOG_DEBUG2, 'Exception calling observer: %s', exc)
 
     def exception(self, msg):
         """
@@ -142,5 +144,5 @@ class EggObserver(object):
             try:
                 self.observer('except', msg, -1, -1)
             except Exception as exc:
-                self.logger.debug('Exception calling observer: %s', exc)
+                self.logger.log(LOG_DEBUG2, 'Exception calling observer: %s', exc)
 

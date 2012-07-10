@@ -324,7 +324,8 @@ class TestCase(unittest.TestCase):
 
             server, server_cfg = start_server(port=port,
                                               allowed_users=allowed_users,
-                                              allowed_types=allowed_types)
+                                              allowed_types=allowed_types,
+                                              log_prefix=server_dir)
             self.servers.append(server)
             cfg = read_server_config(server_cfg)
             self.address = cfg['address']

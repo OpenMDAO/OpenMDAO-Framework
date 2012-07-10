@@ -67,8 +67,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
     /** load json dataflow data */
     this.loadData = function(json) {
         // FIXME: just having it update itself for now, ignoring json data
-        //dataflowFig.updateDataflow(json);
-        this.update();
+        dataflowFig.updateDataflow(json);
+//        this.update();
     };
 
     /** update by deleting existing dataflow and creating a new one */
