@@ -17,7 +17,7 @@ from networkx.algorithms.components import strongly_connected_components
 from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitecture, IComponent, IContainer,\
                                      ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
-from openmdao.main.container import find_trait_and_value
+from openmdao.main.container import find_trait_and_value, recorded
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.slot import Slot
@@ -258,6 +258,7 @@ class Assembly (Component):
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
     
+    @recorded
     def __init__(self, doc=None, directory=''):
         
         super(Assembly, self).__init__(doc=doc, directory=directory)
@@ -288,6 +289,7 @@ class Assembly (Component):
         if seqno:
             self.driver.workflow.set_initial_count(seqno)
 
+    @recorded
     def add(self, name, obj):
         """Call the base class *add*.  Then,
         if obj is a Component, add it to the component graph.
@@ -337,6 +339,7 @@ class Assembly (Component):
                     self.parent.disconnect(u,v)
         return old_autos
         
+    @recorded
     def rename(self, oldname, newname):
         """Renames a child of this object from oldname to newname."""
         self._check_rename(oldname, newname)
@@ -370,6 +373,7 @@ class Assembly (Component):
                 v = re.sub(par_rgx, r'\g<1>', v)
                 self.parent.connect(u,v)
     
+    @recorded
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the inputs and connections
         of the replaced object as much as possible.
@@ -402,6 +406,7 @@ class Assembly (Component):
             for wflow,idx in wflows:
                 wflow.add(target_name, idx)
     
+    @recorded
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow(s) if it's a Component."""
@@ -416,6 +421,7 @@ class Assembly (Component):
                     
         return super(Assembly, self).remove(name)
 
+    @recorded
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation, adds it to self, and creates a connection
@@ -498,6 +504,7 @@ class Assembly (Component):
             return (None, self, path)
         return (compname, getattr(self, compname), varname)
         
+    @recorded
     @rbac(('owner', 'user'))
     def connect(self, src, dest):
         """Connect one src expression to one destination expression. This could be
@@ -552,6 +559,7 @@ class Assembly (Component):
                     bouts = self.child_invalidated(destcompname, outs, force=True)
                     
 
+    @recorded
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
@@ -847,6 +855,11 @@ class Assembly (Component):
                 connections.append(list(connection))
         return {'components': components, 'connections': connections}
 
+    def get_config(self):
+        """Return the config dict for this Assembly."""
+        cfg = super(Assembly, self).get_config()
+        cfg['@connect'] = self.list_connections()
+        return cfg
 
 def dump_iteration_tree(obj):
     """Returns a text version of the iteration tree
