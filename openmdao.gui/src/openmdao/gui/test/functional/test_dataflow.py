@@ -31,10 +31,7 @@ def _test_maxmin(browser):
 
     # verify that the globals figure is invisible
     globals_figure = workspace_page.get_dataflow_figure('')
-    if sys.platform == 'darwin':
-        eq(globals_figure.border, 'none')
-    else:
-        eq(globals_figure.border, '0px none rgb(0, 0, 0)')
+    eq(globals_figure.border.find('none') >= 0, True)
     eq(globals_figure.background_color, 'rgba(0, 0, 0, 0)')
 
     # Add maxmin.py to project
@@ -63,28 +60,15 @@ def _test_maxmin(browser):
     workspace_page.hide_right()
     workspace_page.hide_console()
 
-    # minimized and maximized styles for top right corner of dataflow figures
-    if sys.platform == 'darwin':
-        bg_min = '%s %s' % ('url(http://localhost/static/images/circle-plus.png)',
-                            'no-repeat 100% 0%')
-    else:
-        bg_min = '%s %s %s' % ('rgba(0, 0, 0, 0)',
-                               'url(http://localhost/static/images/circle-plus.png)',
-                               'no-repeat scroll 100% 0%')
-    bg_max = bg_min.replace('circle-plus', 'circle-minus')
-
     # Maximize maxmin.
     maxmin = workspace_page.get_dataflow_figure('maxmin')
     background = maxmin('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, bg_min)
+    eq(background.find('circle-plus.png') >= 0, True)
 
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-
-    eq(background, bg_max)
     time.sleep(1)
+    eq(background.find('circle-minus.png') >= 0, True)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
@@ -98,8 +82,7 @@ def _test_maxmin(browser):
     time.sleep(0.5)
     workspace_page.do_command('dir()')
     background = maxmin('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, bg_max)
+    eq(background.find('circle-minus.png') >= 0, True)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
@@ -107,8 +90,7 @@ def _test_maxmin(browser):
     # Minimize sub
     sub('top_right').click()
     background = sub('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, bg_min)
+    eq(background.find('circle-plus.png') >= 0, True)
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
@@ -348,8 +330,8 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        _test_connect(browser)
-        _test_connections(browser)
+        #_test_connect(browser)
+        #_test_connections(browser)
         _test_maxmin(browser)
         browser.quit()
         teardown_server()
