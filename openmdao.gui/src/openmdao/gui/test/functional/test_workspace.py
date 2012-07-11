@@ -217,6 +217,7 @@ f_x = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page('libraries_tab').click()
+    workspace_page.libraries_search = 'In Project\n'
     time.sleep(2)
     workspace_page.find_palette_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
@@ -311,12 +312,12 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        _test_addfiles(browser)
-        _test_console(browser)
-        _test_import(browser)
-        _test_menu(browser)
+#        _test_addfiles(browser)
+#        _test_console(browser)
+#        _test_import(browser)
+#        _test_menu(browser)
         _test_newfile(browser)
-        _test_properties(browser)
+#        _test_properties(browser)
         browser.quit()
         teardown_server()
     else:
