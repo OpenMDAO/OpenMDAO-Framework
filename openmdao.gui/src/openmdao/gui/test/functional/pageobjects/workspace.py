@@ -74,10 +74,8 @@ class WorkspacePage(BasePageObject):
     props_outputs  = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[2]"))
 
     libraries_tab = ButtonElement((By.ID, 'palette_tab'))
-    #working_section = ButtonElement((By.XPATH,
-                            #"//div[(@id='palette')]//div[(@title='working')]"))
-    openmdao_section = ButtonElement((By.XPATH,
-                            "//div[(@id='palette')]//div[(@title='openmdao')]"))
+    libraries_searchbox = InputElement((By.ID, 'objtt-select'))
+
     # Bottom.
     history = TextElement((By.ID, 'history'))
     command = InputElement((By.ID, 'command'))
@@ -185,6 +183,16 @@ class WorkspacePage(BasePageObject):
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
         self('obj_dataflow').click()
+
+    @property
+    def libraries_search(self):
+        """ The contents of the libraries_search box. """
+        return  self('libraries_searchbox').value
+
+    @libraries_search.setter
+    def libraries_search(self, value):
+        """ Set the value of the libraries_search box. """
+        self.libraries_searchbox = value
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
