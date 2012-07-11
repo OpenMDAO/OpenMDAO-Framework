@@ -380,17 +380,20 @@ openmdao.Model=function() {
     };
 
     /** set the contents of the specified file */
-    this.setFile = function(filepath, contents, callback, errorHandler) {
+    this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
-            data: { 'contents': contents},
+            data: { 'contents': contents, 'force': force },
             success: function(text) {
                         if (typeof callback === 'function') {
                             callback(text);
                         }
                      },
-            error: errorHandler
+            error: errorHandler,
+            statusCode: {
+                409: handler409
+             },
         });
     };
 

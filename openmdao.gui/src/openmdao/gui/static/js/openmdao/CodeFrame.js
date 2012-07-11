@@ -13,19 +13,18 @@ openmdao.CodeFrame = function(id,model) {
         filepath = "",
         editorID = id+'-textarea',
         editorArea = jQuery('<pre id="'+editorID+'">').appendTo("#"+id).width(screen.width).height(screen.height);
-	
-	var editor = ace.edit(editorID);
-	
-	//editor.setTheme("ace/theme/chrome");
-	editor.getSession().setMode("ace/mode/python");
         
-	
+    var editor = ace.edit(editorID);
+        
+    //editor.setTheme("ace/theme/chrome");
+    editor.getSession().setMode("ace/mode/python");
+        
     editor.commands.addCommand({
-	name: "save",
-	bindKey: {win: "Ctrl-S", mac: "Command-S"},
-	exec: function() {saveFile();}
+        name: "save",
+        bindKey: {win: "Ctrl-S", mac: "Command-S"},
+        exec: function() {saveFile();}
     });    
-    	
+            
     // make the parent element (tabbed pane) a drop target for file objects
     editorArea.parent().droppable ({
         accept: '.file .obj',
@@ -38,10 +37,26 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
+    function handle409(jqXHR, textStatus, errorThrown) {
+        var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
+        jQuery(win).dialog({
+            'modal': true,
+            'title': 'Overwrite Existing Classes',
+            'buttons': {
+                'Overwrite': function() {
+                    jQuery(this).dialog('close');
+                    model.setFile(filepath,editor.getSession().getValue(),1,null,null,handle409);
+                },
+                'Cancel': function() {
+                    jQuery(this).dialog('close');
+                }
+            }
+        });
+    }
+
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
-	console.log(editor.getValue());
-        model.setFile(filepath,editor.session.doc.getValue());
+        model.setFile(filepath,editor.getSession().getValue(),0,null,null,handle409);
     }
 
     /***********************************************************************
@@ -55,8 +70,8 @@ openmdao.CodeFrame = function(id,model) {
             // success
             function(contents) {
                 //editor.setValue(contents);
-		editor.session.doc.setValue(contents);
-		editor.navigateFileStart();
+                editor.session.doc.setValue(contents);
+                editor.navigateFileStart();
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {

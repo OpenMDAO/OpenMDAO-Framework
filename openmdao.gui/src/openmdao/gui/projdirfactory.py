@@ -104,7 +104,6 @@ class ProjDirFactory(Factory):
         super(ProjDirFactory, self).__init__()
         self._lock = threading.RLock()
         self.watchdir = watchdir
-        self.imported = {}  # imported files vs (module, ctor dict)
         try:
             self.analyzer = PythonSourceTreeAnalyser()
             
@@ -133,11 +132,6 @@ class ProjDirFactory(Factory):
         if self._ownsobserver:
             self.observer.daemon = True
             self.observer.start()
-        
-    def _get_mod_ctors(self, mod, fpath, visitor):
-        self.imported[fpath] = (mod, {})
-        for cname in visitor.classes.keys():
-            self.imported[fpath][1][cname] = getattr(mod, cname.split('.')[-1])
         
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):

@@ -24,7 +24,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory, factories
 from openmdao.util.log import logger
 
 
@@ -571,3 +571,19 @@ class ConsoleServer(cmd.Cmd):
                         self._publish_comps[pathname] -= 1
                         if self._publish_comps[pathname] < 1:
                             del self._publish_comps[pathname]
+                            
+    def file_classes_changed(self, filename):
+        pdf = None
+        for f in factories:
+            if isinstance(f, ProjDirFactory):
+                pdf = f
+                break
+        if pdf:
+            filename = filename.lstrip('/')
+            filename = os.path.join(self.proj.path, filename)
+            info = pdf.analyzer.fileinfo.get(filename,(None,None))[0]
+            # if changed file contained classes and has already been imported..
+            if info and len(info.classes)>0 and info.modpath in sys.modules: 
+                return True
+        return False
+

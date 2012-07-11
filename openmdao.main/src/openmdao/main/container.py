@@ -11,6 +11,7 @@ import socket
 import sys
 import inspect
 import re
+from inspect import  getmodule
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -46,6 +47,7 @@ from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.index import process_index_entry, get_indexed_value, INDEX, ATTR, CALL, SLICE
+from openmdao.main.macro import CommandRecorder, recorded
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -59,6 +61,7 @@ _copydict = {
 _iodict = { 'out': 'output', 'in': 'input' }
 
 _missing = object()
+
 
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
@@ -162,6 +165,7 @@ class Container(SafeHasTraits):
    
     implements(IContainer)
 
+    @recorded
     def __init__(self, doc=None):
         super(Container, self).__init__()
         
@@ -173,6 +177,8 @@ class Container(SafeHasTraits):
                           
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
+        
+        self._adds = {} # keep track of added stuff for saving config
         
         self._parent = None
         self._name = None
@@ -248,6 +254,7 @@ class Container(SafeHasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
+    @recorded
     @rbac(('owner', 'user'))
     def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression. 
@@ -325,6 +332,7 @@ class Container(SafeHasTraits):
             self.raise_exception("Can't connect '%s' to '%s': %s" % (srcpath, destpath, str(err)),
                                  RuntimeError)
 
+    @recorded
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
@@ -504,6 +512,8 @@ class Container(SafeHasTraits):
                 raise NameError('Would override attribute %r of %s'
                                 % (name, base.__name__))
 
+        self._adds[name] = getmodule(trait).__name__ + '.' + trait.__class__.__name__
+
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
@@ -572,6 +582,7 @@ class Container(SafeHasTraits):
             val = get_indexed_value(self, name, index)
         return val
         
+    @recorded
     def add(self, name, obj):
         """Add an object to this Container.
         Returns the added object.
@@ -600,6 +611,7 @@ class Container(SafeHasTraits):
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
+            self._adds[name] = getmodule(obj).__name__ + '.' + obj.__class__.__name__
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
@@ -666,6 +678,7 @@ class Container(SafeHasTraits):
         obj = self.remove(oldname)
         self.add(newname, obj)
         
+    @recorded
     def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
@@ -675,6 +688,11 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, NameError)
+        try:
+            del self._adds[name]
+        except KeyError:
+            pass
+        
         trait = self.get_trait(name)
         if trait is not None:
             obj = getattr(self, name)
@@ -692,6 +710,7 @@ class Container(SafeHasTraits):
             self.raise_exception("cannot remove '%s': not found"%
                                  name, AttributeError)
 
+    @recorded
     @rbac(('owner', 'user'))
     def configure(self):
         pass
@@ -939,6 +958,7 @@ class Container(SafeHasTraits):
     def get_iotype(self, name):
         return self.get_trait(name).iotype
         
+    @recorded
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
@@ -1415,7 +1435,53 @@ class Container(SafeHasTraits):
         new_exc = exc_type(msg)
         raise type(new_exc), new_exc, exc_traceback
 
+    def get_config(self):
+        """Return the config dict for this Container."""
+        cfg = {}
+        cfg['@add'] = self._adds.copy()
+        for name in self._adds:
+            obj = getattr(self, name)
+            if hasattr(obj, 'get_config'):
+                cfg[name] = obj.get_config()
+        return cfg
+    
+    def set_config(self, config):
+        """Set this object's configuration using the given config dict."""
+        cache = {}
+        for name, cname in config['@add']:
+            klass = cache.get(cname)
+            if not klass:
+                mod, klass = _find_module_attr(cname)
+                if klass is not None:
+                    cache[cname] = klass
+            
 
+def _find_module_attr(modpath):
+    """Return a module object and an attribute from that module based on the given modpath.
+    Import the module if necessary.
+    """
+    parts = modpath.split('.')
+    if len(parts) <= 1:
+        return (None, None)
+    
+    mname = '.'.join(parts[:-1])
+    mod = sys.modules.get(mname)
+    if mod is None:
+        try:
+            __import__(mname)
+            mod = sys.modules.get(mname)
+        except ImportError:
+            pass
+    if mod:
+        return (mod, getattr(mod, parts[-1]))
+    
+    # try one more level down in case attr is nested
+    mod, obj = _find_module_attr(mname)
+    if obj:
+        obj = getattr(obj, parts[-1], None)
+    return (mod, obj)
+    
+    
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
 CLASSES_TO_PROXY.append(FileRef)
@@ -1576,3 +1642,5 @@ def create_io_traits(cont, obj_info, iotype='in'):
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  RuntimeError)
         cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))
+
+        

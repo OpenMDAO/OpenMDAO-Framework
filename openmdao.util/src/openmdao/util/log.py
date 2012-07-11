@@ -64,15 +64,19 @@ if sys.platform == 'win32' and current_process().name != 'MainProcess':
     _mode = 'a'  # Avoid mangling by subprocesses.
 else:
     _mode = 'w'
-_filename = 'openmdao_log.txt'
+#_filename = 'openmdao_log.txt'
 
 # Ensure we can write to the log file.
-try:
-    _tmplog = open(_filename, _mode)
-except IOError:
-    _filename = 'openmdao_log_%d.txt' % os.getpid()
-else:
-    _tmplog.close()
+#try:
+    #_tmplog = open(_filename, _mode)
+#except IOError:
+    #_filename = 'openmdao_log_%d.txt' % os.getpid()
+#else:
+    #_tmplog.close()
+    
+# FIXME: We currently have a problem with multiple gui processes writing to the same file,
+# so for now just write a file for each process
+_filename = 'openmdao_log_%d.txt' % os.getpid()
 
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
 logging.basicConfig(level=logging.WARNING,
