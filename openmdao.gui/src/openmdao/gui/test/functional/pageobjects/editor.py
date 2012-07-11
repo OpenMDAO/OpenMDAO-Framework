@@ -1,3 +1,4 @@
+import sys
 import logging
 import time
 
@@ -10,7 +11,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement
-from util import ValuePrompt, NotifierPage
+from util import ValuePrompt
 
 
 class UploadPage(BasePageObject):
@@ -24,6 +25,16 @@ class UploadPage(BasePageObject):
     def upload_file(self, path):
         self.filename = path
         self('submit').click()
+
+    def upload_files(self):
+        self('submit').click()
+
+    def select_file(self, path):
+        self.filename = path
+
+    def select_files(self, paths):
+        for path in paths:
+            self.select_file(path)
 
 
 class EditorPage(BasePageObject):
@@ -63,9 +74,6 @@ class EditorPage(BasePageObject):
         self.locators = {}
         self.locators["files"] = (By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']")
 
-        # Locator is relative to the iframe not the top level window.
-        self.locators["code_input"] = (By.XPATH, "/html/body")
-
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
@@ -79,7 +87,7 @@ class EditorPage(BasePageObject):
                 try:
                     file_names.append(self.browser.find_elements(*self.locators["files"])[i].text.strip())
                 except StaleElementReferenceException:
-                    logging.critical('get_files: StaleElementReferenceException')
+                    logging.warning('get_files: StaleElementReferenceException')
                 else:
                     break
         return file_names
@@ -102,6 +110,20 @@ class EditorPage(BasePageObject):
         # Go back to the main window.
         self.browser.switch_to_window(main_window_handle)
 
+    def add_files(self):
+        self('file_menu').click()
+        self('add_button').click()
+        self.browser.switch_to_window('Add File')
+        return UploadPage.verify(self.browser, self.port)
+
+    def new_file_dialog(self):
+        """ bring up the new file dialog """
+        self('file_menu').click()
+        self('newfile_button').click()
+
+        page = ValuePrompt(self.browser, self.port)
+        return page
+
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
@@ -112,12 +134,9 @@ class EditorPage(BasePageObject):
 
         self.edit_file(filename)
 
-        # Switch to editor iframe.
-        self.browser.switch_to_frame(0)  # No identifying name or ID.
+        # Switch to editor textarea
         code_input_element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(*self.locators['code_input']))
-        WebDriverWait(self.browser, TMO).until(
-            lambda browser: code_input_element.text)
+            lambda browser: browser.find_element_by_css_selector('textarea'))
 # FIXME: absolute delay for editor to get ready.
 #        Problem is Firefox sometimes sends arrow key to scrollbar.
 #        Sadly this didn't completely fix the issue.
@@ -129,32 +148,15 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(code)
         # Control-S to save.
-        code_input_element.send_keys(Keys.CONTROL+'s')
+        if sys.platform == 'darwin':
+            code_input_element.send_keys(Keys.COMMAND + 's')
+        else:
+            code_input_element.send_keys(Keys.CONTROL + 's')
 # FIXME: absolute delay for save to complete.
         time.sleep(2)
 
         # Back to main window.
         self.browser.switch_to_default_content()
-
-    def import_file(self, filename):
-        """ Import from `filename`. """
-        xpath = "//a[(@path='/%s')]" % filename
-        element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath(xpath))
-        chain = ActionChains(self.browser)
-        for i in range(10):
-            try:
-                chain.context_click(element).perform()
-            except StaleElementReferenceException:
-                logging.critical('edit_file: StaleElementReferenceException')
-                element = WebDriverWait(self.browser, 1).until(
-                    lambda browser: browser.find_element_by_xpath(xpath))
-                chain = ActionChains(self.browser)
-            else:
-                break
-        self('file_import').click()
-        # took out the following notify for now... it opened on workspace page
-        #NotifierPage.wait(self.browser, self.port)  
 
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
@@ -167,7 +169,7 @@ class EditorPage(BasePageObject):
                 try:
                     chain.double_click(element).perform()
                 except StaleElementReferenceException:
-                    logging.critical('edit_file: StaleElementReferenceException')
+                    logging.warning('edit_file: StaleElementReferenceException')
                     element = WebDriverWait(self.browser, 1).until(
                         lambda browser: browser.find_element_by_xpath(xpath))
                     chain = ActionChains(self.browser)

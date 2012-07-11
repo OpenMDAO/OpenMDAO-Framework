@@ -2,7 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.PaletteFrame = function(id,model) {
-    openmdao.PaletteFrame.prototype.init.call(this,id,'Libraries',[]);
+    openmdao.PaletteFrame.prototype.init.call(this,id,'Library',[]);
 
     /***********************************************************************
      *  private
@@ -10,80 +10,163 @@ openmdao.PaletteFrame = function(id,model) {
 
     // initialize private variables
     var self = this,
-        libs = jQuery('<div>').appendTo("#"+id);
+        palette = jQuery('#'+id),
+        libs = jQuery('<div>').appendTo(palette);
 
-    // dropping a filename onto the palette pane means import *
-    libs.droppable ({
-        accept: '.file',
-        drop: function(ev,ui) {
-            debug.info('PaletteFrame drop: ',ev,ui);
-            var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('PaletteFrame drop: ',droppedObject);
-            var path = droppedObject.attr("path");
-            debug.info('PaletteFrame drop: '+path);
-            if (/.py$/.test(path)) {
-                model.importFile(path);
-            }
-            else {
-                alert("Not a python file:\n"+path);
-            }
-        }
-    });
+    /** find the actual top of the given element, taking visibility and 
+        scrolling into account */
+    function getElementTop(elem) {
+       var yPos = 0;
+       var scrolls = 0;
+       var firstElemWithOSP = 0;
+       while(elem && !isNaN(elem.offsetTop)) {
+          scrolls += elem.scrollTop;
+          if (firstElemWithOSP === 0 && elem.offsetParent) {
+             firstElemWithOSP = elem;
+          }
+          elem = elem.parentNode;
+       }
+       
+       elem = firstElemWithOSP;
+       while(elem && !isNaN(elem.offsetTop)) {
+          yPos += elem.offsetTop;
+          elem = elem.offsetParent;
+       }
+       return yPos-scrolls;
+    }
+    
 
-    /** rebuild the Palette from an XML library list */
+    /** rebuild the Palette from a JSON library list of tuples of the form (libname, meta_dict) */
     function updatePalette(packages) {
-        // remember what is expanded
-        var expanded = jQuery('.library-list:visible');
-
         // build the new html
         var html="<div id='library'>";
+        html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
+        html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
+        // headers: ClassName, Module Path, Version, Context, Interfaces
+        html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>';
         jQuery.each(packages, function(name,item) {
-            html+= packageHTML(name,item);
+            html+= packageHTML(name, item);
         });
-        html+="</div>";
+        html+="</tbody></table></div>";
 
         // replace old html
         libs.html(html);
 
+        var dtable = palette.find('#objtypetable').dataTable({
+            'bPaginate': false,
+            'bjQueryUI': true,
+            'sScrollY': '600px',
+            'bScrollCollapse': true,
+            'bFilter': true,    // make sure filtering is still turned on
+            'aoColumnDefs': [
+                 { 'bVisible': false, 'aTargets': [1,2,3,4] }
+             ],
+            'sDom': '<"H"lr>t<"F">'   // removes the built-in filter field and bottom info (default is lfrtip)
+        });
+
+        // here's the default list of filters for the library
+        var selections = [
+                    "In Project",
+                    "Architecture",
+                    "Assembly",
+                    "CaseRecorder",
+                    "CaseIterator",
+                    "Component",
+                    "Differentiator",
+                    "DOEgenerator",
+                    "Driver",
+                    "Solver",
+                    "Surrogate",
+                    //"UncertainVariable",
+                    "Variable"
+                ];
+        var input_obj = palette.find('#objtt-select');
+        input_obj.autocomplete({
+           source: function(term, response_cb) {
+               response_cb(selections);
+           },
+           select: function(event, ui) {
+               input_obj.value = ui.item.value;
+               ent = jQuery.Event('keypress.enterkey');
+               ent.target = input_obj;
+               ent.which = 13;
+               input_obj.trigger(ent);
+           },
+           delay: 0,
+           minLength: 0
+        });
+        input_obj.bind('keypress.enterkey', function(e) {
+            if (e.which === 13) {
+                dtable.fnFilter( e.target.value );
+                if (selections.indexOf(e.target.value) === -1) {
+                   selections.push(e.target.value);
+                }
+                input_obj.autocomplete('close');
+            }
+        });
+        
+        var contextMenu = jQuery("<ul id='lib-cmenu' class='context-menu'>")
+                          .appendTo(dtable);
+
+        var objtypes = dtable.find('.objtype');
+        
+        // given a click event, find the table entry that corresponds
+        // to that location. Returns the matching element.
+        function _findMatch(ev) {
+            var otop = 0, match=0;
+            var event_top = ev.target.offsetParent.offsetTop;
+            objtypes.each(function(i, elem) {
+               otop = getElementTop(elem);
+               // elemoffsetHeight = 0 for invisible entries
+               if (otop <= event_top && (otop+elem.offsetHeight)>=event_top) {
+                  match = elem;
+                  return false; // break out of loop
+               }
+            });
+            return match;
+        }
+        
+        contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
+            debug.info('View Docs context event:');
+            var modpath = _findMatch(ev).getAttribute('modpath');
+            var url = '/docs/plugins/'+modpath;
+            var parts = modpath.split('.')
+            var cname = parts.pop()
+            window.open(url, 'Docs for '+modpath);
+        }));
+        contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
+            debug.info('View Metadata context event:');
+            var match = _findMatch(ev);
+            var win = jQuery('<div></div>');
+            var table = jQuery('<table cellpadding=5px>');
+            table.append('<tr><th></th><th></th></tr>')
+            var hdata = ['name','modpath','version','context','ifaces'];
+            var data = dtable.fnGetData(match.parentNode);
+            for (var i=1; i<data.length; i++) {
+               table.append('<tr><td>'+hdata[i]+'</td><td>'+data[i]+'</td></tr>');
+            }
+            win.append(table);
+            
+            // Display dialog
+            jQuery(win).dialog({
+                title: match.innerText+' Metadata',
+                width: 'auto'
+            });
+        }));
+        ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
+        
         // make everything draggable
-        jQuery('.objtype').draggable({ helper: 'clone', appendTo: 'body' });
-        jQuery('.objtype').addClass('jstree-draggable'); // allow drop on jstree
-
-        // collapse all and add click functionality
-        jQuery('.library-list').hide();
-        jQuery('.library-header').click(function () {
-            jQuery(this).next().toggle("normal");
-            return false;
-        });
-
-        // restore previously expanded libraries, if any
-        expanded.each(function() {
-            jQuery('.library-list:[title='+this.title+']').show();
-        });
+        objtypes.draggable({ helper: 'clone', appendTo: 'body' });
+        objtypes.addClass('jstree-draggable'); // allow drop on jstree
     }
 
     /** build HTML string for a package */
     function packageHTML(name,item) {
-        var html = '';
-        // if item has a version it's an object type, otherwise it's a package
-        if (item.version) {
-            html+="<div class='objtype' path='"+item.path+"' title='"+name+"'>"+
-                   name +
-                  "</div>";
-        }
-        else {
-            html+="<div class='library-header' title='"+name+"'>";
-            html+="<h3>"+name+"</h3>";
-            html+="</div>";
-            html+="<ul class='library-list' title='"+name+"'>";
-            jQuery.each(item, function(name,subitem) {
-                html+= packageHTML(name,subitem);
-            });
-            html+="</ul>";
-        }
+        var html = "<tr><td class='objtype' modpath="+item.modpath+">"+name+"</td><td>"+
+                   item.modpath+"</td><td>"+item.version+"</td><td>"+
+                   item._context+"</td><td>"+item.ifaces+"</td></tr>";
         return html;
     }
-
 
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== 'types') {
@@ -109,8 +192,8 @@ openmdao.PaletteFrame = function(id,model) {
     };
 
     // ask model for an update whenever something changes
-    model.addListener('types',handleMessage);
-    
+    model.addListener('types', handleMessage);
+
     this.update();
 
 };

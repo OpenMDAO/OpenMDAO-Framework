@@ -128,6 +128,20 @@ class ExprCaseFilter(object):
     def __init__(self, expr):
         self.expr = expr
 
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        
+        state = self.__dict__.copy()
+        
+        # Compiled stuff doesn't pickle
+        state['_code'] = None
+        
+    def __setstate__(self, state):
+        """Restore this component's state."""
+        
+        self.__dict__.update(state)
+        self._code = compile(self._expr, '<string>', 'eval')
+        
     @property
     def expr(self):
         """ The expression to be evaluated. """

@@ -91,9 +91,17 @@ def pack_zipfile(patterns, filename, logger=None):
     """
     logger = logger or NullLogger()
 
+    # Scan to see if we have to use zip64 flag.
+    nbytes = 0
+    for pattern in patterns:
+        for path in glob.glob(pattern):
+            nbytes += os.path.getsize(path)
+    zip64 = nbytes > zipfile.ZIP64_LIMIT
+    compression = zipfile.ZIP_DEFLATED
+
     nfiles = 0
     nbytes = 0
-    zipped = zipfile.ZipFile(filename, 'w')
+    zipped = zipfile.ZipFile(filename, 'w', compression, zip64)
     try:
         for pattern in patterns:
             for path in glob.glob(pattern):

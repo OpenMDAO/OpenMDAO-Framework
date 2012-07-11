@@ -251,11 +251,20 @@ openmdao.Model=function() {
             return;
         }
         else {
+            // src and dst names are optional
+            // (no src or dst means the src or dst is the assembly itself)
+            var args = {};
+            if (src_name) {
+                args.src_name = src_name;
+            }
+            if (dst_name) {
+                args.dst_name = dst_name;
+            }
             jQuery.ajax({
                 type: 'GET',
                 url:  'connections/'+pathname,
                 dataType: 'json',
-                data: { 'src_name': src_name, 'dst_name': dst_name },
+                data: args,
                 success: callback,
                 error: errorHandler
             });
@@ -281,7 +290,10 @@ openmdao.Model=function() {
             parent = '';
         }
 
-        if (/driver/.test(typepath)&&(openmdao.Util['$'+name])){openmdao.Util['$'+name]();return;}
+        if (/driver/.test(typepath) && (openmdao.Util['$'+name])) {
+            openmdao.Util['$'+name]();
+            return;
+        }
 
         jQuery.ajax({
             type: 'POST',

@@ -5,7 +5,7 @@ import re
 
 from openmdao.main.api import Component, ComponentWithDerivatives
 from openmdao.main.datatypes.api import Float
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator, _expr_dict
 
 
 class ExecComp(Component):
@@ -21,6 +21,7 @@ class ExecComp(Component):
         ins = set()
         outs = set()
         allvars = set()
+        self.exprs = exprs
         self.codes = [compile(expr,'<string>','exec') for expr in exprs]
         for expr in exprs:
             lhs,rhs = expr.split('=')
@@ -39,10 +40,28 @@ class ExecComp(Component):
                     iotype = 'in'
                 self.add(var, Float(iotype=iotype))
         
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        
+        state = super(ExecComp, self).__getstate__()
+        
+        # Compiled stuff doesn't pickle
+        state['codes'] = None
+        
+        return state
+        
+    def __setstate__(self, state):
+        """Restore this component's state."""
+        
+        super(ExecComp, self).__setstate__(state)
+        self.codes = [compile(expr,'<string>','exec') for expr in self.exprs]
+        
     def execute(self):
         ''' ExecComp execute function '''
+        global _expr_dict
+        
         for expr in self.codes:
-            exec expr in self.__dict__
+            exec(expr, _expr_dict, self.__dict__ )
 
 
 class ExecCompWithDerivatives(ComponentWithDerivatives):
@@ -61,6 +80,7 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
         ins = set()
         outs = set()
         allvars = set()
+        self.exprs = exprs
         self.codes = [compile(expr,'<string>','exec') for expr in exprs]
         
         for expr in exprs:
@@ -81,6 +101,7 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
                     iotype = 'in'
                 self.add(var, Float(iotype=iotype))
     
+        self.deriv_exprs = derivatives
         self.derivative_codes = \
             [compile(expr,'<string>','exec') for expr in derivatives]
         
@@ -107,18 +128,41 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
             
             self.derivative_names.append( (lhs, num, wrt) )
     
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        
+        state = super(ExecCompWithDerivatives, self).__getstate__()
+        
+        # Compiled stuff doesn't pickle
+        state['codes'] = None
+        state['derivative_codes'] = None
+        
+        return state
+        
+    def __setstate__(self, state):
+        """Restore this component's state."""
+        
+        super(ExecCompWithDerivatives, self).__setstate__(state)
+        self.codes = [compile(expr,'<string>','exec') for expr in self.exprs]
+        self.derivative_codes = \
+            [compile(expr,'<string>','exec') for expr in self.deriv_exprs]
+        
     def execute(self):
         ''' ExecCompWithDerivatives execute function '''
         
+        global _expr_dict
+        
         for expr in self.codes:
-            exec expr in self.__dict__    
+            exec(expr, _expr_dict, self.__dict__ )
             
             
     def calculate_first_derivatives(self):
         ''' Calculate the first derivatives '''
         
+        global _expr_dict
+        
         for expr in self.derivative_codes:
-            exec expr in self.__dict__
+            exec(expr, _expr_dict, self.__dict__ )
             
         for item in self.derivative_names:
             self.derivatives.set_first_derivative(item[1], item[2], 

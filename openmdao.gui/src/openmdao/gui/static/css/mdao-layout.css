@@ -17,13 +17,13 @@ ul {
   margin: 0;
   float: left;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 #central {
   margin: 0;
   float: left;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 #central_label {
   margin: 0;
@@ -34,7 +34,7 @@ ul {
   margin: 0;
   float: left;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
 }
 
 /* menus */
@@ -153,7 +153,8 @@ dl {
   margin: 0;
 }
 
-#otree, #ftree, #propertieseditor, #palette {
+/*#otree, #ftree, #propertieseditor, #palette {*/
+#otree, #ftree, #propertieseditor {
   height: 100%;
   width: 100%;
 }

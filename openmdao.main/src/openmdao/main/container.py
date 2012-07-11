@@ -271,7 +271,9 @@ class Container(SafeHasTraits):
         
         # check for self connections
         if not destpath.startswith('parent.'):
-            cname2, _, destvar = destpath.partition('.')
+            vpath = destpath.split('[', 1)[0]
+            cname2, _, destvar = vpath.partition('.')
+            destvar = destpath[len(cname2)+1:]
             if cname2 in srcexpr.get_referenced_compnames():
                 self.raise_exception("Cannot connect '%s' to '%s'. Both refer to the same component." %
                                      (srcpath, destpath), RuntimeError)
@@ -746,8 +748,7 @@ class Container(SafeHasTraits):
                     if is_instance(obj, Container) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
-                    elif trait.iotype is not None and id(trait) not in visited:
-                        visited.add(id(trait))
+                    elif trait.iotype is not None:
                         yield (name, obj)
 
     def items(self, recurse=False, **metadata):

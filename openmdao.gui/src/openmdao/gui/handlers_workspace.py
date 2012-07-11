@@ -162,31 +162,16 @@ class ComponentsHandler(ReqHandler):
 
 
 class ConnectionsHandler(ReqHandler):
-    ''' get/set connections between two components in an assembly
+    ''' get connections between two components in an assembly
     '''
-
-    @web.authenticated
-    def post(self, pathname):
-        result = ''
-        try:
-            src_name = self.get_argument('src_name')
-            dst_name = self.get_argument('dst_name')
-            connections = self.get_argument('connections')
-            cserver = self.get_server()
-            cserver.set_connections(pathname, src_name, dst_name, connections)
-        except Exception, e:
-            print e
-            result = sys.exc_info()
-        self.content_type = 'text/html'
-        self.write(result)
 
     @web.authenticated
     def get(self, pathname):
         cserver = self.get_server()
         connects = {}
         try:
-            src_name = self.get_argument('src_name')
-            dst_name = self.get_argument('dst_name')
+            src_name = self.get_argument('src_name', default=None)
+            dst_name = self.get_argument('dst_name', default=None)
             connects = cserver.get_connections(pathname, src_name, dst_name)
         except Exception, e:
             print e
@@ -399,14 +384,17 @@ class UploadHandler(ReqHandler):
     def post(self):
         path = self.get_argument('path', default=None)
         cserver = self.get_server()
-        file = self.request.files['myfile'][0]
-        if file:
-            filename = file['filename']
-            if len(filename) > 0:
-                if path:
-                    filename = os.path.sep.join([path, filename])
-                cserver.add_file(filename, file['body'])
-                self.render('closewindow.html')
+        files = self.request.files['file']
+        if files:
+            for file_ in files:
+                filename = file_['filename']
+                if len(filename) > 0:
+                    if path:
+                        filename = os.path.sep.join([path, filename])
+                    cserver.add_file(filename, file_['body'])
+            self.render('closewindow.html')
+        else:
+            self.render('workspace/upload.html', path=path)
 
     @web.authenticated
     def get(self):
@@ -468,4 +456,3 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
-

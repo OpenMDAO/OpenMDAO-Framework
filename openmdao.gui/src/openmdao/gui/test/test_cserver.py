@@ -30,10 +30,10 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         time.sleep(3.0)
         types = self.cserver.get_types()
-        self.assertTrue('Paraboloid' in types['paraboloid'])
+        self.assertTrue('Paraboloid' in types)
 
-        type_info = types['paraboloid']['Paraboloid']
-        self.assertEqual(type_info['path'], 'paraboloid.Paraboloid')
+        type_info = types['Paraboloid']
+        self.assertEqual(type_info['modpath'], 'paraboloid.Paraboloid')
 
         components = json.loads(self.cserver.get_components())
 
@@ -202,6 +202,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.cserver.execfile('optimization_constrained.py')
         self.cserver.save_project()
 
+        self.cserver.cleanup()
         os.remove(proj_copy)
 
     def tearDown(self):

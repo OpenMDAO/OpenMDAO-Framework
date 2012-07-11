@@ -295,7 +295,7 @@ your plugin.
 More descriptions of the various metadata values can be found 
 `here`__.
 
-.. __: http://readthedocs.org/docs/distutils2/en/latest/setupcfg.html#metadata
+.. __: http://distutils2.readthedocs.org/en/latest/setupcfg.html
 
 
 The values in the *metadata* section are specified by **PEP 345** and 

@@ -2,6 +2,11 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowPane = function(elm,model,pathname,name) {
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     // initialize private variables
     var self = this,
         dataflowID  = pathname.replace(/\./g,'-')+"-dataflow",
@@ -11,12 +16,9 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
                       .appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID),
-        dataflowFig = new openmdao.DataflowFigure(model, pathname);
-
-    self.pathname = pathname;
+        dataflowFig = null;
 
     dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
-    dataflow.addFigure(dataflowFig,20,20);
 
     // make the dataflow pane droppable
     dataflowDiv.droppable ({
@@ -25,7 +27,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             // get the object that was dropped and where it was dropped
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
-                droppedPath = droppedObject.attr("path"),
+                droppedPath = droppedObject.attr("modpath"),
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top),
@@ -33,7 +35,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             var elem = dataflowDiv[0];
             var zindex = document.defaultView.getComputedStyle(elem,null)
                          .getPropertyValue("z-index");
-            debug.info(droppedName,'(path=',droppedPath,') ',
+            debug.info(droppedName,'(modpath=',droppedPath,') ',
                        'dropped on dataflow:',self.pathname,
                        'z-index',dataflowDiv.css('z-index'),
                        'zIndex',dataflowDiv.css('zIndex'));
@@ -52,6 +54,10 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         }
     });
 
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
+
     /** change the dataflow to the one with the specified pathname */
     this.showDataflow = function(pathname) {
         self.pathname = pathname;
@@ -61,16 +67,22 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
     /** load json dataflow data */
     this.loadData = function(json) {
         // FIXME: just having it update itself for now, ignoring json data
-        //dataflowFig.updateDataflow(json);
-        this.update();
+        dataflowFig.updateDataflow(json);
+//        this.update();
     };
 
-    /** update dataflow diagram by clearing and rebuilding it */
+    /** update by deleting existing dataflow and creating a new one */
     this.update = function() {
-        dataflow.clear();
+        if (dataflowFig !== null) {
+            // need to minimize & destroy figures to get rid of listeners
+            dataflowFig.minimize();
+            dataflow.clear();
+            dataflowFig.destroy();
+        }
         dataflowFig = new openmdao.DataflowFigure(model, self.pathname);
         dataflow.addFigure(dataflowFig,20,20);
         dataflowFig.maximize();
     };
 
+    this.showDataflow(pathname);
 };

@@ -16,15 +16,23 @@ import sys
 import tempfile
 import unittest
 
+from openmdao.main.api import Assembly, Component
 from openmdao.main.mp_util import read_server_config
 from openmdao.main.objserverfactory import connect, start_server
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import ResourceAllocator, LocalAllocator, \
                                    ClusterAllocator, RESOURCE_LIMITS
+from openmdao.lib.datatypes.api import Dict
 from openmdao.util.testutil import assert_raises, find_python
 
 # Users who have ssh configured correctly for testing.
 SSH_USERS = []
+
+
+class ExtCode(Component):
+    """ Just a component with resources. """
+    resources = Dict({}, iotype='in',
+                     desc='Resources required to run this component.')
 
 
 class TestCase(unittest.TestCase):
@@ -547,6 +555,67 @@ max_load: 100
 
         assert_raises(self, "allocator.release(None)",
                       globals(), locals(), NotImplementedError, 'release')
+
+    def test_request(self):
+        logging.debug('')
+        logging.debug('test_request')
+
+        assembly = Assembly()
+        comp1 = assembly.add('comp1', ExtCode())
+        comp2 = assembly.add('comp2', ExtCode())
+        sub = assembly.add('sub', Assembly())
+        comp3 = sub.add('comp3', ExtCode())
+
+        comp1.resources = dict(min_cpus=10,
+                               max_cpus=10,
+                               resource_limits=dict(virtual_memory=100,
+                                                    cpu_time=120),
+                               rerunnable=True,
+                               accounting_id='frobozz',
+                               queue_name='debug',
+                               job_category='MPI')
+
+        comp2.resources = dict(max_cpus=2,
+                               resource_limits=dict(wallclock_time=1000000))
+
+        comp3.resources = dict(min_cpus=200,
+                               resource_limits=dict(virtual_memory=20,
+                                                    cpu_time=1000,
+                                                    wallclock_time=500),
+                               rerunnable=True,
+                               accounting_id='frobozz',
+                               queue_name='debug',
+                               job_category='MPI')
+
+        req = RAM.max_request(assembly)
+        expected = dict(min_cpus=200,
+                        max_cpus=200,
+                        resource_limits=dict(virtual_memory=100,
+                                             cpu_time=1000,
+                                             wallclock_time=1000000))
+        logging.debug('req: %r', req)
+        logging.debug('exp: %r', expected)
+        self.assertEqual(req, expected)
+
+        req = RAM.total_request(assembly)
+        expected = dict(min_cpus=200,
+                        max_cpus=200,
+                        resource_limits=dict(virtual_memory=100,
+                                             cpu_time=1120,
+                                             wallclock_time=1000500),
+                        rerunnable=True,
+                        accounting_id='frobozz',
+                        queue_name='debug',
+                        job_category='MPI')
+        logging.debug('req: %r', req)
+        logging.debug('exp: %r', expected)
+        self.assertEqual(req, expected)
+
+        comp3.resources['accounting_id'] = 'xyzzy'
+        assert_raises(self, 'RAM.total_request(assembly)',
+                      globals(), locals(), ValueError,
+                      "Incompatible settings for 'accounting_id':"
+                      " 'xyzzy' vs. 'frobozz'")
 
 
 if __name__ == '__main__':
