@@ -493,6 +493,103 @@ class ResourceAllocationManager(object):
         return self._allocators[index]
 
     @staticmethod
+    def max_request(assembly):
+        """
+        Determine the maximum resources requested.
+
+        Resource descriptions are assumed to be named ``resources``.
+        Similar to :meth:`total_request`, but for the 'peak' value.
+        This can be used to ensure an allocated server can support
+        the maximum of any resources requested by an assembly's components.
+
+        Returns a resource description for the maximum.
+
+        assembly: :class:`Assembly`
+            Assembly containing components requesting resources.
+        """
+        req = {}
+        for path, obj in assembly.items(recurse=True):
+            prefix, dot, name = path.rpartition('.')
+            if name == 'resources' and isinstance(obj, dict):
+                req = ResourceAllocationManager._max_request(req, obj)
+        return req
+
+    @staticmethod
+    def _max_request(base, new):
+        """ Helper for :meth:`max_request`. """
+        req = base.copy()
+        for item in ('min_cpus', 'max_cpus', 'min_phys_memory'):
+            if item in new:
+                req[item] = max(req.get(item, 0), new[item])
+        if req.get('min_cpus', 0) > req.get('max_cpus', 0):
+            req['max_cpus'] = req['min_cpus']
+
+        if 'resource_limits' in new:
+            new_limits = new['resource_limits']
+            req_limits = base.get('resource_limits', {}).copy()
+            for item in ('core_file_size', 'data_seg_size', 'file_size',
+                         'open_files', 'stack_size', 'virtual_memory',
+                         'cpu_time', 'wallclock_time') :
+                if item in new_limits:
+                    req_limits[item] = max(req_limits.get(item, 0),
+                                           new_limits[item])
+            req['resource_limits'] = req_limits
+        return req
+
+    @staticmethod
+    def total_request(assembly):
+        """
+        Determine the total resources requested.
+
+        Resource descriptions are assumed to be named ``resources``.
+        Similar to :meth:`max_request`, but for the total value.
+        This can be used to obtain a resource description for running
+        `assembly` as a batch job.
+
+        Returns a resource description for the total.
+
+        assembly: :class:`Assembly`
+            Assembly containing components requesting resources.
+        """
+        req = {}
+        for path, obj in assembly.items(recurse=True):
+            prefix, dot, name = path.rpartition('.')
+            if name == 'resources' and isinstance(obj, dict):
+                req = ResourceAllocationManager._total_request(req, obj)
+        return req
+
+    @staticmethod
+    def _total_request(base, new):
+        """ Helper for :meth:`total_request`. """
+        req = ResourceAllocationManager._max_request(base, new)
+
+        # Rerunnable only if all are rerunnable.
+        if 'rerunnable' in new:
+            req['rerunnable'] = base.get('rerunnable', True) and new['rerunnable']
+
+        # If specified, these should match.
+        for item in ('accounting_id', 'queue_name', 'job_category', 'localhost'):
+            if item in new:
+                if item in base:
+                    if new[item] != base[item]:
+                        raise ValueError('Incompatible settings for %r: %r vs. %r'
+                                         % (item, new[item], base[item]))
+                else:
+                    req[item] = new[item]
+
+        # Total time requested.
+        if 'resource_limits' in new:
+            req_limits = req['resource_limits']
+            new_limits = new['resource_limits']
+            base_limits = base.get('resource_limits', {})
+            for item in ('cpu_time', 'wallclock_time'):
+                if item in new_limits:
+                    req_limits[item] = base_limits.get(item, 0) + new_limits[item]
+            req['resource_limits'] = req_limits
+
+        return req
+
+    @staticmethod
     def validate_resources(resource_desc):
         """
         Validate that `resource_desc` is legal.
