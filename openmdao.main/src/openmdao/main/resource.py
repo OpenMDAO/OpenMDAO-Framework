@@ -518,7 +518,7 @@ class ResourceAllocationManager(object):
     def _max_request(base, new):
         """ Helper for :meth:`max_request`. """
         req = base.copy()
-        for item in ('min_cpus', 'max_cpus'):
+        for item in ('min_cpus', 'max_cpus', 'min_phys_memory'):
             if item in new:
                 req[item] = max(req.get(item, 0), new[item])
         if req.get('min_cpus', 0) > req.get('max_cpus', 0):
@@ -568,7 +568,7 @@ class ResourceAllocationManager(object):
             req['rerunnable'] = base.get('rerunnable', True) and new['rerunnable']
 
         # If specified, these should match.
-        for item in ('accounting_id', 'queue_name', 'job_category'):
+        for item in ('accounting_id', 'queue_name', 'job_category', 'localhost'):
             if item in new:
                 if item in base:
                     if new[item] != base[item]:
