@@ -79,7 +79,7 @@ class FDHelperTestCase(unittest.TestCase):
         output_dict = {}
         for item in outs:
             output_dict[item] = self.top.get(item)
-                
+        fd.model.comp3.x1 = 11
         derivs = fd.run(input_dict, output_dict)
         
         assert_rel_error(self, derivs['comp2.x1']['comp4.y1'], 0.5, .001)
