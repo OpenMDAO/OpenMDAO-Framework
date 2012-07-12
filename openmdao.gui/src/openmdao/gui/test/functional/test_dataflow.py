@@ -143,8 +143,8 @@ def _test_connect(browser):
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
     eq(conn_page.dialog_title, 'Connections: top')
-#    eq(conn_page.source_component, 'comp1')
-#    eq(conn_page.target_component, 'comp2')
+    eq(conn_page.source_component, 'comp1')
+    eq(conn_page.target_component, 'comp2')
     for prefix in ('b', 'e', 'f', 'i', 's'):
         conn_page.connect_vars('comp1.' + prefix + '_out',
                                'comp2.' + prefix + '_in')
