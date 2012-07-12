@@ -83,7 +83,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(child['type'], 'CONMINdriver')
         self.assertEqual(child['interfaces'],
             ['IHasParameters', 'IHasIneqConstraints', 'IHasObjective',
-             'IDriver', 'IHasEvents', 'IComponent', 'IContainer'])
+             'IOptimizer', 'IDriver', 'IHasEvents', 'IComponent', 'IContainer'])
 
         # CHECK DRIVER ATTRIBUTES
         attributes = json.loads(self.cserver.get_attributes('prob.driver'))
@@ -211,4 +211,3 @@ class ConsoleServerTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
