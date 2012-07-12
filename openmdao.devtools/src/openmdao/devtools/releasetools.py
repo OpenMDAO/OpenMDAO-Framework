@@ -253,7 +253,7 @@ def finalize_release(parser, options):
         if options.dry_run:
             print 'skipping...'
         else:
-            check_call(['release', 'push', reldir, 'openmdao@web103.webfaction.com'])
+            check_call(['release', 'push', reldir, 'openmdao@web39.webfaction.com'])
             
         # push release files to official repo on github (dev branch)
         print "pushing branch %s up to the official dev branch" % brname
