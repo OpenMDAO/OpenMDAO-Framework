@@ -41,7 +41,7 @@ class ConnectionsPage(DialogPage):
 
     def get_variable_names(self):
         """ Return names of variables. """
-        # shameful copy/paste from workspace.get_variable_names()
+        # shameful copy/paste from workspace.get_dataflow_component_names()
         names = []
 
         # Assume there should be at least 1, wait for number to not change.
