@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import jsonpickle
+from cStringIO import StringIO
 
 from tornado import web
 
@@ -439,6 +440,30 @@ class TestHandler(ReqHandler):
         self.render('workspace/test.html')
 
 
+class MacroSaveHandler(ReqHandler):
+    ''' save the recorded commands as a macro file.
+    '''
+
+    @web.authenticated
+    def post(self, filename):
+        cserver = self.get_server()
+        contents = StringIO()
+        contents.write('#\n# openmdao macro\n#\n\n')
+        for cmd in cserver.get_recorded_cmds():
+            contents.write(cmd)
+            contents.write('\n')
+        self.write(str(cserver.write_file(filename, contents.getvalue())))
+
+class MacroStartHandler(ReqHandler):
+    ''' set the starting point of recorded commands for macros.
+    '''
+
+    @web.authenticated
+    def post(self):
+        cserver = self.get_server()
+        cserver.macro_start()
+
+
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
     web.url(r'/workspace/addons/?',         AddOnsHandler),
@@ -464,4 +489,6 @@ handlers = [
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
+    web.url(r'/workspace/macro/save/(.*)',  MacroSaveHandler),
+    web.url(r'/workspace/macro/start',      MacroStartHandler),
 ]

@@ -176,6 +176,31 @@ openmdao.Model=function() {
         });
     };
 
+    /* save the command history from the designated start point to the latest command */
+    this.saveMacro = function(filepath, callback, errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'macro/save/'+filepath.replace(/\\/g,'/'),
+            success: callback,
+            error: errorHandler,
+            complete: function(jqXHR, textStatus) {
+                          if (typeof openmdao_test_mode !== 'undefined') {
+                              openmdao.Util.notify('Save complete: ' +textStatus);
+                          }
+                      }
+        });
+    };
+
+    /* set the current point as the designated start point in the command history */
+    this.startMacro = function(callback,errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'macro/start',
+            success: callback,
+            error: errorHandler
+        });
+    };
+
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback !== 'function') {

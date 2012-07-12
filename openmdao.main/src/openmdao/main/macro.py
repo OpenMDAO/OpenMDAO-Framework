@@ -6,7 +6,8 @@ from cStringIO import StringIO
 import pprint
 import types
 
-def _find_name(obj, frame):
+def _find_name_in_frame(obj, frame):
+    """Find the name of the given object in the given frame."""
     for k,v in frame.f_locals.items():
         if v is obj:
             return k
@@ -17,17 +18,18 @@ def _find_name(obj, frame):
 def _cvt_args(args, frame):
     newargs = args[:]
     for i,arg in enumerate(newargs):
-        name = _find_name(arg, frame)
+        name = _find_name_in_frame(arg, frame)
         if name is not None:
             newargs[i] = name
     return newargs
-        
+
 def _cvt_kwargs(kwargs, frame):
     newargs = []
     for key, value in kwargs.items():
-        try:
-            newargs.append((key, value.__name__))
-        except:
+        name = _find_name_in_frame(value, frame)
+        if name is not None:
+            newargs.append((key, name))
+        else:
             newargs.append((key, value))
     return newargs
         
@@ -52,13 +54,12 @@ class CommandRecorder(object):
                         frame = stack[i+1]
                         break
                 CommandRecorder.tmp_history.append((
+                    _find_name_in_frame(obj, frame[0]),
                     fnc.__name__, 
                     _cvt_args(args, frame[0]), 
                     _cvt_kwargs(kwargs, frame[0]), 
                     {'stack': frame[1:] }
                 ))
-                #CommandRecorder.tmp_history.append((fname, id(obj), obj.__class__.__module__, obj.__class__.__name__,
-                                                    #args, kwargs))
         
     @staticmethod
     def pop():
@@ -85,7 +86,7 @@ def recorded(fnc):
     """
     def _wrap(self, *args, **kwargs):
         if CommandRecorder.active:
-            CommandRecorder.record(fnc, self, (self,)+args, kwargs)
+            CommandRecorder.record(fnc, self, list((self,)+args), kwargs)
             try:
                 ret = fnc(self, *args, **kwargs)
             finally:

@@ -23,7 +23,9 @@
     { "text": "Tools", "id": "tools-menu",
       "items": [
         { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor')"},
-        { "text": "Plotter",       "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"}
+        { "text": "Plotter",       "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"},
+        { "text": "Start Macro",   "id": "tools-startmacro","onclick": "openmdao.model.startMacro();" },
+        { "text": "Save Macro",    "id": "tools-savemacro", "onclick": "openmdao.model.saveMacro();" }
       ]
     },
     { "text": "Help", "id": "help-menu",

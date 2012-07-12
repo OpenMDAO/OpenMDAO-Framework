@@ -4,6 +4,7 @@ import sys
 import traceback
 import cmd
 import jsonpickle
+import pprint
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -55,7 +56,8 @@ class ConsoleServer(cmd.Cmd):
         self.prompt = 'OpenMDAO>> '
 
         self._hist = []
-        self.known_types = []
+        self._recorded_cmds = []
+        self._macro_start = None
 
         self.host = host
         self.projfile = ''
@@ -123,18 +125,18 @@ class ConsoleServer(cmd.Cmd):
 
     def precmd(self, line):
         ''' This method is called after the line has been input but before
-            it has been interpreted. If you want to modifdy the input line
+            it has been interpreted. If you want to modify the input line
             before execution (for example, variable substitution) do it here.
         '''
-        self._hist += [line.strip()]
+        self._hist += line.strip()
         return line
 
     @modifies_model
     def onecmd(self, line):
-        self._hist += [line.strip()]
-        # Override the onecmd() method so we can trap error returns
+        self._hist += line.strip()
+        self._recorded_cmds.append(line)
         try:
-            cmd.Cmd.onecmd(self, line)
+            result = cmd.Cmd.onecmd(self, line)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -156,6 +158,8 @@ class ConsoleServer(cmd.Cmd):
             try:
                 exec(line) in self.proj.__dict__
             except Exception, err:
+                if self._recorded_cmds and (line == self._recorded_cmds[-1]):
+                    self._recorded_cmds.pop()
                 self._error(err, sys.exc_info())
         else:
             try:
@@ -163,6 +167,8 @@ class ConsoleServer(cmd.Cmd):
                 if result is not None:
                     print result
             except Exception, err:
+                if self._recorded_cmds and (line == self._recorded_cmds[-1]):
+                    self._recorded_cmds.pop()
                 self._error(err, sys.exc_info())
 
     @modifies_model
@@ -219,6 +225,21 @@ class ConsoleServer(cmd.Cmd):
         ''' Return this server's :attr:`_hist`.
         '''
         return self._hist
+    
+    def get_recorded_cmds(self):
+        ''' Return this server's :attr:`_recorded_cmds`.
+        '''
+        return self._recorded_cmds[self._macro_start:]
+    
+    def macro_start(self, idx='current'):
+        if idx == 'current':
+            idx = len(self._recorded_cmds) - 1
+            
+        if idx < 0:
+            self._macro_start = None
+        else:
+            self._macro_start = int(idx)
+        return self._macro_start
 
     def get_JSON(self):
         ''' return current state as JSON
@@ -230,14 +251,14 @@ class ConsoleServer(cmd.Cmd):
             returns the container and the name of the root object
         '''
         cont = None
-        root = pathname.split('.')[0]
+        parts = pathname.split('.', 1)
+        root = parts[0]
         if self.proj and root in self.proj.__dict__:
             if root == pathname:
                 cont = self.proj.__dict__[root]
             else:
-                rest = pathname[len(root) + 1:]
                 try:
-                    cont = self.proj.__dict__[root].get(rest)
+                    cont = self.proj.__dict__[root].get(parts[1])
                 except Exception, err:
                     self._error(err, sys.exc_info())
         return cont, root
@@ -446,7 +467,7 @@ class ConsoleServer(cmd.Cmd):
             self._error(err, sys.exc_info())
 
     def save_project(self):
-        ''' save the cuurent project state & export it whence it came
+        ''' save the current project state & export it whence it came
         '''
         if self.proj:
             try:
@@ -463,34 +484,33 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
         else:
             print 'No Project to save'
-
+            
+    
     @modifies_model
     def add_component(self, name, classname, parentname):
         ''' add a new component of the given type to the specified parent.
         '''
         name = name.encode('utf8')
-        if (parentname and len(parentname) > 0):
+        if parentname:
             parent, root = self.get_container(parentname)
             if parent:
                 try:
-                    if self.projdirfactory:
-                        obj = self.projdirfactory.create(classname)
-                    if obj:
-                        parent.add(name, obj)
-                    else:
-                        parent.add(name, create(classname))
+                    parent.add(name, create(classname))
                 except Exception, err:
                     self._error(err, sys.exc_info())
+                else:
+                    self._recorded_cmds.append('%s.add("%s",create("%s"))' % 
+                                               (parentname, name, classname))
             else:
                 print "Error adding component, parent not found:", parentname
         else:
             try:
-                if (classname.find('.') < 0):
-                    self.default(name + '=' + classname + '()')
-                else:
-                    self.proj.__dict__[name] = create(classname)
+                self.proj.__dict__[name] = create(classname)
             except Exception, err:
                 self._error(err, sys.exc_info())
+            else:
+                self._recorded_cmds.append('%s = create("%s"))' % 
+                                           (name, classname))
 
     def cleanup(self):
         ''' Cleanup various resources.
