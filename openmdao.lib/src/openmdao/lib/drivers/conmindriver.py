@@ -41,7 +41,7 @@ from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
-                                     IHasObjective, implements
+                                     IHasObjective, implements, IOptimizer
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
@@ -197,7 +197,7 @@ class CONMINdriver(DriverUsesDerivatives):
             
     """
     # I don't see an IUsesGradients
-    implements(IHasParameters, IHasIneqConstraints, IHasObjective)
+    implements(IHasParameters, IHasIneqConstraints, IHasObjective, IOptimizer)
     
     # pylint: disable-msg=E1101
     # Control parameters for CONMIN.
