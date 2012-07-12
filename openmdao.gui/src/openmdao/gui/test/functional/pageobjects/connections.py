@@ -2,7 +2,6 @@ import logging
 
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
-from selenium.webdriver.common.keys import Keys
 
 from dialog import DialogPage
 from elements import ButtonElement, InputElement
@@ -20,10 +19,12 @@ class ConnectionsPage(DialogPage):
     connect_button = ButtonElement((By.ID, 'connect'))
 
     def set_source_component(self, comp_name):
-        self.source_component = comp_name + Keys.RETURN
+        """ Set the source component. """
+        self.source_component = comp_name + '\n'
 
     def set_target_component(self, comp_name):
-        self.target_component = comp_name + Keys.RETURN
+        """ Set the target component. """
+        self.target_component = comp_name + '\n'
 
     def connect(self):
         """ Connect the selected variables. """
@@ -31,8 +32,8 @@ class ConnectionsPage(DialogPage):
 
     def connect_vars(self, src, dst):
         """ Connect `src` to `dst`. """
-        self.source_variable = src + Keys.RETURN
-        self.target_variable = dst + Keys.RETURN
+        self.source_variable = src + '\n'
+        self.target_variable = dst + '\n'
         self('connect_button').click()
 
     def get_variable_figures(self):
