@@ -109,15 +109,17 @@ class FDhelper(object):
         
         icase = 0
         derivs = {}
+        for out in self.model.driver.case_outputs:
+            derivs[out] = {}
+        
         for wrt, val in self.model.driver.get_parameters().iteritems():
             
-            derivs[wrt] = {}
             if self.model.driver.distribution_generator.form == 'CENTRAL':
                 
                 delx = cases[icase][wrt] - cases[icase+1][wrt]
                 for out in self.model.driver.case_outputs:
                     
-                    derivs[wrt][out] = \
+                    derivs[out][wrt] = \
                         (cases[icase][out] - cases[icase+1][out])/delx
                         
                     
@@ -128,7 +130,7 @@ class FDhelper(object):
                 delx = cases[icase][wrt] - input_dict[wrt]
                 for out in self.model.driver.case_outputs:
                     
-                    derivs[wrt][out] = \
+                    derivs[out][wrt] = \
                         (cases[icase][out] - output_dict[out])/delx
                         
                 icase += 1

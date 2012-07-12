@@ -292,13 +292,17 @@ class Analytic(ChainRule):
             
         i_eq = eq_num
         for node_name in self.dworkflow[scope_name]:
-    
-            if not isinstance(node_name, list):
-                node = dscope.parent.get(node_name)
             
             # If it's a list, then it's a set of components to finite
             # difference together.
-            if isinstance(node_name, list):
+            if not isinstance(node_name, list):
+                node = dscope.parent.get(node_name)
+                fdblock = False
+            else:
+                fdblock = True
+            
+            # Finite difference block
+            if fdblock:
                 
                 fd = self.fdhelpers[scope_name][str(node_name)]
                 
@@ -366,8 +370,7 @@ class Analytic(ChainRule):
                          
                         i_param = self.param_names.index(input_full)
                          
-                        self.RHS[i_eq][i_param] = \
-                            local_derivs[output_name][input_name]
+                        self.RHS[i_eq][i_param] = 1.0
                          
                     # Assy Input connected to other outputs goes in LHS
                     else:
@@ -432,9 +435,9 @@ class Analytic(ChainRule):
             # This component can determine its derivatives.
             else:
                  
-                node_name = [node_name]
                 node.calc_derivatives(first=True)
                 local_derivs = node.derivatives.first_derivatives
+                node_name = [node_name]
                  
             # The following executes for components with derivatives and
             # blocks that are finite-differenced
@@ -452,7 +455,6 @@ class Analytic(ChainRule):
                        input_full not in solver_conns:
                 
                         sources = ascope._depgraph.connections_to(input_full)
-                        print input_full, sources
                         expr_txt = sources[0][0]
                         target = sources[0][1]
                         
@@ -474,17 +476,27 @@ class Analytic(ChainRule):
                      
                     self.LHS[i_eq][i_eq] = 1.0
                      
+                    if fdblock:
+                        local_out = "%s.%s" % (item, output_name)
+                    else:
+                        local_out = output_name
+                    
                     # Each input provides a term for LHS or RHS
                     for input_name in edge_dict[0]:
                         
-                        # Direct connection to parameter goes in RHS
                         input_full = "%s.%s" % (item, input_name)
+                        if fdblock:
+                            local_in = input_full
+                        else:
+                            local_in = input_name
+                            
+                        # Direct connection to parameter goes in RHS
                         if input_full in self.param_names:
                              
                             i_param = self.param_names.index(input_full)
                              
                             self.RHS[i_eq][i_param] = \
-                                local_derivs[output_name][input_name]
+                                local_derivs[local_out][local_in]
                              
                         # Input is a dependent in a solver loop
                         elif input_full in solver_conns:
@@ -493,7 +505,7 @@ class Analytic(ChainRule):
                             i_dep = self.var_list.index(source)
                              
                             self.LHS[i_eq][i_dep] = \
-                                -local_derivs[output_name][input_name]
+                                -local_derivs[local_out][local_in]
                             
                         # Input connected to other outputs goes in LHS
                         else:
@@ -503,7 +515,7 @@ class Analytic(ChainRule):
                             expr_deriv = conn_data[input_full][1]
                             
                             self.LHS[i_eq][i_var] = \
-                                -local_derivs[output_name][input_name] * \
+                                -local_derivs[local_out][local_in] * \
                                  expr_deriv
                      
                     i_eq += 1

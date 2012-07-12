@@ -413,7 +413,6 @@ class Container(SafeHasTraits):
         olditraits = self._instance_traits()
         for name, trait in olditraits.items():
             if trait.type is not 'event' and name in self._added_traits:
-                print "added", name, trait.type, type(trait)
                 result.add_trait(name, _clone_trait(trait))
                 setattr(result, name, getattr(self, name))
 
