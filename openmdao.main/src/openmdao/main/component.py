@@ -233,6 +233,18 @@ class Component(Container):
                 if self.parent:
                     self.parent.child_invalidated(self.name, outs)
 
+    def __deepcopy__ ( self, memo ):
+        """ For some reason, deepcopying does not set the trait callback
+        functions. We need to do this manually. """
+        
+        result = super(Component, self).__deepcopy__(memo)
+        
+        for name, trait in result.class_traits().items():
+            if trait.iotype == 'in':
+                result._set_input_callback(name)        
+            
+        return result
+        
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = super(Component, self).__getstate__()

@@ -13,13 +13,12 @@ from openmdao.main.driver import Driver
 class DriverUsesDerivatives(Driver): 
     """This class provides an implementation of the derivatives delegates."""
 
+    differentiator = Slot(IDifferentiator, iotype='in',
+                          desc = "Slot for a differentiator")
+    
     def __init__(self, *args, **kwargs):
         
         super(DriverUsesDerivatives, self).__init__(*args, **kwargs)
-        
-        self.add("differentiator", 
-                   Slot(IDifferentiator, iotype='in',
-                        desc = "Slot for a differentiator"))
         
         # These flags tell whether to check for missing derivatives during
         # check_config. Default as stated.
