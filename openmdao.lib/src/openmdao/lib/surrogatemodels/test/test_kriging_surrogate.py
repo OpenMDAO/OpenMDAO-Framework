@@ -35,7 +35,7 @@ class KrigingSurrogateTests(unittest.TestCase):
         x = array([[0.05], [.25], [0.61], [0.95]])
         y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
         
-        krig1 = KrigingSurrogate(x,y)
+        krig1 = KrigingSurrogate(list(x),list(y))
         new_x = array([0.5])
         pred = krig1.predict(new_x)
         

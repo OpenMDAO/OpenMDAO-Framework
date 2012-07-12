@@ -79,35 +79,35 @@ class FDHelperTestCase(unittest.TestCase):
         output_dict = {}
         for item in outs:
             output_dict[item] = self.top.get(item)
-                
+        fd.model.comp3.x1 = 11
         derivs = fd.run(input_dict, output_dict)
         
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y1'], 0.5, .001)
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y2'], 1.5, .001)
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y3'], 10.5, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y1'], 7.0, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y2'], 0.0, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y3'], 14.0, .001)
+        assert_rel_error(self, derivs['comp4.y1']['comp2.x1'], 0.5, .001)
+        assert_rel_error(self, derivs['comp4.y2']['comp2.x1'], 1.5, .001)
+        assert_rel_error(self, derivs['comp4.y3']['comp2.x1'], 10.5, .001)
+        assert_rel_error(self, derivs['comp4.y1']['comp3.x1'], 7.0, .001)
+        assert_rel_error(self, derivs['comp4.y2']['comp3.x1'], 0.0, .001)
+        assert_rel_error(self, derivs['comp4.y3']['comp3.x1'], 14.0, .001)
 
         fd.model.driver.distribution_generator.form = 'FORWARD'
         derivs = fd.run(input_dict, output_dict)
         
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y1'], 0.5, .001)
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y2'], 1.5, .001)
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y3'], 10.5, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y1'], 7.0, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y2'], 0.0, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y3'], 14.0, .001)
+        assert_rel_error(self, derivs['comp4.y1']['comp2.x1'], 0.5, .001)
+        assert_rel_error(self, derivs['comp4.y2']['comp2.x1'], 1.5, .001)
+        assert_rel_error(self, derivs['comp4.y3']['comp2.x1'], 10.5, .001)
+        assert_rel_error(self, derivs['comp4.y1']['comp3.x1'], 7.0, .001)
+        assert_rel_error(self, derivs['comp4.y2']['comp3.x1'], 0.0, .001)
+        assert_rel_error(self, derivs['comp4.y3']['comp3.x1'], 14.0, .001)
 
         fd.model.driver.distribution_generator.form = 'BACKWARD'
         derivs = fd.run(input_dict, output_dict)
         
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y1'], 0.5, .001)
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y2'], 1.5, .001)
-        assert_rel_error(self, derivs['comp2.x1']['comp4.y3'], 10.5, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y1'], 7.0, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y2'], 0.0, .001)
-        assert_rel_error(self, derivs['comp3.x1']['comp4.y3'], 14.0, .001)
+        assert_rel_error(self, derivs['comp4.y1']['comp2.x1'], 0.5, .001)
+        assert_rel_error(self, derivs['comp4.y2']['comp2.x1'], 1.5, .001)
+        assert_rel_error(self, derivs['comp4.y3']['comp2.x1'], 10.5, .001)
+        assert_rel_error(self, derivs['comp4.y1']['comp3.x1'], 7.0, .001)
+        assert_rel_error(self, derivs['comp4.y2']['comp3.x1'], 0.0, .001)
+        assert_rel_error(self, derivs['comp4.y3']['comp3.x1'], 14.0, .001)
 
 if __name__ == "__main__":
     unittest.main()

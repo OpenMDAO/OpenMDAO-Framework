@@ -27,7 +27,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, IHasConstraints, \
-                                     IHasObjective, implements
+                                     IHasObjective, implements, IOptimizer
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
     
@@ -44,7 +44,7 @@ class SLSQPdriver(DriverUsesDerivatives):
     (positive = violated).
     """
     
-    implements(IHasParameters, IHasConstraints, IHasObjective)
+    implements(IHasParameters, IHasConstraints, IHasObjective, IOptimizer)
     
     # pylint: disable-msg=E1101
     accuracy = Float(1.0e-6, iotype='in', 
