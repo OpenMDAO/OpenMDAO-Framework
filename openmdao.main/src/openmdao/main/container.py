@@ -758,8 +758,7 @@ class Container(SafeHasTraits):
                     if is_instance(obj, Container) and id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
-                    elif trait.iotype is not None and id(trait) not in visited:
-                        visited.add(id(trait))
+                    elif trait.iotype is not None:
                         yield (name, obj)
 
     def items(self, recurse=False, **metadata):
