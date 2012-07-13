@@ -7,7 +7,6 @@ build
 dist
 parts
 eggs
-~*
 licenses_table.txt
 wingproj.wpr
 .installed.cfg
