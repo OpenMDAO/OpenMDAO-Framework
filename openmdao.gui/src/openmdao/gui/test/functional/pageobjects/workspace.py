@@ -74,10 +74,8 @@ class WorkspacePage(BasePageObject):
     props_outputs  = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[2]"))
 
     libraries_tab = ButtonElement((By.ID, 'palette_tab'))
-    #working_section = ButtonElement((By.XPATH,
-                            #"//div[(@id='palette')]//div[(@title='working')]"))
-    openmdao_section = ButtonElement((By.XPATH,
-                            "//div[(@id='palette')]//div[(@title='openmdao')]"))
+    libraries_search = InputElement((By.ID, 'objtt-select'))
+
     # Bottom.
     history = TextElement((By.ID, 'history'))
     command = InputElement((By.ID, 'command'))

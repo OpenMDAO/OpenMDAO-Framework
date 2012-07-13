@@ -4,7 +4,6 @@ Tests of dataflow functions.
 
 import logging
 import pkg_resources
-import re
 import sys
 import time
 
@@ -31,10 +30,7 @@ def _test_maxmin(browser):
 
     # verify that the globals figure is invisible
     globals_figure = workspace_page.get_dataflow_figure('')
-    if sys.platform == 'darwin':
-        eq(globals_figure.border, 'none')
-    else:
-        eq(globals_figure.border, '0px none rgb(0, 0, 0)')
+    assert globals_figure.border.find('none') >= 0
     eq(globals_figure.background_color, 'rgba(0, 0, 0, 0)')
 
     # Add maxmin.py to project
@@ -63,28 +59,15 @@ def _test_maxmin(browser):
     workspace_page.hide_right()
     workspace_page.hide_console()
 
-    # minimized and maximized styles for top right corner of dataflow figures
-    if sys.platform == 'darwin':
-        bg_min = '%s %s' % ('url(http://localhost/static/images/circle-plus.png)',
-                            'no-repeat 100% 0%')
-    else:
-        bg_min = '%s %s %s' % ('rgba(0, 0, 0, 0)',
-                               'url(http://localhost/static/images/circle-plus.png)',
-                               'no-repeat scroll 100% 0%')
-    bg_max = bg_min.replace('circle-plus', 'circle-minus')
-
     # Maximize maxmin.
     maxmin = workspace_page.get_dataflow_figure('maxmin')
     background = maxmin('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, bg_min)
+    assert background.find('circle-plus.png') >= 0
 
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-
-    eq(background, bg_max)
     time.sleep(1)
+    assert background.find('circle-minus.png') >= 0
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
@@ -98,8 +81,7 @@ def _test_maxmin(browser):
     time.sleep(0.5)
     workspace_page.do_command('dir()')
     background = maxmin('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, bg_max)
+    assert background.find('circle-minus.png') >= 0
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
@@ -107,8 +89,7 @@ def _test_maxmin(browser):
     # Minimize sub
     sub('top_right').click()
     background = sub('top_right').value_of_css_property('background')
-    background = re.sub('localhost:[0-9]+/', 'localhost/', background)
-    eq(background, bg_min)
+    assert background.find('circle-plus.png') >= 0
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
@@ -162,6 +143,8 @@ def _test_connect(browser):
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
     eq(conn_page.dialog_title, 'Connections: top')
+    eq(conn_page.source_component, 'comp1')
+    eq(conn_page.target_component, 'comp2')
     for prefix in ('b', 'e', 'f', 'i', 's'):
         conn_page.connect_vars('comp1.' + prefix + '_out',
                                'comp2.' + prefix + '_in')
@@ -249,7 +232,6 @@ def _test_connections(browser):
 
     # show dataflow for vehicle
     workspace_page.expand_object('sim')
-    time.sleep(1)
     workspace_page.show_dataflow('sim.vehicle')
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
 
@@ -257,66 +239,69 @@ def _test_connections(browser):
     conn_page = vehicle.connections_page()
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '<Assembly>')
-    eq(conn_page.destination_component, '<Assembly>')
+    eq(conn_page.target_component, '<Assembly>')
     eq(len(conn_page.get_variable_figures()), 0)
 
     # one connection between transmission and engine (RPM)
-    conn_page.source_component = 'transmission\n'
-    conn_page.destination_component = 'engine\n'
-    time.sleep(1)
+    conn_page.set_source_component('transmission')
+    conn_page.set_target_component('engine')
     eq(conn_page.source_variable, '')
-    eq(conn_page.destination_variable, '')
+    eq(conn_page.target_variable, '')
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['RPM', 'RPM'])
 
     # two connections between engine and chassis
-    conn_page.source_component = 'engine\n'
-    conn_page.destination_component = 'chassis\n'
-    time.sleep(1)
+    conn_page.set_source_component('engine')
+    conn_page.set_target_component('chassis')
     eq(conn_page.source_variable, '')
-    eq(conn_page.destination_variable, '')
+    eq(conn_page.target_variable, '')
     eq(len(conn_page.get_variable_figures()), 4)
+    eq(sorted(conn_page.get_variable_names()),
+       ['engine_torque', 'engine_weight', 'mass_engine', 'torque'])
 
     # disconnect transmission
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
 
     # now there are no connections between transmission and engine
-    conn_page.source_component = 'transmission\n'
-    conn_page.destination_component = 'engine\n'
-    time.sleep(1)
+    conn_page.set_source_component('transmission')
+    conn_page.set_target_component('engine')
     eq(len(conn_page.get_variable_figures()), 0)
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
-    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['RPM', 'RPM'])
 
     # no connections between transmission and chassis
-    conn_page.destination_component = 'chassis\n'
-    time.sleep(1)
+    conn_page.set_target_component('chassis')
     eq(len(conn_page.get_variable_figures()), 0)
 
-    # reconnect transmission torque torque to chassis torque
+    # reconnect transmission torque to chassis torque
     conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
-    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['torque_ratio', 'torque_ratio'])
 
     # no connections between vehicle assembly and transmission
-    conn_page.source_component = '\n'
-    conn_page.destination_component = 'transmission\n'
-    time.sleep(1)
+    conn_page.set_source_component('')
+    conn_page.set_target_component('transmission')
     eq(len(conn_page.get_variable_figures()), 0)
 
     # connect assembly variable to component variable
     conn_page.connect_vars('current_gear', 'transmission.current_gear')
-    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['current_gear', 'current_gear'])
 
     # one connection from chassis component to vehicle assembly
-    conn_page.source_component = 'chassis\n'
-    conn_page.destination_component = '\n'
-    time.sleep(1)
+    conn_page.set_source_component('chassis')
+    conn_page.set_target_component('')
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['acceleration', 'acceleration'])
 
     # disconnect chassis
     conn_page.close()
@@ -324,14 +309,14 @@ def _test_connections(browser):
     chassis.disconnect()
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
     conn_page = vehicle.connections_page()
-    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 0)
 
     # connect component variable to assembly variable
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
-    time.sleep(1)
-    conn_page.source_component = 'chassis\n'
+    conn_page.set_source_component('chassis')
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['acceleration', 'acceleration'])
 
     conn_page.close()
 
