@@ -12,6 +12,28 @@ ul {
     margin: 0;
 }
 
+.ui-layout-content {
+    overflow:        auto; /* add scrolling to content-divs (panel-wrappers) */
+    border-top:        0 !important; /* tab-buttons above this DIV already has a border-bottom */
+}
+
+
+/*
+ *  These tabs 'fill' the pane,
+ *  so the pane-border acts as the tab-border
+ */
+.ui-layout-pane-west, .ui-layout-pane-center, .ui-layout-pane-east {
+  padding:  0;
+  overflow:  hidden;
+}
+
+/**
+.ui-tabs-panel {
+  overflow: auto;
+}
+**/
+
+
 /* desktop */
 #leftcol {
   margin: 0;
@@ -154,7 +176,7 @@ dl {
 }
 
 /*#otree, #ftree, #propertieseditor, #palette {*/
-#otree, #ftree, #propertieseditor {
+#otree_pane, #ftree, #properties_pane {
   height: 100%;
   width: 100%;
 }

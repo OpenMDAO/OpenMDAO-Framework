@@ -19,6 +19,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         dataflowFig = null;
 
     dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
+    elm.css({ 'overflow':'auto' });
+    dataflow.setViewPort(elm.attr('id'));
 
     // make the dataflow pane droppable
     dataflowDiv.droppable ({

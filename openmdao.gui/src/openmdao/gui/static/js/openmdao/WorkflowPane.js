@@ -17,6 +17,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
     self.pathname = pathname;
 
     workflow.setBackgroundImage( "/static/images/grid_10.png", true);
+//    workflow.setViewPort(elm.attr('id'));
 
     // make the workflow pane droppable, handle drops of objtype
     // (obj drops from ComponentTree are handled in ComponentTreeFrame.js)

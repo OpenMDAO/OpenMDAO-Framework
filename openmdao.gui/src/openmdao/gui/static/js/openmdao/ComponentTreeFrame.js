@@ -2,14 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_fn,dataflow_fn) {
-    var menu =  [
-                    {   "text": "Component",
-                        "items": [
-                            { "text": "Add Component", "onclick": "alert('Sorry, not implemented yet :(');" }
-                        ]
-                    }
-                ];
-    openmdao.ComponentTreeFrame.prototype.init.call(this,id,'Objects',menu);
+    openmdao.ComponentTreeFrame.prototype.init.call(this,id,'Components',menu);
 
     /***********************************************************************
      *  private

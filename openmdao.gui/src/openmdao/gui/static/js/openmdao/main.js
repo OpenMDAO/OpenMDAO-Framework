@@ -13,7 +13,16 @@ jQuery(function() {
         north__size: 40,
         north__resizable: false,
         north_showOverflowOnHover: true,
-        south__size: 150
+        south__size: 150,
+        onresize: function(e) {
+            var layout_pane = jQuery('.ui-layout-'+e);
+            debug.info('layout resize',e,layout_pane);
+            jQuery(layout_pane.find('.ui-tabs-panel').each(function() {
+                var panel = jQuery(this);
+                panel.width(layout_pane.width());
+                panel.height(layout_pane.height()-panel.position().top);
+            }));
+        }
     });
 
     // add main menu
@@ -22,17 +31,17 @@ jQuery(function() {
     );
 
     // add tabbed pane functionality
-    openmdao.TabbedPane("leftcol_tabs");
-    openmdao.TabbedPane("central_tabs");
-    openmdao.TabbedPane("rightcol_tabs");
+    jQuery("#leftcol_tabs").tabs();
+    jQuery("#central_tabs").tabs();
+    jQuery("#rightcol_tabs").tabs();
 
     // add gui functionality to designated DOM nodes
     (function() {
         var model = openmdao.model;
 
-        var data = new openmdao.DataflowFrame("dataflow",model,''),
-            work = new openmdao.WorkflowFrame("workflow",model,''),
-            prop = new openmdao.PropertiesFrame("propertieseditor",model);
+        var data = new openmdao.DataflowFrame("dataflow_pane",model,''),
+            work = new openmdao.WorkflowFrame("workflow_pane",model,''),
+            prop = new openmdao.PropertiesFrame("properties_pane",model);
 
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
@@ -48,8 +57,8 @@ jQuery(function() {
         function prop_fn(path) { prop.editObject(path); }
         function comp_fn(path) { new openmdao.ComponentFrame(model,path); }
 
-        new openmdao.ComponentTreeFrame("otree", model, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.PaletteFrame("palette",  model);
+        new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
+        new openmdao.PaletteFrame("palette_pane",  model);
         new openmdao.ConsoleFrame("console",  model);
     }());
 
