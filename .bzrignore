@@ -3,7 +3,6 @@
 *_log.txt
 *.tar.gz
 *.tar
-.coverage
 build
 dist
 parts
