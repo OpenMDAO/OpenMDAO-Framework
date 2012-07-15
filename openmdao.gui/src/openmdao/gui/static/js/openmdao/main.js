@@ -47,8 +47,8 @@ jQuery(function() {
         // create functions to load content into the different panes
         // intercept tab clicks to set the adjacent label
         var central_label = jQuery('#central_label'),
-            dataflow_tab  = jQuery('#dataflow_tab'),
-            workflow_tab  = jQuery('#workflow_tab');
+            dataflow_tab  = jQuery('#dataflow_tab a'),
+            workflow_tab  = jQuery('#workflow_tab a');
 
         dataflow_tab.click(function(e) { central_label.text(data.getPathname()); });
         workflow_tab.click(function(e) { central_label.text(work.getPathname()); });
