@@ -2,14 +2,19 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.WorkflowPane = function(elm,model,pathname,name) {
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     // initialize private variables
     var self = this,
         comp_figs = {},
         flow_figs = {},
         workflowID = "#"+pathname.replace(/\./g,'-')+"-workflow",
         workflowCSS = 'height:'+(screen.height-100)+'px;'+
-                      'width:'+(screen.width-100)+'px;' +
-                      'overflow:auto;',
+                      'width:'+(screen.width-100)+'px;'+
+                      'position:relative;',
         workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
                       .appendTo(elm),
         workflow = new draw2d.Workflow(workflowID);
@@ -17,7 +22,8 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
     self.pathname = pathname;
 
     workflow.setBackgroundImage( "/static/images/grid_10.png", true);
-//    workflow.setViewPort(elm.attr('id'));
+    elm.css({ 'overflow':'auto' });
+    workflow.setViewPort(elm.attr('id'));
 
     // make the workflow pane droppable, handle drops of objtype
     // (obj drops from ComponentTree are handled in ComponentTreeFrame.js)
@@ -151,6 +157,10 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
             }
         }
     }
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
 
     /** update the schematic with data from the model */
     this.showWorkflow = function(pathname) {
