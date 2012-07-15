@@ -16,11 +16,12 @@ jQuery(function() {
         south__size: 150,
         onresize: function(e) {
             var layout_pane = jQuery('.ui-layout-'+e);
-            debug.info('layout resize',e,layout_pane);
             jQuery(layout_pane.find('.ui-tabs-panel').each(function() {
                 var panel = jQuery(this);
                 panel.width(layout_pane.width());
                 panel.height(layout_pane.height()-panel.position().top);
+                //debug.info('layout resized',this,layout_pane.width(),
+                //            layout_pane.height()-panel.position().top);
             }));
         }
     });
@@ -51,7 +52,7 @@ jQuery(function() {
 
         dataflow_tab.click(function(e) { central_label.text(data.getPathname()); });
         workflow_tab.click(function(e) { central_label.text(work.getPathname()); });
-                
+
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
         function prop_fn(path) { prop.editObject(path); }
@@ -62,8 +63,12 @@ jQuery(function() {
         new openmdao.ConsoleFrame("console",  model);
     }());
 
+    // do layout
+    jQuery('body').trigger('layoutresizeall');
+
     // start with objects, dataflow & properties visible
     jQuery('#otree_tab').click();
     jQuery('#dataflow_tab').click();
     jQuery('#properties_tab').click();
 });
+
