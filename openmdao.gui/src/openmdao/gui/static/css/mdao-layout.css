@@ -42,8 +42,9 @@ ul {
   overflow: hidden;
 }
 #central_label {
-  margin: 0;
-  float: left;
+  position: absolute;
+  top: 0;
+  right: 0;
   padding: 5px 20px;
 }
 #rightcol {
