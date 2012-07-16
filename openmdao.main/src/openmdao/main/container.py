@@ -11,7 +11,6 @@ import socket
 import sys
 import inspect
 import re
-from inspect import  getmodule
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -175,8 +174,6 @@ class Container(SafeHasTraits):
                           
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
-        
-        self._adds = {} # keep track of added stuff for saving config
         
         self._parent = None
         self._name = None
@@ -517,8 +514,6 @@ class Container(SafeHasTraits):
                 raise NameError('Would override attribute %r of %s'
                                 % (name, base.__name__))
 
-        self._adds[name] = getmodule(trait).__name__ + '.' + trait.__class__.__name__
-
         #FIXME: saving our own list of added traits shouldn't be necessary...
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
@@ -615,7 +610,6 @@ class Container(SafeHasTraits):
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
-            self._adds[name] = getmodule(obj).__name__ + '.' + obj.__class__.__name__
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
@@ -691,11 +685,6 @@ class Container(SafeHasTraits):
             self.raise_exception(
                 'remove does not allow dotted path names like %s' %
                                  name, NameError)
-        try:
-            del self._adds[name]
-        except KeyError:
-            pass
-        
         trait = self.get_trait(name)
         if trait is not None:
             obj = getattr(self, name)
@@ -1435,52 +1424,6 @@ class Container(SafeHasTraits):
         new_exc = exc_type(msg)
         raise type(new_exc), new_exc, exc_traceback
 
-    def get_config(self):
-        """Return the config dict for this Container."""
-        cfg = {}
-        cfg['@add'] = self._adds.copy()
-        for name in self._adds:
-            obj = getattr(self, name)
-            if hasattr(obj, 'get_config'):
-                cfg[name] = obj.get_config()
-        return cfg
-    
-    def set_config(self, config):
-        """Set this object's configuration using the given config dict."""
-        cache = {}
-        for name, cname in config['@add']:
-            klass = cache.get(cname)
-            if not klass:
-                mod, klass = _find_module_attr(cname)
-                if klass is not None:
-                    cache[cname] = klass
-            
-
-def _find_module_attr(modpath):
-    """Return a module object and an attribute from that module based on the given modpath.
-    Import the module if necessary.
-    """
-    parts = modpath.split('.')
-    if len(parts) <= 1:
-        return (None, None)
-    
-    mname = '.'.join(parts[:-1])
-    mod = sys.modules.get(mname)
-    if mod is None:
-        try:
-            __import__(mname)
-            mod = sys.modules.get(mname)
-        except ImportError:
-            pass
-    if mod:
-        return (mod, getattr(mod, parts[-1]))
-    
-    # try one more level down in case attr is nested
-    mod, obj = _find_module_attr(mname)
-    if obj:
-        obj = getattr(obj, parts[-1], None)
-    return (mod, obj)
-    
     
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)

@@ -299,7 +299,6 @@ class NamespaceTestCase(unittest.TestCase):
                          set([('foo.vt2.vt3.a',1.),('foo.vt2.vt3.b',12.),
                               ('foo.vt2.x',-1.),('foo.vt2.y',-2.),
                               ('foo.v1',1.),('foo.v2',2.)]))
-    
 
 class ListConnectTestCase(unittest.TestCase):
 

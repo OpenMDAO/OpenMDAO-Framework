@@ -7,9 +7,7 @@ from cStringIO import StringIO
 from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
-from openmdao.gui.projdirfactory import ProjDirFactory
 
-from openmdao.util.log import logger
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -393,7 +391,6 @@ class UploadHandler(ReqHandler):
     def post(self):
         path = self.get_argument('path', default=None)
         cserver = self.get_server()
-        logger.error("files = %s" % self.request.files.keys())
         files = self.request.files['file']
         if files:
             for file_ in files:
@@ -438,7 +435,6 @@ class TestHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.render('workspace/test.html')
-
 
 
 handlers = [

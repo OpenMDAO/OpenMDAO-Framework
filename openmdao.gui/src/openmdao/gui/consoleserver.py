@@ -125,14 +125,14 @@ class ConsoleServer(cmd.Cmd):
             it has been interpreted. If you want to modify the input line
             before execution (for example, variable substitution) do it here.
         '''
-        self._hist += line.strip()
+        self._hist += [line.strip()]
         return line
 
     @modifies_model
     def onecmd(self, line):
-        self._hist += line.strip()
+        self._hist += [line.strip()]
         try:
-            result = cmd.Cmd.onecmd(self, line)
+            cmd.Cmd.onecmd(self, line)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -454,7 +454,6 @@ class ConsoleServer(cmd.Cmd):
         else:
             print 'No Project to save'
             
-    
     @modifies_model
     def add_component(self, name, classname, parentname):
         ''' add a new component of the given type to the specified parent.

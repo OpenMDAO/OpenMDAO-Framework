@@ -89,13 +89,35 @@ plugin_ifaces = set([
     'IDifferentiator',
 ])
 
-
-
 # predicate functions for selecting available types
 def is_plugin(name, meta):
     return len(plugin_ifaces.intersection(meta.get('ifaces',[]))) > 0
 
-
+def _find_module_attr(modpath):
+    """Return an attribute from a module based on the given modpath.
+    Import the module if necessary.
+    """
+    parts = modpath.split('.')
+    if len(parts) <= 1:
+        return None
+    
+    mname = '.'.join(parts[:-1])
+    mod = sys.modules.get(mname)
+    if mod is None:
+        try:
+            __import__(mname)
+            mod = sys.modules.get(mname)
+        except ImportError:
+            pass
+    if mod:
+        return getattr(mod, parts[-1])
+    
+    # try one more level down in case attr is nested
+    obj = _find_module_attr(mname)
+    if obj:
+        obj = getattr(obj, parts[-1], None)
+    return obj
+    
 class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
     the set of available types up-to-date as project files change.
@@ -153,11 +175,10 @@ class ProjDirFactory(Factory):
                         return None
                     finally:
                         sys.path = sys.path[1:]
-                    #visitor = self.analyzer.fileinfo[fpath][0]
 
                 mod = sys.modules[modpath]
                 try:
-                    ctor = getattr(mod, typ.split('.')[-1])
+                    ctor = _find_module_attr(typ)
                 except KeyError:
                     return None
                 return ctor(**ctor_args)

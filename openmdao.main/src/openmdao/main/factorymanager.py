@@ -17,7 +17,7 @@ from openmdao.main.importfactory import ImportFactory
 from openmdao.main.pkg_res_factory import PkgResourcesFactory, plugin_groups
 from openmdao.util.log import logger
 
-factories = []
+_factories = []
 _factory_lock = threading.Lock()
 typeset = set()  # set of all types that have been created
 
@@ -26,7 +26,7 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     version, etc.
     """
     obj = None
-    for fct in factories:
+    for fct in _factories:
         obj = fct.create(typname, version, server, res_desc, **ctor_args)
         if obj is not None:
             break
@@ -40,22 +40,22 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
 
 def register_class_factory(factory):
     """Add a Factory to the factory list."""
-    global factories
+    global _factories
     with _factory_lock:
-        if factory not in factories:
+        if factory not in _factories:
             logger.error("adding new factory: %s" % factory)
-            factories.append(factory)
+            _factories.append(factory)
         
 def remove_class_factory(factory):
     """Remove a Factory from the factory list."""
-    global factories
+    global _factories
     with _factory_lock:
-        for fct in factories:
+        for fct in _factories:
             if fct is factory:
                 if hasattr(factory, 'cleanup'):
                     factory.cleanup()
                 logger.error("removing factory: %s" % factory)
-                factories.remove(factory)
+                _factories.remove(factory)
                 return
 
 def _cmp(tup1, tup2):
@@ -83,7 +83,7 @@ def get_available_types(groups=None):
             raise RuntimeError("Didn't recognize the following entry point groups: %s. Allowed groups are: %s" %
                                (badgroups, plugin_groups.keys()))
     types = []
-    for fct in factories:
+    for fct in _factories:
         types.extend(fct.get_available_types(groups))
     return sorted(types, _cmp)
 

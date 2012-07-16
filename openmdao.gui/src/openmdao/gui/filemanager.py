@@ -9,7 +9,6 @@ from watchdog.events import FileSystemEventHandler
 
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
-from openmdao.util.log import logger
 
 
 class FilesPublisher(FileSystemEventHandler):
@@ -122,14 +121,11 @@ class FileManager(object):
         '''
         try:
             filepath = os.getcwd()+'/'+str(filename)
-            logger.error("write_file to file %s" % filepath)
-            logger.error("contents:\n%s\n" % contents)
             fout = open(filepath, 'wb')
             fout.write(contents)
             fout.close()
             return True
         except Exception, err:
-            logger.error("write_file error: %s" % str(err))
             return err
 
     def add_file(self, filename, contents):

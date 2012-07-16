@@ -847,12 +847,6 @@ class Assembly (Component):
                 connections.append(list(connection))
         return {'components': components, 'connections': connections}
 
-    def get_config(self):
-        """Return the config dict for this Assembly."""
-        cfg = super(Assembly, self).get_config()
-        cfg['@connect'] = self.list_connections()
-        return cfg
-
 def dump_iteration_tree(obj):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree

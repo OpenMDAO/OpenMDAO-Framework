@@ -543,12 +543,3 @@ class HasParameters(object):
         except Exception:
             self._parameters = old
             raise
-
-    def get_config(self):
-        cfg = {}
-        cfg['_parameters'] = [p.get_config() for n,p in self._parameters.items()]
-        cfg['_allowed_types'] = self._allowed_types[:]
-        return cfg
-    
-        
-    
