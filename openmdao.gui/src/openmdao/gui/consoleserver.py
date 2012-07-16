@@ -4,7 +4,6 @@ import sys
 import traceback
 import cmd
 import jsonpickle
-import pprint
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -25,7 +24,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-from openmdao.main.factorymanager import register_class_factory, remove_class_factory, factories
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 from openmdao.util.log import logger
 
 
@@ -56,7 +55,6 @@ class ConsoleServer(cmd.Cmd):
         self.prompt = 'OpenMDAO>> '
 
         self._hist = []
-        self._macro_start = None
 
         self.host = host
         self.projfile = ''
@@ -211,18 +209,8 @@ class ConsoleServer(cmd.Cmd):
     def get_recorded_cmds(self):
         ''' Return this server's :attr:`_recorded_cmds`.
         '''
-        return self._recorded_cmds[self._macro_start:]
+        return self._recorded_cmds[:]
     
-    def macro_start(self, idx='current'):
-        if idx == 'current':
-            idx = len(self._recorded_cmds) - 1
-            
-        if idx < 0:
-            self._macro_start = None
-        else:
-            self._macro_start = int(idx)
-        return self._macro_start
-
     def get_JSON(self):
         ''' return current state as JSON
         '''
@@ -574,11 +562,7 @@ class ConsoleServer(cmd.Cmd):
                             del self._publish_comps[pathname]
                             
     def file_classes_changed(self, filename):
-        pdf = None
-        for f in factories:
-            if isinstance(f, ProjDirFactory):
-                pdf = f
-                break
+        pdf = self.projdirfactory
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
