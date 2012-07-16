@@ -43,15 +43,14 @@ class EditorPage(BasePageObject):
     title_prefix = 'OpenMDAO:'
 
     # Left side.
-    files_tab = ButtonElement((By.ID, 'ftree_tab'))
     file_menu = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/a'))
+                           '/html/body/div/div/nav2/ul/li/a'))
     newfile_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[1]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[1]/a'))
     newfolder_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[2]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[2]/a'))
     add_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[3]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[3]/a'))
 
     # File context menu.
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
@@ -65,19 +64,17 @@ class EditorPage(BasePageObject):
     file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
-    # Right side.
-    code_tab = ButtonElement((By.ID, 'code_tab'))
 
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["files"] = (By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']")
+        self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
 
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'ftree'))
+            lambda browser: browser.find_element(By.ID, 'file_pane'))
 # FIXME: absolute delay for tree population.
         time.sleep(1)
         file_items = self.browser.find_elements(*self.locators["files"])

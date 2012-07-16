@@ -69,9 +69,9 @@ class WorkspacePage(BasePageObject):
 
     # Right side.
     properties_tab = ButtonElement((By.ID, 'properties_tab'))
-    props_header   = TextElement((By.XPATH, "//div[@id='propertieseditor']/h3"))
-    props_inputs   = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[1]"))
-    props_outputs  = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[2]"))
+    props_header   = TextElement((By.XPATH, "//div[@id='properties_pane']/h3"))
+    props_inputs   = GridElement((By.XPATH, "//div[@id='properties_pane']/div[1]"))
+    props_outputs  = GridElement((By.XPATH, "//div[@id='properties_pane']/div[2]"))
 
     libraries_tab = ButtonElement((By.ID, 'palette_tab'))
     libraries_search = InputElement((By.ID, 'objtt-select'))
@@ -85,7 +85,7 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["objects"] = (By.XPATH, "//div[@id='otree']//li[@path]")
+        self.locators["objects"] = (By.XPATH, "//div[@id='otree_pane']//li[@path]")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, 2*TMO).until(
@@ -151,7 +151,7 @@ class WorkspacePage(BasePageObject):
     def get_objects_attribute(self, attribute):
         """ Return list of `attribute` values for all objects. """
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'otree'))
+            lambda browser: browser.find_element(By.ID, 'otree_pane'))
         object_elements = self.browser.find_elements(*self.locators["objects"])
         values = []
         for element in object_elements:
@@ -161,7 +161,7 @@ class WorkspacePage(BasePageObject):
     def select_object(self, component_name):
         """ Select `component_name`. """
         self('objects_tab').click()
-        xpath = "//div[@id='otree']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -169,7 +169,7 @@ class WorkspacePage(BasePageObject):
     def expand_object(self, component_name):
         """ Expands `component_name`. """
         self('objects_tab').click()
-        xpath = "//div[@id='otree']//li[(@path='%s')]//ins" % component_name
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -177,7 +177,7 @@ class WorkspacePage(BasePageObject):
     def show_dataflow(self, component_name):
         """ Show dataflow of `component_name`. """
         self('objects_tab').click()
-        xpath = "//div[@id='otree']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
@@ -294,6 +294,7 @@ class WorkspacePage(BasePageObject):
 
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
+        print 'workspace.connect src:',src.output_port,'dst:',dst.root
         chain = ActionChains(self.browser)
         chain = chain.click_and_hold(src.output_port)
         # Using root rather than input_port since for some reason

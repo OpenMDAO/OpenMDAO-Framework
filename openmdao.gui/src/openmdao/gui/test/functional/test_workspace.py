@@ -116,7 +116,6 @@ def _test_import(browser):
     # Check to see that the added files are still there.
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    editor_page('files_tab').click()
     file_names = editor_page.get_files()
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
