@@ -47,7 +47,6 @@ from openmdao.main.rbac import rbac
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, IContainer
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.index import process_index_entry, get_indexed_value, INDEX, ATTR, CALL, SLICE
-from openmdao.main.macro import CommandRecorder, recorded
 
 from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.util import eggloader, eggsaver, eggobserver
