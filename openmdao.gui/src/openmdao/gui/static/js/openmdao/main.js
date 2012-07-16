@@ -56,5 +56,5 @@ jQuery(function() {
     // start with objects, dataflow & properties visible
     jQuery('#otree_tab').click();
     jQuery('#dataflow_tab').click();
-    jQuery('#properties_tab').click();
+    jQuery('#palette_tab').click();
 });

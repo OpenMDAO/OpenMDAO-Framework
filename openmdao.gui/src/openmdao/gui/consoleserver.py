@@ -56,7 +56,6 @@ class ConsoleServer(cmd.Cmd):
         self.prompt = 'OpenMDAO>> '
 
         self._hist = []
-        self._recorded_cmds = []
         self._macro_start = None
 
         self.host = host
@@ -134,7 +133,6 @@ class ConsoleServer(cmd.Cmd):
     @modifies_model
     def onecmd(self, line):
         self._hist += line.strip()
-        self._recorded_cmds.append(line)
         try:
             result = cmd.Cmd.onecmd(self, line)
         except Exception, err:
@@ -148,28 +146,12 @@ class ConsoleServer(cmd.Cmd):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
         '''
-        isStatement = False
         try:
-            compile(line, '<string>', 'eval')
-        except SyntaxError:
-            isStatement = True
-
-        if isStatement:
-            try:
-                exec(line) in self.proj.__dict__
-            except Exception, err:
-                if self._recorded_cmds and (line == self._recorded_cmds[-1]):
-                    self._recorded_cmds.pop()
-                self._error(err, sys.exc_info())
-        else:
-            try:
-                result = eval(line, self.proj.__dict__)
-                if result is not None:
-                    print result
-            except Exception, err:
-                if self._recorded_cmds and (line == self._recorded_cmds[-1]):
-                    self._recorded_cmds.pop()
-                self._error(err, sys.exc_info())
+            result = self.proj.command(line)
+            if result is not None:
+                print result
+        except Exception, err:
+            self._error(err, sys.exc_info())
 
     @modifies_model
     def run(self, *args, **kwargs):
@@ -454,15 +436,14 @@ class ConsoleServer(cmd.Cmd):
         try:
             if self.proj:
                 self.proj.deactivate()
-            self.proj = project_from_archive(filename,
-                                             dest_dir=self.files.getcwd())
-            self.proj.activate()
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-            self.projdirfactory = ProjDirFactory(self.proj.path,
+            self.projdirfactory = ProjDirFactory(self.files.getcwd(),
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
+            self.proj = project_from_archive(filename,
+                                             dest_dir=self.files.getcwd())
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -499,8 +480,8 @@ class ConsoleServer(cmd.Cmd):
                 except Exception, err:
                     self._error(err, sys.exc_info())
                 else:
-                    self._recorded_cmds.append('%s.add("%s",create("%s"))' % 
-                                               (parentname, name, classname))
+                    self.proj._recorded_cmds.append('%s.add("%s",create("%s"))' % 
+                                                    (parentname, name, classname))
             else:
                 print "Error adding component, parent not found:", parentname
         else:
@@ -509,7 +490,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self._error(err, sys.exc_info())
             else:
-                self._recorded_cmds.append('%s = create("%s"))' % 
+                self.proj._recorded_cmds.append('%s = create("%s"))' % 
                                            (name, classname))
 
     def cleanup(self):

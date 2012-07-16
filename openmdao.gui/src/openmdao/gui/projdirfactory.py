@@ -142,9 +142,10 @@ class ProjDirFactory(Factory):
             with self._lock:
                 fpath = self.analyzer.class_map[typ].fname
                 modpath = self.analyzer.fileinfo[fpath][0].modpath
-                if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1] and modpath in sys.modules:
-                    reload(sys.modules[modpath])
-                if fpath not in self.imported:
+                if modpath in sys.modules:
+                    if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
+                        reload(sys.modules[modpath])
+                else:
                     sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
                     try:
                         __import__(modpath)
@@ -152,17 +153,16 @@ class ProjDirFactory(Factory):
                         return None
                     finally:
                         sys.path = sys.path[1:]
-                    mod = sys.modules[modpath]
-                    visitor = self.analyzer.fileinfo[fpath][0]
-                    self._get_mod_ctors(mod, fpath, visitor)
+                    #visitor = self.analyzer.fileinfo[fpath][0]
 
+                mod = sys.modules[modpath]
                 try:
-                    ctor = self.imported[fpath][1][typ]
+                    ctor = getattr(mod, typ.split('.')[-1])
                 except KeyError:
                     return None
                 return ctor(**ctor_args)
         return None
-
+    
     def get_available_types(self, groups=None):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
@@ -197,17 +197,17 @@ class ProjDirFactory(Factory):
             if fpath in self.analyzer.fileinfo: # file has been previously scanned
                 visitor = self.analyzer.fileinfo[fpath][0]
                 pre_set = set(visitor.classes.keys())
-            
-                if fpath in self.imported:  # we imported it earlier
+                modpath = get_module_path(fpath)
+                if  modpath in sys.modules:  # we imported it earlier
+                    mod = sys.modules[modpath]
                     imported = True
                     sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
                     try:
-                        reload(self.imported[fpath][0])
+                        reload(mod)
                     except ImportError as err:
                         return None
                     finally:
                         sys.path = sys.path[1:]  # restore original sys.path
-                    #self.imported[fpath] = (m, self.imported[fpath][1])
                 elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
                     modpath = get_module_path(fpath)
                     if modpath in sys.modules:
@@ -230,11 +230,6 @@ class ProjDirFactory(Factory):
                 for pyfile in find_files(self.watchdir, "*.py"):
                     self.on_deleted(pyfile, deleted_set)
             else:
-                try:
-                    del self.imported[fpath]
-                except KeyError:
-                    pass
-            
                 visitor = self.analyzer.fileinfo[fpath][0]
                 deleted_set.update(visitor.classes.keys())
                 self.analyzer.remove_file(fpath)

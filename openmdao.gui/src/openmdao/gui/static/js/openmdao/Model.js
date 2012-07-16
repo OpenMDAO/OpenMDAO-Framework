@@ -177,18 +177,22 @@ openmdao.Model=function() {
     };
 
     /* save the command history from the designated start point to the latest command */
-    this.saveMacro = function(filepath, callback, errorHandler) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'macro/save/'+filepath.replace(/\\/g,'/'),
-            success: callback,
-            error: errorHandler,
-            complete: function(jqXHR, textStatus) {
-                          if (typeof openmdao_test_mode !== 'undefined') {
-                              openmdao.Util.notify('Save complete: ' +textStatus);
-                          }
-                      }
-        });
+    this.saveMacro = function(callback, errorHandler) {
+        openmdao.Util.promptForValue('Specify a name for the macro file',
+            function(filepath) { 
+                jQuery.ajax({
+                    type: 'POST',
+                    url:  'macro/save/'+filepath.replace(/\\/g,'/'),
+                    success: callback,
+                    error: errorHandler,
+                    complete: function(jqXHR, textStatus) {
+                                  if (typeof openmdao_test_mode !== 'undefined') {
+                                      openmdao.Util.notify('Save complete: ' +textStatus);
+                                  }
+                              }
+                });
+            } 
+        );
     };
 
     /* set the current point as the designated start point in the command history */
