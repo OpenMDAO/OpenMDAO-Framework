@@ -847,6 +847,7 @@ class Assembly (Component):
                 connections.append(list(connection))
         return {'components': components, 'connections': connections}
 
+
 def dump_iteration_tree(obj):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree

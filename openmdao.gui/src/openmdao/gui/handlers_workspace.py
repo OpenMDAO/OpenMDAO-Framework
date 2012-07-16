@@ -2,7 +2,6 @@ import sys
 import os
 import re
 import jsonpickle
-from cStringIO import StringIO
 
 from tornado import web
 
