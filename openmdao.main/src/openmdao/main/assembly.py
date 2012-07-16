@@ -28,7 +28,6 @@ from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.printexpr import eliminate_expr_ws, ExprNameTransformer
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.main.depgraph import DependencyGraph
-from openmdao.main.macro import recorded, recorded_funct
 
 _iodict = { 'out': 'output', 'in': 'input' }
 
@@ -37,7 +36,6 @@ __has_top__ = False
 __toplock__ = threading.RLock()
 
 
-@recorded_funct
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
     If first_only is True, then only set it as a top if a global
@@ -260,7 +258,6 @@ class Assembly (Component):
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
     
-    @recorded
     def __init__(self, doc=None, directory=''):
         
         super(Assembly, self).__init__(doc=doc, directory=directory)
@@ -291,7 +288,6 @@ class Assembly (Component):
         if seqno:
             self.driver.workflow.set_initial_count(seqno)
 
-    @recorded
     def add(self, name, obj):
         """Call the base class *add*.  Then,
         if obj is a Component, add it to the component graph.
@@ -341,7 +337,6 @@ class Assembly (Component):
                     self.parent.disconnect(u,v)
         return old_autos
         
-    @recorded
     def rename(self, oldname, newname):
         """Renames a child of this object from oldname to newname."""
         self._check_rename(oldname, newname)
@@ -375,7 +370,6 @@ class Assembly (Component):
                 v = re.sub(par_rgx, r'\g<1>', v)
                 self.parent.connect(u,v)
     
-    @recorded
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the inputs and connections
         of the replaced object as much as possible.
@@ -408,7 +402,6 @@ class Assembly (Component):
             for wflow,idx in wflows:
                 wflow.add(target_name, idx)
     
-    @recorded
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow(s) if it's a Component."""
@@ -423,7 +416,6 @@ class Assembly (Component):
                     
         return super(Assembly, self).remove(name)
 
-    @recorded
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation, adds it to self, and creates a connection
@@ -506,7 +498,6 @@ class Assembly (Component):
             return (None, self, path)
         return (compname, getattr(self, compname), varname)
         
-    @recorded
     @rbac(('owner', 'user'))
     def connect(self, src, dest):
         """Connect one src expression to one destination expression. This could be
@@ -561,7 +552,6 @@ class Assembly (Component):
                     bouts = self.child_invalidated(destcompname, outs, force=True)
                     
 
-    @recorded
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and

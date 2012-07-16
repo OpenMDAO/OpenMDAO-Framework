@@ -165,7 +165,6 @@ class Container(SafeHasTraits):
    
     implements(IContainer)
 
-    @recorded
     def __init__(self, doc=None):
         super(Container, self).__init__()
         
@@ -254,7 +253,6 @@ class Container(SafeHasTraits):
             name = obj.name
         return '.'.join(path[::-1])
             
-    @recorded
     @rbac(('owner', 'user'))
     def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression. 
@@ -332,7 +330,6 @@ class Container(SafeHasTraits):
             self.raise_exception("Can't connect '%s' to '%s': %s" % (srcpath, destpath, str(err)),
                                  RuntimeError)
 
-    @recorded
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one 
@@ -591,7 +588,6 @@ class Container(SafeHasTraits):
             val = get_indexed_value(self, name, index)
         return val
         
-    @recorded
     def add(self, name, obj):
         """Add an object to this Container.
         Returns the added object.
@@ -687,7 +683,6 @@ class Container(SafeHasTraits):
         obj = self.remove(oldname)
         self.add(newname, obj)
         
-    @recorded
     def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
@@ -719,7 +714,6 @@ class Container(SafeHasTraits):
             self.raise_exception("cannot remove '%s': not found"%
                                  name, AttributeError)
 
-    @recorded
     @rbac(('owner', 'user'))
     def configure(self):
         pass
@@ -966,7 +960,6 @@ class Container(SafeHasTraits):
     def get_iotype(self, name):
         return self.get_trait(name).iotype
         
-    @recorded
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         """Set the value of the Variable specified by the given path, which
