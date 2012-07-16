@@ -82,15 +82,13 @@ def _test_import(browser):
     browser.close()
     browser.switch_to_window(workspace_window)
 
-    # Go into Libraries/working section.
-    workspace_page('libraries_tab').click()
-    time.sleep(1)
-    workspace_page.find_palette_button('Paraboloid').click()
-
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
     time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
+
+    # view library
+    workspace_page('libraries_tab').click()
 
     # Drag element into workspace.
     paraboloid_name = 'parab'

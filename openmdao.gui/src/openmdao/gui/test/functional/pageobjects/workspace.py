@@ -294,12 +294,11 @@ class WorkspacePage(BasePageObject):
 
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
-        print 'workspace.connect src:',src.output_port,'dst:',dst.root
         chain = ActionChains(self.browser)
         chain = chain.click_and_hold(src.output_port)
         # Using root rather than input_port since for some reason
         # even using a negative Y offset can select the parent's input.
-        chain = chain.move_to_element(dst.root)
+        chain = chain.move_to_element(dst.input_port)
         chain = chain.release(None)
         chain.perform()
         parent, dot, srcname = src.pathname.rpartition('.')
