@@ -214,8 +214,10 @@ class WorkspacePage(BasePageObject):
         # from a dataflow update problem.
         time.sleep(0.25)
         self.browser.implicitly_wait(1) # We don't expect to find anything.
-        eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
-        self.browser.implicitly_wait(TMO)
+        try:
+            eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        finally:
+            self.browser.implicitly_wait(TMO)
         WebDriverWait(self.browser, TMO).until(
             lambda browser: instance_name in self.get_dataflow_component_names())
 
