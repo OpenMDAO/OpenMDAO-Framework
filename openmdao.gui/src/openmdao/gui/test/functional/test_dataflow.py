@@ -240,7 +240,7 @@ def _test_connections(browser):
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '<Assembly>')
     eq(conn_page.target_component, '<Assembly>')
-    eq(len(conn_page.get_variable_figures()), 0)
+    eq(conn_page.check_variable_figures(), 0)
 
     # one connection between transmission and engine (RPM)
     conn_page.set_source_component('transmission')
@@ -267,7 +267,7 @@ def _test_connections(browser):
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
     conn_page.set_target_component('engine')
-    eq(len(conn_page.get_variable_figures()), 0)
+    eq(conn_page.check_variable_figures(), 0)
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
@@ -277,7 +277,7 @@ def _test_connections(browser):
 
     # no connections between transmission and chassis
     conn_page.set_target_component('chassis')
-    eq(len(conn_page.get_variable_figures()), 0)
+    eq(conn_page.check_variable_figures(), 0)
 
     # reconnect transmission torque to chassis torque
     conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
@@ -288,7 +288,7 @@ def _test_connections(browser):
     # no connections between vehicle assembly and transmission
     conn_page.set_source_component('')
     conn_page.set_target_component('transmission')
-    eq(len(conn_page.get_variable_figures()), 0)
+    eq(conn_page.check_variable_figures(), 0)
 
     # connect assembly variable to component variable
     conn_page.connect_vars('current_gear', 'transmission.current_gear')
@@ -309,7 +309,7 @@ def _test_connections(browser):
     chassis.disconnect()
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
     conn_page = vehicle.connections_page()
-    eq(len(conn_page.get_variable_figures()), 0)
+    eq(conn_page.check_variable_figures(), 0)
 
     # connect component variable to assembly variable
     conn_page.connect_vars('chassis.acceleration', 'acceleration')

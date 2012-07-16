@@ -148,14 +148,15 @@ class WorkspacePage(BasePageObject):
         self('save_button').click()
         NotifierPage.wait(self.browser, self.port)
 
-    def get_objects_attribute(self, attribute):
+    def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'otree'))
         object_elements = self.browser.find_elements(*self.locators["objects"])
         values = []
         for element in object_elements:
-            values.append(element.get_attribute(attribute))
+            if not visible or element.is_displayed():
+                values.append(element.get_attribute(attribute))
         return values
 
     def select_object(self, component_name):
@@ -212,7 +213,11 @@ class WorkspacePage(BasePageObject):
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
         time.sleep(0.25)
-        eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        self.browser.implicitly_wait(1) # We don't expect to find anything.
+        try:
+            eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        finally:
+            self.browser.implicitly_wait(TMO)
         WebDriverWait(self.browser, TMO).until(
             lambda browser: instance_name in self.get_dataflow_component_names())
 
