@@ -300,7 +300,7 @@ class NamespaceTestCase(unittest.TestCase):
                               ('foo.vt2.x',-1.),('foo.vt2.y',-2.),
                               ('foo.v1',1.),('foo.v2',2.)]))
     
-        
+
 class ListConnectTestCase(unittest.TestCase):
 
     def test_connect(self):

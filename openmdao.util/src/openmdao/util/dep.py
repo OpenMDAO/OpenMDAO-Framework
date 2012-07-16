@@ -193,7 +193,6 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
                                 undef_bases.append(newname)
                             break
                 else:
-                    logger.error("can't locate python source for class %s" % base)
                     self.unresolved_classes.add(base)
 
     def visit_Import(self, node):

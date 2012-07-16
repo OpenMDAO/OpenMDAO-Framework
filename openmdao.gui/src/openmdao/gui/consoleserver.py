@@ -4,6 +4,7 @@ import sys
 import traceback
 import cmd
 import jsonpickle
+import pprint
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -24,7 +25,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory, factories
 from openmdao.util.log import logger
 
 
@@ -55,7 +56,7 @@ class ConsoleServer(cmd.Cmd):
         self.prompt = 'OpenMDAO>> '
 
         self._hist = []
-        self.known_types = []
+        self._macro_start = None
 
         self.host = host
         self.projfile = ''
@@ -123,18 +124,17 @@ class ConsoleServer(cmd.Cmd):
 
     def precmd(self, line):
         ''' This method is called after the line has been input but before
-            it has been interpreted. If you want to modifdy the input line
+            it has been interpreted. If you want to modify the input line
             before execution (for example, variable substitution) do it here.
         '''
-        self._hist += [line.strip()]
+        self._hist += line.strip()
         return line
 
     @modifies_model
     def onecmd(self, line):
-        self._hist += [line.strip()]
-        # Override the onecmd() method so we can trap error returns
+        self._hist += line.strip()
         try:
-            cmd.Cmd.onecmd(self, line)
+            result = cmd.Cmd.onecmd(self, line)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -146,24 +146,12 @@ class ConsoleServer(cmd.Cmd):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
         '''
-        isStatement = False
         try:
-            compile(line, '<string>', 'eval')
-        except SyntaxError:
-            isStatement = True
-
-        if isStatement:
-            try:
-                exec(line) in self.proj.__dict__
-            except Exception, err:
-                self._error(err, sys.exc_info())
-        else:
-            try:
-                result = eval(line, self.proj.__dict__)
-                if result is not None:
-                    print result
-            except Exception, err:
-                self._error(err, sys.exc_info())
+            result = self.proj.command(line)
+            if result is not None:
+                print result
+        except Exception, err:
+            self._error(err, sys.exc_info())
 
     @modifies_model
     def run(self, *args, **kwargs):
@@ -219,6 +207,21 @@ class ConsoleServer(cmd.Cmd):
         ''' Return this server's :attr:`_hist`.
         '''
         return self._hist
+    
+    def get_recorded_cmds(self):
+        ''' Return this server's :attr:`_recorded_cmds`.
+        '''
+        return self._recorded_cmds[self._macro_start:]
+    
+    def macro_start(self, idx='current'):
+        if idx == 'current':
+            idx = len(self._recorded_cmds) - 1
+            
+        if idx < 0:
+            self._macro_start = None
+        else:
+            self._macro_start = int(idx)
+        return self._macro_start
 
     def get_JSON(self):
         ''' return current state as JSON
@@ -230,14 +233,14 @@ class ConsoleServer(cmd.Cmd):
             returns the container and the name of the root object
         '''
         cont = None
-        root = pathname.split('.')[0]
+        parts = pathname.split('.', 1)
+        root = parts[0]
         if self.proj and root in self.proj.__dict__:
             if root == pathname:
                 cont = self.proj.__dict__[root]
             else:
-                rest = pathname[len(root) + 1:]
                 try:
-                    cont = self.proj.__dict__[root].get(rest)
+                    cont = self.proj.__dict__[root].get(parts[1])
                 except Exception, err:
                     self._error(err, sys.exc_info())
         return cont, root
@@ -433,20 +436,19 @@ class ConsoleServer(cmd.Cmd):
         try:
             if self.proj:
                 self.proj.deactivate()
-            self.proj = project_from_archive(filename,
-                                             dest_dir=self.files.getcwd())
-            self.proj.activate()
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-            self.projdirfactory = ProjDirFactory(self.proj.path,
+            self.projdirfactory = ProjDirFactory(self.files.getcwd(),
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
+            self.proj = project_from_archive(filename,
+                                             dest_dir=self.files.getcwd())
         except Exception, err:
             self._error(err, sys.exc_info())
 
     def save_project(self):
-        ''' save the cuurent project state & export it whence it came
+        ''' save the current project state & export it whence it came
         '''
         if self.proj:
             try:
@@ -463,34 +465,33 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
         else:
             print 'No Project to save'
-
+            
+    
     @modifies_model
     def add_component(self, name, classname, parentname):
         ''' add a new component of the given type to the specified parent.
         '''
         name = name.encode('utf8')
-        if (parentname and len(parentname) > 0):
+        if parentname:
             parent, root = self.get_container(parentname)
             if parent:
                 try:
-                    if self.projdirfactory:
-                        obj = self.projdirfactory.create(classname)
-                    if obj:
-                        parent.add(name, obj)
-                    else:
-                        parent.add(name, create(classname))
+                    parent.add(name, create(classname))
                 except Exception, err:
                     self._error(err, sys.exc_info())
+                else:
+                    self.proj._recorded_cmds.append('%s.add("%s",create("%s"))' % 
+                                                    (parentname, name, classname))
             else:
                 print "Error adding component, parent not found:", parentname
         else:
             try:
-                if (classname.find('.') < 0):
-                    self.default(name + '=' + classname + '()')
-                else:
-                    self.proj.__dict__[name] = create(classname)
+                self.proj.__dict__[name] = create(classname)
             except Exception, err:
                 self._error(err, sys.exc_info())
+            else:
+                self.proj._recorded_cmds.append('%s = create("%s"))' % 
+                                           (name, classname))
 
     def cleanup(self):
         ''' Cleanup various resources.
@@ -571,3 +572,19 @@ class ConsoleServer(cmd.Cmd):
                         self._publish_comps[pathname] -= 1
                         if self._publish_comps[pathname] < 1:
                             del self._publish_comps[pathname]
+                            
+    def file_classes_changed(self, filename):
+        pdf = None
+        for f in factories:
+            if isinstance(f, ProjDirFactory):
+                pdf = f
+                break
+        if pdf:
+            filename = filename.lstrip('/')
+            filename = os.path.join(self.proj.path, filename)
+            info = pdf.analyzer.fileinfo.get(filename,(None,None))[0]
+            # if changed file contained classes and has already been imported..
+            if info and len(info.classes)>0 and info.modpath in sys.modules: 
+                return True
+        return False
+

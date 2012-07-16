@@ -30,14 +30,15 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.filevar import FileMetadata, FileRef
-from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.publisher import Publisher
+from openmdao.main.macro import recorded, recorded_funct
 
+from openmdao.util.eggsaver import SAVE_CPICKLE
+from openmdao.util.eggobserver import EggObserver
 import openmdao.util.log as tracing
 
 
@@ -132,6 +133,7 @@ class Component(Container):
 
     create_instance_dir = Bool(False)
 
+    @recorded
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
 
@@ -541,6 +543,7 @@ class Component(Container):
         visited = set((id(self),))
         _recursive_close(self, visited)
 
+    @recorded
     def add(self, name, obj):
         """Override of base class version to force call to *check_config*
         after any child containers are added. The base class version is still
@@ -553,6 +556,7 @@ class Component(Container):
             self._depgraph.add(name)
         return super(Component, self).add(name, obj)
 
+    @recorded
     def remove(self, name):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
@@ -766,6 +770,7 @@ class Component(Container):
             self._container_names = names
         return self._container_names
 
+    @recorded
     @rbac(('owner', 'user'))
     def connect(self, srcexpr, destexpr):
         """Connects one source expression to one destination expression.
@@ -801,6 +806,7 @@ class Component(Container):
         for valids_update in valid_updates:
             self._valid_dict[valids_update[0]] = valids_update[1]
 
+    @recorded
     @rbac(('owner', 'user'))
     def disconnect(self, srcpath, destpath):
         """Removes the connection between one source variable and one
@@ -1704,6 +1710,16 @@ class Component(Container):
             attrs['Slots'] = slots
 
         return attrs
+
+    def get_config(self):
+        """Return the config dict for this Container."""
+        cfg = super(Component, self).get_config()
+        if hasattr(self, '_delegates_'):
+            cfg['_delegates_'] = ddict = {}
+            for name, delegate in self._delegates_.items():
+                if hasattr(delegate, 'get_config'):
+                    ddict[name] = delegate.get_config()
+        return cfg
 
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover

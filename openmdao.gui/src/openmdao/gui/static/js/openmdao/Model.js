@@ -176,6 +176,35 @@ openmdao.Model=function() {
         });
     };
 
+    /* save the command history from the designated start point to the latest command */
+    this.saveMacro = function(callback, errorHandler) {
+        openmdao.Util.promptForValue('Specify a name for the macro file',
+            function(filepath) { 
+                jQuery.ajax({
+                    type: 'POST',
+                    url:  'macro/save/'+filepath.replace(/\\/g,'/'),
+                    success: callback,
+                    error: errorHandler,
+                    complete: function(jqXHR, textStatus) {
+                                  if (typeof openmdao_test_mode !== 'undefined') {
+                                      openmdao.Util.notify('Save complete: ' +textStatus);
+                                  }
+                              }
+                });
+            } 
+        );
+    };
+
+    /* set the current point as the designated start point in the command history */
+    this.startMacro = function(callback,errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'macro/start',
+            success: callback,
+            error: errorHandler
+        });
+    };
+
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
         if (typeof callback !== 'function') {
@@ -380,17 +409,20 @@ openmdao.Model=function() {
     };
 
     /** set the contents of the specified file */
-    this.setFile = function(filepath, contents, callback, errorHandler) {
+    this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
-            data: { 'contents': contents},
+            data: { 'contents': contents, 'force': force },
             success: function(text) {
                         if (typeof callback === 'function') {
                             callback(text);
                         }
                      },
-            error: errorHandler
+            error: errorHandler,
+            statusCode: {
+                409: handler409
+             },
         });
     };
 

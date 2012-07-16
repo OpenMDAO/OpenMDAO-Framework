@@ -14,6 +14,7 @@ from openmdao.main.api import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.util.fileutil import get_module_path, expand_path
+from openmdao.util.log import logger
 
 from openmdao.main.mp_support import is_instance
 
@@ -116,6 +117,8 @@ class Project(object):
         projpath: str
             Path to the project's directory.
         """
+        macro_exec = False
+        self._recorded_cmds = []
         self.path = expand_path(projpath)
         modeldir = os.path.join(self.path, 'model')
         self.activate()
@@ -125,52 +128,112 @@ class Project(object):
             if os.path.exists(statefile):
                 try:
                     with open(statefile, 'r') as f:
-                        self.__dict__ = pickle.load(f)
+                        self.__dict__.update(pickle.load(f))
                 except Exception, e:
                     print 'Unable to restore project state:',e
-                    self.top = Assembly()
+                    self._initialize()
+                    macro_exec = True
+            macro_file = os.path.join(self.path, '_project_macro')
+            if os.path.isfile(macro_file):
+                if macro_exec:
+                    print 'Attempting to reconstruct project using macro'
+                self.load_macro(macro_file, execute=macro_exec)
             else:
-                self.top = set_as_top(Assembly())
-            
-            self.path = expand_path(projpath) # set again in case loading project state changed it
+                self._initialize()
         else:  # new project
             os.makedirs(projpath)
             os.mkdir(modeldir)
-            self.top = set_as_top(Assembly())
+            self._initialize()
             
         self.save()
 
         SimulationRoot.chroot(self.path)
 
+    def _initialize(self):
+        self.top = set_as_top(Assembly())
+        
     @property
     def name(self):
         return os.path.basename(self.path)
     
+    def load_macro(self, fpath, execute=True, strict=False):
+        with open(fpath, 'r') as f:
+            for i,line in enumerate(f):
+                if execute:
+                    try:
+                        self.command(line)
+                    except Exception as err:
+                        logger.error('file %s line %d: %s' % (fpath, i, str(err)))
+                        if strict:
+                            raise
+                else:
+                    self._recorded_cmds.append(line)
+
+    def command(self, cmd):
+        err = None
+        try:
+            compile(cmd, '<string>', 'eval')
+        except SyntaxError:
+            try:
+                exec(cmd) in self.__dict__
+            except Exception as err:
+                pass
+        else:
+            try:
+                result = eval(cmd, self.__dict__)
+            except Exception as err:
+                pass
+            
+        if err:
+            self._recorded_cmds.append('#ERR: <%s>' % cmd)
+            raise err
+        else:
+            self._recorded_cmds.append(cmd)
+            
     def activate(self):
         """Puts this project's directory on sys.path."""
-        if self.path not in sys.path:
-            sys.path = [self.path]+sys.path
+        modeldir = os.path.join(self.path, 'model')
+        if modeldir not in sys.path:
+            sys.path = [modeldir]+sys.path
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
+        modeldir = os.path.join(self.path, 'model')
         try:
-            sys.path.remove(self.path)
+            sys.path.remove(modeldir)
         except:
             pass
 
     def save(self):
         """ Save the state of the project to its project directory.
-            entries in the project dictionary that start with double 
-            underscores (e.g. __builtins__) are excluded
+            Currently only Containers found in the project are saved.
         """
         fname = os.path.join(self.path, '_project_state')
         # copy all openmdao containers to a new dict for saving
         save_state = {}
         for k in self.__dict__:
-            if is_instance(self.__dict__[k],Container):
+            if is_instance(self.__dict__[k], Container):
                 save_state[k] = self.__dict__[k]
-        with open(fname, 'wb') as f:
-            pickle.dump(save_state, f)
+        try:
+            with open(fname, 'wb') as f:
+                pickle.dump(save_state, f)
+        except Exception as err:
+            logger.error("Failed to pickle the project: %s" % str(err))
+            
+        if self._recorded_cmds:
+            logger.info("Saving macro used to create project")
+            with open(os.path.join(self.path, '_project_macro'), 'w') as f:
+                self._write_macro_header(f)
+                for cmd in self._recorded_cmds:
+                    f.write(cmd)
+                    f.write('\n')
+        
+    def _write_macro_header(self, f):
+        header = [
+            'from openmdao.main.factorymanager import create',
+        ]
+        for line in header:
+            f.write(line+'\n')
         
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export. 

@@ -512,7 +512,7 @@ TestCase("ModelTest", {
                              success_handler, error_handler);
       assertEquals("file/filepath", this.requests[0].url);
       assertEquals(this.requests[0].method, "POST" );
-      assertEquals("contents=file+contents", this.requests[0].requestBody);
+      assertEquals("contents=file+contents&force=undefined", this.requests[0].requestBody);
       this.requests[0].respond(200, { "Content-Type": "text/plain" }, '' ) ;
       sinon.assert.calledOnce(success_handler);
       sinon.assert.notCalled(error_handler);

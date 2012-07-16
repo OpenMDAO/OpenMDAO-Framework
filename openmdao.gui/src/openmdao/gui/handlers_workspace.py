@@ -2,11 +2,14 @@ import sys
 import os
 import re
 import jsonpickle
+from cStringIO import StringIO
 
 from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
+from openmdao.gui.projdirfactory import ProjDirFactory
 
+from openmdao.util.log import logger
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -240,6 +243,12 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
+            force = int(self.get_argument('force', default=0))
+            if not force and filename.endswith('.py'):
+                ret = cserver.file_classes_changed(filename)
+                if ret:
+                    self.send_error(409)  # user will be prompted to overwrite classes
+                    return
             contents = self.get_argument('contents', default='')
             self.write(str(cserver.write_file(filename, contents)))
 
@@ -300,7 +309,7 @@ class OutstreamHandler(ReqHandler):
 
 class ProjectHandler(ReqHandler):
     ''' GET:  load model fom the given project archive,
-              or reload remebered project for session if no file given
+              or reload remembered project for session if no file given
 
         POST: save project archive of the current project
     '''
@@ -384,6 +393,7 @@ class UploadHandler(ReqHandler):
     def post(self):
         path = self.get_argument('path', default=None)
         cserver = self.get_server()
+        logger.error("files = %s" % self.request.files.keys())
         files = self.request.files['file']
         if files:
             for file_ in files:
@@ -430,6 +440,30 @@ class TestHandler(ReqHandler):
         self.render('workspace/test.html')
 
 
+class MacroSaveHandler(ReqHandler):
+    ''' save the recorded commands as a macro file.
+    '''
+
+    @web.authenticated
+    def post(self, filename):
+        cserver = self.get_server()
+        contents = StringIO()
+        contents.write('#\n# openmdao macro\n#\n\n')
+        for cmd in cserver.get_recorded_cmds():
+            contents.write(cmd)
+            contents.write('\n')
+        self.write(str(cserver.write_file(filename, contents.getvalue())))
+
+class MacroStartHandler(ReqHandler):
+    ''' set the starting point of recorded commands for macros.
+    '''
+
+    @web.authenticated
+    def post(self):
+        cserver = self.get_server()
+        cserver.macro_start()
+
+
 handlers = [
     web.url(r'/workspace/?',                WorkspaceHandler, name='workspace'),
     web.url(r'/workspace/addons/?',         AddOnsHandler),
@@ -455,4 +489,6 @@ handlers = [
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
+    web.url(r'/workspace/macro/save/(.*)',  MacroSaveHandler),
+    web.url(r'/workspace/macro/start',      MacroStartHandler),
 ]
