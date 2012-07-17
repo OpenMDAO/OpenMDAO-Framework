@@ -88,7 +88,7 @@ def _test_import(browser):
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # view library
-    workspace_page('libraries_tab').click()
+    workspace_page('library_tab').click()
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
@@ -145,7 +145,7 @@ def _test_menu(browser):
 
     #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('console', 'libraries', 'objects',
+    for item in ('console', 'library', 'objects',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
@@ -213,8 +213,8 @@ f_x = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page('libraries_tab').click()
-    workspace_page.libraries_search = 'In Project\n'
+    workspace_page('library_tab').click()
+    workspace_page.library_search = 'In Project\n'
     time.sleep(2)
     workspace_page.find_palette_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')

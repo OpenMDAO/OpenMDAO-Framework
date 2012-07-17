@@ -34,7 +34,7 @@ class WorkspacePage(BasePageObject):
     view_menu         = ButtonElement((By.ID, 'view-menu'))
     cmdline_button    = ButtonElement((By.ID, 'view-cmdline'))
     console_button    = ButtonElement((By.ID, 'view-console'))
-    libraries_button  = ButtonElement((By.ID, 'view-library'))
+    library_button    = ButtonElement((By.ID, 'view-library'))
     objects_button    = ButtonElement((By.ID, 'view-components'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
     workflow_button   = ButtonElement((By.ID, 'view-workflow'))
@@ -73,8 +73,8 @@ class WorkspacePage(BasePageObject):
     props_inputs   = GridElement((By.XPATH, "//div[@id='properties_pane']/div[1]"))
     props_outputs  = GridElement((By.XPATH, "//div[@id='properties_pane']/div[2]"))
 
-    libraries_tab = ButtonElement((By.ID, 'palette_tab'))
-    libraries_search = InputElement((By.ID, 'objtt-select'))
+    library_tab = ButtonElement((By.ID, 'palette_tab'))
+    library_search = InputElement((By.ID, 'objtt-select'))
 
     # Bottom.
     history = TextElement((By.ID, 'history'))

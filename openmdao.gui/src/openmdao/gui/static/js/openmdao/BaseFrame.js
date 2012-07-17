@@ -7,12 +7,12 @@ openmdao.update = function() {
     });
 };
 
-openmdao.BaseFrame = function () {
-    id:         null;   // the id attribute of the element the frame is built on
-    elm:        null;   // the element the frame is built on wrapped by jQuery
-    par:        null;   // the parent element as a jQuery object
-    title:      "";     // the title to be used for this frame
-    menu:       null;   // an optional menu
+openmdao.BaseFrame = function() {
+    this.id    = null;  // the id attribute of the element the frame is built on
+    this.elm   = null;  // the element the frame is built on wrapped by jQuery
+    this.par   = null;  // the parent element as a jQuery object
+    this.title = "";    // the title to be used for this frame
+    this.menu  = null;  // an optional menu
 };
 
 openmdao.BaseFrame.prototype.init = function (id,title,menu) {
@@ -60,60 +60,57 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
 
     // create menubar and add menu if one has been provided
     if (this.menu) {
-        var menuID = this.id+"-menu",
+        var menuID  = this.id+"-menu",
             menuDiv = this.elm.append("<nav2 id='"+menuID+"'>"),
-            style = "style='position:absolute;top:5px;right:5px;z-index:1001'",
-            popButton = jQuery("<div title='Pop Out' "+style+">*</div>");
-        popButton.click( function() { this.popup(this.title); }.bind(this) );
-        new openmdao.Menu(menuID,this.menu);
-        // FIXME: HACK, add button to make window pop out
-        // (TODO: alternately open in new browser window?)
-        menuDiv.append(popButton);
+            menuObj = new openmdao.Menu(menuID,this.menu),
+            style   = "style='position:absolute;top:5px;right:5px;z-index:1001'",
+            pop_btn = jQuery("<div title='Pop Out' "+style+">*</div>");
+        pop_btn.click( function() { this.popup(this.title); }.bind(this) );
+        menuDiv.append(pop_btn);
     }
 };
 
 openmdao.BaseFrame.prototype.popup = function (title) {
     /* put this frame in a popup */
-    this.elm.dialog({
+    var dlg = this.elm;
+    dlg.dialog({
         'modal': false,
         'title': title,
         'close': function(ev, ui) {
                     this.close();
                  }.bind(this),
-        'width': 'auto',
-        'height': 'auto'
+        'height': 'auto',
+        'width' : 'auto',
+        'open': function(ev, ui) {
+                    // make sure the popup fits in the window
+                    if (dlg.height() > window.innerHeight*0.8) {
+                        dlg.height(window.innerHeight*0.8);
+                    }
+                    if (dlg.width() > window.innerWidth*0.8) {
+                        dlg.width(window.innerWidth*0.8);
+                    }
+                    // and is not off the edge of the window
+                    var off  = dlg.offset(),
+                        top  = off.top,
+                        left = off.left;
+                    if (top < 0) {
+                        top = 0;
+                    }
+                    else if (top + dlg.outerHeight() > window.innerHeight) {
+                        top = window.innerHeight - dlg.outerHeight();
+                    }
+                    if (left < 0) {
+                        left = 0;
+                    }
+                    else if (left + dlg.outerWidth() > window.innerWidth) {
+                        left = window.innerWidth - dlg.outerWidth();
+                    }
+                    if (top !== off.top || left !== off.left) {
+                        dlg.dialog({ position: [top, left] });
+                    }
+                }
     });
-    
-    // make sure the popup is in the window
-    if (this.elm.height() > window.innerHeight*.8) {
-        this.elm.height(window.innerHeight*.8);
-    }
-    if (this.elm.width() > window.innerWidth*.8) {
-        this.elm.width(window.innerWidth*.8);
-    }
 
-    // give it a few ms to render then check for being out of bounds
-    var dlg = this.elm;
-    setTimeout(function() {
-        var off  = dlg.offset(),
-            top  = off.top,
-            left = off.left;
-        if (top < 0) {
-            top = 0;
-        }
-        else if (top + dlg.outerHeight() > window.innerHeight) {
-            top = window.innerHeight - dlg.outerHeight();
-        }
-        if (left < 0) {
-            left = 0;
-        }
-        else if (left + dlg.outerWidth() > window.innerWidth) {
-            left = window.innerWidth - dlg.outerWidth();
-        }
-        if (top !== off.top || left !== off.left) {
-            dlg.dialog({ position: [top, left] });
-        }
-    },25);
 };
 
 openmdao.BaseFrame.prototype.setTitle = function (title) {
@@ -136,7 +133,7 @@ openmdao.BaseFrame.prototype.close = function () {
     }
     else {
         this.elm.dialog('destroy');
-        this.elm.remove(); 
+        this.elm.remove();
     }
 };
 
