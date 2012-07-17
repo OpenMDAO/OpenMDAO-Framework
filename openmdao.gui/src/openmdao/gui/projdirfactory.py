@@ -160,7 +160,11 @@ class ProjDirFactory(Factory):
         """Create and return an instance of the specified type, or None if
         this Factory can't satisfy the request.
         """
+        logger.error("attempting to create a %s" % typ)
+        import pprint
+        logger.error(pprint.pformat(self.analyzer.class_map))
         if server is None and res_desc is None and typ in self.analyzer.class_map:
+            logger.error("found it in class_map")
             with self._lock:
                 fpath = self.analyzer.class_map[typ].fname
                 modpath = self.analyzer.fileinfo[fpath][0].modpath
@@ -168,10 +172,12 @@ class ProjDirFactory(Factory):
                     if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
                         reload(sys.modules[modpath])
                 else:
+                    logger.error("adding %s to sys.path" % get_ancestor_dir(fpath, len(modpath.split('.'))))
                     sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
                     try:
                         __import__(modpath)
                     except ImportError as err:
+                        logger.error("import failed")
                         return None
                     finally:
                         sys.path = sys.path[1:]
@@ -180,6 +186,7 @@ class ProjDirFactory(Factory):
                 try:
                     ctor = _find_module_attr(typ)
                 except KeyError:
+                    logger.error("lookup of ctor failed")
                     return None
                 return ctor(**ctor_args)
         return None

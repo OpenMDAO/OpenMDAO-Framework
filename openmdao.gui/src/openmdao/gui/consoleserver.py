@@ -14,7 +14,7 @@ from openmdao.main.assembly import Assembly, set_as_top
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
-from openmdao.main.project import project_from_archive
+from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
 
 from openmdao.main.publisher import Publisher
@@ -427,11 +427,15 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
+            # have to do things in a specific order here. First, create the files,
+            # then point the ProjDirFactory at the files, then finally create the
+            # Project. Executing the project macro (which happens in the Project __init__)
+            # requires that the ProjDirFactory is already in place.
+            project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
             self.projdirfactory = ProjDirFactory(self.files.getcwd(),
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            self.proj = project_from_archive(filename,
-                                             dest_dir=self.files.getcwd())
+            self.proj = Project(os.path.join(self.files.getcwd(), parse_archive_name(filename)))
         except Exception, err:
             self._error(err, sys.exc_info())
 

@@ -13,16 +13,17 @@ from pkg_resources import get_distribution, DistributionNotFound
 from openmdao.main.api import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
+from openmdao.main.factorymanager import create
+from openmdao.main.mp_support import is_instance
 from openmdao.util.fileutil import get_module_path, expand_path
 from openmdao.util.log import logger
 
-from openmdao.main.mp_support import is_instance
 
 # extension for project files
 PROJ_FILE_EXT = '.proj'
 
 
-def _parse_archive_name(pathname):
+def parse_archive_name(pathname):
     """Return the name of the project given the pathname of a project
     archive file.
     """
@@ -32,7 +33,7 @@ def _parse_archive_name(pathname):
         return os.path.basename(pathname)
 
 
-def project_from_archive(archive_name, proj_name=None, dest_dir=None):
+def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True):
     """Expand the given project archive file in the specified destination
     directory and return a Project object that points to the newly
     expanded project.
@@ -47,6 +48,9 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
     dest_dir: str (optional)
         Directory where the project directory for the expanded archive will
         reside. Defaults to the directory where the archive is located.
+        
+    create: bool (optional)
+        If True, create and return a Project object
     """
     archive_name = expand_path(archive_name)
 
@@ -56,7 +60,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
         dest_dir = expand_path(dest_dir)
         
     if proj_name is None:
-        proj_name = _parse_archive_name(archive_name)
+        proj_name = parse_archive_name(archive_name)
 
     projpath = os.path.join(dest_dir, proj_name)
     
@@ -74,8 +78,9 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None):
             print "Error expanding project archive:",err
         finally:
             tf.close()
-    proj = Project(projpath)
-    return proj
+
+    if create:
+        return Project(projpath)
 
 #def find_distrib_for_obj(obj):
     #"""Return the name of the distribution containing the module that
@@ -112,25 +117,31 @@ class Project(object):
         self.path = expand_path(projpath)
         modeldir = os.path.join(self.path, 'model')
         self.activate()
+        setattr(self, 'create', create) # create is called from macros
+        
         if os.path.isdir(projpath):
             # locate file containing state, create it if it doesn't exist
             statefile = os.path.join(projpath, '_project_state')
             if os.path.exists(statefile):
+                logger.error("found state file")
                 try:
                     with open(statefile, 'r') as f:
                         self.__dict__.update(pickle.load(f))
                 except Exception, e:
-                    print 'Unable to restore project state:',e
-                    self._initialize()
+                    logger.error('Unable to restore project state: %s' % e)
                     macro_exec = True
+            else:
+                macro_exec = True
+                logger.error("%s doesn't exist" % statefile)
+            if macro_exec:
+                self._initialize()
             macro_file = os.path.join(self.path, '_project_macro')
             if os.path.isfile(macro_file):
                 if macro_exec:
-                    print 'Attempting to reconstruct project using macro'
+                    logger.error('Attempting to reconstruct project using macro')
                 self.load_macro(macro_file, execute=macro_exec)
-            else:
-                self._initialize()
         else:  # new project
+            logger.error("new project")
             os.makedirs(projpath)
             os.mkdir(modeldir)
             self._initialize()
@@ -140,6 +151,7 @@ class Project(object):
         SimulationRoot.chroot(self.path)
 
     def _initialize(self):
+        logger.error("creating a blank assembly")
         self.top = set_as_top(Assembly())
         
     @property
@@ -149,15 +161,16 @@ class Project(object):
     def load_macro(self, fpath, execute=True, strict=False):
         with open(fpath, 'r') as f:
             for i,line in enumerate(f):
+                logger.error("reading <%s> from file" % line)
                 if execute:
                     try:
-                        self.command(line)
+                        self.command(line.strip('\n'))
                     except Exception as err:
-                        logger.error('file %s line %d: %s' % (fpath, i, str(err)))
+                        logger.error('file %s line %d: %s' % (fpath, i+1, str(err)))
                         if strict:
                             raise
                 else:
-                    self._recorded_cmds.append(line)
+                    self._recorded_cmds.append(line.strip('\n'))
 
     def command(self, cmd):
         err = None
@@ -175,6 +188,7 @@ class Project(object):
                 pass
             
         if err:
+            logger.error("command error: <%s>" % cmd)
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
             raise err
         else:
@@ -213,18 +227,10 @@ class Project(object):
         if self._recorded_cmds:
             logger.info("Saving macro used to create project")
             with open(os.path.join(self.path, '_project_macro'), 'w') as f:
-                self._write_macro_header(f)
                 for cmd in self._recorded_cmds:
                     f.write(cmd)
                     f.write('\n')
-        
-    def _write_macro_header(self, f):
-        header = [
-            'from openmdao.main.factorymanager import create',
-        ]
-        for line in header:
-            f.write(line+'\n')
-        
+
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export. 
         
