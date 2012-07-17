@@ -174,6 +174,7 @@ class Project(object):
 
     def command(self, cmd):
         err = None
+        result = None
         try:
             compile(cmd, '<string>', 'eval')
         except SyntaxError:
@@ -193,6 +194,8 @@ class Project(object):
             raise err
         else:
             self._recorded_cmds.append(cmd)
+            
+        return result
             
     def activate(self):
         """Puts this project's directory on sys.path."""

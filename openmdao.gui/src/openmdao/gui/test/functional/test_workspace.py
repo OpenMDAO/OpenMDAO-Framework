@@ -29,8 +29,8 @@ def _test_console(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    workspace_page.do_command('dir()')
-    expected = ">>> dir()\n['__builtins__', 'path', 'top']"
+    workspace_page.do_command("print 'blah'")
+    expected = ">>> print 'blah'\nblah"
     eq(workspace_page.history, expected)
 
     # Clean up.
