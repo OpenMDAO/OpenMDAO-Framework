@@ -5,6 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 
+from selenium.common.exceptions import StaleElementReferenceException
+
 
 class Grid(object):
     """
@@ -21,7 +23,8 @@ class Grid(object):
     def rows(self):
         if self._rows is None:
             rows = self._root.find_elements(By.CLASS_NAME, 'slick-row')
-            self._rows = [GridRow(self._browser, row) for row in rows]
+            self._rows = [GridRow(self._browser, row, self._root, i)
+                          for i, row in enumerate(rows)]
         return self._rows
 
     @property
@@ -38,16 +41,29 @@ class Grid(object):
 class GridRow(object):
     """ Represents a SlickRow at `root`. """
 
-    def __init__(self, browser, root):
+    def __init__(self, browser, root, grid_root, row):
         self._browser = browser
         self._root = root
+        self._grid_root = grid_root
+        self._row = row
         self._cells = None
 
     @property
     def cells(self):
         if self._cells is None:
-            cells = self._root.find_elements(By.CLASS_NAME, 'slick-cell')
+            for retry in range(5):
+                try:
+                    cells = self._root.find_elements(By.CLASS_NAME, 'slick-cell')
+                except StaleElementReferenceException:
+                    if retry < 4:
+                        logging.warning('GridRow.cells: StaleElementReferenceException')
+                        self._root = self._grid_root.find_elements(By.CLASS_NAME, 'slick-row')[self._row]
+                    else:
+                        raise
+                else:
+                    break
             self._cells = [GridCell(self._browser, cell) for cell in cells]
+            
         return self._cells
 
     @property

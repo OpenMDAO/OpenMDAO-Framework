@@ -3,6 +3,7 @@ import logging
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
 
+from basepageobject import TMO
 from dialog import DialogPage
 from elements import ButtonElement, InputElement
 
@@ -35,6 +36,16 @@ class ConnectionsPage(DialogPage):
         self.source_variable = src + '\n'
         self.target_variable = dst + '\n'
         self('connect_button').click()
+
+    def check_variable_figures(self):
+        """ Return number of variable figure elements, assume zero. """
+        self.browser.implicitly_wait(1)
+        try:
+            figs = self.browser.find_elements_by_class_name('VariableFigureHeader')
+            count = len(figs)
+        finally:
+            self.browser.implicitly_wait(TMO)
+        return count
 
     def get_variable_figures(self):
         """ Return variable figure elements. """

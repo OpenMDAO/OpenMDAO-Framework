@@ -31,7 +31,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
     **/
 
     /** convert model.json to structure required for jstree */
-    function convertJSON(json, path) {
+    function convertJSON(json, path, openNodes) {
         var data = [];
 
         jQuery.each(json, function(idx,item) {
@@ -49,7 +49,11 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                      'interfaces' : interfaces
                 };
                 if (item.children) {
-                    node.children = convertJSON(item.children,pathname);
+                    node.children = convertJSON(item.children, pathname,
+                                                openNodes);
+                }
+                if (openNodes.indexOf(pathname) >= 0) {
+                    node.state = 'open';
                 }
                 data.push(node);
             }
@@ -59,10 +63,16 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 
     /** update the tree with JSON model data  */
     function updateTree(json) {
+        // Grab paths of currently open nodes.
+        var openNodes = [];
+        jQuery("#otree").find("li.jstree-open").each(function () {
+            openNodes.push(this.getAttribute("path"));
+        });
+
         tree.empty();
         tree.jstree({
             plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm", "dnd"],
-            json_data   : { "data": convertJSON(json,'') },
+            json_data   : { "data": convertJSON(json, '', openNodes) },
             themes      : { "theme":  "classic" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },

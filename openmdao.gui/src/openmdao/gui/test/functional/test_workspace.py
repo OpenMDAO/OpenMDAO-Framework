@@ -302,6 +302,54 @@ def _test_properties(browser):
     project_info_page.delete_project()
     print "_test_properties complete."
 
+
+def _test_objtree(browser):
+    print "running _test_objtree..."
+    # Toggles maxmimize/minimize button on assemblies.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add maxmin.py to project
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'maxmin.py')
+    editor_page.add_file(file_path)
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Add MaxMin to 'top'.
+    workspace_page.show_dataflow('top')
+    time.sleep(1)
+    workspace_page('libraries_tab').click()
+    time.sleep(1)
+    workspace_page.find_palette_button('MaxMin').click()
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
+
+    # Maximize 'top' and 'top.maxmin'
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top'])
+    workspace_page.expand_object('top')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin'])
+    workspace_page.expand_object('top.maxmin')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub'])
+
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_objtree complete."
+
+
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
@@ -314,6 +362,7 @@ if __name__ == '__main__':
         _test_import(browser)
         _test_menu(browser)
         _test_newfile(browser)
+        _test_objtree(browser)
         _test_properties(browser)
         browser.quit()
         teardown_server()
