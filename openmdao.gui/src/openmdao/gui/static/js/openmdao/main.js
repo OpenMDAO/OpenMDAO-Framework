@@ -63,12 +63,12 @@ jQuery(function() {
         new openmdao.ConsoleFrame("console",  model);
     }());
 
+    // start with objects, dataflow & properties visible
+    jQuery('#otree_tab a').click();
+    jQuery('#dataflow_tab a').click();
+    jQuery('#palette_tab a').click();
+
     // do layout
     jQuery('body').trigger('layoutresizeall');
-
-    // start with objects, dataflow & properties visible
-    jQuery('#otree_tab').click();
-    jQuery('#dataflow_tab').click();
-    jQuery('#properties_tab').click();
 });
 

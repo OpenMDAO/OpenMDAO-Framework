@@ -13,17 +13,12 @@ ul {
 }
 
 
+/* desktop */
 .ui-layout-pane-west, .ui-layout-pane-center, .ui-layout-pane-east {
   padding:  0;
   overflow:  hidden;
 }
 
-.ui-tabs-panel {
-  overflow: auto;
-}
-
-
-/* desktop */
 #leftcol {
   margin: 0;
   float: left;
@@ -49,7 +44,8 @@ ul {
   overflow: hidden;
 }
 
-/* menus */
+
+/* main menu */
 nav {
   display:block;
   margin:0 auto 20px;
@@ -148,25 +144,12 @@ nav2 ul ul a {
 }
 
 
-.context-menu {
-  visibility: hidden; /* No, you cannot use display:none; */
-  position: absolute;
+/* tabbed panes*/
+.ui-tabs-panel {
+  overflow: auto;
 }
 
-
-.ui-draggable-dragging {
-  z-index: 9999;
-}
-
-
-/* desktop tabbed panes (left, center & right) */
-
-dl {
-  margin: 0;
-}
-
-/*#otree, #ftree, #propertieseditor, #palette {*/
-#otree_pane, #ftree, #properties_pane {
+#otree_pane, #properties_pane, #palette_pane {
   height: 100%;
   width: 100%;
 }
@@ -198,3 +181,16 @@ dl {
   width: 9%;
   float: left;
 }
+
+/* context menus */
+.context-menu {
+  visibility: hidden; /* No, you cannot use display:none; */
+  position: absolute;
+}
+
+/* draggables */
+.ui-draggable-dragging {
+  z-index: 9999;
+}
+
+
