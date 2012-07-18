@@ -23,6 +23,7 @@ from openmdao.devtools.utils import get_git_branch, get_git_branches, \
 from openmdao.devtools.push_release import push_release
 from openmdao.devtools.remote_cfg import add_config_options
 from openmdao.devtools.remotetst import test_release
+from openmdao.devtools.uploadGists import uploadGists
 from openmdao.util.fileutil import cleanup
 from openmdao.test.testing import read_config, filter_config
 from openmdao.util.fileutil import get_cfg_file
@@ -225,7 +226,19 @@ def finalize_release(parser, options):
     """
     if options.version is None:
         raise RuntimeError("you must specify the version")
-    
+
+    if options.tutorials:
+        if not uploadGists(options.version):
+            print ""
+            print "Did not upload tutorials to GitHub"
+        else: 
+            print "Successfully uploaded tutorials to GitHub"
+
+        print "Only uploaded tutorials, no other action was taken. Now exiting"
+        sys.exit(0)
+
+
+
     reldir = 'rel_%s' % options.version
     brname = 'release_%s' % options.version
     # check validity
@@ -261,6 +274,18 @@ def finalize_release(parser, options):
             print 'skipping...'
         else:
             check_call(['git', 'push', '--tags', 'origin', '%s:dev' % brname])
+
+        # push tutorials to github
+        print "uploading tutorials and examples to GitHub and Cookbook"
+        if options.dry_run or options.nogists:
+            print' skipping...'
+        else:
+            if not uploadGists(options.version):
+                print ""
+                print "Did not upload tutorials to GitHub"
+            else: 
+                print "Successfully uploaded tutorials to GitHub"
+
     finally:
         print 'returning to original branch (%s)' % start_branch
         check_call(['git', 'checkout', start_branch])
@@ -289,6 +314,7 @@ def build_release(parser, options):
     number of releaseinfo.py files will be updated with new version
     information and committed.
     """
+
     if options.version is None:
         parser.print_usage()
         print "version was not specified"
@@ -441,6 +467,10 @@ def _get_release_parser():
                         help="release version of OpenMDAO to be finalized")
     parser.add_argument("-d","--dryrun", action="store_true", dest='dry_run',
                         help="don't actually push any changes up to github or openmdao.org")
+    parser.add_argument("--tutorials", action="store_true", dest="tutorials",
+                        help="Only upload the tutorials, no other action will be taken")
+    parser.add_argument("--nogists", action="store_true", dest="nogists",
+                        help="Do not upload gists when finalizing the release")
     parser.set_defaults(func=finalize_release)
 
     parser = subparsers.add_parser('push',
