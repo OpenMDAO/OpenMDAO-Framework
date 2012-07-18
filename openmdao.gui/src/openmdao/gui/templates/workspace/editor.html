@@ -7,31 +7,16 @@
 {% end %}
 
 {% block body %}
-    <!-- ================================= -->
-    <!-- basic components of the workspace -->
-    <!-- ================================= -->
-
-    <nav id="menu" class="ui-layout-north"
-         onmouseover="layout.allowOverflow('north')" >
-    </nav>
+    <!-- ============================== -->
+    <!-- basic components of the editor -->
+    <!-- ============================== -->
 
     <div id="leftcol" class="ui-layout-west">
-        <dl id="leftcol_tabs">
-            <dt id="ftree_tab" target="ftree_pane">Files</dt>
-            <dd id="ftree_pane">
-                <div id="ftree"></div>
-            </dd>
-        </dl>
+        <div id="file_pane"></div>
     </div>
 
     <div id="central" class="ui-layout-center">
-        <dl id="central_tabs">
-            <dt id="code_tab" target="code_pane">Code</dt>
-            <dd id="code_pane">
-                <div id="code"></textarea>
-            </dd>
-        </dl>
-        <div id="central_label"></div>
+        <div id="code_pane" style="overflow:auto"></div>
     </div>
 
 {% end %}

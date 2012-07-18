@@ -16,39 +16,35 @@
     </nav>
 
     <div id="leftcol" class="ui-layout-west">
-        <dl id="leftcol_tabs">
-            <dt id="otree_tab" target="otree_pane">Objects</dt>
-            <dd id="otree_pane">
-                <div id="otree"></div>
-            </dd>
-        </dl>
+        <div id="leftcol_tabs">
+            <ul>
+                <li id="otree_tab"><a href="#otree_pane">Components</a></li>
+            </ul>
+            <div id="otree_pane"></div>
+        </div>
     </div>
 
     <div id="central" class="ui-layout-center">
-    <dl id="central_tabs">
-        <dt id="dataflow_tab" target="dataflow_pane">Dataflow</dt>
-        <dd id="dataflow_pane">
-            <div id="dataflow"></div>
-        </dd>
-        <dt id="workflow_tab" target="workflow_pane">Workflow</dt>
-        <dd id="workflow_pane">
-            <div id="workflow"></div>
-        </dd>
-    </dl>
-    <div id="central_label"></div>
+        <div id="central_tabs">
+            <ul>
+                <li id="dataflow_tab"><a href="#dataflow_pane">Dataflow</a></li>
+                <li id="workflow_tab"><a href="#workflow_pane">Workflow</a></li>
+            </ul>
+            <div id="dataflow_pane"></div>
+            <div id="workflow_pane"></div>
+        </div>
+        <div id="central_label"></div>
     </div>
 
     <div id="rightcol" class="ui-layout-east">
-        <dl id="rightcol_tabs">
-            <dt id="properties_tab" target="properties_pane">Properties</dt>
-            <dd id="properties_pane">
-                <div id="propertieseditor"></div>
-            </dd>
-            <dt id="palette_tab" target="palette_pane">Library</dt>
-            <dd id="palette_pane">
-                <div id="palette" ></div>
-            </dd>
-        </dl>
+        <div id="rightcol_tabs">
+            <ul>
+                <li id="properties_tab"><a href="#properties_pane">Properties</a></li>
+                <li id="library_tab"><a href="#library_pane">Library</a></li>
+            </ul>
+            <div id="properties_pane"></div>
+            <div id="library_pane"></div>
+        </div>
     </div>
 
     <div id="console" class="ui-layout-south"></div>
