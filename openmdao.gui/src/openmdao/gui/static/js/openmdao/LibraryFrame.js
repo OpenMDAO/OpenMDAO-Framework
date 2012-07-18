@@ -1,8 +1,8 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.PaletteFrame = function(id,model) {
-    openmdao.PaletteFrame.prototype.init.call(this,id,'Library',[]);
+openmdao.LibraryFrame = function(id,model) {
+    openmdao.LibraryFrame.prototype.init.call(this,id,'Library',[]);
 
     /***********************************************************************
      *  private
@@ -33,9 +33,9 @@ openmdao.PaletteFrame = function(id,model) {
        return yPos-scrolls;
     }
 
-    /** rebuild the Palette from a JSON library list of tuples of the form:
+    /** rebuild the Library from a JSON library list of tuples of the form:
         (libname, meta_dict) */
-    function updatePalette(packages) {
+    function updateLibrary(packages) {
         // build the new html
         var html = '<div class="ui-widget" style="clear:both">'
                  +   '<label for="objtt-select" id="objtt-search">Search: </label>'
@@ -177,7 +177,7 @@ openmdao.PaletteFrame = function(id,model) {
         else {
             self.elm.html("<div>Updating...</div>")
                 .effect('highlight',{color:'#ffd'},1000);
-            updatePalette(message[1][0]);
+            updateLibrary(message[1][0]);
         }
     }
 
@@ -189,7 +189,7 @@ openmdao.PaletteFrame = function(id,model) {
     this.update = function() {
         self.elm.html("<div>Updating...</div>")
             .effect('highlight',{color:'#ffd'},1000);
-        model.getTypes(updatePalette);
+        model.getTypes(updateLibrary);
     };
 
     // ask model for an update whenever something changes
@@ -200,6 +200,6 @@ openmdao.PaletteFrame = function(id,model) {
 };
 
 /** set prototype */
-openmdao.PaletteFrame.prototype = new openmdao.BaseFrame();
-openmdao.PaletteFrame.prototype.constructor = openmdao.PaletteFrame;
+openmdao.LibraryFrame.prototype = new openmdao.BaseFrame();
+openmdao.LibraryFrame.prototype.constructor = openmdao.LibraryFrame;
 

@@ -65,7 +65,6 @@ class WorkspacePage(BasePageObject):
     # Center.
     dataflow_tab = ButtonElement((By.ID, 'dataflow_tab'))
     workflow_tab = ButtonElement((By.ID, 'workflow_tab'))
-    code_tab     = ButtonElement((By.ID, 'code_tab'))
 
     # Right side.
     properties_tab = ButtonElement((By.ID, 'properties_tab'))
@@ -73,7 +72,7 @@ class WorkspacePage(BasePageObject):
     props_inputs   = GridElement((By.XPATH, "//div[@id='properties_pane']/div[1]"))
     props_outputs  = GridElement((By.XPATH, "//div[@id='properties_pane']/div[2]"))
 
-    library_tab = ButtonElement((By.ID, 'palette_tab'))
+    library_tab = ButtonElement((By.ID, 'library_tab'))
     library_search = InputElement((By.ID, 'objtt-select'))
 
     # Bottom.
@@ -96,7 +95,7 @@ class WorkspacePage(BasePageObject):
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         NotifierPage.wait(browser, port)
 
-    def find_palette_button(self, name):
+    def find_library_button(self, name):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
         return ButtonElement((By.XPATH, path)).get(self)
 
@@ -187,7 +186,7 @@ class WorkspacePage(BasePageObject):
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
-        #xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
+        #xpath = "//div[(@id='library')]//div[(@path='%s')]" % item_name
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))

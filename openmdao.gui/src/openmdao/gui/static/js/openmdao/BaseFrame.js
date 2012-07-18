@@ -78,38 +78,42 @@ openmdao.BaseFrame.prototype.popup = function (title) {
         'title': title,
         'close': function(ev, ui) {
                     this.close();
+                    // if returning to a tab, need to trigger layout to resize
+                    jQuery('body').trigger('layoutresizeall');
                  }.bind(this),
         'height': 'auto',
-        'width' : 'auto',
-        'open': function(ev, ui) {
-                    // make sure the popup fits in the window
-                    if (dlg.height() > window.innerHeight*0.8) {
-                        dlg.height(window.innerHeight*0.8);
-                    }
-                    if (dlg.width() > window.innerWidth*0.8) {
-                        dlg.width(window.innerWidth*0.8);
-                    }
-                    // and is not off the edge of the window
-                    var off  = dlg.offset(),
-                        top  = off.top,
-                        left = off.left;
-                    if (top < 0) {
-                        top = 0;
-                    }
-                    else if (top + dlg.outerHeight() > window.innerHeight) {
-                        top = window.innerHeight - dlg.outerHeight();
-                    }
-                    if (left < 0) {
-                        left = 0;
-                    }
-                    else if (left + dlg.outerWidth() > window.innerWidth) {
-                        left = window.innerWidth - dlg.outerWidth();
-                    }
-                    if (top !== off.top || left !== off.left) {
-                        dlg.dialog({ position: [top, left] });
-                    }
-                }
+        'width' : 'auto'
     });
+
+    // make sure the popup fits in the window
+    if (this.elm.height() > window.innerHeight*.8) {
+        this.elm.height(window.innerHeight*.8);
+    }
+    if (this.elm.width() > window.innerWidth*.8) {
+        this.elm.width(window.innerWidth*.8);
+    }
+
+    // give it a few ms to render then check for being out of bounds
+    setTimeout(function() {
+        var off  = dlg.offset(),
+            top  = off.top,
+            left = off.left;
+        if (top < 0) {
+            top = 0;
+        }
+        else if (top + dlg.outerHeight() > window.innerHeight) {
+            top = window.innerHeight - dlg.outerHeight();
+        }
+        if (left < 0) {
+            left = 0;
+        }
+        else if (left + dlg.outerWidth() > window.innerWidth) {
+            left = window.innerWidth - dlg.outerWidth();
+        }
+        if (top !== off.top || left !== off.left) {
+            dlg.dialog({ position: [top, left] });
+        }
+    }, 33);
 
 };
 

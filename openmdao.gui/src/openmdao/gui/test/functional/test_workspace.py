@@ -216,7 +216,7 @@ f_x = Float(0.0, iotype='out')
     workspace_page('library_tab').click()
     workspace_page.library_search = 'In Project\n'
     time.sleep(2)
-    workspace_page.find_palette_button('Plane').click()
+    workspace_page.find_library_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
@@ -322,9 +322,9 @@ def _test_objtree(browser):
     # Add MaxMin to 'top'.
     workspace_page.show_dataflow('top')
     time.sleep(1)
-    workspace_page('libraries_tab').click()
+    workspace_page('library_tab').click()
     time.sleep(1)
-    workspace_page.find_palette_button('MaxMin').click()
+    workspace_page.find_library_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
     # Maximize 'top' and 'top.maxmin'

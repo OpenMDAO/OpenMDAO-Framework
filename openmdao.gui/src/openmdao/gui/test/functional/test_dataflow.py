@@ -49,7 +49,7 @@ def _test_maxmin(browser):
        ['driver', 'top'])
     workspace_page('library_tab').click()
     time.sleep(1)
-    workspace_page.find_palette_button('MaxMin').click()
+    workspace_page.find_library_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
@@ -128,7 +128,7 @@ def _test_connect(browser):
     workspace_page('library_tab').click()
     for retry in range(5):
         try:
-            workspace_page.find_palette_button('Top').click()
+            workspace_page.find_library_button('Top').click()
         except StaleElementReferenceException:
             logging.warning('StaleElementReferenceException in _test_connect')
         else:
@@ -219,7 +219,7 @@ def _test_connections(browser):
     workspace_page('library_tab').click()
     for retry in range(2):
         try:
-            workspace_page.find_palette_button('VehicleSim').click()
+            workspace_page.find_library_button('VehicleSim').click()
         except StaleElementReferenceException:
             logging.warning('StaleElementReferenceException in _test_connect')
         else:

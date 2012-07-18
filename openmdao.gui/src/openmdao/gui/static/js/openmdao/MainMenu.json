@@ -11,7 +11,7 @@
     { "text": "View", "id": "view-menu",
       "items": [
         { "text": "Console",       "id": "view-console",    "onclick": "layout.open('south');" },
-        { "text": "Library",       "id": "view-library",    "onclick": "layout.open('east'); jQuery('#palette_tab a').click();" },
+        { "text": "Library",       "id": "view-library",    "onclick": "layout.open('east'); jQuery('#library_tab a').click();" },
         { "text": "Components",    "id": "view-components", "onclick": "layout.open('west'); jQuery('#otree_tab a').click();" },
         { "text": "Properties",    "id": "view-properties", "onclick": "layout.open('east'); jQuery('#properties_tab a').click();" },
         { "text": "Workflow",      "id": "view-workflow",   "onclick": "jQuery('#workflow_tab a').click();" },

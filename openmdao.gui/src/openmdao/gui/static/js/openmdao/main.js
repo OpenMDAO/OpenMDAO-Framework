@@ -15,13 +15,15 @@ jQuery(function() {
         north_showOverflowOnHover: true,
         south__size: 150,
         onresize: function(e) {
-            var layout_pane = jQuery('.ui-layout-'+e);
+            // resize content pane of all tabbed panes to fill the layout pane
+            var layout_pane = jQuery('.ui-layout-'+e),
+                tabs_height = layout_pane.find('.ui-tabs-nav').height(),
+                pane_height = layout_pane.height()-tabs_height;
+                pane_width  = layout_pane.width()
             jQuery(layout_pane.find('.ui-tabs-panel').each(function() {
                 var panel = jQuery(this);
-                panel.width(layout_pane.width());
-                panel.height(layout_pane.height()-panel.position().top);
-                //debug.info('layout resized',this,layout_pane.width(),
-                //            layout_pane.height()-panel.position().top);
+                panel.height(pane_height);
+                panel.width(pane_width);
             }));
         }
     });
@@ -59,14 +61,9 @@ jQuery(function() {
         function comp_fn(path) { new openmdao.ComponentFrame(model,path); }
 
         new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
-        new openmdao.PaletteFrame("palette_pane",  model);
+        new openmdao.LibraryFrame("library_pane",  model);
         new openmdao.ConsoleFrame("console",  model);
     }());
-
-    // start with objects, dataflow & properties visible
-    jQuery('#otree_tab a').click();
-    jQuery('#dataflow_tab a').click();
-    jQuery('#palette_tab a').click();
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
