@@ -4,8 +4,6 @@ import re
 import json
 import requests
 
-from pprint import pprint
-
 from openmdao.devtools.utils import repo_top
 
 
