@@ -65,7 +65,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
     function updateTree(json) {
         // Grab paths of currently open nodes.
         var openNodes = [];
-        jQuery("#otree").find("li.jstree-open").each(function () {
+        self.elm.find("li.jstree-open").each(function () {
             openNodes.push(this.getAttribute("path"));
         });
 
