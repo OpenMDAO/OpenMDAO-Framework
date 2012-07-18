@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from connections import ConnectionsPage
@@ -72,7 +73,7 @@ class WorkspacePage(BasePageObject):
     props_inputs   = GridElement((By.XPATH, "//div[@id='properties_pane']/div[1]"))
     props_outputs  = GridElement((By.XPATH, "//div[@id='properties_pane']/div[2]"))
 
-    library_tab = ButtonElement((By.ID, 'library_tab'))
+    library_tab    = ButtonElement((By.ID, 'library_tab'))
     library_search = InputElement((By.ID, 'objtt-select'))
 
     # Bottom.
@@ -183,6 +184,19 @@ class WorkspacePage(BasePageObject):
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
         self('obj_dataflow').click()
+
+    def show_library(self):
+        for retry in range(5):
+            try:
+                self('library_tab').click()
+                WebDriverWait(self.browser, TMO).until(
+                    lambda browser: self('library_search').is_visible())
+            except TimeoutException:
+                logging.warning('TimoutException in show_library')
+            else:
+                break
+        else:
+            raise RuntimeError('Too many TimoutExceptions')
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """

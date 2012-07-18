@@ -88,7 +88,7 @@ def _test_import(browser):
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # view library
-    workspace_page('library_tab').click()
+    workspace_page.show_library()
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
@@ -213,7 +213,7 @@ f_x = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page('library_tab').click()
+    workspace_page.show_library()
     workspace_page.library_search = 'In Project\n'
     time.sleep(2)
     workspace_page.find_library_button('Plane').click()
@@ -322,7 +322,7 @@ def _test_objtree(browser):
     # Add MaxMin to 'top'.
     workspace_page.show_dataflow('top')
     time.sleep(1)
-    workspace_page('library_tab').click()
+    workspace_page.show_library()
     time.sleep(1)
     workspace_page.find_library_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
