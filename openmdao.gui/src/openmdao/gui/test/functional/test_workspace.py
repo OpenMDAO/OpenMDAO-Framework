@@ -82,15 +82,13 @@ def _test_palette_update(browser):
     browser.close()
     browser.switch_to_window(workspace_window)
 
-    # Go into Libraries/working section.
-    workspace_page('libraries_tab').click()
-    time.sleep(1)
-    workspace_page.find_palette_button('Paraboloid').click()
-
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
     time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
+
+    # view library
+    workspace_page.show_library()
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
@@ -116,7 +114,6 @@ def _test_palette_update(browser):
     # Check to see that the added files are still there.
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    editor_page('files_tab').click()
     file_names = editor_page.get_files()
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
@@ -151,7 +148,7 @@ def _test_menu(browser):
 
     #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('console', 'libraries', 'objects',
+    for item in ('console', 'library', 'objects',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
@@ -219,10 +216,10 @@ f_x = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page('libraries_tab').click()
-    workspace_page.libraries_search = 'In Project\n'
+    workspace_page.show_library()
+    workspace_page.library_search = 'In Project\n'
     time.sleep(2)
-    workspace_page.find_palette_button('Plane').click()
+    workspace_page.find_library_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
@@ -403,9 +400,9 @@ def _test_objtree(browser):
     # Add MaxMin to 'top'.
     workspace_page.show_dataflow('top')
     time.sleep(1)
-    workspace_page('libraries_tab').click()
+    workspace_page.show_library()
     time.sleep(1)
-    workspace_page.find_palette_button('MaxMin').click()
+    workspace_page.find_library_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
     # Maximize 'top' and 'top.maxmin'

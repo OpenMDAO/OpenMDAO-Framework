@@ -43,15 +43,14 @@ class EditorPage(BasePageObject):
     title_prefix = 'OpenMDAO:'
 
     # Left side.
-    files_tab = ButtonElement((By.ID, 'ftree_tab'))
     file_menu = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/a'))
+                           '/html/body/div/div/nav2/ul/li/a'))
     newfile_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[1]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[1]/a'))
     newfolder_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[2]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[2]/a'))
     add_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[3]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[3]/a'))
 
     # File context menu.
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
@@ -67,17 +66,23 @@ class EditorPage(BasePageObject):
 
     # Right side.
     code_tab = ButtonElement((By.ID, 'code_tab'))
+    editor_save_button       = ButtonElement((By.ID, 'code-uiBar-save'))
+    editor_find_button       = ButtonElement((By.ID, 'code-uiBar-find'))
+    editor_replace_button       = ButtonElement((By.ID, 'code-uiBar-replace'))
+    editor_replaceAll_button       = ButtonElement((By.ID, 'code-uiBar-replaceAll'))
+    editor_undo_button       = ButtonElement((By.ID, 'code-uiBar-undo'))
+
 
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["files"] = (By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']")
+        self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
 
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'ftree'))
+            lambda browser: browser.find_element(By.ID, 'file_pane'))
 # FIXME: absolute delay for tree population.
         time.sleep(1)
         file_items = self.browser.find_elements(*self.locators["files"])
@@ -123,7 +128,30 @@ class EditorPage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         return page
-
+    
+    def find_text(self,text):
+        #click the 'find' button, and enter text. Not yet functional
+        self('editor_find_button').click()
+        alert = self.browser.switch_to_alert()
+        chain = ActionChains(alert)
+        chain.send_keys(text).perform()
+        chain.send_keys(Keys.RETURN).perform()
+        return
+    
+    def replace_text(self,old_text,new_text,replace_all=False):
+        #click the 'replace' or 'replace all 'button,
+        # and enter text to find and replace. Not yet functional
+        if replace_all:
+            self('editor_replace_button').click()
+        else:
+            self('editor_replaceAll_button').click()
+        return
+    
+    def undo(self):
+        #click the 'undo' button
+        self('editor_undo_button').click()
+        return
+    
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
@@ -179,15 +207,9 @@ class EditorPage(BasePageObject):
         return code_input_element
         
     def save_document(self):
-        code_input_element = self.get_text_area()
-        # Control-S to save.
-        if sys.platform == 'darwin':
-            code_input_element.send_keys(Keys.COMMAND + 's')
-        else:
-            code_input_element.send_keys(Keys.CONTROL + 's')
-# FIXME: absolute delay for save to complete.
+        #use 'save' button to save code
+        self('editor_save_button').click()
         time.sleep(2)
-        return code_input_element
         
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """
