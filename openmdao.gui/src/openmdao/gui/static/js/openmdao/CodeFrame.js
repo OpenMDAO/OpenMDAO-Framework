@@ -36,34 +36,33 @@ openmdao.CodeFrame = function(id,model) {
     var self = this,
         filepath = "",
         editorID = id+'-textarea',
+
         editorArea = jQuery('<pre id="'+editorID+'">').css({position:'absolute',overflow:'hidden'}).appendTo("#"+id);
 	var editor = ace.edit(editorID);
 	
 	//editor.setTheme("ace/theme/chrome");
 	editor.getSession().setMode("ace/mode/python");
         
-	
     editor.commands.addCommand({
-	name: "save",
-	bindKey: {win: "Ctrl-S", mac: "Command-S"},
-	exec: function() {saveFile();}
-    });    
-    	
+        name: "save",
+        bindKey: {win: "Ctrl-S", mac: "Command-S"},
+        exec: function() {saveFile();}
+    });
+
     // make the parent element (tabbed pane) a drop target for file objects
-    editorArea.parent().droppable ({
-        accept: '.file .obj',
+    editorArea.droppable ({
+        accept: '.file',
         drop: function(ev,ui) {
-            var droppedObject = jQuery(ui.draggable).clone();
-            debug.info('CodeFrame drop',droppedObj);
-            if (droppedObject.hasClass('file')) {
-                editFile(droppedObject.attr("path"));
+            var droppedObject = jQuery(ui.draggable).clone(),
+                droppedPath = droppedObject.attr("path");
+            if (droppedPath) {
+                self.editFile(droppedPath);
             }
         }
     });
 
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
-	console.log(editor.getValue());
         model.setFile(filepath,editor.session.doc.getValue());
     }
 

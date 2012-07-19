@@ -302,8 +302,14 @@ class IDriver(IComponent):
         in this Driver's workflow or any of its sub-workflows.
         """
 
-class ISolver(IComponent):
+class ISolver(IDriver):
     """An interface for drivers that are solvers. 
+    """
+    
+    pass
+
+class IOptimizer(IDriver):
+    """An interface for drivers that are optimizers. 
     """
     
     pass

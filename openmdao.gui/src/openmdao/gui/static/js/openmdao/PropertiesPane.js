@@ -5,7 +5,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
-        propsDiv = jQuery("<div id='"+name+"_props' style='overflow:none;'>"),
+        propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80 },
             {id:"value", name:"Value", field:"value", width:80, editor:TextCellEditor},

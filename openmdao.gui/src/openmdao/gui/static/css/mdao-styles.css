@@ -1,10 +1,6 @@
+/* font */
 html {
   font:12px Tahoma, Sans-serif;
-}
-
-ul {
-  margin-left: 1em;
-  padding-left: 1em;
 }
 
 
@@ -37,7 +33,7 @@ ul {
   border:1px groove #222;
 }
 
-/* nav styles */
+/* menu styles */
 nav {
   border:1px solid #222;
   background-color:#6a6a6a;
@@ -70,21 +66,13 @@ nav ul ul a:hover {
   background-color:#555;
 }
 
-/* base dl dt (tab) styles */
-dl dt {
-  display: block;
-  border: 1px solid #222; 
-  background-color:#6a6a6a; 
-  color: white; 
-  font-size: 14px;
+
+/* file tree & object tree styles */
+.folder, .obj {
+  font-weight: bold;
 }
 
-.tab_here {
-  background-color: #EFEFEF;
-  color: #23A4FF  !important;
-}
-
-/* base H3 (palette accordian header) styles */
+/* H3 (properties accordian header) styles */
  h3 {
   margin:0; 
   border:1px solid #222; 
@@ -93,17 +81,6 @@ dl dt {
   color: white; 
   font-size: 14px;
   font-weight: normal;
-}
-
-/* file tree & object tree styles */
-.folder, .obj {
-  font-weight: bold;
-}
-.file, .var, .array, .ref {
-  font-weight: normal;
-}
-.null {
-  font-style: italic; 
 }
 
 /* objtype styles */
@@ -131,7 +108,7 @@ dl dt {
   color:white;
 }
 
-/* history box */
+/* console history box */
 #historybox {
   background-color:grey;
   border-style:groove;
@@ -143,19 +120,6 @@ dl dt {
   background-color:#6a6a6a; 
   color: white; 
   font-size:14px;
-}
-
-/* codemirror line numbers */
-.CodeMirror-line-numbers {
-    width: 2.2em;
-    color: #aaa;
-    background-color: #eee;
-    text-align: right;
-    padding: .4em;
-    margin: 0;
-    font-family: monospace;
-    font-size: 10pt;
-    line-height: 1.1em;
 }
 
 /* context menus */
@@ -230,6 +194,5 @@ dl dt {
   -moz-transform:rotate(-180deg);
   -webkit-transform:rotate(-180deg);
 }
-
 /* end CSS3 */
 

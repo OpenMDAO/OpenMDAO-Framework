@@ -4,7 +4,6 @@ Tests of dataflow functions.
 
 import logging
 import pkg_resources
-import re
 import sys
 import time
 
@@ -31,7 +30,7 @@ def _test_maxmin(browser):
 
     # verify that the globals figure is invisible
     globals_figure = workspace_page.get_dataflow_figure('')
-    eq(globals_figure.border.find('none') >= 0, True)
+    assert globals_figure.border.find('none') >= 0
     eq(globals_figure.background_color, 'rgba(0, 0, 0, 0)')
 
     # Add maxmin.py to project
@@ -48,9 +47,9 @@ def _test_maxmin(browser):
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
-    workspace_page('libraries_tab').click()
+    workspace_page.show_library()
     time.sleep(1)
-    workspace_page.find_palette_button('MaxMin').click()
+    workspace_page.find_library_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
@@ -63,12 +62,12 @@ def _test_maxmin(browser):
     # Maximize maxmin.
     maxmin = workspace_page.get_dataflow_figure('maxmin')
     background = maxmin('top_right').value_of_css_property('background')
-    eq(background.find('circle-plus.png') >= 0, True)
+    assert background.find('circle-plus.png') >= 0
 
     maxmin('top_right').click()
     background = maxmin('top_right').value_of_css_property('background')
     time.sleep(1)
-    eq(background.find('circle-minus.png') >= 0, True)
+    assert background.find('circle-minus.png') >= 0
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
@@ -82,7 +81,7 @@ def _test_maxmin(browser):
     time.sleep(0.5)
     workspace_page.do_command('dir()')
     background = maxmin('top_right').value_of_css_property('background')
-    eq(background.find('circle-minus.png') >= 0, True)
+    assert background.find('circle-minus.png') >= 0
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
@@ -90,7 +89,7 @@ def _test_maxmin(browser):
     # Minimize sub
     sub('top_right').click()
     background = sub('top_right').value_of_css_property('background')
-    eq(background.find('circle-plus.png') >= 0, True)
+    assert background.find('circle-plus.png') >= 0
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
@@ -126,16 +125,8 @@ def _test_connect(browser):
     # Replace 'top' with connect.py's top.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page('libraries_tab').click()
-    for retry in range(5):
-        try:
-            workspace_page.find_palette_button('Top').click()
-        except StaleElementReferenceException:
-            logging.warning('StaleElementReferenceException in _test_connect')
-        else:
-            break
-    else:
-        raise RuntimeError('Too many StaleElementReferenceExceptions')
+    workspace_page.show_library()
+    workspace_page.find_library_button('Top').click()
     workspace_page.add_library_item_to_dataflow('connect.Top', 'top')
 
     # Connect components.
@@ -144,6 +135,8 @@ def _test_connect(browser):
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
     eq(conn_page.dialog_title, 'Connections: top')
+    eq(conn_page.source_component, 'comp1')
+    eq(conn_page.target_component, 'comp2')
     for prefix in ('b', 'e', 'f', 'i', 's'):
         conn_page.connect_vars('comp1.' + prefix + '_out',
                                'comp2.' + prefix + '_in')
@@ -215,23 +208,14 @@ def _test_connections(browser):
     # Replace 'top' with VehicleSim.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page('libraries_tab').click()
-    for retry in range(2):
-        try:
-            workspace_page.find_palette_button('VehicleSim').click()
-        except StaleElementReferenceException:
-            logging.warning('StaleElementReferenceException in _test_connect')
-        else:
-            break
-    else:
-        raise RuntimeError('Too many StaleElementReferenceExceptions')
+    workspace_page.show_library()
+    workspace_page.find_library_button('VehicleSim').click()
     asm_name = 'sim'
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
 
     # show dataflow for vehicle
     workspace_page.expand_object('sim')
-    time.sleep(1)
     workspace_page.show_dataflow('sim.vehicle')
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
 
@@ -239,66 +223,69 @@ def _test_connections(browser):
     conn_page = vehicle.connections_page()
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '<Assembly>')
-    eq(conn_page.destination_component, '<Assembly>')
-    eq(len(conn_page.get_variable_figures()), 0)
+    eq(conn_page.target_component, '<Assembly>')
+    eq(conn_page.check_variable_figures(), 0)
 
     # one connection between transmission and engine (RPM)
-    conn_page.source_component = 'transmission\n'
-    conn_page.destination_component = 'engine\n'
-    time.sleep(1)
+    conn_page.set_source_component('transmission')
+    conn_page.set_target_component('engine')
     eq(conn_page.source_variable, '')
-    eq(conn_page.destination_variable, '')
+    eq(conn_page.target_variable, '')
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['RPM', 'RPM'])
 
     # two connections between engine and chassis
-    conn_page.source_component = 'engine\n'
-    conn_page.destination_component = 'chassis\n'
-    time.sleep(1)
+    conn_page.set_source_component('engine')
+    conn_page.set_target_component('chassis')
     eq(conn_page.source_variable, '')
-    eq(conn_page.destination_variable, '')
+    eq(conn_page.target_variable, '')
     eq(len(conn_page.get_variable_figures()), 4)
+    eq(sorted(conn_page.get_variable_names()),
+       ['engine_torque', 'engine_weight', 'mass_engine', 'torque'])
 
     # disconnect transmission
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
 
     # now there are no connections between transmission and engine
-    conn_page.source_component = 'transmission\n'
-    conn_page.destination_component = 'engine\n'
-    time.sleep(1)
-    eq(len(conn_page.get_variable_figures()), 0)
+    conn_page.set_source_component('transmission')
+    conn_page.set_target_component('engine')
+    eq(conn_page.check_variable_figures(), 0)
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
-    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['RPM', 'RPM'])
 
     # no connections between transmission and chassis
-    conn_page.destination_component = 'chassis\n'
-    time.sleep(1)
-    eq(len(conn_page.get_variable_figures()), 0)
+    conn_page.set_target_component('chassis')
+    eq(conn_page.check_variable_figures(), 0)
 
-    # reconnect transmission torque torque to chassis torque
+    # reconnect transmission torque to chassis torque
     conn_page.connect_vars('transmission.torque_ratio', 'chassis.torque_ratio')
-    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['torque_ratio', 'torque_ratio'])
 
     # no connections between vehicle assembly and transmission
-    conn_page.source_component = '\n'
-    conn_page.destination_component = 'transmission\n'
-    time.sleep(1)
-    eq(len(conn_page.get_variable_figures()), 0)
+    conn_page.set_source_component('')
+    conn_page.set_target_component('transmission')
+    eq(conn_page.check_variable_figures(), 0)
 
     # connect assembly variable to component variable
     conn_page.connect_vars('current_gear', 'transmission.current_gear')
-    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['current_gear', 'current_gear'])
 
     # one connection from chassis component to vehicle assembly
-    conn_page.source_component = 'chassis\n'
-    conn_page.destination_component = '\n'
-    time.sleep(1)
+    conn_page.set_source_component('chassis')
+    conn_page.set_target_component('')
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['acceleration', 'acceleration'])
 
     # disconnect chassis
     conn_page.close()
@@ -306,14 +293,14 @@ def _test_connections(browser):
     chassis.disconnect()
     vehicle = workspace_page.get_dataflow_figure('vehicle', 'sim')
     conn_page = vehicle.connections_page()
-    time.sleep(1)
-    eq(len(conn_page.get_variable_figures()), 0)
+    eq(conn_page.check_variable_figures(), 0)
 
     # connect component variable to assembly variable
     conn_page.connect_vars('chassis.acceleration', 'acceleration')
-    time.sleep(1)
-    conn_page.source_component = 'chassis\n'
+    conn_page.set_source_component('chassis')
     eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['acceleration', 'acceleration'])
 
     conn_page.close()
 
@@ -330,8 +317,8 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        #_test_connect(browser)
-        #_test_connections(browser)
+        _test_connect(browser)
+        _test_connections(browser)
         _test_maxmin(browser)
         browser.quit()
         teardown_server()

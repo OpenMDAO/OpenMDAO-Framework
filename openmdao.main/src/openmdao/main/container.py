@@ -398,15 +398,24 @@ class Container(SafeHasTraits):
         id_self = id( self )
         if id_self in memo:
             return memo[ id_self ]
+        
+        # Make sure HasTraits is performing all deepcopies. We need this
+        # in order for our sub-components and objects to get deep-copied.
+        memo['traits_copy_mode'] = "deep"
+        
         result = super(Container, self).__deepcopy__(memo)
         result._cached_traits_ = None
+        
+        # Instance traits are not created properly by deepcopy, so we need
+        # to manually recreate them. Note, self._added_traits is the most
+        # accurate listing of them. Self._instance_traits includes some
+        # extra stuff.
         olditraits = self._instance_traits()
-        newtraits = result._instance_traits()
-        newtraits.update(result.traits())
         for name, trait in olditraits.items():
-            if trait.type is not 'event' and name not in newtraits:
+            if trait.type is not 'event' and name in self._added_traits:
                 result.add_trait(name, _clone_trait(trait))
                 setattr(result, name, getattr(self, name))
+
         return result
 
     def __getstate__(self):
