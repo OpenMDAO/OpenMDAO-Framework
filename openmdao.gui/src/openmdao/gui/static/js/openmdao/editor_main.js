@@ -29,6 +29,19 @@ jQuery(function() {
         ftree.close();
     });
 
+
+    // resize the Ace code pane when the window is resized
+    jQuery(window).resize(function(e) {
+        code.resize();
+    });
+
+    // set label above code editor to filename when tab is clicked
+    code_tab.click(function(e) { central_label.text(code.getPathname()); });
+
+    // make sure tabbed panes are showing
+    code_tab.click();
+    file_tab.click();
+
     // do layout
     jQuery('body').trigger('layoutresizeall');
 });
