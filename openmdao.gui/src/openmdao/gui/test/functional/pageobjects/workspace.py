@@ -187,7 +187,6 @@ class WorkspacePage(BasePageObject):
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
-        #xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))

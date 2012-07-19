@@ -135,25 +135,15 @@ class EditorPage(BasePageObject):
         self.edit_file(filename)
 
         # Switch to editor textarea
-        code_input_element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_css_selector('textarea'))
-# FIXME: absolute delay for editor to get ready.
-#        Problem is Firefox sometimes sends arrow key to scrollbar.
-#        Sadly this didn't completely fix the issue.
-        time.sleep(1)
+        code_input_element = self.get_text_area()
 
         # Go to the bottom of the code editor window
         for i in range(4):
             code_input_element.send_keys(Keys.ARROW_DOWN)
         # Type in the code.
         code_input_element.send_keys(code)
-        # Control-S to save.
-        if sys.platform == 'darwin':
-            code_input_element.send_keys(Keys.COMMAND + 's')
-        else:
-            code_input_element.send_keys(Keys.CONTROL + 's')
-# FIXME: absolute delay for save to complete.
-        time.sleep(2)
+        
+        self.save_document()
 
         # Back to main window.
         self.browser.switch_to_default_content()
@@ -178,4 +168,41 @@ class EditorPage(BasePageObject):
         else:
             chain.context_click(element).perform()
             self('file_edit').click()
+
+    def get_text_area(self):
+        code_input_element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_css_selector('#code-textarea textarea'))
+# FIXME: absolute delay for editor to get ready.
+#        Problem is Firefox sometimes sends arrow key to scrollbar.
+#        Sadly this didn't completely fix the issue.
+        time.sleep(1)
+        return code_input_element
+        
+    def save_document(self):
+        code_input_element = self.get_text_area()
+        # Control-S to save.
+        if sys.platform == 'darwin':
+            code_input_element.send_keys(Keys.COMMAND + 's')
+        else:
+            code_input_element.send_keys(Keys.CONTROL + 's')
+# FIXME: absolute delay for save to complete.
+        time.sleep(2)
+        return code_input_element
+        
+    def add_text_to_file(self, text):
+        """ Add the given text to the current file.  """
+        # Switch to editor textarea
+        code_input_element = self.get_text_area()
+
+        # Type in the code.
+        code_input_element.send_keys(text)
+        self.save_document()
+        return code_input_element
+    
+    def find_overwrite_button(self):
+        path = "//div[(@id='overwrite-dialog')]//button[text()='Overwrite']"
+        b = ButtonElement((By.XPATH, path)).get(self)
+        logging.error("overwrite button = %s" % b)
+        return b
+    
 

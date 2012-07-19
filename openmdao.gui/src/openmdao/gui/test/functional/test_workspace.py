@@ -40,8 +40,8 @@ def _test_console(browser):
     print "_test_console complete."
 
 
-def _test_import(browser):
-    print "running _test_import..."
+def _test_palette_update(browser):
+    print "running _test_palette_update..."
     # Import some files and add components from them.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -124,6 +124,9 @@ def _test_import(browser):
             % (expected_file_names, file_names))
     browser.close()
     browser.switch_to_window(workspace_window)
+    
+    # Now modify the parabola.py file and save the project again.  Pickling will fail
+    # and we'll fall back to using the saved macro
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
@@ -222,6 +225,81 @@ f_x = Float(0.0, iotype='out')
     workspace_page.find_palette_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_newfile complete."
+
+    
+def _test_macro(browser):
+    print "running _test_macro..."
+    # Creates a file in the GUI.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Open code editor.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+
+    # Create a file (code editor automatically indents).
+    editor_page.new_file('foo.py', """
+from openmdao.main.api import Component
+from openmdao.lib.datatypes.api import Float
+
+class Foo(Component):
+
+    a = Float(0.0, iotype='in')
+# subsequent lines will be auto-indented by ace editor
+b = Float(0.0, iotype='in')
+c = Float(0.0, iotype='out')
+d = Float(0.0, iotype='out')
+
+""")
+    time.sleep(1)
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Drag over Plane.
+    workspace_page.show_dataflow('top')
+    workspace_page('libraries_tab').click()
+    workspace_page.libraries_search = 'In Project\n'
+    time.sleep(2)
+    workspace_page.find_palette_button('Foo').click()
+    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
+    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
+    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp3')
+
+    comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
+    comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
+    comp3 = workspace_page.get_dataflow_figure('comp3', 'top')
+    conn_page = workspace_page.connect(comp1, comp2)
+    conn_page.connect_vars('comp1.c', 'comp2.a')
+    time.sleep(1)  # Wait for display update.
+    conn_page.close()
+    conn_page = workspace_page.connect(comp2, comp3)
+    conn_page.connect_vars('comp2.c', 'comp3.a')
+    time.sleep(1)  # Wait for display update.
+    conn_page.close()
+    
+    workspace_page.save_project()
+
+    editor_page = workspace_page.open_editor()
+    editor_window = browser.current_window_handle
+    editor_page.edit_file('foo.py', dclick=False)
+    editor_page.add_text_to_file('#just a comment')
+    editor_page.save_document()
+    time.sleep(2)
+    
+    # should bring up an 'are you sure?' dialog
+    editor_page.find_overwrite_button().click()
+    
+    workspace_page.save_project() # the pickle should fail here because an imported file has been modified
+    
+    
+    
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
@@ -360,13 +438,14 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        _test_addfiles(browser)
-        _test_console(browser)
-        _test_import(browser)
-        _test_menu(browser)
-        _test_newfile(browser)
-        _test_objtree(browser)
-        _test_properties(browser)
+        _test_macro(browser)
+        #_test_addfiles(browser)
+        #_test_console(browser)
+        #_test_palette_update(browser)
+        #_test_menu(browser)
+        #_test_newfile(browser)
+        #_test_objtree(browser)
+        #_test_properties(browser)
         browser.quit()
         teardown_server()
     else:
