@@ -48,6 +48,8 @@ jQuery(function() {
     });
 
     // trigger initial layout
-    jQuery('body').trigger('layoutresizeall');
+    setTimeout(function() {
+        jQuery('body').trigger('layoutresizeall');
+    },50);
 });
 
