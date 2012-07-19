@@ -130,6 +130,7 @@ nav ul ul a:hover {
   list-style:none;
   width:100px;
   background-color:#eee;
+  color: black;
 } 
 .context-menu li:hover, .context-menu .context-menu-item-active {
   background-color:#ccc;

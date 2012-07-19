@@ -261,10 +261,10 @@ d = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page('libraries_tab').click()
+    workspace_page('library_tab').click()
     workspace_page.libraries_search = 'In Project\n'
     time.sleep(2)
-    workspace_page.find_palette_button('Foo').click()
+    workspace_page.find_library_button('Foo').click()
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp3')
@@ -291,11 +291,10 @@ d = Float(0.0, iotype='out')
     time.sleep(2)
     
     # should bring up an 'are you sure?' dialog
-    editor_page.find_overwrite_button().click()
+    editor_overwrite_button = ButtonElement((By.ID, 'code_pane-overwrite'))
+    editor_page.editor_overwrite_button().click()
     
     workspace_page.save_project() # the pickle should fail here because an imported file has been modified
-    
-    
     
     # Clean up.
     projects_page = workspace_page.close_workspace()

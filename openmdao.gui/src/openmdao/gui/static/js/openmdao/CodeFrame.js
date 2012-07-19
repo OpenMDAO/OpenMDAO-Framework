@@ -10,15 +10,19 @@ openmdao.CodeFrame = function(id,model) {
 
     // initialize private variables
         
-        uiBarID=id+'-uiBar';
-        uiparent=jQuery("#"+id).parent();
-        uiparent.css({overflow:'hidden',position:'absolute'});
-        uiBar= jQuery('<div id="'+uiBarID+'">').prependTo(uiparent).width(screen.width).height(15);        
+    var self = this,
+        filepath = "",
+        editorID = id+'-textarea',
+        overwriteID = id+'-overwrite',
+        cancelID = id+'-cancel',
+        uiBarID=id+'-uiBar',
+        uiparent=jQuery("#"+id).parent().css({overflow:'hidden',position:'absolute'}),
+        uiBar= jQuery('<div id="'+uiBarID+'">').prependTo(uiparent).width(screen.width).height(15),
 
-        saveID = uiBarID+'-save';
-        findID = uiBarID+'-find';
-        replaceID = uiBarID+'-replace';
-        replaceAllID = uiBarID+'-replaceAll';
+        saveID = uiBarID+'-save',
+        findID = uiBarID+'-find',
+        replaceID = uiBarID+'-replace',
+        replaceAllID = uiBarID+'-replaceAll',
         undoID = uiBarID+'-undo';
         
         jQuery("<button id='"+saveID+"'>Save</button>").button({icons: {primary:'ui-icon-disk'}}).css({height:'25px'}).appendTo("#"+uiBarID);    
@@ -33,14 +37,10 @@ openmdao.CodeFrame = function(id,model) {
         jQuery("#"+replaceAllID).click(function() { editor.commands.commands.replaceall.exec(editor); });
         jQuery("#"+undoID).click(function() { editor.commands.commands.undo.exec(editor); });
         
-    var self = this,
-        filepath = "",
-        editorID = id+'-textarea',
-        editorArea = jQuery('<pre id="'+editorID+'">').css({position:'absolute',overflow:'hidden'}).appendTo("#"+id);
-        var editor = ace.edit(editorID);
+    var editorArea = jQuery('<pre id="'+editorID+'">').css({position:'absolute',overflow:'hidden'}).appendTo("#"+id);
+    var editor = ace.edit(editorID);
         
-        //editor.setTheme("ace/theme/chrome");
-        editor.getSession().setMode("ace/mode/python");
+    editor.getSession().setMode("ace/mode/python");
         
     editor.commands.addCommand({
         name: "save",
@@ -61,20 +61,29 @@ openmdao.CodeFrame = function(id,model) {
     });
 
     function handle409(jqXHR, textStatus, errorThrown) {
-        var win = jQuery('<div id="overwrite-dialog">You have modified a class that may already have instances in the model. Do you want to continue?</div>');
+        var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
         jQuery(win).dialog({
             'modal': true,
             'title': 'Overwrite Existing Classes',
-            'buttons': {
-                'Overwrite': function() {
-                    jQuery(this).dialog('close');
-                    model.setFile(filepath,editor.getSession().getValue(),1,null,null,handle409);
+            'buttons': [
+                {
+                  text: 'Overwrite',
+                  id: overwriteID,
+                  click: function() {
+                           jQuery(this).dialog('close');
+                           model.setFile(filepath,editor.getSession().getValue(),1,null,null,handle409);
+                         }
                 },
-                'Cancel': function() {
-                    jQuery(this).dialog('close');
+                {
+                   text: 'Cancel',
+                   id: cancelID,
+                   click: function() {
+                             jQuery(this).dialog('close');
+                          }
                 }
+              ]
             }
-        });
+        );
     }
 
     /** tell the model to save the current contents to current filepath */

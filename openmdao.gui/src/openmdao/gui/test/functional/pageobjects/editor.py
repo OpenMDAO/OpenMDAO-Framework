@@ -66,13 +66,12 @@ class EditorPage(BasePageObject):
 
     # Right side.
     code_tab = ButtonElement((By.ID, 'code_tab'))
-    editor_save_button       = ButtonElement((By.ID, 'code-uiBar-save'))
-    editor_find_button       = ButtonElement((By.ID, 'code-uiBar-find'))
-    editor_replace_button       = ButtonElement((By.ID, 'code-uiBar-replace'))
-    editor_replaceAll_button       = ButtonElement((By.ID, 'code-uiBar-replaceAll'))
-    editor_undo_button       = ButtonElement((By.ID, 'code-uiBar-undo'))
-
-
+    editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
+    editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
+    editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
+    editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
+    editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
+    
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
 
@@ -199,7 +198,7 @@ class EditorPage(BasePageObject):
 
     def get_text_area(self):
         code_input_element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_css_selector('#code-textarea textarea'))
+            lambda browser: browser.find_element_by_css_selector('textarea'))
 # FIXME: absolute delay for editor to get ready.
 #        Problem is Firefox sometimes sends arrow key to scrollbar.
 #        Sadly this didn't completely fix the issue.
@@ -221,10 +220,3 @@ class EditorPage(BasePageObject):
         self.save_document()
         return code_input_element
     
-    def find_overwrite_button(self):
-        path = "//div[(@id='overwrite-dialog')]//button[text()='Overwrite']"
-        b = ButtonElement((By.XPATH, path)).get(self)
-        logging.error("overwrite button = %s" % b)
-        return b
-    
-
