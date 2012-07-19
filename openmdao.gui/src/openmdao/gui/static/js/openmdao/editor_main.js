@@ -13,9 +13,6 @@ jQuery(function() {
         openmdao.model = new openmdao.Model();
     }
 
-    // set the layout (note: global scope)
-    layout = jQuery('body').layout({});
-
     var code = new openmdao.CodeFrame('code_pane', openmdao.model);
 
     function code_fn(path) { code.editFile(path); }
@@ -29,20 +26,28 @@ jQuery(function() {
         ftree.close();
     });
 
-
-    // resize the Ace code pane when the window is resized
-    jQuery(window).resize(function(e) {
-        code.resize();
+    // set the layout (note: global scope)
+    layout = jQuery('body').layout({
+        onresize: function(e) {
+            // resize content pane of all tabbed panes to fill the layout pane
+            var layout_pane = jQuery('.ui-layout-'+e),
+                pane_height = layout_pane.height(),
+                pane_width  = layout_pane.width();
+            jQuery(layout_pane.children('div:first').each(function() {
+                var panel = jQuery(this);
+                panel.height(pane_height);
+                panel.width(pane_width);
+            }));
+            code.resize();
+        }
     });
 
-    // set label above code editor to filename when tab is clicked
-    code_tab.click(function(e) { central_label.text(code.getPathname()); });
+    // redo layout when window is resized
+    jQuery(window).resize(function(e) {
+        jQuery('body').trigger('layoutresizeall');
+    });
 
-    // make sure tabbed panes are showing
-    code_tab.click();
-    file_tab.click();
-
-    // do layout
+    // trigger initial layout
     jQuery('body').trigger('layoutresizeall');
 });
 
