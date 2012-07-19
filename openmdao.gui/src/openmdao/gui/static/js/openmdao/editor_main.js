@@ -47,9 +47,9 @@ jQuery(function() {
         jQuery('body').trigger('layoutresizeall');
     });
 
-    // trigger initial layout
+    // wait a few ms for it to render, then trigger initial layout
     setTimeout(function() {
         jQuery('body').trigger('layoutresizeall');
-    },50);
+    },100);
 });
 
