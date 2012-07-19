@@ -66,11 +66,11 @@ class EditorPage(BasePageObject):
 
     # Right side.
     code_tab = ButtonElement((By.ID, 'code_tab'))
-    editor_save_button       = ButtonElement((By.ID, 'code-uiBar-save'))
-    editor_find_button       = ButtonElement((By.ID, 'code-uiBar-find'))
-    editor_replace_button       = ButtonElement((By.ID, 'code-uiBar-replace'))
-    editor_replaceAll_button       = ButtonElement((By.ID, 'code-uiBar-replaceAll'))
-    editor_undo_button       = ButtonElement((By.ID, 'code-uiBar-undo'))
+    editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
+    editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
+    editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
+    editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
+    editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
 
 
     def __init__(self, browser, port):
