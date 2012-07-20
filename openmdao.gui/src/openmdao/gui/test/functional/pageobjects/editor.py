@@ -65,12 +65,13 @@ class EditorPage(BasePageObject):
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Right side.
-    code_tab = ButtonElement((By.ID, 'code_tab'))
+    #code_tab = ButtonElement((By.ID, 'code_tab'))
     editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
     editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
+    editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
     
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
@@ -217,6 +218,10 @@ class EditorPage(BasePageObject):
 
         # Type in the code.
         code_input_element.send_keys(text)
-        self.save_document()
         return code_input_element
     
+    #def overwrite_button(self):
+        ##return ButtonElement((By.ID, 'code_pane-overwrite'))
+        #return WebDriverWait(self.browser, TMO).until(
+           #lambda browser: browser.find_element_by_css_selector('#code_pane-overwrite'))
+

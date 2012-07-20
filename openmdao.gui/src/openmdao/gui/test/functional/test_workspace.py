@@ -12,7 +12,6 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
-
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import setup_server, teardown_server, generate, begin, new_project
 
@@ -286,21 +285,28 @@ d = Float(0.0, iotype='out')
     editor_page = workspace_page.open_editor()
     editor_window = browser.current_window_handle
     editor_page.edit_file('foo.py', dclick=False)
-    editor_page.add_text_to_file('#just a comment')
+    editor_page.add_text_to_file('#just a comment\n')
     editor_page.save_document()
-    time.sleep(2)
+    time.sleep(3)
     
-    # should bring up an 'are you sure?' dialog
-    editor_overwrite_button = ButtonElement((By.ID, 'code_pane-overwrite'))
-    editor_page.editor_overwrite_button().click()
-    
+    editor_page('editor_overwrite_button').click()
+    time.sleep(1)
+   
+    browser.close()
+    browser.switch_to_window(workspace_window)
     workspace_page.save_project() # the pickle should fail here because an imported file has been modified
+    
+    projects_page = workspace_page.close_workspace()
+    workspace_page = projects_page.open_project(project_dict['name'])
+    workspace_page.show_dataflow('top')
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['comp1', 'comp2', 'comp3', 'driver', 'top'])
     
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
-    print "_test_newfile complete."
+    print "_test_macro complete."
 
 
 def _test_addfiles(browser):
@@ -434,7 +440,13 @@ if __name__ == '__main__':
         from util import setup_chrome  # , setup_firefox
         setup_server(virtual_display=False)
         browser = setup_chrome()
-        _test_macro(browser)
+        args = [a for a in sys.argv[1:] if not a.startswith('-')]
+        gnames = globals().keys()
+        if not args:
+            args = [tst for tst in gnames if tst.startswith('_test_')]
+        for arg in args:
+            globals()[arg](browser)
+        #_test_macro(browser)
         #_test_addfiles(browser)
         #_test_console(browser)
         #_test_palette_update(browser)

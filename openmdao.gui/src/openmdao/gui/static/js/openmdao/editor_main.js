@@ -36,11 +36,11 @@ jQuery(function() {
     });
 
     // set label above code editor to filename when tab is clicked
-    code_tab.click(function(e) { central_label.text(code.getPathname()); });
+    //code_tab.click(function(e) { central_label.text(code.getPathname()); });
 
     // make sure tabbed panes are showing
-    code_tab.click();
-    file_tab.click();
+    //code_tab.click();
+    //file_tab.click();
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
