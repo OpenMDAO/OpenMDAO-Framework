@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from connections import ConnectionsPage
@@ -34,8 +35,8 @@ class WorkspacePage(BasePageObject):
     view_menu         = ButtonElement((By.ID, 'view-menu'))
     cmdline_button    = ButtonElement((By.ID, 'view-cmdline'))
     console_button    = ButtonElement((By.ID, 'view-console'))
-    libraries_button  = ButtonElement((By.ID, 'view-libraries'))
-    objects_button    = ButtonElement((By.ID, 'view-objects'))
+    library_button    = ButtonElement((By.ID, 'view-library'))
+    objects_button    = ButtonElement((By.ID, 'view-components'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
     workflow_button   = ButtonElement((By.ID, 'view-workflow'))
     dataflow_button   = ButtonElement((By.ID, 'view-dataflow'))
@@ -65,16 +66,15 @@ class WorkspacePage(BasePageObject):
     # Center.
     dataflow_tab = ButtonElement((By.ID, 'dataflow_tab'))
     workflow_tab = ButtonElement((By.ID, 'workflow_tab'))
-    code_tab     = ButtonElement((By.ID, 'code_tab'))
 
     # Right side.
     properties_tab = ButtonElement((By.ID, 'properties_tab'))
-    props_header   = TextElement((By.XPATH, "//div[@id='propertieseditor']/h3"))
-    props_inputs   = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[1]"))
-    props_outputs  = GridElement((By.XPATH, "//div[@id='propertieseditor']/div[2]"))
+    props_header   = TextElement((By.XPATH, "//div[@id='properties_pane']/h3"))
+    props_inputs   = GridElement((By.XPATH, "//div[@id='properties_pane']/div[1]"))
+    props_outputs  = GridElement((By.XPATH, "//div[@id='properties_pane']/div[2]"))
 
-    libraries_tab = ButtonElement((By.ID, 'palette_tab'))
-    libraries_search = InputElement((By.ID, 'objtt-select'))
+    library_tab    = ButtonElement((By.ID, 'library_tab'))
+    library_search = InputElement((By.ID, 'objtt-select'))
 
     # Bottom.
     history = TextElement((By.ID, 'history'))
@@ -85,7 +85,7 @@ class WorkspacePage(BasePageObject):
         super(WorkspacePage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["objects"] = (By.XPATH, "//div[@id='otree']//li[@path]")
+        self.locators["objects"] = (By.XPATH, "//div[@id='otree_pane']//li[@path]")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, 2*TMO).until(
@@ -96,7 +96,7 @@ class WorkspacePage(BasePageObject):
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         NotifierPage.wait(browser, port)
 
-    def find_palette_button(self, name):
+    def find_library_button(self, name):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
         return ButtonElement((By.XPATH, path)).get(self)
 
@@ -148,20 +148,21 @@ class WorkspacePage(BasePageObject):
         self('save_button').click()
         NotifierPage.wait(self.browser, self.port)
 
-    def get_objects_attribute(self, attribute):
+    def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'otree'))
+            lambda browser: browser.find_element(By.ID, 'otree_pane'))
         object_elements = self.browser.find_elements(*self.locators["objects"])
         values = []
         for element in object_elements:
-            values.append(element.get_attribute(attribute))
+            if not visible or element.is_displayed():
+                values.append(element.get_attribute(attribute))
         return values
 
     def select_object(self, component_name):
         """ Select `component_name`. """
         self('objects_tab').click()
-        xpath = "//div[@id='otree']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -169,7 +170,7 @@ class WorkspacePage(BasePageObject):
     def expand_object(self, component_name):
         """ Expands `component_name`. """
         self('objects_tab').click()
-        xpath = "//div[@id='otree']//li[(@path='%s')]//ins" % component_name
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//ins" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
@@ -177,16 +178,29 @@ class WorkspacePage(BasePageObject):
     def show_dataflow(self, component_name):
         """ Show dataflow of `component_name`. """
         self('objects_tab').click()
-        xpath = "//div[@id='otree']//li[(@path='%s')]//a" % component_name
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
         self('obj_dataflow').click()
 
+    def show_library(self):
+        for retry in range(5):
+            try:
+                self('library_tab').click()
+                WebDriverWait(self.browser, TMO).until(
+                    lambda browser: self('library_search').is_visible())
+            except TimeoutException:
+                logging.warning('TimoutException in show_library')
+            else:
+                break
+        else:
+            raise RuntimeError('Too many TimoutExceptions')
+
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
-        #xpath = "//div[(@id='palette')]//div[(@path='%s')]" % item_name
+        #xpath = "//div[(@id='library')]//div[(@path='%s')]" % item_name
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
@@ -212,7 +226,11 @@ class WorkspacePage(BasePageObject):
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
         time.sleep(0.25)
-        eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        self.browser.implicitly_wait(1) # We don't expect to find anything.
+        try:
+            eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
+        finally:
+            self.browser.implicitly_wait(TMO)
         WebDriverWait(self.browser, TMO).until(
             lambda browser: instance_name in self.get_dataflow_component_names())
 
@@ -298,7 +316,7 @@ class WorkspacePage(BasePageObject):
         chain = chain.click_and_hold(src.output_port)
         # Using root rather than input_port since for some reason
         # even using a negative Y offset can select the parent's input.
-        chain = chain.move_to_element(dst.root)
+        chain = chain.move_to_element(dst.input_port)
         chain = chain.release(None)
         chain.perform()
         parent, dot, srcname = src.pathname.rpartition('.')

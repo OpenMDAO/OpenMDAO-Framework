@@ -6,7 +6,6 @@ from elements import ButtonElement, TextElement
 from component import ComponentPage, PropertiesPage
 from connections import ConnectionsPage
 
-
 class DataflowFigure(BasePageObject):
     """ Represents elements within a dataflow figure. """
 
