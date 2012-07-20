@@ -65,14 +65,17 @@ def _test_maxmin(browser):
     assert background.find('circle-plus.png') >= 0
 
     maxmin('top_right').click()
-    background = maxmin('top_right').value_of_css_property('background')
     time.sleep(1)
+    background = maxmin('top_right').value_of_css_property('background')
     assert background.find('circle-minus.png') >= 0
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
     sub = workspace_page.get_dataflow_figure('sub')
     sub('top_right').click()
+    time.sleep(1)
+    background = sub('top_right').value_of_css_property('background')
+    assert background.find('circle-minus.png') >= 0
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
 

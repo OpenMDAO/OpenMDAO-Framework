@@ -140,7 +140,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
         }
 
         resize_contents();
-    }, 33);
+    }, 100);
 
 };
 
