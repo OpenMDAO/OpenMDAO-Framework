@@ -70,6 +70,7 @@ class EditorPage(BasePageObject):
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
+    editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
 
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)

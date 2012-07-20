@@ -43,6 +43,7 @@ openmdao.CodeFrame = function(id,model) {
         // editor
         editorID = id+'-textarea',
         overwriteID = id+'-overwrite',
+        cancelID = id+'-cancel',
         editorArea = jQuery('<pre id="'+editorID+'">')
             .css({overflow:'hidden', position:'absolute'})
             .height('100%') //self.elm.height() - uiBar.height())
