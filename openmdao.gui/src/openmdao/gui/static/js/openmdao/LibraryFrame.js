@@ -14,9 +14,9 @@ openmdao.LibraryFrame = function(id,model) {
     /** find the actual top of the given element, taking visibility and
         scrolling into account */
     function getElementTop(elem) {
-       var yPos = 0;
-       var scrolls = 0;
-       var firstElemWithOSP = 0;
+       var yPos = 0,
+           scrolls = 0,
+           firstElemWithOSP = 0;
        while(elem && !isNaN(elem.offsetTop)) {
           scrolls += elem.scrollTop;
           if (firstElemWithOSP === 0 && elem.offsetParent) {
