@@ -260,8 +260,8 @@ d = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page('library_tab').click()
-    workspace_page.libraries_search = 'In Project\n'
+    workspace_page.show_library()
+    workspace_page.library_search = 'In Project\n'
     time.sleep(2)
     workspace_page.find_library_button('Foo').click()
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')

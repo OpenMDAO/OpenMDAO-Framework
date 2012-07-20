@@ -50,7 +50,8 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
         reside. Defaults to the directory where the archive is located.
         
     create: bool (optional)
-        If True, create and return a Project object
+        If True, create and return a Project object. Otherwise just unpack the
+        project directory.
     """
     archive_name = expand_path(archive_name)
 
@@ -102,7 +103,6 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
         #return dist
     #return None
     
-    
 
 class Project(object):
     def __init__(self, projpath):
@@ -117,7 +117,7 @@ class Project(object):
         self.path = expand_path(projpath)
         modeldir = os.path.join(self.path, 'model')
         self.activate()
-        setattr(self, 'create', create) # create is called from macros
+        setattr(self, 'create', create) # add create funct here so macros can call it
         
         if os.path.isdir(projpath):
             # locate file containing state, create it if it doesn't exist
