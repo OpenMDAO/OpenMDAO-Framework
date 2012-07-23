@@ -234,6 +234,7 @@ class WorkspacePage(BasePageObject):
                 continue
             fig_name = None
             for figure in figures:
+                self.browser.implicitly_wait(1)
                 try:
                     header = figure.find_elements_by_class_name('DataflowFigureHeader')
                     if len(header) == 0:
@@ -256,6 +257,8 @@ class WorkspacePage(BasePageObject):
                             else:
                                 fig.pathname = name
                         return fig
+                finally:
+                    self.browser.implicitly_wait(TMO)
         return None
 
     def get_dataflow_component_names(self):
