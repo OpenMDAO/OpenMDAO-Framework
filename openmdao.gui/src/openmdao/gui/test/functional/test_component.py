@@ -57,8 +57,22 @@ def _test_editable_inputs(browser):
             assembly_name + '.vehicle')
     component_editor = transmission.editor_page()
 
-    print dir(component_editor)
+    elements = component_editor.browser.find_elements_by_xpath(\
+            "//div[@id='Inputs_props']")[1]
+            #/div[@class='slick-viewport']")
+            #/div[@id='grid-canvas']\
+            #/div[@row='1'] | div[@row='3']")
     
+    elements = elements.find_elements_by_xpath(\
+            "div[@class='slick-viewport']\
+            /div[@class='grid-canvas']\
+            /div[@row='1' or @row='3']\
+            /div[contains(@class, 'ui-state-highlight')]")
+   
+    for element in elements:
+        assert("rgb(204, 204, 204)" == element.value_of_css_property("background-color"))
+        assert("rgb(46, 125, 178)" == element.value_of_css_property("color"))
+
     component_editor.close()
 
     # Clean up.
