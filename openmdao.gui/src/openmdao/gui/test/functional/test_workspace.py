@@ -262,21 +262,15 @@ d = Float(0.0, iotype='out')
     workspace_page.show_dataflow('top')
     workspace_page.show_library()
     workspace_page.library_search = 'In Project\n'
-    time.sleep(2)
+
     workspace_page.find_library_button('Foo').click()
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
-    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp3')
 
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
-    comp3 = workspace_page.get_dataflow_figure('comp3', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
     conn_page.connect_vars('comp1.c', 'comp2.a')
-    time.sleep(1)  # Wait for display update.
-    conn_page.close()
-    conn_page = workspace_page.connect(comp2, comp3)
-    conn_page.connect_vars('comp2.c', 'comp3.a')
     time.sleep(1)  # Wait for display update.
     conn_page.close()
     
@@ -286,21 +280,19 @@ d = Float(0.0, iotype='out')
     editor_window = browser.current_window_handle
     editor_page.edit_file('foo.py', dclick=False)
     editor_page.add_text_to_file('#just a comment\n')
-    editor_page.save_document()
-    time.sleep(3)
+    editor_page.save_document(overwrite=True)
     
-    editor_page('editor_overwrite_button').click()
-    time.sleep(1)
-   
     browser.close()
     browser.switch_to_window(workspace_window)
     workspace_page.save_project() # the pickle should fail here because an imported file has been modified
     
+    time.sleep(3)
     projects_page = workspace_page.close_workspace()
+    
     workspace_page = projects_page.open_project(project_dict['name'])
     workspace_page.show_dataflow('top')
     eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['comp1', 'comp2', 'comp3', 'driver', 'top'])
+       ['comp1', 'comp2', 'driver', 'top'])
     
     # Clean up.
     projects_page = workspace_page.close_workspace()

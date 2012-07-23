@@ -78,6 +78,12 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
+    function successful_save(data, textStatus, jqXHR) {
+        if (typeof openmdao_test_mode !== 'undefined') {
+            openmdao.Util.notify('Save complete: ' +textStatus);
+        }
+    }
+    
     function handle409(jqXHR, textStatus, errorThrown) {
         var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
         jQuery(win).dialog({
@@ -89,7 +95,8 @@ openmdao.CodeFrame = function(id,model) {
                   id: overwriteID,
                   click: function() {
                            jQuery(this).dialog('close');
-                           model.setFile(filepath,editor.getSession().getValue(),1,null,null,handle409);
+                           model.setFile(filepath,editor.getSession().getValue(), 1,
+                                         successful_save, null, handle409);
                          }
                 },
                 {
@@ -106,7 +113,8 @@ openmdao.CodeFrame = function(id,model) {
 
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
-        model.setFile(filepath,editor.getSession().getValue(),0,null,null,handle409);
+        model.setFile(filepath,editor.getSession().getValue(), 0,
+                      successful_save, null, handle409);
     }
 
     /***********************************************************************

@@ -11,7 +11,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement
-from util import ValuePrompt
+from util import ValuePrompt, NotifierPage
 
 
 class UploadPage(BasePageObject):
@@ -205,10 +205,16 @@ class EditorPage(BasePageObject):
         time.sleep(1)
         return code_input_element
         
-    def save_document(self):
+    def save_document(self, overwrite=False):
         #use 'save' button to save code
         self('editor_save_button').click()
-        time.sleep(2)
+        if overwrite:
+            WebDriverWait(self.browser, TMO).until(
+                lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
+            self('editor_overwrite_button').click()
+
+        NotifierPage.wait(self.browser, self.port)
+   
         
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """
