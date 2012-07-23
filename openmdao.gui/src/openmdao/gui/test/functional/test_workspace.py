@@ -304,34 +304,6 @@ def _test_properties(browser):
     project_info_page.delete_project()
     print "_test_properties complete."
 
-def _test_propterties_inputs(browser):
-    # Checks right-hand side properties display.
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
-
-    # Opens code editor
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
-    editor_window = browser.current_window_handle
-
-    # Add the files
-    upload_page.select_files((paraboloidPath, optPath))
-    upload_page.upload_files()
-
-    time.sleep(1.0)
-
-    browser.switch_to_window(workspace_window)
-
-    # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_properties complete."
-
-
-
-
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
