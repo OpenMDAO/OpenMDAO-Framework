@@ -1,3 +1,4 @@
+import logging
 import time
 
 from selenium.webdriver import ActionChains
@@ -68,7 +69,18 @@ class GridRow(object):
 
     @property
     def value(self):
-        return [cell.value for cell in self.cells]
+        for retry in range(5):
+            try:
+                val = [cell.value for cell in self.cells]
+            except StaleElementReferenceException:
+                if retry < 4:
+                    logging.warning('GridRow.value: StaleElementReferenceException')
+                    self._cells = None  # refetch row
+                else:
+                    raise
+            else:
+                break
+        return val
 
     def __len__(self):
         return len(self.cells)

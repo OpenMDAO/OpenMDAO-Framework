@@ -2,14 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_fn,dataflow_fn) {
-    var menu =  [
-                    {   "text": "Component",
-                        "items": [
-                            { "text": "Add Component", "onclick": "alert('Sorry, not implemented yet :(');" }
-                        ]
-                    }
-                ];
-    openmdao.ComponentTreeFrame.prototype.init.call(this,id,'Objects',menu);
+    openmdao.ComponentTreeFrame.prototype.init.call(this,id,'Components');
 
     /***********************************************************************
      *  private
@@ -72,7 +65,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
     function updateTree(json) {
         // Grab paths of currently open nodes.
         var openNodes = [];
-        jQuery("#otree").find("li.jstree-open").each(function () {
+        self.elm.find("li.jstree-open").each(function () {
             openNodes.push(this.getAttribute("path"));
         });
 

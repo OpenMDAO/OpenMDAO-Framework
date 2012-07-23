@@ -8,9 +8,9 @@ from util import NotifierPage
 class ComponentPage(DialogPage):
     """ Component editor page. """
 
-    inputs_tab   = ButtonElement((By.XPATH, "dl/dt[text()='Inputs']"))
-    slots_tab    = ButtonElement((By.XPATH, "dl/dt[text()='Slots']"))
-    outputs_tab  = ButtonElement((By.XPATH, "dl/dt[text()='Outputs']"))
+    inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
+    slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
+    outputs_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']"))
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
@@ -46,11 +46,11 @@ class ComponentPage(DialogPage):
 class DriverPage(ComponentPage):
     """ Driver editor page. """
 
-    parameters_tab   = ButtonElement((By.XPATH, "dl/dt[text()='Parameters']"))
-    workflow_tab     = ButtonElement((By.XPATH, "dl/dt[text()='Workflow']"))
-    objectives_tab   = ButtonElement((By.XPATH, "dl/dt[text()='Objectives']"))
-    equalities_tab   = ButtonElement((By.XPATH, "dl/dt[text()='EqConstr]"))
-    inequalities_tab = ButtonElement((By.XPATH, "dl/dt[text()='IneqConstr]"))
+    parameters_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Parameters']"))
+    workflow_tab     = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']"))
+    objectives_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']"))
+    equalities_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='EqConstr]"))
+    inequalities_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='IneqConstr]"))
 
     parameters   = GridElement((By.ID, 'Parameters_parms'))
     objectives   = GridElement((By.ID, 'Objectives_objectives'))
@@ -81,7 +81,7 @@ class DriverPage(ComponentPage):
 class AssemblyPage(ComponentPage):
     """ Assembly editor page. """
 
-    dataflow_tab = ButtonElement((By.XPATH, "dl/dt[text()='Dataflow']"))
+    dataflow_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Dataflow']"))
 
 
 class PropertiesPage(DialogPage):
