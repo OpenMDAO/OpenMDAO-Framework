@@ -34,7 +34,7 @@ def main():
     parser = OptionParser(usage="%prog DIST1 DIST2 ... DIST_N")
     (options, args) = parser.parse_args(sys.argv[1:])
     
-    with settings(host_string='openmdao@web103.webfaction.com'):
+    with settings(host_string='openmdao@web39.webfaction.com'):
         for dist in args:
             if not os.path.isfile(dist):
                 print "distribution file %s not found" % dist

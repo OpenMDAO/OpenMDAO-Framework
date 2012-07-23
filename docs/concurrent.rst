@@ -34,7 +34,9 @@ server is allocated, the sub-model egg is loaded into the server, input
 variables are set, the model is run, and outputs are retrieved.
 The resource allocator normally just looks for a compatible server based on
 the sub-model's Python requirements, but you can add additional resource
-information via the ``extra_resources`` attribute.
+information via the ``extra_resources`` attribute. The RAM methods
+:ref:`max_request() <resource.py>` and :ref:`total_request() <resource.py>`
+are sometimes useful for generating the ``extra_resources`` attribute value.
 In some circumstances, particularly when submitting from a Windows client to a
 Linux server (or vice-versa), there will be spurious Python incompatibilities.
 You can try forcing a submission by setting the ``ignore_egg_requirements``

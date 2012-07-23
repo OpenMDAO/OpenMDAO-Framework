@@ -280,6 +280,22 @@ class ContainerTestCase(unittest.TestCase):
                                  if isinstance(x, Container) and x.parent==self.root.c2]
         self.assertEqual(set(names), set(['c2.c21', 'c2.c22']))
 
+    def test_iteration2(self):
+        # Had been skipping some traits of multiple instances.
+        class Ext(Container):
+            resources = Dict(iotype='in')
+
+        top = Ext()
+        top.add('ext2', Ext())
+        sub = top.add('sub', Container())
+        sub.add('ext3', Ext())
+
+        names = [n for n,x in top.items(recurse=True)]
+        expected = ['ext2', 'ext2.resources', 'resources',
+                    'sub', 'sub.ext3', 'sub.ext3.resources']
+        self.assertEqual(sorted(names), expected)
+        
+
     # TODO: all of these save/load test functions need to do more checking
     #       to verify that the loaded thing is equivalent to the saved thing
     

@@ -82,15 +82,13 @@ def _test_import(browser):
     browser.close()
     browser.switch_to_window(workspace_window)
 
-    # Go into Libraries/working section.
-    workspace_page('libraries_tab').click()
-    time.sleep(1)
-    workspace_page.find_palette_button('Paraboloid').click()
-
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
     time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
+
+    # view library
+    workspace_page.show_library()
 
     # Drag element into workspace.
     paraboloid_name = 'parab'
@@ -116,7 +114,6 @@ def _test_import(browser):
     # Check to see that the added files are still there.
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    editor_page('files_tab').click()
     file_names = editor_page.get_files()
     if sorted(file_names) != sorted(expected_file_names):
         raise TestCase.failureException(
@@ -148,7 +145,7 @@ def _test_menu(browser):
 
     #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('console', 'libraries', 'objects',
+    for item in ('console', 'library', 'objects',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
@@ -216,9 +213,10 @@ f_x = Float(0.0, iotype='out')
 
     # Drag over Plane.
     workspace_page.show_dataflow('top')
-    workspace_page('libraries_tab').click()
+    workspace_page.show_library()
+    workspace_page.library_search = 'In Project\n'
     time.sleep(2)
-    workspace_page.find_palette_button('Plane').click()
+    workspace_page.find_library_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
@@ -304,6 +302,54 @@ def _test_properties(browser):
     project_info_page.delete_project()
     print "_test_properties complete."
 
+
+def _test_objtree(browser):
+    print "running _test_objtree..."
+    # Toggles maxmimize/minimize button on assemblies.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add maxmin.py to project
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'maxmin.py')
+    editor_page.add_file(file_path)
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Add MaxMin to 'top'.
+    workspace_page.show_dataflow('top')
+    time.sleep(1)
+    workspace_page.show_library()
+    time.sleep(1)
+    workspace_page.find_library_button('MaxMin').click()
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
+
+    # Maximize 'top' and 'top.maxmin'
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top'])
+    workspace_page.expand_object('top')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin'])
+    workspace_page.expand_object('top.maxmin')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub'])
+
+    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
+    visible = workspace_page.get_objects_attribute('path', True)
+    eq(visible, ['top', 'top.driver', 'top.maxmin',
+                 'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_objtree complete."
+
+
 if __name__ == '__main__':
     if '--nonose' in sys.argv:
         # Run outside of nose.
@@ -316,6 +362,7 @@ if __name__ == '__main__':
         _test_import(browser)
         _test_menu(browser)
         _test_newfile(browser)
+        _test_objtree(browser)
         _test_properties(browser)
         browser.quit()
         teardown_server()

@@ -38,7 +38,7 @@ class ExecComp(Component):
                     iotype = 'out'
                 else:
                     iotype = 'in'
-                self.add(var, Float(iotype=iotype))
+                self.add(var, Float(0.0, iotype=iotype))
         
     def __getstate__(self):
         """Return dict representing this container's state."""
@@ -59,9 +59,9 @@ class ExecComp(Component):
     def execute(self):
         ''' ExecComp execute function '''
         global _expr_dict
-        
         for expr in self.codes:
             exec(expr, _expr_dict, self.__dict__ )
+                        
 
 
 class ExecCompWithDerivatives(ComponentWithDerivatives):
@@ -99,7 +99,7 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
                     iotype = 'out'
                 else:
                     iotype = 'in'
-                self.add(var, Float(iotype=iotype))
+                self.add(var, Float(0.0, iotype=iotype))
     
         self.deriv_exprs = derivatives
         self.derivative_codes = \
@@ -154,8 +154,7 @@ class ExecCompWithDerivatives(ComponentWithDerivatives):
         
         for expr in self.codes:
             exec(expr, _expr_dict, self.__dict__ )
-            
-            
+    
     def calculate_first_derivatives(self):
         ''' Calculate the first derivatives '''
         
