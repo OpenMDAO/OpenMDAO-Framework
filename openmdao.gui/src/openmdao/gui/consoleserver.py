@@ -8,9 +8,8 @@ import jsonpickle
 from setuptools.command import easy_install
 from zope.interface import implementedBy
 
-from openmdao.main.factorymanager import create, get_available_types
-from openmdao.main.component import Component
-from openmdao.main.assembly import Assembly, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, logger, \
+                              set_as_top, create, get_available_types
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
@@ -25,7 +24,6 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
-from openmdao.util.log import logger
 
 
 def modifies_model(target):
@@ -380,6 +378,9 @@ class ConsoleServer(cmd.Cmd):
                                       })
             dataflow['components'] = components
             dataflow['connections'] = []
+            dataflow['parameters'] = []
+            dataflow['constraints'] = []
+            dataflow['objectives'] = []
         return jsonpickle.encode(dataflow)
 
     def get_workflow(self, pathname):
