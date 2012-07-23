@@ -186,13 +186,16 @@ class WorkspacePage(BasePageObject):
         self('obj_dataflow').click()
 
     def show_library(self):
+        # For some reason the first try never works, so the wait is set
+        # low and we expect to retry at least once.
         for retry in range(5):
             try:
                 self('library_tab').click()
-                WebDriverWait(self.browser, TMO).until(
+                WebDriverWait(self.browser, 1).until(
                     lambda browser: self('library_search').is_visible())
             except TimeoutException:
-                logging.warning('TimoutException in show_library')
+                if retry:
+                    logging.warning('TimoutException in show_library')
             else:
                 break
         else:
@@ -247,6 +250,7 @@ class WorkspacePage(BasePageObject):
                 continue
             fig_name = None
             for figure in figures:
+                self.browser.implicitly_wait(1)
                 try:
                     header = figure.find_elements_by_class_name('DataflowFigureHeader')
                     if len(header) == 0:
@@ -269,6 +273,8 @@ class WorkspacePage(BasePageObject):
                             else:
                                 fig.pathname = name
                         return fig
+                finally:
+                    self.browser.implicitly_wait(TMO)
         return None
 
     def get_dataflow_component_names(self):
