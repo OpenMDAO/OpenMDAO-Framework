@@ -13,7 +13,8 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
-    from util import setup_server, teardown_server, generate, begin, new_project
+    from util import main, setup_server, teardown_server, generate, \
+                     begin, new_project
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -426,31 +427,6 @@ def _test_objtree(browser):
 
 
 if __name__ == '__main__':
-    if '--nonose' in sys.argv:
-        # Run outside of nose.
-        # tests should be in alpha order as that's how they will run under nose
-        from util import setup_chrome  # , setup_firefox
-        setup_server(virtual_display=False)
-        browser = setup_chrome()
-        args = [a for a in sys.argv[1:] if not a.startswith('-')]
-        gnames = globals().keys()
-        if not args:
-            args = [tst for tst in gnames if tst.startswith('_test_')]
-        for arg in args:
-            globals()[arg](browser)
-        #_test_macro(browser)
-        #_test_addfiles(browser)
-        #_test_console(browser)
-        #_test_palette_update(browser)
-        #_test_menu(browser)
-        #_test_newfile(browser)
-        #_test_objtree(browser)
-        #_test_properties(browser)
-        browser.quit()
-        teardown_server()
-    else:
-        # Run under nose.
-        import nose
-        sys.argv.append('--cover-package=openmdao.')
-        sys.argv.append('--cover-erase')
-        sys.exit(nose.runmodule())
+    main()
+
+

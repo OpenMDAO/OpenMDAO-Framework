@@ -12,7 +12,8 @@ from nose.tools import with_setup
 
 
 if sys.platform != 'win32':  # No testing on Windows yet.
-    from util import setup_server, teardown_server, generate, begin, new_project
+    from util import main, setup_server, teardown_server, generate, \
+                     begin, new_project
     from selenium.common.exceptions import StaleElementReferenceException
 
     @with_setup(setup_server, teardown_server)
@@ -316,7 +317,7 @@ def _test_connections(browser):
 
 
 def _test_driverflows(browser):
-    print "_test_driverflows"
+    print "running _test_driverflows"
     # Excercises display of driver flows (parameters, constraints, objectives).
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -363,8 +364,7 @@ def _test_driverflows(browser):
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
-#FIXME: not necessarily on-screen.
-#    editor.close()
+    editor.close()
 
 #FIXME: can't seem to do context-click on output port.
 
@@ -381,20 +381,5 @@ def _test_driverflows(browser):
 
 
 if __name__ == '__main__':
-    if '--nonose' in sys.argv:
-        # Run outside of nose.
-        from util import setup_chrome  # , setup_firefox
-        setup_server(virtual_display=False)
-        browser = setup_chrome()
-        _test_connect(browser)
-        _test_connections(browser)
-        _test_driverflows(browser)
-        _test_maxmin(browser)
-        browser.quit()
-        teardown_server()
-    else:
-        # Run under nose.
-        import nose
-        sys.argv.append('--cover-package=openmdao.')
-        sys.argv.append('--cover-erase')
-        sys.exit(nose.runmodule())
+    main()
+
