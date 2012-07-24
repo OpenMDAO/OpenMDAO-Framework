@@ -35,28 +35,23 @@ def _test_editable_inputs(browser):
     # Replace 'top' with Vehicle ThreeSim  top.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page('libraries_tab').click()
-    for retry in range(2):
-        try:
-            workspace_page.find_palette_button('VehicleSim').click()
-        except StaleElementReferenceException:
-            logging.warning('StaleElementReferenceException in _test_connect')
-        else:
-            break
-    else:
-        raise RuntimeError('Too many StaleElementReferenceExceptions')
+    workspace_page.show_library()
+    workspace_page.find_library_button('VehicleSim').click()
     assembly_name = "sim"
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
             assembly_name)
 
-    # Connect components.
+    # Get component editor for transmission.
     workspace_page.expand_object(assembly_name)
-    time.sleep(1)
     workspace_page.show_dataflow(assembly_name + ".vehicle")
     transmission = workspace_page.get_dataflow_figure('transmission',
             assembly_name + '.vehicle')
+
     component_editor = transmission.editor_page()
 
+    # Find rows in inputs table 
+    # for transmission for single sim vehicle 
+    # that are editable. 
     elements = component_editor.browser.find_elements_by_xpath(\
             "//div[@id='Inputs_props']")[1]
             #/div[@class='slick-viewport']")
@@ -67,11 +62,12 @@ def _test_editable_inputs(browser):
             "div[@class='slick-viewport']\
             /div[@class='grid-canvas']\
             /div[@row='1' or @row='3']\
-            /div[contains(@class, 'ui-state-highlight')]")
+            /div[contains(@class, 'ui-state-editable')]")
    
+    # Verify that the rows are highlighted
     for element in elements:
-        assert("rgb(204, 204, 204)" == element.value_of_css_property("background-color"))
-        assert("rgb(46, 125, 178)" == element.value_of_css_property("color"))
+        assert("rgb(255, 255, 255)" == element.value_of_css_property("background-color"))
+        assert("rgb(0, 0, 0)" == element.value_of_css_property("color"))
 
     component_editor.close()
 

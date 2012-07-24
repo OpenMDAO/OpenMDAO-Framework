@@ -78,7 +78,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     value.editable = options.editable && (value.connected.length === 0);
                     if(value.editable)
                     {
-                        editableCells[index] = {"value" : "ui-state-highlight"};
+                        editableCells[index] = {"value" : "ui-state-editable"};
                     }
                 }
             });
