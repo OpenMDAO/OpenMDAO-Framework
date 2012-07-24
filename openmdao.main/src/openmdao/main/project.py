@@ -105,7 +105,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
     
 
 class Project(object):
-    def __init__(self, projpath):
+    def __init__(self, projpath, projdirfactory=None):
         """Initializes a Project containing the project found in the 
         specified directory or creates a new project if one doesn't exist.
         
@@ -118,6 +118,9 @@ class Project(object):
         modeldir = os.path.join(self.path, 'model')
         self.activate()
         setattr(self, 'create', create) # add create funct here so macros can call it
+        
+        if projdirfactory:
+            projdirfactory.set_project(self)
         
         if os.path.isdir(projpath):
             # locate file containing state, create it if it doesn't exist

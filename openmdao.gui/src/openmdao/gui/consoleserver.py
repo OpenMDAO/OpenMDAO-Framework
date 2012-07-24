@@ -436,7 +436,8 @@ class ConsoleServer(cmd.Cmd):
             self.projdirfactory = ProjDirFactory(self.files.getcwd(),
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            self.proj = Project(os.path.join(self.files.getcwd(), parse_archive_name(filename)))
+            self.proj = Project(os.path.join(self.files.getcwd(), parse_archive_name(filename)),
+                                projdirfactory=self.projdirfactory)
         except Exception, err:
             self._error(err, sys.exc_info())
 
