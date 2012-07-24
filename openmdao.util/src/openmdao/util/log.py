@@ -65,6 +65,7 @@ if sys.platform == 'win32' and current_process().name != 'MainProcess':
 else:
     _mode = 'w'
 _filename = 'openmdao_log.txt'
+_filename = 'openmdao_log_%d.txt' % os.getpid()
 
 # Ensure we can write to the log file.
 try:
@@ -73,6 +74,8 @@ except IOError:
     _filename = 'openmdao_log_%d.txt' % os.getpid()
 else:
     _tmplog.close()
+    
+# FIXME: We currently have a problem with multiple gui processes writing to the same file,
 
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
 logging.basicConfig(level=logging.WARNING,

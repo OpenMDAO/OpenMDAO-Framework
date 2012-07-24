@@ -12,7 +12,6 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
-
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
@@ -30,8 +29,8 @@ def _test_console(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    workspace_page.do_command('dir()')
-    expected = ">>> dir()\n['__builtins__', 'path', 'top']"
+    workspace_page.do_command("print 'blah'")
+    expected = ">>> print 'blah'\nblah"
     eq(workspace_page.history, expected)
 
     # Clean up.
@@ -41,8 +40,8 @@ def _test_console(browser):
     print "_test_console complete."
 
 
-def _test_import(browser):
-    print "running _test_import..."
+def _test_palette_update(browser):
+    print "running _test_palette_update..."
     # Import some files and add components from them.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -122,6 +121,9 @@ def _test_import(browser):
             % (expected_file_names, file_names))
     browser.close()
     browser.switch_to_window(workspace_window)
+    
+    # Now modify the parabola.py file and save the project again.  Pickling will fail
+    # and we'll fall back to using the saved macro
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
@@ -225,6 +227,79 @@ f_x = Float(0.0, iotype='out')
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_newfile complete."
+
+    
+def _test_macro(browser):
+    print "running _test_macro..."
+    # Creates a file in the GUI.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Open code editor.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+
+    # Create a file (code editor automatically indents).
+    editor_page.new_file('foo.py', """
+from openmdao.main.api import Component
+from openmdao.lib.datatypes.api import Float
+
+class Foo(Component):
+
+    a = Float(0.0, iotype='in')
+# subsequent lines will be auto-indented by ace editor
+b = Float(0.0, iotype='in')
+c = Float(0.0, iotype='out')
+d = Float(0.0, iotype='out')
+
+""")
+    time.sleep(1)
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Drag over Plane.
+    workspace_page.show_dataflow('top')
+    workspace_page.show_library()
+    workspace_page.library_search = 'In Project\n'
+
+    workspace_page.find_library_button('Foo').click()
+    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
+    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
+
+    comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
+    comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
+    conn_page = workspace_page.connect(comp1, comp2)
+    conn_page.connect_vars('comp1.c', 'comp2.a')
+    time.sleep(1)  # Wait for display update.
+    conn_page.close()
+    
+    workspace_page.save_project()
+
+    editor_page = workspace_page.open_editor()
+    editor_window = browser.current_window_handle
+    editor_page.edit_file('foo.py', dclick=False)
+    editor_page.add_text_to_file('#just a comment\n')
+    editor_page.save_document(overwrite=True)
+    
+    browser.close()
+    browser.switch_to_window(workspace_window)
+    workspace_page.save_project() # the pickle should fail here because an imported file has been modified
+    
+    time.sleep(3)
+    projects_page = workspace_page.close_workspace()
+    
+    workspace_page = projects_page.open_project(project_dict['name'])
+    workspace_page.show_dataflow('top')
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['comp1', 'comp2', 'driver', 'top'])
+    
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_macro complete."
 
 
 def _test_addfiles(browser):
@@ -353,4 +428,5 @@ def _test_objtree(browser):
 
 if __name__ == '__main__':
     main()
+
 
