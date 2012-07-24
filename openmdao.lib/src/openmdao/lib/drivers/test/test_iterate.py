@@ -196,6 +196,23 @@ class TestIterateUntill(unittest.TestCase):
         self.assertEqual(self.top.driver.iteration,2)
         self.assertEqual(self.top.simple.outvar, 2)
      
+    def test_stop_conditions_nested_iter(self): 
+        self.top.add("iter",IterateUntil())
+        self.top.iter.max_iterations = 10;
+        
+        self.top.driver.workflow.add('iter')
+        
+        self.top.iter.workflow.add('simple')
+        
+        self.top.add('simple',Simple4())
+        self.top.simple.invar = 1
+        self.top.iter.add_stop_condition("simple.outvar >= 3")
+        
+        self.top.run()
+        
+        self.assertEqual(self.top.iter.iteration,3)
+        self.assertEqual(self.top.simple.outvar, 3)
+     
 if __name__ == "__main__":
     unittest.main()
   
