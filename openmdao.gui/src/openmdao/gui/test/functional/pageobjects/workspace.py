@@ -98,7 +98,18 @@ class WorkspacePage(BasePageObject):
 
     def find_library_button(self, name):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
-        return ButtonElement((By.XPATH, path)).get(self)
+        for retry in range(5):
+            try:
+                element = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: browser.find_element(By.XPATH, path))
+            except TimeoutException as err:
+                logging.warning(str(err))
+            else:
+                break
+        else:
+            raise err
+
+        return element
 
     def run(self, timeout=TMO):
         """ Run current component. """
@@ -112,10 +123,10 @@ class WorkspacePage(BasePageObject):
         self('submit').click()
         NotifierPage.wait(self.browser, self.port, timeout)
 
-    def close_workspace(self):
+    def close_workspace(self, timeout=TMO):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
-        NotifierPage.wait(self.browser, self.port)
+        NotifierPage.wait(self.browser, self.port, timeout)
         self('project_menu').click()
 
         # Sometimes chromedriver hangs here, so we click in separate thread.
@@ -195,15 +206,14 @@ class WorkspacePage(BasePageObject):
                     lambda browser: self('library_search').is_visible())
             except TimeoutException:
                 if retry:
-                    logging.warning('TimoutException in show_library')
+                    logging.warning('TimeoutException in show_library')
             else:
                 break
         else:
-            raise RuntimeError('Too many TimoutExceptions')
+            raise RuntimeError('Too many TimeoutExceptions')
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
-        #xpath = "//div[(@id='library')]//div[(@path='%s')]" % item_name
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
