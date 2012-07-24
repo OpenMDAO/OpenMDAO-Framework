@@ -76,6 +76,7 @@ from openmdao.main.api import Component
 class MyComp2(Component):
     pass
                 """)
+
             time.sleep(2.0)
             types = dict(pdf.get_available_types())
             typenames = types.keys()
@@ -93,6 +94,7 @@ class MyComp2(Component):
 
             # now try modifying an existing file
             with open(os.path.join(self.tdir, 'mydrv.py'), 'w') as f:
+                time.sleep(6)
                 f.write("""
 from openmdao.main.api import Component
 class MyDrv(Component):  #old MyDrv was a Driver, new one is just a Component
@@ -101,6 +103,7 @@ class MyDrv(Component):  #old MyDrv was a Driver, new one is just a Component
 class Foo(Component):
     pass
                 """)
+                time.sleep(3)
             time.sleep(2.0)
             expected = ['mydrv.MyDrv', 'mydrv.Foo', 'mycomp.MyComp']
             types = dict(pdf.get_available_types())

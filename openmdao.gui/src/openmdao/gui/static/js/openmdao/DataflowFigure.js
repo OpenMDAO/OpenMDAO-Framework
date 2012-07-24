@@ -8,6 +8,8 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
     this.type = type || '';
     this.valid = valid;
     this.maxmin = maxmin;
+    if (arguments.length < 5)  // Refresh doesn't pass all arguments.
+        this.maxmin = pathname == '' ? '' : '+'
 
     this.cornerWidth=15;
     this.cornerHeight=15;
@@ -43,6 +45,8 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
     this.figures = {};
     this.connections = {};
     this.margin = 20;
+    this.drawDataFlows = true;
+    this.drawDriverFlows = false;
 
     if (this.pathname === '') {
         // global dataflow figure is transparent with no border
@@ -325,7 +329,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         menu.appendMenuItem(new draw2d.MenuItem("<b>"+name+"</b>",null,function(){
         }));
 
-        // properties
+        // edit
         menu.appendMenuItem(new draw2d.MenuItem("Edit",null,function(){
             cf = new openmdao.ComponentFrame(model,pathname);
         }));
@@ -350,6 +354,27 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
                     model.issueCommand(cmd);
                 }));
             }
+        }
+
+        // Show/hide flows.
+        if (this.maxmin === '-') {
+            var self = this, txt;
+            if (this.drawDataFlows)
+                txt = 'Hide Data Flows';
+            else
+                txt = 'Show Data Flows';
+            menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
+                self.drawDataFlows = !self.drawDataFlows;
+                self.maximize();
+            }));
+            if (this.drawDriverFlows)
+                txt = 'Hide Driver Flows';
+            else
+                txt = 'Show Driver Flows';
+            menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
+                self.drawDriverFlows = !self.drawDriverFlows;
+                self.maximize();
+            }));
         }
 
         // run
@@ -495,7 +520,6 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         workflow.addFigure(self.inputsFigure,0,0);
     }
 
-
     if (!self.outputsFigure) {
         self.outputsFigure = new draw2d.Node();
         self.outputsFigure.html.style.border = 'none';
@@ -503,7 +527,14 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         workflow.addFigure(self.outputsFigure,0,0);
     }
 
-    jQuery.each(json.connections,function(idx,conn) {
+    var flow_colors = {
+        data:       new draw2d.Color(100,100,100),
+        parameter:  new draw2d.Color(200,000,000),
+        constraint: new draw2d.Color(000,200,000),
+        objective:  new draw2d.Color(000,000,200)
+    };
+
+    var displayFlow = function(conn, type, tabName) {
         var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
             dst_name = conn[1].indexOf('.') < 0 ? '' : conn[1].split('.')[0],
             con_name = src_name+'-'+dst_name,
@@ -514,11 +545,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         if (!con) {
             con = new draw2d.Connection();
             con.setCoronaWidth(10);
-
-            con.setColor(new draw2d.Color(100,100,100));  // default: dark grey
+            con.setColor(flow_colors[type]);
 
             if (src_name.length > 0) {
                 con.setSource(src_fig.getPort("output"));
+//                if (type != 'data')
+//                    con.setRouter(new draw2d.BezierConnectionRouter());
                 con.setZOrder(self.getZOrder()+2);
             }
             else {
@@ -536,6 +568,8 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             if (dst_name.length > 0) {
                 con.setTarget(dst_fig.getPort("input"));
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
+//                if (type != 'data')
+//                    con.setRouter(new draw2d.BezierConnectionRouter());
                 con.setZOrder(self.getZOrder()+2);
             }
             else {
@@ -554,12 +588,24 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             // context menu
             con.getContextMenu=function(){
                 var menu=new draw2d.Menu();
-                menu.appendMenuItem(new draw2d.MenuItem("Edit Connections",null,
-                    function(){
-                        var f = new openmdao.ConnectionsFrame(self.openmdao_model,
+                if (type == 'data') {
+                    menu.appendMenuItem(new draw2d.MenuItem("Edit Connections",null,
+                        function(){
+                            var f = new openmdao.ConnectionsFrame(self.openmdao_model,
                                                  self.pathname,src_name,dst_name);
-                    })
-                );
+                        })
+                    );
+                }
+                else {
+                    var driver = (type == 'parameter') ? src_name : dst_name;
+                    menu.appendMenuItem(new draw2d.MenuItem("Edit Driver", null,
+                        function() {
+                            var f = new openmdao.ComponentFrame(self.openmdao_model,
+                                                                self.pathname+'.'+driver,
+                                                                tabName);
+                        })
+                    );
+                }
                 menu.setZOrder(self.getZOrder()+3);
                 return menu;
             };
@@ -567,16 +613,43 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             // double click brings up connection frame if between two components
             // FIXME: usually doesn't work... DataflowFigure steals the clicks
             if ((src_name.length > 0) && (dst_name.length > 0)) {
-                con.onDoubleClick = function() {
-                    var f = new openmdao.ConnectionsFrame(self.openmdao_model,
-                                             self.pathname,src_name,dst_name);
-                };
+                if (type == 'data') {
+                    con.onDoubleClick = function() {
+                        var f = new openmdao.ConnectionsFrame(self.openmdao_model,
+                                                 self.pathname,src_name,dst_name);
+                    };
+                }
+                else {
+                    var driver = (type == 'parameter') ? src_name : dst_name;
+                    con.onDoubleClick = function() {
+                        var f = new openmdao.ComponentFrame(self.openmdao_model,
+                                                            self.pathname+'.'+driver);
+                    };
+                }
             }
 
             workflow.addFigure(con);
             self.connections[con_name] = con;
         }
-    });
+    };
+
+    flows = [];
+    if (this.drawDataFlows) {
+        jQuery.each(json.connections, function(idx, flow) {
+            displayFlow(flow, 'data', 'Inputs'); });
+        flows = flows.concat(json.connections);
+    }
+    if (this.drawDriverFlows) {
+        jQuery.each(json.parameters, function(idx, flow) {
+            displayFlow(flow, 'parameter', 'Parameters'); });
+        flows = flows.concat(json.parameters);
+        jQuery.each(json.constraints, function(idx, flow) {
+            displayFlow(flow, 'constraint', 'Constraints'); });
+        flows = flows.concat(json.constraints);
+        jQuery.each(json.objectives, function(idx, flow) {
+            displayFlow(flow, 'objective', 'Objectives'); });
+        flows = flows.concat(json.objectives);
+    }
 
     // remove any component figures that are not in the updated data
     jQuery.each(self.figures,function(name,fig){
@@ -596,7 +669,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
 
     jQuery.each(self.connections,function(name,fig){
         var found = false;
-        jQuery.each(json.connections, function(idx,conn) {
+        jQuery.each(flows, function(idx,conn) {
             var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
                 dst_name = conn[1].indexOf('.') < 0 ? '' : conn[1].split('.')[0],
                 con_name = src_name+'-'+dst_name;
@@ -636,7 +709,8 @@ openmdao.DataflowFigure.prototype.layout=function() {
     });
 
     // add some room for incoming arrowheads
-    if (self.inputsFigure && self.inputsFigure.getPorts().size > 0) {
+    if ((this.drawDriverFlows) ||
+        (self.inputsFigure && self.inputsFigure.getPorts().size > 0)) {
         y = y + self.cornerHeight;
     }
 
@@ -729,11 +803,13 @@ openmdao.DataflowFigure.prototype.resize=function(){
     width  = xmax-xmin+this.margin*2;
     height = ymax-ymin+this.margin*2 + this.cornerHeight;
 
-    if (this.inputsFigure && this.inputsFigure.getPorts().size > 0) {
+    if ((this.drawDriverFlows) ||
+        (this.inputsFigure && this.inputsFigure.getPorts().size > 0)) {
         height = height + this.cornerHeight;
     }
 
-    if (this.outputsFigure && this.outputsFigure.getPorts().size > 0) {
+    if ((this.drawDriverFlows) ||
+        (this.outputsFigure && this.outputsFigure.getPorts().size > 0)) {
         width = width + this.cornerWidth;
     }
 

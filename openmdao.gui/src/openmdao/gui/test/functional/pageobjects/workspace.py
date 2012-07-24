@@ -98,7 +98,18 @@ class WorkspacePage(BasePageObject):
 
     def find_library_button(self, name):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
-        return ButtonElement((By.XPATH, path)).get(self)
+        for retry in range(5):
+            try:
+                element = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: browser.find_element(By.XPATH, path))
+            except TimeoutException as err:
+                logging.warning(str(err))
+            else:
+                break
+        else:
+            raise err
+
+        return element
 
     def run(self, timeout=TMO):
         """ Run current component. """
@@ -112,10 +123,10 @@ class WorkspacePage(BasePageObject):
         self('submit').click()
         NotifierPage.wait(self.browser, self.port, timeout)
 
-    def close_workspace(self):
+    def close_workspace(self, timeout=TMO):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
-        NotifierPage.wait(self.browser, self.port)
+        NotifierPage.wait(self.browser, self.port, timeout)
         self('project_menu').click()
 
         # Sometimes chromedriver hangs here, so we click in separate thread.
@@ -186,21 +197,23 @@ class WorkspacePage(BasePageObject):
         self('obj_dataflow').click()
 
     def show_library(self):
+        # For some reason the first try never works, so the wait is set
+        # low and we expect to retry at least once.
         for retry in range(5):
             try:
                 self('library_tab').click()
-                WebDriverWait(self.browser, TMO).until(
+                WebDriverWait(self.browser, 1).until(
                     lambda browser: self('library_search').is_visible())
             except TimeoutException:
-                logging.warning('TimoutException in show_library')
+                if retry:
+                    logging.warning('TimeoutException in show_library')
             else:
                 break
         else:
-            raise RuntimeError('Too many TimoutExceptions')
+            raise RuntimeError('Too many TimeoutExceptions')
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
-        #xpath = "//div[(@id='library')]//div[(@path='%s')]" % item_name
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
@@ -247,6 +260,7 @@ class WorkspacePage(BasePageObject):
                 continue
             fig_name = None
             for figure in figures:
+                self.browser.implicitly_wait(1)
                 try:
                     header = figure.find_elements_by_class_name('DataflowFigureHeader')
                     if len(header) == 0:
@@ -269,6 +283,8 @@ class WorkspacePage(BasePageObject):
                             else:
                                 fig.pathname = name
                         return fig
+                finally:
+                    self.browser.implicitly_wait(TMO)
         return None
 
     def get_dataflow_component_names(self):

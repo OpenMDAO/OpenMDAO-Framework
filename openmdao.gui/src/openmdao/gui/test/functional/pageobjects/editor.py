@@ -11,7 +11,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement
-from util import ValuePrompt
+from util import ValuePrompt, NotifierPage
 
 
 class UploadPage(BasePageObject):
@@ -70,7 +70,7 @@ class EditorPage(BasePageObject):
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
-
+    editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
 
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
@@ -162,12 +162,7 @@ class EditorPage(BasePageObject):
         self.edit_file(filename)
 
         # Switch to editor textarea
-        code_input_element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_css_selector('textarea'))
-# FIXME: absolute delay for editor to get ready.
-#        Problem is Firefox sometimes sends arrow key to scrollbar.
-#        Sadly this didn't completely fix the issue.
-        time.sleep(1)
+        code_input_element = self.get_text_area()
 
         # Go to the bottom of the code editor window
         for i in range(4):
@@ -175,17 +170,7 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(code)
         
-        #use 'save' button to save code
-        self('editor_save_button').click()
-        time.sleep(2)
-        
-        # Control-S to save.
-        #if sys.platform == 'darwin':
-        #    code_input_element.send_keys(Keys.COMMAND + 's')
-        #else:
-        #    code_input_element.send_keys(Keys.CONTROL + 's')
-# FIXME: absolute delay for save to complete.
-        #time.sleep(2)
+        self.save_document()
 
         # Back to main window.
         self.browser.switch_to_default_content()
@@ -211,3 +196,32 @@ class EditorPage(BasePageObject):
             chain.context_click(element).perform()
             self('file_edit').click()
 
+    def get_text_area(self):
+        code_input_element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_css_selector('textarea'))
+# FIXME: absolute delay for editor to get ready.
+#        Problem is Firefox sometimes sends arrow key to scrollbar.
+#        Sadly this didn't completely fix the issue.
+        time.sleep(1)
+        return code_input_element
+        
+    def save_document(self, overwrite=False):
+        #use 'save' button to save code
+        self('editor_save_button').click()
+        if overwrite:
+            WebDriverWait(self.browser, TMO).until(
+                lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
+            self('editor_overwrite_button').click()
+
+        NotifierPage.wait(self.browser, self.port)
+   
+        
+    def add_text_to_file(self, text):
+        """ Add the given text to the current file.  """
+        # Switch to editor textarea
+        code_input_element = self.get_text_area()
+
+        # Type in the code.
+        code_input_element.send_keys(text)
+        return code_input_element
+    

@@ -22,6 +22,9 @@ from openmdao.main.component import Component
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.driver import Driver, Run_Once
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.expreval import ConnectedExprEvaluator
@@ -823,11 +826,15 @@ class Assembly (Component):
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def get_dataflow(self):
-        ''' get the list of components and connections between them
+        ''' get a dictionary of components and connections between them
             that make up the data flow for the given assembly
+            also includes paramerter, constraint, and objective flows
         '''
         components = []
         connections = []
+        parameters = []
+        constraints = []
+        objectives = []
         if is_instance(self, Assembly):
             # list of components (name & type) in the assembly
             g = self._depgraph._graph
@@ -841,11 +848,36 @@ class Assembly (Component):
                                            'valid': comp.is_valid(),
                                            'is_assembly': is_instance(comp, Assembly)
                                           })
+
+                    if is_instance(comp, Driver):
+                        if hasattr(comp, '_delegates_'):
+                            for name, dclass in comp._delegates_.items():
+                                inst = getattr(comp, name)
+                                if isinstance(inst, HasParameters):
+                                    for name, param in inst.get_parameters().items():
+                                        parameters.append([comp.name+'.'+name,
+                                                           param.target])
+                                elif isinstance(inst, (HasConstraints,
+                                                       HasEqConstraints,
+                                                       HasIneqConstraints)):
+                                    for path in inst.get_referenced_varpaths():
+                                        name, dot, rest = path.partition('.')
+                                        constraints.append([path,
+                                                            comp.name+'.'+rest])
+                                elif isinstance(inst, (HasObjective,
+                                                       HasObjectives)):
+                                    for name, expr in inst._objectives.items():
+                                        objectives.append([str(expr),
+                                                           comp.name+'.'+name])
+
             # list of connections (convert tuples to lists)
             conntuples = self.list_connections(show_passthrough=True)
             for connection in conntuples:
                 connections.append(list(connection))
-        return {'components': components, 'connections': connections}
+
+        return {'components': components, 'connections': connections,
+                'parameters': parameters, 'constraints': constraints,
+                'objectives': objectives}
 
 
 def dump_iteration_tree(obj):
