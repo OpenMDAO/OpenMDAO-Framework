@@ -12,7 +12,8 @@ from nose.tools import with_setup
 
 
 if sys.platform != 'win32':  # No testing on Windows yet.
-    from util import setup_server, teardown_server, generate, begin, new_project
+    from util import main, setup_server, teardown_server, generate, \
+                     begin, new_project
     from selenium.common.exceptions import StaleElementReferenceException
 
     @with_setup(setup_server, teardown_server)
@@ -97,7 +98,7 @@ def _test_maxmin(browser):
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
-    # remove maxmin and make sure it'c children are removed as well
+    # remove maxmin and make sure its children are removed as well
     maxmin.remove()
     time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
@@ -264,6 +265,7 @@ def _test_connections(browser):
 
     # no connections between transmission and chassis
     conn_page.set_target_component('chassis')
+    time.sleep(0.5)
     eq(conn_page.check_variable_figures(), 0)
 
     # reconnect transmission torque to chassis torque
@@ -314,20 +316,70 @@ def _test_connections(browser):
     print "_test_connections complete."
 
 
+def _test_driverflows(browser):
+    print "running _test_driverflows"
+    # Excercises display of driver flows (parameters, constraints, objectives).
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                               'rosen_suzuki.py')
+    editor_page.add_file(filename)
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Replace 'top' with Simulation.
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    workspace_page.show_library()
+    workspace_page.find_library_button('Simulation').click()
+    workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
+
+    # Show dataflow for Simulation. 
+    workspace_page.expand_object('top')
+    workspace_page.show_dataflow('top')
+    workspace_page.hide_left()
+    workspace_page.hide_right()
+
+    # Select different displays.
+    top = workspace_page.get_dataflow_figure('top')
+    top.display_driverflows(True)
+    time.sleep(0.5)
+    top.display_dataflows(False)
+    time.sleep(0.5)
+
+    # While only driver flows are displayed, check on context menu.
+    preproc = workspace_page.get_dataflow_figure('preproc', 'top')
+    editor = preproc.input_edit_driver('top.driver')
+    eq(editor.dialog_title, 'CONMINdriver: top.driver')
+    outputs = editor.get_parameters()
+    expected = [
+        ['preproc.x_in[0]', '-10', '99', '', '', '', '', 'preproc.x_in[0]'],
+        ['preproc.x_in[1]', '-10', '99', '', '', '', '', 'preproc.x_in[1]'],
+        ['preproc.x_in[2]', '-10', '99', '', '', '', '', 'preproc.x_in[2]'],
+        ['preproc.x_in[3]', '-10', '99', '', '', '', '', 'preproc.x_in[3]'],
+    ]
+    for i, row in enumerate(outputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+#FIXME: can't seem to do context-click on output port.
+
+    top.display_driverflows(False)
+    time.sleep(0.5)
+    top.display_dataflows(True)
+    time.sleep(0.5)
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_driverflows complete."
+
+
 if __name__ == '__main__':
-    if '--nonose' in sys.argv:
-        # Run outside of nose.
-        from util import setup_chrome  # , setup_firefox
-        setup_server(virtual_display=False)
-        browser = setup_chrome()
-        _test_connect(browser)
-        _test_connections(browser)
-        _test_maxmin(browser)
-        browser.quit()
-        teardown_server()
-    else:
-        # Run under nose.
-        import nose
-        sys.argv.append('--cover-package=openmdao.')
-        sys.argv.append('--cover-erase')
-        sys.exit(nose.runmodule())
+    main()
+

@@ -297,6 +297,7 @@ def new_project(new_project_page):
 
     return (project_info_page, data)
 
+
 def parse_test_args(args=None):
     """ parse test options from command line args
     """
@@ -308,6 +309,8 @@ def parse_test_args(args=None):
                       help="if present, run outside of nose")
     parser.add_option("--test", action="store", type="string", dest='test', 
                       help="specify a specific test to run", default=None)
+    parser.add_option("-v", action="store_true", dest='verbose', 
+                      help="show progress while running under nose")
 
     (options, args) = parser.parse_args(args)
 
@@ -317,23 +320,27 @@ def parse_test_args(args=None):
         sys.exit(-1)
         
     return options
-    
-def run_tests(modname, args=None):
+
+def main(args=None):
     """ run tests for module
-        FIXME: this doesn't work... begin() does not see correct TEST_CONFIG
     """
     options = parse_test_args(args)
 
     if options.nonose or options.test:
         # Run tests outside of nose.
-        __import__(modname)
-        module = sys.modules[modname]
+        module = sys.modules['__main__']
+        functions = inspect.getmembers(module, inspect.isfunction)
         if options.test:
-            tests = [ module.__dict__.get('_test_'+options.test) ]
+            func = module.__dict__.get('_test_'+options.test)
+            if func is None:
+                print 'No test named _test_%s' % options.test
+                print 'Known tests are:', [name for name, func in functions
+                                                    if name.startswith('_test_')]
+                sys.exit(1)
+            tests = [func]
         else:
-            # Search for tests to run.
-            functions = inspect.getmembers(module, inspect.isfunction)
-            tests = [func for name, func in functions]
+            # Run all tests.
+            tests = [func for name, func in functions if name.startswith('_test_')]
 
         setup_server(virtual_display=False)
         browser = setup_chrome()
