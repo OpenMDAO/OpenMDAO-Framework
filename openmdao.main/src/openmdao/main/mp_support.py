@@ -957,8 +957,7 @@ class OpenMDAO_Manager(BaseManager):
                     for path in glob.glob(os.path.join(cwd, name)):
                         name = os.path.basename(path)
                         with open(path, 'r') as inp:
-                            lines = '\n'.join(inp.readlines())
-                            logging.error('    %s:\n%s' % (name, lines))
+                            logging.error('    %s:\n%s', name, inp.read())
             raise RuntimeError(error_msg)
 
         self._address = reply
