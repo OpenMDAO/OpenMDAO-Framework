@@ -701,7 +701,11 @@ class Assembly (Component):
                 for i,val in enumerate(vals):
                     ret[posdict[varnames[i]]] = val
             else:
-                vals = getattr(self, compname).get_valid(varnames)
+                comp = getattr(self, compname)
+                if isinstance(comp, Component):
+                    vals = comp.get_valid(varnames)
+                else:
+                    vals = [self._valid_dict['.'.join([compname, vname])] for vname in varnames]
                 for i,val in enumerate(vals):
                     full = '.'.join([compname,varnames[i]])
                     ret[posdict[full]] = val

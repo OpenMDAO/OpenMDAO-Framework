@@ -81,6 +81,10 @@ class VariableTree(Container):
         """Return a list of Variables in this VariableTree."""
         return [k for k in self.__dict__.keys() if not k.startswith('_')]
 
+    @rbac(('owner', 'user'))
+    def invalidate_deps(self, varnames=None, force=False):
+        return None
+        
     def _iotype_modified(self, obj, name, old, new):
         for k,v in self.__dict__.items():
             if isinstance(v, VariableTree) and v is not self.parent:
