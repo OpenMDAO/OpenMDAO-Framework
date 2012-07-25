@@ -73,7 +73,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
         tree.jstree({
             plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm", "dnd"],
             json_data   : { "data": convertJSON(json, '', openNodes) },
-            themes      : { "theme":  "classic" },
+            themes      : { "theme":  "openmdao" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
             contextmenu : { "items":  contextMenu },
             crrm        : { "move" : {

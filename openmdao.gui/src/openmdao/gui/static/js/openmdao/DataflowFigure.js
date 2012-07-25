@@ -188,10 +188,90 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         item.appendChild(this.bottom_left);
         item.appendChild(this.footer);
         item.appendChild(this.bottom_right);
+
+            openmdao.drag_and_drop_manager.addDroppable( elm ) ;
+            elm.data('corresponding_openmdao_object',this);
+            elm.droppable ({
+                accept: '.IComponent',
+                out: function(ev,ui){
+                    var o = elm.data('corresponding_openmdao_object');
+                    o.unhighlightAsDropTarget() ;
+                    openmdao.drag_and_drop_manager.draggableOut( elm ) ;
+                    calculated_zindex = openmdao.drag_and_drop_manager.computeCalculatedZindex( elm ) ;
+                    topmost_zindex = openmdao.drag_and_drop_manager.computeTopmostZindex( elm ) ;
+                    debug.info ("out", elm.find(".DataflowFigureHeader")[0].innerHTML, calculated_zindex, topmost_zindex )
+                },
+                over: function(ev,ui){
+                    openmdao.drag_and_drop_manager.draggableOver( elm ) ;
+                    calculated_zindex = openmdao.drag_and_drop_manager.computeCalculatedZindex( elm ) ;
+                    topmost_zindex = openmdao.drag_and_drop_manager.computeTopmostZindex( elm ) ;
+                    debug.info ("over", elm.find(".DataflowFigureHeader")[0].innerHTML, calculated_zindex, topmost_zindex )
+                },
+                drop: function(ev,ui) { 
+                    /* divs could be in front of divs and the div that gets the drop
+                       event might not be the one that is in front visibly and therefore
+                       is not the div the user wants the drop to occur on
+                    */
+                    top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent_ver2( ev, ui ) ;
+                    /* call the method on the correct div to handle the drop */
+                    if ( top_div ) {
+                        var drop_function = top_div.droppable( 'option', 'actualDropHandler');
+                        drop_function( ev, ui ) ;
+                    }
+                }, 
+                actualDropHandler: function(ev,ui) { 
+                    var droppedObject = jQuery(ui.draggable).clone(),
+                    droppedName = droppedObject.text(),
+                    droppedPath = droppedObject.attr("modpath"),
+                    off = elm.parent().offset(),
+                    x = Math.round(ui.offset.left - off.left),
+                    y = Math.round(ui.offset.top - off.top),
+                    model = elm.data("corresponding_openmdao_object").openmdao_model ;
+                    
+                    openmdao.drag_and_drop_manager.clearHighlightingDroppables() ;
+                    openmdao.drag_and_drop_manager.clearDroppables() ;
+                    
+                    openmdao.Util.promptForValue('Enter name for new '+droppedName,
+                                                 function(name) {
+                                                     model.addComponent(droppedPath,name,elm.data("pathname"));
+                                                 }
+                                                );
+                }
+            }
+                          ) ;
+
+
     }
 
     return item;
 };
+
+openmdao.DataflowFigure.prototype.highlightAsDropTarget=function(){
+    var circleIMG = "url(/static/images/circle-plus-drop-zone.png)";
+    this.bottom_right.style.backgroundImage=circleIMG ;
+    this.bottom_left.style.backgroundImage=circleIMG ;
+    this.contentArea.style.backgroundColor="#CFD6FE";
+    this.footer.style.backgroundColor="#CFD6FE";
+    debug.info ("highlight", this.name ) ;
+};
+
+openmdao.DataflowFigure.prototype.unhighlightAsDropTarget=function(){
+    var circleIMG ;
+    if (this.maxmin === '+') {
+        circleIMG = "url(/static/images/circle-plus.png)";
+    } else if (this.maxmin === '-') {
+        circleIMG = "url(/static/images/circle-minus.png)";
+    } else {
+        circleIMG = "url(/static/images/circle.png)";
+    }
+    this.bottom_right.style.backgroundImage=circleIMG ;
+    this.bottom_left.style.backgroundImage=circleIMG ;
+    this.contentArea.style.backgroundColor="white";
+    this.footer.style.backgroundColor="white";
+    debug.info ("unhighlight", this.name ) ;
+};
+
+
 
 /** double clicking on figure brings up a component editor on the component */
 openmdao.DataflowFigure.prototype.onDoubleClick=function(){

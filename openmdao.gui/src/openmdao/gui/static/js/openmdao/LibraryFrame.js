@@ -158,12 +158,12 @@ openmdao.LibraryFrame = function(id,model) {
 
         // make everything draggable
         objtypes.draggable({ helper: 'clone', appendTo: 'body' });
-        objtypes.addClass('jstree-draggable'); // allow drop on jstree
+        //objtypes.addClass('jstree-draggable'); // allow drop on jstree
     }
 
     /** build HTML string for a package */
     function packageHTML(name,item) {
-        var html = "<tr><td class='objtype' modpath="+item.modpath+">"+name+"</td><td>"+
+        var html = "<tr><td class='objtype " + item.ifaces.toString().replace(/,/g," " ) + "' modpath="+item.modpath+">"+name+"</td><td>"+
                    item.modpath+"</td><td>"+item.version+"</td><td>"+
                    item._context+"</td><td>"+item.ifaces+"</td></tr>";
         return html;

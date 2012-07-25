@@ -8,6 +8,8 @@ jQuery(function() {
     openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
     openmdao.model = new openmdao.Model();
 
+    openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager()
+
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
         north__size: 40,
