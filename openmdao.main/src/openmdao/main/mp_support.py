@@ -1023,6 +1023,7 @@ class OpenMDAO_Manager(BaseManager):
             server = cls._Server(registry, address, authkey, serializer, name,
                                  allowed_hosts, allowed_users, allow_tunneling)
         except Exception as exc:
+            traceback.print_exc()
             writer.send(exc)
             return
         else:

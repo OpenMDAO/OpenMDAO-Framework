@@ -326,8 +326,14 @@ def install_remote_handler(host, port, prefix=None):  # pragma no cover
         # Remove any handlers from our parent process due to a fork.
         for pid, handlers in _REMOTE_HANDLERS.items():
             for handler in handlers:
-                root.removeHandler(handler)
-                handler.close()
+                try:
+                    root.removeHandler(handler)
+                    handler.close()
+                except KeyError:  # Apparently it's not there anymore.
+                    pass
+                except Exception as exc:
+                    logging.warning("Can't remove inherited remote log handler: %s",
+                                    str(exc) or repr(exc))
             del _REMOTE_HANDLERS[pid]
         _REMOTE_HANDLERS[my_pid] = []
     _REMOTE_HANDLERS[my_pid].append(handler)
