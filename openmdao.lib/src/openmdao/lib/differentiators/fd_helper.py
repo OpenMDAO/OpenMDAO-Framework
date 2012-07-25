@@ -61,6 +61,13 @@ class FDhelper(object):
         for item in self.model.list_containers():
             if item not in comps + ['driver']:
                 self.model.remove(item)
+                
+        # Remove all connections to the assembly boundary
+        bdy_inputs = self.model.list_inputs()
+        bdy_outputs = self.model.list_outputs()
+        for conn in self.model.list_connections():
+            if conn[0] in bdy_inputs or conn[1] in bdy_outputs:
+                self.model.disconnect(conn[0], conn[1])
         
         # Distribution driver to drive the finite difference calculation
         self.model.add('driver', DistributionCaseDriver())
@@ -121,8 +128,8 @@ class FDhelper(object):
                     
                     derivs[out][wrt] = \
                         (cases[icase][out] - cases[icase+1][out])/delx
-                        
                     
+
                 icase += 2
                 
             else:

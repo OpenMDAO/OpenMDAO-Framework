@@ -275,7 +275,7 @@ class ChainRule(HasTraits):
 
                 edge_dict[item] = (needed_inputs, needed_outputs)
 
-        # Cache are finite differentiator helper objects.
+        # Cache our finite differentiator helper objects.
         if scope_name not in self.fdhelpers:
             self._cache_fd(dscope)
                     
