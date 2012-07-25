@@ -115,6 +115,7 @@ class Project(object):
         macro_exec = False
         self._recorded_cmds = []
         self.path = expand_path(projpath)
+        self._model_dict = {}
         modeldir = os.path.join(self.path, 'model')
         self.activate()
         setattr(self, 'create', create) # add create funct here so macros can call it
@@ -129,7 +130,7 @@ class Project(object):
                 logger.error("found state file")
                 try:
                     with open(statefile, 'r') as f:
-                        self.__dict__.update(pickle.load(f))
+                        self._model_dict = pickle.load(f)
                 except Exception, e:
                     logger.error('Unable to restore project state: %s' % e)
                     macro_exec = True
@@ -182,12 +183,12 @@ class Project(object):
             compile(cmd, '<string>', 'eval')
         except SyntaxError:
             try:
-                exec(cmd) in self.__dict__
+                exec(cmd) in self._model_dict
             except Exception as err:
                 pass
         else:
             try:
-                result = eval(cmd, self.__dict__)
+                result = eval(cmd, self._model_dict)
             except Exception as err:
                 pass
             
@@ -215,18 +216,12 @@ class Project(object):
             pass
 
     def save(self):
-        """ Save the state of the project to its project directory.
-            Currently only Containers found in the project are saved.
+        """ Save the state of the project model to its project directory.
         """
         fname = os.path.join(self.path, '_project_state')
-        # copy all openmdao containers to a new dict for saving
-        save_state = {}
-        for k in self.__dict__:
-            if is_instance(self.__dict__[k], Container):
-                save_state[k] = self.__dict__[k]
         try:
             with open(fname, 'wb') as f:
-                pickle.dump(save_state, f)
+                pickle.dump(self._model_dict, f)
         except Exception as err:
             logger.error("Failed to pickle the project: %s" % str(err))
             

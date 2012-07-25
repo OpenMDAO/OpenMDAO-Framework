@@ -213,6 +213,12 @@ class ProjDirFactory(Factory):
                         types.append((typ, meta))
             return types
 
+    def _module_cleanup(self):
+        """This is called when a module reload fails and stuff from the original import
+        has to be removed from the project.
+        """
+        pass
+    
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
             return
@@ -223,13 +229,18 @@ class ProjDirFactory(Factory):
         with self._lock:
             imported = False
             modpath = get_module_path(fpath)
-            if  modpath in sys.modules:  # it was imported earlier
+            if modpath in sys.modules:  # it was imported earlier
                 mod = sys.modules[modpath]
                 imported = True
                 try:
                     reload(mod)
                 except ImportError as err:
-                    return None
+                    self._module_cleanup()
+            else:
+                try:
+                    __import__(modpath, self.project.__dict__)
+                except:
+                    return
             
             ??? left off here...
             #if fpath in self.analyzer.fileinfo: # file has been previously scanned
