@@ -9,5 +9,3 @@ called 'devenv', with all of the openmdao namespace packages
 installed in it as 'develop' eggs.
 
 For more information, go to http://openmdao.org/dev_docs
-
-
