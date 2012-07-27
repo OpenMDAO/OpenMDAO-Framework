@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement
+from elements import ButtonElement, InputElement, TextElement
 from util import ValuePrompt, NotifierPage
 
 
@@ -71,6 +71,8 @@ class EditorPage(BasePageObject):
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
     editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
+    
+    editor_label = TextElement((By.ID, 'code_pane-label'))
 
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
@@ -127,7 +129,7 @@ class EditorPage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         return page
-    
+
     def find_text(self,text):
         #click the 'find' button, and enter text. Not yet functional
         self('editor_find_button').click()
@@ -136,7 +138,7 @@ class EditorPage(BasePageObject):
         chain.send_keys(text).perform()
         chain.send_keys(Keys.RETURN).perform()
         return
-    
+
     def replace_text(self,old_text,new_text,replace_all=False):
         #click the 'replace' or 'replace all 'button,
         # and enter text to find and replace. Not yet functional
@@ -145,12 +147,12 @@ class EditorPage(BasePageObject):
         else:
             self('editor_replaceAll_button').click()
         return
-    
+
     def undo(self):
         #click the 'undo' button
         self('editor_undo_button').click()
         return
-    
+
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
@@ -169,7 +171,7 @@ class EditorPage(BasePageObject):
             code_input_element.send_keys(Keys.ARROW_DOWN)
         # Type in the code.
         code_input_element.send_keys(code)
-        
+
         self.save_document()
 
         # Back to main window.
@@ -204,7 +206,7 @@ class EditorPage(BasePageObject):
 #        Sadly this didn't completely fix the issue.
         time.sleep(1)
         return code_input_element
-        
+
     def save_document(self, overwrite=False):
         #use 'save' button to save code
         self('editor_save_button').click()
@@ -214,8 +216,8 @@ class EditorPage(BasePageObject):
             self('editor_overwrite_button').click()
 
         NotifierPage.wait(self.browser, self.port)
-   
-        
+
+
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """
         # Switch to editor textarea

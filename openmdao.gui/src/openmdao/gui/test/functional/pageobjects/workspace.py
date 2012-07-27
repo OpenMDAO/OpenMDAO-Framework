@@ -35,6 +35,7 @@ class WorkspacePage(BasePageObject):
     view_menu         = ButtonElement((By.ID, 'view-menu'))
     cmdline_button    = ButtonElement((By.ID, 'view-cmdline'))
     console_button    = ButtonElement((By.ID, 'view-console'))
+    files_button      = ButtonElement((By.ID, 'view-files'))
     library_button    = ButtonElement((By.ID, 'view-library'))
     objects_button    = ButtonElement((By.ID, 'view-components'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
@@ -54,6 +55,7 @@ class WorkspacePage(BasePageObject):
 
     # Left side.
     objects_tab = ButtonElement((By.ID, 'otree_tab'))
+    files_tab   = ButtonElement((By.ID, 'ftree_tab'))
 
     # Object context menu.
     obj_properties = ButtonElement((By.XPATH, "//a[(@rel='properties')]"))
@@ -62,6 +64,28 @@ class WorkspacePage(BasePageObject):
     obj_run        = ButtonElement((By.XPATH, "//a[(@rel='run')]"))
     obj_toggle     = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
     obj_remove     = ButtonElement((By.XPATH, "//a[(@rel='remove')]"))
+
+    # File menu
+    file_menu = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/a'))
+    newfile_button = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/ul/li[1]/a'))
+    newfolder_button = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/ul/li[2]/a'))
+    add_button = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/ul/li[3]/a'))
+
+    # File context menu.
+    file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
+    file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
+    file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
+    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
+    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+    file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
+    file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
+    file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
+    file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
+    file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Center.
     dataflow_tab = ButtonElement((By.ID, 'dataflow_tab'))
@@ -150,6 +174,38 @@ class WorkspacePage(BasePageObject):
         """ Open code editor.  Returns :class:`EditorPage`. """
         self('tools_menu').click()
         self('editor_button').click()
+        self.browser.switch_to_window('Code Editor')
+        return EditorPage.verify(self.browser, self.port)
+
+    def new_file_dialog(self):
+        """ bring up the new file dialog """
+        self('files_tab').click()
+        self('file_menu').click()
+        self('newfile_button').click()
+        page = ValuePrompt(self.browser, self.port)
+        return page
+
+    def edit_file(self, filename, dclick=True):
+        """ Edit `filename` via double-click or context menu. """
+        self('files_tab').click()
+        xpath = "//a[(@path='/%s')]" % filename
+        element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
+        chain = ActionChains(self.browser)
+        if dclick:  # This has had issues...
+            for i in range(10):
+                try:
+                    chain.double_click(element).perform()
+                except StaleElementReferenceException:
+                    logging.warning('edit_file: StaleElementReferenceException')
+                    element = WebDriverWait(self.browser, 1).until(
+                        lambda browser: browser.find_element_by_xpath(xpath))
+                    chain = ActionChains(self.browser)
+                else:
+                    break
+        else:
+            chain.context_click(element).perform()
+            self('file_edit').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 

@@ -25,33 +25,40 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
 
-    // Enable dropping of files onto file tree frame to add to project
-    // http://html5demos.com/file-api, http://stackoverflow.com/questions/4722500
+    // Enable dropping of files onto file tree frame to add them to project
     self.elm.bind({
+        dragenter: function () {
+            self.elm.addClass('hover ui-state-highlight');
+            return false;
+        },
         dragover: function () {
-            jQuery(this).addClass('hover');
+            return false;
+        },
+        dragleave: function () {
+            self.elm.removeClass('hover ui-state-highlight');
             return false;
         },
         dragend: function () {
-            jQuery(this).removeClass('hover');
+            self.elm.removeClass('hover ui-state-highlight');
             return false;
         },
         drop: function (e) {
+            self.elm.removeClass('hover ui-state-highlight');
             e = e || window.event;
             e.preventDefault();
             e = e.originalEvent || e;
 
-            var files = (e.files || e.dataTransfer.files);
-            for (var i = 0; i < files.length; i++) {
+            var i = 0,
+                files = (e.files || e.dataTransfer.files);
+            for (i = 0; i < files.length; i++) {
                 (function (i) {
                     var reader = new FileReader();
                     reader.onload = function (e) {
                        model.setFile(files[i].name,e.target.result);
-                    }
+                    };
                     reader.readAsText(files[i]);
                 })(i);
             }
-
             return false;
         }
     });
@@ -63,7 +70,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             name = path.split('/'),
             name = name[name.length-1],
             ext = name.split('.'),
-            ext = ext[ext.length-1];
+            ext = ext[ext.length-1],
+            url = "application/octet-stream:"+name+":file"+path+"'";
 
         var html = '';
         if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
@@ -77,7 +85,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 html += "</ul>";
             }
             else {
-                html += " class='file' path='"+path+"'>"+name+"</a>";
+                html += " class='file' path='"+path+"' draggable='true'"
+                     +  " data-downloadurl='"+url+"'>"+name+"</a>";
             }
             html += "</li>";
         }
@@ -282,6 +291,17 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 debug.warn("node in file tree does not seem to be a file or a folder:",node);
             }
         });
+        
+        // enable dragging out to desktop (only supported under chrome)
+        // ref: http://www.thecssninja.com/javascript/gmail-dragout
+        // FIXME: doesn't work, handlers not getting added??
+        tree.find('.file').bind({
+            'dragstart': function(e) {
+                var url = jQuery(this).attr('data-download-url');
+                e.dataTransfer.setData('DownloadURL',url);
+                return false;
+            }
+        })
     }
 
     function handleMessage(message) {
