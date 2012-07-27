@@ -66,6 +66,7 @@ def _test_editfile(browser):
 
     # verify different file is opened in code editor by double clicking
     browser.switch_to_window(workspace_window)
+    editor_page = workspace_page.edit_file(file2)
     eq(str(editor_page.editor_label),file2)
 
     # Back to workspace.
