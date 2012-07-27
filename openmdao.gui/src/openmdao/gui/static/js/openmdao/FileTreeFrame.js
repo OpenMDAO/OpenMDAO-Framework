@@ -19,10 +19,42 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
     // initialize private variables
     var self = this,
-        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id),
+        tree = jQuery('<div>')
+            .appendTo(self.elm),
         filter_beg = '_.',
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
+
+    // Enable dropping of files onto file tree frame to add to project
+    // http://html5demos.com/file-api, http://stackoverflow.com/questions/4722500
+    self.elm.bind({
+        dragover: function () {
+            jQuery(this).addClass('hover');
+            return false;
+        },
+        dragend: function () {
+            jQuery(this).removeClass('hover');
+            return false;
+        },
+        drop: function (e) {
+            e = e || window.event;
+            e.preventDefault();
+            e = e.originalEvent || e;
+
+            var files = (e.files || e.dataTransfer.files);
+            for (var i = 0; i < files.length; i++) {
+                (function (i) {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                       model.setFile(files[i].name,e.target.result);
+                    }
+                    reader.readAsText(files[i]);
+                })(i);
+            }
+
+            return false;
+        }
+    });
 
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
