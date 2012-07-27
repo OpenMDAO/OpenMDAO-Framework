@@ -14,12 +14,20 @@ openmdao.CodeFrame = function(id,model) {
         // toolbar
         uiBarID = id+'-uiBar',
         uiBar = jQuery('<div id="'+uiBarID+'">')
-            .css({ 'background-color':'gray', height:'25px' })
+            .css({ 'background-color':'gray', height:'25px', 'font-size': '80%'})
             .appendTo(self.elm),
+        newBtn = jQuery("<button id='"+uiBarID+"-new'>New</button>")
+            .button({icons: {primary:'ui-icon-document'}})
+            .css({height:'25px'})
+            .appendTo(uiBar),
         saveBtn = jQuery("<button id='"+uiBarID+"-save'>Save</button>")
             .button({icons: {primary:'ui-icon-disk'}})
             .css({height:'25px'})
             .appendTo(uiBar),
+        //saveAllBtn = jQuery("<button id='"+uiBarID+"-saveAll'>Save All</button>")
+        //    .button({icons: {primary:'ui-icon-disk'}})
+        //    .css({height:'25px'})
+        //    .appendTo(uiBar),
         findBtn = jQuery("<button id='"+uiBarID+"-find'>Find</button>")
             .button({icons: {primary:'ui-icon-search'}})
             .css({height:'25px'})
@@ -37,20 +45,31 @@ openmdao.CodeFrame = function(id,model) {
             .css({height:'25px'})
             .appendTo(uiBar),
         // file label (temporary until we have file tabs)
-        file_label = jQuery('<div id='+id+'-label>')
-            .css({ position:'absolute', top:20, right:0, padding:'5px 20px' })
+        file_tabs = jQuery('<div id='+id+'-tabs>').css({'font-size':'95%'})
             .appendTo(self.elm),
+            file_inner = jQuery('<ul class="tabrow"></ul>').appendTo(file_tabs),
         // editor
         editorID = id+'-textarea',
         overwriteID = id+'-overwrite',
         cancelID = id+'-cancel',
+        closeID = id+'-close',
+        saveID = id+'-save',
         editorArea = jQuery('<pre id="'+editorID+'">')
             .css({overflow:'hidden', position:'absolute'})
             .height('100%') //self.elm.height() - uiBar.height())
             .appendTo(self.elm),
         editor = ace.edit(editorID);
+    
+    file_tabs.tabs({ closable: true, 
+    select: function(event, ui) {selectTab(event,ui);}, 
+    closableClick: function(event, ui) {return closeTab(event,ui); } });
+    //file_tabs.find( ".ui-tabs-nav" ).sortable();
+    sessions={}; //container for ace editor sessions
 
+    newBtn.click(function() { openmdao.Util.promptForValue('Specify a name for the new file',
+                     function(name) { if (name) {newTab('"""\n   '+name+'\n"""\n\n',"/"+name); }} ) });
     saveBtn.click(function() { saveFile(); });
+    //saveAllBtn.click(function() { saveAllFiles(); });
     findBtn.click(function() { editor.commands.commands.find.exec(editor); });
     replBtn.click(function() { editor.commands.commands.replace.exec(editor); });
     rAllBtn.click(function() { editor.commands.commands.replaceall.exec(editor); });
@@ -58,7 +77,73 @@ openmdao.CodeFrame = function(id,model) {
 
     // set theme/mode
     //editor.setTheme("ace/theme/chrome");
-    editor.getSession().setMode("ace/mode/python");
+    EditSession = require("ace/edit_session").EditSession,
+    UndoManager = require("ace/undomanager").UndoManager,
+    selectedFile = "",
+    waitClose=[],
+    defaultSession = new EditSession(" ");
+    editor.setSession(defaultSession);
+    editor.setReadOnly(true);
+
+    selectTab= function(event, ui) { // switch ace session based on the selected tab
+                fname_nodot=nameSplit(ui.tab.innerText);
+                selectedFile=fname_nodot;
+                editor.setSession(sessions[fname_nodot][0]);} 
+    
+    closeTab = function(event,ui) { 
+        tab_id=ui.index;
+        pathname=ui.tab.innerText;
+        fname_nodot=nameSplit(pathname); //remove periods and slashes from filename
+        //file changed since last save?
+        code_last=sessions[fname_nodot][1];
+        code_now=sessions[fname_nodot][0].getValue();
+        
+
+        if (code_last == code_now) {//nothing changed. close tab
+            if (file_tabs.tabs("length") == 1) {editor.setSession(defaultSession);editor.setReadOnly(true);} 
+            delete sessions[fname_nodot]; 
+            file_tabs.tabs("remove",tab_id); 
+            } 
+        
+        else { //file changed. require user choice
+            var win = jQuery('<div>"'+pathname+'" has been changed. Save before closing?</div>');
+            jQuery(win).dialog({
+                'modal': true,
+                'title': 'Save',
+                'buttons': [
+                    {
+                      text: 'Save file',
+                      id: saveID,
+                       click: function() {
+			    waitClose=[fname_nodot,tab_id];
+			    saveFile(fname_nodot);
+                            jQuery(this).dialog('close');
+                              }
+                    },
+                    {
+                       text: 'Close without saving',
+                       id: closeID,
+                       click: function() { 
+                            if (file_tabs.tabs("length") == 1) {editor.setSession(defaultSession);editor.setReadOnly(true);} 
+                            delete sessions[fname_nodot]; 
+                            jQuery(this).dialog('close'); 
+                            file_tabs.tabs("remove",tab_id); 
+                              }
+                    },
+                    {
+                       text: 'Cancel',
+                       id: cancelID,
+                       click: function() {//just close dialog
+                                 jQuery(this).dialog('close');
+                                 return false;
+                              }
+                    }
+                  ]
+                }
+            );       
+            }
+            return false; 
+        }
 
     // keyboard shortcut
     editor.commands.addCommand({
@@ -82,6 +167,15 @@ openmdao.CodeFrame = function(id,model) {
         if (typeof openmdao_test_mode !== 'undefined') {
             openmdao.Util.notify('Save complete: ' +textStatus);
         }
+	if (waitClose.length != 0) {
+		fname_nodot = waitClose[0];
+		tab_id = waitClose[1];
+		if (file_tabs.tabs("length") == 1) {editor.setSession(defaultSession);editor.setReadOnly(true);} 
+		delete sessions[fname_nodot]; 
+		file_tabs.tabs("remove",tab_id); 
+		waitClose=[];
+	
+	}
     }
     
     function handle409(jqXHR, textStatus, errorThrown) {
@@ -112,11 +206,28 @@ openmdao.CodeFrame = function(id,model) {
     }
 
     /** tell the model to save the current contents to current filepath */
-    function saveFile() {
-        model.setFile(filepath,editor.getSession().getValue(), 0,
-                      successful_save, null, handle409);
+    
+    
+    
+    function saveFile(fname_nodot) {
+        if (!(fname_nodot)) {fname_nodot=selectedFile;}
+        code_last=sessions[fname_nodot][1];
+        current_code=sessions[fname_nodot][0].getValue();
+	filepath=sessions[fname_nodot][2]; 
+        if (!(code_last == current_code)){
+            sessions[fname_nodot][1] = current_code; // store saved file for comparison
+            model.setFile(filepath,current_code, 0,
+                          successful_save, null, handle409);
+        }
+	renameTab("#"+fname_nodot,filepath);
+	sessions[fname_nodot][3] = false;
     }
-
+    
+    function saveAllFiles() {       
+        for (key in sessions) {saveFile(key);}
+        
+    }    
+    
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -124,16 +235,18 @@ openmdao.CodeFrame = function(id,model) {
     /** get contents of specified file from model, load into editor */
     this.editFile = function(pathname) {
         filepath = pathname;
-        model.getFile(pathname,
+        mode=findMode(filepath);
+        fname_nodot= nameSplit(filepath);
+        if (fname_nodot in sessions) {// file already has open tab? just switch to it
+            editor.setSession(sessions[fname_nodot][0]); 
+            file_tabs.tabs("select","#"+fname_nodot);
+            }
+        
+        else { // file not being edited; make new tab
+            model.getFile(pathname,
             // success
             function(contents) {
-                file_label.text(filepath);
-                editor.session.doc.setValue(contents);
-                self.resize();
-                editor.resize();
-                editor.navigateFileStart();
-                var UndoManager = require("ace/undomanager").UndoManager;
-                editor.getSession().setUndoManager(new UndoManager());
+                newTab(contents,filepath,fname_nodot,mode);
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {
@@ -142,8 +255,46 @@ openmdao.CodeFrame = function(id,model) {
                 alert("Error editing file: "+jqXHR.statusText);
             }
         );
+        }        
     };
-
+    
+    findMode = function(filepath) {
+        chunks=filepath.split('.');
+        if (chunks.length == 2){
+            if (chunks[1] == "py") {return "ace/mode/python";}
+            else if (chunks[1] == "js") {return "ace/mode/javascript";} 
+            else {return "ace/mode/python";}
+        }
+        else {return "ace/mode/python";}
+    }
+    
+    newTab= function(contents,filepath,fname_nodot,mode) {
+        editor.setReadOnly(false);
+        if (!fname_nodot) {fname_nodot= nameSplit(filepath);}
+        if (!mode) {mode=findMode(filepath);}
+        var newfile = new EditSession(contents); // new code session for ace 
+        newfile.setUndoManager(new UndoManager());
+        newfile.setMode(mode);
+        newfile.on('change', function(evt) {if (!(sessions[fname_nodot][3])) {renameTab("#"+fname_nodot,filepath+"*");sessions[fname_nodot][3] = true;} ;});
+        editor.setSession(newfile);
+        sessions[fname_nodot]=[newfile,contents,filepath,false]; // store session for efficent switching 
+        
+        jQuery('<div id="'+fname_nodot+'"></div>').appendTo(file_inner); // new empty div
+        file_tabs.tabs("add",'#'+fname_nodot,filepath);
+        file_tabs.tabs( 'select', "#"+fname_nodot); 
+        selectedFile=fname_nodot;   
+        self.resize();
+        editor.resize();
+    }
+    
+     
+    function renameTab(selector, value)
+    {	    txt=jQuery('a[href="' + selector + '"]').text();    
+	    jQuery('a[href="' + selector + '"]').text(value);
+    }     
+     
+    nameSplit = function(pathname) {return pathname.split('.').join('').split('/').join('').split('*').join('');}     
+     
     // method to resize the Ace code pane
     this.resize = function() {
         editorArea.width(self.elm.width());
