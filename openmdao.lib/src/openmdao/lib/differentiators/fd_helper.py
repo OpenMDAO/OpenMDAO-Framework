@@ -55,7 +55,6 @@ class FDhelper(object):
             self.model = deepcopy(model)
         finally:
             model.parent = save_parent
-            
 
         # Get rid of the comps we don't need
         for item in self.model.list_containers():
@@ -85,6 +84,16 @@ class FDhelper(object):
         gen.num_parameters = len(wrt)
         gen.form = form
         gen.order = order
+        
+        # Save a reference to the original model so that we can increment the
+        # execution counter as needed.
+        self.copy_source = model
+        
+        # All execution counts should be reset to zero.
+        for comp in self.model.driver.workflow.__iter__():
+            comp.exec_count = 0
+            comp.derivative_exec_count = 0
+        
         
     def run(self, input_dict, output_dict):
         """ Performs finite difference of our submodel with respect to wrt.
@@ -142,6 +151,14 @@ class FDhelper(object):
                         
                 icase += 1
                 
+        # Add the execution count from the copies to the originals.
+        for comp in self.model.driver.workflow.__iter__():
+            source_comp = self.copy_source.get(comp.name)
+            source_comp.exec_count += comp.exec_count
+            comp.exec_count = 0
+            source_comp.derivative_exec_count += comp.derivative_exec_count
+            comp.derivative_exec_count = 0
+        
         return derivs
     
     def list_wrt(self):

@@ -34,6 +34,7 @@ class ChainRule(HasTraits):
         _parent = None
         
         self.param_names = []
+        self.grouped_param_names = {}
         self.function_names = []
         
         self.gradient = {}
@@ -51,7 +52,16 @@ class ChainRule(HasTraits):
     def setup(self):
         """Sets some dimensions."""
 
-        self.param_names = self._parent.get_parameters().keys()
+        self.param_names = []
+        self.grouped_param_names = {}
+        for name in self._parent.get_parameters().keys():
+            if isinstance(name, (tuple, list)):
+                self.param_names.append(name[0])
+                for item in name[1:]:
+                    self.grouped_param_names[item] = name[0]
+            else:
+                self.param_names.append(name)
+        
         objective_names = self._parent.get_objectives().keys()
         
         try:
@@ -160,6 +170,7 @@ class ChainRule(HasTraits):
         # Find our minimum set of edges part 2
         # Inputs connected to parameters
         needed_in_edges = needed_in_edges.union(set(self.param_names))
+        needed_in_edges = needed_in_edges.union(set(self.grouped_param_names))
         
         # Find our minimum set of edges part 3
         # Outputs connected to objectives
@@ -411,6 +422,11 @@ class ChainRule(HasTraits):
                     
             derivs = { wrt: 1.0 }
             
+            # Add in any grouped parameters
+            for grouped, base in self.grouped_param_names.iteritems():
+                if wrt == base:
+                    derivs[grouped] = 1.0
+            
             # Find derivatives for all component outputs in the workflow
             self._chain_workflow(derivs, self._parent, wrt)
 
@@ -471,16 +487,34 @@ class ChainRule(HasTraits):
             self._find_edges(scope, scope)
 
         # Loop through each comp in the workflow
-        for node_name in self.dworkflow[scope_name]:
+        for node_names in self.dworkflow[scope_name]:
     
-            node = scope.parent.get(node_name)
+            # If it's a list, then it's a set of components to finite
+            # difference together.
+            if not isinstance(node_names, list):
+                node = scope.parent.get(node_names)
+                fdblock = False
+                node_names = [node_names]
+            else:
+                fdblock = True
     
-            incoming_deriv_names = {}
-            incoming_derivs = {}
-            ascope = node.parent
+            # Finite difference block
+            if fdblock:
+                
+                fd = self.fdhelpers[scope_name][str(node_names)]
+                
+                input_dict = {}
+                for item in fd.list_wrt():
+                    input_dict[item] = scope.parent.get(item)
+                    
+                output_dict = {}
+                for item in fd.list_outs():
+                    output_dict[item] = scope.parent.get(item)
+                        
+                local_derivs = fd.run(input_dict, output_dict)
             
-            # We don't handle nested drivers yet.
-            if isinstance(node, Driver):
+            # We don't handle nested drivers.
+            elif isinstance(node, Driver):
                 raise NotImplementedError('Nested drivers')
             
             # Recurse into assemblies.
@@ -490,22 +524,36 @@ class ChainRule(HasTraits):
                     raise NotImplementedError('Nested drivers')
                 
                 self._recurse_assy(node, derivs, param)
+                continue
                                      
             # This component can determine its derivatives.
             elif hasattr(node, 'calculate_first_derivatives'):
                 
                 node.calc_derivatives(first=True)
                 
+                local_derivs = node.derivatives.first_derivatives
+                
+            # The following executes for components with derivatives and
+            # blocks that are finite-differenced
+            for node_name in node_names:
+            
+                node = scope.parent.get(node_name)
+                ascope = node.parent
+                
                 local_inputs = self.edge_dicts[scope_name][node_name][0]
                 local_outputs = self.edge_dicts[scope_name][node_name][1]
-                local_derivs = node.derivatives.first_derivatives
+                
+                incoming_deriv_names = {}
+                incoming_derivs = {}
                 
                 for input_name in local_inputs:
                     
                     full_name = '.'.join([node_name, input_name])
-
+    
                     # Inputs who are hooked directly to the current param
-                    if full_name == param:
+                    if full_name == param or \
+                       (full_name in self.grouped_param_names and \
+                        self.grouped_param_names[full_name] == param):
                             
                         incoming_deriv_names[input_name] = full_name
                         incoming_derivs[full_name] = derivs[full_name]
@@ -542,11 +590,11 @@ class ChainRule(HasTraits):
                             metadata = dest_expr.get_metadata('units')
                             target_unit = [x[1] for x in metadata \
                                            if x[0] == target]
-
+    
                             expr_deriv[source] = expr_deriv[source] * \
                                 convert_units(1.0, source_unit[0], 
                                               target_unit[0])
-
+    
                         # Store our derivatives to chain them
                         incoming_deriv_names[input_name] = full_name
                         if full_name in incoming_derivs:
@@ -564,17 +612,23 @@ class ChainRule(HasTraits):
                     full_output_name = '.'.join([node_name, output_name])
                     derivs[full_output_name] = 0.0
                     
+                    if fdblock:
+                        local_out = full_output_name
+                    else:
+                        local_out = output_name
+                    
                     for input_name, full_input_name in \
                         incoming_deriv_names.iteritems():
                         
+                        if fdblock:
+                            local_in = "%s.%s" % (node_name, input_name)
+                        else:
+                            local_in = input_name
+                        
                         derivs[full_output_name] += \
-                            local_derivs[output_name][input_name] * \
+                            local_derivs[local_out][local_in] * \
                             incoming_derivs[full_input_name]
                             
-            # This component must be finite differenced.
-            else:
-                msg = 'CRND cannot Finite Difference subblocks yet.'
-                raise NotImplementedError(msg)
             
 
     def _recurse_assy(self, scope, upscope_derivs, upscope_param):
