@@ -350,23 +350,44 @@ openmdao.FileTreeFrame.prototype.newFolder = function(path) {
                      function(name) { openmdao.model.newFolder(name,path); } );
 };
 
-/** add an existing file to the current project */
+/** choose & add one or more files, optionally specifying a dest folder */
 openmdao.FileTreeFrame.prototype.addFile = function(path) {
-    var win = jQuery('window'),
-        height  = 150,
-        width   = 400,
-        options = {
-            'height' : height,
-            'width'  : width,
-            'top'    : screen.availHeight/2 - height/2,
-            'left'   : screen.availWidth/2  - width/2
-        };
+    filechooser = jQuery('<input type="file" multiple="true"' +
+                         ' style="position:absolute;top:-500;left:-500" />')
+        .appendTo('body');
 
-    if (path) {
-        openmdao.Util.popupWindow('upload?path='+path,'Add File',options);
+    function uploadFiles(files, path) {
+        var formData = new FormData();
+        for (var fileName in files) {
+            formData.append('file', files[fileName]);
+        }
+        // now post a new XHR request
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', 'upload');
+        xhr.onload = function () {
+            if (xhr.status !== 200) {
+                debug.error('error uploading files',files,path);
+            }
+        };
+        if (path) {
+            formData.append('path', path);
+        }
+        xhr.send(formData);
+
+        filechooser.remove();  // self destruct, one use only
     }
-    else {
-        openmdao.Util.popupWindow('upload','Add File',options);
-    }
+
+    filechooser.bind({
+        'change': function(e) {
+            uploadFiles(this.files, path);
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    })
+
+    filechooser.show();
+    filechooser.focus();
+    filechooser.click();
+    filechooser.hide();
 };
 
