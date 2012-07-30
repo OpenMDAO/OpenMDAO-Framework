@@ -103,23 +103,24 @@ def _test_palette_update(browser):
     # View dataflow.
     workspace_page('dataflow_tab').click()
 
-    # Open code editor.
+    # Get file paths
+    file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'paraboloid.py')
+    file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'optimization_unconstrained.py')
+
+    # add first file from workspace
+    workspace_page('files_tab').click()
+    workspace_page.add_file(file1_path)
+    
+    # Open code editor.and add second file from there
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
+    time.sleep(0.5)
+    editor_page.add_file(file2_path)
 
-    # Add paraboloid file.
-    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'paraboloid.py')
-    editor_page.add_file(file_path)
-
-    # Add optimization_unconstrained file.
-    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'optimization_unconstrained.py')
-    editor_page.add_file(file_path)
-
-    time.sleep(1.0)
-
-    # Check to make sure the files were added.
+    # Check code editor to make sure the files were added.
+    time.sleep(0.5)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):
@@ -130,6 +131,15 @@ def _test_palette_update(browser):
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
+
+    # Check workspace to make sure the files also show up there.
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
@@ -178,7 +188,7 @@ def _test_palette_update(browser):
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
-    print "_test_import complete."
+    print "_test_palette_update complete."
 
 
 def _test_menu(browser):

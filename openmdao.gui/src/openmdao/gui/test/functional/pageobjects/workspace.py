@@ -87,6 +87,8 @@ class WorkspacePage(BasePageObject):
     file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
+    file_chooser = InputElement((By.ID, 'filechooser'))
+
     # Center.
     dataflow_tab = ButtonElement((By.ID, 'dataflow_tab'))
     workflow_tab = ButtonElement((By.ID, 'workflow_tab'))
@@ -110,6 +112,7 @@ class WorkspacePage(BasePageObject):
 
         self.locators = {}
         self.locators["objects"] = (By.XPATH, "//div[@id='otree_pane']//li[@path]")
+        self.locators["files"] = (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, 2*TMO).until(
@@ -176,6 +179,35 @@ class WorkspacePage(BasePageObject):
         self('editor_button').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
+
+
+    def get_files(self):
+        """ Return names in the file tree. """
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element(By.ID, 'ftree_pane'))
+# FIXME: absolute delay for tree population.
+        time.sleep(1)
+        file_items = self.browser.find_elements(*self.locators["files"])
+        file_names = []
+        for i in range(len(file_items)):
+            for retry in range(10):  # This has had issues...
+                try:
+                    file_names.append(self.browser.find_elements(*self.locators["files"])[i].text.strip())
+                except StaleElementReferenceException:
+                    logging.warning('get_files: StaleElementReferenceException')
+                else:
+                    break
+        return file_names
+
+    def add_file(self, file_path):
+        """ Read in `file_path` """
+        if file_path.endswith('.pyc'):
+            file_path = file_path[:-1]
+
+        self('file_menu').click()
+        self('add_button').click()
+
+        self.file_chooser = file_path
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -248,6 +280,7 @@ class WorkspacePage(BasePageObject):
         xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
         self('obj_dataflow').click()
