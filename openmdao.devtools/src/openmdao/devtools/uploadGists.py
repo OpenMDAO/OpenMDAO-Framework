@@ -12,7 +12,7 @@ from openmdao.devtools.utils import repo_top
 #whitelist of filetypes to upload
 allowFiletype = ['.py', '.csv', '.f', '.c']
 #blacklist of files to ignore, even if filetype is valid
-ignoreFilename = ['__init__', 'releaseinfo']
+ignoreFilename = ['__init__', 'releaseinfo', 'docs-link']
 
 #url of the github api
 apiURL = 'https://api.github.com/'
@@ -84,11 +84,11 @@ def upload (OpenMDAO_version):
     #gets list of tutorials alrady on github
     existingTutorials = getListOfExistingTutorials()
 
+
     for tutorial in os.listdir(tutorialsDir):
-        if os.path.isdir(tutorial):
+        if os.path.isdir(os.path.join(tutorialsDir, tutorial)):
             tutorialName = tutorial.split(".")[2]
             if(tutorialName):
-                
                 directory = os.path.join(tutorialsDir, tutorial, "openmdao", "examples", tutorialName)
                 files = getUploadFiles(directory, tutorialName)
 
@@ -107,10 +107,13 @@ def upload (OpenMDAO_version):
     if(updateCookbook):
         print ""
         print "Notifying Cookbook with gist #:"
+        count = 0;
         for gist_id in gist_id_list:
             if not notifyCookbook(gist_id, gist_id_list[gist_id], OpenMDAO_version):
                 return True
+            count = count + 1
         print "Done"
+        print "Updated " + str(count) + " tutorials"
 
     return True
     
@@ -213,6 +216,20 @@ def makeFileDict(directory, files, file_dict):
 
     return file_dict
 
+def makeDesc(name, OpenMDAO_version, directory=None):
+    desc = "Example:"+name+": As included in OpenMDAO " + OpenMDAO_version
+    if directory:
+        files = os.listdir(directory)
+        for f in files:
+            filename, extension = os.path.splitext(f)
+            if filename == 'docs-link' and extension == '.txt':
+                link = open(os.path.join(directory, f), 'rU').read().strip()
+                if link.startswith("http://openmdao.org"):
+                    desc = desc + "<a href=\"" + link + "\"> Related Tutorial</a>"
+
+    return desc
+
+
 
 def updateGist(name, gist_id, directory, files, OpenMDAO_version):
     """
@@ -237,7 +254,7 @@ def updateGist(name, gist_id, directory, files, OpenMDAO_version):
         file_dict[f] = None
 
 
-    desc = "Example:"+name+": As included in OpenMDAO " + OpenMDAO_version
+    desc = makeDesc(name, OpenMDAO_version, directory)
     #overwrite updatable files that would be deleted, add new files
     file_dict = makeFileDict(directory, files, file_dict)
 
@@ -265,7 +282,7 @@ def createGist(name, directory, files, OpenMDAO_version):
     print"Uploading " + name + '...',
 
     #create the description of the gist
-    desc = "Example:"+name+": As included in OpenMDAO " + OpenMDAO_version
+    desc = makeDesc(name, OpenMDAO_version, directory)
     file_dict = makeFileDict(directory, files, {})
 
     #content is the actual stuff we are giving to github
@@ -366,7 +383,7 @@ def getListOfExistingTutorials():
         """
         #match the description to the name of an example, if exists. 
             #store in a list of dicts
-        result = re.search('Example:(.*):', item['description'])
+        result = re.search('Example:(.*?):', item['description'])
         if(result):
             existingTutorials.append({'id' : item['id'], 'name': result.groups()[0]})
 
