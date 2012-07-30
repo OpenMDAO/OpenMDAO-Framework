@@ -4,10 +4,7 @@ import re
 import json
 import requests
 
-from openmdao.devtools.utils import repo_top
-
-
-
+from openmdao.util.fileutil import get_ancestor_dir
 
 #whitelist of filetypes to upload
 allowFiletype = ['.py', '.csv', '.f', '.c']
@@ -28,8 +25,7 @@ cookbookURL = 'http://openmdao.org/wordpress_NEWURL/cookbook/'
 
 
 #directory of tutorials
-tutorialsDir = os.path.join(repo_top(), "examples")
-
+tutorialsDir = os.path.join(get_ancestor_dir(__file__,5), "examples")
 
 
 def uploadGists (OpenMDAO_version):
@@ -388,3 +384,5 @@ def getListOfExistingTutorials():
             existingTutorials.append({'id' : item['id'], 'name': result.groups()[0]})
 
     return existingTutorials
+
+
