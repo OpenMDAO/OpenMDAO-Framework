@@ -363,8 +363,6 @@ def _test_addfiles(browser):
     editor_page = workspace_page.open_editor()
     editor_window = browser.current_window_handle
 
-    upload_page = editor_page.add_files()
-
     # Get path to  paraboloid file.
     paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
                                                      'paraboloid.py')
@@ -374,13 +372,9 @@ def _test_addfiles(browser):
                                               'optimization_unconstrained.py')
 
     # Add the files
-    upload_page.select_files((paraboloidPath, optPath))
-    upload_page.upload_files()
-
-    time.sleep(1.0)
+    editor_page.add_files(paraboloidPath, optPath)
 
     # Check to make sure the files were added.
-    browser.switch_to_window(editor_window)
     time.sleep(1)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']

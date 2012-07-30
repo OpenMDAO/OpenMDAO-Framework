@@ -74,6 +74,8 @@ class EditorPage(BasePageObject):
     
     editor_label = TextElement((By.ID, 'code_pane-label'))
 
+    file_chooser = InputElement((By.ID, 'filechooser'))
+
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
 
@@ -103,24 +105,15 @@ class EditorPage(BasePageObject):
         if file_path.endswith('.pyc'):
             file_path = file_path[:-1]
 
-        main_window_handle = self.browser.current_window_handle
-
         self('file_menu').click()
         self('add_button').click()
 
-        # Switch to the Window that pops up.
-        self.browser.switch_to_window('Add File')
-        page = UploadPage(self.browser, self.port)
-        page.upload_file(file_path)
+        self.file_chooser = file_path
 
-        # Go back to the main window.
-        self.browser.switch_to_window(main_window_handle)
-
-    def add_files(self):
+    def add_files(self, *file_paths):
         self('file_menu').click()
         self('add_button').click()
-        self.browser.switch_to_window('Add File')
-        return UploadPage.verify(self.browser, self.port)
+        self.file_chooser = file_paths
 
     def new_file_dialog(self):
         """ bring up the new file dialog """

@@ -352,7 +352,7 @@ openmdao.FileTreeFrame.prototype.newFolder = function(path) {
 
 /** choose & add one or more files, optionally specifying a dest folder */
 openmdao.FileTreeFrame.prototype.addFile = function(path) {
-    filechooser = jQuery('<input type="file" multiple="true"' +
+    filechooser = jQuery('<input id="filechooser" type="file" multiple="true"' +
                          ' style="position:absolute;top:-500;left:-500" />')
         .appendTo('body');
 
@@ -387,7 +387,13 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
 
     filechooser.show();
     filechooser.focus();
-    filechooser.click();
-    filechooser.hide();
+    if (typeof openmdao_test_mode !== 'undefined') {
+        // if testing, make visible for selenium
+        filechooser.css({'left':'100px','top':'100px'});
+    }
+    else {
+        filechooser.click();
+        filechooser.hide();
+    }
 };
 

@@ -130,7 +130,7 @@ class _InputElement(_BaseElement):
         if element.get_attribute('value'):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
-        element.send_keys(new_value)
+        element.send_keys(*new_value)
 
 
 class _TextElement(_BaseElement):
