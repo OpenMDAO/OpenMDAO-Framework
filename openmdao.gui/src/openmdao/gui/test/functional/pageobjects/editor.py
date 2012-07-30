@@ -1,4 +1,3 @@
-import sys
 import logging
 import time
 
@@ -71,7 +70,7 @@ class EditorPage(BasePageObject):
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
     editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
-    
+
     editor_label = TextElement((By.ID, 'code_pane-label'))
 
     file_chooser = InputElement((By.ID, 'filechooser'))
@@ -111,9 +110,13 @@ class EditorPage(BasePageObject):
         self.file_chooser = file_path
 
     def add_files(self, *file_paths):
+        """ Read in multiple 'file_path's
+            FIXME: doesn't work, see elements._InputElement
+            Have to use multiple calls to add_file for now
+        """
         self('file_menu').click()
         self('add_button').click()
-        self.file_chooser = file_paths
+        self('file_chooser').set_values(*file_paths)
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -123,7 +126,7 @@ class EditorPage(BasePageObject):
         page = ValuePrompt(self.browser, self.port)
         return page
 
-    def find_text(self,text):
+    def find_text(self, text):
         #click the 'find' button, and enter text. Not yet functional
         self('editor_find_button').click()
         alert = self.browser.switch_to_alert()
@@ -132,7 +135,7 @@ class EditorPage(BasePageObject):
         chain.send_keys(Keys.RETURN).perform()
         return
 
-    def replace_text(self,old_text,new_text,replace_all=False):
+    def replace_text(self, old_text, new_text, replace_all=False):
         #click the 'replace' or 'replace all 'button,
         # and enter text to find and replace. Not yet functional
         if replace_all:
@@ -210,7 +213,6 @@ class EditorPage(BasePageObject):
 
         NotifierPage.wait(self.browser, self.port)
 
-
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """
         # Switch to editor textarea
@@ -219,4 +221,3 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(text)
         return code_input_element
-    

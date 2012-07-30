@@ -130,7 +130,21 @@ class _InputElement(_BaseElement):
         if element.get_attribute('value'):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
-        element.send_keys(*new_value)
+        element.send_keys(new_value)
+
+    def set_values(self, *values):
+        """ FIXME: doesn't work, see Selenium issue #2239
+            http://code.google.com/p/selenium/issues/detail?id=2239
+        """
+        element = self.element
+        WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_displayed())
+        WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_enabled())
+        if element.get_attribute('value'):
+            element.clear()
+        time.sleep(0.1)  # Just some pacing.
+        element.send_keys(*values)
 
 
 class _TextElement(_BaseElement):

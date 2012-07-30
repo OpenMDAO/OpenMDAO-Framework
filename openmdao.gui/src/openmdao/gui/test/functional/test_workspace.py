@@ -372,7 +372,10 @@ def _test_addfiles(browser):
                                               'optimization_unconstrained.py')
 
     # Add the files
-    editor_page.add_files(paraboloidPath, optPath)
+    # would like to test adding multiple files but Selenium doesn't support it
+    #editor_page.add_files(paraboloidPath, optPath)
+    editor_page.add_file(paraboloidPath)
+    editor_page.add_file(optPath)
 
     # Check to make sure the files were added.
     time.sleep(1)

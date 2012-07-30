@@ -1,8 +1,8 @@
 
-var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
-    var menu = [  
+    var menu = [
         {   "text": "File",
             "items": [
                 { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
@@ -301,7 +301,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 e.dataTransfer.setData('DownloadURL',url);
                 return false;
             }
-        })
+        });
     }
 
     function handleMessage(message) {
@@ -357,12 +357,13 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
         .appendTo('body');
 
     function uploadFiles(files, path) {
-        var formData = new FormData();
-        for (var fileName in files) {
-            formData.append('file', files[fileName]);
+        var formData = new FormData(),
+            xhr = new XMLHttpRequest(),
+            filename;
+        for (filename in files) {
+            formData.append('file', files[filename]);
         }
         // now post a new XHR request
-        var xhr = new XMLHttpRequest();
         xhr.open('POST', 'upload');
         xhr.onload = function () {
             if (xhr.status !== 200) {
@@ -383,12 +384,12 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
             e.preventDefault();
             e.stopPropagation();
         }
-    })
+    });
 
     filechooser.show();
     filechooser.focus();
     if (typeof openmdao_test_mode !== 'undefined') {
-        // if testing, make visible for selenium
+        // if testing, make the file chooser visible for selenium
         filechooser.css({'left':'100px','top':'100px'});
     }
     else {
