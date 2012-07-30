@@ -2,18 +2,26 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     // initialize private variables
     var self = this,
         figures = {},
         slotsID = "#"+pathname.replace(/\./g,'-')+"-slots",
-        slotsCSS = 'overflow:auto;',
+        slotsCSS = 'height:'+(screen.height-100)+'px;'+
+                   'width:'+(screen.width-100)+'px;'+
+                   'position:relative; background-color:black;',
         slotsDiv = jQuery('<div id='+slotsID+' style="'+slotsCSS+'">').appendTo(elm),
         slots = new draw2d.Workflow(slotsID);
 
     self.pathname = pathname;
 
-    slotsDiv.css({'background':'gray'});
     //slots.setBackgroundImage( "/static/images/grid_10.png", true);
+    elm.css({ 'overflow':'auto' });
+    slots.setViewPort(elm.attr('id'));
 
     // make the slots pane droppable
     slotsDiv.droppable ({
@@ -70,6 +78,10 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             slots.addFigure(fig,x,y);
         });
     }
+
+    /***********************************************************************
+     *  protected
+     ***********************************************************************/
 
     /** update slots diagram */
     this.loadData = function(json) {

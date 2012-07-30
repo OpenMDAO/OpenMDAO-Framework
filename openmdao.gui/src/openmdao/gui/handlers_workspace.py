@@ -240,6 +240,12 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
+            force = int(self.get_argument('force', default=0))
+            if not force and filename.endswith('.py'):
+                ret = cserver.file_classes_changed(filename)
+                if ret:
+                    self.send_error(409)  # user will be prompted to overwrite classes
+                    return
             contents = self.get_argument('contents', default='')
             self.write(str(cserver.write_file(filename, contents)))
 
@@ -300,7 +306,7 @@ class OutstreamHandler(ReqHandler):
 
 class ProjectHandler(ReqHandler):
     ''' GET:  load model fom the given project archive,
-              or reload remebered project for session if no file given
+              or reload remembered project for session if no file given
 
         POST: save project archive of the current project
     '''

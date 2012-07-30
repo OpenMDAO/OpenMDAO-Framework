@@ -1,24 +1,22 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.PaletteFrame = function(id,model) {
-    openmdao.PaletteFrame.prototype.init.call(this,id,'Library',[]);
+openmdao.LibraryFrame = function(id,model) {
+    openmdao.LibraryFrame.prototype.init.call(this,id,'Library',[]);
 
     /***********************************************************************
      *  private
      ***********************************************************************/
 
     // initialize private variables
-    var self = this,
-        palette = jQuery('#'+id),
-        libs = jQuery('<div>').appendTo(palette);
+    var self = this;
 
-    /** find the actual top of the given element, taking visibility and 
+    /** find the actual top of the given element, taking visibility and
         scrolling into account */
     function getElementTop(elem) {
-       var yPos = 0;
-       var scrolls = 0;
-       var firstElemWithOSP = 0;
+       var yPos = 0,
+           scrolls = 0,
+           firstElemWithOSP = 0;
        while(elem && !isNaN(elem.offsetTop)) {
           scrolls += elem.scrollTop;
           if (firstElemWithOSP === 0 && elem.offsetParent) {
@@ -26,7 +24,7 @@ openmdao.PaletteFrame = function(id,model) {
           }
           elem = elem.parentNode;
        }
-       
+
        elem = firstElemWithOSP;
        while(elem && !isNaN(elem.offsetTop)) {
           yPos += elem.offsetTop;
@@ -34,28 +32,31 @@ openmdao.PaletteFrame = function(id,model) {
        }
        return yPos-scrolls;
     }
-    
 
-    /** rebuild the Palette from a JSON library list of tuples of the form (libname, meta_dict) */
-    function updatePalette(packages) {
+    /** rebuild the Library from a JSON library list of tuples of the form:
+        (libname, meta_dict) */
+    function updateLibrary(packages) {
         // build the new html
-        var html="<div id='library'>";
-        html += '<div class="ui-widget"><label for="objtt-select" id="objtt-search">Search: </label><input id="objtt-select"></div>';
-        html+= '<table cellpadding="0" cellspacing="0" border="0" id="objtypetable">';
+        var html = '<div class="ui-widget" style="clear:both">'
+                 +   '<label for="objtt-select" id="objtt-search">Search: </label>'
+                 +   '<input id="objtt-select">'
+                 + '</div>';
+        html += '<table id="objtypetable" style="width:100%"' +
+                ' cellpadding="0" cellspacing="0" border="0" >';
         // headers: ClassName, Module Path, Version, Context, Interfaces
-        html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead><tbody>';
+        html += '<thead><tr><th></th><th></th><th></th><th></th><th></th></tr></thead>';
+        html += '<tbody>';
         jQuery.each(packages, function(name,item) {
             html+= packageHTML(name, item);
         });
-        html+="</tbody></table></div>";
+        html += '</tbody></table>';
 
         // replace old html
-        libs.html(html);
+        self.elm.html(html);
 
-        var dtable = palette.find('#objtypetable').dataTable({
+        var dtable = self.elm.find('#objtypetable').dataTable({
             'bPaginate': false,
             'bjQueryUI': true,
-            'sScrollY': '600px',
             'bScrollCollapse': true,
             'bFilter': true,    // make sure filtering is still turned on
             'aoColumnDefs': [
@@ -80,7 +81,7 @@ openmdao.PaletteFrame = function(id,model) {
                     //"UncertainVariable",
                     "Variable"
                 ];
-        var input_obj = palette.find('#objtt-select');
+        var input_obj = self.elm.find('#objtt-select');
         input_obj.autocomplete({
            source: function(term, response_cb) {
                response_cb(selections);
@@ -98,18 +99,19 @@ openmdao.PaletteFrame = function(id,model) {
         input_obj.bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
                 dtable.fnFilter( e.target.value );
+                dtable.width('100%');
                 if (selections.indexOf(e.target.value) === -1) {
                    selections.push(e.target.value);
                 }
                 input_obj.autocomplete('close');
             }
         });
-        
+
         var contextMenu = jQuery("<ul id='lib-cmenu' class='context-menu'>")
                           .appendTo(dtable);
 
         var objtypes = dtable.find('.objtype');
-        
+
         // given a click event, find the table entry that corresponds
         // to that location. Returns the matching element.
         function _findMatch(ev) {
@@ -125,28 +127,27 @@ openmdao.PaletteFrame = function(id,model) {
             });
             return match;
         }
-        
+
         contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
-            debug.info('View Docs context event:');
-            var modpath = _findMatch(ev).getAttribute('modpath');
-            var url = '/docs/plugins/'+modpath;
-            var parts = modpath.split('.')
-            var cname = parts.pop()
+            var modpath = _findMatch(ev).getAttribute('modpath'),
+                url     = '/docs/plugins/'+modpath,
+                parts   = modpath.split('.'),
+                cname   = parts.pop();
             window.open(url, 'Docs for '+modpath);
         }));
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
-            debug.info('View Metadata context event:');
-            var match = _findMatch(ev);
-            var win = jQuery('<div></div>');
-            var table = jQuery('<table cellpadding=5px>');
-            table.append('<tr><th></th><th></th></tr>')
-            var hdata = ['name','modpath','version','context','ifaces'];
-            var data = dtable.fnGetData(match.parentNode);
-            for (var i=1; i<data.length; i++) {
+            var match = _findMatch(ev),
+                win   = jQuery('<div></div>'),
+                table = jQuery('<table cellpadding=5px>')
+                          .append('<tr><th></th><th></th></tr>'),
+                hdata = ['name','modpath','version','context','ifaces'],
+                data  = dtable.fnGetData(match.parentNode),
+                i;
+            for (i=1; i<data.length; i++) {
                table.append('<tr><td>'+hdata[i]+'</td><td>'+data[i]+'</td></tr>');
             }
             win.append(table);
-            
+
             // Display dialog
             jQuery(win).dialog({
                 title: match.innerText+' Metadata',
@@ -154,7 +155,7 @@ openmdao.PaletteFrame = function(id,model) {
             });
         }));
         ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
-        
+
         // make everything draggable
         objtypes.draggable({ helper: 'clone', appendTo: 'body' });
         objtypes.addClass('jstree-draggable'); // allow drop on jstree
@@ -174,9 +175,9 @@ openmdao.PaletteFrame = function(id,model) {
             debug.warn('message length',message.length,'topic',message[0]);
         }
         else {
-            libs.html("<div>Updating...</div>")
+            self.elm.html("<div>Updating...</div>")
                 .effect('highlight',{color:'#ffd'},1000);
-            updatePalette(message[1][0]);
+            updateLibrary(message[1][0]);
         }
     }
 
@@ -186,19 +187,19 @@ openmdao.PaletteFrame = function(id,model) {
 
     /** update the display, with data from the model */
     this.update = function() {
-        libs.html("<div>Updating...</div>")
+        self.elm.html("<div>Updating...</div>")
             .effect('highlight',{color:'#ffd'},1000);
-        model.getTypes(updatePalette);
+        model.getTypes(updateLibrary);
     };
 
     // ask model for an update whenever something changes
     model.addListener('types', handleMessage);
 
+    // initial update
     this.update();
-
 };
 
 /** set prototype */
-openmdao.PaletteFrame.prototype = new openmdao.BaseFrame();
-openmdao.PaletteFrame.prototype.constructor = openmdao.PaletteFrame;
+openmdao.LibraryFrame.prototype = new openmdao.BaseFrame();
+openmdao.LibraryFrame.prototype.constructor = openmdao.LibraryFrame;
 

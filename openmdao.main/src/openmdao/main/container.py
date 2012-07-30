@@ -1423,7 +1423,6 @@ class Container(SafeHasTraits):
         new_exc = exc_type(msg)
         raise type(new_exc), new_exc, exc_traceback
 
-
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)
 CLASSES_TO_PROXY.append(FileRef)
@@ -1584,3 +1583,4 @@ def create_io_traits(cont, obj_info, iotype='in'):
             cont.raise_exception('create_io_traits cannot add trait %s' % entry,
                                  RuntimeError)
         cont.add_trait(name, cont.build_trait(ref_name, iostat, trait))
+

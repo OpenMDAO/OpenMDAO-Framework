@@ -30,14 +30,14 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.filevar import FileMetadata, FileRef
-from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.util.eggobserver import EggObserver
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.publisher import Publisher
 
+from openmdao.util.eggsaver import SAVE_CPICKLE
+from openmdao.util.eggobserver import EggObserver
 import openmdao.util.log as tracing
 
 
@@ -629,42 +629,6 @@ class Component(Container):
                             self._expr_sources[i] = (tup[0], count)
                         return False
         return True
-
-    #@rbac(('owner', 'user'))
-    #def get_configinfo(self, pathname='self'):
-        #"""Return a ConfigInfo object for this instance.  The
-        #ConfigInfo object should also contain ConfigInfo objects
-        #for children of this object.
-        #"""
-        #info = ConfigInfo(self, pathname)
-        #names = self.list_inputs()
-        #for name, trait in self.traits().items():
-            #if trait.is_trait_type(Instance):
-                #names.append(name)
-
-        #nameset = set(names)
-        #for cont in self.list_containers():
-            #if cont not in nameset:
-                #names.append(cont)
-
-        #for name in names:
-            #val = getattr(self, name)
-            #if self.trait(name).default == val:
-                #continue
-            #vname = '.'.join([pathname, name])
-            #if isinstance(val, (float, int, long, complex, basestring, bool)):
-                #info.cmds.append('%s = %s' % (vname, val))
-            #elif hasattr(val, 'get_configinfo'):
-                #cfg = val.get_configinfo(vname)
-                #if issubclass(cfg.klass, Container):
-                    #addtxt = "%s.add('%s', %s)" % (pathname,name,cfg.get_ctor())
-                #else:
-                    #addtxt = '%s = %s' % (vname, cfg.get_ctor())
-                #info.cmds.append((cfg, addtxt))
-            #else:
-                #raise TypeError("get_configinfo: don't know how to handle type %s" % type(val))
-
-        #return info
 
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
@@ -1704,7 +1668,6 @@ class Component(Container):
             attrs['Slots'] = slots
 
         return attrs
-
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
     """prints out validity status of all input and output traits

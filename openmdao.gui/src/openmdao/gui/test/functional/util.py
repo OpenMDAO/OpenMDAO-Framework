@@ -21,6 +21,8 @@ from nose.tools import eq_ as eq
 from pyvirtualdisplay import Display
 from selenium import webdriver
 
+from optparse import OptionParser
+
 from openmdao.util.network import get_unused_ip_port
 
 from pageobjects.project import ProjectsListPage
@@ -269,7 +271,7 @@ class _Runner(object):
 
 def begin(browser):
     """
-    Otherwise, load the projects page and return its page object.
+    Load the projects page and return its page object.
     """
     projects_page = ProjectsListPage(browser, TEST_CONFIG['port'])
     projects_page.go_to()
@@ -295,3 +297,60 @@ def new_project(new_project_page):
 
     return (project_info_page, data)
 
+
+def parse_test_args(args=None):
+    """ parse test options from command line args
+    """
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = OptionParser()
+    parser.add_option("--nonose", action="store_true", dest='nonose', 
+                      help="if present, run outside of nose")
+    parser.add_option("--test", action="store", type="string", dest='test', 
+                      help="specify a specific test to run", default=None)
+    parser.add_option("-v", action="store_true", dest='verbose', 
+                      help="show progress while running under nose")
+
+    (options, args) = parser.parse_args(args)
+
+    if len(args) > 0:
+        print 'unrecognized args: %s' % args
+        parser.print_help()
+        sys.exit(-1)
+        
+    return options
+
+def main(args=None):
+    """ run tests for module
+    """
+    options = parse_test_args(args)
+
+    if options.nonose or options.test:
+        # Run tests outside of nose.
+        module = sys.modules['__main__']
+        functions = inspect.getmembers(module, inspect.isfunction)
+        if options.test:
+            func = module.__dict__.get('_test_'+options.test)
+            if func is None:
+                print 'No test named _test_%s' % options.test
+                print 'Known tests are:', [name for name, func in functions
+                                                    if name.startswith('_test_')]
+                sys.exit(1)
+            tests = [func]
+        else:
+            # Run all tests.
+            tests = [func for name, func in functions if name.startswith('_test_')]
+
+        setup_server(virtual_display=False)
+        browser = setup_chrome()
+        for test in tests:
+            test(browser)
+        browser.quit()
+        teardown_server()
+    else:
+        # Run under nose.
+        import nose
+        sys.argv.append('--cover-package=openmdao.')
+        sys.argv.append('--cover-erase')
+        sys.exit(nose.runmodule())

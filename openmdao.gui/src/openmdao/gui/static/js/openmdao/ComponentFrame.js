@@ -1,10 +1,12 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ComponentFrame = function(model,pathname) {
+openmdao.ComponentFrame = function(model,pathname,tabName) {
     // TODO: hack alert... mangling pathname
     openmdao.ComponentFrame.prototype.init.call(this,
         'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
+
+    this.initiallySelected = tabName || 'Inputs'
 
     /***********************************************************************
      *  private
@@ -14,6 +16,8 @@ openmdao.ComponentFrame = function(model,pathname) {
     var self = this,
         panes = {};
 
+    self.elm.css({'overflow':'hidden'});
+
     /** load the table with the given properties */
     function loadTabs(properties) {
         if (!properties || properties.length === 0) {
@@ -21,13 +25,14 @@ openmdao.ComponentFrame = function(model,pathname) {
             return;
         }
 
-        var style = 'style="padding:5px;"',
-            dl = jQuery('<dl id="'+self.id+'_tabs"></dl>');
+        var tabbed_pane = jQuery('<div id="'+self.id+'_tabs">'),
+            tabs = jQuery('<ul>');
 
         self.elm.html("");
-        self.elm.append(dl);
+        self.elm.append(tabbed_pane);
+        tabbed_pane.append(tabs);
 
-        var tabcount = 0;
+        var tabcount = 0, selected = 0;
 
         jQuery.each(properties,function (name,val) {
             if (name === 'type') {
@@ -36,8 +41,6 @@ openmdao.ComponentFrame = function(model,pathname) {
                 }
             }
             else {
-                tabcount = tabcount + 1;
-
                 if (name.length > 10) {
                     tabname = name.substr(0,10);
                 }
@@ -46,23 +49,26 @@ openmdao.ComponentFrame = function(model,pathname) {
                 }
 
                 var contentID = self.id+'_'+name,
-                    tabID = contentID+'_tab',
-                    targetID = contentID+'_pane',
-                    dt = jQuery('<dt id="'+tabID+'" target="'+targetID+'">'+tabname+'</dt>'),
-                    dd = jQuery('<dd id="'+targetID+'"></dd>'),
-                    contentPane = jQuery('<div id="'+contentID+'" '+style+'></div>');
+                    tab = jQuery('<li id="'+contentID+'_tab">')
+                        .append('<a href="#'+contentID+'">'+tabname+'</a>'),
+                    contentPane = jQuery('<div id="'+contentID+'" style="overflow:auto"></div>');
 
-                dl.append(dt);
-                dl.append(dd);
-                dd.append(contentPane);
-
+                tabs.append(tab);
+                tabbed_pane.append(contentPane);
                 getContent(contentPane,name,val);
+                if (self.initiallySelected == name) {
+                    selected = tabcount;
+                }
+                tabcount = tabcount + 1;
             }
         });
 
-        self.elm.width((tabcount+1)*75);
-
-        openmdao.TabbedPane(self.id);
+        self.elm.height(400);
+        self.elm.width(600);
+        jQuery('#'+self.id).tabs({selected: selected});
+        if (typeof openmdao_test_mode != 'undefined') {
+            openmdao.Util.notify(self.pathname+' loaded');
+        }
     }
 
     /** populate content pane appropriately for the content */
@@ -94,6 +100,8 @@ openmdao.ComponentFrame = function(model,pathname) {
             panes[name].loadData(val);
         }
         else if ((name === 'EqConstraints') || (name === 'IneqConstraints')) {
+            if (self.initiallySelected === 'Constraints')
+                self.initiallySelected = name;
             panes[name] = new openmdao.ConstraintsPane(contentPane,model,
                                 self.pathname,name,true);
             panes[name].loadData(val);

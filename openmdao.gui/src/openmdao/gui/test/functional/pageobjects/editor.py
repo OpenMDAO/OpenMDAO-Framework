@@ -11,7 +11,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement
-from util import ValuePrompt
+from util import ValuePrompt, NotifierPage
 
 
 class UploadPage(BasePageObject):
@@ -43,15 +43,14 @@ class EditorPage(BasePageObject):
     title_prefix = 'OpenMDAO:'
 
     # Left side.
-    files_tab = ButtonElement((By.ID, 'ftree_tab'))
     file_menu = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/a'))
+                           '/html/body/div/div/nav2/ul/li/a'))
     newfile_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[1]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[1]/a'))
     newfolder_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[2]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[2]/a'))
     add_button = ButtonElement((By.XPATH,
-                           '/html/body/div/dl/dd/div/nav2/ul/li/ul/li[3]/a'))
+                           '/html/body/div/div/nav2/ul/li/ul/li[3]/a'))
 
     # File context menu.
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
@@ -66,18 +65,23 @@ class EditorPage(BasePageObject):
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Right side.
-    code_tab = ButtonElement((By.ID, 'code_tab'))
+    editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
+    editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
+    editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
+    editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
+    editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
+    editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
 
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
 
         self.locators = {}
-        self.locators["files"] = (By.XPATH, "//div[@id='ftree']//a[@class='file ui-draggable']")
+        self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
 
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element(By.ID, 'ftree'))
+            lambda browser: browser.find_element(By.ID, 'file_pane'))
 # FIXME: absolute delay for tree population.
         time.sleep(1)
         file_items = self.browser.find_elements(*self.locators["files"])
@@ -123,7 +127,30 @@ class EditorPage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         return page
-
+    
+    def find_text(self,text):
+        #click the 'find' button, and enter text. Not yet functional
+        self('editor_find_button').click()
+        alert = self.browser.switch_to_alert()
+        chain = ActionChains(alert)
+        chain.send_keys(text).perform()
+        chain.send_keys(Keys.RETURN).perform()
+        return
+    
+    def replace_text(self,old_text,new_text,replace_all=False):
+        #click the 'replace' or 'replace all 'button,
+        # and enter text to find and replace. Not yet functional
+        if replace_all:
+            self('editor_replace_button').click()
+        else:
+            self('editor_replaceAll_button').click()
+        return
+    
+    def undo(self):
+        #click the 'undo' button
+        self('editor_undo_button').click()
+        return
+    
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
@@ -135,25 +162,15 @@ class EditorPage(BasePageObject):
         self.edit_file(filename)
 
         # Switch to editor textarea
-        code_input_element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_css_selector('textarea'))
-# FIXME: absolute delay for editor to get ready.
-#        Problem is Firefox sometimes sends arrow key to scrollbar.
-#        Sadly this didn't completely fix the issue.
-        time.sleep(1)
+        code_input_element = self.get_text_area()
 
         # Go to the bottom of the code editor window
         for i in range(4):
             code_input_element.send_keys(Keys.ARROW_DOWN)
         # Type in the code.
         code_input_element.send_keys(code)
-        # Control-S to save.
-        if sys.platform == 'darwin':
-            code_input_element.send_keys(Keys.COMMAND + 's')
-        else:
-            code_input_element.send_keys(Keys.CONTROL + 's')
-# FIXME: absolute delay for save to complete.
-        time.sleep(2)
+        
+        self.save_document()
 
         # Back to main window.
         self.browser.switch_to_default_content()
@@ -179,3 +196,32 @@ class EditorPage(BasePageObject):
             chain.context_click(element).perform()
             self('file_edit').click()
 
+    def get_text_area(self):
+        code_input_element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_css_selector('textarea'))
+# FIXME: absolute delay for editor to get ready.
+#        Problem is Firefox sometimes sends arrow key to scrollbar.
+#        Sadly this didn't completely fix the issue.
+        time.sleep(1)
+        return code_input_element
+        
+    def save_document(self, overwrite=False):
+        #use 'save' button to save code
+        self('editor_save_button').click()
+        if overwrite:
+            WebDriverWait(self.browser, TMO).until(
+                lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
+            self('editor_overwrite_button').click()
+
+        NotifierPage.wait(self.browser, self.port)
+   
+        
+    def add_text_to_file(self, text):
+        """ Add the given text to the current file.  """
+        # Switch to editor textarea
+        code_input_element = self.get_text_area()
+
+        # Type in the code.
+        code_input_element.send_keys(text)
+        return code_input_element
+    

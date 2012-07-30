@@ -21,6 +21,7 @@ from tornado import httpserver, web
 # openmdao
 from openmdao.util.network import get_unused_ip_port
 from openmdao.util.fileutil import get_ancestor_dir, is_dev_build
+from openmdao.util.log import enable_console
 
 from openmdao.gui.util import ensure_dir, launch_browser
 from openmdao.gui.projectdb import Projects
@@ -196,6 +197,7 @@ def run(parser=None, options=None, args=None):
 def main():
     ''' process command line arguments and run
     '''
+    enable_console()
     parser = AppServer.get_argument_parser()
     options, args = parser.parse_known_args()
     run(parser, options, args)

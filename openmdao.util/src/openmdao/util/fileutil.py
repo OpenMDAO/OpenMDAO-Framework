@@ -189,10 +189,11 @@ def get_module_path(fpath):
             pnames.append(pname)
     return '.'.join(pnames[::-1])
 
-def find_module(name, path=None):
-    """Return the pathname of the uncompiled python file corresponding to the
+def find_module(name, path=None, py=True):
+    """Return the pathname of the python file corresponding to the
     given module name, or None if it can't be found. If path is set, search in
-    path for the file; otherwise search in sys.path.
+    path for the file; otherwise search in sys.path. If py is True, the
+    file must be an uncompiled python (.py) file.
     """
     if path is None:
         path = sys.path
@@ -201,6 +202,10 @@ def find_module(name, path=None):
     endings = [os.path.join(*nameparts)]
     endings.append(os.path.join(endings[0], '__init__.py'))
     endings[0] += '.py'
+    if not py:
+        endings.append(endings[0]+'c')
+        endings.append(endings[0]+'o')
+        endings.append(endings[0]+'d')
     
     for entry in path:
         for ending in endings:

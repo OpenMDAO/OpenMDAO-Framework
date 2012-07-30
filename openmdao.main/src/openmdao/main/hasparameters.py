@@ -129,7 +129,7 @@ class Parameter(object):
 
     def __repr__(self): 
         return '<Parameter(target=%s,low=%s,high=%s,fd_step=%s,scaler=%s,adder=%s,start=%s,name=%s)>' % \
-               (self.target, self.low, self.high, self.fd_step, self.scaler, self.adder,self.start,self.name)
+               self.get_config()
     
     def _transform(self, val):
         """ Unscales the variable (parameter space -> var space). """
@@ -190,7 +190,11 @@ class Parameter(object):
                          scaler=self.scaler, adder=self.adder, start=self.start, 
                          fd_step=self.fd_step, scope=self._expreval.scope, name=self.name)
 
-    
+    def get_config(self):
+        return (self.target, self.low, self.high, self.fd_step, 
+                self.scaler, self.adder, self.start, self.name)
+
+        
 class ParameterGroup(object):
     """A group of Parameters that are treated as one, i.e., they are all
     set to the same value.
@@ -201,7 +205,6 @@ class ParameterGroup(object):
             # prevent multiply nested ParameterGroups
             if not isinstance(param, Parameter):
                 raise ValueError("tried to add a non-Parameter object to a ParameterGroup")
-            
             
         self._params = params[:]
         self.low = max([x.low for x in self._params])
@@ -284,11 +287,14 @@ class ParameterGroup(object):
         """Return a set of Variable names referenced in our target strings."""
         result = set()
         for param in self._params:
-            result.update(param.get_referenced_varpaths(copy=False))
+            result.update(param.get_referenced_varpaths())
         return result
 
     def copy(self):
         return ParameterGroup([p.copy() for p in self._params])
+    
+    def get_config(self):
+        return [p.get_config() for p in self._params]
 
     
 class HasParameters(object): 
@@ -517,7 +523,7 @@ class HasParameters(object):
         """
         result = set()
         for param in self._parameters.values():
-            result.update(param.get_referenced_varpaths(copy=False))
+            result.update(param.get_referenced_varpaths())
         return result
     
     def _get_scope(self, scope=None):
