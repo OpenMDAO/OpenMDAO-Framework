@@ -41,42 +41,42 @@ def uploadGists (OpenMDAO_version):
 
 def upload (OpenMDAO_version):
 
-    """
-    file structure of tutorials:
-
-    examples
-            |_  openmdao.examples.TUTORIAL_NAME
-
-
-            |_
-                openmdao.examples.TUTORIAL_NAME
-                |_
-                    garbage we dont' care about
-
-                | MANIFEST.in (not always present. Holds file extensions we want???)
-
-                |_  
-                    openmdao 
-                    |_
-                        examples
-                        |_
-                            TUTORIAL_NAME
-                            |_
-                                test 
-                                |_  build tests for the tutorials (dont' want)
-
-                            | releaseinfo.py (dont' want)
-                            | releaseinfo.pyc (dont' want)
-                            | __init__.py (dont' want)
-
-                            |ACTUAL DOCUMENTS REQUIRED FOR THE TUTORIAL
-
-                            |something.csv (WANT)
-                            |stuff.py (WANT)
-                            |things.f (WANT)
-                            |junk.c    (WANT)
-                             
-    """
+#    """
+#    file structure of tutorials:
+#
+#    examples
+#            |_  openmdao.examples.TUTORIAL_NAME
+#
+#
+#            |_
+#                openmdao.examples.TUTORIAL_NAME
+#                |_
+#                    garbage we dont' care about
+#
+#                | MANIFEST.in (not always present. Holds file extensions we want???)
+#
+#                |_  
+#                    openmdao 
+#                    |_
+#                        examples
+#                        |_
+#                            TUTORIAL_NAME
+#                            |_
+#                                test 
+#                                |_  build tests for the tutorials (dont' want)
+#
+#                            | releaseinfo.py (dont' want)
+#                            | releaseinfo.pyc (dont' want)
+#                            | __init__.py (dont' want)
+#
+#                            |ACTUAL DOCUMENTS REQUIRED FOR THE TUTORIAL
+#
+#                            |something.csv (WANT)
+#                            |stuff.py (WANT)
+#                            |things.f (WANT)
+#                            |junk.c    (WANT)
+#                             
+#    """
 
     #stores list of gist_ids to notify the cookbook about
     gist_id_list = {}
