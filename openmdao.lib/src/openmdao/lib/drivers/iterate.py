@@ -160,6 +160,7 @@ class IterateUntil(Driver):
 
         if self.should_stop():
             return False
+        
         if self.iteration < self.max_iterations: 
             self.iteration += 1
             return True

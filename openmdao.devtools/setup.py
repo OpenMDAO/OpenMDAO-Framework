@@ -45,6 +45,7 @@ setup(name='openmdao.devtools',
           'openmdao.util',
           'boto',
           'paramiko>=1.7.7',
+          'requests',
       ],
       entry_points = {
           "console_scripts": [

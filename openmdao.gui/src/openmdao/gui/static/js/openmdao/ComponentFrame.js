@@ -1,10 +1,12 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ComponentFrame = function(model,pathname) {
+openmdao.ComponentFrame = function(model,pathname,tabName) {
     // TODO: hack alert... mangling pathname
     openmdao.ComponentFrame.prototype.init.call(this,
         'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
+
+    this.initiallySelected = tabName || 'Inputs'
 
     /***********************************************************************
      *  private
@@ -30,7 +32,7 @@ openmdao.ComponentFrame = function(model,pathname) {
         self.elm.append(tabbed_pane);
         tabbed_pane.append(tabs);
 
-        var tabcount = 0;
+        var tabcount = 0, selected = 0;
 
         jQuery.each(properties,function (name,val) {
             if (name === 'type') {
@@ -39,8 +41,6 @@ openmdao.ComponentFrame = function(model,pathname) {
                 }
             }
             else {
-                tabcount = tabcount + 1;
-
                 if (name.length > 10) {
                     tabname = name.substr(0,10);
                 }
@@ -56,12 +56,19 @@ openmdao.ComponentFrame = function(model,pathname) {
                 tabs.append(tab);
                 tabbed_pane.append(contentPane);
                 getContent(contentPane,name,val);
+                if (self.initiallySelected == name) {
+                    selected = tabcount;
+                }
+                tabcount = tabcount + 1;
             }
         });
 
         self.elm.height(400);
         self.elm.width(600);
-        jQuery('#'+self.id).tabs();
+        jQuery('#'+self.id).tabs({selected: selected});
+        if (typeof openmdao_test_mode != 'undefined') {
+            openmdao.Util.notify(self.pathname+' loaded');
+        }
     }
 
     /** populate content pane appropriately for the content */
@@ -93,6 +100,8 @@ openmdao.ComponentFrame = function(model,pathname) {
             panes[name].loadData(val);
         }
         else if ((name === 'EqConstraints') || (name === 'IneqConstraints')) {
+            if (self.initiallySelected === 'Constraints')
+                self.initiallySelected = name;
             panes[name] = new openmdao.ConstraintsPane(contentPane,model,
                                 self.pathname,name,true);
             panes[name].loadData(val);

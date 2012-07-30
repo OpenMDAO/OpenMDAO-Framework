@@ -154,7 +154,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         # DATAFLOW
         dataflow = json.loads(self.cserver.get_dataflow('prob'))
 
-        self.assertEqual(len(dataflow), 2)
+        self.assertEqual(len(dataflow), 5)
 
         self.assertTrue('components' in dataflow)
         components = dataflow['components']
@@ -178,6 +178,18 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('connections' in dataflow)
         connections = dataflow['connections']
         self.assertEqual(len(connections), 0)
+
+        self.assertTrue('parameters' in dataflow)
+        parameters = dataflow['parameters']
+        self.assertEqual(len(parameters), 0)
+
+        self.assertTrue('constraints' in dataflow)
+        constraints = dataflow['constraints']
+        self.assertEqual(len(constraints), 0)
+
+        self.assertTrue('objectives' in dataflow)
+        objectives = dataflow['objectives']
+        self.assertEqual(len(objectives), 0)
 
         # WORKFLOW
         self.cserver.onecmd('prob.driver.workflow.add("p")')
