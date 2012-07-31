@@ -76,7 +76,7 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
         // TODO: get content pane type more dynamically (a look up table maybe?)
         if (name === 'Inputs') {
             panes[name] = new openmdao.PropertiesPane(contentPane,model,
-                                self.pathname,name,('Parameters' in properties),true);
+                                self.pathname,name,!('Parameters' in properties),true);
             panes[name].loadData(properties[name]);
         }
         else if (name === 'Outputs') {
