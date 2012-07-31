@@ -16,7 +16,7 @@ import __builtin__
 
 import networkx as nx
 
-from openmdao.util.fileutil import find_files, get_module_path, find_module
+from openmdao.util.fileutil import find_files, get_module_path, find_module, get_ancestor_dir
 from openmdao.util.log import logger
 
 # This is a dict containing all of the entry point groups that OpenMDAO uses to
@@ -214,7 +214,9 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
             module = node.module
         else:
             parts = self.modpath.split('.')
-            module = '.'.join(parts[0:len(parts)-node.level]+[node.module])
+            module = '.'.join(parts[0:len(parts)-node.level])
+            if node.module is not None:
+                module += '.'.join([module, node.module])
 
         for al in node.names:
             if al.name == '*':
@@ -319,6 +321,8 @@ class PythonSourceTreeAnalyser(object):
             if os.path.getmtime(pyfile) <= self.fileinfo[pyfile][1]:
                 return self.fileinfo[pyfile][0]
 
+        logger.error("analyzing %s" % pyfile)
+        
         myvisitor = PythonSourceFileAnalyser(pyfile, self)
         self.modinfo[get_module_path(pyfile)] = myvisitor
         self.fileinfo[myvisitor.fname] = (myvisitor, os.path.getmtime(myvisitor.fname))

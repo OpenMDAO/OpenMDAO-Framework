@@ -19,7 +19,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver,
 
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
-from openmdao.util.dep import find_files, plugin_groups
+from openmdao.util.dep import find_files, plugin_groups, PythonSourceTreeAnalyser
 from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.util.log import logger
 from openmdao.main.publisher import Publisher
@@ -128,8 +128,9 @@ class ProjDirFactory(Factory):
         self._lock = threading.RLock()
         self.watchdir = watchdir
         self.project = None
+        self._shadow_proj_globals = {}
         try:
-            #self.analyzer = PythonSourceTreeAnalyser()
+            self.analyzer = PythonSourceTreeAnalyser()
             
             added_set = set()
             changed_set = set()
@@ -162,30 +163,39 @@ class ProjDirFactory(Factory):
         """Create and return an instance of the specified type, or None if
         this Factory can't satisfy the request.
         """
-        if server is None and res_desc is None and typ in self.analyzer.class_map:
-            with self._lock:
-                fpath = self.analyzer.class_map[typ].fname
-                modpath = self.analyzer.fileinfo[fpath][0].modpath
-                if modpath in sys.modules:
-                    if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
-                        reload(sys.modules[modpath])
-                else:
-                    sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
+        if server is None and res_desc is None:
+            if typ in self.analyzer.class_map:
+                with self._lock:
+                    fpath = self.analyzer.class_map[typ].fname
+                    modpath = self.analyzer.fileinfo[fpath][0].modpath
+                    if modpath in sys.modules:
+                        if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
+                            reload(sys.modules[modpath])
+                    else:
+                        sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
+                        try:
+                            __import__(modpath)
+                        except ImportError as err:
+                            logger.error("import of %s failed" % modpath)
+                            return None
+                        finally:
+                            sys.path = sys.path[1:]
+    
+                    mod = sys.modules[modpath]
                     try:
-                        __import__(modpath)
-                    except ImportError as err:
-                        logger.error("import of %s failed" % modpath)
+                        ctor = _find_module_attr(typ)
+                    except KeyError:
+                        logger.error("lookup of ctor failed")
                         return None
-                    finally:
-                        sys.path = sys.path[1:]
-
-                mod = sys.modules[modpath]
-                try:
-                    ctor = _find_module_attr(typ)
-                except KeyError:
-                    logger.error("lookup of ctor failed")
-                    return None
-                return ctor(**ctor_args)
+                    return ctor(**ctor_args)
+            else: # look in local project model globals
+                if self.project:
+                    try:
+                        klass = self.project.get(typ)
+                    except:
+                        return None
+                    logger.error("creating a '%s' from local dict" % typ)
+                    return klass(**ctor_args)
         return None
     
     def get_available_types(self, groups=None):
@@ -213,12 +223,6 @@ class ProjDirFactory(Factory):
                         types.append((typ, meta))
             return types
 
-    def _module_cleanup(self):
-        """This is called when a module reload fails and stuff from the original import
-        has to be removed from the project.
-        """
-        pass
-    
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
             return
@@ -229,49 +233,35 @@ class ProjDirFactory(Factory):
         with self._lock:
             imported = False
             modpath = get_module_path(fpath)
-            if modpath in sys.modules:  # it was imported earlier
-                mod = sys.modules[modpath]
-                imported = True
-                try:
-                    reload(mod)
-                except ImportError as err:
-                    self._module_cleanup()
-            else:
-                try:
-                    __import__(modpath, self.project.__dict__)
-                except:
-                    return
-            
-            ??? left off here...
-            #if fpath in self.analyzer.fileinfo: # file has been previously scanned
-                #visitor = self.analyzer.fileinfo[fpath][0]
-                #pre_set = set(visitor.classes.keys())
-                #modpath = get_module_path(fpath)
-                #if  modpath in sys.modules:  # we imported it earlier
-                    #mod = sys.modules[modpath]
-                    #imported = True
-                    #sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
-                    #try:
-                        #reload(mod)
-                    #except ImportError as err:
-                        #return None
-                    #finally:
-                        #sys.path = sys.path[1:]  # restore original sys.path
-                #elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
-                    #modpath = get_module_path(fpath)
-                    #if modpath in sys.modules:
-                        #reload(sys.modules[modpath])
-                #self.on_deleted(fpath, set()) # clean up old refs
-            #else:  # it's a new file
-                #pre_set = set()
+            if fpath in self.analyzer.fileinfo: # file has been previously scanned
+                visitor = self.analyzer.fileinfo[fpath][0]
+                pre_set = set(visitor.classes.keys())
+                modpath = get_module_path(fpath)
+                if  modpath in sys.modules:  # we imported it earlier
+                    mod = sys.modules[modpath]
+                    imported = True
+                    sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
+                    try:
+                        reload(mod)
+                    except ImportError as err:
+                        return None
+                    finally:
+                        sys.path = sys.path[1:]  # restore original sys.path
+                elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
+                    modpath = get_module_path(fpath)
+                    if modpath in sys.modules:
+                        reload(sys.modules[modpath])
+                self.on_deleted(fpath, set()) # clean up old refs
+            else:  # it's a new file
+                pre_set = set()
 
-            #visitor = self.analyzer.analyze_file(fpath)
-            #post_set = set(visitor.classes.keys())
+            visitor = self.analyzer.analyze_file(fpath)
+            post_set = set(visitor.classes.keys())
 
-            #deleted_set.update(pre_set - post_set)
-            #added_set.update(post_set - pre_set)
-            #if imported:
-                #changed_set.update(pre_set.intersection(post_set))
+            deleted_set.update(pre_set - post_set)
+            added_set.update(post_set - pre_set)
+            if imported:
+                changed_set.update(pre_set.intersection(post_set))
 
     def on_deleted(self, fpath, deleted_set):
         with self._lock:

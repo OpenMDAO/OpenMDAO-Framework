@@ -61,6 +61,8 @@ class ConsoleServer(cmd.Cmd):
         self.publish_updates = publish_updates
         self.publisher = None
         self._publish_comps = {}
+        
+        self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
         try:
@@ -72,8 +74,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Ensure that all root containers in the project dictionary know
             their own name and that all root assemblies are set as top
         '''
-        g = self.proj.__dict__.items()
-        for k, v in g:
+        for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 if v.name != k:
                     v.name = k
@@ -105,6 +106,7 @@ class ConsoleServer(cmd.Cmd):
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
         '''
+        self._partial_cmd = None
         self.exc_info = exc_info
         logger.error(str(err))
         print str(err.__class__.__name__), ":", err
@@ -123,25 +125,58 @@ class ConsoleServer(cmd.Cmd):
             it has been interpreted. If you want to modify the input line
             before execution (for example, variable substitution) do it here.
         '''
-        self._hist += [line.strip()]
+        #self._hist += [line.strip()]
         return line
 
     @modifies_model
     def onecmd(self, line):
-        self._hist += [line.strip()]
+        self._hist.append(line)
         try:
             cmd.Cmd.onecmd(self, line)
         except Exception, err:
             self._error(err, sys.exc_info())
 
+    def parseline(self, line):
+        """Have to override this because base class version strips the lines,
+        making multi-line python commands impossible.
+        """
+        #line = line.strip()
+        if not line:
+            return None, None, line
+        elif line[0] == '?':
+            line = 'help ' + line[1:]
+        elif line[0] == '!':
+            if hasattr(self, 'do_shell'):
+                line = 'shell ' + line[1:]
+            else:
+                return None, None, line
+        i, n = 0, len(line)
+        while i < n and line[i] in self.identchars: i = i+1
+        cmd, arg = line[:i], line[i:].strip()
+        return cmd, arg, line
+    
     def emptyline(self):
         # Default for empty line is to repeat last command - yuck
-        pass
+        if self._partial_cmd:
+            self.default('')
 
     def default(self, line):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
         '''
+        line = line.rstrip()
+        if self._partial_cmd is None:
+            if line.endswith(':'):
+                self._partial_cmd = line
+                return
+        else:
+            if line:
+                self._partial_cmd = self._partial_cmd + '\n' + line
+            if line.startswith(' ') or line.startswith('\t'):
+                return
+            else:
+                line = self._partial_cmd
+                self._partial_cmd = None
         try:
             result = self.proj.command(line)
             if result is not None:
@@ -154,16 +189,13 @@ class ConsoleServer(cmd.Cmd):
         ''' run the model (i.e. the top assembly)
         '''
 
-        if 'top' in self.proj.__dict__:
-            print "Executing..."
-            try:
-                top = self.proj.__dict__['top']
-                top.run(*args, **kwargs)
-                print "Execution complete."
-            except Exception, err:
-                self._error(err, sys.exc_info())
-        else:
-            print "Execution failed: No 'top' assembly was found."
+        print "Executing..."
+        try:
+            top = self.proj.get('top')
+            top.run(*args, **kwargs)
+            print "Execution complete."
+        except Exception, err:
+            self._error(err, sys.exc_info())
 
     @modifies_model
     def execfile(self, filename):
@@ -171,21 +203,22 @@ class ConsoleServer(cmd.Cmd):
         '''
 
         try:
-            # first import all definitions
-            basename = os.path.splitext(filename)[0]
-            cmd = 'from ' + basename + ' import *'
-            self.default(cmd)
-            # then execute anything after "if __name__ == __main__:"
-            # setting __name__ to __main__ won't work... fuggedaboutit
-            with open(filename) as file:
-                contents = file.read()
-            main_str = 'if __name__ == "__main__":'
-            contents.replace("if __name__ == '__main__':'", main_str)
-            idx = contents.find(main_str)
-            if idx >= 0:
-                idx = idx + len(main_str)
-                contents = 'if True:\n' + contents[idx:]
-                self.default(contents)
+            self.proj.command("execfile('%s')" % filename)
+            ## first import all definitions
+            #basename = os.path.splitext(filename)[0]
+            #cmd = 'from ' + basename + ' import *'
+            #self.default(cmd)
+            ## then execute anything after "if __name__ == __main__:"
+            ## setting __name__ to __main__ won't work... fuggedaboutit
+            #with open(filename) as file:
+                #contents = file.read()
+            #main_str = 'if __name__ == "__main__":'
+            #contents.replace("if __name__ == '__main__':'", main_str)
+            #idx = contents.find(main_str)
+            #if idx >= 0:
+                #idx = idx + len(main_str)
+                #contents = 'if True:\n' + contents[idx:]
+                #self.default(contents)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -212,7 +245,7 @@ class ConsoleServer(cmd.Cmd):
     def get_JSON(self):
         ''' return current state as JSON
         '''
-        return jsonpickle.encode(self.proj.__dict__)
+        return jsonpickle.encode(self.proj._model_globals)
 
     def get_container(self, pathname):
         ''' get the container with the specified pathname
@@ -221,12 +254,12 @@ class ConsoleServer(cmd.Cmd):
         cont = None
         parts = pathname.split('.', 1)
         root = parts[0]
-        if self.proj and root in self.proj.__dict__:
+        if self.proj and root in self.proj:
             if root == pathname:
-                cont = self.proj.__dict__[root]
+                cont = self.proj.get(root)
             else:
                 try:
-                    cont = self.proj.__dict__[root].get(parts[1])
+                    cont = self.proj.get(root).get(parts[1])
                 except Exception, err:
                     self._error(err, sys.exc_info())
         return cont, root
@@ -240,7 +273,7 @@ class ConsoleServer(cmd.Cmd):
         for k, v in cont.items():
             if is_instance(v, Component):
                 comp = {}
-                if cont == self.proj.__dict__:
+                if cont is self.proj._model_globals:
                     comp['pathname'] = k
                     children = self._get_components(v, k)
                 else:
@@ -259,8 +292,7 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' get hierarchical dictionary of openmdao objects
         '''
-        comps = self._get_components(self.proj.__dict__)
-        return jsonpickle.encode(comps)
+        return jsonpickle.encode(self._get_components(self.proj._model_globals))
 
     def get_connections(self, pathname, src_name, dst_name):
         ''' get list of source variables, destination variables and the
@@ -289,7 +321,7 @@ class ConsoleServer(cmd.Cmd):
                                     'connected': (name in connected)
                                    })
                 # connections to assembly can be passthrough (input to input)
-                if src == asm:
+                if src is asm:
                     connected = src.list_inputs(connected=True)
                     for name in src.list_inputs():
                         units = ''
@@ -367,8 +399,7 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
         else:
             components = []
-            g = self.proj.__dict__.items()
-            for k, v in g:
+            for k, v in self.proj.items():
                 if is_instance(v, Component):
                     components.append({'name': k,
                                        'pathname': k,
@@ -479,7 +510,7 @@ class ConsoleServer(cmd.Cmd):
                 print "Error adding component, parent not found:", parentname
         else:
             try:
-                self.proj.__dict__[name] = create(classname)
+                self.proj._model_globals[name] = create(classname)
             except Exception, err:
                 self._error(err, sys.exc_info())
             else:
@@ -548,7 +579,7 @@ class ConsoleServer(cmd.Cmd):
         if self.publisher:
             parts = pathname.split('.')
             if len(parts) > 1:
-                root = self.proj.__dict__[parts[0]]
+                root = self.proj.get(parts[0])
                 if root:
                     rest = '.'.join(parts[1:])
                     root.register_published_vars(rest, publish)

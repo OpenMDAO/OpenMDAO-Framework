@@ -4,6 +4,7 @@ Routines for handling 'Projects' in Python.
 
 import os
 import sys
+import shutil
 import inspect
 import tarfile
 import cPickle as pickle
@@ -115,22 +116,21 @@ class Project(object):
         macro_exec = False
         self._recorded_cmds = []
         self.path = expand_path(projpath)
-        self._model_dict = {}
-        modeldir = os.path.join(self.path, 'model')
-        self.activate()
-        setattr(self, 'create', create) # add create funct here so macros can call it
+        self._model_globals = {} # where all of the model-related stuff lives
         
         if projdirfactory:
-            projdirfactory.set_project(self)
+            projdirfactory.project = self
         
         if os.path.isdir(projpath):
+            self.activate()
+        
             # locate file containing state, create it if it doesn't exist
             statefile = os.path.join(projpath, '_project_state')
             if os.path.exists(statefile):
                 logger.error("found state file")
                 try:
                     with open(statefile, 'r') as f:
-                        self._model_dict = pickle.load(f)
+                        self._model_globals = pickle.load(f)
                 except Exception, e:
                     logger.error('Unable to restore project state: %s' % e)
                     macro_exec = True
@@ -147,34 +147,59 @@ class Project(object):
         else:  # new project
             logger.error("new project")
             os.makedirs(projpath)
-            os.mkdir(modeldir)
+            os.mkdir(os.path.join(self.path, 'model'))
+            self.activate()
             self._initialize()
+            self.save()
             
-        self.save()
-
-        SimulationRoot.chroot(self.path)
+        self._model_globals['create'] = create # add create funct here so macros can call it
+        self._model_globals['__name__'] = '__main__' # to allow execfile to work the way we want
+        self._model_globals['execfile'] = self.execfile
+        #self.save()
 
     def _initialize(self):
         logger.error("creating a blank assembly")
-        self.top = set_as_top(Assembly())
+        self._model_globals['top'] = set_as_top(Assembly())
         
     @property
     def name(self):
         return os.path.basename(self.path)
     
+    def __contains__(self, name):
+        return name in self._model_globals
+    
+    def items(self):
+        return self._model_globals.items()
+    
+    def execfile(self, fname):
+        with open(fname) as f:
+            contents = f.read()
+            code = compile(contents, fname, 'exec')
+        exec code in self._model_globals
+
+    def get(self, pathname):
+        parts = pathname.split('.')
+        try:
+            obj = self._model_globals[parts[0]]
+            for name in parts[1:]:
+                obj = getattr(obj, name)
+        except (KeyError, AttributeError) as err:
+            raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
+        return obj
+            
     def load_macro(self, fpath, execute=True, strict=False):
         with open(fpath, 'r') as f:
             for i,line in enumerate(f):
-                logger.error("reading <%s> from file" % line)
+                logger.error("reading <%s> from file" % line.strip('\n'))
                 if execute:
                     try:
-                        self.command(line.strip('\n'))
+                        self.command(line.rstrip('\n'))
                     except Exception as err:
                         logger.error('file %s line %d: %s' % (fpath, i+1, str(err)))
                         if strict:
                             raise
                 else:
-                    self._recorded_cmds.append(line.strip('\n'))
+                    self._recorded_cmds.append(line.rstrip('\n'))
 
     def command(self, cmd):
         err = None
@@ -183,12 +208,12 @@ class Project(object):
             compile(cmd, '<string>', 'eval')
         except SyntaxError:
             try:
-                exec(cmd) in self._model_dict
+                exec(cmd) in self._model_globals
             except Exception as err:
                 pass
         else:
             try:
-                result = eval(cmd, self._model_dict)
+                result = eval(cmd, self._model_globals)
             except Exception as err:
                 pass
             
@@ -203,6 +228,7 @@ class Project(object):
             
     def activate(self):
         """Puts this project's directory on sys.path."""
+        SimulationRoot.chroot(self.path)
         modeldir = os.path.join(self.path, 'model')
         if modeldir not in sys.path:
             sys.path = [modeldir]+sys.path
@@ -221,7 +247,7 @@ class Project(object):
         fname = os.path.join(self.path, '_project_state')
         try:
             with open(fname, 'wb') as f:
-                pickle.dump(self._model_dict, f)
+                pickle.dump(self._model_globals, f)
         except Exception as err:
             logger.error("Failed to pickle the project: %s" % str(err))
             
@@ -231,6 +257,7 @@ class Project(object):
                 for cmd in self._recorded_cmds:
                     f.write(cmd)
                     f.write('\n')
+                    logger.info(cmd)
 
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export. 
