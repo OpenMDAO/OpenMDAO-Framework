@@ -204,6 +204,7 @@ class Project(object):
     def command(self, cmd):
         err = None
         result = None
+        logger.error("executing command: '%s'" % cmd)
         try:
             compile(cmd, '<string>', 'eval')
         except SyntaxError:

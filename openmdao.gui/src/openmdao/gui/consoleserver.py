@@ -4,6 +4,7 @@ import sys
 import traceback
 import cmd
 import jsonpickle
+import time
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -14,6 +15,7 @@ from openmdao.main.api import Assembly, Component, Driver, logger, \
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
+from openmdao.util.fileutil import find_files
 
 from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
@@ -469,6 +471,13 @@ class ConsoleServer(cmd.Cmd):
             self.projdirfactory = ProjDirFactory(self.files.getcwd(),
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
+            # now make sure the ProjDirFactory is finished initializing
+            pyfiles = set([f for f in find_files(self.files.getcwd(), "*.py")])
+            while pyfiles.difference(self.projdirfactory.analyzer.fileinfo.keys()):
+                time.sleep(0.1)
+
+            logger.error("pyfiles = %s" % list(pyfiles))
+            logger.error("processed files = %s" % self.projdirfactory.analyzer.fileinfo.keys())
             self.proj = Project(os.path.join(self.files.getcwd(), parse_archive_name(filename)),
                                 projdirfactory=self.projdirfactory)
         except Exception, err:
