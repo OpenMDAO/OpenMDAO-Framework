@@ -13,7 +13,9 @@ from openmdao.main.api import Assembly, Component, Driver, logger, \
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
-from openmdao.main.project import project_from_archive
+from openmdao.util.nameutil import isidentifier
+
+from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
 
 from openmdao.main.publisher import Publisher
@@ -53,7 +55,6 @@ class ConsoleServer(cmd.Cmd):
         self.prompt = 'OpenMDAO>> '
 
         self._hist = []
-        self.known_types = []
 
         self.host = host
         self.projfile = ''
@@ -121,7 +122,7 @@ class ConsoleServer(cmd.Cmd):
 
     def precmd(self, line):
         ''' This method is called after the line has been input but before
-            it has been interpreted. If you want to modifdy the input line
+            it has been interpreted. If you want to modify the input line
             before execution (for example, variable substitution) do it here.
         '''
         self._hist += [line.strip()]
@@ -130,7 +131,6 @@ class ConsoleServer(cmd.Cmd):
     @modifies_model
     def onecmd(self, line):
         self._hist += [line.strip()]
-        # Override the onecmd() method so we can trap error returns
         try:
             cmd.Cmd.onecmd(self, line)
         except Exception, err:
@@ -144,24 +144,12 @@ class ConsoleServer(cmd.Cmd):
         ''' Called on an input line when the command prefix is not recognized.
             In that case we execute the line as Python code.
         '''
-        isStatement = False
         try:
-            compile(line, '<string>', 'eval')
-        except SyntaxError:
-            isStatement = True
-
-        if isStatement:
-            try:
-                exec(line) in self.proj.__dict__
-            except Exception, err:
-                self._error(err, sys.exc_info())
-        else:
-            try:
-                result = eval(line, self.proj.__dict__)
-                if result is not None:
-                    print result
-            except Exception, err:
-                self._error(err, sys.exc_info())
+            result = self.proj.command(line)
+            if result is not None:
+                print result
+        except Exception, err:
+            self._error(err, sys.exc_info())
 
     @modifies_model
     def run(self, *args, **kwargs):
@@ -218,6 +206,11 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self._hist
 
+    def get_recorded_cmds(self):
+        ''' Return this server's :attr:`_recorded_cmds`.
+        '''
+        return self._recorded_cmds[:]
+
     def get_JSON(self):
         ''' return current state as JSON
         '''
@@ -228,14 +221,14 @@ class ConsoleServer(cmd.Cmd):
             returns the container and the name of the root object
         '''
         cont = None
-        root = pathname.split('.')[0]
+        parts = pathname.split('.', 1)
+        root = parts[0]
         if self.proj and root in self.proj.__dict__:
             if root == pathname:
                 cont = self.proj.__dict__[root]
             else:
-                rest = pathname[len(root) + 1:]
                 try:
-                    cont = self.proj.__dict__[root].get(rest)
+                    cont = self.proj.__dict__[root].get(parts[1])
                 except Exception, err:
                     self._error(err, sys.exc_info())
         return cont, root
@@ -434,20 +427,23 @@ class ConsoleServer(cmd.Cmd):
         try:
             if self.proj:
                 self.proj.deactivate()
-            self.proj = project_from_archive(filename,
-                                             dest_dir=self.files.getcwd())
-            self.proj.activate()
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-            self.projdirfactory = ProjDirFactory(self.proj.path,
+            # have to do things in a specific order here. First, create the files,
+            # then point the ProjDirFactory at the files, then finally create the
+            # Project. Executing the project macro (which happens in the Project __init__)
+            # requires that the ProjDirFactory is already in place.
+            project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
+            self.projdirfactory = ProjDirFactory(self.files.getcwd(),
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
+            self.proj = Project(os.path.join(self.files.getcwd(), parse_archive_name(filename)))
         except Exception, err:
             self._error(err, sys.exc_info())
 
     def save_project(self):
-        ''' save the cuurent project state & export it whence it came
+        ''' save the current project state & export it whence it came
         '''
         if self.proj:
             try:
@@ -469,29 +465,30 @@ class ConsoleServer(cmd.Cmd):
     def add_component(self, name, classname, parentname):
         ''' add a new component of the given type to the specified parent.
         '''
-        name = name.encode('utf8')
-        if (parentname and len(parentname) > 0):
-            parent, root = self.get_container(parentname)
-            if parent:
-                try:
-                    if self.projdirfactory:
-                        obj = self.projdirfactory.create(classname)
-                    if obj:
-                        parent.add(name, obj)
-                    else:
+        if isidentifier(name):
+            name = name.encode('utf8')
+            if parentname:
+                parent, root = self.get_container(parentname)
+                if parent:
+                    try:
                         parent.add(name, create(classname))
+                    except Exception, err:
+                        self._error(err, sys.exc_info())
+                    else:
+                        self.proj._recorded_cmds.append('%s.add("%s",create("%s"))' %
+                                                        (parentname, name, classname))
+                else:
+                    print 'Error adding component, parent not found:', parentname
+            else:
+                try:
+                    self.proj.__dict__[name] = create(classname)
                 except Exception, err:
                     self._error(err, sys.exc_info())
-            else:
-                print "Error adding component, parent not found:", parentname
-        else:
-            try:
-                if (classname.find('.') < 0):
-                    self.default(name + '=' + classname + '()')
                 else:
-                    self.proj.__dict__[name] = create(classname)
-            except Exception, err:
-                self._error(err, sys.exc_info())
+                    self.proj._recorded_cmds.append('%s = create("%s"))' %
+                                               (name, classname))
+        else:
+            print 'Error adding component: "%s" is not a valid identifier' % name
 
     def cleanup(self):
         ''' Cleanup various resources.
@@ -572,3 +569,14 @@ class ConsoleServer(cmd.Cmd):
                         self._publish_comps[pathname] -= 1
                         if self._publish_comps[pathname] < 1:
                             del self._publish_comps[pathname]
+
+    def file_classes_changed(self, filename):
+        pdf = self.projdirfactory
+        if pdf:
+            filename = filename.lstrip('/')
+            filename = os.path.join(self.proj.path, filename)
+            info = pdf.analyzer.fileinfo.get(filename, (None, None))[0]
+            # if changed file contained classes and has already been imported..
+            if info and len(info.classes) > 0 and info.modpath in sys.modules:
+                return True
+        return False

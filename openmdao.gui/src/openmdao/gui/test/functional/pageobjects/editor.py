@@ -1,4 +1,3 @@
-import sys
 import logging
 import time
 
@@ -10,8 +9,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement
-from util import ValuePrompt
+from elements import ButtonElement, InputElement, TextElement
+from util import ValuePrompt, NotifierPage
 
 
 class UploadPage(BasePageObject):
@@ -70,7 +69,11 @@ class EditorPage(BasePageObject):
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
+    editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
 
+    editor_label = TextElement((By.ID, 'code_pane-label'))
+
+    file_chooser = InputElement((By.ID, 'filechooser'))
 
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
@@ -101,24 +104,19 @@ class EditorPage(BasePageObject):
         if file_path.endswith('.pyc'):
             file_path = file_path[:-1]
 
-        main_window_handle = self.browser.current_window_handle
-
         self('file_menu').click()
         self('add_button').click()
 
-        # Switch to the Window that pops up.
-        self.browser.switch_to_window('Add File')
-        page = UploadPage(self.browser, self.port)
-        page.upload_file(file_path)
+        self.file_chooser = file_path
 
-        # Go back to the main window.
-        self.browser.switch_to_window(main_window_handle)
-
-    def add_files(self):
+    def add_files(self, *file_paths):
+        """ Read in multiple 'file_path's
+            FIXME: doesn't work, see elements._InputElement
+            Have to use multiple calls to add_file for now
+        """
         self('file_menu').click()
         self('add_button').click()
-        self.browser.switch_to_window('Add File')
-        return UploadPage.verify(self.browser, self.port)
+        self('file_chooser').set_values(*file_paths)
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -127,8 +125,8 @@ class EditorPage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         return page
-    
-    def find_text(self,text):
+
+    def find_text(self, text):
         #click the 'find' button, and enter text. Not yet functional
         self('editor_find_button').click()
         alert = self.browser.switch_to_alert()
@@ -136,8 +134,8 @@ class EditorPage(BasePageObject):
         chain.send_keys(text).perform()
         chain.send_keys(Keys.RETURN).perform()
         return
-    
-    def replace_text(self,old_text,new_text,replace_all=False):
+
+    def replace_text(self, old_text, new_text, replace_all=False):
         #click the 'replace' or 'replace all 'button,
         # and enter text to find and replace. Not yet functional
         if replace_all:
@@ -145,12 +143,12 @@ class EditorPage(BasePageObject):
         else:
             self('editor_replaceAll_button').click()
         return
-    
+
     def undo(self):
         #click the 'undo' button
         self('editor_undo_button').click()
         return
-    
+
     def new_file(self, filename, code):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
@@ -162,30 +160,15 @@ class EditorPage(BasePageObject):
         self.edit_file(filename)
 
         # Switch to editor textarea
-        code_input_element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_css_selector('textarea'))
-# FIXME: absolute delay for editor to get ready.
-#        Problem is Firefox sometimes sends arrow key to scrollbar.
-#        Sadly this didn't completely fix the issue.
-        time.sleep(1)
+        code_input_element = self.get_text_area()
 
         # Go to the bottom of the code editor window
         for i in range(4):
             code_input_element.send_keys(Keys.ARROW_DOWN)
         # Type in the code.
         code_input_element.send_keys(code)
-        
-        #use 'save' button to save code
-        self('editor_save_button').click()
-        time.sleep(2)
-        
-        # Control-S to save.
-        #if sys.platform == 'darwin':
-        #    code_input_element.send_keys(Keys.COMMAND + 's')
-        #else:
-        #    code_input_element.send_keys(Keys.CONTROL + 's')
-# FIXME: absolute delay for save to complete.
-        #time.sleep(2)
+
+        self.save_document()
 
         # Back to main window.
         self.browser.switch_to_default_content()
@@ -211,3 +194,30 @@ class EditorPage(BasePageObject):
             chain.context_click(element).perform()
             self('file_edit').click()
 
+    def get_text_area(self):
+        code_input_element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_css_selector('textarea'))
+# FIXME: absolute delay for editor to get ready.
+#        Problem is Firefox sometimes sends arrow key to scrollbar.
+#        Sadly this didn't completely fix the issue.
+        time.sleep(1)
+        return code_input_element
+
+    def save_document(self, overwrite=False):
+        #use 'save' button to save code
+        self('editor_save_button').click()
+        if overwrite:
+            WebDriverWait(self.browser, TMO).until(
+                lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
+            self('editor_overwrite_button').click()
+
+        NotifierPage.wait(self.browser, self.port)
+
+    def add_text_to_file(self, text):
+        """ Add the given text to the current file.  """
+        # Switch to editor textarea
+        code_input_element = self.get_text_area()
+
+        # Type in the code.
+        code_input_element.send_keys(text)
+        return code_input_element

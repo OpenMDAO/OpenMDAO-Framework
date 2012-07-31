@@ -89,13 +89,35 @@ plugin_ifaces = set([
     'IDifferentiator',
 ])
 
-
-
 # predicate functions for selecting available types
 def is_plugin(name, meta):
     return len(plugin_ifaces.intersection(meta.get('ifaces',[]))) > 0
 
-
+def _find_module_attr(modpath):
+    """Return an attribute from a module based on the given modpath.
+    Import the module if necessary.
+    """
+    parts = modpath.split('.')
+    if len(parts) <= 1:
+        return None
+    
+    mname = '.'.join(parts[:-1])
+    mod = sys.modules.get(mname)
+    if mod is None:
+        try:
+            __import__(mname)
+            mod = sys.modules.get(mname)
+        except ImportError:
+            pass
+    if mod:
+        return getattr(mod, parts[-1])
+    
+    # try one more level down in case attr is nested
+    obj = _find_module_attr(mname)
+    if obj:
+        obj = getattr(obj, parts[-1], None)
+    return obj
+    
 class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
     the set of available types up-to-date as project files change.
@@ -104,7 +126,6 @@ class ProjDirFactory(Factory):
         super(ProjDirFactory, self).__init__()
         self._lock = threading.RLock()
         self.watchdir = watchdir
-        self.imported = {}  # imported files vs (module, ctor dict)
         try:
             self.analyzer = PythonSourceTreeAnalyser()
             
@@ -134,41 +155,42 @@ class ProjDirFactory(Factory):
             self.observer.daemon = True
             self.observer.start()
         
-    def _get_mod_ctors(self, mod, fpath, visitor):
-        self.imported[fpath] = (mod, {})
-        for cname in visitor.classes.keys():
-            self.imported[fpath][1][cname] = getattr(mod, cname.split('.')[-1])
-        
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
         """Create and return an instance of the specified type, or None if
         this Factory can't satisfy the request.
         """
+        logger.error("attempting to create a %s" % typ)
+        import pprint
+        logger.error(pprint.pformat(self.analyzer.class_map))
         if server is None and res_desc is None and typ in self.analyzer.class_map:
+            logger.error("found it in class_map")
             with self._lock:
                 fpath = self.analyzer.class_map[typ].fname
                 modpath = self.analyzer.fileinfo[fpath][0].modpath
-                if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1] and modpath in sys.modules:
-                    reload(sys.modules[modpath])
-                if fpath not in self.imported:
+                if modpath in sys.modules:
+                    if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
+                        reload(sys.modules[modpath])
+                else:
+                    logger.error("adding %s to sys.path" % get_ancestor_dir(fpath, len(modpath.split('.'))))
                     sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
                     try:
                         __import__(modpath)
                     except ImportError as err:
+                        logger.error("import failed")
                         return None
                     finally:
                         sys.path = sys.path[1:]
-                    mod = sys.modules[modpath]
-                    visitor = self.analyzer.fileinfo[fpath][0]
-                    self._get_mod_ctors(mod, fpath, visitor)
 
+                mod = sys.modules[modpath]
                 try:
-                    ctor = self.imported[fpath][1][typ]
+                    ctor = _find_module_attr(typ)
                 except KeyError:
+                    logger.error("lookup of ctor failed")
                     return None
                 return ctor(**ctor_args)
         return None
-
+    
     def get_available_types(self, groups=None):
         """Return a list of available types that cause predicate(classname, metadata) to
         return True.
@@ -203,17 +225,17 @@ class ProjDirFactory(Factory):
             if fpath in self.analyzer.fileinfo: # file has been previously scanned
                 visitor = self.analyzer.fileinfo[fpath][0]
                 pre_set = set(visitor.classes.keys())
-            
-                if fpath in self.imported:  # we imported it earlier
+                modpath = get_module_path(fpath)
+                if  modpath in sys.modules:  # we imported it earlier
+                    mod = sys.modules[modpath]
                     imported = True
                     sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
                     try:
-                        reload(self.imported[fpath][0])
+                        reload(mod)
                     except ImportError as err:
                         return None
                     finally:
                         sys.path = sys.path[1:]  # restore original sys.path
-                    #self.imported[fpath] = (m, self.imported[fpath][1])
                 elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
                     modpath = get_module_path(fpath)
                     if modpath in sys.modules:
@@ -236,11 +258,6 @@ class ProjDirFactory(Factory):
                 for pyfile in find_files(self.watchdir, "*.py"):
                     self.on_deleted(pyfile, deleted_set)
             else:
-                try:
-                    del self.imported[fpath]
-                except KeyError:
-                    pass
-            
                 visitor = self.analyzer.fileinfo[fpath][0]
                 deleted_set.update(visitor.classes.keys())
                 self.analyzer.remove_file(fpath)

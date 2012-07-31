@@ -19,7 +19,7 @@ def msg_split(frames):
     frames.  
     
     The format of the frames passed in is assumed to be: [rframe1, ..., '', plframe1, ... ]
-    It is assumed that there will be zero or more routing frames, and empty frame, and
+    It is assumed that there will be zero or more routing frames, an empty frame, and
     one or more payload frames.
     
     Returns a tuple of (routing_frames, payload_frames)

@@ -35,6 +35,7 @@ class WorkspacePage(BasePageObject):
     view_menu         = ButtonElement((By.ID, 'view-menu'))
     cmdline_button    = ButtonElement((By.ID, 'view-cmdline'))
     console_button    = ButtonElement((By.ID, 'view-console'))
+    files_button      = ButtonElement((By.ID, 'view-files'))
     library_button    = ButtonElement((By.ID, 'view-library'))
     objects_button    = ButtonElement((By.ID, 'view-components'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
@@ -54,6 +55,7 @@ class WorkspacePage(BasePageObject):
 
     # Left side.
     objects_tab = ButtonElement((By.ID, 'otree_tab'))
+    files_tab   = ButtonElement((By.ID, 'ftree_tab'))
 
     # Object context menu.
     obj_properties = ButtonElement((By.XPATH, "//a[(@rel='properties')]"))
@@ -62,6 +64,30 @@ class WorkspacePage(BasePageObject):
     obj_run        = ButtonElement((By.XPATH, "//a[(@rel='run')]"))
     obj_toggle     = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
     obj_remove     = ButtonElement((By.XPATH, "//a[(@rel='remove')]"))
+
+    # File menu
+    file_menu = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/a'))
+    newfile_button = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/ul/li[1]/a'))
+    newfolder_button = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/ul/li[2]/a'))
+    add_button = ButtonElement((By.XPATH,
+                           '/html/body/div/div/div/nav2/ul/li/ul/li[3]/a'))
+
+    # File context menu.
+    file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
+    file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
+    file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
+    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
+    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+    file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
+    file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
+    file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
+    file_delete = ButtonElement((By.XPATH, "//a[(@rel='deleteFile')]"))
+    file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
+
+    file_chooser = InputElement((By.ID, 'filechooser'))
 
     # Center.
     dataflow_tab = ButtonElement((By.ID, 'dataflow_tab'))
@@ -86,6 +112,7 @@ class WorkspacePage(BasePageObject):
 
         self.locators = {}
         self.locators["objects"] = (By.XPATH, "//div[@id='otree_pane']//li[@path]")
+        self.locators["files"] = (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
         # Wait for bulk of page to load.
         WebDriverWait(self.browser, 2*TMO).until(
@@ -98,7 +125,18 @@ class WorkspacePage(BasePageObject):
 
     def find_library_button(self, name):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
-        return ButtonElement((By.XPATH, path)).get(self)
+        for retry in range(5):
+            try:
+                element = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: browser.find_element(By.XPATH, path))
+            except TimeoutException as err:
+                logging.warning(str(err))
+            else:
+                break
+        else:
+            raise err
+
+        return element
 
     def run(self, timeout=TMO):
         """ Run current component. """
@@ -112,10 +150,10 @@ class WorkspacePage(BasePageObject):
         self('submit').click()
         NotifierPage.wait(self.browser, self.port, timeout)
 
-    def close_workspace(self):
+    def close_workspace(self, timeout=TMO):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
-        NotifierPage.wait(self.browser, self.port)
+        NotifierPage.wait(self.browser, self.port, timeout)
         self('project_menu').click()
 
         # Sometimes chromedriver hangs here, so we click in separate thread.
@@ -139,6 +177,67 @@ class WorkspacePage(BasePageObject):
         """ Open code editor.  Returns :class:`EditorPage`. """
         self('tools_menu').click()
         self('editor_button').click()
+        self.browser.switch_to_window('Code Editor')
+        return EditorPage.verify(self.browser, self.port)
+
+
+    def get_files(self):
+        """ Return names in the file tree. """
+        WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element(By.ID, 'ftree_pane'))
+# FIXME: absolute delay for tree population.
+        time.sleep(1)
+        file_items = self.browser.find_elements(*self.locators["files"])
+        file_names = []
+        for i in range(len(file_items)):
+            for retry in range(10):  # This has had issues...
+                try:
+                    file_names.append(self.browser.find_elements(*self.locators["files"])[i].text.strip())
+                except StaleElementReferenceException:
+                    logging.warning('get_files: StaleElementReferenceException')
+                else:
+                    break
+        return file_names
+
+    def add_file(self, file_path):
+        """ Read in `file_path` """
+        if file_path.endswith('.pyc'):
+            file_path = file_path[:-1]
+
+        self('file_menu').click()
+        self('add_button').click()
+
+        self.file_chooser = file_path
+
+    def new_file_dialog(self):
+        """ bring up the new file dialog """
+        self('files_tab').click()
+        self('file_menu').click()
+        self('newfile_button').click()
+        page = ValuePrompt(self.browser, self.port)
+        return page
+
+    def edit_file(self, filename, dclick=True):
+        """ Edit `filename` via double-click or context menu. """
+        self('files_tab').click()
+        xpath = "//a[(@path='/%s')]" % filename
+        element = WebDriverWait(self.browser, TMO).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
+        chain = ActionChains(self.browser)
+        if dclick:  # This has had issues...
+            for i in range(10):
+                try:
+                    chain.double_click(element).perform()
+                except StaleElementReferenceException:
+                    logging.warning('edit_file: StaleElementReferenceException')
+                    element = WebDriverWait(self.browser, 1).until(
+                        lambda browser: browser.find_element_by_xpath(xpath))
+                    chain = ActionChains(self.browser)
+                else:
+                    break
+        else:
+            chain.context_click(element).perform()
+            self('file_edit').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 
@@ -181,6 +280,7 @@ class WorkspacePage(BasePageObject):
         xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
         self('obj_dataflow').click()
@@ -195,15 +295,14 @@ class WorkspacePage(BasePageObject):
                     lambda browser: self('library_search').is_visible())
             except TimeoutException:
                 if retry:
-                    logging.warning('TimoutException in show_library')
+                    logging.warning('TimeoutException in show_library')
             else:
                 break
         else:
-            raise RuntimeError('Too many TimoutExceptions')
+            raise RuntimeError('Too many TimeoutExceptions')
 
     def add_library_item_to_dataflow(self, item_name, instance_name):
         """ Add component `item_name`, with name `instance_name`. """
-        #xpath = "//div[(@id='library')]//div[(@path='%s')]" % item_name
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))

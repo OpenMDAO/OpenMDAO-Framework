@@ -42,6 +42,8 @@ openmdao.CodeFrame = function(id,model) {
             .appendTo(self.elm),
         // editor
         editorID = id+'-textarea',
+        overwriteID = id+'-overwrite',
+        cancelID = id+'-cancel',
         editorArea = jQuery('<pre id="'+editorID+'">')
             .css({overflow:'hidden', position:'absolute'})
             .height('100%') //self.elm.height() - uiBar.height())
@@ -64,7 +66,6 @@ openmdao.CodeFrame = function(id,model) {
         bindKey: {win: "Ctrl-S", mac: "Command-S"},
         exec: function() { saveFile(); }
     });
-
     // make the editor a drop target for file objects
     editorArea.droppable ({
         accept: '.file',
@@ -77,9 +78,43 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
+    function successful_save(data, textStatus, jqXHR) {
+        if (typeof openmdao_test_mode !== 'undefined') {
+            openmdao.Util.notify('Save complete: ' +textStatus);
+        }
+    }
+
+    function handle409(jqXHR, textStatus, errorThrown) {
+        var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
+        jQuery(win).dialog({
+            'modal': true,
+            'title': 'Overwrite Existing Classes',
+            'buttons': [
+                {
+                  text: 'Overwrite',
+                  id: overwriteID,
+                  click: function() {
+                           jQuery(this).dialog('close');
+                           model.setFile(filepath,editor.getSession().getValue(), 1,
+                                         successful_save, null, handle409);
+                         }
+                },
+                {
+                   text: 'Cancel',
+                   id: cancelID,
+                   click: function() {
+                             jQuery(this).dialog('close');
+                          }
+                }
+              ]
+            }
+        );
+    }
+
     /** tell the model to save the current contents to current filepath */
     function saveFile() {
-        model.setFile(filepath,editor.session.doc.getValue());
+        model.setFile(filepath,editor.getSession().getValue(), 0,
+                      successful_save, null, handle409);
     }
 
     /***********************************************************************
@@ -92,7 +127,12 @@ openmdao.CodeFrame = function(id,model) {
         model.getFile(pathname,
             // success
             function(contents) {
-                file_label.text(filepath);
+                if (filepath.charAt(0) === "/") {
+                    file_label.text(filepath.substr(1));
+                }
+                else {
+                    file_label.text(filepath);
+                }
                 editor.session.doc.setValue(contents);
                 self.resize();
                 editor.resize();

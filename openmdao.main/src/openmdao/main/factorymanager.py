@@ -9,15 +9,17 @@ __all__ = [ "create", "register_class_factory", "get_available_types" ]
 
 
 import os
+import threading
 
 from pkg_resources import parse_version
 
 from openmdao.main.importfactory import ImportFactory
 from openmdao.main.pkg_res_factory import PkgResourcesFactory, plugin_groups
+from openmdao.util.log import logger
 
 _factories = []
-_pkg_res_factory = None
-
+_factory_lock = threading.Lock()
+typeset = set()  # set of all types that have been created
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     """Create and return an object specified by the given type,
@@ -27,24 +29,34 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     for fct in _factories:
         obj = fct.create(typname, version, server, res_desc, **ctor_args)
         if obj is not None:
-            return obj
+            break
+        
+    if obj:
+        typeset.add(typname)
+        return obj
     
     raise NameError("unable to create object of type '"+typname+"'")
 
 
 def register_class_factory(factory):
     """Add a Factory to the factory list."""
-    if factory not in _factories:
-        _factories.append(factory)
+    global _factories
+    with _factory_lock:
+        if factory not in _factories:
+            logger.error("adding new factory: %s" % factory)
+            _factories.append(factory)
         
 def remove_class_factory(factory):
     """Remove a Factory from the factory list."""
-    for fct in _factories:
-        if fct is factory:
-            if hasattr(factory, 'cleanup'):
-                factory.cleanup()
-            _factories.remove(factory)
-            return
+    global _factories
+    with _factory_lock:
+        for fct in _factories:
+            if fct is factory:
+                if hasattr(factory, 'cleanup'):
+                    factory.cleanup()
+                logger.error("removing factory: %s" % factory)
+                _factories.remove(factory)
+                return
 
 def _cmp(tup1, tup2):
     s1 = tup1[0].lower()
@@ -77,8 +89,7 @@ def get_available_types(groups=None):
 
 
 # register factory that loads plugins via pkg_resources
-_pkg_res_factory = PkgResourcesFactory()
-register_class_factory(_pkg_res_factory)
+register_class_factory(PkgResourcesFactory())
 
 # register factory for simple imports
 register_class_factory(ImportFactory())
