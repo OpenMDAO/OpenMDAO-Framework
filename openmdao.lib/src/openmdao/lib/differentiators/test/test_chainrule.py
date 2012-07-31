@@ -491,6 +491,33 @@ class ChainRuleTestCase(unittest.TestCase):
         grad = self.top.driver.differentiator.get_gradient(con)
         assert_rel_error(self, grad[0], -48.0, .001)
         
+    def test_parameter_groups(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y = 2.0*x']
+        deriv1 = ['dy_dx = 2.0']
+        self.top.add('driver', Driv())
+    
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp1, deriv1))
+            
+        self.top.driver.workflow.add(['comp1', 'comp2'])
+        
+        # Top driver setup
+        self.top.driver.differentiator = ChainRule()
+        obj = 'comp1.y+comp2.y'
+        self.top.driver.add_parameter(['comp1.x', 'comp2.x'], low=-100., high=100., fd_step=.001)
+        self.top.driver.add_objective(obj)
+    
+        self.top.comp1.x1 = 1.0
+        self.top.comp2.x2 = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 4.0, .001)
+        
     #def test_reset_state(self):
         
         #raise SkipTest("Test not needed yet.")
