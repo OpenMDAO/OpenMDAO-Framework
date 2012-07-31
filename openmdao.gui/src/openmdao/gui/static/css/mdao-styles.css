@@ -141,11 +141,6 @@ nav ul ul a:hover {
   background-color:#eee !important;
 }
 
-.editable {
-    color:#000000;
-    background-color:#FFFFFF;
-}
-
 /* CSS3 */
 .borderradius nav, dl dt,  h3, .button {
   -moz-border-radius:4px;
