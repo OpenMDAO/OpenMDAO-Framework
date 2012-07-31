@@ -3,6 +3,9 @@
 {% block title %} OpenMDAO: {{ current_user }} {% end %}
 
 {% block head %}
+    {% if filename %}
+        <script>openmdao.edit_filename = "{{ filename }}";</script>
+    {% end %}
     <script src="/static/js/openmdao/editor_main.js" type="text/javascript"></script>
 {% end %}
 
