@@ -83,7 +83,7 @@ openmdao.CodeFrame = function(id,model) {
             openmdao.Util.notify('Save complete: ' +textStatus);
         }
     }
-    
+
     function handle409(jqXHR, textStatus, errorThrown) {
         var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
         jQuery(win).dialog({
@@ -127,7 +127,12 @@ openmdao.CodeFrame = function(id,model) {
         model.getFile(pathname,
             // success
             function(contents) {
-                file_label.text(filepath);
+                if (filepath.charAt(0) === "/") {
+                    file_label.text(filepath.substr(1));
+                }
+                else {
+                    file_label.text(filepath);
+                }
                 editor.session.doc.setValue(contents);
                 self.resize();
                 editor.resize();

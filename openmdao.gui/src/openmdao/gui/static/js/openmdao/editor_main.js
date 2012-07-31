@@ -24,6 +24,7 @@ jQuery(function() {
     jQuery(window).bind('beforeunload', function(e) {
         code.close();
         ftree.close();
+        openmdao.model.editor = undefined;
     });
 
     // set the layout (note: global scope)
@@ -51,5 +52,14 @@ jQuery(function() {
     setTimeout(function() {
         jQuery('body').trigger('layoutresizeall');
     },100);
+
+    // if a filename was specified, load it & clean up the temporary variable
+    if (openmdao.edit_filename) {
+        code.editFile(openmdao.edit_filename);
+        delete openmdao.edit_filename;
+    }
+
+    // save ref to editor for others to use
+    openmdao.model.editor = code;
 });
 
