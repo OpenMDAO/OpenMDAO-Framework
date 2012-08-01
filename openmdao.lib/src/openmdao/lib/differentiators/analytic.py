@@ -153,7 +153,8 @@ class Analytic(ChainRule):
         # connection derivatives.
         # Objectives first
         i_eq = 0
-        wrt = self.var_list + self.param_names
+        wrt = self.var_list + self.param_names + \
+            [item for sublist in self.grouped_param_names for item in sublist]
         for expr in self._parent.get_objectives().values():
             
             obj_grad = expr.evaluate_gradient(scope=self._parent.parent,
@@ -165,6 +166,12 @@ class Analytic(ChainRule):
                     i_param = self.param_names.index(input_name)
                     self.EQS_zero[i_eq][i_param] = val
                     
+                elif input_name in self.grouped_param_names:
+                        
+                    grouped = self.grouped_param_names[input_name]
+                    i_param = self.param_names.index(grouped)
+                    self.EQS_zero[i_eq][i_param] = val
+                        
                 elif input_name in self.var_list:
                     
                     i_var = self.var_list.index(input_name)
@@ -189,6 +196,12 @@ class Analytic(ChainRule):
                     i_param = self.param_names.index(input_name)
                     self.EQS_zero[i_eq][i_param] += val
                     
+                elif input_name in self.grouped_param_names:
+                        
+                    grouped = self.grouped_param_names[input_name]
+                    i_param = self.param_names.index(grouped)
+                    self.EQS_zero[i_eq][i_param] += val
+
                 elif input_name in self.var_list:
                     
                     i_var = self.var_list.index(input_name)
@@ -202,6 +215,12 @@ class Analytic(ChainRule):
                     i_param = self.param_names.index(input_name)
                     self.EQS_zero[i_eq][i_param] += val
                     
+                elif input_name in self.grouped_param_names:
+                        
+                    grouped = self.grouped_param_names[input_name]
+                    i_param = self.param_names.index(grouped)
+                    self.EQS_zero[i_eq][i_param] += val
+
                 elif input_name in self.var_list:
                     
                     i_var = self.var_list.index(input_name)
@@ -256,7 +275,8 @@ class Analytic(ChainRule):
                 
                 # Parameter edges in adjoint mode are not added to the
                 # unknowns
-                if full_name not in self.param_names:
+                if full_name not in self.param_names and \
+                   full_name not in self.grouped_param_names:
                     self.var_list.append(full_name)
                 
         
@@ -372,6 +392,13 @@ class Analytic(ChainRule):
                          
                         self.RHS[i_eq][i_param] = 1.0
                          
+                    elif input_full in self.grouped_param_names:
+                             
+                        grouped = self.grouped_param_names[input_full]
+                        i_param = self.param_names.index(grouped)
+                             
+                        self.RHS[i_eq][i_param] = 1.0
+                             
                     # Assy Input connected to other outputs goes in LHS
                     else:
                         
@@ -452,6 +479,7 @@ class Analytic(ChainRule):
                     input_full = "%s.%s" % (item, input_name)
                     
                     if input_full not in self.param_names and \
+                       input_full not in self.grouped_param_names and \
                        input_full not in solver_conns:
                 
                         sources = ascope._depgraph.connections_to(input_full)
@@ -498,6 +526,14 @@ class Analytic(ChainRule):
                             self.RHS[i_eq][i_param] = \
                                 local_derivs[local_out][local_in]
                              
+                        elif input_full in self.grouped_param_names:
+                                 
+                            grouped = self.grouped_param_names[input_full]
+                            i_param = self.param_names.index(grouped)
+                                 
+                            self.RHS[i_eq][i_param] = \
+                                local_derivs[local_out][local_in]
+                                 
                         # Input is a dependent in a solver loop
                         elif input_full in solver_conns:
                             
