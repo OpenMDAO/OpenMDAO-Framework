@@ -42,6 +42,55 @@ def _test_console(browser):
     print "_test_console complete."
 
 
+def _test_editfile(browser):
+    print "running _test_editfile..."
+    # Check ability to open code editor by double clicking on file in workspace.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # create a couple of files
+    file1 = 'test1.py'
+    dlg = workspace_page.new_file_dialog()
+    dlg.set_text(file1)
+    dlg.click_ok()
+    time.sleep(0.5)
+    file2 = 'test2.py'
+    dlg = workspace_page.new_file_dialog()
+    dlg.set_text(file2)
+    dlg.click_ok()
+    time.sleep(1.0)
+
+    # verify file is opened in code editor by double clicking
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.edit_file(file1)
+    eq(str(editor_page.editor_label), file1)
+
+    # verify different file is opened in code editor by double clicking
+    browser.switch_to_window(workspace_window)
+    editor_page = workspace_page.edit_file(file2)
+    eq(str(editor_page.editor_label), file2)
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # verify code editor can be re-opened by double clicking on file
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.edit_file(file1)
+    eq(str(editor_page.editor_label), file1)
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_editfile complete."
+
+
 def _test_palette_update(browser):
     print "running _test_palette_update..."
     # Import some files and add components from them.
@@ -56,23 +105,24 @@ def _test_palette_update(browser):
     # View dataflow.
     workspace_page('dataflow_tab').click()
 
-    # Open code editor.
+    # Get file paths
+    file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'paraboloid.py')
+    file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'optimization_unconstrained.py')
+
+    # add first file from workspace
+    workspace_page('files_tab').click()
+    workspace_page.add_file(file1_path)
+    
+    # Open code editor.and add second file from there
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
+    time.sleep(0.5)
+    editor_page.add_file(file2_path)
 
-    # Add paraboloid file.
-    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'paraboloid.py')
-    editor_page.add_file(file_path)
-
-    # Add optimization_unconstrained file.
-    file_path = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                'optimization_unconstrained.py')
-    editor_page.add_file(file_path)
-
-    time.sleep(1.0)
-
-    # Check to make sure the files were added.
+    # Check code editor to make sure the files were added.
+    time.sleep(0.5)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
     if sorted(file_names) != sorted(expected_file_names):
@@ -83,6 +133,15 @@ def _test_palette_update(browser):
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
+
+    # Check workspace to make sure the files also show up there.
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
+    if sorted(file_names) != sorted(expected_file_names):
+        raise TestCase.failureException(
+            "Expected file names, '%s', should match existing file names, '%s'"
+            % (expected_file_names, file_names))
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
@@ -123,7 +182,7 @@ def _test_palette_update(browser):
             % (expected_file_names, file_names))
     browser.close()
     browser.switch_to_window(workspace_window)
-    
+
     # Now modify the parabola.py file and save the project again.  Pickling will fail
     # and we'll fall back to using the saved macro
 
@@ -131,7 +190,7 @@ def _test_palette_update(browser):
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
-    print "_test_import complete."
+    print "_test_palette_update complete."
 
 
 def _test_menu(browser):
@@ -150,7 +209,7 @@ def _test_menu(browser):
 
     #FIXME: These need to verify that the request has been performed.
     # View menu.
-    for item in ('console', 'library', 'objects',
+    for item in ('console', 'library', 'objects', 'files',
                  'properties', 'workflow', 'dataflow', 'refresh'):
         workspace_page('view_menu').click()
         workspace_page('%s_button' % item).click()
@@ -202,10 +261,10 @@ def _test_newfile(browser):
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
+# lines will be auto-indented by ace editor
 class Plane(Component):
 
-    x1 = Float(0.0, iotype='in')
-# subsequent lines will be auto-indented by ace editor
+x1 = Float(0.0, iotype='in')
 x2 = Float(0.0, iotype='in')
 x3 = Float(0.0, iotype='in')
 
@@ -230,7 +289,7 @@ f_x = Float(0.0, iotype='out')
     project_info_page.delete_project()
     print "_test_newfile complete."
 
-    
+
 def _test_macro(browser):
     print "running _test_macro..."
     # Creates a file in the GUI.
@@ -247,10 +306,10 @@ def _test_macro(browser):
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
+# lines will be auto-indented by ace editor
 class Foo(Component):
 
-    a = Float(0.0, iotype='in')
-# subsequent lines will be auto-indented by ace editor
+a = Float(0.0, iotype='in')
 b = Float(0.0, iotype='in')
 c = Float(0.0, iotype='out')
 d = Float(0.0, iotype='out')
@@ -276,7 +335,7 @@ d = Float(0.0, iotype='out')
     conn_page.connect_vars('comp1.c', 'comp2.a')
     time.sleep(1)  # Wait for display update.
     conn_page.close()
-    
+
     workspace_page.save_project()
 
     editor_page = workspace_page.open_editor()
@@ -284,20 +343,20 @@ d = Float(0.0, iotype='out')
     editor_page.edit_file('foo.py', dclick=False)
     editor_page.add_text_to_file('#just a comment\n')
     editor_page.save_document(overwrite=True)
-    
+
     browser.close()
     browser.switch_to_window(workspace_window)
-    workspace_page.save_project() # the pickle should fail here because an imported file has been modified
-    
+    workspace_page.save_project()  # the pickle should fail here because an imported file has been modified
+
     time.sleep(3)
     projects_page = workspace_page.close_workspace()
-    
+
     workspace_page = projects_page.open_project(project_dict['name'])
     workspace_page.show_dataflow('top')
     time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['comp1', 'comp2', 'driver', 'top'])
-    
+
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
@@ -317,8 +376,6 @@ def _test_addfiles(browser):
     editor_page = workspace_page.open_editor()
     editor_window = browser.current_window_handle
 
-    upload_page = editor_page.add_files()
-
     # Get path to  paraboloid file.
     paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
                                                      'paraboloid.py')
@@ -328,13 +385,12 @@ def _test_addfiles(browser):
                                               'optimization_unconstrained.py')
 
     # Add the files
-    upload_page.select_files((paraboloidPath, optPath))
-    upload_page.upload_files()
-
-    time.sleep(1.0)
+    # would like to test adding multiple files but Selenium doesn't support it
+    #editor_page.add_files(paraboloidPath, optPath)
+    editor_page.add_file(paraboloidPath)
+    editor_page.add_file(optPath)
 
     # Check to make sure the files were added.
-    browser.switch_to_window(editor_window)
     time.sleep(1)
     file_names = editor_page.get_files()
     expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
@@ -461,21 +517,21 @@ def _test_editable_inputs(browser):
 
     component_editor = transmission.editor_page()
 
-    # Find rows in inputs table 
-    # for transmission for single sim vehicle 
-    # that are editable. 
+    # Find rows in inputs table
+    # for transmission for single sim vehicle
+    # that are editable.
     elements = component_editor.browser.find_elements_by_xpath(\
             "//div[@id='Inputs_props']")[1]
             #/div[@class='slick-viewport']")
             #/div[@id='grid-canvas']\
             #/div[@row='1'] | div[@row='3']")
-    
+
     elements = elements.find_elements_by_xpath(\
             "div[@class='slick-viewport']\
             /div[@class='grid-canvas']\
             /div[@row='1' or @row='3']\
             /div[contains(@class, 'ui-state-editable')]")
-   
+
     # Verify that the rows are highlighted
     for element in elements:
         assert("rgb(255, 255, 255)" == element.value_of_css_property("background-color"))

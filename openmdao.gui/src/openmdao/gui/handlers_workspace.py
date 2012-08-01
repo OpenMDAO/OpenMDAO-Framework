@@ -199,7 +199,8 @@ class EditorHandler(ReqHandler):
     def get(self):
         '''Code Editor
         '''
-        self.render('workspace/editor.html')
+        filename = self.get_argument('filename', default=None)
+        self.render('workspace/editor.html', filename=filename)
 
 
 class ExecHandler(ReqHandler):

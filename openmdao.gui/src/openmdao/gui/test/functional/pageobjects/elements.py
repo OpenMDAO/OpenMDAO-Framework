@@ -7,7 +7,8 @@ import time
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, \
-                                       ElementNotVisibleException
+                                       ElementNotVisibleException, \
+                                       StaleElementReferenceException
 from basepageobject import TMO
 from grid import Grid
 
@@ -140,6 +141,20 @@ class _InputElement(_BaseElement):
                                     ' StaleElementReferenceException')
                 else:
                     raise
+
+    def set_values(self, *values):
+        """ FIXME: doesn't work, see Selenium issue #2239
+            http://code.google.com/p/selenium/issues/detail?id=2239
+        """
+        element = self.element
+        WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_displayed())
+        WebDriverWait(self._browser, TMO).until(
+            lambda browser: element.is_enabled())
+        if element.get_attribute('value'):
+            element.clear()
+        time.sleep(0.1)  # Just some pacing.
+        element.send_keys(*values)
 
 
 class _TextElement(_BaseElement):
