@@ -67,9 +67,7 @@ class SensitivityDriver(DriverUsesDerivatives):
         
         self._check()
         
-        
         # Calculate gradient of the workflow
-        self.calc_derivatives(first=True)
         self.ffd_order = 1
         self.differentiator.calc_gradient()
         self.ffd_order = 0

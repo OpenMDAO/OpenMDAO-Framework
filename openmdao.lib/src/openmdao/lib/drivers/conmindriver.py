@@ -406,7 +406,6 @@ class CONMINdriver(DriverUsesDerivatives):
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            self.calc_derivatives(first=True)
             self.ffd_order = 1
             self.differentiator.calc_gradient()
             self.ffd_order = 0
