@@ -130,7 +130,16 @@ class _InputElement(_BaseElement):
         if element.get_attribute('value'):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
-        element.send_keys(new_value)
+        for retry in range(3):
+            try:
+                element.send_keys(new_value)
+                return
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('InputElement.send_keys:'
+                                    ' StaleElementReferenceException')
+                else:
+                    raise
 
 
 class _TextElement(_BaseElement):

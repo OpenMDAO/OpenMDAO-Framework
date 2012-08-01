@@ -42,20 +42,25 @@ class ValuePrompt(BasePageObject):
         self('cancel_button').click()
 
 
-class NotifierPage(BasePageObject):
-    """ Overlay displayed by ``openmdao.Util.notify()``. """
-
-    message = TextElement((By.ID, 'notify-msg'))
-    ok_button = ButtonElement((By.ID, 'notify-ok'))
+class NotifierPage(object):
+    """
+    Overlay displayed by ``openmdao.Util.notify()``.
+    There can potentially be more than one of these displayed at the same
+    time in test mode (such as when saving a file with a syntax error).
+    """
 
     @staticmethod
-    def wait(browser, port, timeout=TMO):
+    def wait(parent, timeout=TMO, base_id=None):
         """ Wait for notification. Returns notification message. """
         time.sleep(0.1)  # Pacing.
-        page = NotifierPage(browser, port)
-        WebDriverWait(browser, timeout).until(
-            lambda browser: browser.find_element(*page('message')._locator))
-        message = page.message
-        page('ok_button').click()
+        base_id = base_id or 'notify'
+        msg_id = base_id+'-msg'
+        ok_id  = base_id+'-ok'
+        msg = WebDriverWait(parent.browser, timeout).until(
+                  lambda browser: browser.find_element(By.ID, msg_id))
+        ok = WebDriverWait(parent.browser, timeout).until(
+                  lambda browser: browser.find_element(By.ID, ok_id))
+        message = msg.text
+        ok.click()
         return message
 

@@ -278,6 +278,7 @@ def _test_connections(browser):
     # no connections between vehicle assembly and transmission
     conn_page.set_source_component('')
     conn_page.set_target_component('transmission')
+    time.sleep(0.5)
     eq(conn_page.check_variable_figures(), 0)
 
     # connect assembly variable to component variable

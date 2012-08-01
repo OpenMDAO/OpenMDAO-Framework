@@ -13,8 +13,10 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
+    from selenium.common.exceptions import TimeoutException
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
+    from pageobjects.util import NotifierPage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -292,6 +294,7 @@ d = Float(0.0, iotype='out')
     
     workspace_page = projects_page.open_project(project_dict['name'])
     workspace_page.show_dataflow('top')
+    time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['comp1', 'comp2', 'driver', 'top'])
     
@@ -486,7 +489,66 @@ def _test_editable_inputs(browser):
     project_info_page.delete_project()
     print "_test_editable_inputs complete."
 
+
+def _test_console_errors(browser):
+    print "running _test_console_errors..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Set input to illegal value.
+    top = workspace_page.get_dataflow_figure('top', '')
+    editor = top.editor_page(double_click=False)
+    inputs = editor.get_inputs()
+    inputs[1][2] = '42'  # force_execute
+    message = NotifierPage.wait(editor)
+    eq(message, "TraitError: The 'force_execute' trait of an Assembly instance"
+                " must be a boolean, but a value of 42 <type 'int'> was"
+                " specified.")
+    editor.close()
+
+    # Save file with syntax error.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    editor_page.new_file('bug.py', """
+from openmdao.main.api import Component
+class Bug(Component):
+def execute(self)
+    pass
+""", check=False)
+
+    message = NotifierPage.wait(editor_page, base_id='file-error')
+    eq(message, 'invalid syntax (bug.py, line 6)')
+    NotifierPage.wait(editor_page)  # Save complete.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Load file with instantiation error.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    editor_page.new_file('bug2.py', """
+from openmdao.main.api import Component
+from nowhere import nothing
+class Bug2(Component):
+pass
+""")
+    browser.close()
+    browser.switch_to_window(workspace_window)
+    workspace_page.show_library()
+    workspace_page.library_search = 'In Project\n'
+    time.sleep(0.5)
+    workspace_page.find_library_button('Bug2').click()
+    workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
+    message = NotifierPage.wait(workspace_page)
+    eq(message, "NameError: unable to create object of type 'bug2.Bug2'")
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_console_errors complete."
+
+
 if __name__ == '__main__':
     main()
-
 
