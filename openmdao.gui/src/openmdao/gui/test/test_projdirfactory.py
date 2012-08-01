@@ -41,14 +41,10 @@ class ProjDirFactoryTestCase(unittest.TestCase):
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
         build_directory(_dstruct, topdir=self.tdir)
-        #try:
-            #sys.path = [self.tdir] + sys.path
-            #if 'mydrv' in sys.modules:
-                #reload(sys.modules['mydrv'])  # in case mydrv was already imported in earlier test
-        #finally:
-            #sys.path = sys.path[1:]
+        sys.path = [self.tdir] + sys.path
 
     def tearDown(self):
+        sys.path.remove(self.tdir)
         for pyfile in find_files(self.tdir, "*.py"):
             modpath = get_module_path(pyfile)
             if modpath in sys.modules:
@@ -57,18 +53,18 @@ class ProjDirFactoryTestCase(unittest.TestCase):
 
     def test_with_observer(self):
         pdf = ProjDirFactory(self.tdir)
-        time.sleep(2)
         try:
             expected = ['mydrv.MyDrv', 'mydrv.MyDrv2', 'mycomp.MyComp']
             types = dict(pdf.get_available_types())
             typenames = types.keys()
             print "typenames = %s" % typenames
             self.assertEqual(set(typenames), set(expected))
-            self.assertEqual(set(types['mydrv.MyDrv']['ifaces']), set(['IContainer', 'IComponent', 'IDriver']))
+            self.assertEqual(set(types['mydrv.MyDrv']['ifaces']), 
+                             set(['IContainer', 'IComponent', 'IDriver','IHasEvents']))
             self.assertEqual(set(types['mycomp.MyComp']['ifaces']), set(['IContainer', 'IComponent']))
-            self.assertTrue('mydrv.MyDrv' in pdf.analyzer.class_map)
-            self.assertTrue('mydrv.MyDrv2' in pdf.analyzer.class_map)
-            self.assertTrue('mycomp.MyComp' in pdf.analyzer.class_map)
+            self.assertTrue('mydrv.MyDrv' in pdf._classes)
+            self.assertTrue('mydrv.MyDrv2' in pdf._classes)
+            self.assertTrue('mycomp.MyComp' in pdf._classes)
 
             # now try creating a MyDrv
             mydrv = pdf.create('mydrv.MyDrv')
@@ -88,7 +84,7 @@ class MyComp2(Component):
             typenames = types.keys()
             self.assertEqual(set(typenames), set(expected + ['mycomp2.MyComp2']))
             self.assertEqual(set(types['mycomp2.MyComp2']['ifaces']), set(['IContainer', 'IComponent']))
-            self.assertTrue('mycomp2.MyComp2' in pdf.analyzer.class_map)
+            self.assertTrue('mycomp2.MyComp2' in pdf._classes)
 
             # now test removal
             os.remove(os.path.join(self.tdir, 'mycomp2.py'))
@@ -96,7 +92,7 @@ class MyComp2(Component):
             types = dict(pdf.get_available_types())
             typenames = types.keys()
             self.assertEqual(set(typenames), set(expected))
-            self.assertTrue('mycomp2.MyComp2' not in pdf.analyzer.class_map)
+            self.assertTrue('mycomp2.MyComp2' not in pdf._classes)
 
             # now try modifying an existing file
             with open(os.path.join(self.tdir, 'mydrv.py'), 'w') as f:

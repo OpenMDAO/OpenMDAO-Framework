@@ -144,10 +144,8 @@ class _FileInfo(object):
         self.modtime = os.path.getmtime(fpath)
         if self.modpath in sys.modules:
             mod = sys.modules[self.modpath]
-            print '   reloading %s' % self.modpath
             self._reload()
         else:
-            print '   importing %s' % self.modpath
             __import__(self.modpath)
         module = sys.modules[self.modpath]
         self.version = getattr(module, '__version__', None)
@@ -156,7 +154,6 @@ class _FileInfo(object):
     def _update_class_info(self):
         self.classes = {}
         cset = set(['.'.join([self.modpath,cname]) for cname in _ClassVisitor(self.fpath).classes])
-        print "cset = %s" % list(cset)
         module = sys.modules[self.modpath]
         for key,val in getmembers(module, isclass):
             fullname = '.'.join([self.modpath, key])
@@ -227,7 +224,6 @@ class ProjDirFactory(Factory):
             self._ownsobserver = False
         self.observer.schedule(PyWatcher(self), path=self.watchdir, recursive=True)
         if self._ownsobserver:
-            print "starting observer"
             self.observer.daemon = True
             self.observer.start()
         
@@ -258,7 +254,6 @@ class ProjDirFactory(Factory):
             for typ in typset:
                 finfo = self._classes[typ]
                 meta = finfo.classes[typ]
-                print 'for %s, ifaces = %s' % (typ, meta['ifaces'])
                 if ifaces.intersection(meta['ifaces']):
                     meta = { 
                         'ifaces': meta['ifaces'],
@@ -271,25 +266,20 @@ class ProjDirFactory(Factory):
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
             return None
-        
         with self._lock:
             finfo = self._files.get(fpath)
             if finfo is None:
-                print 'new file %s' % fpath
                 fileinfo = _FileInfo(fpath)
                 self._files[fpath] = fileinfo
                 added_set.update(fileinfo.classes.keys())
                 for cname in fileinfo.classes.keys():
                     self._classes[cname] = fileinfo
-                print "finished processing of %s" % fpath
             else: # updating a file that's already been imported
-                print "updating existing file %s" % fpath
                 finfo.update(added_set, changed_set, deleted_set)
                 for cname in added_set:
                     self._classes[cname] = finfo
                 for cname in deleted_set:
                     del self._classes[cname]
-                print "finished processing of %s" % fpath
                 
     def on_deleted(self, fpath, deleted_set):
         with self._lock:
