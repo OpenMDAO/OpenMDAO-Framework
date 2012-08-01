@@ -34,7 +34,7 @@ def _test_newfile(browser):
     editor_page = workspace_page.open_editor()
 
     # Create the file (code editor automatically indents).
-    editor_page.new_file('plane.py', """
+    test_code = """
 from openmdao.main.api import Component
 from openmdao.lib.datatypes.api import Float
 
@@ -46,7 +46,8 @@ x2 = Float(0.0, iotype='in')
 x3 = Float(0.0, iotype='in')
 
 f_x = Float(0.0, iotype='out')
-""")
+"""
+    editor_page.new_file('plane.py', test_code)
 
     # Back to workspace.
     browser.close()
@@ -55,7 +56,7 @@ f_x = Float(0.0, iotype='out')
     # Go back to code editor, open file, verify source code
     
     editor_page = workspace_page.edit_file('plane.py')
-    eq(str(editor_page.editor_label), 'plane.py')
+    eq(str(editor_page.get_code()), test_code)
     
     # Clean up.
     projects_page = workspace_page.close_workspace()
