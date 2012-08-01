@@ -5,7 +5,7 @@ Routines for handling 'Projects' in Python.
 import os
 import sys
 import shutil
-import inspect
+from inspect import isclass #, getfile
 import tarfile
 import cPickle as pickle
 
@@ -89,7 +89,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
     #contains the given object, or None if it's not part of a distribution.
     #"""
     #try:
-        #fname = inspect.getfile(obj)
+        #fname = getfile(obj)
     #except TypeError:
         #return None
     
@@ -105,6 +105,22 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
     #return None
     
 
+class _ProjDict(dict):
+    """Use this dict as globals when exec'ing files. It substitutes classes
+    from the imported version of the file for the __main__ version.
+    """
+    def __init__(self):
+        super(_ProjDict, self).__init__()
+        self._modname = None
+        
+    def __getitem__(self, name):
+        if self._modname:
+            val = getattr(sys.modules[self._modname], name, None)
+            if isclass(val):
+                return val
+        return super(_ProjDict, self).__getitem__(name)
+
+
 class Project(object):
     def __init__(self, projpath, projdirfactory=None):
         """Initializes a Project containing the project found in the 
@@ -116,8 +132,11 @@ class Project(object):
         macro_exec = False
         self._recorded_cmds = []
         self.path = expand_path(projpath)
-        self._model_globals = {} # where all of the model-related stuff lives
-        
+        self._model_globals = _ProjDict()
+        self._model_globals['create'] = create    # add create funct here so macros can call it
+        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
+        self._model_globals['execfile'] = self.execfile
+
         if projdirfactory:
             projdirfactory.project = self
         
@@ -150,9 +169,6 @@ class Project(object):
             self._initialize()
             self.save()
             
-        self._model_globals['create'] = create # add create funct here so macros can call it
-        self._model_globals['__name__'] = '__main__' # to allow execfile to work the way we want
-        self._model_globals['execfile'] = self.execfile
         #self.save()
 
     def _initialize(self):
@@ -201,7 +217,7 @@ class Project(object):
         err = None
         result = None
         try:
-            compile(cmd, '<string>', 'eval')
+            code = compile(cmd, '<string>', 'eval')
         except SyntaxError:
             try:
                 exec(cmd) in self._model_globals
@@ -209,7 +225,7 @@ class Project(object):
                 pass
         else:
             try:
-                result = eval(cmd, self._model_globals)
+                result = eval(code, self._model_globals)
             except Exception as err:
                 pass
             
