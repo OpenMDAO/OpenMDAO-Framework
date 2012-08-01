@@ -177,7 +177,7 @@ openmdao.CodeFrame = function(id,model) {
 	
 	}
     }
-    
+
     function handle409(jqXHR, textStatus, errorThrown) {
         var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
         jQuery(win).dialog({
@@ -247,6 +247,18 @@ openmdao.CodeFrame = function(id,model) {
             // success
             function(contents) {
                 newTab(contents,filepath,fname_nodot,mode);
+                if (filepath.charAt(0) === "/") {
+                    file_label.text(filepath.substr(1));
+                }
+                else {
+                    file_label.text(filepath);
+                }
+                editor.session.doc.setValue(contents);
+                self.resize();
+                editor.resize();
+                editor.navigateFileStart();
+                var UndoManager = require("ace/undomanager").UndoManager;
+                editor.getSession().setUndoManager(new UndoManager());
             },
             // failure
             function(jqXHR, textStatus, errorThrown) {

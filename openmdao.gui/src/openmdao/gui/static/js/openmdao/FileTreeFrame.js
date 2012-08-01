@@ -1,8 +1,8 @@
 
-var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
-    var menu = [  
+    var menu = [
         {   "text": "File",
             "items": [
                 { "text": "New File",   "onclick": "openmdao.FileTreeFrame.prototype.newFile();" },
@@ -19,10 +19,49 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
     // initialize private variables
     var self = this,
-        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id),
+        tree = jQuery('<div>')
+            .appendTo(self.elm),
         filter_beg = '_.',
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
+
+    // Enable dropping of files onto file tree frame to add them to project
+    self.elm.bind({
+        dragenter: function () {
+            self.elm.addClass('hover ui-state-highlight');
+            return false;
+        },
+        dragover: function () {
+            return false;
+        },
+        dragleave: function () {
+            self.elm.removeClass('hover ui-state-highlight');
+            return false;
+        },
+        dragend: function () {
+            self.elm.removeClass('hover ui-state-highlight');
+            return false;
+        },
+        drop: function (e) {
+            self.elm.removeClass('hover ui-state-highlight');
+            e = e || window.event;
+            e.preventDefault();
+            e = e.originalEvent || e;
+
+            var i = 0,
+                files = (e.files || e.dataTransfer.files);
+            for (i = 0; i < files.length; i++) {
+                (function (i) {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                       model.setFile(files[i].name,e.target.result);
+                    };
+                    reader.readAsText(files[i]);
+                })(i);
+            }
+            return false;
+        }
+    });
 
     /** recursively build an HTML representation of a JSON file structure */
     function getFileHTML(path,val) {
@@ -31,7 +70,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             name = path.split('/'),
             name = name[name.length-1],
             ext = name.split('.'),
-            ext = ext[ext.length-1];
+            ext = ext[ext.length-1],
+            url = "application/octet-stream:"+name+":file"+path+"'";
 
         var html = '';
         if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
@@ -45,7 +85,8 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 html += "</ul>";
             }
             else {
-                html += " class='file' path='"+path+"'>"+name+"</a>";
+                html += " class='file' path='"+path+"' draggable='true'"
+                     +  " data-downloadurl='"+url+"'>"+name+"</a>";
             }
             html += "</li>";
         }
@@ -250,6 +291,17 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
                 debug.warn("node in file tree does not seem to be a file or a folder:",node);
             }
         });
+        
+        // enable dragging out to desktop (only supported under chrome)
+        // ref: http://www.thecssninja.com/javascript/gmail-dragout
+        // FIXME: doesn't work, handlers not getting added??
+        tree.find('.file').bind({
+            'dragstart': function(e) {
+                var url = jQuery(this).attr('data-download-url');
+                e.dataTransfer.setData('DownloadURL',url);
+                return false;
+            }
+        });
     }
 
     function handleMessage(message) {
@@ -298,23 +350,51 @@ openmdao.FileTreeFrame.prototype.newFolder = function(path) {
                      function(name) { openmdao.model.newFolder(name,path); } );
 };
 
-/** add an existing file to the current project */
+/** choose & add one or more files, optionally specifying a dest folder */
 openmdao.FileTreeFrame.prototype.addFile = function(path) {
-    var win = jQuery('window'),
-        height  = 150,
-        width   = 400,
-        options = {
-            'height' : height,
-            'width'  : width,
-            'top'    : screen.availHeight/2 - height/2,
-            'left'   : screen.availWidth/2  - width/2
-        };
+    filechooser = jQuery('<input id="filechooser" type="file" multiple="true"' +
+                         ' style="position:absolute;top:-500;left:-500" />')
+        .appendTo('body');
 
-    if (path) {
-        openmdao.Util.popupWindow('upload?path='+path,'Add File',options);
+    function uploadFiles(files, path) {
+        var formData = new FormData(),
+            xhr = new XMLHttpRequest(),
+            filename;
+        for (filename in files) {
+            formData.append('file', files[filename]);
+        }
+        // now post a new XHR request
+        xhr.open('POST', 'upload');
+        xhr.onload = function () {
+            if (xhr.status !== 200) {
+                debug.error('error uploading files',files,path);
+            }
+        };
+        if (path) {
+            formData.append('path', path);
+        }
+        xhr.send(formData);
+
+        filechooser.remove();  // self destruct, one use only
+    }
+
+    filechooser.bind({
+        'change': function(e) {
+            uploadFiles(this.files, path);
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
+
+    filechooser.show();
+    filechooser.focus();
+    if (typeof openmdao_test_mode !== 'undefined') {
+        // if testing, make the file chooser visible for selenium
+        filechooser.css({'left':'100px','top':'100px'});
     }
     else {
-        openmdao.Util.popupWindow('upload','Add File',options);
+        filechooser.click();
+        filechooser.hide();
     }
 };
 
