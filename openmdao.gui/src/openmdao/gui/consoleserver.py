@@ -468,18 +468,11 @@ class ConsoleServer(cmd.Cmd):
             # Project. Executing the project macro (which happens in the Project __init__)
             # requires that the ProjDirFactory is already in place.
             project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
-            self.projdirfactory = ProjDirFactory(self.files.getcwd(),
+            projdir = os.path.join(self.files.getcwd(), parse_archive_name(filename))
+            self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            # now make sure the ProjDirFactory is finished initializing
-            pyfiles = set([f for f in find_files(self.files.getcwd(), "*.py")])
-            while pyfiles.difference(self.projdirfactory.analyzer.fileinfo.keys()):
-                time.sleep(0.1)
-
-            logger.error("pyfiles = %s" % list(pyfiles))
-            logger.error("processed files = %s" % self.projdirfactory.analyzer.fileinfo.keys())
-            self.proj = Project(os.path.join(self.files.getcwd(), parse_archive_name(filename)),
-                                projdirfactory=self.projdirfactory)
+            self.proj = Project(projdir, projdirfactory=self.projdirfactory)
         except Exception, err:
             self._error(err, sys.exc_info())
 

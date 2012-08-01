@@ -127,7 +127,6 @@ class Project(object):
             # locate file containing state, create it if it doesn't exist
             statefile = os.path.join(projpath, '_project_state')
             if os.path.exists(statefile):
-                logger.error("found state file")
                 try:
                     with open(statefile, 'r') as f:
                         self._model_globals = pickle.load(f)
@@ -145,9 +144,8 @@ class Project(object):
                     logger.error('Attempting to reconstruct project using macro')
                 self.load_macro(macro_file, execute=macro_exec)
         else:  # new project
-            logger.error("new project")
             os.makedirs(projpath)
-            os.mkdir(os.path.join(self.path, 'model'))
+            #os.mkdir(os.path.join(self.path, 'model'))
             self.activate()
             self._initialize()
             self.save()
@@ -158,7 +156,6 @@ class Project(object):
         #self.save()
 
     def _initialize(self):
-        logger.error("creating a blank assembly")
         self._model_globals['top'] = set_as_top(Assembly())
         
     @property
@@ -190,7 +187,6 @@ class Project(object):
     def load_macro(self, fpath, execute=True, strict=False):
         with open(fpath, 'r') as f:
             for i,line in enumerate(f):
-                logger.error("reading <%s> from file" % line.strip('\n'))
                 if execute:
                     try:
                         self.command(line.rstrip('\n'))
@@ -204,7 +200,6 @@ class Project(object):
     def command(self, cmd):
         err = None
         result = None
-        logger.error("executing command: '%s'" % cmd)
         try:
             compile(cmd, '<string>', 'eval')
         except SyntaxError:
@@ -230,13 +225,13 @@ class Project(object):
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
-        modeldir = os.path.join(self.path, 'model')
-        if modeldir not in sys.path:
-            sys.path = [modeldir]+sys.path
+        modeldir = self.path
+        sys.path = [modeldir]+sys.path
+        logger.error("added %s to sys.path" % modeldir)
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
-        modeldir = os.path.join(self.path, 'model')
+        modeldir = self.path
         try:
             sys.path.remove(modeldir)
         except:

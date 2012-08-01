@@ -204,6 +204,8 @@ class ProjDirFactory(Factory):
             added_set = set()
             changed_set = set()
             deleted_set = set()
+            
+            sys.path = [self.watchdir]+sys.path
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
             
@@ -280,6 +282,7 @@ class ProjDirFactory(Factory):
                     self._classes[cname] = finfo
                 for cname in deleted_set:
                     del self._classes[cname]
+        logger.error("on_modified for %s: added_set = %s" % (fpath,list(added_set)))
                 
     def on_deleted(self, fpath, deleted_set):
         with self._lock:
@@ -311,6 +314,10 @@ class ProjDirFactory(Factory):
         """If this factory is removed from the FactoryManager during execution, this function
         will stop the watchdog observer thread.
         """
+        try:
+            sys.path.remove(self.watchdir)
+        except:
+            pass
         if self.observer and self._ownsobserver:
             self.observer.unschedule_all()
             self.observer.stop()
