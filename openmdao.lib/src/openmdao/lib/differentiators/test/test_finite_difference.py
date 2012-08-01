@@ -12,6 +12,7 @@ from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective, HasObjectives
+from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.decorators import add_delegate
 
@@ -127,6 +128,33 @@ class FiniteDifferenceTestCase(unittest.TestCase):
         self.model.driver.differentiator.calc_gradient()
         assert_rel_error(self, self.model.driver.differentiator.get_derivative('comp.y',wrt='comp.x'),
                                5.99, .01)
+
+    def test_parameter_groups(self):
+        
+        self.top = set_as_top(Assembly())
+    
+        exp1 = ['y = 2.0*x']
+        deriv1 = ['dy_dx = 2.0']
+        self.top.add('driver', Driv())
+    
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp1, deriv1))
+            
+        self.top.driver.workflow.add(['comp1', 'comp2'])
+        
+        # Top driver setup
+        self.top.driver.differentiator = FiniteDifference()
+        obj = 'comp1.y+comp2.y'
+        self.top.driver.add_parameter(['comp1.x', 'comp2.x'], low=-100., high=100., fd_step=.001)
+        self.top.driver.add_objective(obj)
+    
+        self.top.comp1.x1 = 1.0
+        self.top.comp2.x2 = 1.0
+        self.top.run()
+        self.top.driver.differentiator.calc_gradient()
+        
+        grad = self.top.driver.differentiator.get_gradient(obj)
+        assert_rel_error(self, grad[0], 4.0, .001)
 
     def test_Hessian(self):
         
