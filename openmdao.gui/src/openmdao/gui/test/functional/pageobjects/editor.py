@@ -1,6 +1,7 @@
 import logging
 import time
 
+from selenium import getEval
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -80,7 +81,10 @@ class EditorPage(BasePageObject):
 
         self.locators = {}
         self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
-
+    
+    def get_code(self):
+        return selenium.getEval("openmdao.frames.code_pane.getCode();")
+    
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
