@@ -542,5 +542,66 @@ def _test_editable_inputs(browser):
     project_info_page.delete_project()
     print "_test_editable_inputs complete."
 
+def _test_uneditable_inputs(browser):
+    print "running _test_uneditable_inputs..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Import vehicle_singlesim
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    file_path = pkg_resources.resource_filename('openmdao.lib.drivers',
+                                                'genetic.py')
+    editor_page.add_file(file_path)
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Replace 'top' with Vehicle ThreeSim  top.
+    time.sleep(1)
+    workspace_page.show_dataflow('top')
+    time.sleep(2)
+    workspace_page.show_library()
+    time.sleep(1)
+    workspace_page.find_library_button('Genetic').click()
+    driver_name = "g"
+    workspace_page.add_library_item_to_dataflow('genetic.Genetic',
+            driver_name)
+
+    # Get component editor for transmission.
+    workspace_page.expand_object('top')
+    #workspace_page.show_dataflow('top.' + driver_name)
+    genetic = workspace_page.get_dataflow_figure(driver_name, 'top')
+
+    component_editor = genetic.editor_page()
+
+    # Find rows in inputs table
+    # for transmission for single sim vehicle
+    # that are editable.
+    elements = component_editor.browser.find_elements_by_xpath(\
+            "//div[@id='Inputs_props']")[1]
+            #/div[@class='slick-viewport']")
+            #/div[@id='grid-canvas']\
+            #/div[@row='1'] | div[@row='3']")
+
+    elements = elements.find_elements_by_xpath(\
+            "div[@class='slick-viewport']\
+            /div[@class='grid-canvas']\
+            /div[@row]\
+            /div[contains(@class, 'l2') and contains(@class, 'r2')]")
+
+    # Verify that the rows are highlighted
+    for element in elements:
+
+        assert("rgba(0, 0, 0, 0)" == element.value_of_css_property("background-color"))
+        assert("rgb(255, 255, 255)" == element.value_of_css_property("color"))
+
+    component_editor.close()
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_uneditable_inputs complete."
 if __name__ == '__main__':
     main()
