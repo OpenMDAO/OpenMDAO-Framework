@@ -140,6 +140,7 @@ class _InputElement(_BaseElement):
                 if retry < 2:
                     logging.warning('InputElement.send_keys:'
                                     ' StaleElementReferenceException')
+                    element = self.element
                 else:
                     raise
 
