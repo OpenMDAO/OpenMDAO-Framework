@@ -3,6 +3,7 @@ Element descriptors and underlying object types which are intended to be used
 with BasePageObject.
 """
 
+import logging
 import time
 
 from selenium.webdriver.support.ui import WebDriverWait

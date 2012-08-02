@@ -276,6 +276,7 @@ f_x = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
 
     # Drag over Plane.
+    time.sleep(0.5)
     workspace_page.show_dataflow('top')
     workspace_page.show_library()
     workspace_page.library_search = 'In Project\n'

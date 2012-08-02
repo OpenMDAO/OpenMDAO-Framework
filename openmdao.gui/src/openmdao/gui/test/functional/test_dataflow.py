@@ -255,6 +255,7 @@ def _test_connections(browser):
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
     conn_page.set_target_component('engine')
+    time.sleep(0.5)
     eq(conn_page.check_variable_figures(), 0)
 
     # reconnect transmission RPM to engine RPM
