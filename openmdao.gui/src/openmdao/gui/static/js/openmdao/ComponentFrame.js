@@ -55,7 +55,7 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
 
                 tabs.append(tab);
                 tabbed_pane.append(contentPane);
-                getContent(contentPane,name,val);
+                getContent(contentPane,name,properties);
                 if (self.initiallySelected == name) {
                     selected = tabcount;
                 }
@@ -72,54 +72,54 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
     }
 
     /** populate content pane appropriately for the content */
-    function getContent(contentPane,name,val) {
+    function getContent(contentPane, name, properties) {
         // TODO: get content pane type more dynamically (a look up table maybe?)
         if (name === 'Inputs') {
             panes[name] = new openmdao.PropertiesPane(contentPane,model,
-                                self.pathname,name,true,true);
-            panes[name].loadData(val);
+                                self.pathname,name,!('Parameters' in properties),true);
+            panes[name].loadData(properties[name]);
         }
         else if (name === 'Outputs') {
             panes[name] = new openmdao.PropertiesPane(contentPane,model,
                                 self.pathname,name,false,true);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else if (name === 'CouplingVars') {
             panes[name] = new openmdao.CouplingVarsPane(contentPane,model,
                                 self.pathname,name,true);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else if (name === 'Objectives') {
             panes[name] = new openmdao.ObjectivesPane(contentPane,model,
                                 self.pathname,name,true);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else if (name === 'Parameters') {
             panes[name] = new openmdao.ParametersPane(contentPane,model,
                                 self.pathname,name,true);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else if ((name === 'EqConstraints') || (name === 'IneqConstraints')) {
             if (self.initiallySelected === 'Constraints')
                 self.initiallySelected = name;
             panes[name] = new openmdao.ConstraintsPane(contentPane,model,
                                 self.pathname,name,true);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else if (name === 'Workflow') {
             panes[name] = new openmdao.WorkflowPane(contentPane,model,
                                 self.pathname,name);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else if (name === 'Dataflow') {
             panes[name] = new openmdao.DataflowPane(contentPane,model,
                                 self.pathname,name);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else if (name === 'Slots') {
             panes[name] = new openmdao.SlotsPane(contentPane,model,
                                 self.pathname,name,false);
-            panes[name].loadData(val);
+            panes[name].loadData(properties[name]);
         }
         else {
             debug.warn("ComponentFrame: Unexpected object",self.pathname,name);
