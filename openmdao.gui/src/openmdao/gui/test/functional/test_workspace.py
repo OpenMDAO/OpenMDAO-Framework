@@ -574,9 +574,20 @@ def execute(self)
     pass
 """, check=False)
 
-    message = NotifierPage.wait(editor_page, base_id='file-error')
-    eq(message, 'invalid syntax (bug.py, line 6)')
+    # The error notifier can potentially arrive *before* the save notifier,
+    # resulting in the error notifier being underneath and causing a
+    # WebDriverException.  If that happens, try to handle the save and
+    # then retry the error notifier.
+    message = None
+    try:
+        message = NotifierPage.wait(editor_page, base_id='file-error')
+    except WebDriverException:
+        pass
     NotifierPage.wait(editor_page)  # Save complete.
+    if message is None:
+        message = NotifierPage.wait(editor_page, base_id='file-error')
+    eq(message, 'invalid syntax (bug.py, line 6)')
+    
     browser.close()
     browser.switch_to_window(workspace_window)
 
