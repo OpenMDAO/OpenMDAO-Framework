@@ -24,7 +24,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
             yield _test, browser
 
 
-def _test_console(browser):
+def k(browser):
     print "running _test_console..."
     # Check basic console functionality.
     projects_page = begin(browser)
