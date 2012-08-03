@@ -1,8 +1,12 @@
+import random
+import string
+
 from selenium.webdriver.common.by import By
 
 from dialog import DialogPage
-from elements import ButtonElement, GridElement, TextElement
+from elements import ButtonElement, GridElement, TextElement, InputElement
 from util import NotifierPage
+from basepageobject import TMO
 
 
 class ComponentPage(DialogPage):
@@ -83,6 +87,9 @@ class AssemblyPage(ComponentPage):
 
     dataflow_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Dataflow']"))
 
+    def show_dataflow(self):
+        self('dataflow_tab').element.click()
+
 
 class PropertiesPage(DialogPage):
     """ Component properties page. """
@@ -102,4 +109,34 @@ class PropertiesPage(DialogPage):
                 return
             found.append(row[0])
         raise RuntimeError('%r not found in inputs %s' % (name, found))
+
+
+class NameInstanceDialog(DialogPage):
+    """The dialog that appears to name a Component when its dragged onto the workspace"""
+
+    textInput = InputElement((By.ID, 'get-value-input'))
+    okButton = ButtonElement((By.ID, 'get-value-ok'))
+    cancelButton = ButtonElement((By.ID, 'get-value-cancel'))
+
+    
+    def __init__(self, browser, port):
+        super(NameInstanceDialog, self).__init__(browser, port, (By.XPATH, '//div[@id="get-value"]/..'))
+
+
+
+    def create_and_dismiss(self, name = None):
+        """Names the instance. Returns the name. Force a name with the name argument"""
+        chars = string.ascii_uppercase
+        name = name or ''.join(random.choice(chars).strip() for x in range(8))
+
+        self('textInput').value = name
+        self('okButton').click()
+
+        return name
+
+    def clickOK():
+        okButton.click()
+
+    def clickCancel():
+        cancelButton.click()
 
