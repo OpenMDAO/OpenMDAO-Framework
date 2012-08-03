@@ -9,7 +9,7 @@ import pkg_resources
 
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
-
+from nose.tools import assert_not_equal as neq
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
@@ -22,8 +22,8 @@ if sys.platform != 'win32':  # No testing on Windows yet.
             yield _test, browser
 
 
-def _test_newfile(browser):
-    print "running _test_newfile..."
+def _test_multitab(browser):
+    print "running _test_multitab..."
     # Creates a file in the GUI.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -34,34 +34,50 @@ def _test_newfile(browser):
     editor_page = workspace_page.open_editor()
 
     # Create the file (code editor automatically indents).
-    editor_page.new_file('plane.py', """
-from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+    test_code1 = """
+def f(x):
+    return math.sqrt(x)"""
+    
+    test_code2 = """
+def g(x):
+    return x**2"""
+    
+    editor_page.new_file('test1.py', test_code1)
+    editor_page.new_file('test2.py', test_code2)
+    
+    editor_page.edit_file('test1.py')
+    editor_page.add_text_to_file('\n #an extra comment line')
+    input_code1 = editor_page.get_code()
+    editor_page.save_document()
 
-class Plane(Component):
-
-    x1 = Float(0.0, iotype='in')
-# subsequent lines will be auto-indented by ace editor
-x2 = Float(0.0, iotype='in')
-x3 = Float(0.0, iotype='in')
-
-f_x = Float(0.0, iotype='out')
-""")
-
+    editor_page.edit_file('test2.py')
+    editor_page.add_text_to_file('\n #an extra comment line')
+    input_code2 = editor_page.get_code()
+    
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
 
     # Go back to code editor, open file, verify source code
     
-    editor_page = workspace_page.edit_file('plane.py')
-    eq(str(editor_page.editor_label), 'plane.py')
+    editor_page = workspace_page.edit_file('test1.py') #this file was saved
+    time.sleep(1)
+    loaded_code = editor_page.get_code()
+    eq(input_code1, loaded_code)
+    
+    
+    editor_page.edit_file('test2.py') #this file was not saved
+    time.sleep(1)
+    loaded_code = editor_page.get_code()
+    neq(input_code2, loaded_code)
     
     # Clean up.
+    browser.close()
+    browser.switch_to_window(workspace_window)
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
-    print "_test_newfile complete."
+    print "_test_multitab complete."
 
 
 if __name__ == '__main__':

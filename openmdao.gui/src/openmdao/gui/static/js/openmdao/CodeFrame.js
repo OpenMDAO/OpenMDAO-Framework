@@ -235,7 +235,7 @@ openmdao.CodeFrame = function(id,model) {
     /** get contents of specified file from model, load into editor */
     
     // for GUI testing
-    this.getCode = function() {return editor.getValue();}    
+    this.editor = editor;  
     
     this.editFile = function(pathname) {
         filepath = pathname;
@@ -289,6 +289,7 @@ openmdao.CodeFrame = function(id,model) {
         if (!fname_nodot) {fname_nodot= nameSplit(filepath);}
         if (!mode) {mode=findMode(filepath);}
         var newfile = new EditSession(contents); // new code session for ace 
+	newfile.setUseSoftTabs();
         newfile.setUndoManager(new UndoManager());
         newfile.setMode(mode);
         newfile.on('change', function(evt) {if (!(sessions[fname_nodot][3])) {renameTab("#"+fname_nodot,filepath+"*");sessions[fname_nodot][3] = true;} ;});
