@@ -18,7 +18,7 @@ class ComponentPage(DialogPage):
     def __init__(self, browser, port, locator):
         super(ComponentPage, self).__init__(browser, port, locator)
         # It takes a while for the full load to complete.
-        NotifierPage.wait(browser, port)
+        NotifierPage.wait(self)
 
     def get_inputs(self):
         """ Return inputs grid. """
