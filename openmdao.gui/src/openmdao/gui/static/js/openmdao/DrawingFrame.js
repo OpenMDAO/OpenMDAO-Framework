@@ -11,14 +11,19 @@ openmdao.DrawingFrame = function(id,model,pathname) {
      ***********************************************************************/
     // initialize private variables
     var self = this,
-        css = 'height: 350px;width: 600px;', //position:relative;',
+        css = 'height:100%; width:100%;', //position:relative;',
         drawing = jQuery('<div style="'+css+'";>')
            .appendTo(this.elm),
        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>");
 
     /** update the Drawing with SVG data */
     function updateDrawing(svgdata) {
-        drawing.html(svgdata);
+        if (svgdata.length > 0) {
+            drawing.html(svgdata);
+        }
+        else {
+            drawing.html('Drawing not available');
+        }
     }
 
     // handle message with new drawing data
@@ -35,6 +40,10 @@ openmdao.DrawingFrame = function(id,model,pathname) {
 
     // subscribe to model for data
     function draw(pathname) {
+        // accept the pathname of a component and look for a drawing attribute
+        if (! pathname.match(/.drawing$/)) {
+            pathname = pathname + '.drawing';
+        }
         if (self.pathname && self.pathname.length>0) {
             if (self.pathname !== pathname) {
                 model.removeListener(self.pathname, handleMessage);
