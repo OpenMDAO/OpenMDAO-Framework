@@ -8,8 +8,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         clrButton = jQuery("<div>Clear Parameters</div>"),
         columns = [
             {id:"target",  name:"Target",  field:"target",  width:140},
-            {id:"low",     name:"Low",     field:"low",     width:40},
-            {id:"high",    name:"High",    field:"high",    width:40},
+            {id:"low",     name:"Low",     field:"low",     width:70},
+            {id:"high",    name:"High",    field:"high",    width:70},
             {id:"scaler",  name:"Scaler",  field:"scaler",  width:60},
             {id:"adder",   name:"Adder",   field:"adder",   width:50},
             {id:"fd_step", name:"fd_step", field:"fd_step", width:60},

@@ -41,8 +41,8 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
                 }
             }
             else {
-                if (name.length > 10) {
-                    tabname = name.substr(0,10);
+                if (name.length > 12) {
+                    tabname = name.substr(0,12);
                 }
                 else {
                     tabname = name;
@@ -64,7 +64,7 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
         });
 
         self.elm.height(400);
-        self.elm.width(600);
+        self.elm.width(625);
         jQuery('#'+self.id).tabs({selected: selected});
         if (typeof openmdao_test_mode != 'undefined') {
             openmdao.Util.notify(self.pathname+' loaded');
@@ -99,7 +99,7 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
                                 self.pathname,name,true);
             panes[name].loadData(val);
         }
-        else if ((name === 'EqConstraints') || (name === 'IneqConstraints')) {
+        else if (name === 'Constraints') {
             if (self.initiallySelected === 'Constraints')
                 self.initiallySelected = name;
             panes[name] = new openmdao.ConstraintsPane(contentPane,model,
