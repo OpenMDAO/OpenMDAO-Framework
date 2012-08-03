@@ -82,8 +82,18 @@ openmdao.ConsoleFrame = function(id,model) {
         }
     }
 
+    /** display console error */
+    function consoleError(msg) {
+        // topic = msg[0];
+        text = msg[1];
+        openmdao.Util.notify(text, 'Console Error');
+    }
+
     // ask model for an update whenever something changes
     model.addListener('outstream',updateHistory);
+
+    // ask model for an update whenever a console error occurs.
+    model.addListener('console_errors', consoleError);
 };
 
 /** set prototype */

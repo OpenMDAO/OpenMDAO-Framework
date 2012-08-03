@@ -109,7 +109,18 @@ class ConsoleServer(cmd.Cmd):
         '''
         self.exc_info = exc_info
         logger.error(str(err))
-        print str(err.__class__.__name__), ":", err
+        msg = '%s: %s' % (err.__class__.__name__, err)
+        print msg
+
+        if not self.publisher:
+            try:
+                self.publisher = Publisher.get_instance()
+            except Exception as exc:
+                print 'Error getting publisher:', exc
+                self.publisher = None
+
+        if self.publisher:
+            self.publisher.publish('console_errors', msg)
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -538,7 +549,8 @@ class ConsoleServer(cmd.Cmd):
     def publish(self, pathname, publish):
         ''' publish the specified topic
         '''
-        if pathname in ['', 'components', 'files', 'types']:
+        if pathname in ['', 'components', 'files', 'types',
+                        'console_errors', 'file_errors']:
             # these topics are published automatically
             return
 
