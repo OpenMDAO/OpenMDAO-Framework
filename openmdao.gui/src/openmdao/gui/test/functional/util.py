@@ -110,6 +110,7 @@ _browsers_to_test = dict(
 
 
 def setup_server(virtual_display=True):
+    virtual_display = False
     """ Start server on ``localhost`` using an unused port. """
     global _display, _display_set
 

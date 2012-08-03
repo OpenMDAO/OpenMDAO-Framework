@@ -119,6 +119,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         this.top_left.style.left="0px";
         this.top_left.style.top="0px";
         this.top_left.style.fontSize="2px";
+        this.top_left.className="DataflowFigureTopLeft";
 
         this.top_right=document.createElement("div");
         this.top_right.style.background=circleIMG+" no-repeat top right";
@@ -138,6 +139,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         this.bottom_left.style.left="0px";
         this.bottom_left.style.top="0px";
         this.bottom_left.style.fontSize="2px";
+        this.bottom_left.className="DataflowFigureBottomLeft";
 
         this.bottom_right=document.createElement("div");
         this.bottom_right.style.background=circleIMG+" no-repeat bottom right";
@@ -147,6 +149,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         this.bottom_right.style.left="0px";
         this.bottom_right.style.top="0px";
         this.bottom_right.style.fontSize="2px";
+        this.bottom_right.className="DataflowFigureBottomRight";
 
         this.header=document.createElement("div");
         this.header.style.position="absolute";
@@ -168,6 +171,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         this.footer.style.backgroundColor="white";
         this.footer.style.borderBottom="1px solid #666666";
         this.footer.style.fontSize="2px";
+        this.footer.className="DataflowFigureFooter";
 
         this.contentArea=document.createElement("div");
         this.contentArea.style.position="absolute";
@@ -179,6 +183,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         this.contentArea.style.borderRight="1px solid #666666";
         this.contentArea.style.overflow="hidden";
         this.contentArea.style.fontSize="9pt";
+        this.contentArea.className="DataflowFigureContentArea";
         this.disableTextSelection(this.contentArea);
 
         item.appendChild(this.top_left);
