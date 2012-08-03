@@ -160,11 +160,9 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if not driver.differentiator:
             return obj, dobj, ddobj, g, dg
         
-        driver.calc_derivatives(first=True)
         driver.ffd_order = 1
         driver.differentiator.calc_gradient()
         
-        driver.calc_derivatives(second=True)
         driver.ffd_order = 2
         driver.differentiator.calc_hessian(reuse_first=True)
         

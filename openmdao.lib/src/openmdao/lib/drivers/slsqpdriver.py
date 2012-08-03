@@ -210,7 +210,6 @@ class SLSQPdriver(DriverUsesDerivatives):
         
         Note: m, me, la, n, f, g, df, and dg are unused inputs."""
         
-        self.calc_derivatives(first=True)
         self.ffd_order = 1
         self.differentiator.calc_gradient()
         self.ffd_order = 0
