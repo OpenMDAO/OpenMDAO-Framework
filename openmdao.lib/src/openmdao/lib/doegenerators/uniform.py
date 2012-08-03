@@ -7,8 +7,9 @@ from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Int
 from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.main.interfaces import implements, IDOEgenerator
+from openmdao.main.api import Container
 
-class Uniform(HasTraits):
+class Uniform(Container):
     """ DOEgenerator that performs a space-filling Design of Experiments with uniform
     distributions on all design variables. Plugs into the DOEgenerator socket on a 
     DOEdriver."""
