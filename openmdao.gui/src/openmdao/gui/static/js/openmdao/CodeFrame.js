@@ -235,7 +235,7 @@ openmdao.CodeFrame = function(id,model) {
     /** get contents of specified file from model, load into editor */
     
     // for GUI testing
-    this.getCode = function() {return editor.getValue();}    
+    this.editor = editor;  
     
     this.editFile = function(pathname) {
         filepath = pathname;
