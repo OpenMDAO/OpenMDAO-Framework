@@ -31,6 +31,7 @@ from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Int, Enum
 from openmdao.main.interfaces import implements, IDOEgenerator
+from openmdao.main.api import Container
 from openmdao.util.decorators import stub_if_missing_deps
 
 
@@ -158,7 +159,7 @@ _norm_map = {"1-norm":1,"2-norm":2}
 
 
 @stub_if_missing_deps('numpy')
-class LatinHypercube(HasTraits): 
+class LatinHypercube(Container): 
     """IDOEgenerator which provides a Latin hypercube DOE sample set.
     """    
     implements(IDOEgenerator)
