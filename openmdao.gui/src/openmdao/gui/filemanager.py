@@ -2,6 +2,7 @@ import os
 import os.path
 import shutil
 import tempfile
+import traceback
 import zipfile
 
 from watchdog.observers import Observer
@@ -21,7 +22,10 @@ class FilesPublisher(FileSystemEventHandler):
     def dispatch(self, event):
         ''' just publish the updated file collection
         '''
-        self.files.publish_files()
+        try:
+            self.files.publish_files()
+        except Exception:
+            traceback.print_exc()
 
 
 class FileManager(object):

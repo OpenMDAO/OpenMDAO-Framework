@@ -3,11 +3,13 @@ Element descriptors and underlying object types which are intended to be used
 with BasePageObject.
 """
 
+import logging
 import time
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, \
-                                       ElementNotVisibleException
+                                       ElementNotVisibleException, \
+                                       StaleElementReferenceException
 from basepageobject import TMO
 from grid import Grid
 
@@ -130,7 +132,17 @@ class _InputElement(_BaseElement):
         if element.get_attribute('value'):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
-        element.send_keys(new_value)
+        for retry in range(3):
+            try:
+                element.send_keys(new_value)
+                return
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('InputElement.send_keys:'
+                                    ' StaleElementReferenceException')
+                    element = self.element
+                else:
+                    raise
 
     def set_values(self, *values):
         """ FIXME: doesn't work, see Selenium issue #2239

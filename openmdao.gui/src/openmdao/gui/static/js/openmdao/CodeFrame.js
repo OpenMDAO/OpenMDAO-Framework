@@ -321,6 +321,16 @@ openmdao.CodeFrame = function(id,model) {
     this.getPathname = function() {
         return filepath;
     };
+
+    /** display file error */
+    function fileError(msg) {
+        // topic = msg[0];
+        text = msg[1];
+        openmdao.Util.notify(text, 'File Error', 'file-error');
+    }
+
+    // ask model for an update whenever a file error occurs.
+    model.addListener('file_errors', fileError);
 };
 
 /** set prototype */
