@@ -166,6 +166,10 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
 
             debug.info( "over slot", elm[0].id, o.name ) ;
 
+            if ( o.name === "warm_start_data" ) {
+                debug.info( "over slot for warm start data" ) ;
+            }
+
             //debug.info ("over", elm.find(".DataflowFigureHeader")[0].innerHTML, calculated_zindex, topmost_zindex )
         },
 
@@ -224,7 +228,6 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     return item;
 };
 
-openmdao.SlotFigure.prototype.figure_type="SlotFigure";
 
 openmdao.SlotFigure.prototype.highlightAsDropTarget=function(){
     var circleIMG = "url(/static/images/circle-plus-drop-zone.png)";

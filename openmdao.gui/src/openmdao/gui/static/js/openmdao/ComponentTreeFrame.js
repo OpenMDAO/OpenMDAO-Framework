@@ -87,8 +87,9 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                             "drop_check" : function (data) {
                                 // data.o - the object being dragged
                                 // data.r - the drop target
-                                //debug.info("ComponentTreeFrame: drop_check:",data);
+                                debug.info("ComponentTreeFrame: drop_check:",data);
                                 if (data.r.hasClass('WorkflowFigure')) {
+                                    debug.info("ComponentTreeFrame: drop_check:","inside workflowfigure");
                                     return true;
                                 }
                                 else {

@@ -353,6 +353,24 @@ openmdao.DragAndDropManager=function() {
 
 
 
+    var workflow_figures= [];
+
+    /** add workflow figure ID to the list. */
+    this.addWorkflowFigure = function(workflow_figure_id) {
+        workflow_figures.push( workflow_figure_id );
+    };
+
+    /** remove workflow figure from list. */
+    this.removeWorkflowFigure = function(workflow_figure_id) {
+        workflow_figures.splice(workflow_figures.indexOf(workflow_figure_id), 1);
+    };
+
+    /** clear all workflow figures */
+    this.clearWorkflowFigures = function() {
+        workflow_figures = [] ;
+    };
+
+
 
 
 

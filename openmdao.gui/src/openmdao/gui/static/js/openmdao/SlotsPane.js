@@ -60,17 +60,37 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                    debug.info ("over", elm.find(".DataflowFigureHeader")[0].innerHTML, calculated_zindex, topmost_zindex )
                 */
             },
+
+        drop: function(ev,ui) { 
+            /* divs could be in front of divs and the div that gets the drop
+               event might not be the one that is in front visibly and therefore
+               is not the div the user wants the drop to occur on
+            */
+
+            var o = elm.data('corresponding_openmdao_object');
+            debug.info( "dropping on slots pane" ) ;
+
+
+            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent_ver2( ev, ui ) ;
+            /* call the method on the correct div to handle the drop */
+            if ( top_div ) {
+                var drop_function = top_div.droppable( 'option', 'actualDropHandler');
+                drop_function( ev, ui ) ;
+            }
+        }, 
+
+
             
         }
                               ) ;
 
     // TODO: Do I really need these ?
     this.highlightAsDropTarget=function(){
-        debug.info ("highlight slotspane", slotsDiv.id ) ;
+        debug.info ("highlight slotspane", slotsDiv[0].id ) ;
     };
     
     this.unhighlightAsDropTarget=function(){
-        debug.info ("unhighlight slotspane", slotsDiv.id ) ;
+        debug.info ("unhighlight slotspane", slotsDiv[0].id ) ;
     };
 
 
