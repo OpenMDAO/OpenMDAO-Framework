@@ -111,13 +111,13 @@ def getLogger(name):
 # Optional handler which writes messages to sys.stderr
 CONSOLE = None
 
-def enable_console():
+def enable_console(level=logging.DEBUG):
     """ Configure logging to receive log messages at the console. """
     global CONSOLE
     if CONSOLE is None:
         # define a Handler which writes messages to sys.stderr
         CONSOLE = logging.StreamHandler()
-        CONSOLE.setLevel(logging.DEBUG)
+        CONSOLE.setLevel(level)
         # set a format which is simpler for console use
         formatter = logging.Formatter('%(levelname)s %(name)s: %(message)s')
         # tell the handler to use this format
@@ -326,8 +326,14 @@ def install_remote_handler(host, port, prefix=None):  # pragma no cover
         # Remove any handlers from our parent process due to a fork.
         for pid, handlers in _REMOTE_HANDLERS.items():
             for handler in handlers:
-                root.removeHandler(handler)
-                handler.close()
+                try:
+                    root.removeHandler(handler)
+                    handler.close()
+                except KeyError:  # Apparently it's not there anymore.
+                    pass
+                except Exception as exc:
+                    logging.warning("Can't remove inherited remote log handler: %s",
+                                    str(exc) or repr(exc))
             del _REMOTE_HANDLERS[pid]
         _REMOTE_HANDLERS[my_pid] = []
     _REMOTE_HANDLERS[my_pid].append(handler)

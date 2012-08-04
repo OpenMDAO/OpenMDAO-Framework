@@ -13,6 +13,8 @@ from openmdao.main.api import Assembly, Component, Driver, logger, \
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
+from openmdao.util.nameutil import isidentifier
+
 from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
 
@@ -107,7 +109,18 @@ class ConsoleServer(cmd.Cmd):
         '''
         self.exc_info = exc_info
         logger.error(str(err))
-        print str(err.__class__.__name__), ":", err
+        msg = '%s: %s' % (err.__class__.__name__, err)
+        print msg
+
+        if not self.publisher:
+            try:
+                self.publisher = Publisher.get_instance()
+            except Exception as exc:
+                print 'Error getting publisher:', exc
+                self.publisher = None
+
+        if self.publisher:
+            self.publisher.publish('console_errors', msg)
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -203,12 +216,12 @@ class ConsoleServer(cmd.Cmd):
         ''' Return this server's :attr:`_hist`.
         '''
         return self._hist
-    
+
     def get_recorded_cmds(self):
         ''' Return this server's :attr:`_recorded_cmds`.
         '''
         return self._recorded_cmds[:]
-    
+
     def get_JSON(self):
         ''' return current state as JSON
         '''
@@ -458,32 +471,35 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
         else:
             print 'No Project to save'
-            
+
     @modifies_model
     def add_component(self, name, classname, parentname):
         ''' add a new component of the given type to the specified parent.
         '''
-        name = name.encode('utf8')
-        if parentname:
-            parent, root = self.get_container(parentname)
-            if parent:
+        if isidentifier(name):
+            name = name.encode('utf8')
+            if parentname:
+                parent, root = self.get_container(parentname)
+                if parent:
+                    try:
+                        parent.add(name, create(classname))
+                    except Exception, err:
+                        self._error(err, sys.exc_info())
+                    else:
+                        self.proj._recorded_cmds.append('%s.add("%s",create("%s"))' %
+                                                        (parentname, name, classname))
+                else:
+                    print 'Error adding component, parent not found:', parentname
+            else:
                 try:
-                    parent.add(name, create(classname))
+                    self.proj.__dict__[name] = create(classname)
                 except Exception, err:
                     self._error(err, sys.exc_info())
                 else:
-                    self.proj._recorded_cmds.append('%s.add("%s",create("%s"))' % 
-                                                    (parentname, name, classname))
-            else:
-                print "Error adding component, parent not found:", parentname
+                    self.proj._recorded_cmds.append('%s = create("%s"))' %
+                                               (name, classname))
         else:
-            try:
-                self.proj.__dict__[name] = create(classname)
-            except Exception, err:
-                self._error(err, sys.exc_info())
-            else:
-                self.proj._recorded_cmds.append('%s = create("%s"))' % 
-                                           (name, classname))
+            print 'Error adding component: "%s" is not a valid identifier' % name
 
     def cleanup(self):
         ''' Cleanup various resources.
@@ -533,7 +549,8 @@ class ConsoleServer(cmd.Cmd):
     def publish(self, pathname, publish):
         ''' publish the specified topic
         '''
-        if pathname in ['', 'components', 'files', 'types']:
+        if pathname in ['', 'components', 'files', 'types',
+                        'console_errors', 'file_errors']:
             # these topics are published automatically
             return
 
@@ -564,15 +581,14 @@ class ConsoleServer(cmd.Cmd):
                         self._publish_comps[pathname] -= 1
                         if self._publish_comps[pathname] < 1:
                             del self._publish_comps[pathname]
-                            
+
     def file_classes_changed(self, filename):
         pdf = self.projdirfactory
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
-            info = pdf.analyzer.fileinfo.get(filename,(None,None))[0]
+            info = pdf.analyzer.fileinfo.get(filename, (None, None))[0]
             # if changed file contained classes and has already been imported..
-            if info and len(info.classes)>0 and info.modpath in sys.modules: 
+            if info and len(info.classes) > 0 and info.modpath in sys.modules:
                 return True
         return False
-

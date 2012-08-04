@@ -255,10 +255,12 @@ def _test_connections(browser):
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
     conn_page.set_target_component('engine')
+    time.sleep(0.5)
     eq(conn_page.check_variable_figures(), 0)
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
+    time.sleep(0.5)
     eq(len(conn_page.get_variable_figures()), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['RPM', 'RPM'])
@@ -277,6 +279,7 @@ def _test_connections(browser):
     # no connections between vehicle assembly and transmission
     conn_page.set_source_component('')
     conn_page.set_target_component('transmission')
+    time.sleep(0.5)
     eq(conn_page.check_variable_figures(), 0)
 
     # connect assembly variable to component variable

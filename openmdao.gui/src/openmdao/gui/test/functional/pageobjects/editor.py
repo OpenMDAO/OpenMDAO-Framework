@@ -1,4 +1,3 @@
-import sys
 import logging
 import time
 
@@ -10,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, InputElement
+from elements import ButtonElement, InputElement, TextElement
 from util import ValuePrompt, NotifierPage
 
 
@@ -65,6 +64,7 @@ class EditorPage(BasePageObject):
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Right side.
+    editor_new_button       = ButtonElement((By.ID, 'code_pane-uiBar-new'))
     editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
     editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
@@ -72,12 +72,20 @@ class EditorPage(BasePageObject):
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
     editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
 
+    editor_label = TextElement((By.ID, 'code_pane-label'))
+
+    file_chooser = InputElement((By.ID, 'filechooser'))
+
     def __init__(self, browser, port):
         super(EditorPage, self).__init__(browser, port)
 
         self.locators = {}
         self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
-
+    
+    def get_code(self):
+        return self.browser.execute_script("return openmdao.frames.code_pane.editor.getValue()")
+    
+    
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
@@ -101,24 +109,19 @@ class EditorPage(BasePageObject):
         if file_path.endswith('.pyc'):
             file_path = file_path[:-1]
 
-        main_window_handle = self.browser.current_window_handle
-
         self('file_menu').click()
         self('add_button').click()
 
-        # Switch to the Window that pops up.
-        self.browser.switch_to_window('Add File')
-        page = UploadPage(self.browser, self.port)
-        page.upload_file(file_path)
+        self.file_chooser = file_path
 
-        # Go back to the main window.
-        self.browser.switch_to_window(main_window_handle)
-
-    def add_files(self):
+    def add_files(self, *file_paths):
+        """ Read in multiple 'file_path's
+            FIXME: doesn't work, see elements._InputElement
+            Have to use multiple calls to add_file for now
+        """
         self('file_menu').click()
         self('add_button').click()
-        self.browser.switch_to_window('Add File')
-        return UploadPage.verify(self.browser, self.port)
+        self('file_chooser').set_values(*file_paths)
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -127,8 +130,8 @@ class EditorPage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         return page
-    
-    def find_text(self,text):
+
+    def find_text(self, text):
         #click the 'find' button, and enter text. Not yet functional
         self('editor_find_button').click()
         alert = self.browser.switch_to_alert()
@@ -136,8 +139,8 @@ class EditorPage(BasePageObject):
         chain.send_keys(text).perform()
         chain.send_keys(Keys.RETURN).perform()
         return
-    
-    def replace_text(self,old_text,new_text,replace_all=False):
+
+    def replace_text(self, old_text, new_text, replace_all=False):
         #click the 'replace' or 'replace all 'button,
         # and enter text to find and replace. Not yet functional
         if replace_all:
@@ -145,13 +148,13 @@ class EditorPage(BasePageObject):
         else:
             self('editor_replaceAll_button').click()
         return
-    
+
     def undo(self):
         #click the 'undo' button
         self('editor_undo_button').click()
         return
     
-    def new_file(self, filename, code):
+    def new_file(self, filename, code, check=True):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
         self('newfile_button').click()
@@ -170,10 +173,7 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(code)
         
-        self.save_document()
-
-        # Back to main window.
-        self.browser.switch_to_default_content()
+        self.save_document(check=check)
 
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
@@ -205,7 +205,7 @@ class EditorPage(BasePageObject):
         time.sleep(1)
         return code_input_element
         
-    def save_document(self, overwrite=False):
+    def save_document(self, overwrite=False, check=True):
         #use 'save' button to save code
         self('editor_save_button').click()
         if overwrite:
@@ -213,9 +213,9 @@ class EditorPage(BasePageObject):
                 lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
             self('editor_overwrite_button').click()
 
-        NotifierPage.wait(self.browser, self.port)
-   
-        
+        if check:
+            NotifierPage.wait(self)
+
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """
         # Switch to editor textarea
@@ -224,4 +224,4 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(text)
         return code_input_element
-    
+

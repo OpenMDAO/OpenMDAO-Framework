@@ -36,6 +36,7 @@ method.
 # No obvious 'best' alternative.
 
 import errno
+import glob
 import hashlib
 import inspect
 import logging
@@ -455,8 +456,8 @@ class OpenMDAO_Server(Server):
                         else:
                             raise
                 except Exception as exc:
-                    self._logger.error('%s %s %s: %r',
-                                       methodname, role, credentials, exc)
+                    self._logger.exception('%s %s %s failed:',
+                                           methodname, role, credentials)
                     msg = ('#ERROR', exc)
                 else:
                     msg = self._form_reply(res, ident, methodname, function,
@@ -938,10 +939,27 @@ class OpenMDAO_Manager(BaseManager):
             self._process.terminate()
             raise RuntimeError('Server process %d startup timed-out in %.2f' \
                                % (pid, et))
-        reply = reader.recv()
-        if isinstance(reply, Exception):
-            raise RuntimeError('Server process %d startup failed: %s'
-                               % (pid, reply))
+        error_msg = None
+        try:
+            reply = reader.recv()
+        except Exception as exc:  # str(Exception()) is null, repr() isn't.
+            error_msg = 'Server process %d read failed: %s' \
+                        % (pid, (str(exc) or repr(exc)))
+        else:
+            if isinstance(reply, Exception):
+                error_msg = 'Server process %d startup failed: %s' \
+                             % (pid, (str(reply) or repr(reply)))
+        if error_msg:
+            logging.error(error_msg)
+            if cwd:
+                logging.error('    in dir %r', cwd)
+                for name in ('stdout', 'stderr', 'openmdao_log*.txt'):
+                    for path in glob.glob(os.path.join(cwd, name)):
+                        name = os.path.basename(path)
+                        with open(path, 'r') as inp:
+                            logging.error('    %s:\n%s', name, inp.read())
+            raise RuntimeError(error_msg)
+
         self._address = reply
         if self._authkey == 'PublicKey':
             self._pubkey = reader.recv()
@@ -1005,6 +1023,7 @@ class OpenMDAO_Manager(BaseManager):
             server = cls._Server(registry, address, authkey, serializer, name,
                                  allowed_hosts, allowed_users, allow_tunneling)
         except Exception as exc:
+            traceback.print_exc()
             writer.send(exc)
             return
         else:
