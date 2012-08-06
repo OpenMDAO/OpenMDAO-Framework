@@ -9,12 +9,15 @@ from inspect import isclass #, getfile
 import tarfile
 import cPickle as pickle
 from tokenize import generate_tokens
+import token
+from cStringIO import StringIO
 
 from pkg_resources import get_distribution, DistributionNotFound
 
 from openmdao.main.api import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
+from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create
 from openmdao.main.mp_support import is_instance
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5
@@ -106,6 +109,70 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
     #return None
     
 
+_excluded_calls = set(['run', 'execute'])
+
+def _check_hierarchy(pathname, objs):
+    # any operation we apply to a given object will be cancelled
+    # out if that object or any of its parents are overwritten
+    # later. Returns True if the command applying to the object
+    # indicated by the given pathname should be filtered out.
+    if pathname in objs:
+        return True
+    for name in objs:
+        if pathname.startswith(name+'.'):
+            return True
+    return False
+    
+def filter_macro(lines):
+    """Removes any commands from a macro that are overridden by later commands."""
+    filt_lines = []
+    assigns = set()
+    execs = set()
+    objs = set()
+    for line in lines[::-1]:
+        stripped = line.strip()
+        if stripped.startswith('execfile'):
+            lst = list(generate_tokens(StringIO(stripped).readline))
+            if lst[0][1] == 'execfile':
+                if lst[2][0] == token.STRING:
+                    fname = lst[2][1].strip("'").strip('"')
+                    if fname in execs:
+                        continue
+                    else:
+                        execs.add(fname)
+        else:
+            match = namecheck_rgx.match(stripped)
+            if match:
+                full = match.group()
+                rest = stripped[len(full):].strip()
+                parts = full.rsplit('.', 1)
+                if len(parts) > 1:
+                    # remove calls to run, execute, ...
+                    if parts[1] in _excluded_calls:
+                        continue
+                    elif parts[1] in ['add', 'remove']:
+                        lst = list(generate_tokens(StringIO(rest).readline))
+                        if lst[1][0] == token.STRING:
+                            pathname = '.'.join([parts[0],
+                                                 lst[1][1].strip("'").strip('"')])
+                            if _check_hierarchy(pathname, objs):
+                                continue
+                            objs.add(pathname)
+                            if parts[1] == 'remove': # don't include the remove command
+                                continue             # since there won't be anything to remove
+                
+                # only keep the most recent assignment to any variable
+                if rest.startswith('='):
+                    if full in assigns or _check_hierarchy(full, objs):
+                        continue
+                    else:
+                        assigns.add(full)
+                        
+        filt_lines.append(line)
+            
+    return filt_lines[::-1] # reverse the result
+    
+    
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes
     from the imported version of the file for the __main__ version.
@@ -186,19 +253,16 @@ class Project(object):
         return self._model_globals.items()
     
     def execfile(self, fname, digest):
-        try:
-            newdigest = file_md5(fname)
-            if digest != newdigest:
-                logger.warning("file '%s' has been modified since the last time it was exec'd" % fname)
-            with open(fname) as f:
-                contents = f.read()
-                code = compile(contents, fname, 'exec')
-            exec code in self._model_globals
-        except Exception as err:
-            logger.error(str(err))
-        else:
-            # make the recorded execfile command use the current md5 hash
-            self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
+        newdigest = file_md5(fname)
+        if digest != newdigest:
+            logger.warning("file '%s' has been modified since the last time it was exec'd" % fname)
+        with open(fname) as f:
+            contents = f.read()
+            code = compile(contents, fname, 'exec')
+        exec code in self._model_globals
+        
+        # make the recorded execfile command use the current md5 hash
+        self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
 
     def get(self, pathname):
         parts = pathname.split('.')
@@ -209,14 +273,10 @@ class Project(object):
         except (KeyError, AttributeError) as err:
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
-            
-    def _filter_macro(self, lines):
-        """Removes any commands from a macro that are overridden by later commands."""
-        return lines  # FIXME: currently does nothing
     
     def load_macro(self, fpath, execute=True, strict=False):
         with open(fpath, 'r') as f:
-            for i,line in enumerate(self._filter_macro(f.readlines())):
+            for i,line in enumerate(filter_macro(f.readlines())):
                 if execute:
                     try:
                         self.command(line.rstrip('\n'))
@@ -246,9 +306,8 @@ class Project(object):
                 pass
             
         if err:
-            logger.error("command error: <%s>" % cmd)
+            logger.error("command '%s' caused error: %s" % (cmd, str(err)))
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
-            raise err
         else:
             # certain commands (like execfile) can modify the recorded string,
             # so only record the given command if the executed command didn't

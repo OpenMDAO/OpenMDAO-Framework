@@ -5,7 +5,8 @@ import shutil
 
 from openmdao.util.fileutil import find_files
 from openmdao.main.component import Component
-from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
+from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
+                                  filter_macro
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -91,6 +92,32 @@ class ProjectTestCase(unittest.TestCase):
     def test_localfile_factory(self):
         proj = Project(os.path.join(self.tdir, 'proj2'))
         self._fill_project(proj.get('top'))
+        
+    def test_filter_macro(self):
+        lines = [
+            "abc.xyz = 123.45",
+            "execfile('foo.py')",
+            "top.add('foo', create('MyClass'))",
+            "top.foo.x = 8.9",
+            "top.foo.execute()",
+            "abc.xyz = 99.9",
+            "some_unknown_funct(a,b,c)",
+            "execfile('foo.py')",
+            "top.add('foo', create('SomeClass'))",
+            "top.foo.gg = 53",
+            "top.blah.xx = 44",
+            "top.remove('blah')",
+            "abc.run()",
+            ]
+        expected = [
+            "abc.xyz = 99.9",
+            "some_unknown_funct(a,b,c)",
+            "execfile('foo.py')",
+            "top.add('foo', create('SomeClass'))",
+            "top.foo.gg = 53",
+            ]
+        filtered = filter_macro(lines)
+        self.assertEqual(filtered, expected)
         
 
 if __name__ == "__main__":
