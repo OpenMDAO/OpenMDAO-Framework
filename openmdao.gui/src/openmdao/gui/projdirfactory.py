@@ -5,6 +5,7 @@ __all__ = ["ProjDirFactory"]
 import os
 import sys
 import threading
+import traceback
 import fnmatch
 import ast
 from inspect import isclass, getmembers
@@ -29,56 +30,72 @@ from openmdao.util.log import logger
 from openmdao.main.publisher import Publisher
 from openmdao.gui.util import packagedict
 
+
 class PyWatcher(FileSystemEventHandler):
+    """
+    Watches files and dispatches to :class:`ProjDirFactory`.
+    Exceptions are caught and reported here so the daemon thread continues
+    to run.
+    """
 
     def __init__(self, factory):
         super(PyWatcher, self).__init__()
         self.factory = factory
 
     def on_modified(self, event):
-        added_set = set()
-        changed_set = set()
-        deleted_set = set()
-        if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
-            compiled = event.src_path+'c'
-            if os.path.exists(compiled):
-                os.remove(compiled)
-            self.factory.on_modified(event.src_path, added_set, changed_set, deleted_set)
-            self.factory.publish_updates(added_set, changed_set, deleted_set)
+        try:
+            added_set = set()
+            changed_set = set()
+            deleted_set = set()
+            if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
+                compiled = event.src_path+'c'
+                if os.path.exists(compiled):
+                    os.remove(compiled)
+                self.factory.on_modified(event.src_path, added_set, changed_set, deleted_set)
+                self.factory.publish_updates(added_set, changed_set, deleted_set)
+        except Exception:
+            traceback.print_exc()
 
     on_created = on_modified
     
     def on_moved(self, event):
-        added_set = set()
-        changed_set = set()
-        deleted_set = set()
+        try:
+            added_set = set()
+            changed_set = set()
+            deleted_set = set()
         
-        publish = False
-        if event._src_path and (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
-            if not event.is_directory:
-                compiled = event._src_path+'c'
-                if os.path.exists(compiled):
-                    os.remove(compiled)
-            self.factory.on_deleted(event._src_path, deleted_set)
-            publish = True
+            publish = False
+            if event._src_path and (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
+                if not event.is_directory:
+                    compiled = event._src_path+'c'
+                    if os.path.exists(compiled):
+                        os.remove(compiled)
+                self.factory.on_deleted(event._src_path, deleted_set)
+                publish = True
         
-        if fnmatch.fnmatch(event._dest_path, '*.py'):
-            self.factory.on_modified(event._dest_path, added_set, changed_set, deleted_set)
-            publish = True
+            if fnmatch.fnmatch(event._dest_path, '*.py'):
+                self.factory.on_modified(event._dest_path, added_set, changed_set, deleted_set)
+                publish = True
             
-        if publish:
-            self.factory.publish_updates(added_set, changed_set, deleted_set)
+            if publish:
+                self.factory.publish_updates(added_set, changed_set, deleted_set)
+        except Exception:
+            traceback.print_exc()
 
     def on_deleted(self, event):
-        added_set = set()
-        changed_set = set()
-        deleted_set = set()
-        if event.is_directory or fnmatch.fnmatch(event.src_path, '*.py'):
-            compiled = event.src_path+'c'
-            if os.path.exists(compiled):
-                os.remove(compiled)
-            self.factory.on_deleted(event.src_path, deleted_set)
-            self.factory.publish_updates(added_set, changed_set, deleted_set)
+        try:
+            added_set = set()
+            changed_set = set()
+            deleted_set = set()
+            if event.is_directory or fnmatch.fnmatch(event.src_path, '*.py'):
+                compiled = event.src_path+'c'
+                if os.path.exists(compiled):
+                    os.remove(compiled)
+                self.factory.on_deleted(event.src_path, deleted_set)
+                self.factory.publish_updates(added_set, changed_set, deleted_set)
+        except Exception:
+            traceback.print_exc()
+
             
 plugin_ifaces = set([
     'IContainer', 

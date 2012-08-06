@@ -64,6 +64,7 @@ class EditorPage(BasePageObject):
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Right side.
+    editor_new_button       = ButtonElement((By.ID, 'code_pane-uiBar-new'))
     editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
     editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
@@ -80,7 +81,11 @@ class EditorPage(BasePageObject):
 
         self.locators = {}
         self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
-
+    
+    def get_code(self):
+        return self.browser.execute_script("return openmdao.frames.code_pane.editor.getValue()")
+    
+    
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
@@ -148,8 +153,8 @@ class EditorPage(BasePageObject):
         #click the 'undo' button
         self('editor_undo_button').click()
         return
-
-    def new_file(self, filename, code):
+    
+    def new_file(self, filename, code, check=True):
         """ Make a new file `filename` with contents `code`. """
         self('file_menu').click()
         self('newfile_button').click()
@@ -167,11 +172,8 @@ class EditorPage(BasePageObject):
             code_input_element.send_keys(Keys.ARROW_DOWN)
         # Type in the code.
         code_input_element.send_keys(code)
-
-        self.save_document()
-
-        # Back to main window.
-        self.browser.switch_to_default_content()
+        
+        self.save_document(check=check)
 
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
@@ -202,8 +204,8 @@ class EditorPage(BasePageObject):
 #        Sadly this didn't completely fix the issue.
         time.sleep(1)
         return code_input_element
-
-    def save_document(self, overwrite=False):
+        
+    def save_document(self, overwrite=False, check=True):
         #use 'save' button to save code
         self('editor_save_button').click()
         if overwrite:
@@ -211,7 +213,8 @@ class EditorPage(BasePageObject):
                 lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
             self('editor_overwrite_button').click()
 
-        NotifierPage.wait(self.browser, self.port)
+        if check:
+            NotifierPage.wait(self)
 
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """
@@ -221,3 +224,4 @@ class EditorPage(BasePageObject):
         # Type in the code.
         code_input_element.send_keys(text)
         return code_input_element
+

@@ -140,6 +140,11 @@ class FiniteDifference(HasTraits):
         """Calculates the gradient vectors for all outputs in this Driver's
         workflow."""
         
+        # Each component runs its calc_derivatives method.
+        # We used to do this in the driver instead, but we've moved it in
+        # here to make the interface more uniform.
+        self._parent.calc_derivatives(first=True)
+        
         self.setup()
 
         # Create our 2D dictionary the first time we execute.
@@ -228,6 +233,11 @@ class FiniteDifference(HasTraits):
             driver needs gradient and hessian information at the same point,
             and calls calc_gradient before calc_hessian.
         """
+        
+        # Each component runs its calc_derivatives method.
+        # We used to do this in the driver instead, but we've moved it in
+        # here to make the interface more uniform.
+        self._parent.calc_derivatives(second=True)
         
         self.setup()
         

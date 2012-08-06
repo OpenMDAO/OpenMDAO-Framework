@@ -1616,9 +1616,11 @@ class Component(Container):
                     parameters.append(attr)
                 attrs['Parameters'] = parameters
 
+            constraints = []
+            constraint_pane = False
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasEqConstraints):
-                constraints = []
+                constraint_pane = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1627,11 +1629,10 @@ class Component(Container):
                     attr['scaler']  = con.scaler
                     attr['adder']   = con.adder
                     constraints.append(attr)
-                attrs['EqConstraints'] = constraints
 
             if has_interface(self, IHasConstraints) or \
                has_interface(self, IHasIneqConstraints):
-                constraints = []
+                constraint_pane = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
                     attr = {}
@@ -1640,7 +1641,9 @@ class Component(Container):
                     attr['scaler']  = con.scaler
                     attr['adder']   = con.adder
                     constraints.append(attr)
-                attrs['IneqConstraints'] = constraints
+                    
+            if constraint_pane:
+                attrs['Constraints'] = constraints
 
             slots = []
             for name, value in self.traits().items():
