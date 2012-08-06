@@ -227,12 +227,6 @@ class SellarProblemWithDeriv(OptProblem):
             'obj1':3.1834
         }
         
-        #END OF MDAO Problem Definition         
-        
-if __name__ == "__main__": 
-    
-    p = SellarProblem()
-    
-    p.run()
+        #END OF MDAO Problem Definition              
 
         
