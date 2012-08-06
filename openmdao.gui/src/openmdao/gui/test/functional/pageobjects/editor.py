@@ -64,7 +64,6 @@ class EditorPage(BasePageObject):
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Right side.
-    editor_new_button       = ButtonElement((By.ID, 'code_pane-uiBar-new'))
     editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
     editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
@@ -81,11 +80,7 @@ class EditorPage(BasePageObject):
 
         self.locators = {}
         self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
-    
-    def get_code(self):
-        return self.browser.execute_script("return openmdao.frames.code_pane.editor.getValue()")
-    
-    
+
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
