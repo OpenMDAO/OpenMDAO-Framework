@@ -30,7 +30,7 @@ class Constants(VariableTree):
 
 class Thermal(Component): 
     
-    constants = Slot(Constants(),iotype="in")
+    constants = Slot(Constants,iotype="in")
     
     w = Float(0.08,iotype="in",desc="blade width", low=0)
     t = Float(0.005,iotype="in",desc="blade thickness", low=0)
@@ -60,7 +60,7 @@ class Thermal(Component):
             
 
 class Structures(Component): 
-    constants = Slot(Constants(),iotype="in")
+    constants = Slot(Constants,iotype="in")
     
     T_x = Array(default_value=[400,400,400,400,400,400,400,400],dtype=float,iotype="in"
                 ,desc="Temperature distribution along x direction")
@@ -123,7 +123,7 @@ class Structures(Component):
 from openmdao.lib.drivers.api import BroydenSolver
 
 class TurbineBlade(OptProblem): 
-    constants = Slot(Constants(),iotype="in")
+    constants = Slot(Constants,iotype="in")
     
     
     def configure(self): 

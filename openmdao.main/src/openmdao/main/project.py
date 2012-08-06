@@ -8,6 +8,7 @@ import shutil
 from inspect import isclass #, getfile
 import tarfile
 import cPickle as pickle
+from tokenize import generate_tokens
 
 from pkg_resources import get_distribution, DistributionNotFound
 
@@ -16,7 +17,7 @@ from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.factorymanager import create
 from openmdao.main.mp_support import is_instance
-from openmdao.util.fileutil import get_module_path, expand_path
+from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.log import logger
 
 
@@ -184,11 +185,20 @@ class Project(object):
     def items(self):
         return self._model_globals.items()
     
-    def execfile(self, fname):
-        with open(fname) as f:
-            contents = f.read()
-            code = compile(contents, fname, 'exec')
-        exec code in self._model_globals
+    def execfile(self, fname, digest):
+        try:
+            newdigest = file_md5(fname)
+            if digest != newdigest:
+                logger.warning("file '%s' has been modified since the last time it was exec'd" % fname)
+            with open(fname) as f:
+                contents = f.read()
+                code = compile(contents, fname, 'exec')
+            exec code in self._model_globals
+        except Exception as err:
+            logger.error(str(err))
+        else:
+            # make the recorded execfile command use the current md5 hash
+            self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
 
     def get(self, pathname):
         parts = pathname.split('.')
@@ -200,9 +210,13 @@ class Project(object):
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
             
+    def _filter_macro(self, lines):
+        """Removes any commands from a macro that are overridden by later commands."""
+        return lines  # FIXME: currently does nothing
+    
     def load_macro(self, fpath, execute=True, strict=False):
         with open(fpath, 'r') as f:
-            for i,line in enumerate(f):
+            for i,line in enumerate(self._filter_macro(f.readlines())):
                 if execute:
                     try:
                         self.command(line.rstrip('\n'))
@@ -216,6 +230,8 @@ class Project(object):
     def command(self, cmd):
         err = None
         result = None
+        size = len(self._recorded_cmds)
+        
         try:
             code = compile(cmd, '<string>', 'eval')
         except SyntaxError:
@@ -234,7 +250,11 @@ class Project(object):
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
             raise err
         else:
-            self._recorded_cmds.append(cmd)
+            # certain commands (like execfile) can modify the recorded string,
+            # so only record the given command if the executed command didn't
+            # add its own entry to _recorded_cmds.
+            if len(self._recorded_cmds) == size:
+                self._recorded_cmds.append(cmd)
             
         return result
             

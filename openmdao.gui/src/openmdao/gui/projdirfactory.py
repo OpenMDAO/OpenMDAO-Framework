@@ -288,18 +288,26 @@ class ProjDirFactory(Factory):
         with self._lock:
             finfo = self._files.get(fpath)
             if finfo is None:
-                fileinfo = _FileInfo(fpath)
+                try:
+                    fileinfo = _FileInfo(fpath)
+                except Exception as err:
+                    logger.error(str(err))
+                    return
                 self._files[fpath] = fileinfo
                 added_set.update(fileinfo.classes.keys())
                 for cname in fileinfo.classes.keys():
                     self._classes[cname] = fileinfo
             else: # updating a file that's already been imported
-                finfo.update(added_set, changed_set, deleted_set)
+                try:
+                    finfo.update(added_set, changed_set, deleted_set)
+                except Exception as err:
+                    logger.error(str(err))
+                    self._remove_fileinfo(fpath)
+                    return
                 for cname in added_set:
                     self._classes[cname] = finfo
                 for cname in deleted_set:
                     del self._classes[cname]
-        logger.error("on_modified for %s: added_set = %s" % (fpath,list(added_set)))
                 
     def on_deleted(self, fpath, deleted_set):
         with self._lock:
@@ -309,9 +317,7 @@ class ProjDirFactory(Factory):
             else:
                 finfo = self._files[fpath]
                 deleted_set.update(finfo.classes.keys())
-                for cname in finfo.classes:
-                    del self._classes[cname]
-                del self._files[fpath]
+                self._remove_fileinfo(fpath)
             
     def publish_updates(self, added_set, changed_set, deleted_set):
         publisher = Publisher.get_instance()
@@ -327,6 +333,18 @@ class ProjDirFactory(Factory):
         else:
             logger.error("no Publisher found")
 
+    def _remove_fileinfo(self, fpath):
+        """Clean up all data related to the given file. This typically occurs
+        when there is some error during the import of the file.
+        """
+        finfo = self._files.get(fpath)
+        if finfo:
+            classes = [c for c,f in self._classes if f is finfo]
+            for klass in classes:
+                del self._classes[klass]
+            del self._files[fpath]
+            return classes
+                
     def cleanup(self):
         """If this factory is removed from the FactoryManager during execution, this function
         will stop the watchdog observer thread.

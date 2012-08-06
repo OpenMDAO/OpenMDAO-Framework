@@ -25,7 +25,7 @@ class Constants(VariableTree):
 
 class Structural(Component): 
     
-    constants = Slot(Constants(), iotype="in")
+    constants = Slot(Constants, iotype="in")
     
     l = Float(0.02,units="m", iotype="in", desc="length of the stator flap")
     F = Float(2.0,units="N", iotype="in", desc="Aerodynamic force on the stator flap")
@@ -57,7 +57,7 @@ class StructuralAsmb(Assembly):
         
 class Aerodynamics(Component): 
         
-    constants = Slot(Constants(), iotype="in")
+    constants = Slot(Constants, iotype="in")
     l = Float(0.02,units="m", iotype="in", desc="length of the stator flap")
     w = Float(0.02,units="m", iotype="in", desc="width of the stator flap")
     theta = Float(0.1,units="rad", iotype="in", desc="Radial deflection of the stator flap") #state variable
@@ -69,7 +69,7 @@ class Aerodynamics(Component):
             
     
 class VaneAirFlow(OptProblem): 
-    constants = Slot(Constants(), iotype="in")
+    constants = Slot(Constants, iotype="in")
     
     def configure(self): 
         self.constants = Constants()

@@ -15,7 +15,7 @@ from openmdao.main.api import Assembly, Component, Driver, logger, \
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
-from openmdao.util.fileutil import find_files
+from openmdao.util.fileutil import find_files, file_md5
 
 from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
@@ -216,9 +216,9 @@ class ConsoleServer(cmd.Cmd):
     def execfile(self, filename):
         ''' execfile in server's globals.
         '''
-
         try:
-            self.proj.command("execfile('%s')" % filename)
+            self.proj.command("execfile('%s', '%s')" % 
+                                 (filename, file_md5(filename)))
             ## first import all definitions
             #basename = os.path.splitext(filename)[0]
             #cmd = 'from ' + basename + ' import *'

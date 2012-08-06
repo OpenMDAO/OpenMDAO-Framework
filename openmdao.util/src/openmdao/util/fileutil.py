@@ -11,6 +11,7 @@ import warnings
 import itertools
 import string
 import threading
+from hashlib import md5
 
 from fnmatch import fnmatch
 from os.path import islink, isdir, join
@@ -295,3 +296,16 @@ def clean_filename(name):
 def is_dev_build():
     return basename(get_ancestor_dir(sys.executable, 2)) == 'devenv'
 
+def file_md5(fpath):
+    """Return the MD5 digest for the given file"""
+    try:
+        f = open(fpath,'rb')
+        m = md5()
+        while True:
+            s = f.read(4096)
+            if not s:
+                break
+            m.update(s)
+        return m.hexdigest()
+    finally:
+        f.close()
