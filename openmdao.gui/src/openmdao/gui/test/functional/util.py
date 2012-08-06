@@ -309,6 +309,8 @@ def parse_test_args(args=None):
                       help="if present, run outside of nose")
     parser.add_option("--test", action="store", type="string", dest='test', 
                       help="specify a specific test to run", default=None)
+    parser.add_option("--noclose", action="store_true", dest='noclose', 
+                      help="if present, don't close run outside of nose")
     parser.add_option("-v", action="store_true", dest='verbose', 
                       help="show progress while running under nose")
 
@@ -346,8 +348,9 @@ def main(args=None):
         browser = setup_chrome()
         for test in tests:
             test(browser)
-        browser.quit()
-        teardown_server()
+        if not options.noclose:
+            browser.quit()
+            teardown_server()
     else:
         # Run under nose.
         import nose

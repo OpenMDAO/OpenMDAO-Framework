@@ -850,7 +850,8 @@ class Assembly (Component):
                                            'pathname': comp.get_pathname(),
                                            'type': type(comp).__name__,
                                            'valid': comp.is_valid(),
-                                           'is_assembly': is_instance(comp, Assembly)
+                                           'is_assembly': is_instance(comp, Assembly),
+                                           'python_id': id(comp)
                                           })
 
                     if is_instance(comp, Driver):
