@@ -3,9 +3,10 @@ import csv
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Int, Str
 from openmdao.main.interfaces import implements, IDOEgenerator
+from openmdao.main.api import Container
 
 
-class CSVFile(HasTraits):
+class CSVFile(Container):
     """
     DOEgenerator that returns rows in a CSV file.
     Plugs into the DOEgenerator socket on a DOEdriver.
