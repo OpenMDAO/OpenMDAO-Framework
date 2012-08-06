@@ -7,11 +7,11 @@ from itertools import product, permutations, chain
 from enthought.traits.api import HasTraits
 from openmdao.lib.datatypes.api import Int, Float, Enum
 
-from openmdao.main.api import implements
+from openmdao.main.api import implements, Container
 from openmdao.main.interfaces import IDOEgenerator
 
 
-class CentralComposite(HasTraits):
+class CentralComposite(Container):
     """ DOEgenerator that performs a central composite Design of Experiments. Plugs
     into the DOEgenerator socket on a DOEdriver."""
     
