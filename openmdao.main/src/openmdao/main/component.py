@@ -1513,8 +1513,16 @@ class Component(Container):
 
         if has_interface(self, IComponent):
             inputs = []
+            parameters = {}
+            for parameter, target in self.parent.get_dataflow()['parameters']:
+                if not target in parameters:
+                    parameters[target] = []
 
-            components_assembly = self.get_pathname().rsplit('.', 1)
+                parameters[target].append(parameter)
+
+            parameters = dict([reversed(x) for x in self.parent.get_dataflow()['parameters']])
+
+
             if self.parent is None:
                 connected_inputs = []
                 connected_outputs = []
@@ -1546,7 +1554,12 @@ class Component(Container):
 #                        print 'DEBUG:',self.get_pathname(),'.get_attributes() input',vname,'connections:',connections
                         # there can be only one connection to an input
                         attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
-                    
+
+                    attr['implicit'] = ''
+                    if "%s.%s" % (self.name, vname) in parameters:
+
+                        attr['implicit'] = str(parameters["%s.%s" % (self.name, vname)])
+
                 inputs.append(attr)
             attrs['Inputs'] = inputs
 
