@@ -237,6 +237,10 @@ openmdao.CodeFrame = function(id,model) {
     // for GUI testing
     this.editor = editor;  
     
+    this.currentTablabel = function() {
+	return jQuery('#'+id+'-tabs .ui-tabs-selected').find("span").text().split('/').pop()
+    }
+    
     this.editFile = function(pathname) {
         filepath = pathname;
         mode=findMode(filepath);

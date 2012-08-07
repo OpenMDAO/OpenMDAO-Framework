@@ -85,6 +85,8 @@ class EditorPage(BasePageObject):
     def get_code(self):
         return self.browser.execute_script("return openmdao.frames.code_pane.editor.getValue()")
     
+    def get_tab_label(self):
+        return self.browser.execute_script("return openmdao.frames.code_pane.currentTablabel()")
     
     def get_files(self):
         """ Return names in the file tree. """
