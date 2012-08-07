@@ -201,9 +201,7 @@ class Project(object):
         self._recorded_cmds = []
         self.path = expand_path(projpath)
         self._model_globals = _ProjDict()
-        self._model_globals['create'] = create    # add create funct here so macros can call it
-        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
-        self._model_globals['execfile'] = self.execfile
+        self._init_globals()
 
         if projdirfactory:
             projdirfactory.project = self
@@ -217,6 +215,14 @@ class Project(object):
                 try:
                     with open(statefile, 'r') as f:
                         self._model_globals = pickle.load(f)
+                        # this part is just to handle cases where a project was saved
+                        # before _model_globals was changed to a _ProjDict
+                        if not isinstance(self._model_globals, _ProjDict):
+                            m = _ProjDict()
+                            m.update(self._model_globals)
+                            self._model_globals = m
+                            self._init_globals()
+                            
                 except Exception, e:
                     logger.error('Unable to restore project state: %s' % e)
                     macro_exec = True
@@ -242,6 +248,11 @@ class Project(object):
     def _initialize(self):
         self._model_globals['top'] = set_as_top(Assembly())
         
+    def _init_globals(self):
+        self._model_globals['create'] = create    # add create funct here so macros can call it
+        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
+        self._model_globals['execfile'] = self.execfile
+
     @property
     def name(self):
         return os.path.basename(self.path)
