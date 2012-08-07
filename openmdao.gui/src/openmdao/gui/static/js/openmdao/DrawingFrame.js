@@ -28,7 +28,6 @@ openmdao.DrawingFrame = function(id,model,pathname) {
 
     // handle message with new drawing data
     function handleMessage(message) {
-        debug.info('DrawingFrame received message',message);
         if (message.length !== 2 || message[0] !== self.pathname) {
             debug.warn('Invalid drawing data for:', self.pathname, message);
             debug.warn('message length',message.length, 'topic', message[0]);
@@ -38,12 +37,8 @@ openmdao.DrawingFrame = function(id,model,pathname) {
         }
     }
 
-    // subscribe to model for data
+    // subscribe to model for data and set initial value
     function draw(pathname) {
-        // accept the pathname of a component and look for a drawing attribute
-        if (! pathname.match(/.drawing$/)) {
-            pathname = pathname + '.drawing';
-        }
         if (self.pathname && self.pathname.length>0) {
             if (self.pathname !== pathname) {
                 model.removeListener(self.pathname, handleMessage);
@@ -53,7 +48,15 @@ openmdao.DrawingFrame = function(id,model,pathname) {
         else {
             self.pathname = pathname;
         }
-        model.addListener(self.pathname, handleMessage);
+        if (self.pathname.length > 0) {
+            model.addListener(self.pathname, handleMessage);
+            model.getValue(self.pathname,
+                              updateDrawing,
+                              function(jqXHR, textStatus, errorThrown) {
+                                  self.pathname = '';
+                                  debug.error("Error getting drawing:", jqXHR);
+                              });
+        }
     }
 
     // create context menu
@@ -71,23 +74,31 @@ openmdao.DrawingFrame = function(id,model,pathname) {
      *  privileged
      ***********************************************************************/
 
-
+    /** clean up listeners before going away */
     this.destructor = function() {
         if (self.pathname && self.pathname.length>0) {
             model.removeListener(self.pathname, handleMessage);
         }
     };
 
-    /** nothing to see here, we get our data elsewhere */
-    this.update = function() {};
-
+    /** update drawing */
+    this.update = function() {
+        if (self.pathname) {
+            draw(self.pathname);
+        }
+        else {
+            updateDrawing('');
+        }
+    };
 };
 
 /** set prototype */
 openmdao.DrawingFrame.prototype = new openmdao.BaseFrame();
 
 openmdao.DrawingFrame.prototype.chooseVariable = function() {
-    openmdao.Util.promptForValue('Enter pathname of variable to Drawing:',
+    var prompt = 'Enter pathname of variable to draw:<br>' +
+                 '(a Str variable with an SVG value)';
+    openmdao.Util.promptForValue(prompt,
         function(pathname) {
             p=new openmdao.DrawingFrame('Drawing-'+pathname,openmdao.model,pathname);
         }

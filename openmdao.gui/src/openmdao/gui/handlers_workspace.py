@@ -361,7 +361,7 @@ class PublishHandler(ReqHandler):
 
 
 class PubstreamHandler(ReqHandler):
-    ''' return the url of the zmq publisher server,
+    ''' return the url of the zmq publisher server
     '''
 
     @web.authenticated
@@ -407,6 +407,19 @@ class UploadHandler(ReqHandler):
     def get(self):
         path = self.get_argument('path', default=None)
         self.render('workspace/upload.html', path=path)
+
+
+class ValueHandler(ReqHandler):
+    ''' GET: get a value for the given pathname
+        TODO: combine with ComponentHandler? handle Containers as well?
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        value = cserver.get_value(name)
+        self.content_type = 'application/javascript'
+        self.write(value)
 
 
 class WorkflowHandler(ReqHandler):
@@ -460,6 +473,7 @@ handlers = [
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
+    web.url(r'/workspace/value/(.*)',       ValueHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
