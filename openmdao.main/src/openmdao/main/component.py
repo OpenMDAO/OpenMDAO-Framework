@@ -1514,6 +1514,7 @@ class Component(Container):
         if has_interface(self, IComponent):
             inputs = []
 
+            components_assembly = self.get_pathname().rsplit('.', 1)
             if self.parent is None:
                 connected_inputs = []
                 connected_outputs = []
@@ -1545,8 +1546,10 @@ class Component(Container):
 #                        print 'DEBUG:',self.get_pathname(),'.get_attributes() input',vname,'connections:',connections
                         # there can be only one connection to an input
                         attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
+                    
                 inputs.append(attr)
             attrs['Inputs'] = inputs
+
 
             outputs = []
             for vname in self.list_outputs():
