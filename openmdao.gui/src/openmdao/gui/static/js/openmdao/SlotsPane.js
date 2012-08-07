@@ -71,15 +71,13 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             debug.info( "dropping on slots pane" ) ;
 
 
-            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent_ver2( ev, ui ) ;
+            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent( ev, ui ) ;
             /* call the method on the correct div to handle the drop */
             if ( top_div ) {
                 var drop_function = top_div.droppable( 'option', 'actualDropHandler');
                 drop_function( ev, ui ) ;
             }
         }, 
-
-
             
         }
                               ) ;

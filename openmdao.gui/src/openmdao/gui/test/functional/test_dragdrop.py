@@ -5,21 +5,11 @@ Tests of overall workspace functions.
 import sys
 import time
 
-import pkg_resources
-
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
-from unittest import TestCase
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-
-
-
-
 
 
 if sys.platform != 'win32':  # No testing on Windows yet.
@@ -35,7 +25,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
             yield _test, browser
 
 
-def start_test(browser):
+def startup(browser):
     # Create a project and enter workspace
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -46,7 +36,7 @@ def start_test(browser):
 
     return projects_page, project_info_page, project_dict, workspace_page
 
-def teardown_test(projects_page, project_info_page, project_dict, workspace_page):
+def closeout(projects_page, project_info_page, project_dict, workspace_page):
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
@@ -54,7 +44,7 @@ def teardown_test(projects_page, project_info_page, project_dict, workspace_page
 
 #WORKING
 def _test_drop_on_driver(browser):
-    projects_page, project_info_page, project_dict, workspace_page = start_test(browser)
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', 'top', and 'driver' objects
     assembly = workspace_page.find_library_button('Assembly').element
@@ -69,11 +59,11 @@ def _test_drop_on_driver(browser):
 
     #don't bother checking to see if they appeared, the UI box will appear and screw the test if they did
 
-    teardown_test(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 #WORKING
 def _test_workspace_dragdrop(browser):
-    projects_page, project_info_page, project_dict, workspace_page = start_test(browser)
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
     assembly = workspace_page.find_library_button('Assembly').element
@@ -104,21 +94,21 @@ def _test_workspace_dragdrop(browser):
     for path in guess_pathnames:
         eq(path in pathnames, True, "An element did not drop into 'top' when dragged onto one of its drop areas.\nIt was created somewhere else")
 
-    teardown_test(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 #WORKING
 def _test_drop_on_grid(browser):
-    projects_page, project_info_page, project_dict, workspace_page = start_test(browser)
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     
     #other tests also need to put an assembly on the grid, so put in seperate method
     put_assembly_on_grid(browser, workspace_page)   
 
-    teardown_test(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 #WORKING
 def _test_drop_on_existing_assembly(browser):
-    projects_page, project_info_page, project_dict, workspace_page = start_test(browser)
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     assembly = workspace_page.find_library_button('Assembly').element
     
@@ -159,11 +149,11 @@ def _test_drop_on_existing_assembly(browser):
 
 
 
-    teardown_test(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 #WORKING
 def _test_drop_on_component_editor(browser):
-    projects_page, project_info_page, project_dict, workspace_page = start_test(browser)
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
     assembly = workspace_page.find_library_button('Assembly').element
     top = workspace_page.get_dataflow_figure('top')
@@ -202,11 +192,11 @@ def _test_drop_on_component_editor(browser):
     for path in guess_pathnames:
         eq(path in pathnames, True, "An element did not drop into 'top' (in component editor) when dragged onto one of its drop areas.\nIt was created somewhere else")
 
-    teardown_test(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 #WORKING
 def _test_drop_on_component_editor_grid(browser):
-    projects_page, project_info_page, project_dict, workspace_page = start_test(browser)
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
     assembly = workspace_page.find_library_button('Assembly').element
     top = workspace_page.get_dataflow_figure('top')
@@ -227,9 +217,179 @@ def _test_drop_on_component_editor_grid(browser):
      #don't bother checking to see if it appeared, the UI box will appear and screw the test if it did
 
 
-    teardown_test(projects_page, project_info_page, project_dict, workspace_page)
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
     
 
+def _test_slots(browser):
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+   
+    editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(browser, workspace_page)
+
+    execcomp = workspace_page.find_library_button('ExecComp').element
+
+    #drag one success and one failure onto slots
+        #failure:
+    slot_drop(browser, execcomp, caserec, False, 'Component')
+
+    #refresh
+    labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#'+meta_name+'-slots"]/div/div/center')
+    caserec =  get_slot_target(labels, 'CaseRecorder')
+
+    #check for font change
+    eq(False, not ("color: rgb(204, 0, 0)" in caserec.get_attribute('style')), "Component dropped into CaseRecorder (should not have)")
+
+
+
+    slot_drop(browser, execcomp, comp, True, 'Component')
+
+    #refresh
+    labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#'+meta_name+'-slots"]/div/div/center')
+    comp =  get_slot_target(labels, 'Component')
+
+    #check for font change
+    eq(True, not ("color: rgb(204, 0, 0)" in comp.get_attribute('style')), "Component did not drop into Component slot")
+    
+
+    
+
+
+
+
+
+
+
+    #for the future:
+    """
+    #get the objects we need for the test
+    #setup a data structure explaining which things can be dropped where
+    #element, dropOnCaseIter, dropOnCaseRec, dropOnComp
+    dropdata = [('CSVCaseIterator', True, False, False),\
+                 ('CSVCaseRecorder', False, True, False),\
+                 ('ExecComp', False, False, True),\
+                 ('Assembly', False, False, True)]
+
+    drop_elements = [(workspace_page.find_library_button(ele[0]), ele[1], ele[2], ele[3]) for ele in dropdata]
+
+    #now loop through each dropable item, and see what happens when it lands on the target
+    for ele in drop_elements:
+
+
+        #drop on caseiter
+        slot_drop(browser, ele[0].element, caseiter, ele[1], 'CaseIterator')
+    #TODO: REFRESH THE SLOTS, CHECK THEIR FONT COLOR
+        #drop on caserec
+        slot_drop(browser, ele[0].element, caserec, ele[2], 'CaseRecorder')
+    #TODO: REFRESH THE SLOTS, CHECK THEIR FONT COLOR
+        #drop on comp
+        slot_drop(browser, ele[0].element, comp, ele[3], 'Component')
+    #TODO: REFRESH THE SLOTS, CHECK THEIR FONT COLOR
+
+        editor, metamodel, caseiter, caserec, comp = slot_reset(browser, workspace_page, editor, metamodel, True)
+    """
+
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+def slot_drop(browser, element, slot, should_drop, message='Slot'):
+
+    chain = drag_element_to(browser,element, slot, should_drop)
+    check_highlighting(slot, browser, should_highlight=should_drop, message=message)
+    release(chain)  
+
+
+def slot_reset(browser, workspace_page, editor=None, metamodel=None, remove_old=False):
+    #every successfull drop perminantly fills the slot. because of this, 
+    #we need to make a new metamodel (with empty slots) every successfull drop
+
+    if remove_old:
+        #first, close out the dialog box we have open
+        editor.close()
+        # remove the current metamodel
+        metamodel.remove()
+
+    #drop 'metamodel' onto the grid
+    meta_name = put_element_on_grid(browser, workspace_page, "MetaModel")
+    #find it on the page
+    metamodel = workspace_page.get_dataflow_figure(meta_name)
+    metamodel.pathname = get_pathname(browser, metamodel('header').element.find_element_by_xpath(".."))
+
+    #open the 'edit' dialog on metamodel
+    editor = metamodel.editor_page(False)
+    editor.show_slots()
+
+    resize_editor(browser, workspace_page, editor)
+
+    #get an arbitrary element so we can do a 'find_elements_by_xpath' search
+    ele = metamodel('header').element
+
+    #search for the drop target labels
+    labels = ele.find_elements_by_xpath('//div[@id="#'+meta_name+'-slots"]/div/div/center')
+
+    #find the slots (this is both the drop target and highlight area)
+    caseiter =  get_slot_target(labels, 'CaseIterator')
+    caserec =  get_slot_target(labels, 'CaseRecorder')
+    comp = get_slot_target(labels, 'Component')
+
+    return editor, metamodel, caseiter, caserec, comp, meta_name
+
+def resize_editor(browser, workspace_page, editor):
+        #ensure that the editor is not covering the libarary (or else we cannot drag things from it!)
+    page_width = workspace_page.browser.get_window_size()['width']
+    lib_width = workspace_page('library_tab').element.find_element_by_xpath('..').size['width']
+    lib_position = workspace_page('library_tab').element.find_element_by_xpath('..').location['x']
+    dialog_width = editor('dialog_title').element.find_element_by_xpath('../..').size['width']
+    dialog_position = editor('dialog_title').element.find_element_by_xpath('../..').location['x']
+    
+    #how much overlap do we have?
+    overlap = lib_position - (dialog_position + dialog_width) 
+
+    if overlap < 0: #we are overlaping
+        #check to see if we have enough room to move out of the way
+        if page_width < dialog_width + lib_width:
+            #not enough, need to rezize the editor
+
+            #look for the resize handle
+            sibblings = editor('dialog_title').element.find_elements_by_xpath('../../div')
+            handle = None
+            for sib in sibblings:
+                if "ui-resizable-se" in sib.get_attribute('class'):
+                    handle = sib
+
+            #do the resizing
+            chain = ActionChains(browser)
+            chain.click_and_hold(handle)
+            chain.move_by_offset(450 - dialog_width,0).perform() #we can resize editor down to 425px, any less and we cover drop targets
+            chain.click().perform()             #must click because release is not working. why? I do not know. 
+            chain.release(None).perform()
+
+            #recalculate the overlap
+            dialog_width = editor('dialog_title').element.find_element_by_xpath('../..').size['width']
+            dialog_position = editor('dialog_title').element.find_element_by_xpath('../..').location['x']
+            overlap = lib_position - (dialog_position + dialog_width)
+
+
+        #We are good, move out!
+        chain = ActionChains(browser)
+        chain.click_and_hold(editor('dialog_title').element)
+        chain.move_by_offset(overlap,0).perform()
+        chain.click().perform()             #must click because release is not working. why? I do not know. 
+        chain.release(None).perform()
+
+        #recalculate the overlap
+        dialog_width = editor('dialog_title').element.find_element_by_xpath('../..').size['width']
+        dialog_position = editor('dialog_title').element.find_element_by_xpath('../..').location['x']
+        overlap = lib_position - (dialog_position + dialog_width)
+
+        if overlap < 0:
+            #we still have a problem. 
+            eq(True, False, "Could not move or rezise the editor dialog so it is not overlapping the library. The browser window is too small")
+
+
+def get_slot_target(labels, element_str):
+    for label in labels:
+        if element_str in label.text:
+            return label.find_element_by_xpath("..")
+
+    return None
 
 def get_dataflow_fig_in_assembly_editor(browser, port, workspace_page, name):
     allFigs = workspace_page.get_dataflow_figures()
@@ -240,11 +400,12 @@ def get_dataflow_fig_in_assembly_editor(browser, port, workspace_page, name):
 
     return None
 
-    teardown_test(projects_page, project_info_page, project_dict, workspace_page)
-
 def put_assembly_on_grid(browser, workspace_page):
-     #find and get the 'assembly', and the div for the grid object
-    assembly = workspace_page.find_library_button('Assembly').element
+    return put_element_on_grid(browser, workspace_page,'Assembly')
+
+def put_element_on_grid(browser, workspace_page, element_str):
+    #find and get the 'assembly', and the div for the grid object
+    assembly = workspace_page.find_library_button(element_str).element
     grid = browser.find_element(*(By.XPATH, '//div[@id="-dataflow"]'))
 
     chain = ActionChains(browser)
@@ -258,9 +419,10 @@ def put_assembly_on_grid(browser, workspace_page):
     name = (NameInstanceDialog(browser, workspace_page.get_dataflow_figure('top').port).create_and_dismiss())
 
     #make sure it is on the grid
-    ensure_names_in_workspace(workspace_page, [name],"Dragging 'assembly' to grid did not produce a new element on page")
+    ensure_names_in_workspace(workspace_page, [name],"Dragging '"+element_str+"' to grid did not produce a new element on page")
 
     return name
+
 
 def get_pathname(browser, fig):
     figid = fig.get_attribute('id')#get the ID of the element here
