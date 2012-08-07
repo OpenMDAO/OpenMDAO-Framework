@@ -33,6 +33,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             {id:"valid",     name:"Valid",       field:"valid",     width:60 },
             {id:"desc",      name:"Description", field:"desc",      width:120 },
             {id:"connected", name:"Connected To",   field:"connected", width:100 },
+            {id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
         ];
     }
 
@@ -82,6 +83,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     }
                 }
             });
+            debug.info(properties)
             props.setData(properties);
         }
         else {
