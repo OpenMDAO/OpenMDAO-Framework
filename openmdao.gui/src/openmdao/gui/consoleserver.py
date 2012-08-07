@@ -15,7 +15,7 @@ from openmdao.main.api import Assembly, Component, Driver, logger, \
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
-from openmdao.util.fileutil import find_files, file_md5
+from openmdao.util.fileutil import find_files, file_md5, get_module_path
 
 from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
@@ -112,8 +112,8 @@ class ConsoleServer(cmd.Cmd):
         '''
         self._partial_cmd = None
         self.exc_info = exc_info
-        logger.error(str(err))
         msg = '%s: %s' % (err.__class__.__name__, err)
+        logger.error(msg)
         print msg
 
         if not self.publisher:
@@ -219,21 +219,6 @@ class ConsoleServer(cmd.Cmd):
         try:
             self.proj.command("execfile('%s', '%s')" % 
                                  (filename, file_md5(filename)))
-            ## first import all definitions
-            #basename = os.path.splitext(filename)[0]
-            #cmd = 'from ' + basename + ' import *'
-            #self.default(cmd)
-            ## then execute anything after "if __name__ == __main__:"
-            ## setting __name__ to __main__ won't work... fuggedaboutit
-            #with open(filename) as file:
-                #contents = file.read()
-            #main_str = 'if __name__ == "__main__":'
-            #contents.replace("if __name__ == '__main__':'", main_str)
-            #idx = contents.find(main_str)
-            #if idx >= 0:
-                #idx = idx + len(main_str)
-                #contents = 'if True:\n' + contents[idx:]
-                #self.default(contents)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -460,7 +445,7 @@ class ConsoleServer(cmd.Cmd):
             val, root = self.get_container(pathname)
             return val
         except Exception, err:
-            print "error getting value:", err
+            self._error(err, sys.exc_info())
 
     def get_types(self):
         return packagedict(get_available_types())
@@ -513,25 +498,13 @@ class ConsoleServer(cmd.Cmd):
         if isidentifier(name):
             name = name.encode('utf8')
             if parentname:
-                parent, root = self.get_container(parentname)
-                if parent:
-                    try:
-                        parent.add(name, create(classname))
-                    except Exception, err:
-                        self._error(err, sys.exc_info())
-                    else:
-                        self.proj._recorded_cmds.append('%s.add("%s",create("%s"))' %
-                                                        (parentname, name, classname))
-                else:
-                    print 'Error adding component, parent not found:', parentname
+                cmd = '%s.add("%s",create("%s"))' % (parentname, name, classname)
             else:
-                try:
-                    self.proj.__dict__[name] = create(classname)
-                except Exception, err:
-                    self._error(err, sys.exc_info())
-                else:
-                    self.proj._recorded_cmds.append('%s = create("%s"))' %
-                                               (name, classname))
+                cmd = '%s = create("%s")' % (name, classname)
+            try:
+                self.proj.command(cmd)
+            except Exception, err:
+                self._error(err, sys.exc_info())
         else:
             print 'Error adding component: "%s" is not a valid identifier' % name
 
@@ -621,7 +594,7 @@ class ConsoleServer(cmd.Cmd):
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
-            info = pdf.analyzer.fileinfo.get(filename, (None, None))[0]
+            info = pdf._files.get(filename)
             # if changed file contained classes and has already been imported..
             if info and len(info.classes) > 0 and info.modpath in sys.modules:
                 return True

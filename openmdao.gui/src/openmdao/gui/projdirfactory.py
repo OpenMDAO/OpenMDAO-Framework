@@ -257,7 +257,12 @@ class ProjDirFactory(Factory):
             except KeyError:
                 return None
             
-            return klass(**ctor_args)
+            try:
+                return klass(**ctor_args)
+            except Exception as err:
+                self._error(str(err))
+                raise
+        return None
     
     def get_available_types(self, groups=None):
         """Return a list of available types."""
@@ -291,7 +296,7 @@ class ProjDirFactory(Factory):
                 try:
                     fileinfo = _FileInfo(fpath)
                 except Exception as err:
-                    logger.error(str(err))
+                    self._error(str(err))
                     return
                 self._files[fpath] = fileinfo
                 added_set.update(fileinfo.classes.keys())
@@ -301,7 +306,7 @@ class ProjDirFactory(Factory):
                 try:
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:
-                    logger.error(str(err))
+                    self._error(str(err))
                     self._remove_fileinfo(fpath)
                     return
                 for cname in added_set:
@@ -333,13 +338,19 @@ class ProjDirFactory(Factory):
         else:
             logger.error("no Publisher found")
 
+    def _error(self, msg):
+        logger.error(msg)
+        publisher = Publisher.get_instance()
+        if publisher:
+            publisher.publish('file_errors', msg)
+        
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs
         when there is some error during the import of the file.
         """
         finfo = self._files.get(fpath)
         if finfo:
-            classes = [c for c,f in self._classes if f is finfo]
+            classes = [c for c,f in self._classes.items() if f is finfo]
             for klass in classes:
                 del self._classes[klass]
             del self._files[fpath]

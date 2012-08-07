@@ -252,9 +252,9 @@ class Project(object):
     def items(self):
         return self._model_globals.items()
     
-    def execfile(self, fname, digest):
+    def execfile(self, fname, digest=None):
         newdigest = file_md5(fname)
-        if digest != newdigest:
+        if digest and digest != newdigest:
             logger.warning("file '%s' has been modified since the last time it was exec'd" % fname)
         with open(fname) as f:
             contents = f.read()
@@ -308,6 +308,7 @@ class Project(object):
         if err:
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
+            raise err
         else:
             # certain commands (like execfile) can modify the recorded string,
             # so only record the given command if the executed command didn't

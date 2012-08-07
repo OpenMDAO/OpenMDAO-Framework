@@ -596,9 +596,9 @@ def execute(self)
     editor_page = workspace_page.open_editor()
     editor_page.new_file('bug2.py', """
 from openmdao.main.api import Component
-from nowhere import nothing
 class Bug2(Component):
-pass
+def __init__(self):
+    raise RuntimeError("__init__ failed")
 """)
     browser.close()
     browser.switch_to_window(workspace_window)
@@ -608,7 +608,7 @@ pass
     workspace_page.find_library_button('Bug2').click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
     message = NotifierPage.wait(workspace_page)
-    eq(message, "NameError: unable to create object of type 'bug2.Bug2'")
+    eq(message, "NameError: unable to create object of type 'bug2.Bug2': __init__ failed")
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
