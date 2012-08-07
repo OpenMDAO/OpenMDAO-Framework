@@ -33,7 +33,8 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
                 off = dataflowDiv.parent().offset(),
                 x = Math.round(ui.offset.left - off.left),
                 y = Math.round(ui.offset.top - off.top),
-                bestfig = dataflow.getBestCompartmentFigure(x,y);
+                bestFigure = dataflow.getBestCompartmentFigure(x,y);
+
             var elem = dataflowDiv[0];
             var zindex = document.defaultView.getComputedStyle(elem,null)
                          .getPropertyValue("z-index");
@@ -41,17 +42,39 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
                        'dropped on dataflow:',self.pathname,
                        'z-index',dataflowDiv.css('z-index'),
                        'zIndex',dataflowDiv.css('zIndex'));
+//            debug.info('ui.offset', ui.offset.left, ui.offset.top);
+//            debug.info('offset', off.left, off.top);
+//            debug.info('x, y', x, y);
+
             if (droppedObject.hasClass('objtype')) {
-                openmdao.Util.promptForValue('Enter name for new '+droppedName,
-                    function(name) {
-                        if (bestfig) {
-                            model.addComponent(droppedPath,name,bestfig.pathname);
+                var pathname = null,
+                    addComp = true;
+                if (bestFigure) {
+                    pathname = bestFigure.pathname;
+                    // maxmin is null for non-assembly components.
+                    addComp = bestFigure.maxmin != ''
+//                    debug.info('bestFigure', pathname, addComp);
+//                    debug.info('dims', bestFigure.getX(), bestFigure.getY(),
+//                               bestFigure.getWidth(), bestFigure.getHeight());
+                }
+                else {
+                    pathname = self.pathname;
+                    debug.info('me', pathname);
+                }
+                if (addComp) {
+                    openmdao.Util.promptForValue('Enter name for new '+droppedName,
+                        function(name) {
+                            model.addComponent(droppedPath,name,pathname);
                         }
-                        else {
-                            model.addComponent(droppedPath,name,self.pathname);
+                    );
+                }
+                else {
+                    openmdao.Util.confirm('Replace '+pathname+' with '+droppedName,
+                        function() {
+                            model.replaceComponent(pathname, droppedPath);
                         }
-                    }
-                );
+                    );
+                }
             }
         }
     });

@@ -208,22 +208,20 @@ def _check_test_output(host):
     """ Look for final test status ('OK' or 'FAILED'). """
     run_out = os.path.join('host_results', host, 'run.out')
     if not os.path.exists(run_out):
-        return ''
+        return '"run.out" not found'
 
     with open(run_out, 'r') as inp:
         lines = inp.readlines()
 
-    i = len(lines)-1
-    while i >= 0:
-        line = lines[i]
+    for line in reversed(lines):
         if 'OK' in line:
-            return 'OK'
+            i = line.index('OK')
+            return line[i:].strip()
         elif 'FAILED' in line:
-            j = line.index('FAILED')
-            return line[j:].strip()
-        i -= 1
+            i = line.index('FAILED')
+            return line[i:].strip()
 
-    return ''
+    return 'Test status not found'
 
 def start_host_processes(config, conn, ec2_hosts, options, funct, funct_kwargs):
     """Start up a different process for each host in options.hosts. Hosts can

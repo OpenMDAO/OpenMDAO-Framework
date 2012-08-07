@@ -303,6 +303,16 @@ openmdao.Model=function() {
         });
     };
 
+    /** replace pathname with an object of the specified type */
+    this.replaceComponent = function(pathname, typepath, callback) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'replace/'+pathname,
+            data: {'type': typepath},
+            success: callback
+        });
+    };
+
     /** remove the component with the given pathname */
     this.removeComponent = function(pathname) {
         var parent = openmdao.Util.getPath(pathname);

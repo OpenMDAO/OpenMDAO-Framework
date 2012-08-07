@@ -236,6 +236,66 @@ openmdao.Util = {
     },
 
     /**
+     * Prompt for confirmation.
+     *
+     * prompt:      prompt string
+     * callback:    the function to call with the provided value
+     * title:       optional title, default ``Please confirm``
+     * baseId:      optional id, default ``confirm``, used for element ids
+     */
+    confirm: function(prompt, callback, title, baseId) {
+        title = title || 'Please confirm:';
+        baseId = baseId || 'confirm';
+
+        // if the user didn't specify a callback, just return
+        if (typeof callback !== 'function') {
+            return;
+        }
+
+        var promptId = baseId+'-prompt',
+            okId = baseId+'-ok',
+            cancelId = baseId + '-cancel',
+            element = document.getElementById(baseId),
+            win = null;
+            userInput = null;
+
+        function handleResponse(ok) {
+            // close dialog
+            win.dialog('close');
+            // if response was 'Ok' then invoke the callback
+            if (ok && callback) {
+                callback();
+            }
+            // remove from DOM
+            win.remove();
+        }
+
+        win = jQuery('<div id="'+baseId+'"><div id="'+promptId+'" /></div>');
+
+        win.dialog({
+            autoOpen: false,
+            modal: true,
+            title: title,
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: okId,
+                    click: function() { handleResponse(true); }
+                },
+                {
+                    text: 'Cancel',
+                    id: cancelId,
+                    click: function() { handleResponse(false); }
+                }
+            ]
+        });
+
+        jQuery('#'+promptId).html(prompt+'?');
+
+        win.dialog('open');
+    },
+
+    /**
      * Notify user with `msg`.  Typically used when testing to catch
      * completion of 'background' processing.
      *
