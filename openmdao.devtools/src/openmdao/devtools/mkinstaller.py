@@ -139,8 +139,8 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
-    parser.add_option("--gui", action="store_true", dest='gui', 
-                      help="install the openmdao graphical user interface and its dependencies")
+    parser.add_option("--nogui", action="store_false", dest='gui', default=True,
+                      help="do not install the openmdao graphical user interface and its dependencies")
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
