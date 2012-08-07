@@ -79,7 +79,12 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     value.editable = options.editable && (value.connected.length === 0);
                     if(value.editable)
                     {
-                        editableCells[index] = {"value" : "ui-state-editable"};
+                        if("implicit" in value && value.implicit.length >0){
+                            //need a css class for highlighting implicitly connected inputs
+                        }
+                        else{
+                            editableCells[index] = {"value" : "ui-state-editable"};
+                        }
                     }
                 }
             });
