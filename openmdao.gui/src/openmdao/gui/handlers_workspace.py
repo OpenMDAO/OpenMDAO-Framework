@@ -151,6 +151,24 @@ class ComponentHandler(ReqHandler):
         self.write(attr)
 
 
+class ReplaceHandler(ReqHandler):
+    ''' replace a component
+    '''
+
+    @web.authenticated
+    def post(self, pathname):
+        type = self.get_argument('type')
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.replace_component(pathname, type)
+        except Exception, e:
+            print e
+            result = sys.exc_info()
+        self.content_type = 'text/html'
+        self.write(result)
+
+
 class ComponentsHandler(ReqHandler):
 
     @web.authenticated
@@ -471,6 +489,7 @@ handlers = [
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
     web.url(r'/workspace/value/(.*)',       ValueHandler),
