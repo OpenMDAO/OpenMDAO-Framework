@@ -89,6 +89,7 @@ nav ul ul a:hover {
   border:1px solid #222;
   background-color: #6a6a6a;
   color:white;
+  cursor: url( http://www.google.com/intl/en_ALL/mapfiles/openhand.cur ) 8 8 , auto ;
 }
 
 /*palette library styles */
