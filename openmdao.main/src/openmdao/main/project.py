@@ -161,7 +161,9 @@ def filter_macro(lines):
                             if parts[1] == 'remove': # don't include the remove command
                                 continue             # since there won't be anything to remove
                 
-                # only keep the most recent assignment to any variable
+                # only keep the most recent assignment to any variable, and throw away
+                # assigns to variables in objects that have been overridden by newer ones with
+                # the same name.
                 if rest.startswith('='):
                     if full in assigns or _check_hierarchy(full, objs):
                         continue
