@@ -151,6 +151,24 @@ class ComponentHandler(ReqHandler):
         self.write(attr)
 
 
+class ReplaceHandler(ReqHandler):
+    ''' replace a component
+    '''
+
+    @web.authenticated
+    def post(self, pathname):
+        type = self.get_argument('type')
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.replace_component(pathname, type)
+        except Exception, e:
+            print e
+            result = sys.exc_info()
+        self.content_type = 'text/html'
+        self.write(result)
+
+
 class ComponentsHandler(ReqHandler):
 
     @web.authenticated
@@ -199,7 +217,8 @@ class EditorHandler(ReqHandler):
     def get(self):
         '''Code Editor
         '''
-        self.render('workspace/editor.html')
+        filename = self.get_argument('filename', default=None)
+        self.render('workspace/editor.html', filename=filename)
 
 
 class ExecHandler(ReqHandler):
@@ -240,6 +259,12 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
+            force = int(self.get_argument('force', default=0))
+            if not force and filename.endswith('.py'):
+                ret = cserver.file_classes_changed(filename)
+                if ret:
+                    self.send_error(409)  # user will be prompted to overwrite classes
+                    return
             contents = self.get_argument('contents', default='')
             self.write(str(cserver.write_file(filename, contents)))
 
@@ -300,7 +325,7 @@ class OutstreamHandler(ReqHandler):
 
 class ProjectHandler(ReqHandler):
     ''' GET:  load model fom the given project archive,
-              or reload remebered project for session if no file given
+              or reload remembered project for session if no file given
 
         POST: save project archive of the current project
     '''
@@ -354,7 +379,7 @@ class PublishHandler(ReqHandler):
 
 
 class PubstreamHandler(ReqHandler):
-    ''' return the url of the zmq publisher server,
+    ''' return the url of the zmq publisher server
     '''
 
     @web.authenticated
@@ -400,6 +425,19 @@ class UploadHandler(ReqHandler):
     def get(self):
         path = self.get_argument('path', default=None)
         self.render('workspace/upload.html', path=path)
+
+
+class ValueHandler(ReqHandler):
+    ''' GET: get a value for the given pathname
+        TODO: combine with ComponentHandler? handle Containers as well?
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        value = cserver.get_value(name)
+        self.content_type = 'application/javascript'
+        self.write(value)
 
 
 class WorkflowHandler(ReqHandler):
@@ -451,8 +489,10 @@ handlers = [
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
+    web.url(r'/workspace/value/(.*)',       ValueHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]

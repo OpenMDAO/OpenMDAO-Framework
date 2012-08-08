@@ -212,7 +212,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                             else {
                                 filter_beg = '';
                             }
-                            update();
+                            self.update();
                         }
         };
         menu.remove = {

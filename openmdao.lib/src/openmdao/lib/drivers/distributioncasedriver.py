@@ -75,9 +75,9 @@ class FiniteDifferenceGenerator(HasTraits):
             delta[ i ] =  param.fd_step
             
         # baseline case
-        if not ( self.form == "CENTRAL" and self.order % 2 == 1 ) and \
-           not (self.form != "CENTRAL" and self.skip_baseline):
-            yield baseline
+        if not self.skip_baseline:
+            if not ( self.form == "CENTRAL" and self.order % 2 == 1 ):
+                yield baseline
 
         if self.form == "FORWARD" :
             offset = 1

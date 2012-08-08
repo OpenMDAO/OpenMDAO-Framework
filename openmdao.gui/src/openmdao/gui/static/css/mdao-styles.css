@@ -133,6 +133,7 @@ nav ul ul a:hover {
   width:100px;
   color:#000;
   background-color:#eee;
+  color: black;
 } 
 .context-menu li:hover, .context-menu .context-menu-item-active {
   background-color:#ccc;
@@ -141,7 +142,6 @@ nav ul ul a:hover {
   color:#999;
   background-color:#eee !important;
 }
-
 
 /* CSS3 */
 .borderradius nav, dl dt,  h3, .button {

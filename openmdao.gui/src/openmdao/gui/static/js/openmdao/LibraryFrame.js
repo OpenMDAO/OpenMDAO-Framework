@@ -14,9 +14,9 @@ openmdao.LibraryFrame = function(id,model) {
     /** find the actual top of the given element, taking visibility and
         scrolling into account */
     function getElementTop(elem) {
-       var yPos = 0;
-       var scrolls = 0;
-       var firstElemWithOSP = 0;
+       var yPos = 0,
+           scrolls = 0,
+           firstElemWithOSP = 0;
        while(elem && !isNaN(elem.offsetTop)) {
           scrolls += elem.scrollTop;
           if (firstElemWithOSP === 0 && elem.offsetParent) {
@@ -129,17 +129,17 @@ openmdao.LibraryFrame = function(id,model) {
         }
 
         contextMenu.append(jQuery('<li>View Docs</li>').click(function(ev) {
-            var modpath = _findMatch(ev).getAttribute('modpath');
-            var url = '/docs/plugins/'+modpath;
-            var parts = modpath.split('.');
-            var cname = parts.pop();
+            var modpath = _findMatch(ev).getAttribute('modpath'),
+                url     = '/docs/plugins/'+modpath,
+                parts   = modpath.split('.'),
+                cname   = parts.pop();
             window.open(url, 'Docs for '+modpath);
         }));
         contextMenu.append(jQuery('<li>View Metadata</li>').click(function(ev) {
             var match = _findMatch(ev),
                 win   = jQuery('<div></div>'),
                 table = jQuery('<table cellpadding=5px>')
-                    .append('<tr><th></th><th></th></tr>'),
+                          .append('<tr><th></th><th></th></tr>'),
                 hdata = ['name','modpath','version','context','ifaces'],
                 data  = dtable.fnGetData(match.parentNode),
                 i;

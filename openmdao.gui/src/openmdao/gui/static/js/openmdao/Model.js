@@ -23,7 +23,7 @@ openmdao.Model=function() {
         jQuery.ajax({
             type: 'GET',
             url:  url,
-            success: function(addr) {
+            success: function(addr, textStatus, jqXHR) {
                 sockets[url] = openmdao.Util.openWebSocket(addr,handler);
             },
             error: function(jqXHR, textStatus, err) {
@@ -211,7 +211,7 @@ openmdao.Model=function() {
         }
     };
 
-    /** get  hierarchical list of components*/
+    /** get  hierarchical list of components */
     this.getComponents = function(callback,errorHandler) {
         if (typeof callback !== 'function') {
             return;
@@ -228,7 +228,7 @@ openmdao.Model=function() {
         }
     };
 
-    /** get  attributes of a component*/
+    /** get  attributes of a component */
     this.getComponent = function(name,callback,errorHandler) {
         if (typeof callback !== 'function') {
             return;
@@ -239,6 +239,22 @@ openmdao.Model=function() {
                 url:  'component/'+name,
                 dataType: 'json',
                 data: {},
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
+
+
+    /** get value for pathname */
+    this.getValue = function(pathname,callback,errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'value/'+pathname,
                 success: callback,
                 error: errorHandler
             });
@@ -299,11 +315,17 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'component/'+name,
             data: {'type': typepath, 'parent': parent },
-            success: function(text) {
-                        if (typeof callback === 'function') {
-                            callback(text);
-                        }
-            }
+            success: callback
+        });
+    };
+
+    /** replace pathname with an object of the specified type */
+    this.replaceComponent = function(pathname, typepath, callback) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'replace/'+pathname,
+            data: {'type': typepath},
+            success: callback
         });
     };
 
@@ -325,11 +347,7 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'command',
             data: { 'command': cmd },
-            success: function(txt) {
-                        if (typeof callback === 'function') {
-                            callback(txt);
-                        }
-                     },
+            success: callback,
             error: errorHandler,
             complete: completeHandler
         });
@@ -339,11 +357,7 @@ openmdao.Model=function() {
     this.getOutput = function(callback, errorHandler) {
         jQuery.ajax({
             url: 'output',
-            success: function(text) {
-                        if (typeof callback === 'function') {
-                            callback(text);
-                        }
-                     },
+            success: callback,
             error: errorHandler
         });
     };
@@ -380,17 +394,16 @@ openmdao.Model=function() {
     };
 
     /** set the contents of the specified file */
-    this.setFile = function(filepath, contents, callback, errorHandler) {
+    this.setFile = function(filepath, contents, force, callback, errorHandler, handler409) {
         jQuery.ajax({
             type: 'POST',
             url:  'file/'+filepath.replace(/\\/g,'/'),
-            data: { 'contents': contents},
-            success: function(text) {
-                        if (typeof callback === 'function') {
-                            callback(text);
-                        }
-                     },
-            error: errorHandler
+            data: { 'contents': contents, 'force': force },
+            success: callback,
+            error: errorHandler,
+            statusCode: {
+                409: handler409
+             }
         });
     };
 
@@ -400,11 +413,7 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'file/'+folderpath.replace(/\\/g,'/'),
             data: { 'isFolder': true},
-            success: function(text) {
-                        if (typeof callback === 'function') {
-                            callback(text);
-                        }
-                     },
+            success: callback,
             error: errorHandler
         });
     };
@@ -464,7 +473,7 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'exec',
             data: { },
-            success: function(jqXHR, textStatus) {
+            success: function(data, textStatus, jqXHR) {
                          if (typeof openmdao_test_mode !== 'undefined') {
                              openmdao.Util.notify('Run complete: '+textStatus);
                          }
@@ -488,11 +497,7 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'exec',
             data: { 'filename': path },
-            success: function(text) {
-                        if (typeof callback === 'function') {
-                            callback(text);
-                        }
-                     }
+            success: callback
         });
     };
 

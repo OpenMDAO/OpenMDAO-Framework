@@ -1545,8 +1545,8 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
-    parser.add_option("--gui", action="store_true", dest='gui', 
-                      help="install the openmdao graphical user interface and its dependencies")
+    parser.add_option("--nogui", action="store_false", dest='gui', default=True,
+                      help="do not install the openmdao graphical user interface and its dependencies")
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
@@ -1621,7 +1621,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
 def after_install(options, home_dir):
     global logger, openmdao_prereqs
     
-    reqs = ['SetupDocs==1.0.5', 'Pyevolve==0.6', 'networkx==1.3', 'slsqp==1.0.1', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'docutils==0.8.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Sphinx==1.1.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'virtualenv==1.6.4', 'conmin==1.0.1', 'pycrypto==2.3']
+    reqs = ['SetupDocs==1.0.5', 'Pyevolve==0.6', 'networkx==1.3', 'slsqp==1.0.1', 'pyparsing==1.5.2', 'Pygments==1.3.1', 'docutils==0.8.1', 'argparse==1.2.1', 'nose==0.11.3', 'zope.interface==3.6.1', 'Sphinx==1.1.3', 'requests==0.13.3', 'Jinja2==2.4', 'decorator==3.2.0', 'ordereddict==1.1', 'newsumt==1.1.0', 'Traits==3.3.0', 'boto==2.0rc1', 'cobyla==1.0.1', 'paramiko==1.7.7.1', 'Fabric==0.9.3', 'sympy==0.7.1', 'virtualenv==1.6.4', 'conmin==1.0.1', 'pycrypto==2.3']
     guireqs = ['pyzmq-static==2.1.11.1', 'PyYAML==3.10', 'pathtools==0.1.2', 'tornado==2.2.1', 'argh==0.15.1', 'jsonpickle==0.4.0', 'watchdog==0.6.0']
     guitestreqs = ['entrypoint2==0.0.5', 'mocker==1.1', 'EasyProcess==0.1.4', 'zope.exceptions==3.6.1', 'path.py==2.2.2', 'PyVirtualDisplay==0.1.0', 'zope.testrunner==4.0.4', 'lazr.testing==0.1.2a', 'selenium==2.20.0', 'zope.testing==4.1.1']
     

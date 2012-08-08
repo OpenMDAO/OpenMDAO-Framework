@@ -701,7 +701,11 @@ class Assembly (Component):
                 for i,val in enumerate(vals):
                     ret[posdict[varnames[i]]] = val
             else:
-                vals = getattr(self, compname).get_valid(varnames)
+                comp = getattr(self, compname)
+                if isinstance(comp, Component):
+                    vals = comp.get_valid(varnames)
+                else:
+                    vals = [self._valid_dict['.'.join([compname, vname])] for vname in varnames]
                 for i,val in enumerate(vals):
                     full = '.'.join([compname,varnames[i]])
                     ret[posdict[full]] = val
@@ -846,7 +850,8 @@ class Assembly (Component):
                                            'pathname': comp.get_pathname(),
                                            'type': type(comp).__name__,
                                            'valid': comp.is_valid(),
-                                           'is_assembly': is_instance(comp, Assembly)
+                                           'is_assembly': is_instance(comp, Assembly),
+                                           'python_id': id(comp)
                                           })
 
                     if is_instance(comp, Driver):

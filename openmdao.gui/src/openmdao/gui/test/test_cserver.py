@@ -92,7 +92,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('Outputs' in attributes)
         self.assertTrue('Objectives' in attributes)
         self.assertTrue('Parameters' in attributes)
-        self.assertTrue('IneqConstraints' in attributes)
+        self.assertTrue('Constraints' in attributes)
         self.assertTrue('Slots' in attributes)
         self.assertTrue('Workflow' in attributes)
 

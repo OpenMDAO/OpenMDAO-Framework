@@ -2,13 +2,14 @@ import os
 import os.path
 import shutil
 import tempfile
+import traceback
 import zipfile
-
-from openmdao.gui.util import filedict
-from openmdao.main.publisher import Publisher
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+from openmdao.gui.util import filedict
+from openmdao.main.publisher import Publisher
 
 
 class FilesPublisher(FileSystemEventHandler):
@@ -21,7 +22,10 @@ class FilesPublisher(FileSystemEventHandler):
     def dispatch(self, event):
         ''' just publish the updated file collection
         '''
-        self.files.publish_files()
+        try:
+            self.files.publish_files()
+        except Exception:
+            traceback.print_exc()
 
 
 class FileManager(object):

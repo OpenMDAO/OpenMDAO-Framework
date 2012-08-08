@@ -80,6 +80,22 @@ openmdao.DataflowFigure.prototype.destroy=function(){
     this.openmdao_model.removeListener(topic,this.setExecState.bind(this));
 };
 
+/** Remove component figure. */
+openmdao.DataflowFigure.prototype.removeComponent = function(name_or_fig) {
+    var fig = null;
+    if (name_or_fig instanceof openmdao.DataflowFigure) {
+        fig = name_or_fig;
+    }
+    else {
+        fig = this.figures[name_or_fig];
+        delete this.figures[name_or_fig];
+    }
+    fig.minimize();
+    this.getWorkflow().removeFigure(fig);
+    this.removeChild(fig);
+    fig.destroy();
+};
+
 openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     var item=draw2d.CompartmentFigure.prototype.createHTMLElement.call(this);
 
@@ -510,10 +526,7 @@ openmdao.DataflowFigure.prototype.minimize=function(){
         self.top_right.style.background=circleIMG+" no-repeat top right";
 
         jQuery.each(self.figures,function(name,fig) {
-            fig.minimize();
-            self.removeChild(fig);
-            workflow.removeFigure(fig);
-            fig.destroy();
+            this.removeComponent(fig);
         });
         self.figures = {};
 
@@ -589,6 +602,14 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             maxmin = comp.is_assembly ? '+' : '',
             fig = self.figures[name];
 
+        if (fig) {
+            // Check for replacement.
+            if (fig.pythonID != comp.python_id) {
+                self.removeComponent(name);
+                fig = null;
+            }
+        }
+
         if (!fig) {
             if (self.pathname) {
                 figname = self.pathname+'.'+name;
@@ -598,6 +619,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             }
             fig = new openmdao.DataflowFigure(self.openmdao_model,
                                               figname, type, valid, maxmin);
+            fig.pythonID = comp.python_id;
             self.figures[name] = fig;
             self.addChild(fig);
             workflow.addFigure(fig,0,0);
@@ -755,10 +777,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             }
         });
         if (!found) {
-            fig.minimize();
-            workflow.removeFigure(fig);
-            self.removeChild(fig);
-            delete self.figures[name];
+            self.removeComponent(name);
         }
     });
 
@@ -934,4 +953,3 @@ openmdao.DataflowFigure.prototype.setExecState=function(message){
     else if (state === "RUNNING") {
         this.setColor(new draw2d.Color(0,0,255));
     }
-};
