@@ -500,6 +500,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
 
     this.setContent('');
 
+    var flows = [];
+    flows = flows.concat(json.connections);
+    flows = flows.concat(json.parameters);
+    flows = flows.concat(json.constraints);
+    flows = flows.concat(json.objectives);
+
     jQuery.each(json.components,function(idx,comp) {
         var name = comp.name,
             type = comp.type,
@@ -512,6 +518,15 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             if (fig.pythonID != comp.python_id) {
                 self.removeComponent(name);
                 fig = null;
+                jQuery.each(flows, function(idx, conn) {
+                    var src_name = conn[0].indexOf('.') < 0 ? '' : conn[0].split('.')[0],
+                        dst_name = conn[1].indexOf('.') < 0 ? '' : conn[1].split('.')[0],
+                        con_name = src_name+'-'+dst_name;
+                    if (name === src_name || name === dst_name) {
+                        workflow.removeFigure(self.connections[con_name]);
+                        delete self.connections[con_name];
+                    }
+                });
             }
         }
 
