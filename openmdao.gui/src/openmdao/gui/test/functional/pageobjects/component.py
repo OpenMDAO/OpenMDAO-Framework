@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import random 
 import string 
  
