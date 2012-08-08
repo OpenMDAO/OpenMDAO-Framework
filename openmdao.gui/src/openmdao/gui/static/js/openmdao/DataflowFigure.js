@@ -1,5 +1,4 @@
-
-var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = ( openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
     this.openmdao_model = model;
@@ -953,3 +952,4 @@ openmdao.DataflowFigure.prototype.setExecState=function(message){
     else if (state === "RUNNING") {
         this.setColor(new draw2d.Color(0,0,255));
     }
+}
