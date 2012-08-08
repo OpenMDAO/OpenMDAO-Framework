@@ -4,8 +4,8 @@ from openmdao.main.api import Driver, Architecture,SequentialWorkflow
 
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
-                                     SensitivityDriver, FixedPointIterator#, COBYLAdriver as CONMINdriver
+from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
+                                     SensitivityDriver, FixedPointIterator#, COBYLAdriver as SLSQPdriver
 
 class BLISS(Architecture): 
     """Bi-Level Integrated Systems Synthesis architecture"""
@@ -79,7 +79,6 @@ class BLISS(Architecture):
                 sa.add_constraint(constraint)
             sa.add_objective(objective[1].text,name=objective[0])
             sa.differentiator = FiniteDifference()
-            sa.workflow.add(comp)
         
         #Linear System Optimizations
         
@@ -89,7 +88,8 @@ class BLISS(Architecture):
         
         bbopts = []
         for comp,local_params in local_dvs.iteritems(): 
-            bbopt = self.parent.add('bbopt_%s'%comp,CONMINdriver())
+            bbopt = self.parent.add('bbopt_%s'%comp,SLSQPdriver())
+            bbopt.differentiator = FiniteDifference()
             bbopt.iprint = 0
 
             bbopts.append('bbopt_%s'%comp)
@@ -127,12 +127,13 @@ class BLISS(Architecture):
             lin_objective = "+".join(objective_parts)
             bbopt.add_objective(lin_objective)
             
+            
         # Global Optimization
         delta_z = []
         df = []
         dg = []
         
-        sysopt = self.parent.add('sysopt', CONMINdriver())
+        sysopt = self.parent.add('sysopt', SLSQPdriver())
         sysopt.differentiator = FiniteDifference()
         sysopt.recorders = self.data_recorders
         sysopt.iprint = 0
@@ -168,13 +169,10 @@ class BLISS(Architecture):
 
         self.parent.driver.workflow = SequentialWorkflow()
         self.parent.driver.workflow.add("mda")
+        self.parent.driver.workflow.add(sa_s)
         if global_dvs: 
             self.parent.driver.workflow.add("ssa")
-       
-        self.parent.driver.workflow.add(sa_s)
-        
         self.parent.driver.workflow.add(bbopts)
-        
         if global_dvs: 
             self.parent.driver.workflow.add("sysopt")
             

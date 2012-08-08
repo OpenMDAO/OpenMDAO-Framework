@@ -1,5 +1,5 @@
 """
-Tests of overall workspace functions.
+Tests of code editor functions.
 """
 
 import sys
