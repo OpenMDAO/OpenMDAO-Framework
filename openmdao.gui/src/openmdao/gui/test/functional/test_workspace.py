@@ -324,7 +324,9 @@ d = Float(0.0, iotype='out')
     workspace_page.library_search = 'In Project\n'
 
     workspace_page.find_library_button('Foo').click()
+    time.sleep(2)
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
+    time.sleep(2)
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
 
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
