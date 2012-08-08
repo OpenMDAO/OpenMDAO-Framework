@@ -110,12 +110,24 @@ class ProjectTestCase(unittest.TestCase):
             "abc.run()",
             ]
         expected = [
+            "abc.xyz = 123.45",
+            "top.add('foo', create('MyClass'))",
+            "top.foo.x = 8.9",
             "abc.xyz = 99.9",
             "some_unknown_funct(a,b,c)",
             "execfile('foo.py')",
             "top.add('foo', create('SomeClass'))",
             "top.foo.gg = 53",
+            "top.blah.xx = 44",
+            "top.remove('blah')",
             ]
+        #expected = [
+            #"abc.xyz = 99.9",
+            #"some_unknown_funct(a,b,c)",
+            #"execfile('foo.py')",
+            #"top.add('foo', create('SomeClass'))",
+            #"top.foo.gg = 53",
+            #]
         filtered = filter_macro(lines)
         self.assertEqual(filtered, expected)
         

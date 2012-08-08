@@ -124,7 +124,11 @@ def _check_hierarchy(pathname, objs):
     return False
     
 def filter_macro(lines):
-    """Removes any commands from a macro that are overridden by later commands."""
+    """Removes commands from a macro that are overridden by later commands."""
+    # FIXME: this needs a lot of work. Things get a little messy when you have
+    # rename and move calls mixed in and I didn't have time to sort out those issues yet,
+    # so right now I'm just filtering out multiple execfile() calls and all calls to 
+    # run() and execute().
     filt_lines = []
     assigns = set()
     execs = set()
@@ -150,25 +154,25 @@ def filter_macro(lines):
                     # remove calls to run, execute, ...
                     if parts[1] in _excluded_calls:
                         continue
-                    elif parts[1] in ['add', 'remove']:
-                        lst = list(generate_tokens(StringIO(rest).readline))
-                        if lst[1][0] == token.STRING:
-                            pathname = '.'.join([parts[0],
-                                                 lst[1][1].strip("'").strip('"')])
-                            if _check_hierarchy(pathname, objs):
-                                continue
-                            objs.add(pathname)
-                            if parts[1] == 'remove': # don't include the remove command
-                                continue             # since there won't be anything to remove
+                    #elif parts[1] in ['add', 'remove']:
+                        #lst = list(generate_tokens(StringIO(rest).readline))
+                        #if lst[1][0] == token.STRING:
+                            #pathname = '.'.join([parts[0],
+                                                 #lst[1][1].strip("'").strip('"')])
+                            #if _check_hierarchy(pathname, objs):
+                                #continue
+                            #objs.add(pathname)
+                            #if parts[1] == 'remove': # don't include the remove command
+                                #continue             # since there won't be anything to remove
                 
-                # only keep the most recent assignment to any variable, and throw away
-                # assigns to variables in objects that have been overridden by newer ones with
-                # the same name.
-                if rest.startswith('='):
-                    if full in assigns or _check_hierarchy(full, objs):
-                        continue
-                    else:
-                        assigns.add(full)
+                ## only keep the most recent assignment to any variable, and throw away
+                ## assigns to variables in objects that have been overridden by newer ones with
+                ## the same name.
+                #if rest.startswith('='):
+                    #if full in assigns or _check_hierarchy(full, objs):
+                        #continue
+                    #else:
+                        #assigns.add(full)
                         
         filt_lines.append(line)
             
