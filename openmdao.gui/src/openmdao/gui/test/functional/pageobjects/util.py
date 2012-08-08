@@ -42,6 +42,23 @@ class ValuePrompt(BasePageObject):
         self('cancel_button').click()
 
 
+class ConfirmationPage(BasePageObject):
+    """ Overlay displayed by ``openmdao.Util.confirm()``. """
+
+    prompt = TextElement((By.ID, 'confirm-prompt'))
+    ok_button = ButtonElement((By.ID, 'confirm-ok'))
+    cancel_button = ButtonElement((By.ID, 'confirm-cancel'))
+
+    def __init__(self, parent):
+        super(ConfirmationPage, self).__init__(parent.browser, parent.port)
+
+    def click_ok(self):
+        self('ok_button').click()
+
+    def click_cancel(self):
+        self('cancel_button').click()
+
+
 class NotifierPage(object):
     """
     Overlay displayed by ``openmdao.Util.notify()``.

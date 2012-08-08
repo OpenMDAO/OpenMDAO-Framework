@@ -42,18 +42,18 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
     """Expand the given project archive file in the specified destination
     directory and return a Project object that points to the newly
     expanded project.
-    
+
     archive_name: str
         Path to the project archive to be expanded.
-        
+
     proj_name: str (optional)
         Name of the new project. Defaults to the name of the project contained
         in the name of the archive.
-        
+
     dest_dir: str (optional)
         Directory where the project directory for the expanded archive will
         reside. Defaults to the directory where the archive is located.
-        
+
     create: bool (optional)
         If True, create and return a Project object. Otherwise just unpack the
         project directory.
@@ -64,29 +64,29 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
         dest_dir = os.path.dirname(archive_name)
     else:
         dest_dir = expand_path(dest_dir)
-        
+
     if proj_name is None:
         proj_name = parse_archive_name(archive_name)
 
     projpath = os.path.join(dest_dir, proj_name)
-    
+
     if os.path.exists(projpath):
         raise RuntimeError("Directory '%s' already exists" % projpath)
 
     os.mkdir(projpath)
-    startdir = os.getcwd()
     if os.path.getsize(archive_name) > 0:
         try:
             f = open(archive_name, 'rb')
-            tf = tarfile.open(fileobj=f,mode='r')
+            tf = tarfile.open(fileobj=f, mode='r')
             tf.extractall(projpath)
         except Exception, err:
-            print "Error expanding project archive:",err
+            print "Error expanding project archive:", err
         finally:
             tf.close()
 
     if create:
         return Project(projpath)
+
 
 #def find_distrib_for_obj(obj):
     #"""Return the name of the distribution containing the module that
@@ -96,7 +96,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
         #fname = getfile(obj)
     #except TypeError:
         #return None
-    
+
     #modpath = get_module_path(fname)
     #parts = modpath.split('.')
     #l = len(parts)
@@ -107,7 +107,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
             #continue
         #return dist
     #return None
-    
+
 
 _excluded_calls = set(['run', 'execute'])
 
@@ -199,7 +199,7 @@ class Project(object):
     def __init__(self, projpath, projdirfactory=None):
         """Initializes a Project containing the project found in the 
         specified directory or creates a new project if one doesn't exist.
-        
+
         projpath: str
             Path to the project's directory.
         """
@@ -248,8 +248,6 @@ class Project(object):
             self.activate()
             self._initialize()
             self.save()
-            
-        #self.save()
 
     def _initialize(self):
         self._model_globals['top'] = set_as_top(Assembly())
@@ -258,6 +256,7 @@ class Project(object):
         self._model_globals['create'] = create    # add create funct here so macros can call it
         self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
         self._model_globals['execfile'] = self.execfile
+
 
     @property
     def name(self):
@@ -298,7 +297,7 @@ class Project(object):
                     try:
                         self.command(line.rstrip('\n'))
                     except Exception as err:
-                        logger.error('file %s line %d: %s' % (fpath, i+1, str(err)))
+                        logger.error('file %s line %d: %s' % (fpath, i + 1, str(err)))
                         if strict:
                             raise
                 else:
@@ -321,11 +320,11 @@ class Project(object):
                 result = eval(code, self._model_globals)
             except Exception as err:
                 pass
-            
+
         if err:
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
-            raise err
+            raise
         else:
             # certain commands (like execfile) can modify the recorded string,
             # so only record the given command if the executed command didn't
@@ -334,7 +333,7 @@ class Project(object):
                 self._recorded_cmds.append(cmd)
             
         return result
-            
+
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
@@ -359,7 +358,7 @@ class Project(object):
                 pickle.dump(self._model_globals, f)
         except Exception as err:
             logger.error("Failed to pickle the project: %s" % str(err))
-            
+
         if self._recorded_cmds:
             logger.info("Saving macro used to create project")
             with open(os.path.join(self.path, '_project_macro'), 'w') as f:
@@ -369,38 +368,37 @@ class Project(object):
                     logger.info(cmd)
 
     def export(self, projname=None, destdir='.'):
-        """Creates an archive of the current project for export. 
-        
+        """Creates an archive of the current project for export.
+
         projname: str (optional)
             The name that the project in the archive will have. Defaults to
             the current project name.
-        
+
         destdir: str (optional)
             The directory where the project archive will be placed. Defaults to
             the current directory.
         """
-        
+
         ddir = expand_path(destdir)
         if projname is None:
             projname = self.name
-        projpath = os.path.join(ddir, projname)
-        
+
         if ddir.startswith(self.path):  # the project contains the dest directory... bad
             raise RuntimeError("Destination directory for export (%s) is within project directory (%s)" %
                                (ddir, self.path))
-        
+
         self.save()
         startdir = os.getcwd()
         os.chdir(self.path)
         try:
             try:
-                fname = os.path.join(ddir,projname+PROJ_FILE_EXT)
+                fname = os.path.join(ddir, projname + PROJ_FILE_EXT)
                 f = open(fname, 'wb')
-                tf = tarfile.open(fileobj=f,mode='w:gz')
+                tf = tarfile.open(fileobj=f, mode='w:gz')
                 for entry in os.listdir(self.path):
                     tf.add(entry)
             except Exception, err:
-                print "Error creating project archive:",err
+                print "Error creating project archive:", err
             finally:
                 tf.close()
         finally:

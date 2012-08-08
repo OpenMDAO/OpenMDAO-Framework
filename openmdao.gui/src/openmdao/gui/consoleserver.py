@@ -113,9 +113,12 @@ class ConsoleServer(cmd.Cmd):
         self._partial_cmd = None
         self.exc_info = exc_info
         msg = '%s: %s' % (err.__class__.__name__, err)
-        logger.error(msg)
-        print msg
+        self._print_error(msg)
 
+    def _print_error(self, msg):
+        ''' print & publish error message
+        '''
+        print msg
         if not self.publisher:
             try:
                 self.publisher = Publisher.get_instance()
@@ -204,13 +207,16 @@ class ConsoleServer(cmd.Cmd):
         ''' run the model (i.e. the top assembly)
         '''
 
-        print "Executing..."
-        try:
-            top = self.proj.get('top')
-            top.run(*args, **kwargs)
-            print "Execution complete."
-        except Exception, err:
-            self._error(err, sys.exc_info())
+        if 'top' in self.proj:
+            print "Executing..."
+            try:
+                top = self.proj.get('top')
+                top.run(*args, **kwargs)
+                print "Execution complete."
+            except Exception, err:
+                self._error(err, sys.exc_info())
+        else:
+            self._print_error("Execution failed: No 'top' assembly was found.")
 
     @modifies_model
     def execfile(self, filename):
@@ -405,7 +411,8 @@ class ConsoleServer(cmd.Cmd):
                                        'pathname': k,
                                        'type': type(v).__name__,
                                        'valid': v.is_valid(),
-                                       'is_assembly': is_instance(v, Assembly)
+                                       'is_assembly': is_instance(v, Assembly),
+                                       'python_id': id(v)
                                       })
             dataflow['components'] = components
             dataflow['connections'] = []
@@ -445,7 +452,7 @@ class ConsoleServer(cmd.Cmd):
             val, root = self.get_container(pathname)
             return val
         except Exception, err:
-            self._error(err, sys.exc_info())
+            self._print_error("error getting value: %s" % err)
 
     def get_types(self):
         return packagedict(get_available_types())
@@ -485,11 +492,11 @@ class ConsoleServer(cmd.Cmd):
                     self.proj.export(destdir=dir)
                     print 'Exported to ', dir + '/' + self.proj.name
                 else:
-                    print 'Export failed, directory not known'
+                    self._print_error('Export failed, directory not known')
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            print 'No Project to save'
+            self._print_error('No Project to save')
 
     @modifies_model
     def add_component(self, name, classname, parentname):
@@ -504,9 +511,25 @@ class ConsoleServer(cmd.Cmd):
             try:
                 self.proj.command(cmd)
             except Exception, err:
+                self._print_error(err, sys.exc_info())
+        else:
+            self._print_error('Error adding component: "%s" is not a valid identifier' % name)
+
+    @modifies_model
+    def replace_component(self, pathname, classname):
+        ''' replace existing component with component of the given type.
+        '''
+        pathname = pathname.encode('utf8')
+        parentname, dot, name = pathname.rpartition('.')
+        if parentname:
+            try:
+                self.proj.command('%s.replace("%s", create("%s"))' % (parentname,
+                                                                      name, classname))
+            except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            print 'Error adding component: "%s" is not a valid identifier' % name
+            self._print_error('Error replacing component, no parent: "%s"'
+                              % pathname)
 
     def cleanup(self):
         ''' Cleanup various resources.
