@@ -20,7 +20,7 @@ from openmdao.util.fileutil import find_files, file_md5, get_module_path
 from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
 
-from openmdao.main.publisher import Publisher
+from openmdao.main.publisher import publish
 
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
@@ -63,7 +63,6 @@ class ConsoleServer(cmd.Cmd):
         self.proj = None
         self.exc_info = None
         self.publish_updates = publish_updates
-        self.publisher = None
         self._publish_comps = {}
         
         self._partial_cmd = None  # for multi-line commands
@@ -88,24 +87,20 @@ class ConsoleServer(cmd.Cmd):
     def publish_components(self):
         ''' publish the current component tree and subscribed components
         '''
-        if not self.publisher:
-            try:
-                self.publisher = Publisher.get_instance()
-            except Exception, err:
-                print 'Error getting publisher:', err
-                self.publisher = None
-
-        if self.publisher:
-            self.publisher.publish('components', self.get_components())
-            self.publisher.publish('', {'Dataflow': self.get_dataflow('')})
+        try:
+            publish('components', self.get_components())
+            publish('', {'Dataflow': self.get_dataflow('')})
+        except Exception as err:
+            self._error(err)
+        else:
             comps = self._publish_comps.keys()
             for pathname in comps:
                 comp, root = self.get_container(pathname)
                 if comp is None:
                     del self._publish_comps[pathname]
-                    self.publisher.publish(pathname, {})
+                    publish(pathname, {})
                 else:
-                    self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
+                    publish(pathname, comp.get_attributes(ioOnly=False))
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -119,15 +114,10 @@ class ConsoleServer(cmd.Cmd):
         ''' print & publish error message
         '''
         print msg
-        if not self.publisher:
-            try:
-                self.publisher = Publisher.get_instance()
-            except Exception as exc:
-                print 'Error getting publisher:', exc
-                self.publisher = None
-
-        if self.publisher:
-            self.publisher.publish('console_errors', msg)
+        try:
+            publish('console_errors', msg)
+        except:
+            print 'publishing of message failed'
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception

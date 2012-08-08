@@ -27,7 +27,7 @@ from openmdao.main.factorymanager import get_available_types
 from openmdao.util.dep import find_files, plugin_groups, PythonSourceTreeAnalyser
 from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.util.log import logger
-from openmdao.main.publisher import Publisher
+from openmdao.main.publisher import publish
 from openmdao.gui.util import packagedict
 
 
@@ -64,20 +64,20 @@ class PyWatcher(FileSystemEventHandler):
             changed_set = set()
             deleted_set = set()
         
-            publish = False
+            pub = False
             if event._src_path and (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
                 if not event.is_directory:
                     compiled = event._src_path+'c'
                     if os.path.exists(compiled):
                         os.remove(compiled)
                 self.factory.on_deleted(event._src_path, deleted_set)
-                publish = True
+                pub = True
         
             if fnmatch.fnmatch(event._dest_path, '*.py'):
                 self.factory.on_modified(event._dest_path, added_set, changed_set, deleted_set)
-                publish = True
+                pub = True
             
-            if publish:
+            if pub:
                 self.factory.publish_updates(added_set, changed_set, deleted_set)
         except Exception:
             traceback.print_exc()
@@ -325,24 +325,21 @@ class ProjDirFactory(Factory):
                 self._remove_fileinfo(fpath)
             
     def publish_updates(self, added_set, changed_set, deleted_set):
-        publisher = Publisher.get_instance()
-        if publisher:
-            types = get_available_types()
-            publisher.publish('types', 
-                              [
-                                  packagedict(types),
-                                  list(added_set),
-                                  list(changed_set),
-                                  list(deleted_set),
-                              ])
-        else:
-            logger.error("no Publisher found")
+        types = get_available_types()
+        try:
+            publish('types', 
+                    [
+                        packagedict(types),
+                        list(added_set),
+                        list(changed_set),
+                        list(deleted_set),
+                    ])
+        except:
+            logger.error("publish of types failed")
 
     def _error(self, msg):
         logger.error(msg)
-        publisher = Publisher.get_instance()
-        if publisher:
-            publisher.publish('file_errors', msg)
+        publish('console_errors', msg)
         
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs

@@ -91,18 +91,23 @@ openmdao.CodeFrame = function(id,model) {
     }
 
     function handle409(jqXHR, textStatus, errorThrown) {
-        var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
+        var win = jQuery('<div>You have modified a class that may already have instances in the model. '+
+                         'If you save the file, you must save and reload the project.</div>');
         jQuery(win).dialog({
             'modal': true,
-            'title': 'Overwrite Existing Classes',
+            'title': 'Save and Reload Project',
             'buttons': [
                 {
-                  text: 'Overwrite',
+                  text: 'Save and Reload',
                   id: overwriteID,
                   click: function() {
                            jQuery(this).dialog('close');
                            model.setFile(filepath,editor.getSession().getValue(), 1,
-                                         successful_save, null, handle409);
+                                         function(data, textStatus, jqXHR) {
+                                            model.saveProject(function(data, textStatus, jqXHR) {
+                                                model.reload()
+                                            })
+                                         });
                          }
                 },
                 {

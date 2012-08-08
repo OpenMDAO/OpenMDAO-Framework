@@ -580,12 +580,12 @@ def execute(self)
     # then retry the error notifier.
     message = None
     try:
-        message = NotifierPage.wait(editor_page, base_id='file-error')
+        message = NotifierPage.wait(editor_page)#, base_id='file-error')
     except WebDriverException:
         pass
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
-        message = NotifierPage.wait(editor_page, base_id='file-error')
+        message = NotifierPage.wait(editor_page)#, base_id='file-error')
     eq(message, 'invalid syntax (bug.py, line 6)')
     
     browser.close()

@@ -9,7 +9,6 @@ import json
 
 from distutils.spawn import find_executable
 
-
 def ensure_dir(d):
     ''' create directory if it doesn't exist
     '''
