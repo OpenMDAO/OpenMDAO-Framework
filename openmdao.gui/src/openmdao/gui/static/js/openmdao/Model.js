@@ -211,7 +211,7 @@ openmdao.Model=function() {
         }
     };
 
-    /** get  hierarchical list of components*/
+    /** get  hierarchical list of components */
     this.getComponents = function(callback,errorHandler) {
         if (typeof callback !== 'function') {
             return;
@@ -228,7 +228,7 @@ openmdao.Model=function() {
         }
     };
 
-    /** get  attributes of a component*/
+    /** get  attributes of a component */
     this.getComponent = function(name,callback,errorHandler) {
         if (typeof callback !== 'function') {
             return;
@@ -239,6 +239,22 @@ openmdao.Model=function() {
                 url:  'component/'+name,
                 dataType: 'json',
                 data: {},
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
+
+
+    /** get value for pathname */
+    this.getValue = function(pathname,callback,errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'value/'+pathname,
                 success: callback,
                 error: errorHandler
             });
@@ -387,7 +403,7 @@ openmdao.Model=function() {
             error: errorHandler,
             statusCode: {
                 409: handler409
-             },
+             }
         });
     };
 
