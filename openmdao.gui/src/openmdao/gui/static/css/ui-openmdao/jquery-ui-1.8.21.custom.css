@@ -77,6 +77,8 @@
 .ui-state-highlight a, .ui-widget-content .ui-state-highlight a,.ui-widget-header .ui-state-highlight a { color: #2e7db2; }
 .ui-state-editable, .ui-widget-content .ui-state-editable, .ui-widget-header .ui-state-editable  {border: 1px solid #cccccc; background: #ffffff; url(images/ui-bg_highlight-soft_80_eeeeee_1x100.png) 50% top repeat-x; color: #000000; }
 .ui-state-editable a, .ui-widget-content .ui-state-editable a,.ui-widget-header .ui-state-editable a { color: #000000; }
+.ui-state-implicit, .ui-widget-content .ui-state-implicit, .ui-widget-header .ui-state-implicit  {border: 1px solid #cccccc; background: #ffffff; url(images/ui-bg_highlight-soft_80_eeeeee_1x100.png) 50% top repeat-x; color: #ee0000; }
+.ui-state-implicit a, .ui-widget-content .ui-state-implicit a,.ui-widget-header .ui-state-implicit a { color: #000000; }
 .ui-state-error, .ui-widget-content .ui-state-error, .ui-widget-header .ui-state-error {border: 1px solid #ffb73d; background: #ffc73d url(images/ui-bg_glass_40_ffc73d_1x400.png) 50% 50% repeat-x; color: #111111; }
 .ui-state-error a, .ui-widget-content .ui-state-error a, .ui-widget-header .ui-state-error a { color: #111111; }
 .ui-state-error-text, .ui-widget-content .ui-state-error-text, .ui-widget-header .ui-state-error-text { color: #111111; }
