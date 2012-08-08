@@ -109,7 +109,22 @@ class ConsoleServer(cmd.Cmd):
         '''
         self.exc_info = exc_info
         logger.error(str(err))
-        print str(err.__class__.__name__), ":", err
+        msg = '%s: %s' % (err.__class__.__name__, err)
+        self._print_error(msg)
+
+    def _print_error(self, msg):
+        ''' print & publish error message
+        '''
+        print msg
+        if not self.publisher:
+            try:
+                self.publisher = Publisher.get_instance()
+            except Exception as exc:
+                print 'Error getting publisher:', exc
+                self.publisher = None
+
+        if self.publisher:
+            self.publisher.publish('console_errors', msg)
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -165,7 +180,7 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            print "Execution failed: No 'top' assembly was found."
+            self._print_error("Execution failed: No 'top' assembly was found.")
 
     @modifies_model
     def execfile(self, filename):
@@ -376,7 +391,8 @@ class ConsoleServer(cmd.Cmd):
                                        'pathname': k,
                                        'type': type(v).__name__,
                                        'valid': v.is_valid(),
-                                       'is_assembly': is_instance(v, Assembly)
+                                       'is_assembly': is_instance(v, Assembly),
+                                       'python_id': id(v)
                                       })
             dataflow['components'] = components
             dataflow['connections'] = []
@@ -416,7 +432,7 @@ class ConsoleServer(cmd.Cmd):
             val, root = self.get_container(pathname)
             return val
         except Exception, err:
-            print "error getting value:", err
+            self._print_error("error getting value: %s" % err)
 
     def get_types(self):
         return packagedict(get_available_types())
@@ -455,11 +471,11 @@ class ConsoleServer(cmd.Cmd):
                     self.proj.export(destdir=dir)
                     print 'Exported to ', dir + '/' + self.proj.name
                 else:
-                    print 'Export failed, directory not known'
+                    self._print_error('Export failed, directory not known')
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            print 'No Project to save'
+            self._print_error('No Project to save')
 
     @modifies_model
     def add_component(self, name, classname, parentname):
@@ -478,7 +494,8 @@ class ConsoleServer(cmd.Cmd):
                         self.proj._recorded_cmds.append('%s.add("%s",create("%s"))' %
                                                         (parentname, name, classname))
                 else:
-                    print 'Error adding component, parent not found:', parentname
+                    self._print_error('Error adding component,'
+                                      ' parent not found: %s' % parentname)
             else:
                 try:
                     self.proj.__dict__[name] = create(classname)
@@ -488,7 +505,31 @@ class ConsoleServer(cmd.Cmd):
                     self.proj._recorded_cmds.append('%s = create("%s"))' %
                                                (name, classname))
         else:
-            print 'Error adding component: "%s" is not a valid identifier' % name
+            self._print_error('Error adding component: "%s" is not a valid'
+                              ' identifier' % name)
+
+    @modifies_model
+    def replace_component(self, pathname, classname):
+        ''' replace existing component with component of the given type.
+        '''
+        pathname = pathname.encode('utf8')
+        parentname, dot, name = pathname.rpartition('.')
+        if parentname:
+            parent, root = self.get_container(parentname)
+            if parent:
+                try:
+                    parent.replace(name, create(classname))
+                except Exception, err:
+                    self._error(err, sys.exc_info())
+                else:
+                    self.proj._recorded_cmds.append('%s.replace("%s",create("%s"))' %
+                                                    (parentname, name, classname))
+            else:
+                self._print_error('Error replacing component,'
+                                  ' parent not found: %s' % parentname)
+        else:
+            self._print_error('Error replacing component, no parent: "%s"'
+                              % pathname)
 
     def cleanup(self):
         ''' Cleanup various resources.
@@ -538,7 +579,8 @@ class ConsoleServer(cmd.Cmd):
     def publish(self, pathname, publish):
         ''' publish the specified topic
         '''
-        if pathname in ['', 'components', 'files', 'types']:
+        if pathname in ['', 'components', 'files', 'types',
+                        'console_errors', 'file_errors']:
             # these topics are published automatically
             return
 

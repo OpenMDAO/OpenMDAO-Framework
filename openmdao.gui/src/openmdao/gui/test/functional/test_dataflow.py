@@ -14,6 +14,7 @@ from nose.tools import with_setup
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
+    from pageobjects.util import NotifierPage
     from selenium.common.exceptions import StaleElementReferenceException
 
     @with_setup(setup_server, teardown_server)
@@ -255,6 +256,7 @@ def _test_connections(browser):
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
     conn_page.set_target_component('engine')
+    time.sleep(0.5)
     eq(conn_page.check_variable_figures(), 0)
 
     # reconnect transmission RPM to engine RPM
@@ -278,6 +280,7 @@ def _test_connections(browser):
     # no connections between vehicle assembly and transmission
     conn_page.set_source_component('')
     conn_page.set_target_component('transmission')
+    time.sleep(0.5)
     eq(conn_page.check_variable_figures(), 0)
 
     # connect assembly variable to component variable
@@ -379,6 +382,107 @@ def _test_driverflows(browser):
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_driverflows complete."
+
+
+def _test_replace(browser):
+    print "running _test_replace"
+    # Replaces ExternalCode component with an Assembly.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to 'top'.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'top'])
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.find_library_button('ExternalCode').click()
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    time.sleep(0.5)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'ext', 'top'])
+
+    # Verify inputs.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    editor = ext.editor_page()
+    inputs = editor.get_inputs()
+    expected = [
+        ['directory',     'str',             '',      '',  'true',
+         'If non-blank, the directory to execute in.', ''],
+        ['env_vars',      'TraitDictObject', '{}',    '',  'true',
+         'Environment variables required by the command.', ''],
+        ['force_execute', 'bool',            'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', ''],
+        ['poll_delay',    'float',           '0.0',   's', 'true',
+         'Delay between polling for command completion.'
+         ' A value of zero will use an internally computed default.', ''],
+        ['resources',     'TraitDictObject', '{}',    '',  'true',
+         'Resources required to run this component.', ''],
+        ['timeout',       'float',           '0.0',   's', 'true',
+         'Maximum time to wait for command completion.'
+         ' A value of zero implies an infinite wait.', '']
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+    # Cancel replacement with a Float.
+    workspace_page.replace('ext', 'openmdao.main.datatypes.float.Float', False)
+    time.sleep(0.5)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'ext', 'top'])
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    editor = ext.editor_page()
+    inputs = editor.get_inputs()
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+    # Erroneously replace ext with a Float.
+    workspace_page.replace('ext', 'openmdao.main.datatypes.float.Float')
+    message = NotifierPage.wait(workspace_page)
+    eq(message, "TypeError: top: Couldn't replace 'ext' of type ExternalCode"
+                " with type Float: 'NoneType' object is not callable")
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'ext', 'top'])
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    editor = ext.editor_page()
+    inputs = editor.get_inputs()
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+    # Replace with an Assembly.
+    workspace_page.replace('ext', 'openmdao.main.assembly.Assembly')
+    time.sleep(0.5)
+    eq(sorted(workspace_page.get_dataflow_component_names()),
+       ['driver', 'ext', 'top'])
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    editor = ext.editor_page()
+    inputs = editor.get_inputs()
+    expected = [
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', ''],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+    # Verify new figure.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    background = ext('top_right').value_of_css_property('background')
+    assert background.find('circle-plus.png') >= 0
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_replace complete."
 
 
 if __name__ == '__main__':

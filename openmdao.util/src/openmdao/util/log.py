@@ -111,13 +111,13 @@ def getLogger(name):
 # Optional handler which writes messages to sys.stderr
 CONSOLE = None
 
-def enable_console():
+def enable_console(level=logging.DEBUG):
     """ Configure logging to receive log messages at the console. """
     global CONSOLE
     if CONSOLE is None:
         # define a Handler which writes messages to sys.stderr
         CONSOLE = logging.StreamHandler()
-        CONSOLE.setLevel(logging.DEBUG)
+        CONSOLE.setLevel(level)
         # set a format which is simpler for console use
         formatter = logging.Formatter('%(levelname)s %(name)s: %(message)s')
         # tell the handler to use this format

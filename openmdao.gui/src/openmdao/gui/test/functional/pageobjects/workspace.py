@@ -17,7 +17,7 @@ from connections import ConnectionsPage
 from dataflow import DataflowFigure
 from editor import EditorPage
 from elements import ButtonElement, InputElement, GridElement, TextElement
-from util import abort, ValuePrompt, NotifierPage
+from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
 
 
 class WorkspacePage(BasePageObject):
@@ -121,7 +121,7 @@ class WorkspacePage(BasePageObject):
 # FIXME: absolute delay before polling sockets.
         time.sleep(2)
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
-        NotifierPage.wait(browser, port)
+        NotifierPage.wait(self)
 
     def find_library_button(self, name):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
@@ -142,18 +142,18 @@ class WorkspacePage(BasePageObject):
         """ Run current component. """
         self('project_menu').click()
         self('run_button').click()
-        NotifierPage.wait(self.browser, self.port, timeout)
+        NotifierPage.wait(self, timeout)
 
     def do_command(self, cmd, timeout=TMO):
         """ Execute a command. """
         self.command = cmd
         self('submit').click()
-        NotifierPage.wait(self.browser, self.port, timeout)
+        NotifierPage.wait(self, timeout)
 
     def close_workspace(self, timeout=TMO):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
-        NotifierPage.wait(self.browser, self.port, timeout)
+        NotifierPage.wait(self, timeout)
         self('project_menu').click()
 
         # Sometimes chromedriver hangs here, so we click in separate thread.
@@ -245,7 +245,7 @@ class WorkspacePage(BasePageObject):
         """ Save current project. """
         self('project_menu').click()
         self('save_button').click()
-        NotifierPage.wait(self.browser, self.port)
+        NotifierPage.wait(self)
 
     def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
@@ -301,8 +301,8 @@ class WorkspacePage(BasePageObject):
         else:
             raise RuntimeError('Too many TimeoutExceptions')
 
-    def add_library_item_to_dataflow(self, item_name, instance_name):
-        """ Add component `item_name`, with name `instance_name`. """
+    def get_library_item(self, item_name):
+        """ Return element for library item `item_name`. """
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
         library_item = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
@@ -310,6 +310,11 @@ class WorkspacePage(BasePageObject):
             lambda browser: library_item.is_displayed())
 # FIXME: absolute delay to wait for 'slide' to complete.
         time.sleep(1)
+        return library_item
+
+    def add_library_item_to_dataflow(self, item_name, instance_name, check=True):
+        """ Add component `item_name`, with name `instance_name`. """
+        library_item = self.get_library_item(item_name)
 
         target = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath("//*[@id='-dataflow']"))
@@ -333,8 +338,10 @@ class WorkspacePage(BasePageObject):
             eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
         finally:
             self.browser.implicitly_wait(TMO)
-        WebDriverWait(self.browser, TMO).until(
-            lambda browser: instance_name in self.get_dataflow_component_names())
+
+        if check:  # Check that it's been added.
+            WebDriverWait(self.browser, TMO).until(
+                lambda browser: instance_name in self.get_dataflow_component_names())
 
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
@@ -429,6 +436,23 @@ class WorkspacePage(BasePageObject):
         editor_id = 'ConnectionsFrame-%s' % (parent)
         editor_id = editor_id.replace('.', '-')
         return ConnectionsPage(self.browser, self.port, (By.ID, editor_id))
+
+    def replace(self, name, classname, confirm=True):
+        """ Replace `name` with an instance of `classname`. """
+        library_item = self.get_library_item(classname)
+        target = self.get_dataflow_figure(name).root
+
+        chain = ActionChains(self.browser)
+        chain = chain.click_and_hold(library_item)
+        chain = chain.move_to_element_with_offset(target, 125, 30)
+        chain = chain.release(None)
+        chain.perform()
+
+        dialog = ConfirmationPage(self)
+        if confirm:
+            dialog.click_ok()
+        else:
+            dialog.click_cancel()
 
     def hide_left(self):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')

@@ -151,6 +151,24 @@ class ComponentHandler(ReqHandler):
         self.write(attr)
 
 
+class ReplaceHandler(ReqHandler):
+    ''' replace a component
+    '''
+
+    @web.authenticated
+    def post(self, pathname):
+        type = self.get_argument('type')
+        result = ''
+        try:
+            cserver = self.get_server()
+            cserver.replace_component(pathname, type)
+        except Exception, e:
+            print e
+            result = sys.exc_info()
+        self.content_type = 'text/html'
+        self.write(result)
+
+
 class ComponentsHandler(ReqHandler):
 
     @web.authenticated
@@ -361,7 +379,7 @@ class PublishHandler(ReqHandler):
 
 
 class PubstreamHandler(ReqHandler):
-    ''' return the url of the zmq publisher server,
+    ''' return the url of the zmq publisher server
     '''
 
     @web.authenticated
@@ -407,6 +425,19 @@ class UploadHandler(ReqHandler):
     def get(self):
         path = self.get_argument('path', default=None)
         self.render('workspace/upload.html', path=path)
+
+
+class ValueHandler(ReqHandler):
+    ''' GET: get a value for the given pathname
+        TODO: combine with ComponentHandler? handle Containers as well?
+    '''
+
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        value = cserver.get_value(name)
+        self.content_type = 'application/javascript'
+        self.write(value)
 
 
 class WorkflowHandler(ReqHandler):
@@ -458,8 +489,10 @@ handlers = [
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
+    web.url(r'/workspace/replace/(.*)',     ReplaceHandler),
     web.url(r'/workspace/types/?',          TypesHandler),
     web.url(r'/workspace/upload/?',         UploadHandler),
+    web.url(r'/workspace/value/(.*)',       ValueHandler),
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
