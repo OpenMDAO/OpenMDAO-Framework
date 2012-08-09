@@ -159,3 +159,20 @@ class ProjectsListPage(BasePageObject):
         element.click()
         title = ProjectInfoPage.project_title(project_name)
         return ProjectInfoPage.verify(self.browser, self.port, title)
+
+    # TODO: Leaving this in for now for future testing of deleting projects via the GUI
+    def delete_all_test_projects(self):
+        """ Removes all projects with 'test project' in the name.
+            Not perfect, will timeout when it runs out of projects"""
+
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_partial_link_text('testing project'))
+
+        while (element):
+            project_name = element.text
+            element = element.find_element_by_xpath('../../td[6]/form/input')
+            element.click()
+            title = ProjectInfoPage.project_title(project_name)
+            ProjectInfoPage.verify(self.browser, self.port, title).delete_project()
+            element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_partial_link_text('testing project'))
