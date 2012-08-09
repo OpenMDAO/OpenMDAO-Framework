@@ -195,5 +195,17 @@ nav ul ul a:hover {
   -moz-transform:rotate(-180deg);
   -webkit-transform:rotate(-180deg);
 }
+
+.parameter {
+    color:rbga(200,0,0,0);
+}
+
+.constraint {
+    color:rgba(0,200,0,0);
+}
+
+.objective {
+    color:rgba(0,0,200,0);
+}
 /* end CSS3 */
 
