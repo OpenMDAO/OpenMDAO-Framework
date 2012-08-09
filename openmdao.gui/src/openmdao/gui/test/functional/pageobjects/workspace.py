@@ -281,8 +281,10 @@ class WorkspacePage(BasePageObject):
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
+        time.sleep(0.5)
         chain = ActionChains(self.browser)
         chain.context_click(element).perform()
+        time.sleep(0.5)
         self('obj_dataflow').click()
 
     def show_library(self):
