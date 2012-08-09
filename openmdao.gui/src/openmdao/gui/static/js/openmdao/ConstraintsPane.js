@@ -6,7 +6,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
         constraintsDiv = jQuery("<div id='"+name+"_constraints' >"),
         buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
         addButton = jQuery("<div "+buttonSpec +">Add Constraint</div>"),
-        clrButton = jQuery("<div "+buttonSpec +">Clear Constraint</div>"),
+        clrButton = jQuery("<div "+buttonSpec +">Clear Constraints</div>"),
         columns = [
             {id:"expr",   name:"Expression",  field:"expr",    width:148},
             {id:"scaler", name:"Scaler",      field:"scaler",  width:60},
