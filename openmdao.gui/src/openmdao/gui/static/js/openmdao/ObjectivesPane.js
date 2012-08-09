@@ -4,8 +4,9 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
     var objectives,
         objectivesDiv = jQuery("<div id='"+name+"_objectives' >"),
-        addButton = jQuery("<div class='button' style='text-align:center'>Add Objective</div>"),
-        clrButton = jQuery("<div class='button' style='text-align:center'>Clear Objectives</div>"),
+        buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
+        addButton = jQuery("<div "+buttonSpec +">Add Objective</div>"),
+        clrButton = jQuery("<div "+buttonSpec +">Clear Objectives</div>"),
         columns = [
             {id:"expr",  name:"Expression",  field:"expr",  width:180},
             {id:"scope", name:"Scope",       field:"scope", width:80},

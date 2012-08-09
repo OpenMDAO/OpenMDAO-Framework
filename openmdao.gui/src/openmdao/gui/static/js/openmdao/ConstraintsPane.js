@@ -4,8 +4,9 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
     var constraints,
         constraintsDiv = jQuery("<div id='"+name+"_constraints' >"),
-        addButton = jQuery("<div class='button' style='text-align:center'>Add Constraint</div>"),
-        clrButton = jQuery("<div class='button' style='text-align:center'>Clear Constraints</div>"),
+        buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
+        addButton = jQuery("<div "+buttonSpec +">Add Constraint</div>"),
+        clrButton = jQuery("<div "+buttonSpec +">Clear Constraint</div>"),
         columns = [
             {id:"expr",   name:"Expression",  field:"expr",    width:148},
             {id:"scaler", name:"Scaler",      field:"scaler",  width:60},
