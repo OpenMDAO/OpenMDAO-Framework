@@ -8,7 +8,6 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         clrButton = jQuery("<div>Clear Objectives</div>"),        
         columns = [
             {id:"expr",  name:"Expression",  field:"expr",  width:180},
-            {id:"scope", name:"Scope",       field:"scope", width:80},
             {id:"name",  name:"Name",        field:"name",  width:50},
         ],
         options = {
@@ -41,13 +40,10 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
    }
     
     /** add a new objective */
-    function addObjective(expr,name,scope) {
+    function addObjective(expr,name) {
         cmd = pathname+".add_objective('"+expr+"'";
         if (name) {
             cmd = cmd + ",name="+name;
-        }            
-        if (scope) {
-            cmd = cmd + ",scope="+scope;
         }            
         cmd = cmd + ");"
         model.issueCommand(cmd);
@@ -58,14 +54,12 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         // Build dialog markup
         var win = jQuery('<div></div>'),
             expr   = jQuery('<input type="text" style="width:100%"></input>'),
-            name   = jQuery('<input type="text" style="width:50%"></input>'),
-            scope  = jQuery('<input type="text" style="width:50%"></input>');
+            name   = jQuery('<input type="text" style="width:75%"></input>');
         
         win.append(jQuery('<div>Expression: </div>').append(expr));
         
         var table = jQuery('<table>');
-        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)))
-                            .append(jQuery('<td>').append(jQuery('<div>Scope: </div>').append(scope)));
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
         table.append(row);
         win.append(table);
 
@@ -77,7 +71,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
             'buttons': {
                 'Ok': function() {                    
                     jQuery(this).dialog('close');
-                    callback(expr.val(),name.val(),scope.val());
+                    callback(expr.val(),name.val());
                 },
                 'Cancel': function() {
                     jQuery(this).dialog('close');

@@ -13,7 +13,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             {id:"scaler",  name:"Scaler",  field:"scaler",  width:60},
             {id:"adder",   name:"Adder",   field:"adder",   width:50},
             {id:"fd_step", name:"fd_step", field:"fd_step", width:60},
-            {id:"scope",   name:"Scope",   field:"scope",   width:50},
             {id:"name",    name:"Name",    field:"name",    width:50},
         ],
         options = {
