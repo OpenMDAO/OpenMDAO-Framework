@@ -149,19 +149,34 @@ openmdao.DragAndDropManager=function() {
            if ( id == max_id ) {
                //debug.info( "in drag and drop manager, highlighting", div_object[0].id ) ;
                /* We only allow dropping onto Assemblies and a good way to check that
-                  is the maxmin variable. We also allow dropping onto the top */
+                  is the maxmin variable. We also allow dropping onto the top, which is the  */
+
+
+
+
+               // if (
+               //     div.id === "dataflow_pane"
+               //         ||
+               //         o.maxmin === "+"
+               //         ||
+               //         o.maxmin === "-"
+               //         ||
+               //         ( div_object.attr("class").substring(0,14) === "DataflowFigure"
+               //         && div_object.parent().children()[0].id === div_object[0].id
+               //         )
+               //         ||
+               //         ( div_object.attr("class").indexOf("SlotFigure") !== -1 )
+
                if (
-                   div.id === "dataflow_pane"
+                   (div.id === "dataflow_pane" )
                        ||
-                       o.maxmin === "+"
+                   ( div_object.attr("class").substring(0,14) === "DataflowFigure" )
                        ||
-                       o.maxmin === "-"
-                       ||
-                       ( div_object.attr("class").substring(0,14) === "DataflowFigure"
-                       && div_object.parent().children()[0].id === div_object[0].id
-                       )
-                       ||
-                       ( div_object.attr("class").indexOf("SlotFigure") !== -1 )
+                   ( div_object.attr("class").indexOf("SlotFigure") !== -1 )
+                   
+
+
+
                ) {
                    o.highlightAsDropTarget()
                    openmdao.drag_and_drop_manager.drop_target = div_object ;

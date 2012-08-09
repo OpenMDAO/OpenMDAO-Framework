@@ -12,17 +12,21 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 
 
+
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
 
     from pageobjects.component import NameInstanceDialog
     from pageobjects.dataflow import DataflowFigure
+    from pageobjects.dialog import NotifyDialog 
+    from pageobjects.util import ConfirmationPage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
         for _test, browser in generate(__name__):
             yield _test, browser
+
 
 
 def startup(browser):
@@ -46,27 +50,34 @@ def closeout(projects_page, project_info_page, project_dict, workspace_page):
 def _test_drop_on_driver(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    #find and get the 'assembly', 'top', and 'driver' objects
-    assembly = workspace_page.find_library_button('Assembly').element
+    #find and get the 'comnindriver', 'top', and 'driver' objects
+    conmindriver = workspace_page.find_library_button('CONMINdriver')
     top = workspace_page.get_dataflow_figure('top')
     driver_element = workspace_page.get_dataflow_figure('driver')
 
-    for div in getDropableElements(driver_element):
-            chain = drag_element_to(browser, assembly, div, True)
-            check_highlighting(top('content_area').element, browser, False, "Driver's content_area")
-            release(chain)
+    div = getDropableElements(driver_element)[0]
+    chain = drag_element_to(browser, conmindriver, div, True)
+    check_highlighting(driver_element('content_area').element, browser, True, "Driver's content_area")
+    release(chain)
+    
+    # brings up a confirm dialog for replacing the existing driver.
+    dialog = ConfirmationPage(top)
+    dialog.click_ok()
 
-
-    #don't bother checking to see if they appeared, the UI box will appear and screw the test if they did
-
+    # Check to see that the content area for the driver is now CONMINdriver
+    driver_element = workspace_page.get_dataflow_figure('driver')
+    eq( driver_element( 'content_area' ).element.find_element_by_xpath( 'center/i' ).text,
+        'CONMINdriver', "Dropping CONMINdriver onto existing driver did not replace it")
+    
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+
 
 #WORKING
 def _test_workspace_dragdrop(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
-    assembly = workspace_page.find_library_button('Assembly').element
+    assembly = workspace_page.find_library_button('Assembly')
     top = workspace_page.get_dataflow_figure('top')
    
     names = []
@@ -110,7 +121,7 @@ def _test_drop_on_grid(browser):
 def _test_drop_on_existing_assembly(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    assembly = workspace_page.find_library_button('Assembly').element
+    assembly = workspace_page.find_library_button('Assembly')
     
 
     outer_name = put_assembly_on_grid(browser, workspace_page)
@@ -155,7 +166,7 @@ def _test_drop_on_existing_assembly(browser):
 def _test_drop_on_component_editor(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
-    assembly = workspace_page.find_library_button('Assembly').element
+    assembly = workspace_page.find_library_button('Assembly')
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
 
@@ -198,7 +209,7 @@ def _test_drop_on_component_editor(browser):
 def _test_drop_on_component_editor_grid(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
-    assembly = workspace_page.find_library_button('Assembly').element
+    assembly = workspace_page.find_library_button('Assembly')
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
 
@@ -222,14 +233,21 @@ def _test_drop_on_component_editor_grid(browser):
 
 def _test_slots(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    top = workspace_page.get_dataflow_figure('top')
    
     editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(browser, workspace_page)
 
-    execcomp = workspace_page.find_library_button('ExecComp').element
+    execcomp = workspace_page.find_library_button('ExecComp')
 
+    ##################################################
+    # First part of test: Drag and drop ExecComp from the Library to
+    #  onto the recorder slot of a MetaModel. This should fail. 
+    ##################################################
     #drag one success and one failure onto slots
         #failure:
     slot_drop(browser, execcomp, caserec, False, 'Component')
+
 
     #refresh
     labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#'+meta_name+'-slots"]/div/div/center')
@@ -238,9 +256,15 @@ def _test_slots(browser):
     #check for font change
     eq(False, not ("color: rgb(204, 0, 0)" in caserec.get_attribute('style')), "Component dropped into CaseRecorder (should not have)")
 
-
-
+    ##################################################
+    # Second part of test: Drag and drop ExecComp from the Library to
+    #  onto the model ( IComponent)  slot of a MetaModel. This should be successful
+    #  even though a dialog will popup with this notification message:
+    #     RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
+    ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
+
+    NotifyDialog(browser, top.port).close()
 
     #refresh
     labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#'+meta_name+'-slots"]/div/div/center')
@@ -249,13 +273,6 @@ def _test_slots(browser):
     #check for font change
     eq(True, not ("color: rgb(204, 0, 0)" in comp.get_attribute('style')), "Component did not drop into Component slot")
     
-
-    
-
-
-
-
-
 
 
     #for the future:
@@ -405,7 +422,7 @@ def put_assembly_on_grid(browser, workspace_page):
 
 def put_element_on_grid(browser, workspace_page, element_str):
     #find and get the 'assembly', and the div for the grid object
-    assembly = workspace_page.find_library_button(element_str).element
+    assembly = workspace_page.find_library_button(element_str)
     grid = browser.find_element(*(By.XPATH, '//div[@id="-dataflow"]'))
 
     chain = ActionChains(browser)

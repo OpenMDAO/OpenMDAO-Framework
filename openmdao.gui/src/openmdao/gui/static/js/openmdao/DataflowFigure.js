@@ -249,22 +249,45 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                 var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath"),
-                off = elm.parent().offset(),
-                x = Math.round(ui.offset.left - off.left),
-                y = Math.round(ui.offset.top - off.top),
                 model = elm.data("corresponding_openmdao_object").openmdao_model ;
                 
                 openmdao.drag_and_drop_manager.clearHighlightingDroppables() ;
                 openmdao.drag_and_drop_manager.clearDroppables() ;
+
+
+
+                var o = elm.data('corresponding_openmdao_object');
+
+                if ( o.maxmin != '' ) {
                 
-                openmdao.Util.promptForValue('Enter name for new '+droppedName,
-                                             function(name) {
-                                                 model.addComponent(droppedPath,name,elm.data("pathname"));
-                                             }
-                                            );
+                    openmdao.Util.promptForValue('Enter name for new '+droppedName,
+                                                 function(name) {
+                                                     model.addComponent(droppedPath,name,elm.data("pathname"));
+                                                 }
+                                                );
+                } else {
+
+
+                   openmdao.Util.confirm('Replace '+ elm.data("pathname") +' with ' + droppedName,
+                        function() {
+                            model.replaceComponent( elm.data("pathname"), droppedPath);
+                        }
+                    );
+
+
+                }
+
             }
         }
                       ) ;
+
+
+
+ 
+
+
+
+
         
         
     }
