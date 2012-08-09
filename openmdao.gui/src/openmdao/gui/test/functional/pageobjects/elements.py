@@ -170,6 +170,14 @@ class _TextElement(_BaseElement):
         """ The element's text. """
         return self.element.text
 
+class _GenericElement(_BaseElement):
+
+    def __init__(self, page, locator):
+        super(_GenericElement, self).__init__(page,locator)
+
+    @property
+    def value(self):
+        return self.element
 
 class BaseElement(object):
     """
@@ -233,4 +241,9 @@ class TextElement(BaseElement):
     """ Just some text on the page. """
     def __init__(self, locator):
         super(TextElement, self).__init__(_TextElement, locator)
+
+class GenericElement(BaseElement):
+    """A Generic Element for objects not of the above types"""
+    def __init__(self,locator):
+        super(GenericElement, self).__init__(_GenericElement, locator)
 
