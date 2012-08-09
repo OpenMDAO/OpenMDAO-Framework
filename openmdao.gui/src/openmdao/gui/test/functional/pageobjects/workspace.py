@@ -282,10 +282,15 @@ class WorkspacePage(BasePageObject):
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
         time.sleep(0.5)
-        chain = ActionChains(self.browser)
-        chain.context_click(element).perform()
-        time.sleep(0.5)
-        self('obj_dataflow').click()
+        # Try to recover from context menu not getting displayed.
+        for retry in range(3):
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            try:
+                self('obj_dataflow').click()
+            except TimeoutException:
+                if retry >= 2:
+                    raise
 
     def show_library(self):
         # For some reason the first try never works, so the wait is set
