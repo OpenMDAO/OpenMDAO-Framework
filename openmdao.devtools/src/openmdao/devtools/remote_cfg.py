@@ -208,7 +208,7 @@ def _check_test_output(host):
     """ Look for final test status ('OK' or 'FAILED'). """
     run_out = os.path.join('host_results', host, 'run.out')
     if not os.path.exists(run_out):
-        return '"run.out" not found'
+        return ''
 
     with open(run_out, 'r') as inp:
         lines = inp.readlines()

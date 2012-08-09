@@ -8,6 +8,7 @@ from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.datatypes.api import Array, Float, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
 
 
 class PreProc(Component):
@@ -17,6 +18,15 @@ class PreProc(Component):
 
     def execute(self):
         self.x_out = self.x_in
+
+
+class ScalingPreProc(PreProc):
+    """ Scaling pre-processor. """
+    scaler = Float(1.0, iotype='in')
+
+    def execute(self):
+        super(ScalingPreProc, self).execute()
+        self.x_out *= self.scaler
 
 
 class OptRosenSuzukiComponent(Component):
@@ -45,6 +55,15 @@ class PostProc(Component):
 
     def execute(self):
         self.result_out = self.result_in
+
+
+class ScalingPostProc(PostProc):
+    """ Scaling post-processor. """
+    scaler = Float(1.0, iotype='in')
+
+    def execute(self):
+        super(ScalingPostProc, self).execute()
+        self.result_out *= self.scaler
 
 
 class Simulation(Assembly):
@@ -89,4 +108,6 @@ if __name__ == '__main__':
     print 'objective', sim.comp.opt_objective, sim.driver.eval_objective()
     for i in range(len(sim.preproc.x_in)):
         print 'design_var', i, sim.comp.opt_design_vars[i], sim.preproc.x_in[i]
+
+    sim.replace('driver', SLSQPdriver())
 
