@@ -79,8 +79,8 @@ class WorkspacePage(BasePageObject):
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
     file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
     file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
-    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+#    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
+#    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
     file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
     file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
     file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
@@ -281,9 +281,16 @@ class WorkspacePage(BasePageObject):
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
-        chain = ActionChains(self.browser)
-        chain.context_click(element).perform()
-        self('obj_dataflow').click()
+        time.sleep(0.5)
+        # Try to recover from context menu not getting displayed.
+        for retry in range(3):
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            try:
+                self('obj_dataflow').click()
+            except TimeoutException:
+                if retry >= 2:
+                    raise
 
     def show_library(self):
         # For some reason the first try never works, so the wait is set

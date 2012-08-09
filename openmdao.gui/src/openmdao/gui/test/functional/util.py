@@ -52,15 +52,18 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
+        version = '21.0.1180.4'
         if sys.platform == 'darwin':
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
+            version = '20.0.1133.0'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
             flavor = 'linux32'
-        filename = '%s_%s_19.0.1068.0.zip' % (exe, flavor)
+        #filename = '%s_%s_19.0.1068.0.zip' % (exe, flavor)
+        filename = '%s_%s_%s.zip' % (exe, flavor, version)
         orig_dir = os.getcwd()
         os.chdir(os.path.dirname(sys.executable))
         try:
