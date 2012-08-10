@@ -88,8 +88,9 @@ openmdao.BaseFrame.prototype.popup = function (title) {
     function resize_contents() {
         // resize content pane of all tabbed panes to fit dialog content pane
         var tabs_height = dlg.find('.ui-tabs-nav').height(),
-            pane_height = dlg.height()-tabs_height;
-            pane_width  = dlg.width()
+            pane_height = dlg.height()-tabs_height,
+            pane_width  = dlg.width();
+
         dlg.find('.ui-tabs-panel').each(function() {
             var panel = jQuery(this);
             panel.height(pane_height);
@@ -100,7 +101,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
                 var grid = jQuery(this),
                     grid_hdr = grid.children('.slick-header'),
                     grid_vwp = grid.children('.slick-viewport');
-                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight()); 
+                grid_vwp.height(panel.innerHeight()-grid_hdr.outerHeight());
                 grid_vwp.width(panel.innerWidth());
             });
         });
@@ -111,11 +112,11 @@ openmdao.BaseFrame.prototype.popup = function (title) {
     });
 
     // make sure the popup fits in the window
-    if (this.elm.height() > window.innerHeight*.8) {
-        this.elm.height(window.innerHeight*.8);
+    if (this.elm.height() > window.innerHeight*0.8) {
+        this.elm.height(window.innerHeight*0.8);
     }
-    if (this.elm.width() > window.innerWidth*.8) {
-        this.elm.width(window.innerWidth*.8);
+    if (this.elm.width() > window.innerWidth*0.8) {
+        this.elm.width(window.innerWidth*0.8);
     }
 
     // give it a few ms to render then check for being out of bounds
@@ -138,9 +139,8 @@ openmdao.BaseFrame.prototype.popup = function (title) {
         if (top !== off.top || left !== off.left) {
             dlg.dialog({ position: [top, left] });
         }
-
         resize_contents();
-    }, 100);
+    }, 120);
 
 };
 
