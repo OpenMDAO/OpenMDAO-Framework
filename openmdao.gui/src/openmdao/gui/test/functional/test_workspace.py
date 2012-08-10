@@ -536,8 +536,12 @@ def _test_editable_inputs(browser):
     # Verify that the rows are highlighted
     
     for element in elements:
-        assert("rgb(255, 255, 255)" == element.value_of_css_property("background-color"))
-        assert("rgb(0, 0, 0)" == element.value_of_css_property("color"))
+        # On my machine, I get colors of rgba(n,n,n,n) instead of rgb(n,n,n), so do
+        # a little parsing here to see if the first three numbers match
+        bg = element.value_of_css_property("background-color").split('(',1)[1].strip(')').split(',')[0:3]
+        fg = element.value_of_css_property("color").split('(',1)[1].strip(')').split(',')[0:3]
+        assert(['255', '255', '255'] == bg)
+        assert(['0', '0', '0'] == fg)
     
     component_editor.close()
 
