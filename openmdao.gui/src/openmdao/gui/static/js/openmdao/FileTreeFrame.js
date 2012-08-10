@@ -193,18 +193,18 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         };
 
         // TODO: implement rename()
-        menu.renameFile = {
-            "label"  : 'Rename',
-            "action" : function(node) { alert("Rename is not implemented yet, sorry :("); }
-        };
+        //menu.renameFile = {
+        //    "label"  : 'Rename',
+        //    "action" : function(node) { alert("Rename is not implemented yet, sorry :("); }
+        //};
 
         // if it's not a folder, 
         if (!isFolder) {
             // view file in another window (TODO: make this useful, e.g. display image, format text or w/e)
-            menu.viewFile = {
-                "label"  : 'View File (raw)',
-                "action" : function(node) { viewFile(path); }
-            };
+            //menu.viewFile = {
+            //    "label"  : 'View File (raw)',
+            //    "action" : function(node) { viewFile(path); }
+            //};
             // let them edit it (TODO: filter out non-text files?)
             menu.editFile = {
                 "label"  : 'Edit File',
