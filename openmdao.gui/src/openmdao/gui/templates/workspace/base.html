@@ -46,7 +46,7 @@
 
     <!-- jstree pre 1.0 fixed -->
     <script src="/static/js/jquery.jstree.js"               type="text/javascript"></script>
-    <script>jQuery.jstree.THEMES_DIR = "/static/js/themes/";</script>
+    <script>jQuery.jstree._themes = "/static/css/jstree-themes/";</script>
 
     <!-- flot -->
     <script src="/static/js/jquery.flot.js"                 type="text/javascript"></script>
@@ -58,8 +58,9 @@
     
     <script src="/static/ace-min/ace.js" type="text/javascript" charset="utf-8"></script>
 
+    <!-- used by DragAndDropManager -->
+    <script src="/static/js/jshashtable-2.1_src.js"               type="text/javascript"></script>
     <!--  closable tabs  -->
-    
     <script src="/static/js/ui.tabs.closable.min.js" type="text/javascript" type="text/javascript"></script>  
 
     <!-- openmdao specific imports (to be rolled into single file at some point)-->
@@ -96,6 +97,9 @@
     <script src="/static/js/openmdao/WorkflowComponentFigure.js"  type="text/javascript"></script>
     <script src="/static/js/openmdao/VariableFigure.js"           type="text/javascript"></script>
     <script src="/static/js/openmdao/SlotFigure.js"               type="text/javascript"></script>
+
+    <script src="/static/js/openmdao/DragAndDropManager.js"               type="text/javascript"></script>
+
 
     {% block head %}
     {% if 'head_script' in globals() %} <script> {% raw head_script %} </script> {% end %}
