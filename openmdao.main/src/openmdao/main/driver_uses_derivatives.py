@@ -30,7 +30,8 @@ class DriverUsesDerivatives(Driver):
         """When a new differentiator is slotted, give it a handle to the
         parent."""
         
-        self.differentiator._parent = self
+        if self.differentiator is not None:
+            self.differentiator._parent = self
         
     def _list_driver_connections(self):
         """Return a list of inputs and a list of outputs that are referenced by

@@ -6,7 +6,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         parmsDiv = jQuery("<div id='"+name+"_parms'>"),
         buttonSpec = "class='button' style='text-align:center; margin-top:1em;'",
         addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
-        clrButton = jQuery("<div "+buttonSpec +">Clear Parameter</div>"),
+        clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
         columns = [
             {id:"target",  name:"Target",  field:"target",  width:140},
             {id:"low",     name:"Low",     field:"low",     width:70},
