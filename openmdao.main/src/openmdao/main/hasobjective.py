@@ -85,6 +85,16 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        for oname, obj in self._objectives.items():
+            if name in obj.get_referenced_compnames():
+                self.remove_objective(oname)
+
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
         return self._objectives

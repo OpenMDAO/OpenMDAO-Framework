@@ -63,7 +63,6 @@ def setup_chrome():
             flavor = 'linux64'
         else:
             flavor = 'linux32'
-        #filename = '%s_%s_19.0.1068.0.zip' % (exe, flavor)
         filename = '%s_%s_%s.zip' % (exe, flavor, version)
         orig_dir = os.getcwd()
         os.chdir(os.path.dirname(sys.executable))

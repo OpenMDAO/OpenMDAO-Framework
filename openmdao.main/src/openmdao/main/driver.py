@@ -159,6 +159,21 @@ class Driver(Component):
                     full.update(graph.find_all_connecting(start, end))
         return full
 
+    def remove_references(self, name):
+        """Remove parameter, constraint, and objective references to component
+        `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        if hasattr(self, '_delegates_'):
+            for dname, dclass in self._delegates_.items():
+                inst = getattr(self, dname)
+                if isinstance(inst, (HasParameters, HasConstraints,
+                                     HasEqConstraints, HasIneqConstraints,
+                                     HasObjective, HasObjectives)):
+                    inst.remove_references(name)
+
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
         """Run this object. This should include fetching input variables if necessary,

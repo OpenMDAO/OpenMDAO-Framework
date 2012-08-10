@@ -416,6 +416,7 @@ class Assembly (Component):
             for obj in self.__dict__.values():
                 if obj is not cont and is_instance(obj, Driver):
                     obj.workflow.remove(name)
+                    obj.remove_references(name)
                     
         return super(Assembly, self).remove(name)
 

@@ -335,7 +335,23 @@ class CONMINdriverTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
             
-            
+    def test_remove(self):
+        self.top.driver.add_objective('comp.result')
+        map(self.top.driver.add_parameter, 
+            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+        
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_constraint,[
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+
+        self.top.remove('comp')
+        self.assertEqual(self.top.driver.list_param_targets(), [])
+        self.assertEqual(self.top.driver.list_constraints(), [])
+        self.assertEqual(self.top.driver.get_objectives(), {})
+
+
 class TestContainer(VariableTree):
     dummy1 = Float(desc='default value of 0.0') #this value is being grabbed by the optimizer
     dummy2 = Float(11.0) 

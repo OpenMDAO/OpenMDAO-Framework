@@ -127,6 +127,17 @@ class _HasConstraintsBase(object):
             msg = "Constraint '%s' was not found. Remove failed." % key
             self._parent.raise_exception(msg, AttributeError)
             
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        for cname, constraint in self._constraints.items():
+            if name in constraint.lhs.get_referenced_compnames() or \
+               name in constraint.rhs.get_referenced_compnames():
+                self.remove_constraint(cname)
+
     def clear_constraints(self):
         """Removes all constraints."""
         self._constraints = ordereddict.OrderedDict()
@@ -467,6 +478,15 @@ class HasConstraints(object):
         else:
             self._ineq.remove_constraint(expr_string)
         
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        self._eq.remove_references(name)
+        self._ineq.remove_references(name)
+
     def clear_constraints(self):
         """Removes all constraints."""
         self._eq.clear_constraints()

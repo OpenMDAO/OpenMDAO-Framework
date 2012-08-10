@@ -446,6 +446,16 @@ class HasParameters(object):
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        for pname, param in self._parameters.items():
+            if name in param.get_referenced_compnames():
+                self.remove_parameter(pname)
+
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this
         list may contain more entries than the list of Parameter and
