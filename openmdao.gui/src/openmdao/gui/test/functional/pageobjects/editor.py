@@ -211,10 +211,7 @@ class EditorPage(BasePageObject):
         #use 'save' button to save code
         self('editor_save_button').click()
         if overwrite:
-            WebDriverWait(self.browser, TMO).until(
-                lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
             self('editor_overwrite_button').click()
-
         if check:
             NotifierPage.wait(self)
 
