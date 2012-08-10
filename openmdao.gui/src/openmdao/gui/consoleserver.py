@@ -117,7 +117,7 @@ class ConsoleServer(cmd.Cmd):
         try:
             publish('console_errors', msg)
         except:
-            print 'publishing of message failed'
+            logger.error('publishing of message failed')
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -501,7 +501,7 @@ class ConsoleServer(cmd.Cmd):
             try:
                 self.proj.command(cmd)
             except Exception, err:
-                self._print_error(err, sys.exc_info())
+                self._error(err, sys.exc_info())
         else:
             self._print_error('Error adding component: "%s" is not a valid identifier' % name)
 
