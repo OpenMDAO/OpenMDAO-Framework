@@ -38,12 +38,12 @@ class ImportFactory(Factory):
                 __import__(modname, globals(), locals(), [cname])
                 mod = sys.modules[modname]
             except (ImportError, KeyError), err:
-                logger.debug(str(err))
+                logger.error(str(err))
                 return None
             try:
                 self._ctors[typ] = getattr(mod, cname)
             except AttributeError, err:
-                logger.debug(str(err))
+                logger.error(str(err))
                 return None
         
         return self._ctors[typ](**ctor_args)

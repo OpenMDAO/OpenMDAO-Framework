@@ -301,7 +301,7 @@ openmdao.Model=function() {
     };
 
     /** add an object of the specified type & name to the specified parent */
-    this.addComponent = function(typepath,name,parent,callback) {
+    this.addComponent = function(typepath,name,parent,callback,errorHandler) {
         if (!parent) {
             parent = '';
         }
@@ -315,17 +315,19 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'component/'+name,
             data: {'type': typepath, 'parent': parent },
-            success: callback
+            success: callback,
+            error: errorHandler
         });
     };
 
     /** replace pathname with an object of the specified type */
-    this.replaceComponent = function(pathname, typepath, callback) {
+    this.replaceComponent = function(pathname, typepath, callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'replace/'+pathname,
             data: {'type': typepath},
-            success: callback
+            success: callback,
+            error: errorHandler
         });
     };
 

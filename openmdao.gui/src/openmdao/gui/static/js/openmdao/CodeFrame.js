@@ -350,10 +350,10 @@ openmdao.CodeFrame = function(id,model) {
                 function(contents) {
                     newTab(contents,filepath,fname_nodot,mode);
                     if (filepath.charAt(0) === "/") {
-                        file_label.text(filepath.substr(1));
+                        //file_label.text(filepath.substr(1));
                     }
                     else {
-                        file_label.text(filepath);
+                        //file_label.text(filepath);
                     }
                     editor.session.doc.setValue(contents);
                     self.resize();

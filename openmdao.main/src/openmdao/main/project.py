@@ -324,7 +324,7 @@ class Project(object):
         if err:
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
-            raise
+            raise err
         else:
             # certain commands (like execfile) can modify the recorded string,
             # so only record the given command if the executed command didn't

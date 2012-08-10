@@ -568,6 +568,7 @@ def _test_console_errors(browser):
     # Save file with syntax error.
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
+    editor_window = browser.current_window_handle
     editor_page.new_file('bug.py', """
 from openmdao.main.api import Component
 class Bug(Component):
@@ -581,12 +582,13 @@ def execute(self)
     # then retry the error notifier.
     message = None
     try:
-        message = NotifierPage.wait(editor_page)#, base_id='file-error')
+        message = NotifierPage.wait(editor_page, base_id='file-error')
     except WebDriverException:
         pass
+    browser.switch_to_window(editor_window)
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
-        message = NotifierPage.wait(editor_page)#, base_id='file-error')
+        message = NotifierPage.wait(editor_page, base_id='file-error')
     eq(message, 'invalid syntax (bug.py, line 6)')
     
     browser.close()

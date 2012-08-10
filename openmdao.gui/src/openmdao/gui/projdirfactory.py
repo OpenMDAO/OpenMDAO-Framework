@@ -232,6 +232,7 @@ class ProjDirFactory(Factory):
             else:
                 self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
         except Exception as err:
+            self._error(str(err))
             logger.error(str(err))
 
     def _start_observer(self, observer):
@@ -257,11 +258,7 @@ class ProjDirFactory(Factory):
             except KeyError:
                 return None
             
-            try:
-                return klass(**ctor_args)
-            except Exception as err:
-                self._error(str(err))
-                raise
+            return klass(**ctor_args)
         return None
     
     def get_available_types(self, groups=None):
@@ -296,7 +293,7 @@ class ProjDirFactory(Factory):
                 try:
                     fileinfo = _FileInfo(fpath)
                 except Exception as err:
-                    self._error(str(err))
+                    self._file_error(str(err))
                     return
                 self._files[fpath] = fileinfo
                 added_set.update(fileinfo.classes.keys())
@@ -306,7 +303,7 @@ class ProjDirFactory(Factory):
                 try:
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:
-                    self._error(str(err))
+                    self._file_error(str(err))
                     self._remove_fileinfo(fpath)
                     return
                 for cname in added_set:
@@ -340,6 +337,12 @@ class ProjDirFactory(Factory):
     def _error(self, msg):
         logger.error(msg)
         publish('console_errors', msg)
+        print msg
+        
+    def _file_error(self, msg):
+        logger.error(msg)
+        publish('file_errors', msg)
+        print msg
         
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs
