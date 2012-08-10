@@ -8,12 +8,10 @@ import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
-
-
-
 if sys.platform != 'win32':  # No testing on Windows yet.
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.action_chains import ActionChains
+
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
 
