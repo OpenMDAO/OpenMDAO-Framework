@@ -119,6 +119,11 @@ openmdao.BaseFrame.prototype.popup = function (title) {
         this.elm.width(window.innerWidth*0.8);
     }
 
+    //if (typeof openmdao_test_mode !== 'undefined') {
+    //    // reliably set position to be fully in window for testing
+    //    dlg.dialog({ position: [100, 10] });
+    //}
+
     // give it a few ms to render then check for being out of bounds
     setTimeout(function() {
         var off  = dlg.offset(),
