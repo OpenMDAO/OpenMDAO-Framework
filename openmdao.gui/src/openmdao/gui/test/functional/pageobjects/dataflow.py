@@ -5,15 +5,26 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 from basepageobject import BasePageObject, TMO
-from elements import ButtonElement, TextElement
-from component import ComponentPage, DriverPage, PropertiesPage
+from elements import GenericElement, ButtonElement, TextElement
+from component import ComponentPage, DriverPage, PropertiesPage, AssemblyPage
 from connections import ConnectionsPage
 
 class DataflowFigure(BasePageObject):
     """ Represents elements within a dataflow figure. """
 
     name = TextElement((By.CLASS_NAME, 'DataflowFigureHeader'))
+
+    top_left = GenericElement((By.CLASS_NAME, 'DataflowFigureTopLeft'))
+    header = GenericElement((By.CLASS_NAME, 'DataflowFigureHeader'))
     top_right = ButtonElement((By.CLASS_NAME, 'DataflowFigureTopRight'))
+    
+    content_area = GenericElement((By.CLASS_NAME, 'DataflowFigureContentArea'))
+
+    bottom_left = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomLeft'))
+    bottom_right = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomRight'))
+    footer = GenericElement((By.CLASS_NAME, 'DataflowFigureFooter'))
+
+
 
     # Context menu.
     edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
@@ -30,6 +41,7 @@ class DataflowFigure(BasePageObject):
     # Port context menus.
     edit_connections   = ButtonElement((By.XPATH, "../div/a[text()='Edit Connections']"))
     edit_driver        = ButtonElement((By.XPATH, "../div/a[text()='Edit Driver']"))
+
 
     @property
     def pathname(self):
@@ -60,7 +72,7 @@ class DataflowFigure(BasePageObject):
         """ Figure background-color property. """
         return self.root.value_of_css_property('background-color')
 
-    def editor_page(self, double_click=True):
+    def editor_page(self, double_click=True, is_assembly=False):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)
         if double_click:
@@ -68,6 +80,8 @@ class DataflowFigure(BasePageObject):
         else:
             self._context_click('edit_button')
         editor_id = 'CE-%s' % self.pathname.replace('.', '-')
+        if is_assembly:
+            return AssemblyPage(self.browser, self.port, (By.ID, editor_id))
         return ComponentPage(self.browser, self.port, (By.ID, editor_id))
 
     def properties_page(self):
