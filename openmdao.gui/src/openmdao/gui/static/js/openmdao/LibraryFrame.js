@@ -157,13 +157,19 @@ openmdao.LibraryFrame = function(id,model) {
         ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
 
         // make everything draggable
-        objtypes.draggable({ helper: 'clone', appendTo: 'body' });
-        objtypes.addClass('jstree-draggable'); // allow drop on jstree
+        objtypes.draggable({ helper: 'clone', appendTo: 'body' } ) ;
+        // TODO: Could not get this to work if the cursor was for .objtype in mdao-style.css
+        //        For some reason this does not override that during the drag
+        //        But for now it all looks pretty good with just an open hand for the hover
+        //        and then drag
+        //cursor: 'url( http://www.google.com/intl/en_ALL/mapfiles/closedhand.cur ) 8 8, auto ' });
+                             
+        //objtypes.addClass('jstree-draggable'); // allow drop on jstree
     }
 
     /** build HTML string for a package */
     function packageHTML(name,item) {
-        var html = "<tr><td class='objtype' modpath="+item.modpath+">"+name+"</td><td>"+
+        var html = "<tr><td class='objtype " + item.ifaces.toString().replace(/,/g," " ) + "' modpath="+item.modpath+">"+name+"</td><td>"+
                    item.modpath+"</td><td>"+item.version+"</td><td>"+
                    item._context+"</td><td>"+item.ifaces+"</td></tr>";
         return html;

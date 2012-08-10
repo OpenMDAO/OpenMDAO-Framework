@@ -65,6 +65,12 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     elm.data('name',this.name);
     elm.data('pathname',this.pathname);
     elm.data('flowpath',this.flowpath);
+    elm.data('corresponding_openmdao_object',this);
+
+
+    openmdao.drag_and_drop_manager.addWorkflowFigure( elm.attr( "id" ) ) ;
+
+
 
     return item;
 };
