@@ -5,12 +5,9 @@ Tests of code editor functions.
 import sys
 import time
 
-import pkg_resources
-
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 from nose.tools import assert_not_equal as neq
-from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
@@ -60,17 +57,16 @@ def g(x):
 
     # Go back to code editor, open file, verify source code
     
-    editor_page = workspace_page.edit_file('test1.py') #this file was saved
+    editor_page = workspace_page.edit_file('test1.py')  # this file was saved
     time.sleep(1)
     loaded_code = editor_page.get_code()
     eq(input_code1, loaded_code)
-    
-    
-    editor_page.edit_file('test2.py') #this file was not saved
+
+    editor_page.edit_file('test2.py')  # this file was not saved
     time.sleep(1)
     loaded_code = editor_page.get_code()
     neq(input_code2, loaded_code)
-    
+
     # Clean up.
     browser.close()
     browser.switch_to_window(workspace_window)
