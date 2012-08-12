@@ -279,7 +279,7 @@ f_x = Float(0.0, iotype='out')
     time.sleep(0.5)
     workspace_page.show_dataflow('top')
     workspace_page.show_library()
-    workspace_page.library_search = 'In Project\n'
+    workspace_page.set_library_filter('In Project')
     time.sleep(2)
     workspace_page.find_library_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
@@ -324,7 +324,7 @@ d = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page.show_library()
-    workspace_page.library_search = 'In Project\n'
+    workspace_page.set_library_filter('In Project')
 
     workspace_page.find_library_button('Foo').click()
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
@@ -604,7 +604,7 @@ pass
     browser.close()
     browser.switch_to_window(workspace_window)
     workspace_page.show_library()
-    workspace_page.library_search = 'In Project\n'
+    workspace_page.set_library_filter('In Project')
     time.sleep(0.5)
     workspace_page.find_library_button('Bug2').click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)

@@ -307,6 +307,16 @@ class WorkspacePage(BasePageObject):
         else:
             raise RuntimeError('Too many TimeoutExceptions')
 
+    def set_library_filter(self, filter):
+        for retry in range(10):  # This has had issues...
+            try:
+                self.library_search = filter + '\n'
+            except StaleElementReferenceException:
+                logging.warning('set_library_filter:'
+                                ' StaleElementReferenceException')
+            else:
+                break
+
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
