@@ -17,6 +17,8 @@ import weakref
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str, Int, Property
 
+from zope.interface import implementedBy
+
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
