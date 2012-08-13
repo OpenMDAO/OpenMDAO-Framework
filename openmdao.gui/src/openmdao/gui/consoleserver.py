@@ -91,7 +91,7 @@ class ConsoleServer(cmd.Cmd):
             publish('components', self.get_components())
             publish('', {'Dataflow': self.get_dataflow('')})
         except Exception as err:
-            self._error(err)
+            self._error(err, sys.exc_info())
         else:
             comps = self._publish_comps.keys()
             for pathname in comps:
