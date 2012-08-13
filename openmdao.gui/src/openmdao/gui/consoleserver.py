@@ -102,7 +102,7 @@ class ConsoleServer(cmd.Cmd):
                     del self._publish_comps[pathname]
                     self.publisher.publish(pathname, {})
                 else:
-                    self.publisher.publish(pathname, comp.get_attributes(ioOnly=False))
+                    self.publisher.publish(pathname, comp.get_attributes(io_only=False))
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -420,7 +420,7 @@ class ConsoleServer(cmd.Cmd):
         comp, root = self.get_container(pathname)
         if comp:
             try:
-                attr = comp.get_attributes(ioOnly=False)
+                attr = comp.get_attributes(io_only=False)
             except Exception, err:
                 self._error(err, sys.exc_info())
         return jsonpickle.encode(attr)
