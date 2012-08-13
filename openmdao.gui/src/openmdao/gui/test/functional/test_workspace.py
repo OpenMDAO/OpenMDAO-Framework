@@ -534,10 +534,31 @@ def _test_editable_inputs(browser):
             /div[contains(@class, 'ui-state-editable')]")
 
     # Verify that the rows are highlighted
-    
+   
+    import re
+    regex = re.compile( "(\d+),\s*(\d+),\s*(\d+),?\s*(\d+)?")
+    import pdb
+    pdb.set_trace()
     for element in elements:
-        assert("rgb(255, 255, 255)" == element.value_of_css_property("background-color"))
-        assert("rgb(0, 0, 0)" == element.value_of_css_property("color"))
+        #Test that element has a background color
+        match = regex.search( element.value_of_css_property( "background-color" ) )
+        assert( match )
+
+        #Test that background color is white with no alpha
+        red, green, blue, alpha = [ int( color ) for color in match.groups('255') ]
+        assert( red == 255 )
+        assert( green == 255 )
+        assert( blue == 255 )
+
+        #Test that element has a color
+        match = regex.search( element.value_of_css_property( "color" ) )
+        assert( match )
+
+        #Test that color is black with no alpha
+        red, green, blue, alpha = [ int( color ) for color in match.groups('255') ]
+        assert( red == 0 ) 
+        assert( green == 0 )
+        assert( blue == 0 )
     
     component_editor.close()
 
