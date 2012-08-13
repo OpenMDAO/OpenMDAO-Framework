@@ -402,7 +402,7 @@ class WorkspacePage(BasePageObject):
 
     def get_dataflow_component_names(self):
         """ Return names of dataflow components. """
-        names = set()
+        names = []
 
         # Assume there should be at least 1, wait for number to not change.
         n_found = 0
@@ -410,16 +410,14 @@ class WorkspacePage(BasePageObject):
             dataflow_component_headers = \
                 self.browser.find_elements_by_class_name('DataflowFigureHeader')
             if dataflow_component_headers:
-                for header in dataflow_component_headers:
-                    names.add(header.text)
                 n_headers = len(dataflow_component_headers)
                 if n_found:
                     if n_headers == n_found:
-                        break
+                        return [h.text for h in dataflow_component_headers]
                 n_found = n_headers
         else:
             logging.error('get_dataflow_component_names: n_found %s', n_found)
-            return list(names)
+            return names
 
         #for i in range(len(dataflow_component_headers)):
             #for retry in range(10):  # This has had issues...
@@ -439,7 +437,7 @@ class WorkspacePage(BasePageObject):
             #logging.error('get_dataflow_component_names:'
                           #' expecting %d names, got %s',
                           #len(dataflow_component_headers), names)
-        return list(names)
+        #return names
 
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
