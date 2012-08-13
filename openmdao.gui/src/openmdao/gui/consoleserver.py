@@ -108,6 +108,7 @@ class ConsoleServer(cmd.Cmd):
         self._partial_cmd = None
         self.exc_info = exc_info
         msg = '%s: %s' % (err.__class__.__name__, err)
+        logger.error(msg)
         self._print_error(msg)
 
     def _print_error(self, msg):
@@ -574,33 +575,25 @@ class ConsoleServer(cmd.Cmd):
             # these topics are published automatically
             return
 
-        if not self.publisher:
-            try:
-                self.publisher = Publisher.get_instance()
-            except Exception, err:
-                print 'Error getting publisher:', err
-                self.publisher = None
+        parts = pathname.split('.')
+        if len(parts) > 1:
+            root = self.proj.get(parts[0])
+            if root:
+                rest = '.'.join(parts[1:])
+                root.register_published_vars(rest, publish)
 
-        if self.publisher:
-            parts = pathname.split('.')
-            if len(parts) > 1:
-                root = self.proj.get(parts[0])
-                if root:
-                    rest = '.'.join(parts[1:])
-                    root.register_published_vars(rest, publish)
-
-            cont, root = self.get_container(pathname)
-            if has_interface(cont, IComponent):
-                if publish:
-                    if pathname in self._publish_comps:
-                        self._publish_comps[pathname] += 1
-                    else:
-                        self._publish_comps[pathname] = 1
+        cont, root = self.get_container(pathname)
+        if has_interface(cont, IComponent):
+            if publish:
+                if pathname in self._publish_comps:
+                    self._publish_comps[pathname] += 1
                 else:
-                    if pathname in self._publish_comps:
-                        self._publish_comps[pathname] -= 1
-                        if self._publish_comps[pathname] < 1:
-                            del self._publish_comps[pathname]
+                    self._publish_comps[pathname] = 1
+            else:
+                if pathname in self._publish_comps:
+                    self._publish_comps[pathname] -= 1
+                    if self._publish_comps[pathname] < 1:
+                        del self._publish_comps[pathname]
 
     def file_classes_changed(self, filename):
         pdf = self.projdirfactory

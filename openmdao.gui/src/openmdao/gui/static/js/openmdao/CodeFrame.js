@@ -332,7 +332,7 @@ openmdao.CodeFrame = function(id,model) {
     this.editor = editor;
 
     this.currentTablabel = function() {
-        return jQuery('#'+id+'-tabs .ui-tabs-selected').find("span").text().split('/').pop();
+        return jQuery('#'+id+'-tabs .ui-tabs-selected a').text();
     };
 
     /** get contents of specified file from model, load into editor */
