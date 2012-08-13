@@ -112,7 +112,12 @@ class HasObjectivesTestCase(unittest.TestCase):
     def test_clear_objectives(self):
         self.asm.driver.add_objective('comp1.a-comp1.b')
         self.asm.driver.add_objective('comp1.c-comp1.d')
+        self.asm.run()
+        self.assertEqual(self.asm.driver.is_valid(), True)
+        self.assertEqual(self.asm.driver._exec_state, 'VALID')
         self.asm.driver.clear_objectives()
+        self.assertEqual(self.asm.driver.is_valid(), False)
+        self.assertEqual(self.asm.driver._exec_state, 'INVALID')
         self.assertEqual(len(self.asm.driver.get_objectives()), 0)
 
 if __name__ == "__main__":
