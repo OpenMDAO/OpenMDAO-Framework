@@ -85,6 +85,16 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to remove objective '%s' "
                                          "that is not in this driver." % expr,
                                          AttributeError)
+    def get_references(self, name):
+        """Return references to component `name` in preparation for subsequent
+        :meth:`restore_references` call.
+
+        name: string
+            Name of component being removed.
+        """
+        # Just returning everything for now.
+        return self._objectives.copy()
+
     def remove_references(self, name):
         """Remove references to component `name`.
 
@@ -94,6 +104,22 @@ class HasObjectives(object):
         for oname, obj in self._objectives.items():
             if name in obj.get_referenced_compnames():
                 self.remove_objective(oname)
+
+    def restore_references(self, refs, name):
+        """Restore references to component `name` from `refs`.
+
+        name: string
+            Name of component being removed.
+
+        refs: object
+            Value returned by :meth:`get_references`.
+        """
+        # Not exactly safe here...
+        if isinstance(refs, ordereddict.OrderedDict):
+            self._objectives = refs
+        else:
+            raise TypeError('refs should be ordereddict.OrderedDict, got %r' 
+                            % refs)
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""

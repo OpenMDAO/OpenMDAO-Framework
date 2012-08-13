@@ -145,7 +145,6 @@ def _test_palette_update(browser):
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
-    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # view library
@@ -354,7 +353,6 @@ d = Float(0.0, iotype='out')
 
     workspace_page = projects_page.open_project(project_dict['name'])
     workspace_page.show_dataflow('top')
-    time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['comp1', 'comp2', 'driver', 'top'])
 
@@ -534,10 +532,15 @@ def _test_editable_inputs(browser):
             /div[contains(@class, 'ui-state-editable')]")
 
     # Verify that the rows are highlighted
-    
     for element in elements:
-        assert("rgb(255, 255, 255)" == element.value_of_css_property("background-color"))
-        assert("rgb(0, 0, 0)" == element.value_of_css_property("color"))
+        for prop_name, value in (('background-color', 255), ('color', 0)):
+            color = element.value_of_css_property(prop_name)
+            if color.startswith('rgba'):
+                values = [int(v) for v in color[5:-1].split(',')]
+                eq([value, value, value, 1], values)
+            else:
+                values = [int(v) for v in color[4:-1].split(',')]
+                eq([value, value, value], values)
     
     component_editor.close()
 

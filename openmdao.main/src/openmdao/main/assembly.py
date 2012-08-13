@@ -378,6 +378,14 @@ class Assembly (Component):
         of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
+
+        # Save existing driver references.
+        refs = {}
+        if has_interface(tobj, IComponent):
+            for obj in self.__dict__.values():
+                if obj is not tobj and is_instance(obj, Driver):
+                    refs[obj] = obj.get_references(target_name)
+
         if has_interface(newobj, IComponent): # remove any existing connections to replacement object
             self.disconnect(newobj.name)
         if hasattr(newobj, 'mimic'):
@@ -405,6 +413,12 @@ class Assembly (Component):
             for wflow,idx in wflows:
                 wflow.add(target_name, idx)
     
+        # Restore driver references.
+        if refs:
+            for obj in self.__dict__.values():
+                if obj is not newobj and is_instance(obj, Driver):
+                    obj.restore_references(refs[obj], target_name)
+
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow(s) if it's a Component."""
