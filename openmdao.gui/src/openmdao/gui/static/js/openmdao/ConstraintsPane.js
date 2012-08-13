@@ -43,7 +43,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
    }
 
     /** add a new constraint */
-    function addConstraint(expr,scaler,adder,name,scope) {
+    function addConstraint(expr,scaler,adder,name) {
         cmd = pathname+".add_constraint('"+expr+"'";
         if (scaler) {
             cmd = cmd + ",scaler="+scaler;
@@ -53,9 +53,6 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
         }
         if (name) {
             cmd = cmd + ",name="+name;
-        }
-        if (scope) {
-            cmd = cmd + ",scope="+scope;
         }
         cmd = cmd + ");";
         model.issueCommand(cmd);
@@ -68,17 +65,15 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
             expr   = jQuery('<input type="text" style="width:100%"></input>'),
             scaler = jQuery('<input type="text" style="width:50%"></input>'),
             adder  = jQuery('<input type="text" style="width:50%"></input>'),
-            name   = jQuery('<input type="text" style="width:50%"></input>'),
-            scope  = jQuery('<input type="text" style="width:50%"></input>');
-
+            name   = jQuery('<input type="text" style="width:75%"></input>');
+            
         win.append(jQuery('<div>Expression: </div>').append(expr));
 
         var table = jQuery('<table>');
         row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
                             .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
         table.append(row);
-        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)))
-                            .append(jQuery('<td>').append(jQuery('<div>Scope: </div>').append(scope)));
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
         table.append(row);
         win.append(table);
 
@@ -90,7 +85,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
             'buttons': {
                 'Ok': function() {
                     jQuery(this).dialog('close');
-                    callback(expr.val(),scaler.val(),adder.val(),name.val(),scope.val());
+                    callback(expr.val(),scaler.val(),adder.val(),name.val());
                 },
                 'Cancel': function() {
                     jQuery(this).dialog('close');

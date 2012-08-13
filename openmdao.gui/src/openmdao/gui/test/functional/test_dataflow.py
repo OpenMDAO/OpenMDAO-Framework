@@ -2,7 +2,6 @@
 Tests of dataflow functions.
 """
 
-import logging
 import pkg_resources
 import sys
 import time
@@ -15,7 +14,6 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
     from pageobjects.util import NotifierPage
-    from selenium.common.exceptions import StaleElementReferenceException
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -337,7 +335,7 @@ def _test_driverflows(browser):
     workspace_page.find_library_button('Simulation').click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
-    # Show dataflow for Simulation. 
+    # Show dataflow for Simulation.
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
     workspace_page.hide_right()
@@ -355,10 +353,10 @@ def _test_driverflows(browser):
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
-        ['preproc.x_in[0]', '-10', '99', '', '', '', '', 'preproc.x_in[0]'],
-        ['preproc.x_in[1]', '-10', '99', '', '', '', '', 'preproc.x_in[1]'],
-        ['preproc.x_in[2]', '-10', '99', '', '', '', '', 'preproc.x_in[2]'],
-        ['preproc.x_in[3]', '-10', '99', '', '', '', '', 'preproc.x_in[3]'],
+        ['preproc.x_in[0]', '-10', '99', '', '', '', 'preproc.x_in[0]'],
+        ['preproc.x_in[1]', '-10', '99', '', '', '', 'preproc.x_in[1]'],
+        ['preproc.x_in[2]', '-10', '99', '', '', '', 'preproc.x_in[2]'],
+        ['preproc.x_in[3]', '-10', '99', '', '', '', 'preproc.x_in[3]'],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -400,7 +398,7 @@ def _test_replace(browser):
     workspace_page.find_library_button('Simulation').click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
-    # Show dataflow for Simulation. 
+    # Show dataflow for Simulation.
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
 
@@ -537,4 +535,3 @@ def _test_replace(browser):
 
 if __name__ == '__main__':
     main()
-

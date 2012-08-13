@@ -180,7 +180,6 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 
-
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
@@ -310,6 +309,16 @@ class WorkspacePage(BasePageObject):
         else:
             raise RuntimeError('Too many TimeoutExceptions')
 
+    def set_library_filter(self, filter):
+        for retry in range(10):  # This has had issues...
+            try:
+                self.library_search = filter + '\n'
+            except StaleElementReferenceException:
+                logging.warning('set_library_filter:'
+                                ' StaleElementReferenceException')
+            else:
+                break
+
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
@@ -342,7 +351,7 @@ class WorkspacePage(BasePageObject):
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
         time.sleep(0.25)
-        self.browser.implicitly_wait(1) # We don't expect to find anything.
+        self.browser.implicitly_wait(1)  # We don't expect to find anything.
         try:
             eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
         finally:
