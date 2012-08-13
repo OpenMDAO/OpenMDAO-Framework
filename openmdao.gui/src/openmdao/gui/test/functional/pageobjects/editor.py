@@ -71,6 +71,7 @@ class EditorPage(BasePageObject):
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
     editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
+    editor_cancel_button     = ButtonElement((By.ID, 'code_pane-cancel'))
 
     editor_label = TextElement((By.ID, 'code_pane-label'))
 
@@ -214,9 +215,10 @@ class EditorPage(BasePageObject):
             WebDriverWait(self.browser, TMO).until(
                 lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
             self('editor_overwrite_button').click()
-
+            
         if check:
             NotifierPage.wait(self)
+
 
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """

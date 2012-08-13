@@ -76,3 +76,10 @@ class Publisher(object):
     @staticmethod
     def disable():
         Publisher.__enabled = False
+
+
+def publish(topic, msg):
+    try:
+        Publisher.get_instance().publish(topic, msg)
+    except AttributeError:
+        raise RuntimeError("Publisher has not been initialized")

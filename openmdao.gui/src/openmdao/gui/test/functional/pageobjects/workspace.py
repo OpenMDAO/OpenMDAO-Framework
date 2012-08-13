@@ -357,7 +357,8 @@ class WorkspacePage(BasePageObject):
 
         if check:  # Check that it's been added.
             WebDriverWait(self.browser, TMO).until(
-                lambda browser: instance_name in self.get_dataflow_component_names())
+                lambda browser: self.get_dataflow_figure(instance_name) is not None)
+                #lambda browser: instance_name in self.get_dataflow_component_names())
 
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
@@ -412,31 +413,31 @@ class WorkspacePage(BasePageObject):
                 n_headers = len(dataflow_component_headers)
                 if n_found:
                     if n_headers == n_found:
-                        break
+                        return [h.text for h in dataflow_component_headers]
                 n_found = n_headers
         else:
             logging.error('get_dataflow_component_names: n_found %s', n_found)
             return names
 
-        for i in range(len(dataflow_component_headers)):
-            for retry in range(10):  # This has had issues...
-                try:
-                    names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
-                except StaleElementReferenceException:
-                    logging.warning('get_dataflow_component_names:'
-                                    ' StaleElementReferenceException')
-                except IndexError:
-                    logging.warning('get_dataflow_component_names:'
-                                    ' IndexError for i=%s, headers=%s',
-                                    i, len(dataflow_component_headers))
-                else:
-                    break
+        #for i in range(len(dataflow_component_headers)):
+            #for retry in range(10):  # This has had issues...
+                #try:
+                    #names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
+                #except StaleElementReferenceException:
+                    #logging.warning('get_dataflow_component_names:'
+                                    #' StaleElementReferenceException')
+                #except IndexError:
+                    #logging.warning('get_dataflow_component_names:'
+                                    #' IndexError for i=%s, headers=%s',
+                                    #i, len(dataflow_component_headers))
+                #else:
+                    #break
 
-        if len(names) != len(dataflow_component_headers):
-            logging.error('get_dataflow_component_names:'
-                          ' expecting %d names, got %s',
-                          len(dataflow_component_headers), names)
-        return names
+        #if len(names) != len(dataflow_component_headers):
+            #logging.error('get_dataflow_component_names:'
+                          #' expecting %d names, got %s',
+                          #len(dataflow_component_headers), names)
+        #return names
 
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
