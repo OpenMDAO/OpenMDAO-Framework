@@ -1520,7 +1520,7 @@ class Component(Container):
 
                 parameters[target].append(parameter)
 
-            parameters = dict([reversed(x) for x in self.parent.get_dataflow()['parameters']])
+            #parameters = dict([reversed(x) for x in self.parent.get_dataflow()['parameters']])
 
 
             if self.parent is None:
@@ -1558,7 +1558,7 @@ class Component(Container):
                     attr['implicit'] = ''
                     if "%s.%s" % (self.name, vname) in parameters:
 
-                        attr['implicit'] = str(parameters["%s.%s" % (self.name, vname)])
+                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in parameters["%s.%s" % (self.name, vname)]])
 
                 inputs.append(attr)
             attrs['Inputs'] = inputs
