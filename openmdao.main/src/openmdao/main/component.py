@@ -1513,16 +1513,28 @@ class Component(Container):
 
         if has_interface(self, IComponent):
             inputs = []
+            dataflow = self.parent.get_dataflow()
             parameters = {}
-            for parameter, target in self.parent.get_dataflow()['parameters']:
+            for parameter, target in dataflow['parameters']:
                 if not target in parameters:
                     parameters[target] = []
 
                 parameters[target].append(parameter)
 
             #parameters = dict([reversed(x) for x in self.parent.get_dataflow()['parameters']])
+            
+            
+            objectives = {}
+            for target, objective in dataflow['objectives']:
+                if not target in objectives:
+                    objectives[target] = []
 
+                objectives[target].append(objective)
 
+            #objectives = dict([x for x in self.parent.get_dataflow()['objectives']])
+           
+            print objectives
+            print dataflow['objectives']
             if self.parent is None:
                 connected_inputs = []
                 connected_outputs = []
@@ -1585,6 +1597,13 @@ class Component(Container):
                         connections = self._depgraph.connections_to(vname)
 #                        print 'DEBUG:',self.get_pathname(),'.get_attributes() output',vname,'connections:',connections
                         attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
+
+
+                    attr['implicit'] = ''
+                    if "%s.%s" % (self.name, vname) in objectives:
+                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in objectives["%s.%s" % (self.name, vname)]])
+
+
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
