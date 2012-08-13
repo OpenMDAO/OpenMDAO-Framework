@@ -2,7 +2,6 @@
 Tests of dataflow functions.
 """
 
-import logging
 import pkg_resources
 import sys
 import time
@@ -15,7 +14,6 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
     from pageobjects.util import NotifierPage
-    from selenium.common.exceptions import StaleElementReferenceException
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -342,7 +340,7 @@ def _test_driverflows(browser):
     workspace_page.find_library_button('Simulation').click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
-    # Show dataflow for Simulation. 
+    # Show dataflow for Simulation.
     workspace_page.expand_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
@@ -406,7 +404,7 @@ def _test_replace(browser):
     workspace_page.find_library_button('Simulation').click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
-    # Show dataflow for Simulation. 
+    # Show dataflow for Simulation.
     workspace_page.expand_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
@@ -544,4 +542,3 @@ def _test_replace(browser):
 
 if __name__ == '__main__':
     main()
-

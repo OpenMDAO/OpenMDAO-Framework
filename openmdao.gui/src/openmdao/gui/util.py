@@ -147,7 +147,7 @@ def launch_browser(port, preferred_browser=None):
                 preferred_browser = 'open -a ' + CHROMEPATH + ' %s'
         elif sys.platform == 'linux2':
             # Linux
-            CHROMEPATH = get_executable_path(["chromium-browser", "google-chrome", "chrome"])
+            CHROMEPATH = get_executable_path(["google-chrome", "chrome", "chromium-browser"])
             if CHROMEPATH and os.path.isfile(CHROMEPATH):
                 preferred_browser = CHROMEPATH + ' --app=%s &'
 
