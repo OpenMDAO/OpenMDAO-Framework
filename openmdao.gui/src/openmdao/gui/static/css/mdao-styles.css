@@ -84,11 +84,13 @@ nav ul ul a:hover {
 }
 
 /* objtype styles */
+/* cursor file from http://www.google.com/intl/en_ALL/mapfiles/openhand.cur */
 .objtype {
   display: block;
   border:1px solid #222;
   background-color: #6a6a6a;
   color:white;
+  cursor: url( /static/images/openhand.cur ) 8 8 , auto ;
 }
 
 /*palette library styles */

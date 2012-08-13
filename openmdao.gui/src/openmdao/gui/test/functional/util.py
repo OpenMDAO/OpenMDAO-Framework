@@ -40,10 +40,11 @@ def check_for_chrome():
     """ Determine if Chrome is available. """
     if os.path.exists('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'):
         return True
-    for exe in ('chromium-browser', 'google-chrome', 'chrome'):
+    for exe in ('google-chrome', 'chrome', 'chromium-browser'):
         if find_executable(exe):
             return True
     return False
+
 
 def setup_chrome():
     """ Initialize the Chrome browser. """
@@ -52,20 +53,23 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
+        version = '21.0.1180.4'
         if sys.platform == 'darwin':
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
+            version = '20.0.1133.0'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
             flavor = 'linux32'
-        filename = '%s_%s_19.0.1068.0.zip' % (exe, flavor)
+        #filename = '%s_%s_19.0.1068.0.zip' % (exe, flavor)
+        filename = '%s_%s_%s.zip' % (exe, flavor, version)
         orig_dir = os.getcwd()
         os.chdir(os.path.dirname(sys.executable))
         try:
             logging.critical('Downloading %s to %s', filename, os.getcwd())
-            src = urllib2.urlopen(prefix+filename)
+            src = urllib2.urlopen(prefix + filename)
             with open(filename, 'wb') as dst:
                 dst.write(src.read())
             src.close()
@@ -73,7 +77,7 @@ def setup_chrome():
             zip.extract(exe)
             zip.close()
             if sys.platform != 'win32':
-                os.chmod(exe, stat.S_IRUSR|stat.S_IWUSR|stat.S_IXUSR)
+                os.chmod(exe, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
             path = os.path.join(os.getcwd(), exe)
             os.remove(filename)
         finally:
@@ -92,6 +96,7 @@ def check_for_firefox():
         if find_executable(exe):
             return True
     return False
+
 
 def setup_firefox():
     """ Initialize the Firefox browser. """
@@ -275,7 +280,7 @@ def begin(browser):
     """
     projects_page = ProjectsListPage(browser, TEST_CONFIG['port'])
     projects_page.go_to()
-    eq( 'Projects', projects_page.page_title )
+    eq('Projects', projects_page.page_title)
     return projects_page
 
 
@@ -293,7 +298,7 @@ def new_project(new_project_page):
     project_info_page = \
         new_project_page.create_project(data['name'], data['description'],
                                         data['version'])
-    eq( 'Project: '+data['name'], project_info_page.page_title )
+    eq('Project: ' + data['name'], project_info_page.page_title)
 
     return (project_info_page, data)
 
@@ -305,13 +310,13 @@ def parse_test_args(args=None):
         args = sys.argv[1:]
 
     parser = OptionParser()
-    parser.add_option("--nonose", action="store_true", dest='nonose', 
+    parser.add_option("--nonose", action="store_true", dest='nonose',
                       help="if present, run outside of nose")
-    parser.add_option("--test", action="store", type="string", dest='test', 
+    parser.add_option("--test", action="store", type="string", dest='test',
                       help="specify a specific test to run", default=None)
-    parser.add_option("--noclose", action="store_true", dest='noclose', 
+    parser.add_option("--noclose", action="store_true", dest='noclose',
                       help="if present, don't close run outside of nose")
-    parser.add_option("-v", action="store_true", dest='verbose', 
+    parser.add_option("-v", action="store_true", dest='verbose',
                       help="show progress while running under nose")
 
     (options, args) = parser.parse_args(args)
@@ -320,8 +325,9 @@ def parse_test_args(args=None):
         print 'unrecognized args: %s' % args
         parser.print_help()
         sys.exit(-1)
-        
+
     return options
+
 
 def main(args=None):
     """ run tests for module
@@ -333,16 +339,17 @@ def main(args=None):
         module = sys.modules['__main__']
         functions = inspect.getmembers(module, inspect.isfunction)
         if options.test:
-            func = module.__dict__.get('_test_'+options.test)
+            func = module.__dict__.get('_test_' + options.test)
             if func is None:
                 print 'No test named _test_%s' % options.test
                 print 'Known tests are:', [name for name, func in functions
-                                                    if name.startswith('_test_')]
+                                                if name.startswith('_test_')]
                 sys.exit(1)
             tests = [func]
         else:
             # Run all tests.
-            tests = [func for name, func in functions if name.startswith('_test_')]
+            tests = [func for name, func in functions
+                        if name.startswith('_test_')]
 
         setup_server(virtual_display=False)
         browser = setup_chrome()

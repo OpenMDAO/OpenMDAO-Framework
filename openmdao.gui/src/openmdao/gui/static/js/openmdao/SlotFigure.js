@@ -3,6 +3,10 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotFigure=function(myModel,pathname,type,filled){
     this.myModel = myModel;
+
+    self.myModel = myModel; // TODO : Need this?
+
+
     this.pathname = pathname;
     this.type = type;
     this.filled = filled;
@@ -43,6 +47,7 @@ openmdao.SlotFigure.prototype.type="SlotFigure";
 
 openmdao.SlotFigure.prototype.createHTMLElement=function(){
     var circleIMG = "url(/static/images/circle.png)";
+    var self = this;
 
     var item=document.createElement("div");
     item.id=this.id;
@@ -130,8 +135,110 @@ openmdao.SlotFigure.prototype.createHTMLElement=function(){
     item.appendChild(this.bottom_left);
     item.appendChild(this.footer);
     item.appendChild(this.bottom_right);
+
+    // handle the drag and drop to the slots 
+    //   using the drag and drop manager
+    var elm = jQuery(item);
+    openmdao.drag_and_drop_manager.addDroppable( elm ) ;
+    elm.addClass("SlotFigure");
+    elm.data('corresponding_openmdao_object',this);
+    elm.droppable ({
+        accept: "." + this.type,
+        out: function(ev,ui){
+            var o = elm.data('corresponding_openmdao_object');
+            o.unhighlightAsDropTarget() ;
+            openmdao.drag_and_drop_manager.draggableOut( elm ) ;
+
+            // For debugging
+            //calculated_zindex = openmdao.drag_and_drop_manager.computeCalculatedZindex( elm ) ;
+            //topmost_zindex = openmdao.drag_and_drop_manager.computeTopmostZindex( elm ) ;
+            //debug.info( "out of slot", elm[0].id, o.name ) ;
+            //debug.info ("over", elm.find(".DataflowFigureHeader")[0].innerHTML, calculated_zindex, topmost_zindex )
+        },
+        over: function(ev,ui){
+            //var o = elm.data('corresponding_openmdao_object');
+            openmdao.drag_and_drop_manager.draggableOver( elm ) ;
+
+            // For debugging
+            // calculated_zindex = openmdao.drag_and_drop_manager.computeCalculatedZindex( elm ) ;
+            // topmost_zindex = openmdao.drag_and_drop_manager.computeTopmostZindex( elm ) ;
+            // debug.info( "over slot", elm[0].id, o.name ) ;
+            // if ( o.name === "warm_start_data" ) {
+            //    debug.info( "over slot for warm start data" ) ;
+            // }
+            //debug.info ("over", elm.find(".DataflowFigureHeader")[0].innerHTML, calculated_zindex, topmost_zindex )
+        },
+
+        drop: function(ev,ui) { 
+            /* divs could be in front of divs and the div that gets the drop
+               event might not be the one that is in front visibly and therefore
+               is not the div the user wants the drop to occur on
+            */
+            //var o = elm.data('corresponding_openmdao_object');
+            //debug.info( "dropping on slot", elm[0].id, o.name ) ;
+
+            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent( ev, ui ) ;
+            /* call the method on the correct div to handle the drop */
+            var drop_function = top_div.droppable( 'option', 'actualDropHandler');
+            drop_function( ev, ui ) ;
+        }, 
+
+        actualDropHandler: function(ev,ui) { 
+            
+            //var o = elm.data('corresponding_openmdao_object');
+            //debug.info( "actual drop on slot", elm[0].id, o.name ) ;
+
+            /* new way */
+            var droppedObject = jQuery(ui.draggable).clone(),
+            droppedName = droppedObject.text(),
+            droppedPath = droppedObject.attr("modpath"),
+            module = openmdao.Util.getPath(droppedPath),
+            klass = openmdao.Util.getName(droppedPath);
+            
+            cmd = 'from '+module+' import '+klass+';\n'
+                +  self.pathname+'='+klass+'()';
+            self.myModel.issueCommand(cmd);
+            
+            openmdao.drag_and_drop_manager.clearHighlightingDroppables() ;
+            openmdao.drag_and_drop_manager.clearDroppables() ;
+        }
+
+    }
+                  ) ;
     return item;
 };
+
+
+/** Highlight this slot figure when it the cursor is over it and it can accept a drop */
+openmdao.SlotFigure.prototype.highlightAsDropTarget=function(){
+    var circleIMG = "url(/static/images/circle-plus-drop-zone.png)";
+    this.bottom_right.style.backgroundImage=circleIMG ;
+    this.bottom_left.style.backgroundImage=circleIMG ;
+    this.textarea.style.backgroundColor="#CFD6FE";
+    this.footer.style.backgroundColor="#CFD6FE";
+    //debug.info( "highlighting slot", this.id ) ;
+};
+
+/** Turn off highlighting of this slot figure when it can no 
+    longer accept a drop because the cursor is not over it 
+    or another drop target is over it */
+openmdao.SlotFigure.prototype.unhighlightAsDropTarget=function(){
+    var circleIMG ;
+    if (this.maxmin === '+') {
+        circleIMG = "url(/static/images/circle-plus.png)";
+    } else if (this.maxmin === '-') {
+        circleIMG = "url(/static/images/circle-minus.png)";
+    } else {
+        circleIMG = "url(/static/images/circle.png)";
+    }
+    this.bottom_right.style.backgroundImage=circleIMG ;
+    this.bottom_left.style.backgroundImage=circleIMG ;
+    this.textarea.style.backgroundColor="white";
+    this.footer.style.backgroundColor="white";
+};
+
+
+
 
 openmdao.SlotFigure.prototype.setDimension=function(w,h){
     draw2d.Node.prototype.setDimension.call(this,w,h);

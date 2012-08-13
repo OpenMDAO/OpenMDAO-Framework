@@ -13,7 +13,7 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
-    from selenium.common.exceptions import TimeoutException, WebDriverException
+    from selenium.common.exceptions import WebDriverException
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
     from pageobjects.util import NotifierPage
@@ -64,12 +64,12 @@ def _test_editfile(browser):
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.editor_label), file1)
+    eq(str(editor_page.get_tab_label()), file1)
 
     # verify different file is opened in code editor by double clicking
     browser.switch_to_window(workspace_window)
     editor_page = workspace_page.edit_file(file2)
-    eq(str(editor_page.editor_label), file2)
+    eq(str(editor_page.get_tab_label()), file2)
 
     # Back to workspace.
     browser.close()
@@ -78,7 +78,7 @@ def _test_editfile(browser):
     # verify code editor can be re-opened by double clicking on file
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.editor_label), file1)
+    eq(str(editor_page.get_tab_label()), file1)
 
     # Back to workspace.
     browser.close()
@@ -114,7 +114,7 @@ def _test_palette_update(browser):
     # add first file from workspace
     workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
-    
+
     # Open code editor.and add second file from there
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
@@ -279,7 +279,7 @@ f_x = Float(0.0, iotype='out')
     time.sleep(0.5)
     workspace_page.show_dataflow('top')
     workspace_page.show_library()
-    workspace_page.library_search = 'In Project\n'
+    workspace_page.set_library_filter('In Project')
     time.sleep(2)
     workspace_page.find_library_button('Plane').click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
@@ -324,7 +324,7 @@ d = Float(0.0, iotype='out')
     # Drag over Plane.
     workspace_page.show_dataflow('top')
     workspace_page.show_library()
-    workspace_page.library_search = 'In Project\n'
+    workspace_page.set_library_filter('In Project')
 
     workspace_page.find_library_button('Foo').click()
     time.sleep(2)
@@ -342,7 +342,6 @@ d = Float(0.0, iotype='out')
     workspace_page.save_project()
 
     editor_page = workspace_page.open_editor()
-    editor_window = browser.current_window_handle
     editor_page.edit_file('foo.py', dclick=False)
     editor_page.add_text_to_file('#just a comment\n')
     editor_page.save_document(overwrite=True)
@@ -377,7 +376,6 @@ def _test_addfiles(browser):
     # Opens code editor
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    editor_window = browser.current_window_handle
 
     # Get path to  paraboloid file.
     paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
@@ -469,14 +467,17 @@ def _test_objtree(browser):
     visible = workspace_page.get_objects_attribute('path', True)
     eq(visible, ['top'])
     workspace_page.expand_object('top')
+    time.sleep(1)
     visible = workspace_page.get_objects_attribute('path', True)
     eq(visible, ['top', 'top.driver', 'top.maxmin'])
     workspace_page.expand_object('top.maxmin')
+    time.sleep(1)
     visible = workspace_page.get_objects_attribute('path', True)
     eq(visible, ['top', 'top.driver', 'top.maxmin',
                  'top.maxmin.driver', 'top.maxmin.sub'])
 
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin2')
+    time.sleep(1)
     visible = workspace_page.get_objects_attribute('path', True)
     eq(visible, ['top', 'top.driver', 'top.maxmin',
                  'top.maxmin.driver', 'top.maxmin.sub', 'top.maxmin2'])
@@ -537,8 +538,8 @@ def _test_editable_inputs(browser):
 
     # Verify that the rows are highlighted
     for element in elements:
-        assert("rgb(255, 255, 255)" == element.value_of_css_property("background-color"))
-        assert("rgb(0, 0, 0)" == element.value_of_css_property("color"))
+        assert("rgba(255,255,255,1)" == element.value_of_css_property("background-color"))
+        assert("rgba(0,0,0,1)" == element.value_of_css_property("color"))
 
     component_editor.close()
 
@@ -650,7 +651,7 @@ def execute(self)
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
     eq(message, 'invalid syntax (bug.py, line 6)')
-    
+
     browser.close()
     browser.switch_to_window(workspace_window)
 
@@ -666,7 +667,7 @@ pass
     browser.close()
     browser.switch_to_window(workspace_window)
     workspace_page.show_library()
-    workspace_page.library_search = 'In Project\n'
+    workspace_page.set_library_filter('In Project')
     time.sleep(0.5)
     workspace_page.find_library_button('Bug2').click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)

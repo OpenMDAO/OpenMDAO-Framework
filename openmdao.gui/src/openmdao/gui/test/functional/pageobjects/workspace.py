@@ -79,8 +79,8 @@ class WorkspacePage(BasePageObject):
     file_create = ButtonElement((By.XPATH, "//a[(@rel='createFile')]"))
     file_add    = ButtonElement((By.XPATH, "//a[(@rel='addFile')]"))
     file_folder = ButtonElement((By.XPATH, "//a[(@rel='createFolder')]"))
-    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
-    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
+#    file_rename = ButtonElement((By.XPATH, "//a[(@rel='renameFile')]"))
+#    file_view   = ButtonElement((By.XPATH, "//a[(@rel='viewFile')]"))
     file_edit   = ButtonElement((By.XPATH, "//a[(@rel='editFile')]"))
     file_import = ButtonElement((By.XPATH, "//a[(@rel='importFile')]"))
     file_exec   = ButtonElement((By.XPATH, "//a[(@rel='execFile')]"))
@@ -179,7 +179,6 @@ class WorkspacePage(BasePageObject):
         self('editor_button').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
-
 
     def get_files(self):
         """ Return names in the file tree. """
@@ -281,9 +280,16 @@ class WorkspacePage(BasePageObject):
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
-        chain = ActionChains(self.browser)
-        chain.context_click(element).perform()
-        self('obj_dataflow').click()
+        time.sleep(0.5)
+        # Try to recover from context menu not getting displayed.
+        for retry in range(3):
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            try:
+                self('obj_dataflow').click()
+            except TimeoutException:
+                if retry >= 2:
+                    raise
 
     def show_library(self):
         # For some reason the first try never works, so the wait is set
@@ -300,6 +306,16 @@ class WorkspacePage(BasePageObject):
                 break
         else:
             raise RuntimeError('Too many TimeoutExceptions')
+
+    def set_library_filter(self, filter):
+        for retry in range(10):  # This has had issues...
+            try:
+                self.library_search = filter + '\n'
+            except StaleElementReferenceException:
+                logging.warning('set_library_filter:'
+                                ' StaleElementReferenceException')
+            else:
+                break
 
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
@@ -333,7 +349,7 @@ class WorkspacePage(BasePageObject):
         # Check that the prompt is gone so we can distinguish a prompt problem
         # from a dataflow update problem.
         time.sleep(0.25)
-        self.browser.implicitly_wait(1) # We don't expect to find anything.
+        self.browser.implicitly_wait(1)  # We don't expect to find anything.
         try:
             eq(len(self.browser.find_elements(*page('prompt')._locator)), 0)
         finally:

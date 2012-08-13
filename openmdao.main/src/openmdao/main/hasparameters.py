@@ -438,6 +438,8 @@ class HasParameters(object):
             if start is not None: 
                 self._parameters[key].set(start,self._get_scope(scope))
         
+        self._parent._invalidate()
+
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
         try:
@@ -446,6 +448,8 @@ class HasParameters(object):
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % (name,),
                                          AttributeError)
+        self._parent._invalidate()
+            
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this
         list may contain more entries than the list of Parameter and
@@ -459,6 +463,7 @@ class HasParameters(object):
     def clear_parameters(self):
         """Removes all parameters."""
         self._parameters = ordereddict.OrderedDict()
+        self._parent._invalidate()
         
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
@@ -469,6 +474,7 @@ class HasParameters(object):
         for key,param in self._parameters.iteritems():
             if param.start is not None: 
                 param.set(param.start, self._get_scope())
+        self._parent._invalidate()
 
     def set_parameters(self, values, case=None, scope=None): 
         """Pushes the values in the iterator 'values' into the corresponding 

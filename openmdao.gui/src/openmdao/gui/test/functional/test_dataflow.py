@@ -2,7 +2,6 @@
 Tests of dataflow functions.
 """
 
-import logging
 import pkg_resources
 import sys
 import time
@@ -15,7 +14,6 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
     from pageobjects.util import NotifierPage
-    from selenium.common.exceptions import StaleElementReferenceException
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -342,7 +340,7 @@ def _test_driverflows(browser):
     workspace_page.find_library_button('Simulation').click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
-    # Show dataflow for Simulation. 
+    # Show dataflow for Simulation.
     workspace_page.expand_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
@@ -361,10 +359,10 @@ def _test_driverflows(browser):
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
-        ['preproc.x_in[0]', '-10', '99', '', '', '', '', 'preproc.x_in[0]'],
-        ['preproc.x_in[1]', '-10', '99', '', '', '', '', 'preproc.x_in[1]'],
-        ['preproc.x_in[2]', '-10', '99', '', '', '', '', 'preproc.x_in[2]'],
-        ['preproc.x_in[3]', '-10', '99', '', '', '', '', 'preproc.x_in[3]'],
+        ['preproc.x_in[0]', '-10', '99', '', '', '', 'preproc.x_in[0]'],
+        ['preproc.x_in[1]', '-10', '99', '', '', '', 'preproc.x_in[1]'],
+        ['preproc.x_in[2]', '-10', '99', '', '', '', 'preproc.x_in[2]'],
+        ['preproc.x_in[3]', '-10', '99', '', '', '', 'preproc.x_in[3]'],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -386,82 +384,139 @@ def _test_driverflows(browser):
 
 def _test_replace(browser):
     print "running _test_replace"
-    # Replaces ExternalCode component with an Assembly.
+    # Replaces various connected components.
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    # Add ExternalCode to 'top'.
-    workspace_page.show_dataflow('top')
-    time.sleep(0.5)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'top'])
-    workspace_page.show_library()
-    time.sleep(0.5)
-    workspace_page.find_library_button('ExternalCode').click()
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.external_code.ExternalCode', 'ext')
-    time.sleep(0.5)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'ext', 'top'])
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                               'rosen_suzuki.py')
+    editor_page.add_file(filename)
+    browser.close()
+    browser.switch_to_window(workspace_window)
 
-    # Verify inputs.
-    ext = workspace_page.get_dataflow_figure('ext', 'top')
-    editor = ext.editor_page()
+    # Replace 'top' with Simulation.
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
+    workspace_page.show_library()
+    workspace_page.find_library_button('Simulation').click()
+    workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
+
+    # Show dataflow for Simulation.
+    workspace_page.expand_object('top')
+    workspace_page.show_dataflow('top')
+    workspace_page.hide_left()
+
+    top = workspace_page.get_dataflow_figure('top')
+    top.display_driverflows(True)
+
+    # Verify preproc is a PreProc.
+    preproc = workspace_page.get_dataflow_figure('preproc', 'top')
+    editor = preproc.editor_page()
     inputs = editor.get_inputs()
     expected = [
-        ['directory',     'str',             '',      '',  'true',
+        ['directory',     'str',  '',      '',  'true',
          'If non-blank, the directory to execute in.', ''],
-        ['env_vars',      'TraitDictObject', '{}',    '',  'true',
-         'Environment variables required by the command.', ''],
-        ['force_execute', 'bool',            'False', '',  'true',
+        ['force_execute', 'bool', 'False', '',  'true',
          'If True, always execute even if all IO traits are valid.', ''],
-        ['poll_delay',    'float',           '0.0',   's', 'true',
-         'Delay between polling for command completion.'
-         ' A value of zero will use an internally computed default.', ''],
-        ['resources',     'TraitDictObject', '{}',    '',  'true',
-         'Resources required to run this component.', ''],
-        ['timeout',       'float',           '0.0',   's', 'true',
-         'Maximum time to wait for command completion.'
-         ' A value of zero implies an infinite wait.', '']
+        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '',  'true', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
     editor.close()
 
-    # Cancel replacement with a Float.
-    workspace_page.replace('ext', 'openmdao.main.datatypes.float.Float', False)
-    time.sleep(0.5)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'ext', 'top'])
-    ext = workspace_page.get_dataflow_figure('ext', 'top')
-    editor = ext.editor_page()
+    # Replace preproc with a ScalingPreProc.
+    workspace_page.replace('preproc', 'rosen_suzuki.ScalingPreProc')
+    preproc = workspace_page.get_dataflow_figure('preproc', 'top')
+    editor = preproc.editor_page()
     inputs = editor.get_inputs()
+    expected = [
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', ''],
+        ['scaler', 'float', '1.0', '', 'true', '', ''],
+        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', ''],
+    ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
     editor.close()
 
-    # Erroneously replace ext with a Float.
-    workspace_page.replace('ext', 'openmdao.main.datatypes.float.Float')
+    # Verify postproc is a PostProc.
+    postproc = workspace_page.get_dataflow_figure('postproc', 'top')
+    editor = postproc.editor_page()
+    inputs = editor.get_inputs()
+    expected = [
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', ''],
+        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']"],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+    # Replace postproc with a ScalingPostProc.
+    workspace_page.replace('postproc', 'rosen_suzuki.ScalingPostProc')
+    postproc = workspace_page.get_dataflow_figure('postproc', 'top')
+    editor = postproc.editor_page()
+    inputs = editor.get_inputs()
+    expected = [
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', ''],
+        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']"],
+        ['scaler', 'float', '1.0', '', 'true', '', ''],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+    # Verify driver is a CONMINdriver.
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page()
+    inputs = editor.get_inputs()
+    eq(inputs.value[0],
+       ['cons_is_linear', 'ndarray', '[]', '', 'true',
+        'Array designating whether each constraint is linear.', ''])
+    editor.close()
+
+    # Replace driver with an SLSQPdriver.
+    workspace_page.replace('driver',
+                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page()
+    inputs = editor.get_inputs()
+    eq(inputs.value[0],
+       ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', ''])
+    editor.close()
+
+    # Verify comp is a OptRosenSuzukiComponent.
+    comp = workspace_page.get_dataflow_figure('comp', 'top')
+    editor = comp.editor_page()
+    inputs = editor.get_inputs()
+    expected = [
+        ['directory',     'str',  '',      '',  'true',
+         'If non-blank, the directory to execute in.', ''],
+        ['force_execute', 'bool', 'False', '',  'true',
+         'If True, always execute even if all IO traits are valid.', ''],
+        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']"],
+    ]
+    for i, row in enumerate(inputs.value):
+        eq(row, expected[i])
+    editor.close()
+
+    # Replace comp with an Assembly.
+    workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
     message = NotifierPage.wait(workspace_page)
-    eq(message, "TypeError: top: Couldn't replace 'ext' of type ExternalCode"
-                " with type Float: 'NoneType' object is not callable")
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'ext', 'top'])
-    ext = workspace_page.get_dataflow_figure('ext', 'top')
-    editor = ext.editor_page()
-    inputs = editor.get_inputs()
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    editor.close()
-
-    # Replace with an Assembly.
-    workspace_page.replace('ext', 'openmdao.main.assembly.Assembly')
-    time.sleep(0.5)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['driver', 'ext', 'top'])
-    ext = workspace_page.get_dataflow_figure('ext', 'top')
-    editor = ext.editor_page()
+    eq(message, "RuntimeError: top: Can't connect 'comp.result' to"
+                " 'postproc.result_in': top: Can't find 'comp.result'")
+    comp = workspace_page.get_dataflow_figure('comp', 'top')
+    editor = comp.editor_page()
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -474,8 +529,8 @@ def _test_replace(browser):
     editor.close()
 
     # Verify new figure.
-    ext = workspace_page.get_dataflow_figure('ext', 'top')
-    background = ext('top_right').value_of_css_property('background')
+    comp = workspace_page.get_dataflow_figure('comp', 'top')
+    background = comp('top_right').value_of_css_property('background')
     assert background.find('circle-plus.png') >= 0
 
     # Clean up.
@@ -487,4 +542,3 @@ def _test_replace(browser):
 
 if __name__ == '__main__':
     main()
-

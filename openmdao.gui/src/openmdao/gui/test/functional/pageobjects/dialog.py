@@ -20,3 +20,18 @@ class DialogPage(BasePageObject):
         """ Close dialog. """
         self('close_button').click()
 
+class NotifyDialog(DialogPage): 
+    """The dialog that appears when there is an error""" 
+
+    okButton = ButtonElement((By.ID, 'notify-ok')) 
+     
+    def __init__(self, browser, port): 
+        # The div that contains the actual message has a div of notify-msg.
+        #   The div for the dialog is the parent of that div
+        super(NotifyDialog, self).__init__(browser, port, (By.XPATH, '//div[@id="notify-msg"]/..')) 
+  
+    def close(self):
+        """ Close dialog. """
+        self('okButton').click() 
+
+
