@@ -27,8 +27,13 @@ class HasConstraintsTestCase(unittest.TestCase):
         
     def test_list_constraints(self):
         drv = self.asm.add('driver', MyDriver())
+        self.asm.run()
+        self.assertEqual(self.asm.driver.is_valid(), True)
+        self.assertEqual(self.asm.driver._exec_state, 'VALID')
         drv.add_constraint('comp1.a < comp1.b')
         drv.add_constraint('comp1.c = comp1.d')
+        self.assertEqual(self.asm.driver.is_valid(), False)
+        self.assertEqual(self.asm.driver._exec_state, 'INVALID')
         self.assertEqual(drv.list_constraints(), ['comp1.a<comp1.b','comp1.c=comp1.d'])
         
     def test_list_eq_constraints(self):
