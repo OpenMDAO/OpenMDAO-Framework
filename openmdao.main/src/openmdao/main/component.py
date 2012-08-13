@@ -1533,8 +1533,6 @@ class Component(Container):
 
             #objectives = dict([x for x in self.parent.get_dataflow()['objectives']])
            
-            print objectives
-            print dataflow['objectives']
             if self.parent is None:
                 connected_inputs = []
                 connected_outputs = []
