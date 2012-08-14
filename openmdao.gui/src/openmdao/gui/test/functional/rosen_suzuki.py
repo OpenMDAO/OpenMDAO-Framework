@@ -109,5 +109,6 @@ if __name__ == '__main__':
     for i in range(len(sim.preproc.x_in)):
         print 'design_var', i, sim.comp.opt_design_vars[i], sim.preproc.x_in[i]
 
+    sim.replace('preproc', ScalingPreProc())
     sim.replace('driver', SLSQPdriver())
 
