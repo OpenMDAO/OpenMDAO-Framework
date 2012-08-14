@@ -595,12 +595,12 @@ def _test_console_errors(browser):
     workspace_page = project_info_page.load_project()
 
     # Set input to illegal value.
-    top = workspace_page.get_dataflow_figure('top')
+    top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False)
     inputs = editor.get_inputs()
     inputs[1][2] = '42'  # force_execute
     message = NotifierPage.wait(editor)
-    eq(message, "TraitError: The 'force_execute' trait of a Run_Once instance"
+    eq(message, "TraitError: The 'force_execute' trait of an Assembly instance"
                 " must be a boolean, but a value of 42 <type 'int'> was"
                 " specified.")
     editor.close()

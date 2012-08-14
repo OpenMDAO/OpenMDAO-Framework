@@ -171,11 +171,11 @@ def _test_connect(browser):
     eq(editor.dialog_title, 'Connectable: top.comp2')
     outputs = editor.get_outputs()
     expected = [
-        ['b_out', 'bool',  'True',     '', 'true', '', ''],
-        ['e_out', 'int',   '3',        '', 'true', '', ''],
-        ['f_out', 'float', '2.781828', '', 'true', '', ''],
-        ['i_out', 'int',   '42',       '', 'true', '', ''],
-        ['s_out', 'str',   'xyzzy',    '', 'true', '', '']
+        ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
+        ['e_out', 'int',   '3',        '', 'true', '', '', ''],
+        ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
+        ['i_out', 'int',   '42',       '', 'true', '', '', ''],
+        ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -411,10 +411,10 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '',  'true', '', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '',  'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -427,11 +427,11 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['scaler', 'float', '1.0', '', 'true', '', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['scaler', 'float', '1.0', '', 'true', '', '', ''],
+        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -443,10 +443,10 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']"],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']", ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -459,11 +459,11 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']"],
-        ['scaler', 'float', '1.0', '', 'true', '', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']", ''],
+        ['scaler', 'float', '1.0', '', 'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -475,7 +475,7 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['cons_is_linear', 'ndarray', '[]', '', 'true',
-        'Array designating whether each constraint is linear.', ''])
+        'Array designating whether each constraint is linear.', '', ''])
     editor.close()
 
     # Replace driver with an SLSQPdriver.
@@ -485,7 +485,7 @@ def _test_replace(browser):
     editor = driver.editor_page()
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', ''])
+       ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', '', ''])
     editor.close()
 
     # Verify comp is a OptRosenSuzukiComponent.
@@ -494,10 +494,10 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']"],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']", ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -513,9 +513,9 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
