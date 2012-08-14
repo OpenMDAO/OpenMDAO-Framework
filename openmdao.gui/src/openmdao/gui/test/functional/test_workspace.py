@@ -488,6 +488,42 @@ def _test_objtree(browser):
 
 
 def _test_editable_inputs(browser):
+    def test_color(actual, expected, alpha=False):
+        if(alpha):
+            eq(actual, expected)
+        else:
+            eq(actual[0:3], expected[0:3])
+
+    def test_inputs(inputs):
+        for i, row in enumerate(inputs):
+            connected_to_cell = row.cells[len(row.cells)-2]
+            implicit_cell = row.cells[len(row.cells)-1]
+            value_cell = row.cells[2]
+
+            if connected_to_cell.value:
+                test_color(value_cell.color, [255, 255, 255, 1])
+                test_color(value_cell.background_color, [0, 0, 0, 1])
+            elif implicit_cell.value:
+                test_color(value_cell.color, [200, 0, 0, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+            else:
+                test_color(value_cell.color, [0, 0, 0, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+
+    def test_outputs(outputs):
+        for i, row in enumerate(outputs):
+            connected_to_cell = row.cells[len(row.cells)-2]
+            implicit_cell = row.cells[len(row.cells)-1]
+            value_cell = row.cells[2]
+
+            if implicit_cell.value:
+                test_color(value_cell.color, [0, 0, 200, 1])
+            else:
+                test_color(value_cell.color, [255, 255, 255, 1])
+            
+            test_color(value_cell.background_color, [0, 0, 0, 1])
+
+
     print "running _test_editable_inputs..."
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -496,9 +532,11 @@ def _test_editable_inputs(browser):
     # Import vehicle_singlesim
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'basic_model.py')
-    editor_page.add_file(file_path)
+    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional', 'basic_model.py')
+    file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
+                                                            'vehicle_singlesim.py')
+    editor_page.add_file(file_path_one)
+    editor_page.add_file(file_path_two)
     browser.close()
     browser.switch_to_window(workspace_window)
 
@@ -511,22 +549,37 @@ def _test_editable_inputs(browser):
     workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
             assembly_name)
 
-    # Get component editor for transmission.
-    #workspace_page.expand_object(assembly_name)
-    #workspace_page.show_dataflow(assembly_name + ".paraboloid")
-    transmission = workspace_page.get_dataflow_figure('paraboloid',
+    paraboloid = workspace_page.get_dataflow_figure('paraboloid',
             assembly_name)
 
+    #Test highlighting for implicit connections
+    component_editor = paraboloid.editor_page()
+    test_inputs(component_editor.get_inputs()) 
+    test_outputs(component_editor.get_outputs())
+    
+    component_editor.close()
+
+    #Remove sim from the dataflow
+    assembly = workspace_page.get_dataflow_figure(assembly_name)
+    assembly.remove()
+
+    #Add VehicleSim to the dataflow
+    workspace_page.show_library()
+    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+                        assembly_name)
+    
+    # Get component editor for transmission.
+    workspace_page.expand_object(assembly_name)
+    workspace_page.show_dataflow(assembly_name+ ".vehicle")
+    transmission = workspace_page.get_dataflow_figure('transmission',
+                        assembly_name + '.vehicle')# Get component editor for transmission.
+   
+    #Test highlighting for explicit connections
     component_editor = transmission.editor_page()
-    inputs = component_editor.get_inputs()
-    for i, row in enumerate(inputs):
-        value_cell = row.cells[2]
-        if i == 1 or i == 3:
-            eq(value_cell.color, [0, 0, 0, 1])
-            eq(value_cell.background_color, [255, 255, 255, 1])
-        else:
-            eq(value_cell.color, [255, 255, 255, 1])
-            eq(value_cell.background_color, [0, 0, 0, 0])
+    test_inputs(component_editor.get_inputs()) 
+    test_outputs(component_editor.get_outputs())
+
     component_editor.close()
 
     # Clean up.
@@ -535,68 +588,6 @@ def _test_editable_inputs(browser):
     project_info_page.delete_project()
     print "_test_editable_inputs complete."
 
-def _test_uneditable_inputs(browser):
-    print "running _test_uneditable_inputs..."
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
-
-    # Import vehicle_singlesim
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
-    file_path = pkg_resources.resource_filename('openmdao.lib.drivers',
-                                                'genetic.py')
-    editor_page.add_file(file_path)
-    browser.close()
-    browser.switch_to_window(workspace_window)
-
-    # Replace 'top' with Vehicle ThreeSim  top.
-    time.sleep(1)
-    workspace_page.show_dataflow('top')
-    time.sleep(2)
-    workspace_page.show_library()
-    time.sleep(1)
-    workspace_page.find_library_button('Genetic').click()
-    driver_name = "g"
-    workspace_page.add_library_item_to_dataflow('genetic.Genetic',
-            driver_name)
-
-    # Get component editor for transmission.
-    workspace_page.expand_object('top')
-    #workspace_page.show_dataflow('top.' + driver_name)
-    genetic = workspace_page.get_dataflow_figure(driver_name, 'top')
-
-    component_editor = genetic.editor_page()
-
-    # Find rows in inputs table
-    # for transmission for single sim vehicle
-    # that are editable.
-    elements = component_editor.browser.find_elements_by_xpath(\
-            "//div[@id='Inputs_props']")[1]
-            #/div[@class='slick-viewport']")
-            #/div[@id='grid-canvas']\
-            #/div[@row='1'] | div[@row='3']")
-
-    elements = elements.find_elements_by_xpath(\
-            "div[@class='slick-viewport']\
-            /div[@class='grid-canvas']\
-            /div[@row]\
-            /div[contains(@class, 'l2') and contains(@class, 'r2')]")
-
-    # Verify that the rows are highlighted
-    for element in elements:
-
-        assert("rgba(0, 0, 0, 0)" == element.value_of_css_property("background-color"))
-        assert("rgb(255, 255, 255)" == element.value_of_css_property("color"))
-
-    component_editor.close()
-
-    # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_uneditable_inputs complete."
-
 def _test_console_errors(browser):
     print "running _test_console_errors..."
     projects_page = begin(browser)
@@ -604,12 +595,12 @@ def _test_console_errors(browser):
     workspace_page = project_info_page.load_project()
 
     # Set input to illegal value.
-    top = workspace_page.get_dataflow_figure('top', '')
+    top = workspace_page.get_dataflow_figure('driver', 'top')
     editor = top.editor_page(double_click=False)
     inputs = editor.get_inputs()
     inputs[1][2] = '42'  # force_execute
     message = NotifierPage.wait(editor)
-    eq(message, "TraitError: The 'force_execute' trait of an Assembly instance"
+    eq(message, "TraitError: The 'force_execute' trait of a Run_Once instance"
                 " must be a boolean, but a value of 42 <type 'int'> was"
                 " specified.")
     editor.close()
