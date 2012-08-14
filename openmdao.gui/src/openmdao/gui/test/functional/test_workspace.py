@@ -4,6 +4,7 @@ Tests of overall workspace functions.
 
 import sys
 import time
+import logging
 
 import pkg_resources
 
@@ -145,7 +146,6 @@ def _test_palette_update(browser):
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
-    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # view library
@@ -353,7 +353,6 @@ d = Float(0.0, iotype='out')
 
     workspace_page = projects_page.open_project(project_dict['name'])
     workspace_page.show_dataflow('top')
-    time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['comp1', 'comp2', 'driver', 'top'])
 
@@ -518,27 +517,15 @@ def _test_editable_inputs(browser):
             assembly_name + '.vehicle')
 
     component_editor = transmission.editor_page()
-
-    # Find rows in inputs table
-    # for transmission for single sim vehicle
-    # that are editable.
-    elements = component_editor.browser.find_elements_by_xpath(\
-            "//div[@id='Inputs_props']")[1]
-            #/div[@class='slick-viewport']")
-            #/div[@id='grid-canvas']\
-            #/div[@row='1'] | div[@row='3']")
-
-    elements = elements.find_elements_by_xpath(\
-            "div[@class='slick-viewport']\
-            /div[@class='grid-canvas']\
-            /div[@row='1' or @row='3']\
-            /div[contains(@class, 'ui-state-editable')]")
-
-    # Verify that the rows are highlighted
-    for element in elements:
-        assert("rgba(255,255,255,1)" == element.value_of_css_property("background-color"))
-        assert("rgba(0,0,0,1)" == element.value_of_css_property("color"))
-
+    inputs = component_editor.get_inputs()
+    for i, row in enumerate(inputs):
+        value_cell = row.cells[2]
+        if i == 1 or i == 3:
+            eq(value_cell.color, [0, 0, 0, 1])
+            eq(value_cell.background_color, [255, 255, 255, 1])
+        else:
+            eq(value_cell.color, [255, 255, 255, 1])
+            eq(value_cell.background_color, [0, 0, 0, 0])
     component_editor.close()
 
     # Clean up.
@@ -582,8 +569,9 @@ def execute(self)
     message = None
     try:
         message = NotifierPage.wait(editor_page, base_id='file-error')
-    except WebDriverException:
-        pass
+    except Exception as exc:
+        print 'Exception waiting for file-error:', exc
+        logging.exception('Waiting for file-error')
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
