@@ -2,12 +2,11 @@
 
 from numpy import matrix, linalg, power, multiply, concatenate, ones
 
-from enthought.traits.api import HasTraits
-
+from openmdao.main.api import Container
 from openmdao.main.interfaces import implements,ISurrogate
 from openmdao.lib.datatypes.api import Float, Bool
 
-class ResponseSurface(HasTraits): 
+class ResponseSurface(Container): 
     implements(ISurrogate) 
     
     def __init__(self,X=None,Y=None): 

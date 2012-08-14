@@ -3,8 +3,6 @@ from tempfile import mkdtemp
 import os.path
 import shutil
 
-from enthought.traits.api import HasTraits
-
 from openmdao.main.api import  Component, Driver, Architecture,\
      SequentialWorkflow, Case, ExprEvaluator, implements
 

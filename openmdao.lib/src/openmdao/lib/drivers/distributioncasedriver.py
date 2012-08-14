@@ -4,26 +4,22 @@
           in the neighborhood of a given point.
 """
 
-import logging
-
 # pylint: disable-msg=E0611,F0401,E1101
+
+from zope.interface import Attribute, Interface
+
 # E0611 - name cannot be found in a module
 # F0401 - Unable to import module
 # E1101 - Used when a variable is accessed for an unexistent member
-from openmdao.lib.datatypes.api import ListStr, Slot
-from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
-from openmdao.main.case import Case
-from openmdao.main.hasparameters import HasParameters
-from openmdao.util.decorators import add_delegate
-
 from openmdao.main.numpy_fallback import zeros
 
-from enthought.traits.api import HasTraits
-from zope.interface import implements, Attribute, Interface
-
-from openmdao.lib.datatypes.api import Int, Enum, Bool
-from openmdao.main.interfaces import implements
-from openmdao.util.decorators import stub_if_missing_deps
+from openmdao.lib.datatypes.api import ListStr, Slot, Int, Enum, Bool
+from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
+from openmdao.main.api import Container
+from openmdao.main.case import Case
+from openmdao.util.decorators import add_delegate
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.interfaces import implements, IHasParameters
 
 class IDistributionGenerator(Interface):
     """An iterator that returns lists of input
@@ -38,7 +34,7 @@ class IDistributionGenerator(Interface):
         a set of values.
         """
 
-class FiniteDifferenceGenerator(HasTraits): 
+class FiniteDifferenceGenerator(Container): 
     """
     Generate the input cases for finite differences.
     """    
@@ -51,7 +47,8 @@ class FiniteDifferenceGenerator(HasTraits):
     form = Enum("CENTRAL", [ "CENTRAL", "FORWARD", "BACKWARD" ],
                 desc="Form of finite difference used")
     
-    skip_baseline = Bool(False, desc="Set to True to skip running the baseline case.")
+    skip_baseline = Bool(False, 
+                         desc="Set to True to skip running the baseline case.")
     
     def __init__(self, driver):
         super(FiniteDifferenceGenerator, self).__init__()
@@ -114,6 +111,8 @@ class FiniteDifferenceGenerator(HasTraits):
 @add_delegate(HasParameters)
 class DistributionCaseDriver(CaseIterDriverBase):
     """ Driver for evaluating models at point distributions. """
+    
+    implements(IHasParameters)
     
     distribution_generator = Slot(IDistributionGenerator,
                                   iotype='in', required=True,
