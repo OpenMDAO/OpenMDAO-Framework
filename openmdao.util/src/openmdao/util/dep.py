@@ -321,7 +321,7 @@ class PythonSourceTreeAnalyser(object):
             if os.path.getmtime(pyfile) <= self.fileinfo[pyfile][1]:
                 return self.fileinfo[pyfile][0]
 
-        logger.error("analyzing %s" % pyfile)
+        logger.info("analyzing %s" % pyfile)
         
         myvisitor = PythonSourceFileAnalyser(pyfile, self)
         self.modinfo[get_module_path(pyfile)] = myvisitor
