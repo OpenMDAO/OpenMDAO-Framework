@@ -6,6 +6,11 @@
 Installation
 ============
 
+.. note:: On some Windows machines, during the installation process you might get the error: ``The requested
+	  operation requires elevation.`` This means that you need to run as an administrator during
+	  installation. Please follow this link for detailed instructions on solving this error: 
+	  http://techrena.net/fix-requested-operation-requires-elevation-error/.  
+
 To avoid version conflicts with system level Python packages, OpenMDAO is best installed using a
 bootstrap script that installs OpenMDAO in a *virtual* Python environment. This script is called
 ``go-openmdao.py``. 
