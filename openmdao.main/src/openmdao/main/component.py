@@ -1513,26 +1513,27 @@ class Component(Container):
 
         if has_interface(self, IComponent):
             inputs = []
-            dataflow = self.parent.get_dataflow()
+            assembly = None
             parameters = {}
-            for parameter, target in dataflow['parameters']:
-                if not target in parameters:
-                    parameters[target] = []
-
-                parameters[target].append(parameter)
-
-            #parameters = dict([reversed(x) for x in self.parent.get_dataflow()['parameters']])
-            
-            
             objectives = {}
-            for target, objective in dataflow['objectives']:
-                if not target in objectives:
-                    objectives[target] = []
 
-                objectives[target].append(objective)
+            try:
+                assembly = self.parent if self.parent else self
+                dataflow = assembly.get_dataflow()
+                for parameter, target in dataflow['parameters']:
+                    if not target in parameters:
+                        parameters[target] = []
 
-            #objectives = dict([x for x in self.parent.get_dataflow()['objectives']])
-           
+                    parameters[target].append(parameter)
+                
+                for target, objective in dataflow['objectives']:
+                    if not target in objectives:
+                        objectives[target] = []
+
+                    objectives[target].append(objective)
+            except:
+                pass
+            
             if self.parent is None:
                 connected_inputs = []
                 connected_outputs = []

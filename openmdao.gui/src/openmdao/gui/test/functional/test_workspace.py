@@ -322,7 +322,7 @@ d = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
 
     # Drag over Plane.
-    workspace_page.show_dataflow('driver', 'top')
+    workspace_page.show_dataflow('top')
     workspace_page.show_library()
     workspace_page.set_library_filter('In Project')
 
@@ -595,7 +595,7 @@ def _test_console_errors(browser):
     workspace_page = project_info_page.load_project()
 
     # Set input to illegal value.
-    top = workspace_page.get_dataflow_figure('driver', 'top')
+    top = workspace_page.get_dataflow_figure('top')
     editor = top.editor_page(double_click=False)
     inputs = editor.get_inputs()
     inputs[1][2] = '42'  # force_execute
