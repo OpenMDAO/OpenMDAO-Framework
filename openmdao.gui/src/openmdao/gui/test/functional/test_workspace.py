@@ -4,6 +4,7 @@ Tests of overall workspace functions.
 
 import sys
 import time
+import logging
 
 import pkg_resources
 
@@ -145,7 +146,6 @@ def _test_palette_update(browser):
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
-    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # view library
@@ -327,9 +327,8 @@ d = Float(0.0, iotype='out')
     workspace_page.set_library_filter('In Project')
 
     workspace_page.find_library_button('Foo').click()
-    time.sleep(2)
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
-    time.sleep(2)
+
     workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
 
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
@@ -355,7 +354,6 @@ d = Float(0.0, iotype='out')
 
     workspace_page = projects_page.open_project(project_dict['name'])
     workspace_page.show_dataflow('top')
-    time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['comp1', 'comp2', 'driver', 'top'])
 
@@ -520,47 +518,15 @@ def _test_editable_inputs(browser):
             assembly_name)
 
     component_editor = transmission.editor_page()
-
-    # Find rows in inputs table
-    # for transmission for single sim vehicle
-    # that are editable.
-    elements = component_editor.browser.find_elements_by_xpath(\
-            "//div[@id='Inputs_props']")[1]
-            #/div[@class='slick-viewport']")
-            #/div[@id='grid-canvas']\
-            #/div[@row='1'] | div[@row='3']")
-
-    elements = elements.find_elements_by_xpath(\
-            "div[@class='slick-viewport']\
-            /div[@class='grid-canvas']\
-            /div[@row='1' or @row='3']\
-            /div[contains(@class, 'cell-editable')]")
-
-    # Verify that the rows are highlighted
-   
-    import re
-    regex = re.compile( "(\d+),\s*(\d+),\s*(\d+),?\s*(\d+)?")
-    for element in elements:
-        #Test that element has a background color
-        match = regex.search( element.value_of_css_property( "background-color" ) )
-        assert( match )
-
-        #Test that background color is white with no alpha
-        red, green, blue, alpha = [ int( color ) for color in match.groups('255') ]
-        assert( red == 255 )
-        assert( green == 255 )
-        assert( blue == 255 )
-
-        #Test that element has a color
-        match = regex.search( element.value_of_css_property( "color" ) )
-        assert( match )
-
-        #Test that color is black with no alpha
-        red, green, blue, alpha = [ int( color ) for color in match.groups('255') ]
-        assert( red == 0 ) 
-        assert( green == 0 )
-        assert( blue == 0 )
-    
+    inputs = component_editor.get_inputs()
+    for i, row in enumerate(inputs):
+        value_cell = row.cells[2]
+        if i == 1 or i == 3:
+            eq(value_cell.color, [0, 0, 0, 1])
+            eq(value_cell.background_color, [255, 255, 255, 1])
+        else:
+            eq(value_cell.color, [255, 255, 255, 1])
+            eq(value_cell.background_color, [0, 0, 0, 0])
     component_editor.close()
 
     # Clean up.
@@ -665,8 +631,9 @@ def execute(self)
     message = None
     try:
         message = NotifierPage.wait(editor_page, base_id='file-error')
-    except WebDriverException:
-        pass
+    except Exception as exc:
+        print 'Exception waiting for file-error:', exc
+        logging.exception('Waiting for file-error')
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
