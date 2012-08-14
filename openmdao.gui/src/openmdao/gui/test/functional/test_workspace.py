@@ -4,6 +4,7 @@ Tests of overall workspace functions.
 
 import sys
 import time
+import logging
 
 import pkg_resources
 
@@ -568,8 +569,9 @@ def execute(self)
     message = None
     try:
         message = NotifierPage.wait(editor_page, base_id='file-error')
-    except WebDriverException:
-        pass
+    except Exception as exc:
+        print 'Exception waiting for file-error:', exc
+        logging.exception('Waiting for file-error')
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
