@@ -23,11 +23,12 @@ from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
-                                     ICaseIterator, ICaseRecorder, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
-                                     IHasEqConstraints, IHasIneqConstraints
-from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+                                     IHasEqConstraints, IHasIneqConstraints, \
+                                     ICaseIterator, ICaseRecorder
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
+                                         HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
@@ -503,7 +504,9 @@ class Component(Container):
                     if tracing.TRACER is not None and \
                         not obj_has_interface(self, IAssembly) and \
                         not obj_has_interface(self, IDriver):
-                            tracing.TRACER.debug(self.get_itername())
+                        
+                        tracing.TRACER.debug(self.get_itername())
+                        
                     self.execute()
 
                 self._post_execute()
@@ -1502,10 +1505,14 @@ class Component(Container):
                     lst.append((key, val))
                 pub.publish_list(lst)
 
-    def get_attributes(self, ioOnly=True):
+    def get_attributes(self, io_only=True):
         """ get attributes of component. includes inputs and ouputs and, if
-            ioOnly is not true, a dictionary of attributes for each interface
-            implemented by the component
+        io_only is not true, a dictionary of attributes for each interface
+        implemented by the component.  Used by the GUI.
+            
+        io_only: Bool
+            Set to true if we only want to populate the input and output
+            fields of the attributes dictionary.
         """
         attrs = {}
 
@@ -1572,7 +1579,7 @@ class Component(Container):
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
-        if not ioOnly:
+        if not io_only:
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
 
@@ -1671,6 +1678,7 @@ class Component(Container):
             attrs['Slots'] = slots
 
         return attrs
+
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
     """prints out validity status of all input and output traits

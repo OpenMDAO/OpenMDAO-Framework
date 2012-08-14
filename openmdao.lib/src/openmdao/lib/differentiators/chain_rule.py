@@ -5,11 +5,10 @@ Derivatives (CRND) method.
 from ordereddict import OrderedDict
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import HasTraits
 
 from openmdao.lib.datatypes.api import Float
 from openmdao.lib.differentiators.fd_helper import FDhelper
-from openmdao.main.api import Driver, Assembly
+from openmdao.main.api import Driver, Assembly, Container
 from openmdao.main.container import find_name
 from openmdao.main.driver import Run_Once
 from openmdao.main.interfaces import implements, IDifferentiator, ISolver
@@ -17,7 +16,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.numpy_fallback import array
 from openmdao.units import convert_units
 
-class ChainRule(HasTraits):
+class ChainRule(Container):
     """ Differentiates a driver's workflow using the Chain Rule with Numerical
     Derivatives (CRND) method."""
 
@@ -26,10 +25,12 @@ class ChainRule(HasTraits):
     # pylint: disable-msg=E1101
     # Local FD might need a stepsize
     default_stepsize = Float(1.0e-6, iotype='in', desc='Default finite ' + \
-                             'difference step size to use.')
+                             'difference step size.')
     
     def __init__(self):
 
+        super(ChainRule, self).__init__()
+        
         # This gets set in the callback
         _parent = None
         
