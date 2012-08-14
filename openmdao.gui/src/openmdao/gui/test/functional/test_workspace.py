@@ -498,8 +498,8 @@ def _test_editable_inputs(browser):
     # Import vehicle_singlesim
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    file_path = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-                                                'vehicle_singlesim.py')
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'basic_model.py')
     editor_page.add_file(file_path)
     browser.close()
     browser.switch_to_window(workspace_window)
@@ -508,16 +508,16 @@ def _test_editable_inputs(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.find_library_button('Basic_Model').click()
     assembly_name = "sim"
-    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+    workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
             assembly_name)
 
     # Get component editor for transmission.
-    workspace_page.expand_object(assembly_name)
-    workspace_page.show_dataflow(assembly_name + ".vehicle")
-    transmission = workspace_page.get_dataflow_figure('transmission',
-            assembly_name + '.vehicle')
+    #workspace_page.expand_object(assembly_name)
+    #workspace_page.show_dataflow(assembly_name + ".paraboloid")
+    transmission = workspace_page.get_dataflow_figure('paraboloid',
+            assembly_name)
 
     component_editor = transmission.editor_page()
 
@@ -534,14 +534,12 @@ def _test_editable_inputs(browser):
             "div[@class='slick-viewport']\
             /div[@class='grid-canvas']\
             /div[@row='1' or @row='3']\
-            /div[contains(@class, 'ui-state-editable')]")
+            /div[contains(@class, 'cell-editable')]")
 
     # Verify that the rows are highlighted
    
     import re
     regex = re.compile( "(\d+),\s*(\d+),\s*(\d+),?\s*(\d+)?")
-    import pdb
-    pdb.set_trace()
     for element in elements:
         #Test that element has a background color
         match = regex.search( element.value_of_css_property( "background-color" ) )
