@@ -342,7 +342,7 @@ class WorkspacePage(BasePageObject):
             chain = chain.drag_and_drop(library_item, target)
         else:
             chain = chain.click_and_hold(library_item)
-            chain = chain.move_to_element_with_offset(target, 100, 100)
+            chain = chain.move_to_element_with_offset(target, 90, 90)
             chain = chain.release(None)
         chain.perform()
 
