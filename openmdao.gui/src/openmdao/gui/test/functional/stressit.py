@@ -26,7 +26,10 @@ def main():
         print msg
         logfile.write('\n'+msg+'\n')
 
-        for test_script in ('test_project.py',
+        for test_script in ('test_codeeditor.py',
+                            'test_dataflow.py',
+                            'test_dragdrop.py',
+                            'test_project.py',
                             'test_workspace.py'):
             msg = '    Running %s' % test_script
             print msg

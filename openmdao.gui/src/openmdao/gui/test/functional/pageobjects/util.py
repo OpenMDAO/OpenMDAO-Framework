@@ -69,7 +69,7 @@ class NotifierPage(object):
     @staticmethod
     def wait(parent, timeout=TMO, base_id=None):
         """ Wait for notification. Returns notification message. """
-        time.sleep(0.1)  # Pacing.
+        time.sleep(0.5)  # Pacing.
         base_id = base_id or 'notify'
         msg_id = base_id+'-msg'
         ok_id  = base_id+'-ok'
