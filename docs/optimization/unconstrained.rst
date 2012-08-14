@@ -212,3 +212,71 @@ This should produce the output:
 
 Now you are ready to solve a more advanced optimization problem with constraints.
 
+
+Debugging Via Log Messages
+--------------------------
+
+You may have noticed that a file with a name of the form
+``openmdao_log_<pid>.txt`` was created during the above Python run.
+This file is written using the standard Python ``logging`` package.
+Many of the OpenMDAO modules will write to the log file to record errors,
+warnings, debugging information, etc.  The format of the message is:
+
+::
+
+    timestamp loglevel source: message
+
+By default, only warnings (``W``) and errors (``E``) are written to the log
+file.  If you want more information printed you can use the standard logging
+level control on the root logger:
+
+::
+
+    import logging
+    logging.getLogger().setLevel(logging.DEBUG)
+
+This is a global enabling control of all messages.  If you find that messages
+from a particular component need to be throttled somewhat, you can change the
+logging level for that component:
+
+::
+
+    opt_problem.paraboloid.log_level = logging.INFO
+    
+If you would like to have the log messages printed on the console, you can
+include this in your main routine:
+
+:: 
+
+    from openmdao.main.api import enable_console
+    enable_console()
+
+Console log messages do not have timestamps.
+
+Now the existing ``Paraboloid`` component does not do any logging beyond that
+of ``Component``.  You can either modify ``Paraboloid`` to add log messages,
+or make a derived class:
+
+::
+
+    class TracingParaboloid(Paraboloid):
+
+        def execute(self):
+            self._logger.info('execute x=%g, y=%g', self.x, self.y)
+            super(TracingParaboloid, self).execute()
+            self._logger.debug('    result=%g', self.f_xy)
+
+Of course if you make a derived class, you need to change your model to use
+that class rather than the original.
+
+One final note about logging: if you have a distributed simulation, log messages
+from remote servers are automatically routed back to the client.  In this case
+the message includes the source server in square brackets:
+
+::
+
+    timestamp loglevel [server] source: message
+
+You can remotely control the server's logging level via the server's
+:meth:`set_log_level`.
+
