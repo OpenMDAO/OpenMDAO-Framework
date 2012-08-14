@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, \
                                        ElementNotVisibleException, \
                                        StaleElementReferenceException
-from basepageobject import TMO
+from basepageobject import TMO, rgba
 from grid import Grid
 
 
@@ -39,6 +39,15 @@ class _BaseElement(object):
         else:
             return WebDriverWait(self._browser, TMO).until(
                        lambda browser: self._root.find_element(*self._locator))
+    @property
+    def color(self):
+        """ Return RGBA values for ``color`` property. """
+        return rgba(self.value_of_css_property('color'))
+
+    @property
+    def background_color(self):
+        """ Return RGBA values for ``background-color`` property. """
+        return rgba(self.value_of_css_property('background-color'))
 
     def is_present(self):
         """ Return True if the element can be found. """

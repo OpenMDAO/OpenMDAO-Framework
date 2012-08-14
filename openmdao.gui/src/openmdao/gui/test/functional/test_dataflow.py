@@ -44,14 +44,12 @@ def _test_maxmin(browser):
 
     # Add MaxMin to 'top'.
     workspace_page.show_dataflow('top')
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
     workspace_page.show_library()
     time.sleep(1)
     workspace_page.find_library_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
 
@@ -85,7 +83,6 @@ def _test_maxmin(browser):
     workspace_page.do_command('dir()')
     background = maxmin('top_right').value_of_css_property('background')
     assert background.find('circle-minus.png') >= 0
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
 
@@ -93,13 +90,11 @@ def _test_maxmin(browser):
     sub('top_right').click()
     background = sub('top_right').value_of_css_property('background')
     assert background.find('circle-plus.png') >= 0
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
     # remove maxmin and make sure its children are removed as well
     maxmin.remove()
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
 
@@ -341,7 +336,6 @@ def _test_driverflows(browser):
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
-    workspace_page.expand_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
     workspace_page.hide_right()
@@ -405,7 +399,6 @@ def _test_replace(browser):
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
-    workspace_page.expand_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
 

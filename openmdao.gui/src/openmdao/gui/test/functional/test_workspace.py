@@ -4,6 +4,7 @@ Tests of overall workspace functions.
 
 import sys
 import time
+import logging
 
 import pkg_resources
 
@@ -146,7 +147,6 @@ def _test_palette_update(browser):
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
-    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # view library
@@ -292,11 +292,12 @@ f_x = Float(0.0, iotype='out')
     print "_test_newfile complete."
 
 
-### for now I'm giving up on this test.  If the save & reload option is chosen,
-### the browser attribute becomes stale when the project gets reloaded and I'm not 
-### sure how to get back to a 'good' browser handle after that.  begin() fails when using the
-### stale handle.  Also, cleaning up at the end of the test is a problem when you can't
-### get access to the WebElements in the current page.
+## for now I'm giving up on this test.  If the save & reload option is chosen,
+## the browser attribute becomes stale when the project gets reloaded and I'm not 
+## sure how to get back to a 'good' browser handle after that.  begin() fails when using the
+## stale handle.  Also, cleaning up at the end of the test is a problem when you can't
+## get access to the WebElements in the current page.
+## -- this has been turned into a manual test (see gui/test/functional/manual/save_and_reload
 #def _test_macro(browser):
     #print "running _test_macro..."
     ## Creates a file in the GUI.
@@ -522,32 +523,15 @@ def _test_editable_inputs(browser):
             assembly_name + '.vehicle')
 
     component_editor = transmission.editor_page()
-
-    # Find rows in inputs table
-    # for transmission for single sim vehicle
-    # that are editable.
-    elements = component_editor.browser.find_elements_by_xpath(\
-            "//div[@id='Inputs_props']")[1]
-            #/div[@class='slick-viewport']")
-            #/div[@id='grid-canvas']\
-            #/div[@row='1'] | div[@row='3']")
-
-    elements = elements.find_elements_by_xpath(\
-            "div[@class='slick-viewport']\
-            /div[@class='grid-canvas']\
-            /div[@row='1' or @row='3']\
-            /div[contains(@class, 'ui-state-editable')]")
-
-    # Verify that the rows are highlighted
-    for element in elements:
-        ## On my machine, I get colors of rgba(n,n,n,n) instead of rgb(n,n,n), so do
-        ## a little parsing here to see if the first three numbers match
-        #bg = element.value_of_css_property("background-color").split('(',1)[1].strip(')').split(',')[0:3]
-        #fg = element.value_of_css_property("color").split('(',1)[1].strip(')').split(',')[0:3]
-        #assert(['255', '255', '255'] == bg)
-        #assert(['0', '0', '0'] == fg)
-        assert("rgba(255,255,255,1)" == element.value_of_css_property("background-color"))
-        assert("rgba(0,0,0,1)" == element.value_of_css_property("color"))
+    inputs = component_editor.get_inputs()
+    for i, row in enumerate(inputs):
+        value_cell = row.cells[2]
+        if i == 1 or i == 3:
+            eq(value_cell.color, [0, 0, 0, 1])
+            eq(value_cell.background_color, [255, 255, 255, 1])
+        else:
+            eq(value_cell.color, [255, 255, 255, 1])
+            eq(value_cell.background_color, [0, 0, 0, 0])
     component_editor.close()
 
     # Clean up.
@@ -592,9 +576,9 @@ def execute(self)
     message = None
     try:
         message = NotifierPage.wait(editor_page, base_id='file-error')
-    except WebDriverException:
-        pass
-    browser.switch_to_window(editor_window)
+    except Exception as exc:
+        print 'Exception waiting for file-error:', exc
+        logging.exception('Waiting for file-error')
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
