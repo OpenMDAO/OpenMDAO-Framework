@@ -776,6 +776,47 @@ class Container(SafeHasTraits):
         """Return a list of Variables in this Container."""
         return [k for k,v in self.items(iotype=not_none)]
     
+    def get_attributes(self, io_only=True):
+        """ We use Container as a base class for objects that have traits
+        that need to be edited, but have no iotype. This method returns a
+        dictionary of information that the GUI can use to build the editors.
+        
+        The default behavior is to take all traits and put them on the inputs
+        pane. For different behavior, overload this method.
+        
+        io_only: Bool
+            Passed in, but not used in the base class."""
+        
+        attrs = {}
+        attrs['type'] = type(self).__name__
+
+        variables = []
+        for vname in self.list_vars() + self._added_traits.keys():
+            
+            var = self.get(vname)
+            attr = {}
+                
+            attr['name'] = vname
+            attr['type'] = type(var).__name__
+            attr['value'] = str(var)
+            meta = self.get_metadata(vname)
+                
+            if meta:
+                for field in ['units', 'high', 'low', 'desc']:
+                    if field in meta:
+                        attr[field] = meta[field]
+                    else:
+                        attr[field] = ''
+                        
+            # Container variables are not connectable
+            attr['connected'] = ''
+                    
+            variables.append(attr)
+            
+        attrs["Inputs"] = variables
+        return attrs
+
+    
     # Can't use items() since it returns a generator (won't pickle).
     @rbac(('owner', 'user'))
     def _alltraits(self, traits=None, events=False, **metadata):
@@ -1382,11 +1423,6 @@ class Container(SafeHasTraits):
         Container._bases(type(obj), names)
         return names
 
-    def get_attributes(self, io_only=True):
-        """ This stub should be overloaded by the inherited class."""
-        
-        return None
-            
     @staticmethod
     def _bases(cls, names):
         """ Helper for :meth:`get_trait_typenames`. """

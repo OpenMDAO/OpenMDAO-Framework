@@ -18,10 +18,10 @@ from openmdao.util.decorators import add_delegate
 
 from openmdao.main.numpy_fallback import zeros
 
-from enthought.traits.api import HasTraits
 from zope.interface import implements, Attribute, Interface
 
 from openmdao.lib.datatypes.api import Int, Enum, Bool
+from openmdao.main.api import Container
 from openmdao.main.interfaces import implements
 from openmdao.util.decorators import stub_if_missing_deps
 
@@ -38,7 +38,7 @@ class IDistributionGenerator(Interface):
         a set of values.
         """
 
-class FiniteDifferenceGenerator(HasTraits): 
+class FiniteDifferenceGenerator(Container): 
     """
     Generate the input cases for finite differences.
     """    

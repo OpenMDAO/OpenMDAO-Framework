@@ -174,6 +174,18 @@ class NamespaceTestCase(unittest.TestCase):
         # 'in/out' set for end-to-end check.
         self._check_files(self.asm.scomp1.get_files('in'),
                           self.asm.scomp2.get_files('out'))
+        
+        # Check set_attributes on the vartrees
+        attrs = self.asm.scomp1.cont_in.get_attributes()
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'v1', 'value': '1.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Inputs'])
+        self.assertTrue({'name': 'v2', 'value': '2.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Inputs'])
+        attrs = self.asm.scomp1.cont_out.get_attributes()
+        self.assertTrue("Outputs" in attrs.keys())
+        self.assertTrue({'name': 'v1', 'value': '2.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Outputs'])
+        self.assertTrue({'name': 'v2', 'value': '3.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Outputs'])
+        
+        # Now connect
         try:
             self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         except Exception as err:

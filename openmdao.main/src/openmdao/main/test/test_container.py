@@ -429,6 +429,17 @@ class ContainerTestCase(unittest.TestCase):
         assert_raises(self, "c.set('out', 666)", globals(), locals(),
                       RuntimeError, ": Cannot set output 'out'")
 
+    def test_get_attributes(self):
+        c = Container()
+        c.add_trait('inp', Float(desc='Stuff', low=-200, high=200))
+        c.set('inp', 42)
+        attrs = c.get_attributes()
+        self.assertTrue("Inputs" in attrs.keys())
+        check = {'name': 'inp', 'value': '42.0', 'high': 200.0, 'connected': '', 'low': -200.0, 
+                         'units': '', 'type': 'float', 'desc': 'Stuff'}
+        for key in check.keys():
+            self.assertEqual( check[key], attrs["Inputs"][0][key] )
+
 
 if __name__ == "__main__":
     import nose
