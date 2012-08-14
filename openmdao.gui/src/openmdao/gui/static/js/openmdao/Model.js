@@ -162,7 +162,7 @@ openmdao.Model=function() {
     };
 
     /** save the current project */
-    this.saveProject = function(callback,errorHandler) {
+    this.saveProject = function(callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'project',
@@ -301,7 +301,7 @@ openmdao.Model=function() {
     };
 
     /** add an object of the specified type & name to the specified parent */
-    this.addComponent = function(typepath,name,parent,callback) {
+    this.addComponent = function(typepath,name,parent,callback,errorHandler) {
         if (!parent) {
             parent = '';
         }
@@ -315,17 +315,19 @@ openmdao.Model=function() {
             type: 'POST',
             url:  'component/'+name,
             data: {'type': typepath, 'parent': parent },
-            success: callback
+            success: callback,
+            error: errorHandler
         });
     };
 
     /** replace pathname with an object of the specified type */
-    this.replaceComponent = function(pathname, typepath, callback) {
+    this.replaceComponent = function(pathname, typepath, callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'replace/'+pathname,
             data: {'type': typepath},
-            success: callback
+            success: callback,
+            error: errorHandler
         });
     };
 
@@ -457,6 +459,7 @@ openmdao.Model=function() {
     };
 
     /** import the contents of the specified file into the model */
+    /*
     this.importFile = function(filepath, callback, errorHandler) {
         // change path to package notation and import
         var path = filepath.replace(/\.py$/g,'').
@@ -465,7 +468,8 @@ openmdao.Model=function() {
         cmd = 'from '+path+' import *';
         self.issueCommand(cmd, callback, errorHandler, null);
     };
-
+    */
+    
     /** execute the model */
     this.runModel = function() {
         // make the call
@@ -532,7 +536,7 @@ openmdao.Model=function() {
 
     /** close all windows on the window list */
     this.closeWindows = function() {
-        if ( windows) {
+        if ( windows ) {
             for (i = 0; i < windows.length; i++) {
                 windows[i].close();
             }
