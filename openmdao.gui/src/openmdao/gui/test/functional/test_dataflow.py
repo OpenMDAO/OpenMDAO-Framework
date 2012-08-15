@@ -124,8 +124,8 @@ def _test_connect(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('Top').click()
-    workspace_page.add_library_item_to_dataflow('connect.Top', 'top')
+    workspace_page.find_library_button('Topp').click()
+    workspace_page.add_library_item_to_dataflow('connect.Topp', 'top')
 
     # Connect components.
     workspace_page.show_dataflow('top')
