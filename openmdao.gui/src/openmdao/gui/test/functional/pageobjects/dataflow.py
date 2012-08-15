@@ -72,7 +72,7 @@ class DataflowFigure(BasePageObject):
         """ Figure background-color property. """
         return self.root.value_of_css_property('background-color')
 
-    def editor_page(self, double_click=True, is_assembly=False):
+    def editor_page(self, double_click=True, base_type='Component'):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)
         if double_click:
@@ -80,9 +80,12 @@ class DataflowFigure(BasePageObject):
         else:
             self._context_click('edit_button')
         editor_id = 'CE-%s' % self.pathname.replace('.', '-')
-        if is_assembly:
+        if base_type == 'Assembly':
             return AssemblyPage(self.browser, self.port, (By.ID, editor_id))
-        return ComponentPage(self.browser, self.port, (By.ID, editor_id))
+        elif base_type == 'Driver':
+            return DriverPage(self.browser, self.port, (By.ID, editor_id))
+        else:
+            return ComponentPage(self.browser, self.port, (By.ID, editor_id))
 
     def properties_page(self):
         """ Return :class:`PropertiesPage` for this component. """
