@@ -22,7 +22,7 @@ from openmdao.main.component import Component
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.driver import Driver, Run_Once
-from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.rbac import rbac
@@ -845,9 +845,9 @@ class Assembly (Component):
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def get_dataflow(self):
-        ''' get a dictionary of components and connections between them
-            that make up the data flow for the given assembly
-            also includes paramerter, constraint, and objective flows
+        ''' get a dictionary of components and the connections between them
+            that make up the data flow for the assembly
+            also includes parameter, constraint, and objective flows
         '''
         components = []
         connections = []
@@ -875,8 +875,12 @@ class Assembly (Component):
                                 inst = getattr(comp, name)
                                 if isinstance(inst, HasParameters):
                                     for name, param in inst.get_parameters().items():
-                                        parameters.append([comp.name+'.'+name,
-                                                           param.target])
+                                        if isinstance(param, ParameterGroup):
+                                            for n,p in zip(name,tuple(param.targets)):
+                                                parameters.append([comp.name+'.'+n, p])
+                                        else:
+                                            parameters.append([comp.name+'.'+name,
+                                                               param.target])
                                 elif isinstance(inst, (HasConstraints,
                                                        HasEqConstraints,
                                                        HasIneqConstraints)):
