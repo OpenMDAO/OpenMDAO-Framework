@@ -122,6 +122,14 @@ def build_and_test(fname=None, workdir='.', keep=False,
     print "build return code =", retcode
     if retcode != 0:
         sys.exit(retcode)
+        
+    if build_type == 'release':
+        for arg in testargs:
+            if not arg.startswith('-'):
+                break
+        else:
+            if '--small' not in testargs and '--all' not in testargs:
+                testargs.append('--all') # otherwise release test runs small set by default
     
     print '\ntesting  (testargs=%s) ...' % testargs
 
