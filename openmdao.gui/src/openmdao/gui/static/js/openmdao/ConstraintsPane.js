@@ -52,7 +52,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
             cmd = cmd + ",adder="+adder;
         }
         if (name) {
-            cmd = cmd + ",name="+name;
+            cmd = cmd + ",name='"+name+"'";
         }
         cmd = cmd + ");";
         model.issueCommand(cmd);
@@ -61,11 +61,11 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
     /** prompt for new constraint */
     function promptForConstraint(callback) {
         // Build dialog markup
-        var win = jQuery('<div></div>'),
-            expr   = jQuery('<input type="text" style="width:100%"></input>'),
-            scaler = jQuery('<input type="text" style="width:50%"></input>'),
-            adder  = jQuery('<input type="text" style="width:50%"></input>'),
-            name   = jQuery('<input type="text" style="width:75%"></input>');
+        var win = jQuery('<div id="constraint-dialog"></div>'),
+            expr   = jQuery('<input id="constraint-expr" type="text" style="width:100%"></input>'),
+            scaler = jQuery('<input id="constraint-scaler" type="text" style="width:50%"></input>'),
+            adder  = jQuery('<input id="constraint-adder" type="text" style="width:50%"></input>'),
+            name   = jQuery('<input id="constraint-name" type="text" style="width:75%"></input>');
             
         win.append(jQuery('<div>Expression: </div>').append(expr));
 
@@ -82,15 +82,23 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
         jQuery(win).dialog({
             'modal': true,
             'title': 'New Constraint',
-            'buttons': {
-                'Ok': function() {
-                    jQuery(this).dialog('close');
-                    callback(expr.val(),scaler.val(),adder.val(),name.val());
+            'buttons': [
+                {
+                    text: 'Ok',
+                    id: 'constraint-ok',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                        callback(expr.val(),scaler.val(),adder.val(),name.val());
+                    }
                 },
-                'Cancel': function() {
-                    jQuery(this).dialog('close');
+                {
+                    text: 'Cancel',
+                    id: 'constraint-cancel',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                    }
                 }
-            }
+            ]
         });
     }
 
