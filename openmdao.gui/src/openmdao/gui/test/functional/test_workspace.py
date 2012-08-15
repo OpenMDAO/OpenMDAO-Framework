@@ -493,6 +493,42 @@ def _test_objtree(browser):
 
 
 def _test_editable_inputs(browser):
+    def test_color(actual, expected, alpha=False):
+        if(alpha):
+            eq(actual, expected)
+        else:
+            eq(actual[0:3], expected[0:3])
+
+    def test_inputs(inputs):
+        for i, row in enumerate(inputs):
+            connected_to_cell = row.cells[len(row.cells)-2]
+            implicit_cell = row.cells[len(row.cells)-1]
+            value_cell = row.cells[2]
+
+            if connected_to_cell.value:
+                test_color(value_cell.color, [255, 255, 255, 1])
+                test_color(value_cell.background_color, [0, 0, 0, 1])
+            elif implicit_cell.value:
+                test_color(value_cell.color, [200, 0, 0, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+            else:
+                test_color(value_cell.color, [0, 0, 0, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+
+    def test_outputs(outputs):
+        for i, row in enumerate(outputs):
+            connected_to_cell = row.cells[len(row.cells)-2]
+            implicit_cell = row.cells[len(row.cells)-1]
+            value_cell = row.cells[2]
+
+            if implicit_cell.value:
+                test_color(value_cell.color, [0, 0, 200, 1])
+            else:
+                test_color(value_cell.color, [255, 255, 255, 1])
+            
+            test_color(value_cell.background_color, [0, 0, 0, 1])
+
+
     print "running _test_editable_inputs..."
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -501,9 +537,11 @@ def _test_editable_inputs(browser):
     # Import vehicle_singlesim
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    file_path = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-                                                'vehicle_singlesim.py')
-    editor_page.add_file(file_path)
+    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional', 'basic_model.py')
+    file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
+                                                            'vehicle_singlesim.py')
+    editor_page.add_file(file_path_one)
+    editor_page.add_file(file_path_two)
     browser.close()
     browser.switch_to_window(workspace_window)
 
@@ -511,27 +549,42 @@ def _test_editable_inputs(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.find_library_button('Basic_Model').click()
     assembly_name = "sim"
-    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+    workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
             assembly_name)
 
+    paraboloid = workspace_page.get_dataflow_figure('paraboloid',
+            assembly_name)
+
+    #Test highlighting for implicit connections
+    component_editor = paraboloid.editor_page()
+    test_inputs(component_editor.get_inputs()) 
+    test_outputs(component_editor.get_outputs())
+    
+    component_editor.close()
+
+    #Remove sim from the dataflow
+    assembly = workspace_page.get_dataflow_figure(assembly_name)
+    assembly.remove()
+
+    #Add VehicleSim to the dataflow
+    workspace_page.show_library()
+    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+                        assembly_name)
+    
     # Get component editor for transmission.
     workspace_page.expand_object(assembly_name)
-    workspace_page.show_dataflow(assembly_name + ".vehicle")
+    workspace_page.show_dataflow(assembly_name+ ".vehicle")
     transmission = workspace_page.get_dataflow_figure('transmission',
-            assembly_name + '.vehicle')
-
+                        assembly_name + '.vehicle')# Get component editor for transmission.
+   
+    #Test highlighting for explicit connections
     component_editor = transmission.editor_page()
-    inputs = component_editor.get_inputs()
-    for i, row in enumerate(inputs):
-        value_cell = row.cells[2]
-        if i == 1 or i == 3:
-            eq(value_cell.color, [0, 0, 0, 1])
-            eq(value_cell.background_color, [255, 255, 255, 1])
-        else:
-            eq(value_cell.color, [255, 255, 255, 1])
-            eq(value_cell.background_color, [0, 0, 0, 0])
+    test_inputs(component_editor.get_inputs()) 
+    test_outputs(component_editor.get_outputs())
+
     component_editor.close()
 
     # Clean up.
@@ -539,7 +592,6 @@ def _test_editable_inputs(browser):
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_editable_inputs complete."
-
 
 def _test_console_errors(browser):
     print "running _test_console_errors..."
@@ -611,7 +663,6 @@ def __init__(self):
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_console_errors complete."
-
 
 if __name__ == '__main__':
     main()
