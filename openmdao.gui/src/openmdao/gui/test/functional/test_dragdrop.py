@@ -175,7 +175,7 @@ def _test_drop_on_component_editor(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
 
-    editor = top.editor_page(False, True)
+    editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.show_dataflow()
 
     #in order to get the elements in the editor workflow, we must
@@ -223,7 +223,7 @@ def _test_drop_on_component_editor_grid(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
 
-    editor = top.editor_page(False, True)
+    editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.show_dataflow()
 
     editor_top = get_dataflow_fig_in_assembly_editor(browser, top.port, workspace_page, 'top')

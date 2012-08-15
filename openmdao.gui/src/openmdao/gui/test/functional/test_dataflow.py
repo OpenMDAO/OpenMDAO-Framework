@@ -471,7 +471,7 @@ def _test_replace(browser):
 
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page()
+    editor = driver.editor_page(base_type='Driver')
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['cons_is_linear', 'ndarray', '[]', '', 'true',
@@ -482,7 +482,7 @@ def _test_replace(browser):
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page()
+    editor = driver.editor_page(base_type='Driver')
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', '', ''])

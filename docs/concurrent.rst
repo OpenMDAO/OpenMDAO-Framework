@@ -16,8 +16,9 @@ of a simulation from the computational resources it requires.  This makes
 simulations more portable and also allows for the currently "best" resource
 to be used.  The :ref:`ResourceAllocationManager <resource.py>` (RAM) manages
 the selection of a server from one or more registered allocators.
-:ref:`ExternalCode <external_code.py>` and
-:ref:`CaseIteratorDriver <caseiterdriver.py>` are able to use this facility.
+:ref:`ExternalCode <external_code.py>`,
+:ref:`CaseIteratorDriver <caseiterdriver.py>`, and
+:ref:`DOEdriver <doedriver.py>` are able to use this facility.
 
 During ExternalCode execution, if the instance has an empty ``resources``
 dictionary, then the external code is run locally and started directly by the
@@ -28,15 +29,17 @@ server is found, the ExternalCode instance will send any input files to the
 server, invoke ``execute_command()`` on the server, and then retrieve any output
 files.
 
-During CaseIteratorDriver execution a resource allocation is performed for
-each case to be evaluated (unless sequential execution is specified).  Once the
-server is allocated, the sub-model egg is loaded into the server, input
-variables are set, the model is run, and outputs are retrieved.
+During CaseIteratorDriver or DOEdriver execution a resource allocation is
+performed for each case to be evaluated (unless sequential execution is
+specified).  Once the server is allocated, the sub-model egg is loaded into the
+server, input variables are set, the model is run, and outputs are retrieved.
 The resource allocator normally just looks for a compatible server based on
 the sub-model's Python requirements, but you can add additional resource
-information via the ``extra_resources`` attribute. The RAM methods
-:ref:`max_request() <resource.py>` and :ref:`total_request() <resource.py>`
-are sometimes useful for generating the ``extra_resources`` attribute value.
+information via the ``extra_resources`` attribute. The RAM method
+:ref:`max_request() <resource.py>` can be useful for generating the
+``extra_resources`` attribute value when the sub-model contains resource
+descriptions (for example when the sub-model contains a wrapper for a parallel
+CFD code).
 In some circumstances, particularly when submitting from a Windows client to a
 Linux server (or vice-versa), there will be spurious Python incompatibilities.
 You can try forcing a submission by setting the ``ignore_egg_requirements``

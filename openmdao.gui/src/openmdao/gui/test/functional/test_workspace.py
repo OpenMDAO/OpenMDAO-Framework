@@ -601,7 +601,7 @@ def _test_console_errors(browser):
 
     # Set input to illegal value.
     top = workspace_page.get_dataflow_figure('top', '')
-    editor = top.editor_page(double_click=False)
+    editor = top.editor_page(double_click=False, base_type='Assembly')
     inputs = editor.get_inputs()
     inputs[1][2] = '42'  # force_execute
     message = NotifierPage.wait(editor)
@@ -664,5 +664,63 @@ def __init__(self):
     project_info_page.delete_project()
     print "_test_console_errors complete."
 
+
+def _test_driver_config(browser):
+    print "running _test_driver_config..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Replace default driver with CONMIN and edit.
+    workspace_page.show_library()
+    workspace_page.replace('driver',
+                           'openmdao.lib.drivers.conmindriver.CONMINdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+
+    # Add a (nonsense) named parameter.
+    editor('parameters_tab').click()
+    dialog = editor.new_parameter()
+    dialog.target = 'driver.force_execute'
+    dialog.low = '0'
+    dialog.high = '1'
+    dialog.name = 'nonsense'
+    dialog('ok').click()
+    parameters = editor.get_parameters()
+    expected = [['driver.force_execute', '0', '1', '', '', '', 'nonsense']]
+    for i, row in enumerate(parameters.value):
+        eq(row, expected[i])
+
+    # Add a (nonsense) named objective.
+    editor('objectives_tab').click()
+    dialog = editor.new_objective()
+    dialog.expr = 'driver.force_execute'
+    dialog.name = 'nonsense'
+    dialog('ok').click()
+    objectives = editor.get_objectives()
+    expected = [['driver.force_execute', 'nonsense']]
+    for i, row in enumerate(objectives.value):
+        eq(row, expected[i])
+
+    # Add a (nonsense) named constraint.
+    editor('constraints_tab').click()
+    dialog = editor.new_constraint()
+    dialog.expr = 'driver.force_execute > 0'
+    dialog.name = 'nonsense'
+    dialog('ok').click()
+    constraints = editor.get_constraints()
+    expected = [['driver.force_execute > 0', '1', '0', 'nonsense']]
+    for i, row in enumerate(constraints.value):
+        eq(row, expected[i])
+
+    # Clean up.
+    editor.close()
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_driver_config complete."
+
+
 if __name__ == '__main__':
     main()
+
