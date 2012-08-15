@@ -53,7 +53,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
             cmd = self.pathname+'.'+args.item.name+'='+args.item.value
-            model.issueCommand(cmd)
+            model.issueCommand(cmd);
         });
    }
     
