@@ -50,6 +50,18 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.recorders = [DBCaseRecorder()]
         self.top.run()
         
+        # Gui pane stuff
+        
+        attrs = self.top.driver.recorders[0].get_attributes()
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'dbfile',
+                         'type': 'str',
+                         'connected': '',
+                         'value': ':memory:',
+                         'desc': 'Name of the database file to be recorded. Default ' + \
+                       'is ":memory:", which writes the database to memory.'} in attrs['Inputs'])
+        
+        
         # now use the DB as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
         
