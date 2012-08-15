@@ -2,11 +2,9 @@
 Model based on CONMIN test.
 """
 
-import numpy
-
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.datatypes.api import Array, Float, Str
+from openmdao.lib.datatypes.api import Array, Float
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
 
@@ -80,12 +78,11 @@ class Simulation(Assembly):
         self.connect('preproc.x_out', 'comp.x')
         self.connect('comp.result', 'postproc.result_in')
         self.driver.add_objective('postproc.result_out')
-        map(self.driver.add_parameter,
-            ('preproc.x_in[0]', 'preproc.x_in[1]',
-             'preproc.x_in[2]', 'preproc.x_in[3]'))
+        self.driver.add_parameter(('preproc.x_in[0]', 'preproc.x_in[1]',
+                                   'preproc.x_in[2]', 'preproc.x_in[3]'))
 
         # pylint: disable-msg=C0301
-        map(self.driver.add_constraint,[
+        map(self.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])

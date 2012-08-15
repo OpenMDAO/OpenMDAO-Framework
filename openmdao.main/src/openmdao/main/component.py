@@ -27,6 +27,7 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
                                      ICaseIterator, ICaseRecorder
+from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
@@ -234,18 +235,18 @@ class Component(Container):
                 if self.parent:
                     self.parent.child_invalidated(self.name, outs)
 
-    def __deepcopy__ ( self, memo ):
+    def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
         functions. We need to do this manually. """
-        
+
         result = super(Component, self).__deepcopy__(memo)
-        
+
         for name, trait in result.class_traits().items():
             if trait.iotype == 'in':
-                result._set_input_callback(name)        
-            
+                result._set_input_callback(name)
+
         return result
-        
+
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = super(Component, self).__getstate__()
@@ -504,9 +505,9 @@ class Component(Container):
                     if tracing.TRACER is not None and \
                         not obj_has_interface(self, IAssembly) and \
                         not obj_has_interface(self, IDriver):
-                        
+
                         tracing.TRACER.debug(self.get_itername())
-                        
+
                     self.execute()
 
                 self._post_execute()
@@ -1509,7 +1510,7 @@ class Component(Container):
         """ get attributes of component. includes inputs and ouputs and, if
         io_only is not true, a dictionary of attributes for each interface
         implemented by the component.  Used by the GUI.
-            
+
         io_only: Bool
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
@@ -1528,9 +1529,6 @@ class Component(Container):
                 connected_inputs = self._depgraph.get_connected_inputs()
                 connected_outputs = self._depgraph.get_connected_outputs()
 
-#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_inputs:',connected_inputs
-#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_outputs:',connected_outputs
-            
             for vname in self.list_inputs():
                 v = self.get(vname)
                 attr = {}
@@ -1549,7 +1547,6 @@ class Component(Container):
                     attr['connected'] = ''
                     if vname in connected_inputs:
                         connections = self._depgraph.connections_to(vname)
-#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() input',vname,'connections:',connections
                         # there can be only one connection to an input
                         attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
                 inputs.append(attr)
@@ -1574,7 +1571,6 @@ class Component(Container):
                     attr['connected'] = ''
                     if vname in connected_outputs:
                         connections = self._depgraph.connections_to(vname)
-#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() output',vname,'connections:',connections
                         attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
                 outputs.append(attr)
             attrs['Outputs'] = outputs
@@ -1609,18 +1605,30 @@ class Component(Container):
 
             if has_interface(self, IHasParameters):
                 parameters = []
-                parms = self.get_parameters()
-                for key, parm in parms.iteritems():
-                    attr = {}
-                    attr['name']    = str(key)
-                    attr['target']  = parm.target
-                    attr['low']     = parm.low
-                    attr['high']    = parm.high
-                    attr['scaler']  = parm.scaler
-                    attr['adder']   = parm.adder
-                    attr['fd_step'] = parm.fd_step
-                    #attr['scope']   = parm.scope.name
-                    parameters.append(attr)
+                for key, parm in self.get_parameters().items():
+                    if isinstance(parm, ParameterGroup):
+                        for name, target in zip(key,tuple(parm.targets)):
+                            attr = {}
+                            attr['name']    = str(name)
+                            attr['target']  = target
+                            attr['low']     = parm.low
+                            attr['high']    = parm.high
+                            attr['scaler']  = parm.scaler
+                            attr['adder']   = parm.adder
+                            attr['fd_step'] = parm.fd_step
+                            #attr['scope']   = parm.scope.name
+                            parameters.append(attr)
+                    else:
+                        attr = {}
+                        attr['name']    = str(key)
+                        attr['target']  = parm.target
+                        attr['low']     = parm.low
+                        attr['high']    = parm.high
+                        attr['scaler']  = parm.scaler
+                        attr['adder']   = parm.adder
+                        attr['fd_step'] = parm.fd_step
+                        #attr['scope']   = parm.scope.name
+                        parameters.append(attr)
                 attrs['Parameters'] = parameters
 
             constraints = []
