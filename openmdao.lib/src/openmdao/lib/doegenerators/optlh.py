@@ -27,8 +27,6 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from enthought.traits.api import HasTraits
-
 from openmdao.lib.datatypes.api import Int, Enum
 from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.main.api import Container
@@ -186,7 +184,7 @@ class LatinHypercube(Container):
             yield row
 
 @stub_if_missing_deps('numpy')
-class OptLatinHypercube(HasTraits): 
+class OptLatinHypercube(Container): 
     """IDOEgenerator which provides a Latin hypercube DOE sample set.
     The Morris-Mitchell sampling criterion of the DOE is optimzied
     using an evolutionary algorithm.

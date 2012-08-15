@@ -26,8 +26,14 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     version, etc.
     """
     obj = None
+    msgs = []
+    
     for fct in _factories:
-        obj = fct.create(typname, version, server, res_desc, **ctor_args)
+        try:
+            obj = fct.create(typname, version, server, res_desc, **ctor_args)
+        except Exception as err:
+            if str(err) not in msgs:
+                msgs.append(str(err))
         if obj is not None:
             break
         
@@ -35,7 +41,11 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
         typeset.add(typname)
         return obj
     
-    raise NameError("unable to create object of type '"+typname+"'")
+    if msgs:
+        msg = ': '+'\n'.join(msgs)
+    else:
+        msg = ''
+    raise NameError("unable to create object of type '"+typname+"'"+msg)
 
 
 def register_class_factory(factory):

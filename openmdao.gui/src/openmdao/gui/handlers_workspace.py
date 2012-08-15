@@ -6,6 +6,7 @@ import jsonpickle
 from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
+from openmdao.main.publisher import publish
 
 
 class AddOnsHandler(ReqHandler):
@@ -121,7 +122,7 @@ class ComponentHandler(ReqHandler):
             cserver = self.get_server()
             cserver.add_component(name, type, parent)
         except Exception, e:
-            print e
+            publish('console_errors', str(e))
             result = sys.exc_info()
         self.content_type = 'text/html'
         self.write(result)
