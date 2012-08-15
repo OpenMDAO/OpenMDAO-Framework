@@ -1,0 +1,29 @@
+
+This test verifies that when a a user attempts to save a module that has 
+been modified after being imported into a project, he will see a dialog
+with the following options:
+
+    Save & Reload - saves the file but forces the project to be reloaded
+    Cancel - does not save the file
+
+
+The test:
+
+1) Start the GUI
+2) Add a file to the project that contains a class that inherits from 
+   Component, e.g., 
+   examples/openmdao.examples.simple/openmdao/examples/simple/paraboloid.py.
+3) Drag a Paraboloid onto the dataflow view into the top Assembly and name
+   it comp1.
+4) Drag a Paraboloid onto the dataflow view into the top Assembly and name
+   it comp2.
+5) Connect comp1.f_xy to comp2.x
+6) Double click the paraboloid.py file to bring up the editor.
+7) Add a comment line somewhere in the file.
+8) Save the file. You should then be prompted to 'Save & Reload' or 'Cancel'.
+9) First click 'Cancel' to verify that the dialog disappears and nothing else
+   happens.
+10) Save the file and click on 'Save & Reload'.
+11) Verify that you still see comp1 and comp2 in the dataflow and that they are
+    still connected.
+

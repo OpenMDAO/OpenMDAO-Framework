@@ -210,7 +210,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         item.appendChild(this.bottom_right);
 
 
-        /* Handle drage and drop from the Library. Use the code that
+        /* Handle drag and drop from the Library. Use the code that
            deals with the layering problem of drag and drop where
            you can drop something that appears to be on top
            but it ends up in a layer below it

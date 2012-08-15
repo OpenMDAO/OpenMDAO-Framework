@@ -28,7 +28,7 @@ class Connectable(Component):
         self.s_out = self.s_in
 
 
-class Top(Assembly):
+class Topp(Assembly):
 
     def configure(self):
         self.add('comp1', Connectable())
