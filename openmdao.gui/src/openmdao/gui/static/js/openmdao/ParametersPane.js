@@ -47,7 +47,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
    }
 
     /** add a new parameter */
-    function addParameter(target,low,high,scaler,adder) {
+    function addParameter(target,low,high,scaler,adder,name) {
         cmd = pathname+".add_parameter('"+target+"'";
         if (low) {
             cmd = cmd + ",low="+low;
@@ -61,6 +61,9 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         if (adder) {
             cmd = cmd + ",adder="+adder;
         }
+        if (name) {
+            cmd = cmd + ",name='"+name+"'";
+        }
         cmd = cmd + ");";
         model.issueCommand(cmd);
     }
@@ -68,12 +71,13 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     /** prompt new parameter */
     function promptForParameter(callback) {
         // Build dialog markup
-        var win = jQuery('<div></div>'),
-            target = jQuery('<input type="text" style="width:100%"></input>'),
-            low    = jQuery('<input type="text" style="width:50%"></input>'),
-            high   = jQuery('<input type="text" style="width:50%"></input>'),
-            scaler = jQuery('<input type="text" style="width:50%"></input>'),
-            adder  = jQuery('<input type="text" style="width:50%"></input>');
+        var win = jQuery('<div id="parameter-dialog"></div>'),
+            target = jQuery('<input id="parameter-target" type="text" style="width:100%"></input>'),
+            low    = jQuery('<input id="parameter-low" type="text" style="width:50%"></input>'),
+            high   = jQuery('<input id="parameter-high" type="text" style="width:50%"></input>'),
+            scaler = jQuery('<input id="parameter-scaler" type="text" style="width:50%"></input>'),
+            adder  = jQuery('<input id="parameter-adder" type="text" style="width:50%"></input>'),
+            name   = jQuery('<input id="parameter-name" type="text" style="width:50%"></input>');
 
         win.append(jQuery('<div>Target: </div>').append(target));
 
@@ -84,22 +88,33 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Scaler: </div>').append(scaler)))
                             .append(jQuery('<td>').append(jQuery('<div>Adder: </div>').append(adder)));
         table.append(row);
+        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
+        table.append(row);
         win.append(table);
 
 
         // Display dialog
         jQuery(win).dialog({
-            'modal': true,
-            'title': 'New Parameter',
-            'buttons': {
-                'Ok': function() {
-                    jQuery(this).dialog('close');
-                    callback(target.val(),low.val(),high.val(),scaler.val(),adder.val());
+            modal: true,
+            title: 'New Parameter',
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: 'parameter-ok',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                        callback(target.val(),low.val(),high.val(),
+                                 scaler.val(),adder.val(),name.val());
+                    }
                 },
-                'Cancel': function() {
-                    jQuery(this).dialog('close');
+                {
+                    text: 'Cancel',
+                    id: 'parameter-cancel',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                    }
                 }
-            }
+            ]
         });
     }
 
