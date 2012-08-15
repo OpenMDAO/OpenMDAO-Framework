@@ -1521,7 +1521,27 @@ class Component(Container):
 
         if has_interface(self, IComponent):
             inputs = []
+            assembly = None
+            parameters = {}
+            objectives = {}
 
+            try:
+                assembly = self.parent if self.parent else self
+                dataflow = assembly.get_dataflow()
+                for parameter, target in dataflow['parameters']:
+                    if not target in parameters:
+                        parameters[target] = []
+
+                    parameters[target].append(parameter)
+                
+                for target, objective in dataflow['objectives']:
+                    if not target in objectives:
+                        objectives[target] = []
+
+                    objectives[target].append(objective)
+            except:
+                pass
+            
             if self.parent is None:
                 connected_inputs = []
                 connected_outputs = []
@@ -1549,8 +1569,15 @@ class Component(Container):
                         connections = self._depgraph.connections_to(vname)
                         # there can be only one connection to an input
                         attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
+
+                    attr['implicit'] = ''
+                    if "%s.%s" % (self.name, vname) in parameters:
+
+                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in parameters["%s.%s" % (self.name, vname)]])
+
                 inputs.append(attr)
             attrs['Inputs'] = inputs
+
 
             outputs = []
             for vname in self.list_outputs():
@@ -1572,6 +1599,13 @@ class Component(Container):
                     if vname in connected_outputs:
                         connections = self._depgraph.connections_to(vname)
                         attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
+
+
+                    attr['implicit'] = ''
+                    if "%s.%s" % (self.name, vname) in objectives:
+                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in objectives["%s.%s" % (self.name, vname)]])
+
+
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
