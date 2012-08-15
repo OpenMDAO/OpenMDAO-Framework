@@ -495,12 +495,13 @@ class ResourceAllocationManager(object):
     @staticmethod
     def max_request(assembly):
         """
-        Determine the maximum resources requested.
+        Determine the maximum resources requested by `assembly`.
 
-        Resource descriptions are assumed to be named ``resources``.
-        Similar to :meth:`total_request`, but for the 'peak' value.
-        This can be used to ensure an allocated server can support
-        the maximum of any resources requested by an assembly's components.
+        Resource descriptions are assumed to be attributes named ``resources``.
+        Scans the assembly's components for resources and determines a 'peak'
+        value of requested CPUs and resource limits. This can be used to
+        ensure an allocated server can support the maximum of any resources
+        requested by an assembly's components.
 
         Returns a resource description for the maximum.
 
@@ -539,11 +540,14 @@ class ResourceAllocationManager(object):
     @staticmethod
     def total_request(assembly):
         """
-        Determine the total resources requested.
+        Determine the total resources requested by `assembly`.
 
-        Resource descriptions are assumed to be named ``resources``.
-        Similar to :meth:`max_request`, but for the total value.
-        This can be used to obtain a resource description for running
+        Resource descriptions are assumed to be attributes named ``resources``.
+        Scans the assembly's components for resources and determines a total
+        value of requested run time.  The descriptions are first processed by
+        :meth:`max_request` to set peak values.  Then the descriptions are
+        also checked for queuing compatibility (accounting id, job category,
+        etc).  This can be used to obtain a resource description for running
         `assembly` as a batch job.
 
         Returns a resource description for the total.
