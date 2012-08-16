@@ -296,7 +296,7 @@ openmdao.CodeFrame = function(id,model) {
         });
         editor.setSession(newfile);
         sessions[fname_nodot] = [newfile,contents,filepath,false]; // store session for efficent switching
-
+        
         jQuery('<div id="'+fname_nodot+'"></div>').appendTo(file_inner); // new empty div
         file_tabs.tabs("add",'#'+fname_nodot,filepath);
         file_tabs.tabs( 'select', "#"+fname_nodot);
@@ -306,7 +306,6 @@ openmdao.CodeFrame = function(id,model) {
     }
 
     function renameTab(selector, value) {
-        txt = jQuery('a[href="' + selector + '"]').text();
         jQuery('a[href="' + selector + '"]').text(value);
     }
 
@@ -355,7 +354,7 @@ openmdao.CodeFrame = function(id,model) {
                     else {
                         //file_label.text(filepath);
                     }
-                    editor.session.doc.setValue(contents);
+                    //editor.session.doc.setValue(contents);
                     self.resize();
                     editor.resize();
                     editor.navigateFileStart();
