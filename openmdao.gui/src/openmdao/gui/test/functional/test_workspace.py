@@ -66,12 +66,12 @@ def _test_editfile(browser):
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.get_tab_label()), '/'+file1+'*')
+    eq(str(editor_page.get_tab_label()), '/'+file1)
 
     # verify different file is opened in code editor by double clicking
     browser.switch_to_window(workspace_window)
     editor_page = workspace_page.edit_file(file2)
-    eq(str(editor_page.get_tab_label()), '/'+file2+'*')
+    eq(str(editor_page.get_tab_label()), '/'+file2)
 
     # Back to workspace.
     browser.close()
@@ -80,7 +80,7 @@ def _test_editfile(browser):
     # verify code editor can be re-opened by double clicking on file
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.get_tab_label()), '/'+file1+'*')
+    eq(str(editor_page.get_tab_label()), '/'+file1)
 
     # Back to workspace.
     browser.close()
