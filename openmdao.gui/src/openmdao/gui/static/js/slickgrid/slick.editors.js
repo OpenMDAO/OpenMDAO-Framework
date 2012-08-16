@@ -608,13 +608,17 @@
 
             this.init();
         },
+        
+        CellEditor : function(args){
+            this.init(args)
+        },
 
         /*
         * Use this puny thing to get
         * the variable editor for your choice.
         */
         VariableEditor : function(args){
-            var editor = null
+            this.init(args)
         }
     };
 
@@ -622,75 +626,72 @@
     //Not sure what do/how use? Stack Overflow to rescue! http://stackoverflow.com/questions/3211956/slickgrid-select-editor
     //This is just a skeleton so I wouldn't recommend using inheritence with this.
 
-    SlickEditor.CellEditor = function(args){}
-    SlickEditor.CellEditor.prototype.init = function(){}
+    SlickEditor.CellEditor.prototype.init = function(args){ this.args = args }
     SlickEditor.CellEditor.prototype.destroy = function(){}
     SlickEditor.CellEditor.prototype.focus = function(){}
     SlickEditor.CellEditor.prototype.isValueChanged = function(){ return false; }
     SlickEditor.CellEditor.prototype.serializeValue = function(){ return ""; }
     SlickEditor.CellEditor.prototype.loadValue = function(item){}
     SlickEditor.CellEditor.prototype.applyValue = function(item, state){}
-    SlickEditor.CellEditor.prototype.validate = function(){ return { valid: false, msg: "This field is required" }; }
+    SlickEditor.CellEditor.prototype.validate = function(){ return { valid: false, msg: "This field is required" } }
     SlickEditor.CellEditor.prototype.hide = function(){}
     SlickEditor.CellEditor.prototype.show = function(){}
     SlickEditor.CellEditor.prototype.position = function(cellbox){}
    
     SlickEditor.VariableEditor.prototype = new SlickEditor.CellEditor()
-    SlickEditor.VariableEditor.constructor = VariableEditor
-
-    SlickEditor.VariableEditor = function(args){
-       this.init()
-    }
+    SlickEditor.VariableEditor.constructor = SlickEditor.VariableEditor
+    SlickEditor.VariableEditor.superClass = SlickEditor.CellEditor.prototype
+    
     //OpenMDAO supported datatype editors should be added to the dictionary below.
     //
-    SlickEditor.VariableEditor.prototype = { 
-        editors = {'str' : TextCellEditor },
+    SlickEditor.VariableEditor.prototype.editors = {'str' : SlickEditor.TextCellEditor }  
+    
+    SlickEditor.VariableEditor.prototype.init = function(args){
+        this.editor = (args.item.type in this.editors) 
+            ? new this.editors[args.item.type](args) 
+            : new SlickEditor.TextCellEditor(args)
+    }  
 
-        init = function(){ 
-            this.editor = new editors[args.item.type](args) 
-        },
-
-        destroy = function(){ 
-            this.editor.destroy() 
-        },
-
-        focus = function(){ 
-            this.editor.focus()
-        },
-
-        isValueChanged = function(){
-            return this.editor.isValueChanged()
-        },
-
-        serializeValue = function(){
-            return this.editor.serializeValue()
-        },
-
-        loadValue = function(item){
-            this.editor.loadValue(item)
-        },
-
-        applyValue = function(item, state){
-            this.editor.applyValue(item, state)
-        },
-
-        validate = function(){
-            return this.editor.validate()
-        },
-
-        hide = function(){
-            this.editor.hide()
-        },
-
-        show = function(){
-            this.editor.show()
-        },
-
-        position = function(cellbox){
-            this.editor.position(cellbox)
-        }
+    SlickEditor.VariableEditor.prototype.destroy = function(){ 
+        this.editor.destroy() 
     }
 
+    SlickEditor.VariableEditor.prototype.focus = function(){ 
+        this.editor.focus()
+    }
+
+    SlickEditor.VariableEditor.prototype.isValueChanged = function(){
+        return this.editor.isValueChanged()
+    }
+
+    SlickEditor.VariableEditor.prototype.serializeValue = function(){
+        return this.editor.serializeValue()
+    }
+
+    SlickEditor.VariableEditor.prototype.loadValue = function(item){
+        this.editor.loadValue(item)
+    }
+
+    SlickEditor.VariableEditor.prototype.applyValue = function(item, state){
+        this.editor.applyValue(item, state)
+    }
+
+    SlickEditor.VariableEditor.prototype.validate = function(){
+        return this.editor.validate()
+    }
+
+    //Need a better way to handle the optional methods. 
+    SlickEditor.VariableEditor.prototype.hide = function(){
+        this.editor.hide()
+    }
+
+    SlickEditor.VariableEditor.prototype.show = function(){
+        this.editor.show()
+    }
+
+    SlickEditor.VariableEditor.prototype.position = function(cellbox){
+        this.editor.position(cellbox)
+    }
 
     $.extend(window, SlickEditor);
 
