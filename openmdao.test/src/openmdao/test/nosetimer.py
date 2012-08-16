@@ -1,32 +1,35 @@
-"""This plugin provides test timings to identify which tests might be
-taking the most. From this information, it might be useful to couple
-individual tests nose's `--with-profile` option to profile problematic
-tests.
+"""
+::
 
-This plugin is heavily influenced by nose's `xunit` plugin.
-
-Add this command to the way you execute nose::
-
-    --with-test-timer
-
-After all tests are executed, they will be sorted in ascending order.
-
-(c) 2011 - Mahmoud Abdelkader (http://github.com/mahmoudimus)
-
-LICENSE:
-            DO WHAT THE !#$% YOU WANT TO PUBLIC LICENSE
-                    Version 2, December 2004
-
- Copyright (C) 2004 Sam Hocevar <sam@hocevar.net> (slightly modified)
-
- Everyone is permitted to copy and distribute verbatim or modified
- copies of this license document, and changing it is allowed as long
- as the name is changed.
-
-            DO WHAT THE !#$% YOU WANT TO PUBLIC LICENSE
-   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
-
-  0. You just DO WHAT THE !#$% YOU WANT TO.
+    This plugin provides test timings to identify which tests might be
+    taking the most. From this information, it might be useful to couple
+    individual tests nose's `--with-profile` option to profile problematic
+    tests.
+    
+    This plugin is heavily influenced by nose's `xunit` plugin.
+    
+    Add this command to the way you execute nose::
+    
+        --with-test-timer
+    
+    After all tests are executed, they will be sorted in ascending order.
+    
+    (c) 2011 - Mahmoud Abdelkader (http://github.com/mahmoudimus)
+    
+    LICENSE:
+                DO WHAT THE !#$% YOU WANT TO PUBLIC LICENSE
+                        Version 2, December 2004
+    
+     Copyright (C) 2004 Sam Hocevar <sam@hocevar.net> (slightly modified)
+    
+     Everyone is permitted to copy and distribute verbatim or modified
+     copies of this license document, and changing it is allowed as long
+     as the name is changed.
+    
+                DO WHAT THE !#$% YOU WANT TO PUBLIC LICENSE
+       TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+    
+      0. You just DO WHAT THE !#$% YOU WANT TO.
 
 """
 
