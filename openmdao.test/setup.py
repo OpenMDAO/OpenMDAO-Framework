@@ -51,6 +51,9 @@ setup(name='openmdao.test',
           ],
       "console_scripts": [
           'openmdao_test = openmdao.test.testing:run_openmdao_suite_deprecated'
-          ]
+          ],
+      "nose.plugins.0.10": [
+          'nosetimerplugin = openmdao.test.nosetimer:TestTimer'
+          ],
       },
       )
