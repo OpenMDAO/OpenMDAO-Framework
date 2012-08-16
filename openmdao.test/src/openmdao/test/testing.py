@@ -136,6 +136,9 @@ def run_openmdao_suite_deprecated():
         print "Please use 'openmdao test' instead"
         print '***'
         
+def is_dev_install():
+    return (os.path.basename(os.path.dirname(os.path.dirname(sys.executable))) == "devenv")
+
 def run_openmdao_suite(argv=None):
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao test.
@@ -160,8 +163,13 @@ def run_openmdao_suite(argv=None):
             covpkg = True
         if (i>0 and not arg.startswith('-')) or arg in break_check:
             break
-    else:  # no non '-' args, so assume they want to run the whole test suite
-        args.append('--all')
+    else:  # no non '-' args, so assume they want to run the default test suite
+        if not is_dev_install() or '--small' in args: # in a release install, default is the set of tests specified in release_tests.cfg
+            if '--small' in args:
+                args.remove('--small')
+            args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
+        else: # in a dev install, default is all tests
+            args.append('--all') 
         
     args.append('--exe') # by default, nose will skip any .py files that are
                          # executable. --exe prevents this behavior
