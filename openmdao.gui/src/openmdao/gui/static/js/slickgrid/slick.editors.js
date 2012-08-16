@@ -607,9 +607,172 @@
             };
 
             this.init();
+        },
+
+        /*
+        * Use this puny thing to get
+        * the variable editor for your choice.
+        */
+        VariableEditor : function(args){
+            //Add your variable editor to the dictionary below
+            //in the form of 'type':editor
+            editors = {
+                'int' : TextCellEditor
+            }
+
+            var editor = (args.item.type in editors) ? 
+                editors[args.item.type] : 
+                TextCellEditor
+
+            this.init = function(){
+                editor = new editor(args)
+            }
+            /*********** REQUIRED METHODS ***********/
+
+            this.destroy = function() {
+               editor.destroy() 
+            };
+
+            this.focus = function() {
+                // set the focus on the main input control (if any)
+                editor.focus()
+            };
+
+            this.isValueChanged = function() {
+                // return true if the value(s) being edited by the user has/have been changed
+                return editor.isValueChanged()
+            };
+
+            this.serializeValue = function() {
+                // return the value(s) being edited by the user in a serialized form
+                // can be an arbitrary object
+                // the only restriction is that it must be a simple object that can be passed around even
+                // when the editor itself has been destroyed
+                return editor.serializeValue();
+            };
+
+            this.loadValue = function(item) {
+                // load the value(s) from the data item and update the UI
+                // this method will be called immediately after the editor is initialized
+                // it may also be called by the grid if if the row/cell being edited is updated via grid.updateRow/updateCell
+                editor.loadValue(item)
+            };
+
+            this.applyValue = function(item,state) {
+                // deserialize the value(s) saved to "state" and apply them to the data item
+                // this method may get called after the editor itself has been destroyed
+                // treat it as an equivalent of a Java/C# "static" method - no instance variables should be accessed
+                editor.applyValue(item,state)
+            };
+
+            this.validate = function() {
+                // validate user input and return the result along with the validation message, if any
+                // if the input is valid, return {valid:true,msg:null}
+                return editor.validate()
+            };
+
+
+            /*********** OPTIONAL METHODS***********/
+
+            if('hide' in editor){
+                this.hide = function(){
+                    editor.hide()
+                }
+            }
+
+            if('show' in editor){
+                this.show = function(){
+                    editor.show()
+                }
+            }
+
+
+            if('position' in editor){
+                this.position = function(cellbox){
+                    editor.position(cellbox)
+                }
+            }
+
+            this.init()
+        }
+    };
+
+    //Use this behemoth to build the variable editor of your choice.
+    //Not sure what do/how use? Stack Overflow to rescue! http://stackoverflow.com/questions/3211956/slickgrid-select-editor
+    //This is just a skeleton so I wouldn't recommend using inheritence with this.
+    function IEditor(args) {
+
+
+        this.init = function(){
+        // initialize the UI
+
         }
 
-    };
+        /*********** REQUIRED METHODS ***********/
+
+        this.destroy = function() {
+            // remove all data, events & dom elements created in the constructor
+        };
+
+        this.focus = function() {
+            // set the focus on the main input control (if any)
+        };
+
+        this.isValueChanged = function() {
+            // return true if the value(s) being edited by the user has/have been changed
+            return false;
+        };
+
+        this.serializeValue = function() {
+            // return the value(s) being edited by the user in a serialized form
+            // can be an arbitrary object
+            // the only restriction is that it must be a simple object that can be passed around even
+            // when the editor itself has been destroyed
+            return "";
+        };
+
+        this.loadValue = function(item) {
+            // load the value(s) from the data item and update the UI
+            // this method will be called immediately after the editor is initialized
+            // it may also be called by the grid if if the row/cell being edited is updated via grid.updateRow/updateCell
+        };
+
+        this.applyValue = function(item,state) {
+            // deserialize the value(s) saved to "state" and apply them to the data item
+            // this method may get called after the editor itself has been destroyed
+            // treat it as an equivalent of a Java/C# "static" method - no instance variables should be accessed
+        };
+
+        this.validate = function() {
+            // validate user input and return the result along with the validation message, if any
+            // if the input is valid, return {valid:true,msg:null}
+            return { valid: false, msg: "This field is required" };        
+        };
+
+
+        /*********** OPTIONAL METHODS***********/
+
+        this.hide = function() {
+            // if implemented, this will be called if the cell being edited is scrolled out of the view
+            // implement this is your UI is not appended to the cell itself or if you open any secondary
+            // selector controls (like a calendar for a datepicker input)
+        };
+
+        this.show = function() {
+            // pretty much the opposite of hide
+        };
+
+        this.position = function(cellBox) {
+            // if implemented, this will be called by the grid if any of the cell containers are scrolled
+            // and the absolute position of the edited cell is changed
+            // if your UI is constructed as a child of document BODY, implement this to update the
+            // position of the elements as the position of the cell changes
+            // 
+            // the cellBox: { top, left, bottom, right, width, height, visible }
+        };
+
+        this.init()
+    }
 
     $.extend(window, SlickEditor);
 
