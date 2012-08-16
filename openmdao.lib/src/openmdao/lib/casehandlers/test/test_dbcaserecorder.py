@@ -181,6 +181,24 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         except OSError:
             logging.error("problem removing directory %s" % tmpdir)
 
+    def test_dbcaseiterator_get_attributes(self):
+        
+        caseiter = DBCaseIterator()
+        attrs = caseiter.get_attributes()
+        print attrs
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'dbfile',
+                         'type': 'str',
+                         'connected': '',
+                         'value': ':memory:',
+                         'desc': 'Name of the database file to be iterated. Default ' + \
+                       'is ":memory:", which reads the database from memory.'} in attrs['Inputs'])
+        self.assertTrue({'name': 'selectors',
+                         'type': 'NoneType',
+                         'connected': '',
+                         'value': 'None',
+                         'desc': 'String of additional SQL queries to apply to the case selection.'} in attrs['Inputs'])
+
     def test_string(self):
         recorder = DBCaseRecorder()
         case = Case(inputs=[('str', 'Normal String'),
