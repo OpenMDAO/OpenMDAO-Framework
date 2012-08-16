@@ -60,7 +60,7 @@ jQuery(function() {
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }
         function work_fn(path) { work.showWorkflow(path); workflow_tab.click(); }
         function prop_fn(path) { prop.editObject(path); }
-        function comp_fn(path) { new openmdao.ComponentFrame(model,path); }
+        function comp_fn(path) { new openmdao.ObjectFrame(model,path); }
         function code_fn(path) {
             if (openmdao.model.editor) {
                 openmdao.model.editor.editFile(path);
