@@ -16,6 +16,16 @@ class ListCaseIterator(list):
     def __init__(self, cases):
         super(ListCaseIterator, self).__init__(cases)
 
+    def get_attributes(self, io_only=True):
+        """ We need a custom get_attributes because we aren't using Traits to
+        manage our changeable settings. This is unfortunate, and should be
+        changed to something that automates this somehow."""
+        
+        attrs = {}
+        attrs['type'] = type(self).__name__
+        
+        return attrs
+
 
 class ListCaseRecorder(object):
     """Stores cases in a list."""
@@ -40,3 +50,12 @@ class ListCaseRecorder(object):
         '''Return ListCaseIterator that uses our current list.'''
         return ListCaseIterator(self.cases)
     
+    def get_attributes(self, io_only=True):
+        """ We need a custom get_attributes because we aren't using Traits to
+        manage our changeable settings. This is unfortunate, and should be
+        changed to something that automates this somehow."""
+        
+        attrs = {}
+        attrs['type'] = type(self).__name__
+        
+        return attrs
