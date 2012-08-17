@@ -323,6 +323,7 @@ class WorkspacePage(BasePageObject):
                                 ' StaleElementReferenceException')
             else:
                 break
+        time.sleep(0.5)  # Wait for dropdown to go away.
 
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
