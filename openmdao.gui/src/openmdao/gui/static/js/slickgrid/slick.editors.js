@@ -751,7 +751,7 @@
         try{
             this.editor.hide()
         }
-        catch{
+        catch(err){
             //TODO: Should report something to the user maybe
             //Default to using hide method of CellEditor
             SlickEditor.VariableEditor.superClass.hide.call(this)
@@ -763,7 +763,7 @@
         try{
             this.editor.show()
         }
-        catch{
+        catch(err){
             //TODO: Should report something to the user maybe
             //Default to using show method of CellEditor
             SlickEditor.VariableEditor.superClass.show.call(this)
@@ -774,7 +774,7 @@
         try{
             this.editor.position(cellbox)
         }
-        catch{
+        catch(err){
             //TODO: Should report something to the user maybe
             //Default to using position method of CellEditor
             SlickEditor.VariableEditor.superClass.position.call(this, cellbox)
