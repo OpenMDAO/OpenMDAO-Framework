@@ -99,6 +99,25 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                                                      quotechar="'")]
         self.top.run()
 
+        attrs = self.top.driver.recorders[0].get_attributes()
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'filename',
+                         'type': 'str',
+                         'connected': '',
+                         'value': 'openmdao_test_csv_case_iterator.csv',
+                         'desc': 'Name of the CSV file to be output.'} in attrs['Inputs'])
+        self.assertTrue({'name': 'append',
+                         'type': 'bool',
+                         'connected': '',
+                         'value': 'False',
+                         'desc': 'Set to True to append to the existing CSV file.'} in attrs['Inputs'])
+        self.assertTrue({'name': 'delimiter',
+                         'type': 'str',
+                         'connected': '',
+                         'value': ';',
+                         'desc': 'CSV delimiter. Default is ",".'} in attrs['Inputs'])
+        
+
         # now use the DB as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
         
@@ -155,6 +174,21 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp1.x, 3.14159)
         self.assertEqual(self.top.comp1.y, 0.0)
         self.assertEqual(self.top.comp2.b_string, "Goodbye z")
+        
+        # Gui pane stuff
+        
+        attrs = self.top.driver.iterator.get_attributes()
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'filename',
+                         'type': 'str',
+                         'connected': '',
+                         'value': 'openmdao_test_csv_case_iterator.csv',
+                         'desc': 'Name of the CSV file to be iterated.'} in attrs['Inputs'])
+        self.assertTrue({'name': 'headers',
+                         'type': 'NoneType',
+                         'connected': '',
+                         'value': 'None',
+                         'desc': 'Optional dictionary of header labels, where the key is the column number.'} in attrs['Inputs'])
         
         # With a label column
         
