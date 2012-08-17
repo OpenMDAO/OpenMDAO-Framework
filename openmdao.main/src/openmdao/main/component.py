@@ -1716,7 +1716,11 @@ class Component(Container):
                             else:
                                 attr[field] = ''
                         attr['type'] = meta['vartypename']
-                    slots.append(attr)
+                    
+                    # We can hide slots (e.g., the Workflow slot in drivers)
+                    if 'hidden' not in meta or meta['hidden']==False:
+                        slots.append(attr)
+                        
             attrs['Slots'] = slots
 
         return attrs
