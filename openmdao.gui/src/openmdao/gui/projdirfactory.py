@@ -7,9 +7,14 @@ import sys
 import threading
 import traceback
 import fnmatch
+import ast
+from inspect import isclass, getmembers
+import imp
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+from zope.interface import implementedBy
 
 import openmdao.main.api
 import openmdao.main.datatypes.api
@@ -19,10 +24,10 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver,
 
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
-from openmdao.util.dep import PythonSourceTreeAnalyser, find_files, plugin_groups
+from openmdao.util.dep import find_files, plugin_groups, PythonSourceTreeAnalyser
 from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.util.log import logger
-from openmdao.main.publisher import Publisher
+from openmdao.main.publisher import publish
 from openmdao.gui.util import packagedict
 
 
@@ -59,20 +64,20 @@ class PyWatcher(FileSystemEventHandler):
             changed_set = set()
             deleted_set = set()
         
-            publish = False
+            pub = False
             if event._src_path and (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
                 if not event.is_directory:
                     compiled = event._src_path+'c'
                     if os.path.exists(compiled):
                         os.remove(compiled)
                 self.factory.on_deleted(event._src_path, deleted_set)
-                publish = True
+                pub = True
         
             if fnmatch.fnmatch(event._dest_path, '*.py'):
                 self.factory.on_modified(event._dest_path, added_set, changed_set, deleted_set)
-                publish = True
+                pub = True
             
-            if publish:
+            if pub:
                 self.factory.publish_updates(added_set, changed_set, deleted_set)
         except Exception:
             traceback.print_exc()
@@ -106,10 +111,6 @@ plugin_ifaces = set([
     'IDifferentiator',
 ])
 
-# predicate functions for selecting available types
-def is_plugin(name, meta):
-    return len(plugin_ifaces.intersection(meta.get('ifaces',[]))) > 0
-
 def _find_module_attr(modpath):
     """Return an attribute from a module based on the given modpath.
     Import the module if necessary.
@@ -135,6 +136,75 @@ def _find_module_attr(modpath):
         obj = getattr(obj, parts[-1], None)
     return obj
     
+class _ClassVisitor(ast.NodeVisitor):
+    def __init__(self, fname):
+        ast.NodeVisitor.__init__(self)
+        self.classes = []
+        
+        # in order to get this to work with the 'ast' lib, I have
+        # to read using universal newlines and append a newline
+        # to the string I read for some files.  The 'compiler' lib
+        # didn't have this problem. :(
+        with open(fname, 'Ur') as f:
+            contents = f.read()
+            if len(contents)>0 and contents[-1] != '\n':
+                contents += '\n'
+        self.visit(ast.parse(contents, fname))
+        
+    def visit_ClassDef(self, node):
+        self.classes.append(node.name)
+
+class _FileInfo(object):
+    def __init__(self, fpath):
+        self.fpath = fpath
+        self.modpath = get_module_path(fpath)
+        self.modtime = os.path.getmtime(fpath)
+        if self.modpath in sys.modules:
+            mod = sys.modules[self.modpath]
+            self._reload()
+        else:
+            __import__(self.modpath)
+        module = sys.modules[self.modpath]
+        self.version = getattr(module, '__version__', None)
+        self._update_class_info()
+    
+    def _update_class_info(self):
+        self.classes = {}
+        cset = set(['.'.join([self.modpath,cname]) for cname in _ClassVisitor(self.fpath).classes])
+        module = sys.modules[self.modpath]
+        for key,val in getmembers(module, isclass):
+            fullname = '.'.join([self.modpath, key])
+            if fullname in cset:
+                self.classes[fullname] = {
+                    'ctor': val,
+                    'ifaces': [klass.__name__ for klass in implementedBy(val)],
+                    'version': self.version,
+                }
+        
+    def _reload(self):
+        cmpfname = os.path.splitext(self.fpath)[0]+'.pyc'
+        # unless we remove the .pyc file, reload will just use it and won't
+        # see any source updates.  :(
+        if os.path.isfile(cmpfname):
+            os.remove(cmpfname)
+        reload(sys.modules[self.modpath])
+        
+    def update(self, added, changed, removed):
+        """File has changed on disk, update information and return 
+        sets of added, removed and (possibly) changed classes.
+        """
+        self.modpath = get_module_path(self.fpath)
+        startset = set(self.classes.keys())
+        cmpfname = os.path.splitext(self.fpath)[0]+'.pyc'
+        self._reload()
+        self._update_class_info()
+        
+        keys = set(self.classes.keys())
+        added.update(keys - startset)
+        changed.update(startset & keys)
+        removed.update(startset - keys)
+
+
 class ProjDirFactory(Factory):
     """A Factory that watches a Project directory and dynamically keeps
     the set of available types up-to-date as project files change.
@@ -142,13 +212,17 @@ class ProjDirFactory(Factory):
     def __init__(self, watchdir, use_observer=True, observer=None):
         super(ProjDirFactory, self).__init__()
         self._lock = threading.RLock()
+        self.observer = None
         self.watchdir = watchdir
+        self.project = None
+        self._files = {} # mapping of file pathnames to _FileInfo objects
+        self._classes = {} # mapping of class names to _FileInfo objects
         try:
-            self.analyzer = PythonSourceTreeAnalyser()
-            
             added_set = set()
             changed_set = set()
             deleted_set = set()
+            
+            sys.path = [self.watchdir]+sys.path
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
             
@@ -158,6 +232,7 @@ class ProjDirFactory(Factory):
             else:
                 self.observer = None  # sometimes for debugging/testing it's easier to turn observer off
         except Exception as err:
+            self._error(str(err))
             logger.error(str(err))
 
     def _start_observer(self, observer):
@@ -177,44 +252,19 @@ class ProjDirFactory(Factory):
         """Create and return an instance of the specified type, or None if
         this Factory can't satisfy the request.
         """
-        logger.error("attempting to create a %s" % typ)
-        import pprint
-        logger.error(pprint.pformat(self.analyzer.class_map))
-        if server is None and res_desc is None and typ in self.analyzer.class_map:
-            logger.error("found it in class_map")
-            with self._lock:
-                fpath = self.analyzer.class_map[typ].fname
-                modpath = self.analyzer.fileinfo[fpath][0].modpath
-                if modpath in sys.modules:
-                    if os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
-                        reload(sys.modules[modpath])
-                else:
-                    logger.error("adding %s to sys.path" % get_ancestor_dir(fpath, len(modpath.split('.'))))
-                    sys.path = [get_ancestor_dir(fpath, len(modpath.split('.')))] + sys.path
-                    try:
-                        __import__(modpath)
-                    except ImportError as err:
-                        logger.error("import failed")
-                        return None
-                    finally:
-                        sys.path = sys.path[1:]
-
-                mod = sys.modules[modpath]
-                try:
-                    ctor = _find_module_attr(typ)
-                except KeyError:
-                    logger.error("lookup of ctor failed")
-                    return None
-                return ctor(**ctor_args)
+        if server is None and res_desc is None:
+            try:
+                klass = self._classes[typ].classes[typ]['ctor']
+            except KeyError:
+                return None
+            
+            return klass(**ctor_args)
         return None
     
     def get_available_types(self, groups=None):
-        """Return a list of available types that cause predicate(classname, metadata) to
-        return True.
-        """
+        """Return a list of available types."""
         with self._lock:
-            graph = self.analyzer.graph
-            typset = set(graph.nodes())
+            typset = set(self._classes.keys())
             types = []
         
             if groups is None:
@@ -223,89 +273,97 @@ class ProjDirFactory(Factory):
                 ifaces = set([v[0] for k,v in plugin_groups.items() if k in groups])
         
             for typ in typset:
-                if typ.startswith('openmdao.'): # don't include any standard lib types
-                    continue
-                if 'classinfo' in graph.node[typ]:
-                    meta = graph.node[typ]['classinfo'].meta
-                    if ifaces.intersection(self.analyzer.get_interfaces(typ)):
-                        meta = meta.copy()
-                        meta['_context'] = 'In Project'
-                        types.append((typ, meta))
+                finfo = self._classes[typ]
+                meta = finfo.classes[typ]
+                if ifaces.intersection(meta['ifaces']):
+                    meta = { 
+                        'ifaces': meta['ifaces'],
+                        'version': meta['version'],
+                        '_context': 'In Project',
+                    }
+                    types.append((typ, meta))
             return types
 
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
-            return
-        
+            return None
         with self._lock:
-            imported = False
-            if fpath in self.analyzer.fileinfo: # file has been previously scanned
-                visitor = self.analyzer.fileinfo[fpath][0]
-                pre_set = set(visitor.classes.keys())
-                modpath = get_module_path(fpath)
-                if  modpath in sys.modules:  # we imported it earlier
-                    mod = sys.modules[modpath]
-                    imported = True
-                    sys.path = [os.path.dirname(fpath)] + sys.path # add fpath location to sys.path
-                    try:
-                        reload(mod)
-                    except ImportError as err:
-                        return None
-                    finally:
-                        sys.path = sys.path[1:]  # restore original sys.path
-                elif os.path.getmtime(fpath) > self.analyzer.fileinfo[fpath][1]:
-                    modpath = get_module_path(fpath)
-                    if modpath in sys.modules:
-                        reload(sys.modules[modpath])
-                self.on_deleted(fpath, set()) # clean up old refs
-            else:  # it's a new file
-                pre_set = set()
-
-            try:
-                visitor = self.analyzer.analyze_file(fpath)
-            except Exception as exc:
-                publisher = Publisher.get_instance()
-                if publisher:
-                    publisher.publish('file_errors', str(exc))
-                else:
-                    logger.error("no Publisher found")
-                raise
-            post_set = set(visitor.classes.keys())
-
-            deleted_set.update(pre_set - post_set)
-            added_set.update(post_set - pre_set)
-            if imported:
-                changed_set.update(pre_set.intersection(post_set))
-
+            finfo = self._files.get(fpath)
+            if finfo is None:
+                try:
+                    fileinfo = _FileInfo(fpath)
+                except Exception as err:
+                    self._file_error(str(err))
+                    return
+                self._files[fpath] = fileinfo
+                added_set.update(fileinfo.classes.keys())
+                for cname in fileinfo.classes.keys():
+                    self._classes[cname] = fileinfo
+            else: # updating a file that's already been imported
+                try:
+                    finfo.update(added_set, changed_set, deleted_set)
+                except Exception as err:
+                    self._file_error(str(err))
+                    self._remove_fileinfo(fpath)
+                    return
+                for cname in added_set:
+                    self._classes[cname] = finfo
+                for cname in deleted_set:
+                    del self._classes[cname]
+                
     def on_deleted(self, fpath, deleted_set):
         with self._lock:
             if os.path.isdir(fpath):
                 for pyfile in find_files(self.watchdir, "*.py"):
                     self.on_deleted(pyfile, deleted_set)
             else:
-                visitor = self.analyzer.fileinfo[fpath][0]
-                deleted_set.update(visitor.classes.keys())
-                self.analyzer.remove_file(fpath)
+                finfo = self._files[fpath]
+                deleted_set.update(finfo.classes.keys())
+                self._remove_fileinfo(fpath)
             
     def publish_updates(self, added_set, changed_set, deleted_set):
-        publisher = Publisher.get_instance()
-        if publisher:
-            types = get_available_types()
-            types.extend(self.get_available_types())
-            publisher.publish('types', 
-                              [
-                                  packagedict(types),
-                                  list(added_set),
-                                  list(changed_set),
-                                  list(deleted_set),
-                              ])
-        else:
-            logger.error("no Publisher found")
+        types = get_available_types()
+        try:
+            publish('types', 
+                    [
+                        packagedict(types),
+                        list(added_set),
+                        list(changed_set),
+                        list(deleted_set),
+                    ])
+        except:
+            logger.error("publish of types failed")
 
+    def _error(self, msg):
+        logger.error(msg)
+        publish('console_errors', msg)
+        print msg
+        
+    def _file_error(self, msg):
+        logger.error(msg)
+        publish('file_errors', msg)
+        print msg
+        
+    def _remove_fileinfo(self, fpath):
+        """Clean up all data related to the given file. This typically occurs
+        when there is some error during the import of the file.
+        """
+        finfo = self._files.get(fpath)
+        if finfo:
+            classes = [c for c,f in self._classes.items() if f is finfo]
+            for klass in classes:
+                del self._classes[klass]
+            del self._files[fpath]
+            return classes
+                
     def cleanup(self):
         """If this factory is removed from the FactoryManager during execution, this function
         will stop the watchdog observer thread.
         """
+        try:
+            sys.path.remove(self.watchdir)
+        except:
+            pass
         if self.observer and self._ownsobserver:
             self.observer.unschedule_all()
             self.observer.stop()

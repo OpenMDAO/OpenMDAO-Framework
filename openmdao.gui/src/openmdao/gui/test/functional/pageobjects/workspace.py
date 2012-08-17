@@ -272,6 +272,7 @@ class WorkspacePage(BasePageObject):
         element = WebDriverWait(self.browser, TMO).until(
                       lambda browser: browser.find_element_by_xpath(xpath))
         element.click()
+        time.sleep(1)  # Wait for cute animation.
 
     def show_dataflow(self, component_name):
         """ Show dataflow of `component_name`. """
@@ -287,6 +288,7 @@ class WorkspacePage(BasePageObject):
             chain.context_click(element).perform()
             try:
                 self('obj_dataflow').click()
+                break
             except TimeoutException:
                 if retry >= 2:
                     raise
@@ -340,7 +342,7 @@ class WorkspacePage(BasePageObject):
             chain = chain.drag_and_drop(library_item, target)
         else:
             chain = chain.click_and_hold(library_item)
-            chain = chain.move_to_element_with_offset(target, 100, 100)
+            chain = chain.move_to_element_with_offset(target, 90, 90)
             chain = chain.release(None)
         chain.perform()
 
@@ -357,16 +359,18 @@ class WorkspacePage(BasePageObject):
 
         if check:  # Check that it's been added.
             WebDriverWait(self.browser, TMO).until(
-                lambda browser: instance_name in self.get_dataflow_component_names())
+                lambda browser: self.get_dataflow_figure(instance_name) is not None)
+                #lambda browser: instance_name in self.get_dataflow_component_names())
 
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
+        time.sleep(0.5)  # Pause for stable display.
         return self.browser.find_elements_by_class_name('DataflowFigure')
 
     def get_dataflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`DataflowFigure` for `name`. """
         for retry in range(retries):
-            time.sleep(0.5)
+            time.sleep(0.5)  # Pause for stable display.
             figures = self.browser.find_elements_by_class_name('DataflowFigure')
             if not figures:
                 continue
@@ -406,37 +410,38 @@ class WorkspacePage(BasePageObject):
         # Assume there should be at least 1, wait for number to not change.
         n_found = 0
         for retry in range(10):
+            time.sleep(0.5)  # Pause for stable display.
             dataflow_component_headers = \
                 self.browser.find_elements_by_class_name('DataflowFigureHeader')
             if dataflow_component_headers:
                 n_headers = len(dataflow_component_headers)
                 if n_found:
                     if n_headers == n_found:
-                        break
+                        return [h.text for h in dataflow_component_headers]
                 n_found = n_headers
         else:
             logging.error('get_dataflow_component_names: n_found %s', n_found)
             return names
 
-        for i in range(len(dataflow_component_headers)):
-            for retry in range(10):  # This has had issues...
-                try:
-                    names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
-                except StaleElementReferenceException:
-                    logging.warning('get_dataflow_component_names:'
-                                    ' StaleElementReferenceException')
-                except IndexError:
-                    logging.warning('get_dataflow_component_names:'
-                                    ' IndexError for i=%s, headers=%s',
-                                    i, len(dataflow_component_headers))
-                else:
-                    break
+        #for i in range(len(dataflow_component_headers)):
+            #for retry in range(10):  # This has had issues...
+                #try:
+                    #names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
+                #except StaleElementReferenceException:
+                    #logging.warning('get_dataflow_component_names:'
+                                    #' StaleElementReferenceException')
+                #except IndexError:
+                    #logging.warning('get_dataflow_component_names:'
+                                    #' IndexError for i=%s, headers=%s',
+                                    #i, len(dataflow_component_headers))
+                #else:
+                    #break
 
-        if len(names) != len(dataflow_component_headers):
-            logging.error('get_dataflow_component_names:'
-                          ' expecting %d names, got %s',
-                          len(dataflow_component_headers), names)
-        return names
+        #if len(names) != len(dataflow_component_headers):
+            #logging.error('get_dataflow_component_names:'
+                          #' expecting %d names, got %s',
+                          #len(dataflow_component_headers), names)
+        #return names
 
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """

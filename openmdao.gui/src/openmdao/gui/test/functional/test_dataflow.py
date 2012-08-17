@@ -44,14 +44,12 @@ def _test_maxmin(browser):
 
     # Add MaxMin to 'top'.
     workspace_page.show_dataflow('top')
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
     workspace_page.show_library()
     time.sleep(1)
     workspace_page.find_library_button('MaxMin').click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
 
@@ -85,7 +83,6 @@ def _test_maxmin(browser):
     workspace_page.do_command('dir()')
     background = maxmin('top_right').value_of_css_property('background')
     assert background.find('circle-minus.png') >= 0
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
 
@@ -93,13 +90,11 @@ def _test_maxmin(browser):
     sub('top_right').click()
     background = sub('top_right').value_of_css_property('background')
     assert background.find('circle-plus.png') >= 0
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'maxmin', 'sub', 'top'])
 
     # remove maxmin and make sure its children are removed as well
     maxmin.remove()
-    time.sleep(1)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
 
@@ -129,8 +124,8 @@ def _test_connect(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('Top').click()
-    workspace_page.add_library_item_to_dataflow('connect.Top', 'top')
+    workspace_page.find_library_button('Topp').click()
+    workspace_page.add_library_item_to_dataflow('connect.Topp', 'top')
 
     # Connect components.
     workspace_page.show_dataflow('top')
@@ -176,11 +171,11 @@ def _test_connect(browser):
     eq(editor.dialog_title, 'Connectable: top.comp2')
     outputs = editor.get_outputs()
     expected = [
-        ['b_out', 'bool',  'True',     '', 'true', '', ''],
-        ['e_out', 'int',   '3',        '', 'true', '', ''],
-        ['f_out', 'float', '2.781828', '', 'true', '', ''],
-        ['i_out', 'int',   '42',       '', 'true', '', ''],
-        ['s_out', 'str',   'xyzzy',    '', 'true', '', '']
+        ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
+        ['e_out', 'int',   '3',        '', 'true', '', '', ''],
+        ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
+        ['i_out', 'int',   '42',       '', 'true', '', '', ''],
+        ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
@@ -341,7 +336,6 @@ def _test_driverflows(browser):
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
-    workspace_page.expand_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
     workspace_page.hide_right()
@@ -405,7 +399,6 @@ def _test_replace(browser):
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
-    workspace_page.expand_object('top')
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
 
@@ -418,10 +411,10 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '',  'true', '', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '',  'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -434,11 +427,11 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['scaler', 'float', '1.0', '', 'true', '', ''],
-        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['scaler', 'float', '1.0', '', 'true', '', '', ''],
+        ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -450,10 +443,10 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']"],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']", ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -466,11 +459,11 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']"],
-        ['scaler', 'float', '1.0', '', 'true', '', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']", ''],
+        ['scaler', 'float', '1.0', '', 'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -478,21 +471,21 @@ def _test_replace(browser):
 
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page()
+    editor = driver.editor_page(base_type='Driver')
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['cons_is_linear', 'ndarray', '[]', '', 'true',
-        'Array designating whether each constraint is linear.', ''])
+        'Array designating whether each constraint is linear.', '', ''])
     editor.close()
 
     # Replace driver with an SLSQPdriver.
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page()
+    editor = driver.editor_page(base_type='Driver')
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', ''])
+       ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', '', ''])
     editor.close()
 
     # Verify comp is a OptRosenSuzukiComponent.
@@ -501,10 +494,10 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
-        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']"],
+         'If True, always execute even if all IO traits are valid.', '', ''],
+        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']", ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -520,9 +513,9 @@ def _test_replace(browser):
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
-         'If non-blank, the directory to execute in.', ''],
+         'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
-         'If True, always execute even if all IO traits are valid.', ''],
+         'If True, always execute even if all IO traits are valid.', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])

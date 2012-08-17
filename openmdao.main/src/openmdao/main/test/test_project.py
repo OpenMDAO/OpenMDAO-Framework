@@ -5,7 +5,8 @@ import shutil
 
 from openmdao.util.fileutil import find_files
 from openmdao.main.component import Component
-from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
+from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
+                                  filter_macro
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -49,7 +50,7 @@ class ProjectTestCase(unittest.TestCase):
         
     def test_project_export_import(self):
         proj = Project(os.path.join(self.tdir, 'proj1'))
-        self._fill_project(proj.top)
+        self._fill_project(proj.get('top'))
         
         proj.export(destdir=self.tdir)
         proj.deactivate()
@@ -72,23 +73,63 @@ class ProjectTestCase(unittest.TestCase):
             
     def test_using(self):
         proj = Project('a_proj')
-        self._fill_project(proj.top)
-        proj.top.run()
-        self.assertEqual(proj.top.comp1.rval_out, 10.)
-        self.assertEqual(proj.top.comp2.rval_out, 40.)
-        proj.top.comp1.rval_in = 0.5
+        top = proj.get('top')
+        self._fill_project(top)
+        top.run()
+        self.assertEqual(top.comp1.rval_out, 10.)
+        self.assertEqual(top.comp2.rval_out, 40.)
+        top.comp1.rval_in = 0.5
         os.chdir(self.tdir)
         proj.export(projname='fooproj')
         
         fooproj = project_from_archive('fooproj.proj')
-        self.assertEqual(fooproj.top.comp1.rval_in, proj.top.comp1.rval_in)
-        fooproj.top.run()
-        self.assertEqual(fooproj.top.comp1.rval_out, 1.)
-        self.assertEqual(fooproj.top.comp2.rval_out, 4.)
+        footop = fooproj.get('top')
+        self.assertEqual(footop.comp1.rval_in, top.comp1.rval_in)
+        footop.run()
+        self.assertEqual(footop.comp1.rval_out, 1.)
+        self.assertEqual(footop.comp2.rval_out, 4.)
             
     def test_localfile_factory(self):
         proj = Project(os.path.join(self.tdir, 'proj2'))
-        self._fill_project(proj.top)
+        self._fill_project(proj.get('top'))
+        
+    def test_filter_macro(self):
+        lines = [
+            "abc.xyz = 123.45",
+            "execfile('foo.py')",
+            "top.add('foo', create('MyClass'))",
+            "top.foo.x = 8.9",
+            "top.foo.execute()",
+            "abc.xyz = 99.9",
+            "some_unknown_funct(a,b,c)",
+            "execfile('foo.py')",
+            "top.add('foo', create('SomeClass'))",
+            "top.foo.gg = 53",
+            "top.blah.xx = 44",
+            "top.remove('blah')",
+            "abc.run()",
+            ]
+        expected = [
+            "abc.xyz = 123.45",
+            "top.add('foo', create('MyClass'))",
+            "top.foo.x = 8.9",
+            "abc.xyz = 99.9",
+            "some_unknown_funct(a,b,c)",
+            "execfile('foo.py')",
+            "top.add('foo', create('SomeClass'))",
+            "top.foo.gg = 53",
+            "top.blah.xx = 44",
+            "top.remove('blah')",
+            ]
+        #expected = [
+            #"abc.xyz = 99.9",
+            #"some_unknown_funct(a,b,c)",
+            #"execfile('foo.py')",
+            #"top.add('foo', create('SomeClass'))",
+            #"top.foo.gg = 53",
+            #]
+        filtered = filter_macro(lines)
+        self.assertEqual(filtered, expected)
         
 
 if __name__ == "__main__":

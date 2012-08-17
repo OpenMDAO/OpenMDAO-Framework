@@ -7,6 +7,16 @@ from selenium.common.exceptions import TimeoutException
 TMO = 15
 
 
+def rgba(color):
+    """ Return 4-element list of red, green, blue, alpha values. """
+    if color.startswith('rgba'):
+        values = [int(v) for v in color[5:-1].split(',')]
+    else:
+        values = [int(v) for v in color[4:-1].split(',')]
+        values.append(1)
+    return values
+
+
 class BasePageObject(object):
     """
     PageObject abstracts the details of page element layout and low-level

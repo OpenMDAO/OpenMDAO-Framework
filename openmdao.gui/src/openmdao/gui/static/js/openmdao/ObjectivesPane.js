@@ -44,7 +44,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
     function addObjective(expr,name) {
         cmd = pathname+".add_objective('"+expr+"'";
         if (name) {
-            cmd = cmd + ",name="+name;
+            cmd = cmd + ",name='"+name+"'";
         }
         cmd = cmd + ");";
         model.issueCommand(cmd);
@@ -53,9 +53,9 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
     /** prompt for new objective */
     function promptForObjective(callback) {
         // Build dialog markup
-        var win = jQuery('<div></div>'),
-            expr   = jQuery('<input type="text" style="width:100%"></input>'),
-            name   = jQuery('<input type="text" style="width:75%"></input>');
+        var win = jQuery('<div id="objective-dialog"></div>'),
+            expr   = jQuery('<input id="objective-expr" type="text" style="width:100%"></input>'),
+            name   = jQuery('<input id="objective-name" type="text" style="width:75%"></input>');
 
         win.append(jQuery('<div>Expression: </div>').append(expr));
 
@@ -69,15 +69,23 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         jQuery(win).dialog({
             'modal': true,
             'title': 'New Objective',
-            'buttons': {
-                'Ok': function() {
-                    jQuery(this).dialog('close');
-                    callback(expr.val(),name.val());
+            'buttons': [
+                {
+                    text: 'Ok',
+                    id: 'objective-ok',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                        callback(expr.val(),name.val());
+                    }
                 },
-                'Cancel': function() {
-                    jQuery(this).dialog('close');
+                {
+                    text: 'Cancel',
+                    id: 'objective-cancel',
+                    click: function() {
+                        jQuery(this).dialog('close');
+                    }
                 }
-            }
+            ]
         });
     }
 

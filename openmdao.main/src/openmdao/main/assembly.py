@@ -22,7 +22,7 @@ from openmdao.main.component import Component
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.driver import Driver, Run_Once
-from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.rbac import rbac
@@ -378,6 +378,14 @@ class Assembly (Component):
         of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
+
+        # Save existing driver references.
+        refs = {}
+        if has_interface(tobj, IComponent):
+            for obj in self.__dict__.values():
+                if obj is not tobj and is_instance(obj, Driver):
+                    refs[obj] = obj.get_references(target_name)
+
         if has_interface(newobj, IComponent): # remove any existing connections to replacement object
             self.disconnect(newobj.name)
         if hasattr(newobj, 'mimic'):
@@ -405,6 +413,12 @@ class Assembly (Component):
             for wflow,idx in wflows:
                 wflow.add(target_name, idx)
     
+        # Restore driver references.
+        if refs:
+            for obj in self.__dict__.values():
+                if obj is not newobj and is_instance(obj, Driver):
+                    obj.restore_references(refs[obj], target_name)
+
     def remove(self, name):
         """Remove the named container object from this assembly and remove
         it from its workflow(s) if it's a Component."""
@@ -416,6 +430,7 @@ class Assembly (Component):
             for obj in self.__dict__.values():
                 if obj is not cont and is_instance(obj, Driver):
                     obj.workflow.remove(name)
+                    obj.remove_references(name)
                     
         return super(Assembly, self).remove(name)
 
@@ -830,9 +845,9 @@ class Assembly (Component):
         self.driver.check_derivatives(order, driver_inputs, driver_outputs)
 
     def get_dataflow(self):
-        ''' get a dictionary of components and connections between them
-            that make up the data flow for the given assembly
-            also includes paramerter, constraint, and objective flows
+        ''' get a dictionary of components and the connections between them
+            that make up the data flow for the assembly
+            also includes parameter, constraint, and objective flows
         '''
         components = []
         connections = []
@@ -860,8 +875,12 @@ class Assembly (Component):
                                 inst = getattr(comp, name)
                                 if isinstance(inst, HasParameters):
                                     for name, param in inst.get_parameters().items():
-                                        parameters.append([comp.name+'.'+name,
-                                                           param.target])
+                                        if isinstance(param, ParameterGroup):
+                                            for n,p in zip(name,tuple(param.targets)):
+                                                parameters.append([comp.name+'.'+n, p])
+                                        else:
+                                            parameters.append([comp.name+'.'+name,
+                                                               param.target])
                                 elif isinstance(inst, (HasConstraints,
                                                        HasEqConstraints,
                                                        HasIneqConstraints)):

@@ -210,7 +210,7 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         item.appendChild(this.bottom_right);
 
 
-        /* Handle drage and drop from the Library. Use the code that
+        /* Handle drag and drop from the Library. Use the code that
            deals with the layering problem of drag and drop where
            you can drop something that appears to be on top
            but it ends up in a layer below it
@@ -328,7 +328,7 @@ openmdao.DataflowFigure.prototype.unhighlightAsDropTarget=function(){
 
 /** double clicking on figure brings up a component editor on the component */
 openmdao.DataflowFigure.prototype.onDoubleClick=function(){
-    editor = new openmdao.ComponentFrame(this.openmdao_model,this.pathname);
+    editor = new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
 };
 
 /** hook into setWorkflow to add input & ouput ports */
@@ -464,7 +464,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // edit
         menu.appendMenuItem(new draw2d.MenuItem("Edit",null,function(){
-            cf = new openmdao.ComponentFrame(model,pathname);
+            cf = new openmdao.ObjectFrame(model,pathname);
         }));
 
         // properties
@@ -758,7 +758,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                     var driver = (type == 'parameter') ? src_name : dst_name;
                     menu.appendMenuItem(new draw2d.MenuItem("Edit Driver", null,
                         function() {
-                            var f = new openmdao.ComponentFrame(self.openmdao_model,
+                            var f = new openmdao.ObjectFrame(self.openmdao_model,
                                                                 self.pathname+'.'+driver,
                                                                 tabName);
                         })
@@ -780,7 +780,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 else {
                     var driver = (type == 'parameter') ? src_name : dst_name;
                     con.onDoubleClick = function() {
-                        var f = new openmdao.ComponentFrame(self.openmdao_model,
+                        var f = new openmdao.ObjectFrame(self.openmdao_model,
                                                             self.pathname+'.'+driver);
                     };
                 }

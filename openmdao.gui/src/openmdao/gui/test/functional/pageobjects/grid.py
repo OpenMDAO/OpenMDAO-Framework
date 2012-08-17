@@ -8,6 +8,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import StaleElementReferenceException
 
+from basepageobject import rgba
+
 
 class Grid(object):
     """
@@ -116,4 +118,18 @@ class GridCell(object):
             element.clear()
         time.sleep(0.1)  # Just some pacing.
         element.send_keys(value+Keys.RETURN)
+
+    @property
+    def color(self):
+        """ Return RGBA values for ``color`` property. """
+        return rgba(self.value_of_css_property('color'))
+
+    @property
+    def background_color(self):
+        """ Return RGBA values for ``background-color`` property. """
+        return rgba(self.value_of_css_property('background-color'))
+
+    def value_of_css_property(self, name):
+        """ Return value for the the CSS property `name`. """
+        return self._root.value_of_css_property(name)
 

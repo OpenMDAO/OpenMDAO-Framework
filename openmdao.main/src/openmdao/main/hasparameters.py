@@ -449,7 +449,43 @@ class HasParameters(object):
                                          "that is not in this driver." % (name,),
                                          AttributeError)
         self._parent._invalidate()
-            
+
+    def get_references(self, name):
+        """Return references to component `name` in preparation for subsequent
+        :meth:`restore_references` call.
+
+        name: string
+            Name of component being removed.
+        """
+        # Just returning everything for now.
+        return self._parameters.copy()
+
+    def remove_references(self, name):
+        """Remove references to component `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        for pname, param in self._parameters.items():
+            if name in param.get_referenced_compnames():
+                self.remove_parameter(pname)
+
+    def restore_references(self, refs, name):
+        """Restore references to component `name` from `refs`.
+
+        name: string
+            Name of component being removed.
+
+        refs: object
+            Value returned by :meth:`get_references`.
+        """
+        # Not exactly safe here...
+        if isinstance(refs, ordereddict.OrderedDict):
+            self._parameters = refs
+        else:
+            raise TypeError('refs should be ordereddict.OrderedDict, got %r'
+                            % refs)
+
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this
         list may contain more entries than the list of Parameter and

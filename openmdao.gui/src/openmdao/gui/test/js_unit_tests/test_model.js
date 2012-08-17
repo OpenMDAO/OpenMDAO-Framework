@@ -620,7 +620,7 @@ TestCase("ModelTest", {
 
   },
 
-
+/** no need to import files manually any more...
   "test importFile": function () {
 
       var success_handler = sinon.spy() ;
@@ -637,7 +637,7 @@ TestCase("ModelTest", {
       sinon.assert.notCalled(error_handler);
 
   },
-
+*/
 
 
   "test runModel": function () {

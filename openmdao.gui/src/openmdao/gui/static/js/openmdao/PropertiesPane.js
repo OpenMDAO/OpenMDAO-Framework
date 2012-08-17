@@ -33,6 +33,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             {id:"valid",     name:"Valid",       field:"valid",     width:60 },
             {id:"desc",      name:"Description", field:"desc",      width:120 },
             {id:"connected", name:"Connected To",   field:"connected", width:100 },
+            {id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
         ];
     }
 
@@ -52,7 +53,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
             cmd = self.pathname+'.'+args.item.name+'='+args.item.value
-            model.issueCommand(cmd)
+            model.issueCommand(cmd);
         });
    }
     
@@ -75,13 +76,29 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             var editableCells = {};
             jQuery.each(properties, function(index, value){
                 if("connected" in value){
-                    value.editable = options.editable && (value.connected.length === 0);
-                    if(value.editable)
+                    cellCssStyles = ""
+                    if(options.editable && (value.connected.length === 0))
                     {
-                        editableCells[index] = {"value" : "ui-state-editable"};
+                        cellCssStyles = "cell-editable"
+                    }
+                        
+                    if("implicit" in value && value.implicit.length >0){
+                        //need a css class for highlighting implicitly connected inputs
+                        if(name === "Inputs"){
+
+                            cellCssStyles = cellCssStyles + " parameter"
+                        }
+                        else if(name === "Outputs"){
+                            cellCssStyles = cellCssStyles + " objective"
+                        }
+                    }
+                    if(cellCssStyles.length>0){
+                        debug.info(cellCssStyles)
+                        editableCells[index] = {"value" : cellCssStyles}
                     }
                 }
             });
+            debug.info(properties)
             props.setData(properties);
         }
         else {

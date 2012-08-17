@@ -196,20 +196,31 @@ openmdao.CodeFrame = function(id,model) {
             waitClose = [];
         }
     }
+    
+    function failed_save(jqXHR, textStatus, errorThrown) {
+        debug.info("file save failed: "+textStatus);
+        debug.info(jqXHR);
+        debug.info(errorThrown);
+    }
 
     function handle409(jqXHR, textStatus, errorThrown) {
-        var win = jQuery('<div>You have modified a class that may already have instances in the model. Do you want to continue?</div>');
+        var win = jQuery('<div>You have modified a class that may already have instances in the model. '+
+                         'If you save the file, you must save and reload the project.</div>');
         jQuery(win).dialog({
             'modal': true,
-            'title': 'Overwrite Existing Classes',
+            'title': 'Save and Reload Project',
             'buttons': [
                 {
-                  text: 'Overwrite',
+                  text: 'Save and Reload',
                   id: overwriteID,
                   click: function() {
                            jQuery(this).dialog('close');
-                           model.setFile(filepath, editor.getSession().getValue(), 1,
-                                         successful_save, null, handle409);
+                           model.setFile(filepath,editor.getSession().getValue(), 1,
+                                         function(data, textStatus, jqXHR) {
+                                            model.saveProject(function(data, textStatus, jqXHR) {
+                                                model.reload()
+                                            })
+                                         });
                          }
                 },
                 {
@@ -235,7 +246,7 @@ openmdao.CodeFrame = function(id,model) {
         if (code_last !== current_code) {
             sessions[fname_nodot][1] = current_code; // store saved file for comparison
             model.setFile(filepath,current_code, 0,
-                          successful_save, null, handle409);
+                          successful_save, failed_save, handle409);
         }
         renameTab("#"+fname_nodot,filepath);
         sessions[fname_nodot][3] = false;
@@ -285,7 +296,7 @@ openmdao.CodeFrame = function(id,model) {
         });
         editor.setSession(newfile);
         sessions[fname_nodot] = [newfile,contents,filepath,false]; // store session for efficent switching
-
+        
         jQuery('<div id="'+fname_nodot+'"></div>').appendTo(file_inner); // new empty div
         file_tabs.tabs("add",'#'+fname_nodot,filepath);
         file_tabs.tabs( 'select', "#"+fname_nodot);
@@ -295,7 +306,6 @@ openmdao.CodeFrame = function(id,model) {
     }
 
     function renameTab(selector, value) {
-        txt = jQuery('a[href="' + selector + '"]').text();
         jQuery('a[href="' + selector + '"]').text(value);
     }
 
@@ -321,7 +331,7 @@ openmdao.CodeFrame = function(id,model) {
     this.editor = editor;
 
     this.currentTablabel = function() {
-        return jQuery('#'+id+'-tabs .ui-tabs-selected').find("span").text().split('/').pop();
+        return jQuery('#'+id+'-tabs .ui-tabs-selected a').text();
     };
 
     /** get contents of specified file from model, load into editor */
@@ -339,12 +349,12 @@ openmdao.CodeFrame = function(id,model) {
                 function(contents) {
                     newTab(contents,filepath,fname_nodot,mode);
                     if (filepath.charAt(0) === "/") {
-                        file_label.text(filepath.substr(1));
+                        //file_label.text(filepath.substr(1));
                     }
                     else {
-                        file_label.text(filepath);
+                        //file_label.text(filepath);
                     }
-                    editor.session.doc.setValue(contents);
+                    //editor.session.doc.setValue(contents);
                     self.resize();
                     editor.resize();
                     editor.navigateFileStart();

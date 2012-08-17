@@ -42,7 +42,8 @@ class Driver(Component):
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__
-    workflow = Slot(Workflow, allow_none=True, required=True, factory=Dataflow)
+    workflow = Slot(Workflow, allow_none=True, required=True, 
+                    factory=Dataflow, hidden=True)
     
     def __init__(self, doc=None):
         self._iter = None
@@ -176,6 +177,56 @@ class Driver(Component):
                 for start in setcomps:
                     full.update(graph.find_all_connecting(start, end))
         return full
+
+    def get_references(self, name):
+        """Return parameter, constraint, and objective references to component
+        `name` in preparation for subsequent :meth:`restore_references` call.
+
+        name: string
+            Name of component being removed.
+        """
+        refs = {}
+        if hasattr(self, '_delegates_'):
+            for dname, dclass in self._delegates_.items():
+                inst = getattr(self, dname)
+                if isinstance(inst, (HasParameters, HasConstraints,
+                                     HasEqConstraints, HasIneqConstraints,
+                                     HasObjective, HasObjectives)):
+                    refs[inst] = inst.get_references(name)
+        return refs
+
+    def remove_references(self, name):
+        """Remove parameter, constraint, and objective references to component
+        `name`.
+
+        name: string
+            Name of component being removed.
+        """
+        if hasattr(self, '_delegates_'):
+            for dname, dclass in self._delegates_.items():
+                inst = getattr(self, dname)
+                if isinstance(inst, (HasParameters, HasConstraints,
+                                     HasEqConstraints, HasIneqConstraints,
+                                     HasObjective, HasObjectives)):
+                    inst.remove_references(name)
+
+    def restore_references(self, refs, name):
+        """Restore parameter, constraint, and objective references to component
+        `name` from `refs`.
+
+        name: string
+            Name of component being removed.
+
+        refs: object
+            Value returned by :meth:`get_references`.
+        """
+        if hasattr(self, '_delegates_'):
+            for dname, dclass in self._delegates_.items():
+                inst = getattr(self, dname)
+                if isinstance(inst, (HasParameters, HasConstraints,
+                                     HasEqConstraints, HasIneqConstraints,
+                                     HasObjective, HasObjectives)):
+                    inst.restore_references(refs[inst], name)
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):

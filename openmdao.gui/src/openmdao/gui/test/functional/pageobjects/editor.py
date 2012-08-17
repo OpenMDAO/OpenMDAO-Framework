@@ -71,6 +71,7 @@ class EditorPage(BasePageObject):
     editor_replaceAll_button = ButtonElement((By.ID, 'code_pane-uiBar-replaceAll'))
     editor_undo_button       = ButtonElement((By.ID, 'code_pane-uiBar-undo'))
     editor_overwrite_button  = ButtonElement((By.ID, 'code_pane-overwrite'))
+    editor_cancel_button     = ButtonElement((By.ID, 'code_pane-cancel'))
 
     editor_label = TextElement((By.ID, 'code_pane-label'))
 
@@ -86,7 +87,8 @@ class EditorPage(BasePageObject):
         return self.browser.execute_script("return openmdao.frames.code_pane.editor.getValue()")
     
     def get_tab_label(self):
-        return self.browser.execute_script("return openmdao.frames.code_pane.currentTablabel()")
+        label = self.browser.execute_script("return openmdao.frames.code_pane.currentTablabel()")
+        return ''.join(label.split('*')) # ignore changed / unchanged status
     
     def get_files(self):
         """ Return names in the file tree. """
@@ -211,12 +213,12 @@ class EditorPage(BasePageObject):
         #use 'save' button to save code
         self('editor_save_button').click()
         if overwrite:
-            WebDriverWait(self.browser, TMO).until(
-                lambda browser: browser.find_element(*self('editor_overwrite_button')._locator))
             self('editor_overwrite_button').click()
-
+            
         if check:
+            time.sleep(0.5)
             NotifierPage.wait(self)
+
 
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """

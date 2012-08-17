@@ -4,6 +4,7 @@ Tests of overall workspace functions.
 
 import sys
 import time
+import logging
 
 import pkg_resources
 
@@ -17,6 +18,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
     from pageobjects.util import NotifierPage
+    from pageobjects.workspace import WorkspacePage
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -64,12 +66,12 @@ def _test_editfile(browser):
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.get_tab_label()), file1)
+    eq(str(editor_page.get_tab_label()), '/'+file1)
 
     # verify different file is opened in code editor by double clicking
     browser.switch_to_window(workspace_window)
     editor_page = workspace_page.edit_file(file2)
-    eq(str(editor_page.get_tab_label()), file2)
+    eq(str(editor_page.get_tab_label()), '/'+file2)
 
     # Back to workspace.
     browser.close()
@@ -78,7 +80,7 @@ def _test_editfile(browser):
     # verify code editor can be re-opened by double clicking on file
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.get_tab_label()), file1)
+    eq(str(editor_page.get_tab_label()), '/'+file1)
 
     # Back to workspace.
     browser.close()
@@ -145,7 +147,6 @@ def _test_palette_update(browser):
 
     # Make sure there are only two dataflow figures (top & driver)
     workspace_page.show_dataflow('top')
-    time.sleep(1)
     eq(len(workspace_page.get_dataflow_figures()), 2)
 
     # view library
@@ -291,77 +292,81 @@ f_x = Float(0.0, iotype='out')
     print "_test_newfile complete."
 
 
-def _test_macro(browser):
-    print "running _test_macro..."
-    # Creates a file in the GUI.
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
+## for now I'm giving up on this test.  If the save & reload option is chosen,
+## the browser attribute becomes stale when the project gets reloaded and I'm not 
+## sure how to get back to a 'good' browser handle after that.  begin() fails when using the
+## stale handle.  Also, cleaning up at the end of the test is a problem when you can't
+## get access to the WebElements in the current page.
+## -- this has been turned into a manual test (see gui/test/functional/manual/save_and_reload
+#def _test_macro(browser):
+    #print "running _test_macro..."
+    ## Creates a file in the GUI.
+    #projects_page = begin(browser)
+    #project_info_page, project_dict = new_project(projects_page.new_project())
+    #workspace_page = project_info_page.load_project()
 
-    # Open code editor.
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
+    ## Open code editor.
+    #workspace_window = browser.current_window_handle
+    #editor_page = workspace_page.open_editor()
 
-    # Create a file (code editor automatically indents).
-    editor_page.new_file('foo.py', """
-from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+    ## Create a file (code editor automatically indents).
+    #editor_page.new_file('foo.py', """
+#from openmdao.main.api import Component
+#from openmdao.lib.datatypes.api import Float
 
-# lines will be auto-indented by ace editor
-class Foo(Component):
+## lines will be auto-indented by ace editor
+#class Foo(Component):
 
-a = Float(0.0, iotype='in')
-b = Float(0.0, iotype='in')
-c = Float(0.0, iotype='out')
-d = Float(0.0, iotype='out')
+#a = Float(0.0, iotype='in')
+#b = Float(0.0, iotype='in')
+#c = Float(0.0, iotype='out')
+#d = Float(0.0, iotype='out')
 
-""")
-    time.sleep(1)
-    # Back to workspace.
-    browser.close()
-    browser.switch_to_window(workspace_window)
+#""")
+    #time.sleep(1)
+    ## Back to workspace.
+    #browser.close()
+    #browser.switch_to_window(workspace_window)
 
-    # Drag over Plane.
-    workspace_page.show_dataflow('top')
-    workspace_page.show_library()
-    workspace_page.set_library_filter('In Project')
+    #port = workspace_page.port
+    
+    ## Drag over Plane.
+    #workspace_page.show_dataflow('top')
+    #workspace_page.show_library()
+    #workspace_page.set_library_filter('In Project')
 
-    workspace_page.find_library_button('Foo').click()
-    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
-    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
+    #workspace_page.find_library_button('Foo').click()
+    #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
+    #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
 
-    comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
-    comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
-    conn_page = workspace_page.connect(comp1, comp2)
-    conn_page.connect_vars('comp1.c', 'comp2.a')
-    time.sleep(1)  # Wait for display update.
-    conn_page.close()
+    #comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
+    #comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
+    #conn_page = workspace_page.connect(comp1, comp2)
+    #conn_page.connect_vars('comp1.c', 'comp2.a')
+    #time.sleep(1)  # Wait for display update.
+    #conn_page.close()
 
-    workspace_page.save_project()
+    #workspace_page.save_project()
 
-    editor_page = workspace_page.open_editor()
-    editor_page.edit_file('foo.py', dclick=False)
-    editor_page.add_text_to_file('#just a comment\n')
-    editor_page.save_document(overwrite=True)
+    #editor_page = workspace_page.open_editor()
+    #editor_page.edit_file('foo.py', dclick=False)
+    #editor_page.add_text_to_file('#just a comment\n')
+    
+    #editor_page.save_document(overwrite=True, check=False) # forces a save and reload of project
+    #time.sleep(3)
 
-    browser.close()
-    browser.switch_to_window(workspace_window)
-    workspace_page.save_project()  # the pickle should fail here because an imported file has been modified
+    #workspace_page =  WorkspacePage.verify(browser, port)
+    
+    #workspace_page.show_dataflow('top')
+    #time.sleep(0.5)
+    #eq(sorted(workspace_page.get_dataflow_component_names()),
+       #['comp1', 'comp2', 'driver', 'top'])
 
-    time.sleep(3)
-    projects_page = workspace_page.close_workspace()
-
-    workspace_page = projects_page.open_project(project_dict['name'])
-    workspace_page.show_dataflow('top')
-    time.sleep(0.5)
-    eq(sorted(workspace_page.get_dataflow_component_names()),
-       ['comp1', 'comp2', 'driver', 'top'])
-
-    # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_macro complete."
+    ## Clean up.
+    #projects_page = workspace_page.close_workspace()
+    #project_info_page = projects_page.edit_project(project_dict['name'])
+    #project_info_page.delete_project()
+    #print "_test_macro complete."
 
 
 def _test_addfiles(browser):
@@ -488,6 +493,42 @@ def _test_objtree(browser):
 
 
 def _test_editable_inputs(browser):
+    def test_color(actual, expected, alpha=False):
+        if(alpha):
+            eq(actual, expected)
+        else:
+            eq(actual[0:3], expected[0:3])
+
+    def test_inputs(inputs):
+        for i, row in enumerate(inputs):
+            connected_to_cell = row.cells[len(row.cells)-2]
+            implicit_cell = row.cells[len(row.cells)-1]
+            value_cell = row.cells[2]
+
+            if connected_to_cell.value:
+                test_color(value_cell.color, [255, 255, 255, 1])
+                test_color(value_cell.background_color, [0, 0, 0, 1])
+            elif implicit_cell.value:
+                test_color(value_cell.color, [200, 0, 0, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+            else:
+                test_color(value_cell.color, [0, 0, 0, 1])
+                test_color(value_cell.background_color, [255, 255, 255, 1])
+
+    def test_outputs(outputs):
+        for i, row in enumerate(outputs):
+            connected_to_cell = row.cells[len(row.cells)-2]
+            implicit_cell = row.cells[len(row.cells)-1]
+            value_cell = row.cells[2]
+
+            if implicit_cell.value:
+                test_color(value_cell.color, [0, 0, 200, 1])
+            else:
+                test_color(value_cell.color, [255, 255, 255, 1])
+            
+            test_color(value_cell.background_color, [0, 0, 0, 1])
+
+
     print "running _test_editable_inputs..."
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
@@ -496,9 +537,11 @@ def _test_editable_inputs(browser):
     # Import vehicle_singlesim
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    file_path = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-                                                'vehicle_singlesim.py')
-    editor_page.add_file(file_path)
+    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional', 'basic_model.py')
+    file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
+                                                            'vehicle_singlesim.py')
+    editor_page.add_file(file_path_one)
+    editor_page.add_file(file_path_two)
     browser.close()
     browser.switch_to_window(workspace_window)
 
@@ -506,38 +549,41 @@ def _test_editable_inputs(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.find_library_button('Basic_Model').click()
     assembly_name = "sim"
-    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+    workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
             assembly_name)
 
+    paraboloid = workspace_page.get_dataflow_figure('paraboloid',
+            assembly_name)
+
+    #Test highlighting for implicit connections
+    component_editor = paraboloid.editor_page()
+    test_inputs(component_editor.get_inputs()) 
+    test_outputs(component_editor.get_outputs())
+    
+    component_editor.close()
+
+    #Remove sim from the dataflow
+    assembly = workspace_page.get_dataflow_figure(assembly_name)
+    assembly.remove()
+
+    #Add VehicleSim to the dataflow
+    workspace_page.show_library()
+    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
+                        assembly_name)
+    
     # Get component editor for transmission.
     workspace_page.expand_object(assembly_name)
-    workspace_page.show_dataflow(assembly_name + ".vehicle")
+    workspace_page.show_dataflow(assembly_name+ ".vehicle")
     transmission = workspace_page.get_dataflow_figure('transmission',
-            assembly_name + '.vehicle')
-
+                        assembly_name + '.vehicle')# Get component editor for transmission.
+   
+    #Test highlighting for explicit connections
     component_editor = transmission.editor_page()
-
-    # Find rows in inputs table
-    # for transmission for single sim vehicle
-    # that are editable.
-    elements = component_editor.browser.find_elements_by_xpath(\
-            "//div[@id='Inputs_props']")[1]
-            #/div[@class='slick-viewport']")
-            #/div[@id='grid-canvas']\
-            #/div[@row='1'] | div[@row='3']")
-
-    elements = elements.find_elements_by_xpath(\
-            "div[@class='slick-viewport']\
-            /div[@class='grid-canvas']\
-            /div[@row='1' or @row='3']\
-            /div[contains(@class, 'ui-state-editable')]")
-
-    # Verify that the rows are highlighted
-    for element in elements:
-        assert("rgba(255,255,255,1)" == element.value_of_css_property("background-color"))
-        assert("rgba(0,0,0,1)" == element.value_of_css_property("color"))
+    test_inputs(component_editor.get_inputs()) 
+    test_outputs(component_editor.get_outputs())
 
     component_editor.close()
 
@@ -547,7 +593,6 @@ def _test_editable_inputs(browser):
     project_info_page.delete_project()
     print "_test_editable_inputs complete."
 
-
 def _test_console_errors(browser):
     print "running _test_console_errors..."
     projects_page = begin(browser)
@@ -556,7 +601,7 @@ def _test_console_errors(browser):
 
     # Set input to illegal value.
     top = workspace_page.get_dataflow_figure('top', '')
-    editor = top.editor_page(double_click=False)
+    editor = top.editor_page(double_click=False, base_type='Assembly')
     inputs = editor.get_inputs()
     inputs[1][2] = '42'  # force_execute
     message = NotifierPage.wait(editor)
@@ -568,6 +613,7 @@ def _test_console_errors(browser):
     # Save file with syntax error.
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
+    editor_window = browser.current_window_handle
     editor_page.new_file('bug.py', """
 from openmdao.main.api import Component
 class Bug(Component):
@@ -582,8 +628,9 @@ def execute(self)
     message = None
     try:
         message = NotifierPage.wait(editor_page, base_id='file-error')
-    except WebDriverException:
-        pass
+    except Exception as exc:
+        print 'Exception waiting for file-error:', exc
+        logging.exception('Waiting for file-error')
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
@@ -597,9 +644,9 @@ def execute(self)
     editor_page = workspace_page.open_editor()
     editor_page.new_file('bug2.py', """
 from openmdao.main.api import Component
-from nowhere import nothing
 class Bug2(Component):
-pass
+def __init__(self):
+    raise RuntimeError("__init__ failed")
 """)
     browser.close()
     browser.switch_to_window(workspace_window)
@@ -609,7 +656,7 @@ pass
     workspace_page.find_library_button('Bug2').click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
     message = NotifierPage.wait(workspace_page)
-    eq(message, "NameError: unable to create object of type 'bug2.Bug2'")
+    eq(message, "NameError: unable to create object of type 'bug2.Bug2': __init__ failed")
 
     # Clean up.
     projects_page = workspace_page.close_workspace()
@@ -618,5 +665,62 @@ pass
     print "_test_console_errors complete."
 
 
+def _test_driver_config(browser):
+    print "running _test_driver_config..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Replace default driver with CONMIN and edit.
+    workspace_page.show_library()
+    workspace_page.replace('driver',
+                           'openmdao.lib.drivers.conmindriver.CONMINdriver')
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+
+    # Add a (nonsense) named parameter.
+    editor('parameters_tab').click()
+    dialog = editor.new_parameter()
+    dialog.target = 'driver.force_execute'
+    dialog.low = '0'
+    dialog.high = '1'
+    dialog.name = 'nonsense'
+    dialog('ok').click()
+    parameters = editor.get_parameters()
+    expected = [['driver.force_execute', '0', '1', '', '', '', 'nonsense']]
+    for i, row in enumerate(parameters.value):
+        eq(row, expected[i])
+
+    # Add a (nonsense) named objective.
+    editor('objectives_tab').click()
+    dialog = editor.new_objective()
+    dialog.expr = 'driver.force_execute'
+    dialog.name = 'nonsense'
+    dialog('ok').click()
+    objectives = editor.get_objectives()
+    expected = [['driver.force_execute', 'nonsense']]
+    for i, row in enumerate(objectives.value):
+        eq(row, expected[i])
+
+    # Add a (nonsense) named constraint.
+    editor('constraints_tab').click()
+    dialog = editor.new_constraint()
+    dialog.expr = 'driver.force_execute > 0'
+    dialog.name = 'nonsense'
+    dialog('ok').click()
+    constraints = editor.get_constraints()
+    expected = [['driver.force_execute > 0', '1', '0', 'nonsense']]
+    for i, row in enumerate(constraints.value):
+        eq(row, expected[i])
+
+    # Clean up.
+    editor.close()
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_driver_config complete."
+
+
 if __name__ == '__main__':
     main()
+

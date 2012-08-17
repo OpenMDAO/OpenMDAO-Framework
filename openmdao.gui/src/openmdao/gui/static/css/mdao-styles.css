@@ -197,5 +197,24 @@ nav ul ul a:hover {
   -moz-transform:rotate(-180deg);
   -webkit-transform:rotate(-180deg);
 }
+
+.cell-editable {
+    border: 1px solid #cccccc;
+    background:rgba(255,255,255,255);
+    color:rgba(0,0,0,255);
+}
+
+.parameter {
+    color:rgba(200,0,0,255);
+}
+
+.constraint {
+    color:rgba(0,200,0,255);
+}
+
+.objective {
+    color:rgba(0,0,200,255);
+}
+
 /* end CSS3 */
 
