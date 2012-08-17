@@ -71,7 +71,7 @@ class ExprTransformer(ast.NodeTransformer):
         """Visit a node."""
         method = 'visit_' + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
-        if visitor is self.generic_visit:
+        if visitor == self.generic_visit:
             return visitor(node)
         else:
             return visitor(node, subs)
