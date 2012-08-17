@@ -28,8 +28,8 @@ class HSRNOISE(ExternalCode):
 
     # Variables from MEflows and Geometry variable trees
     # -------------------------
-    flow_in = Slot(MEflows(), iotype='in')
-    geo_in = Slot(Geometry(), iotype='in')
+    flow_in = Slot(MEflows, iotype='in')
+    geo_in = Slot(Geometry, iotype='in')
     
     LinFrac = Float(0.9, iotype='in', desc='Fraction of ejector length covered by acoustic liner')
     phi = Float(0.0, iotype='in', units='deg', desc='Roll angle at which noise is estimated')

@@ -353,7 +353,7 @@ openmdao.SlotFigure.prototype.getContextMenu=function(){
 
 openmdao.SlotFigure.prototype.onDoubleClick=function(){
     if (this.filled) {
-        var f = new openmdao.ComponentFrame(this.myModel,this.pathname);
+        var f = new openmdao.ObjectFrame(this.myModel,this.pathname);
     }
 };
 

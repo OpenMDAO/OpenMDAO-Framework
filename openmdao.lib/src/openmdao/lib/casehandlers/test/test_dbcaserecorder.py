@@ -50,6 +50,18 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.recorders = [DBCaseRecorder()]
         self.top.run()
         
+        # Gui pane stuff
+        
+        attrs = self.top.driver.recorders[0].get_attributes()
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'dbfile',
+                         'type': 'str',
+                         'connected': '',
+                         'value': ':memory:',
+                         'desc': 'Name of the database file to be recorded. Default ' + \
+                       'is ":memory:", which writes the database to memory.'} in attrs['Inputs'])
+        
+        
         # now use the DB as source of Cases
         self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
         
@@ -168,6 +180,24 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             shutil.rmtree(tmpdir)
         except OSError:
             logging.error("problem removing directory %s" % tmpdir)
+
+    def test_dbcaseiterator_get_attributes(self):
+        
+        caseiter = DBCaseIterator()
+        attrs = caseiter.get_attributes()
+        print attrs
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'dbfile',
+                         'type': 'str',
+                         'connected': '',
+                         'value': ':memory:',
+                         'desc': 'Name of the database file to be iterated. Default ' + \
+                       'is ":memory:", which reads the database from memory.'} in attrs['Inputs'])
+        self.assertTrue({'name': 'selectors',
+                         'type': 'NoneType',
+                         'connected': '',
+                         'value': 'None',
+                         'desc': 'String of additional SQL queries to apply to the case selection.'} in attrs['Inputs'])
 
     def test_string(self):
         recorder = DBCaseRecorder()
