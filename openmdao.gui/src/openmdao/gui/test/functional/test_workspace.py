@@ -653,7 +653,6 @@ def __init__(self):
     workspace_page.show_library()
     workspace_page.set_library_filter('In Project')
     time.sleep(0.5)
-    raise RuntimeError('forced')
     workspace_page.find_library_button('Bug2', 0.5).click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
     message = NotifierPage.wait(workspace_page)
