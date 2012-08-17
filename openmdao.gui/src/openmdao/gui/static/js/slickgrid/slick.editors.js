@@ -608,6 +608,16 @@
 
             this.init();
         },
+
+        /*
+         * If you intend to create a custom slickgrid editor to be 
+         * used for providing an interface for editing a specific data type,
+         * please be sure to read the comments from here to the end of
+         * the file.
+         *
+         * The comments will hoepfully explain how to properly set up your
+         * editor, as well as explain some the tools used in the process.
+         */
         
         /*
          * This the constructor for a default custom datatype editor.
@@ -630,11 +640,23 @@
         VariableEditor : function(args){
             this.init(args)
         }
+
+        /*
+         * For now, you must add the constructor function for your 
+         * data type editor to this SlickEditor object. It should 
+         * mirror CellEditor and VariableEditor. As an example
+         *
+         *      MyDataTypeEdtior : function(args){
+         *          this.init(args)
+         *      }
+         */
     };
 
-    //CellEditor's init method varies slightly from the default editors provided
-    //by slickgrid. It saves the args object as a data member to be available
-    //for reference by other CellEditor methods.
+    /* CellEditor's init method varies slightly from the default editors provided
+     * by slickgrid. It saves the args object as a data member to be available
+     * for reference by other CellEditor methods.
+     */
+
     SlickEditor.CellEditor.prototype.init = function(args){ this.args = args }
 
     /*
@@ -681,7 +703,13 @@
      * Editors is a public static data member of VariableEditor.
      * It is an object that maps a data type to a CellEditor 
      * and is used by VariableEditor to delegate function
-     * calls.
+     * calls. You must register your data type ediot in thi object.
+     * Remember that it should be registerd as:
+     *
+     *      'datatype' : SlickEditor.MyDataTypeEditor
+     *
+     * It must be prepended with SlickEditor because technically, your
+     * data type editor is a member of SlickEditor.
      */
     SlickEditor.VariableEditor.editors = {'str' : SlickEditor.TextCellEditor }  
     
