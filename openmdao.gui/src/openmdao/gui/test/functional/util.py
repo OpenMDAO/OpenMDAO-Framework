@@ -158,7 +158,7 @@ def setup_server(virtual_display=True):
 
     # If running headless, setup the virtual display.
     if virtual_display:
-        _display = Display()
+        _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True
 

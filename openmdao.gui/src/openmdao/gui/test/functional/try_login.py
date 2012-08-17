@@ -19,7 +19,7 @@ def _test_successful_login(browser):
     projects_page = login_page.login_successfully("herb", "herb" )
     eq( "Projects", projects_page.page_title )
     eq( "http://localhost:%d/" % TEST_CONFIG['port'], projects_page.page_url )
-    assert projects_page('logout').is_present()
+    assert projects_page('logout').is_present
     login_page_again = projects_page.logout()
     eq( "Login", login_page_again.page_title )
     

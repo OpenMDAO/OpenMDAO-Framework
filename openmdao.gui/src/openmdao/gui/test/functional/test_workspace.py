@@ -721,6 +721,38 @@ def _test_driver_config(browser):
     print "_test_driver_config complete."
 
 
+def _test_remove(browser):
+    print "running _test_driver_config..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Show assembly information.
+    workspace_page.select_object('top')
+    top = workspace_page.get_dataflow_figure('top', '')
+    editor = top.editor_page(double_click=False)
+    editor.move(-100, 100)  # Move it away from context menu.
+    connections = top.connections_page()
+    properties = top.properties_page()
+
+    eq(editor.is_visible, True)
+    eq(connections.is_visible, True)
+    eq(properties.is_visible, True)
+
+    # Remove component.
+    top.remove()
+
+    eq(editor.is_visible, False)
+    eq(connections.is_visible, False)
+    eq(properties.is_visible, False)
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_remove complete."
+
+
 if __name__ == '__main__':
     main()
 

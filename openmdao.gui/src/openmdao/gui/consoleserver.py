@@ -95,7 +95,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             comps = self._publish_comps.keys()
             for pathname in comps:
-                comp, root = self.get_container(pathname)
+                comp, root = self.get_container(pathname, report=False)
                 if comp is None:
                     del self._publish_comps[pathname]
                     publish(pathname, {})
@@ -244,7 +244,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         return jsonpickle.encode(self.proj._model_globals)
 
-    def get_container(self, pathname):
+    def get_container(self, pathname, report=True):
         ''' get the container with the specified pathname
             returns the container and the name of the root object
         '''
@@ -256,9 +256,18 @@ class ConsoleServer(cmd.Cmd):
                 cont = self.proj.get(root)
             else:
                 try:
-                    cont = self.proj.get(root).get(parts[1])
-                except Exception, err:
+                    root_obj = self.proj.get(root)
+                except Exception as err:
                     self._error(err, sys.exc_info())
+                else:
+                    try:
+                        cont = root_obj.get(parts[1])
+                    except AttributeError as error:
+                        # When publishing, don't report remove as an error.
+                        if report:
+                            self._error(err, sys.exc_info())
+                    except Exception as err:
+                        self._error(err, sys.exc_info())
         return cont, root
 
     def _get_components(self, cont, pathname=None):

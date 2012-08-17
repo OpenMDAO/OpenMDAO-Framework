@@ -293,6 +293,10 @@ class WorkspacePage(BasePageObject):
                 if retry >= 2:
                     raise
 
+    def show_properties(self):
+        """ Display properties. """
+        self('properties_tab').click()
+
     def show_library(self):
         # For some reason the first try never works, so the wait is set
         # low and we expect to retry at least once.
@@ -300,7 +304,7 @@ class WorkspacePage(BasePageObject):
             try:
                 self('library_tab').click()
                 WebDriverWait(self.browser, 1).until(
-                    lambda browser: self('library_search').is_visible())
+                    lambda browser: self('library_search').is_visible)
             except TimeoutException:
                 if retry:
                     logging.warning('TimeoutException in show_library')

@@ -125,7 +125,9 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
     }
 
     function loadData(ifaces) {
+        var nIfaces = 0;
         jQuery.each(ifaces,function (name,props) {
+            ++nIfaces;
             if (panes[name]) {
                 panes[name].loadData(props);
             }
@@ -134,6 +136,9 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
                                 self.pathname,name,props);
             }
         });
+        if (!nIfaces) {  // If no data assume we've been removed.
+            self.close();
+        }
     }
 
     function handleMessage(message) {

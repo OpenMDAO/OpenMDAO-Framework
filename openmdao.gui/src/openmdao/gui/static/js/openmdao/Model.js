@@ -68,7 +68,7 @@ openmdao.Model=function() {
             }
         }
         var topic = message[0],
-            callbacks = subscribers[message[0]];
+            callbacks = subscribers[message[0]].slice();  // Need a copy.
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
