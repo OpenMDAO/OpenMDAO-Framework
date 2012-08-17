@@ -609,24 +609,45 @@
             this.init();
         },
         
+        /*
+         * This the constructor for a default custom datatype editor.
+         * All custom datatype editors should inherit CellEditor.
+         */    
         CellEditor : function(args){
             this.init(args)
         },
 
         /*
-        * Use this puny thing to get
-        * the variable editor for your choice.
+        * This is the constructor for the editor to be used
+        * when defining a slickgrid. VariableEditor uses the
+        * delegation pattern by resolving which datatype editor
+        * to use based off of the 'type' attribute, then calls
+        * the appropriate method of the datatype editor.
+        *
+        * For more information on the delegation patttern,
+        * visit http://en.wikipedia.org/wiki/Delegation_pattern
         */
         VariableEditor : function(args){
             this.init(args)
         }
     };
 
-    //Use this behemoth to build the variable editor of your choice.
-    //Not sure what do/how use? Stack Overflow to rescue! http://stackoverflow.com/questions/3211956/slickgrid-select-editor
-    //This is just a skeleton so I wouldn't recommend using inheritence with this.
-
+    //CellEditor's init method varies slightly from the default editors provided
+    //by slickgrid. It saves the args object as a data member to be available
+    //for reference by other CellEditor methods.
     SlickEditor.CellEditor.prototype.init = function(args){ this.args = args }
+
+    /*
+     * The following functions are required functions for any custom
+     * slick grid editor:
+     *      destroy
+     *      focus
+     *      isValueChanged
+     *      serializeValue
+     *      loadValue
+     *      applyValue
+     *      validate
+     */
     SlickEditor.CellEditor.prototype.destroy = function(){}
     SlickEditor.CellEditor.prototype.focus = function(){}
     SlickEditor.CellEditor.prototype.isValueChanged = function(){ return false; }
@@ -634,24 +655,63 @@
     SlickEditor.CellEditor.prototype.loadValue = function(item){}
     SlickEditor.CellEditor.prototype.applyValue = function(item, state){}
     SlickEditor.CellEditor.prototype.validate = function(){ return { valid: false, msg: "This field is required" } }
+
+    /*
+     * The following functions are optional functions for 
+     * custom slickgrid editors:
+     *
+     *      hide
+     *      show
+     *      position 
+     */
     SlickEditor.CellEditor.prototype.hide = function(){}
     SlickEditor.CellEditor.prototype.show = function(){}
     SlickEditor.CellEditor.prototype.position = function(cellbox){}
-   
+  
+    /*
+     * The next three lines cause VariableEditor
+     * to inherit CellEditor
+     */ 
     SlickEditor.VariableEditor.prototype = new SlickEditor.CellEditor()
     SlickEditor.VariableEditor.constructor = SlickEditor.VariableEditor
     SlickEditor.VariableEditor.superClass = SlickEditor.CellEditor.prototype
+   
+
+    /*
+     * Editors is a public static data member of VariableEditor.
+     * It is an object that maps a data type to a CellEditor 
+     * and is used by VariableEditor to delegate function
+     * calls.
+     */
+    SlickEditor.VariableEditor.editors = {'str' : SlickEditor.TextCellEditor }  
     
-    //OpenMDAO supported datatype editors should be added to the dictionary below.
-    //
-    SlickEditor.VariableEditor.prototype.editors = {'str' : SlickEditor.TextCellEditor }  
-    
+    /*
+     * The following function declaractions override CellEditor's
+     * functions. 
+     */
+
+    /*
+     * The init function calls CellEditor's init method to initialize
+     * args. This makes the parameter accessible to the rest of 
+     * overriden functions. The correct data type editor is also
+     * set. If the editor is not in editors, VariableEditor defaults
+     * to using TextCellEditor.
+     */
     SlickEditor.VariableEditor.prototype.init = function(args){
-        this.editor = (args.item.type in this.editors) 
-            ? new this.editors[args.item.type](args) 
+
+        SlickEditor.VariableEditor.superClass.init.call(this, args)
+        var editors = SlickEditor.VariableEditor.editors
+        this.editor = (args.item.type in editors) 
+            ? new editors[args.item.type](args) 
             : new SlickEditor.TextCellEditor(args)
     }  
-
+    
+    /*
+     * If the function is required for a custom slickgrid editor,
+     * VariableEditor delegates the work to editor. For functions
+     * that are expected to return a value, VariableEditor returns 
+     * the value returned by editor.
+     */
     SlickEditor.VariableEditor.prototype.destroy = function(){ 
         this.editor.destroy() 
     }
@@ -680,17 +740,45 @@
         return this.editor.validate()
     }
 
-    //Need a better way to handle the optional methods. 
+    /*
+     * If the function is optional, the delegated call is 
+     * wrapped in a try/catch block. If the execution is 
+     * not successful, VariableEditor delegates the work
+     * to it's parent, CellEditor. 
+     */
+
     SlickEditor.VariableEditor.prototype.hide = function(){
-        this.editor.hide()
+        try{
+            this.editor.hide()
+        }
+        catch{
+            //TODO: Should report something to the user maybe
+            //Default to using hide method of CellEditor
+            SlickEditor.VariableEditor.superClass.hide.call(this)
+        }
+
     }
 
     SlickEditor.VariableEditor.prototype.show = function(){
-        this.editor.show()
+        try{
+            this.editor.show()
+        }
+        catch{
+            //TODO: Should report something to the user maybe
+            //Default to using show method of CellEditor
+            SlickEditor.VariableEditor.superClass.show.call(this)
+        }
     }
 
     SlickEditor.VariableEditor.prototype.position = function(cellbox){
-        this.editor.position(cellbox)
+        try{
+            this.editor.position(cellbox)
+        }
+        catch{
+            //TODO: Should report something to the user maybe
+            //Default to using position method of CellEditor
+            SlickEditor.VariableEditor.superClass.position.call(this, cellbox)
+        }
     }
 
     $.extend(window, SlickEditor);
