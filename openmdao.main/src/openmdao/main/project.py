@@ -4,22 +4,19 @@ Routines for handling 'Projects' in Python.
 
 import os
 import sys
-import shutil
-from inspect import isclass #, getfile
+from inspect import isclass  # , getfile
 import tarfile
 import cPickle as pickle
 from tokenize import generate_tokens
 import token
 from cStringIO import StringIO
 
-from pkg_resources import get_distribution, DistributionNotFound
+#from pkg_resources import get_distribution, DistributionNotFound
 
-from openmdao.main.api import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create
-from openmdao.main.mp_support import is_instance
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.log import logger
 
@@ -111,6 +108,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
 
 _excluded_calls = set(['run', 'execute'])
 
+
 def _check_hierarchy(pathname, objs):
     # any operation we apply to a given object will be cancelled
     # out if that object or any of its parents are overwritten
@@ -119,20 +117,21 @@ def _check_hierarchy(pathname, objs):
     if pathname in objs:
         return True
     for name in objs:
-        if pathname.startswith(name+'.'):
+        if pathname.startswith(name + '.'):
             return True
     return False
-    
+
+
 def filter_macro(lines):
     """Removes commands from a macro that are overridden by later commands."""
     # FIXME: this needs a lot of work. Things get a little messy when you have
     # rename and move calls mixed in and I didn't have time to sort out those issues yet,
-    # so right now I'm just filtering out multiple execfile() calls and all calls to 
+    # so right now I'm just filtering out multiple execfile() calls and all calls to
     # run() and execute().
     filt_lines = []
-    assigns = set()
+    #assigns = set()
     execs = set()
-    objs = set()
+    #objs = set()
     for line in lines[::-1]:
         stripped = line.strip()
         if stripped.startswith('execfile'):
@@ -148,7 +147,7 @@ def filter_macro(lines):
             match = namecheck_rgx.match(stripped)
             if match:
                 full = match.group()
-                rest = stripped[len(full):].strip()
+                #rest = stripped[len(full):].strip()
                 parts = full.rsplit('.', 1)
                 if len(parts) > 1:
                     # remove calls to run, execute, ...
@@ -164,7 +163,7 @@ def filter_macro(lines):
                             #objs.add(pathname)
                             #if parts[1] == 'remove': # don't include the remove command
                                 #continue             # since there won't be anything to remove
-                
+
                 ## only keep the most recent assignment to any variable, and throw away
                 ## assigns to variables in objects that have been overridden by newer ones with
                 ## the same name.
@@ -173,12 +172,12 @@ def filter_macro(lines):
                         #continue
                     #else:
                         #assigns.add(full)
-                        
+
         filt_lines.append(line)
-            
-    return filt_lines[::-1] # reverse the result
-    
-    
+
+    return filt_lines[::-1]  # reverse the result
+
+
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes
     from the imported version of the file for the __main__ version.
@@ -186,7 +185,7 @@ class _ProjDict(dict):
     def __init__(self):
         super(_ProjDict, self).__init__()
         self._modname = None
-        
+
     def __getitem__(self, name):
         if self._modname:
             val = getattr(sys.modules[self._modname], name, None)
@@ -194,9 +193,10 @@ class _ProjDict(dict):
                 return val
         return super(_ProjDict, self).__getitem__(name)
 
+
 class Project(object):
     def __init__(self, projpath, projdirfactory=None):
-        """Initializes a Project containing the project found in the 
+        """Initializes a Project containing the project found in the
         specified directory or creates a new project if one doesn't exist.
 
         projpath: str
@@ -210,10 +210,10 @@ class Project(object):
 
         if projdirfactory:
             projdirfactory.project = self
-        
+
         if os.path.isdir(projpath):
             self.activate()
-        
+
             # locate file containing state, create it if it doesn't exist
             statefile = os.path.join(projpath, '_project_state')
             if os.path.exists(statefile):
@@ -227,7 +227,6 @@ class Project(object):
                             m.update(self._model_globals)
                             self._model_globals = m
                             self._init_globals()
-                            
                 except Exception, e:
                     logger.error('Unable to restore project state: %s' % e)
                     macro_exec = True
@@ -250,23 +249,22 @@ class Project(object):
 
     def _initialize(self):
         self._model_globals['top'] = set_as_top(Assembly())
-        
+
     def _init_globals(self):
         self._model_globals['create'] = create    # add create funct here so macros can call it
         self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
         self._model_globals['execfile'] = self.execfile
 
-
     @property
     def name(self):
         return os.path.basename(self.path)
-    
+
     def __contains__(self, name):
         return name in self._model_globals
-    
+
     def items(self):
         return self._model_globals.items()
-    
+
     def execfile(self, fname, digest=None):
         # first, make sure file has been imported
         __import__(get_module_path(fname))
@@ -276,7 +274,7 @@ class Project(object):
         with open(fname) as f:
             contents = f.read()
         exec contents in self._model_globals
-        
+
         # make the recorded execfile command use the current md5 hash
         self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
 
@@ -289,10 +287,10 @@ class Project(object):
         except (KeyError, AttributeError) as err:
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
-    
+
     def load_macro(self, fpath, execute=True, strict=False):
         with open(fpath, 'r') as f:
-            for i,line in enumerate(filter_macro(f.readlines())):
+            for i, line in enumerate(filter_macro(f.readlines())):
                 if execute:
                     try:
                         self.command(line.rstrip('\n'))
@@ -307,7 +305,7 @@ class Project(object):
         err = None
         result = None
         size = len(self._recorded_cmds)
-        
+
         try:
             code = compile(cmd, '<string>', 'eval')
         except SyntaxError:
@@ -325,23 +323,23 @@ class Project(object):
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
             logger.error("%s" % exc_info[2])
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
-            raise err
+            raise  # err  # We don't want to hide the original stack trace!!
         else:
             # certain commands (like execfile) can modify the recorded string,
             # so only record the given command if the executed command didn't
             # add its own entry to _recorded_cmds.
             if len(self._recorded_cmds) == size:
                 self._recorded_cmds.append(cmd)
-            
+
         return result
 
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
         modeldir = self.path
-        sys.path = [modeldir]+sys.path
+        sys.path = [modeldir] + sys.path
         logger.error("added %s to sys.path" % modeldir)
-        
+
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
@@ -404,4 +402,3 @@ class Project(object):
                 tf.close()
         finally:
             os.chdir(startdir)
-    
