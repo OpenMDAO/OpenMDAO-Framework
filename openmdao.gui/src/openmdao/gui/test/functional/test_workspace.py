@@ -282,7 +282,7 @@ f_x = Float(0.0, iotype='out')
     workspace_page.show_library()
     workspace_page.set_library_filter('In Project')
     time.sleep(2)
-    workspace_page.find_library_button('Plane').click()
+    workspace_page.find_library_button('Plane', 0.5).click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
@@ -335,7 +335,7 @@ f_x = Float(0.0, iotype='out')
     #workspace_page.show_library()
     #workspace_page.set_library_filter('In Project')
 
-    #workspace_page.find_library_button('Foo').click()
+    #workspace_page.find_library_button('Foo', 0.5).click()
     #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
     #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
 
@@ -463,7 +463,7 @@ def _test_objtree(browser):
     time.sleep(1)
     workspace_page.show_library()
     time.sleep(1)
-    workspace_page.find_library_button('MaxMin').click()
+    workspace_page.find_library_button('MaxMin', 0.5).click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
     # Maximize 'top' and 'top.maxmin'
@@ -549,7 +549,7 @@ def _test_editable_inputs(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('Basic_Model').click()
+    workspace_page.find_library_button('Basic_Model', 0.5).click()
     assembly_name = "sim"
     workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
             assembly_name)
@@ -570,7 +570,7 @@ def _test_editable_inputs(browser):
 
     #Add VehicleSim to the dataflow
     workspace_page.show_library()
-    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.find_library_button('VehicleSim', 0.5).click()
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                         assembly_name)
     
@@ -653,7 +653,7 @@ def __init__(self):
     workspace_page.show_library()
     workspace_page.set_library_filter('In Project')
     time.sleep(0.5)
-    workspace_page.find_library_button('Bug2').click()
+    workspace_page.find_library_button('Bug2', 0.5).click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
     message = NotifierPage.wait(workspace_page)
     eq(message, "NameError: unable to create object of type 'bug2.Bug2': __init__ failed")

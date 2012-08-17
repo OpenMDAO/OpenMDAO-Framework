@@ -123,7 +123,7 @@ class WorkspacePage(BasePageObject):
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         NotifierPage.wait(self)
 
-    def find_library_button(self, name):
+    def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
         for retry in range(5):
             try:
@@ -135,7 +135,8 @@ class WorkspacePage(BasePageObject):
                 break
         else:
             raise err
-
+        if delay:
+            time.sleep(delay)
         return element
 
     def run(self, timeout=TMO):
