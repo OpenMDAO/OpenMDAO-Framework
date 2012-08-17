@@ -5,7 +5,7 @@ Routines for handling 'Projects' in Python.
 import os
 import sys
 import shutil
-from inspect import isclass #, getfile
+from inspect import isclass
 import tarfile
 import cPickle as pickle
 from tokenize import generate_tokens
@@ -22,7 +22,6 @@ from openmdao.main.factorymanager import create
 from openmdao.main.mp_support import is_instance
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.log import logger
-
 
 # extension for project files
 PROJ_FILE_EXT = '.proj'
@@ -178,6 +177,32 @@ def filter_macro(lines):
             
     return filt_lines[::-1] # reverse the result
     
+
+class CtorInstrumenter(ast.NodeTransformer):
+    """All constructor calls for classes in the specified set will
+    be replaced with a call to a wrapper function that records the
+    call before creating the instance.
+    """
+    def __init__(self, wrapper_name, cset):
+        self.wrapper_name = wrapper_name
+        self.cset = cset
+        self._local_classes = set()
+        super(CtorInstrumenter, self).__init__()
+    
+    def visit_ClassDef(self, node):
+        self._local_classes.add(node.name)
+        print "found class '%s'" % node.name
+
+    def visit_Call(self, node):
+        name = _get_long_name(node.func)
+        if not (name in self._local_classes or name in self.cset):
+            return self.generic_visit(node)
+        
+        return ast.copy_location(ast.Call(func=ast.Name(id=self.wrapper_name), 
+                                          args=[node.func] + node.args,
+                                          ctx=node.ctx, keywords=keywords,
+                                          starargs=node.startargs,
+                                          kwargs=node.kwargs), node)
     
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes

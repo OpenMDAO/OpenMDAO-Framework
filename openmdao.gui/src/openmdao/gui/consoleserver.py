@@ -29,6 +29,37 @@ from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
+class ProjImporter(object):
+    def __init__(self, projpath):
+        self.projpath = os.path.abspath(os.path.expanduser(projpath))
+
+    def __call__(self, path):
+        if path.startswith(self.projpath):  # FIXME ...
+            print "import from %s" % path
+            return self
+        raise ImportError("can't import %s" % path)
+
+    def find_module(self, fullname, path=None):
+        print "finding... %s" % fullname
+    
+    # Consider using importlib.util.module_for_loader() to handle
+    # most of these details for you.
+    def load_module(self, fullname):
+        code = self.get_code(fullname)
+        ispkg = self.is_package(fullname)
+        mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
+        mod.__file__ = "<%s>" % self.__class__.__name__
+        mod.__loader__ = self
+        if ispkg:
+            mod.__path__ = []
+            mod.__package__ = fullname
+        else:
+            mod.__package__ = fullname.rpartition('.')[0]
+        exec(code, mod.__dict__)
+        return mod
+
+
+
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -457,6 +488,10 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
+            
+            # install project specific importer
+            sys.path_hooks.append(ProjImporter(self.files.getcwd()))
+            
             # have to do things in a specific order here. First, create the files,
             # then point the ProjDirFactory at the files, then finally create the
             # Project. Executing the project macro (which happens in the Project __init__)
