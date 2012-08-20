@@ -15,8 +15,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             .appendTo(elm),
         slotHTML = '<div height="50" width="100" style="margin:10px;float:left;">'
                  + '<svg height="50" width="100">'
-                 + '    <rect height="50" width="100" rx="15" ry="15" '
-                 + '          style="stroke-dasharray:3; stroke:red; stroke-width:2; fill:white" />'
+                 + '    <rect height="50" width="100" rx="15" ry="15" style="stroke-width:2; fill:white" />'
                  + '    <text id="name" x="50" y="20" text-anchor="middle">Name</text>'
                  + '    <text id="klass" x="50" y="40" font-style="italic" text-anchor="middle">Klass</text>'
                  + '</svg>'
@@ -35,13 +34,19 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                 type = slot.klass,
                 filled = slot.filled,
                 color = filled ? 'green' : 'red',
-                fig = jQuery(slotHTML).draggable();
+                fig = jQuery(slotHTML);
 
             figures[name] = fig;
 
             fig.attr('id','slot-'+self.pathname+'.'+name);
             fig.attr('title',name);
-            fig.find('rect').css({'stroke': color});
+
+            if (filled) {
+                fig.find('rect').css({'stroke-dasharray':'none', 'stroke':color});
+            }
+            else {
+                fig.find('rect').css({'stroke-dasharray':3, 'stroke':color});
+            }
             fig.find('#name').css({'fill': color}).text(name);
             fig.find('#klass').css({'fill': color}).text(type);
             if (self.pathname) {
@@ -76,10 +81,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                     var droppedObject = jQuery(ui.draggable).clone(),
                         droppedName = droppedObject.text(),
                         droppedPath = droppedObject.attr("modpath"),
-                        module = openmdao.Util.getPath(droppedPath),
-                        klass = openmdao.Util.getName(droppedPath);
-                        cmd = 'from '+module+' import '+klass+';\n'
-                            +  self.pathname+'='+klass+'()';
+                        cmd = self.pathname+'.add("'+name+'", create("'+droppedPath+'"))';
                     model.issueCommand(cmd);
                     openmdao.drag_and_drop_manager.clearHighlightingDroppables();
                 }
