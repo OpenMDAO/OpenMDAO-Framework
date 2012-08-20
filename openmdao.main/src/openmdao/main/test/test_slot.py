@@ -5,7 +5,7 @@ import pickle
 from enthought.traits.api import Int
 
 from openmdao.main.api import Assembly, Component, Container, Case
-from openmdao.main.datatypes.api import Slot
+from openmdao.main.datatypes.api import Slot, List, Dict, Str
 from openmdao.main.interfaces import implements, ICaseIterator
 from openmdao.util.testutil import assert_raises
 
@@ -126,7 +126,60 @@ class SlotTestCase(unittest.TestCase):
         assert_raises(self, 'Slot(object())', globals(), locals(), TypeError,
                       'klass argument must be a Class or Interface,'
                       ' not <object ')
+        
+    def test_list_and_dict_slot_attributes(self):
+        
+        top = Assembly()
+        top.add('sock', Slot(MyClass, iotype='in', desc='Stuff0'))
+        top.add('list_sock', List(Slot(MyClass), iotype='in', desc='Stuff'))
+        top.add('dict_sock', Dict(key_trait=Str, 
+                                  value_trait=Slot(MyClass), 
+                                  iotype='in', desc='Stuff2'))
+        attrs = top.get_attributes(io_only=False)
+        slot_attrs = attrs['Slots']
+        self.assertTrue({'name': 'list_sock',
+                         'interfaces': [],
+                         'containertype': 'list',
+                         'filled': 0,
+                         'klass': 'MyClass',
+                         'desc': 'Stuff'} in slot_attrs)
+        self.assertTrue({'name': 'dict_sock',
+                         'interfaces': [],
+                         'containertype': 'dict',
+                         'filled': [],
+                         'klass': 'MyClass',
+                         'desc': 'Stuff2'} in slot_attrs)
+        self.assertTrue({'name': 'sock',
+                         'interfaces': [],
+                         'containertype': 'none',
+                         'filled': False,
+                         'klass': 'MyClass',
+                         'desc': 'Stuff0'} in slot_attrs)
 
+        # Now fill some slots.
+        
+        top.list_sock.append(MyClass())
+        top.list_sock.append(MyClass())
+        top.dict_sock['Testing'] = MyClass()
+        # Note, only tested with one item in the dict because it is not ordered,
+        # and hash order will vary on different platforms.
+        
+        attrs = top.get_attributes(io_only=False)
+        slot_attrs = attrs['Slots']
+        for item in slot_attrs:
+            print item
+        self.assertTrue({'name': 'list_sock',
+                         'interfaces': [],
+                         'containertype': 'list',
+                         'filled': 2,
+                         'klass': 'MyClass',
+                         'desc': 'Stuff'} in slot_attrs)
+        self.assertTrue({'name': 'dict_sock',
+                         'interfaces': [],
+                         'containertype': 'dict',
+                         'filled': ['Testing'],
+                         'klass': 'MyClass',
+                         'desc': 'Stuff2'} in slot_attrs)
 
 class MyIface(zope.interface.Interface):
     
