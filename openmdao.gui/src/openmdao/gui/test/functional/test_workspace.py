@@ -651,7 +651,6 @@ def __init__(self):
     browser.close()
     browser.switch_to_window(workspace_window)
     workspace_page.show_library()
-    workspace_page.set_library_filter('In Project')
     time.sleep(0.5)
     workspace_page.find_library_button('Bug2', 0.5).click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
