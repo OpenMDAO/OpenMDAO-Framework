@@ -165,6 +165,7 @@ class EditorPage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         page.set_value(filename)
+        time.sleep(5)  # There seems to be some animation/flickering here.
 
         self.edit_file(filename, dclick=False)
 
