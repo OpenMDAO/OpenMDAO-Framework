@@ -214,11 +214,8 @@ class EditorPage(BasePageObject):
         self('editor_save_button').click()
         if overwrite:
             self('editor_overwrite_button').click()
-            
         if check:
-            time.sleep(0.5)
             NotifierPage.wait(self)
-
 
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """

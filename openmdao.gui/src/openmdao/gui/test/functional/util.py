@@ -271,7 +271,17 @@ class _Runner(object):
     def __call__(self, browser):
         if isinstance(browser, Exception):
             raise browser
-        self.test(browser)
+        try:
+            self.test(browser)
+        except Exception:
+            testname = '%s.%s' % (self.test.__module__, self.test.__name__)
+            logging.exception(testname)
+            filename = os.path.join(os.getcwd(), '%s.png' % testname
+            msg = 'Screenshot in %r' % filename
+            print msg
+            browser.save_screenshot(filename)
+            logging.info(msg)
+            raise
 
 
 def begin(browser):
