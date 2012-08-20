@@ -1,10 +1,10 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ComponentFrame = function(model,pathname,tabName) {
+openmdao.ObjectFrame = function(model,pathname,tabName) {
     // TODO: hack alert... mangling pathname
-    openmdao.ComponentFrame.prototype.init.call(this,
-        'CE-'+pathname.replace(/\./g,'-'),'Component: '+pathname);
+    openmdao.ObjectFrame.prototype.init.call(this,
+        'CE-'+pathname.replace(/\./g,'-'),'Object: '+pathname);
 
     this.initiallySelected = tabName || 'Inputs';
 
@@ -120,7 +120,7 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
             panes[name].loadData(val);
         }
         else {
-            debug.warn("ComponentFrame: Unexpected object",self.pathname,name);
+            debug.warn("ObjectFrame: Unexpected object",self.pathname,name);
         }
     }
 
@@ -130,7 +130,7 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
                 panes[name].loadData(props);
             }
             else if (name !== 'type') {
-                debug.warn("ComponentFrame: Unexpected object",
+                debug.warn("ObjectFrame: Unexpected object",
                                 self.pathname,name,props);
             }
         });
@@ -138,7 +138,7 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
 
     function handleMessage(message) {
         if (message.length !== 2 || message[0] !== self.pathname) {
-            debug.warn('Invalid component data for:',self.pathname,message);
+            debug.warn('Invalid object data for:',self.pathname,message);
             debug.warn('message length',message.length,'topic',message[0]);
         }
         else {
@@ -169,13 +169,13 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
             self.pathname = path;
             callback = loadTabs;    // recreate tabs
 
-            // listen for messages and update component properties accordingly
+            // listen for messages and update object properties accordingly
             model.addListener(self.pathname, handleMessage);
         }
 
-        model.getComponent(path, callback,
+        model.getObject(path, callback,
             function(jqXHR, textStatus, errorThrown) {
-                debug.warn('ComponentFrame.editObject() Error:',
+                debug.warn('ObjectFrame.editObject() Error:',
                             jqXHR, textStatus, errorThrown);
                 // assume component has been deleted, so close frame
                 self.close();
@@ -195,6 +195,6 @@ openmdao.ComponentFrame = function(model,pathname,tabName) {
 };
 
 /** set prototype */
-openmdao.ComponentFrame.prototype = new openmdao.BaseFrame();
-openmdao.ComponentFrame.prototype.constructor = openmdao.ComponentFrame;
+openmdao.ObjectFrame.prototype = new openmdao.BaseFrame();
+openmdao.ObjectFrame.prototype.constructor = openmdao.ObjectFrame;
 

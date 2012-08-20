@@ -194,7 +194,6 @@ class _ProjDict(dict):
                 return val
         return super(_ProjDict, self).__getitem__(name)
 
-
 class Project(object):
     def __init__(self, projpath, projdirfactory=None):
         """Initializes a Project containing the project found in the 
@@ -269,13 +268,14 @@ class Project(object):
         return self._model_globals.items()
     
     def execfile(self, fname, digest=None):
+        # first, make sure file has been imported
+        __import__(get_module_path(fname))
         newdigest = file_md5(fname)
         if digest and digest != newdigest:
             logger.warning("file '%s' has been modified since the last time it was exec'd" % fname)
         with open(fname) as f:
             contents = f.read()
-            code = compile(contents, fname, 'exec')
-        exec code in self._model_globals
+        exec contents in self._model_globals
         
         # make the recorded execfile command use the current md5 hash
         self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
@@ -314,15 +314,16 @@ class Project(object):
             try:
                 exec(cmd) in self._model_globals
             except Exception as err:
-                pass
+                exc_info = sys.exc_info()
         else:
             try:
                 result = eval(code, self._model_globals)
             except Exception as err:
-                pass
+                exc_info = sys.exc_info()
 
         if err:
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
+            logger.error("%s" % exc_info[2])
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
             raise err
         else:
@@ -403,3 +404,4 @@ class Project(object):
                 tf.close()
         finally:
             os.chdir(startdir)
+    

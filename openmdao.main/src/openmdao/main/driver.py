@@ -42,7 +42,8 @@ class Driver(Component):
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__
-    workflow = Slot(Workflow, allow_none=True, required=True, factory=Dataflow)
+    workflow = Slot(Workflow, allow_none=True, required=True, 
+                    factory=Dataflow, hidden=True)
     
     def __init__(self, doc=None):
         self._iter = None
