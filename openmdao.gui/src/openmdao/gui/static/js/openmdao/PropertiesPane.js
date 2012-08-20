@@ -41,12 +41,25 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     props = new Slick.Grid(propsDiv, [], columns, options)
 
     props.onBeforeEditCell.subscribe(function(row,cell){
+        /*
+         * TODO: If the datatype does not have a registered 
+         * value editor, an error needs to be logged and
+         * some sort of alert needs to be provided
+         */
+        editable = options.editable
+
+        if( openmdao.ValueEditor.isRegistered(
+                props.getDataItem(cell.row).type) === false)
+        {
+             editable = false;
+        }
+
         if (props.getDataItem(cell.row).connected.length > 0) {
-            return false;
+
+            editable = false;
         }
-        else {
-            return true;
-        }
+
+        return editable;
     })
 
     if (editable) {
@@ -77,13 +90,12 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             jQuery.each(properties, function(index, value){
                 if("connected" in value){
                     cellCssStyles = ""
-                    if(options.editable && (value.connected.length === 0))
+                    if(options.editable && (value.connected.length === 0) && value.editable)
                     {
                         cellCssStyles = "cell-editable"
                     }
                         
                     if("implicit" in value && value.implicit.length >0){
-                        //need a css class for highlighting implicitly connected inputs
                         if(name === "Inputs"){
 
                             cellCssStyles = cellCssStyles + " parameter"
@@ -93,12 +105,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         }
                     }
                     if(cellCssStyles.length>0){
-                        debug.info(cellCssStyles)
                         editableCells[index] = {"value" : cellCssStyles}
                     }
                 }
             });
-            debug.info(properties)
             props.setData(properties);
         }
         else {

@@ -548,8 +548,19 @@ openmdao.Util = {
             }
         }
         poll();
-    }
+    },
 
+    /*
+     * Allow a child object to inherit from a parent object.
+     * Make sure to call this method immeidately after defining
+     * the child's constructor and before extending it's
+     * prototype.
+     */
+    inherit : function(childObject, parentObject){
+        childObject.prototype = new parentObject
+        childObject.prototype.constructor = childObject
+        childObject.prototype.superClass = parentObject.prototype
+    }
 };
 
 
