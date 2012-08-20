@@ -8,7 +8,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80 },
-            {id:"value", name:"Value", field:"value", width:80, editor:VariableEditor},
+            {id:"value", name:"Value", field:"value", width:80, editor:openmdao.ValueEditor},
             //{id:"valid", name:"Valid", field:"valid", width:60},
         ],
         options = {
@@ -28,7 +28,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100 },
             {id:"type",      name:"Type",        field:"type",      width:60 },
-            {id:"value",     name:"Value",       field:"value",     width:100 , editor:VariableEditor },
+            {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
             {id:"units",     name:"Units",       field:"units",     width:60  },
             {id:"valid",     name:"Valid",       field:"valid",     width:60 },
             {id:"desc",      name:"Description", field:"desc",      width:120 },
