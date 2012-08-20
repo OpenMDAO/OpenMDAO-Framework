@@ -276,7 +276,7 @@ class _Runner(object):
         except Exception:
             testname = '%s.%s' % (self.test.__module__, self.test.__name__)
             logging.exception(testname)
-            filename = os.path.join(os.getcwd(), '%s.png' % testname
+            filename = os.path.join(os.getcwd(), '%s.png' % testname)
             msg = 'Screenshot in %r' % filename
             print msg
             browser.save_screenshot(filename)
