@@ -141,10 +141,6 @@ class _ClassVisitor(ast.NodeVisitor):
         ast.NodeVisitor.__init__(self)
         self.classes = []
         
-        # in order to get this to work with the 'ast' lib, I have
-        # to read using universal newlines and append a newline
-        # to the string I read for some files.  The 'compiler' lib
-        # didn't have this problem. :(
         with open(fname, 'Ur') as f:
             contents = f.read()
             if len(contents)>0 and contents[-1] != '\n':
@@ -159,45 +155,45 @@ class _FileInfo(object):
         self.fpath = fpath
         self.modpath = get_module_path(fpath)
         self.modtime = os.path.getmtime(fpath)
-        if self.modpath in sys.modules:
-            mod = sys.modules[self.modpath]
-            self._reload()
-        else:
-            __import__(self.modpath)
+        __import__(self.modpath)
         module = sys.modules[self.modpath]
         self.version = getattr(module, '__version__', None)
         self._update_class_info()
     
     def _update_class_info(self):
         self.classes = {}
-        cset = set(['.'.join([self.modpath,cname]) for cname in _ClassVisitor(self.fpath).classes])
+        cset = set(_ClassVisitor(self.fpath).classes)
         module = sys.modules[self.modpath]
         for key,val in getmembers(module, isclass):
-            fullname = '.'.join([self.modpath, key])
-            if fullname in cset:
+            if key in cset:
+                fullname = '.'.join([self.modpath, key])
                 self.classes[fullname] = {
-                    'ctor': val,
+                    'ctor': key,
                     'ifaces': [klass.__name__ for klass in implementedBy(val)],
                     'version': self.version,
+                    'modpath': self.modpath,
                 }
         
     def _reload(self):
-        cmpfname = os.path.splitext(self.fpath)[0]+'.pyc'
-        # unless we remove the .pyc file, reload will just use it and won't
-        # see any source updates.  :(
-        if os.path.isfile(cmpfname):
-            os.remove(cmpfname)
-        reload(sys.modules[self.modpath])
+        mtime = os.path.getmtime(self.fpath)
+        if self.modtime < mtime:
+            cmpfname = os.path.splitext(self.fpath)[0]+'.pyc'
+            # unless we remove the .pyc file, reload will just use it and won't
+            # see any source updates.  :(
+            if os.path.isfile(cmpfname):
+                os.remove(cmpfname)
+            reload(sys.modules[self.modpath])
+            self.modtime = mtime
+        self._update_class_info()
         
     def update(self, added, changed, removed):
-        """File has changed on disk, update information and return 
+        """File may have changed on disk, update information and return 
         sets of added, removed and (possibly) changed classes.
         """
         self.modpath = get_module_path(self.fpath)
         startset = set(self.classes.keys())
-        cmpfname = os.path.splitext(self.fpath)[0]+'.pyc'
+        
         self._reload()
-        self._update_class_info()
         
         keys = set(self.classes.keys())
         added.update(keys - startset)
@@ -254,7 +250,9 @@ class ProjDirFactory(Factory):
         """
         if server is None and res_desc is None:
             try:
-                klass = self._classes[typ].classes[typ]['ctor']
+                cinfo = self._classes[typ].classes[typ]
+                mod = sys.modules[cinfo['modpath']]
+                klass = getattr(mod, cinfo['ctor'])
             except KeyError:
                 return None
             
