@@ -629,7 +629,7 @@ def execute(self)
     try:
         message = NotifierPage.wait(editor_page, base_id='file-error')
     except Exception as exc:
-        print 'Exception waiting for file-error:', exc
+        print 'Exception waiting for file-error:', str(exc) or repr(exc)
         logging.exception('Waiting for file-error')
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:

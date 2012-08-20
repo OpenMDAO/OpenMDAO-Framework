@@ -274,7 +274,8 @@ class _Runner(object):
         try:
             self.test(browser)
         except Exception:
-            testname = '%s.%s' % (self.test.__module__, self.test.__name__)
+            package, dot, module = self.test.__module__.rpartition('.')
+            testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
             filename = os.path.join(os.getcwd(), '%s.png' % testname)
             msg = 'Screenshot in %r' % filename
