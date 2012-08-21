@@ -1555,6 +1555,9 @@ class Component(Container):
                 if not is_instance(v, Component):
                     attr['name'] = vname
                     attr['type'] = type(v).__name__
+                    print type(v)
+                    print v
+                    print dir(v)
                     attr['value'] = str(v)
                     attr['valid'] = self.get_valid([vname])[0]
                     meta = self.get_metadata(vname)

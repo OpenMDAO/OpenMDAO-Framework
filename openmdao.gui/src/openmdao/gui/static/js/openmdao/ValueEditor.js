@@ -16,6 +16,19 @@ openmdao.ValueEditor = (function(){
     var editors = {}
     var unregistered = {}
 
+    /*
+    * I am making a very poor assumption that the
+    * OpenMDAO GUI will eventually have a preferences
+    * menu for being able to edit some functionality
+    * of the GUI. Based off of this assumption, these
+    * are options that adjust the behavior of ValueEditor.
+    */
+    var options = {
+        defaultEditor : TextCellEditor,
+        defaultEditorEnabled : true
+        overridesEnabled : false
+    }
+
     function constructorFn(args){
         this.init(args)
     }
@@ -42,6 +55,42 @@ openmdao.ValueEditor = (function(){
         else{
             unregistered[dataType] = true
         }
+    }
+
+    /*
+    * I am making a very poor assumption that the
+    * OpenMDAO GUI will eventually have a preferences
+    * menu for being able to edit some functionality
+    * of the GUI. Based off of this assumption, these
+    * are methods to be used to interface with 
+    * ValueEditors options.
+    */
+    constructorFn.overridesEnabled(){
+        return options.enableOverrides
+    }
+
+    constructorFn.enableOverrides(){
+        options.enableOverrides = true
+    }
+
+    constructorFn.disableOverrides(){
+        options.enableOverrides = false
+    }
+
+    constructorFn.defaultEditorEnabled(){
+        return options.defaultEditorEnabled
+    }
+
+    constructorFn.enableDefaultEditor(){
+        options.defaultEditorEnabled = true
+    }
+
+    constructorFn.disableDefaultEditor(){
+        options.defaultEditorEnabled = false
+    }
+
+    constructorFn.setDefaultEditor(editor){
+        options.defaultEditor = defaultEditor
     }
 
     /*

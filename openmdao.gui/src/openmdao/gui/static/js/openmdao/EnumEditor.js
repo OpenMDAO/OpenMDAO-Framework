@@ -12,19 +12,22 @@ openmdao.EnumEditor.prototype.init = function(args){
     value = args.item.value
     debug.info(value)
 
-    var buildSelect = function(enumValues){
-        var options
-        for(i=0; i<enumValues.length; i++)
+    var buildSelect = function(values){
+        return "<select>" + buildOptions(values) + "</select>"
+    }
+
+    var buildOption = function(value){
+        return "<option>" + option + "</option>"
+    }
+
+    var buildOptions = function(values){
+        var options = ""
+        for(i=0; i<options.length; i++)
         {
             options = options + buildOption(enumValues[i])
         }
-        
-        return "<select>" + options + "</select>"
     }
 
-    var buildOption = function(option){
-        return "<option>" + option + "</option>"
-    }
     this.superClass.init.call(this,args)
 }
 
@@ -42,6 +45,7 @@ openmdao.EnumEditor.prototype.focus = function(){
 openmdao.EnumEditor.prototype.isValueChanged = function(){
     return false
 }
+
 openmdao.EnumEditor.prototype.serializeValue = function(){
     return ""
 }
