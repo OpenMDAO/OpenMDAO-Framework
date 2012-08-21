@@ -8,7 +8,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80 },
-            {id:"value", name:"Value", field:"value", width:80, editor:VariableEditor},
+            {id:"value", name:"Value", field:"value", width:80, editor:openmdao.ValueEditor},
             //{id:"valid", name:"Valid", field:"valid", width:60},
         ],
         options = {
@@ -28,7 +28,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100 },
             {id:"type",      name:"Type",        field:"type",      width:60 },
-            {id:"value",     name:"Value",       field:"value",     width:100 , editor:VariableEditor },
+            {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
             {id:"units",     name:"Units",       field:"units",     width:60  },
             {id:"valid",     name:"Valid",       field:"valid",     width:60 },
             {id:"desc",      name:"Description", field:"desc",      width:120 },
@@ -41,12 +41,25 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     props = new Slick.Grid(propsDiv, [], columns, options)
 
     props.onBeforeEditCell.subscribe(function(row,cell){
+        /*
+         * TODO: If the datatype does not have a registered 
+         * value editor, an error needs to be logged and
+         * some sort of alert needs to be provided
+         */
+        editable = options.editable
+
+        if( openmdao.ValueEditor.isRegistered(
+                props.getDataItem(cell.row).type) === false)
+        {
+             editable = false;
+        }
+
         if (props.getDataItem(cell.row).connected.length > 0) {
-            return false;
+
+            editable = false;
         }
-        else {
-            return true;
-        }
+
+        return editable;
     })
 
     if (editable) {
@@ -77,13 +90,12 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             jQuery.each(properties, function(index, value){
                 if("connected" in value){
                     cellCssStyles = ""
-                    if(options.editable && (value.connected.length === 0))
+                    if(options.editable && (value.connected.length === 0) && value.editable)
                     {
                         cellCssStyles = "cell-editable"
                     }
                         
                     if("implicit" in value && value.implicit.length >0){
-                        //need a css class for highlighting implicitly connected inputs
                         if(name === "Inputs"){
 
                             cellCssStyles = cellCssStyles + " parameter"
@@ -93,12 +105,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                         }
                     }
                     if(cellCssStyles.length>0){
-                        debug.info(cellCssStyles)
                         editableCells[index] = {"value" : cellCssStyles}
                     }
                 }
             });
-            debug.info('PropertiesPane', properties)
+
             props.setData(properties);
         }
         else {
