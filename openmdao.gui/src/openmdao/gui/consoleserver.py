@@ -29,32 +29,72 @@ from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
 
+def text_to_node(text):
+    modnode = ast.parse(text, 'exec')
+    if len(modnode.body) == 1:
+        return modnode.body[0]
+    return modnode.body
 
 class CtorInstrumenter(ast.NodeTransformer):
     """All constructor calls for classes in the specified set will
     be replaced with a call to a wrapper function that records the
     call before creating the instance.
     """
-    def __init__(self, wrapper_name, cset):
-        self.wrapper_name = wrapper_name
-        self.cset = cset
-        self._local_classes = set()
+    def __init__(self):
         super(CtorInstrumenter, self).__init__()
     
     def visit_ClassDef(self, node):
-        self._local_classes.add(node.name)
-        print "found class '%s'" % node.name
-
-    def visit_Call(self, node):
-        name = _get_long_name(node.func)
-        if not (name in self._local_classes or name in self.cset):
-            return self.generic_visit(node)
-        
-        return ast.copy_location(ast.Call(func=ast.Name(id=self.wrapper_name), 
+        for stmt in node.body:
+            if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
+                break # __init__ was found - visit_FunctionDef will transform it
+        else: # no __init__ found, make one
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+            """
+            funcbody = [ast.copy_location(ast.Call(func=ast.Name(id='__init__'), 
                                           args=[node.func] + node.args,
                                           ctx=node.ctx, keywords=keywords,
                                           starargs=node.startargs,
-                                          kwargs=node.kwargs), node)
+                                          kwargs=node.kwargs), node)]
+            node.body = [ast.FunctionDef(name='__init__', 
+                                         args=ast.arguments(args=[Name(id='self', ctx=Param())], 
+                                         vararg='args', kwarg='kwargs', defaults=[]), 
+                                         body=functbody, 
+                                         decorator_list=[])]+node.body
+#[FunctionDef(name='__init__', args=arguments(args=[Name(id='self', ctx=Param())], vararg='args', 
+# kwarg='kwargs', defaults=[]), body=[Expr(value=Call(func=Name(id='_register_class', ctx=Load()), 
+# args=[Call(func=Attribute(value=Str(s='.'), attr='join', ctx=Load()), 
+#args=[List(elts=[Attribute(value=Attribute(value=Name(id='self', ctx=Load()), attr='__class__', ctx=Load()),
+#attr='__module__', ctx=Load()), Attribute(value=Attribute(value=Name(id='self', ctx=Load()), 
+#attr='__class__', ctx=Load()), attr='__name__', ctx=Load())], ctx=Load())], keywords=[], 
+#starargs=None, kwargs=None)], keywords=[], starargs=None, kwargs=None)), 
+#Expr(value=Call(func=Attribute(value=Call(func=Name(id='super', ctx=Load()), 
+#args=[Attribute(value=Name(id='self', ctx=Load()), attr='__class__', ctx=Load()), 
+#Name(id='self', ctx=Load())], keywords=[], starargs=None, kwargs=None), attr='__init__', ctx=Load()), 
+#args=[], keywords=[], starargs=Name(id='args', ctx=Load()), kwargs=Name(id='kwargs', ctx=Load())))], 
+#decorator_list=[])]
+        self.generic_visit(node)
+        return node
+
+    def visit_FunctionDef(self, node):
+        #identifier name, arguments args, stmt* body, expr* decorator_list
+        # arguments = (expr* args, identifier? vararg, identifier? kwarg, expr* defaults)
+        if node.name == '__init__':
+            print "init function %s" % node.name
+        self.generic_visit(node)
+        return node
+    
+    #def visit_Call(self, node):
+        #name = _get_long_name(node.func)
+        #if not (name in self._local_classes or name in self.cset):
+            #return self.generic_visit(node)
+        
+        #return ast.copy_location(ast.Call(func=ast.Name(id=self.wrapper_name), 
+                                          #args=[node.func] + node.args,
+                                          #ctx=node.ctx, keywords=keywords,
+                                          #starargs=node.startargs,
+                                          #kwargs=node.kwargs), node)
     
 
 class ProjFinder(object):
@@ -97,6 +137,7 @@ class ProjLoader(object):
         
     def translate(self, node):
         """Take the specified AST and translate it into the instrumented version."""
+        node = CtorInstrumenter().visit(node)
         return node
     
     def get_code(self, modpath):
