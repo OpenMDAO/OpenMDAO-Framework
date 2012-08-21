@@ -40,7 +40,8 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                     self.elm.dialog("option","title",val+': '+self.pathname);
                 }
             }
-            else {
+            // Don't show empty slots tab.
+            else if (name != 'Slots' || val.length) {
                 if (name.length > 12) {
                     tabname = name.substr(0,12);
                 }
@@ -115,12 +116,15 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
             panes[name].loadData(val);
         }
         else if (name === 'Slots') {
-            panes[name] = new openmdao.SlotsPane(contentPane,model,
-                                self.pathname,name,false);
-            panes[name].loadData(val);
+            if (val.length) {
+                panes[name] = new openmdao.SlotsPane(contentPane,model,
+                                    self.pathname,name,false);
+                panes[name].loadData(val);
+            }
         }
         else {
-            debug.warn("ObjectFrame: Unexpected object",self.pathname,name);
+            debug.warn("ObjectFrame.getContent: Unexpected object",
+                       self.pathname, name);
         }
     }
 
@@ -131,9 +135,9 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
             if (panes[name]) {
                 panes[name].loadData(props);
             }
-            else if (name !== 'type') {
-                debug.warn("ObjectFrame: Unexpected object",
-                                self.pathname,name,props);
+            else if (name !== 'type' && props) {
+                debug.warn("ObjectFrame.loadData: Unexpected object",
+                           self.pathname, name, props);
             }
         });
         if (!nIfaces) {  // If no data assume we've been removed.
