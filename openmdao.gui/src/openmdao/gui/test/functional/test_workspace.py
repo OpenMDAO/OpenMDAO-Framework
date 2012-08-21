@@ -752,6 +752,35 @@ def _test_remove(browser):
     print "_test_remove complete."
 
 
+def _test_noslots(browser):
+    print "running _test_noslots..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+
+    # Display editor and check that no 'Slots' tab exists.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    editor = ext.editor_page(double_click=False)
+    eq(editor('inputs_tab').is_visible, True)  # This waits.
+    eq(editor('inputs_tab').is_present, True)  # These are quick tests.
+    eq(editor('slots_tab').is_present, False)
+    eq(editor('outputs_tab').is_present, True)
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_noslots complete."
+
+
 if __name__ == '__main__':
     main()
 
