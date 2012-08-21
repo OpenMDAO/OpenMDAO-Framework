@@ -166,6 +166,7 @@ class MyComp2(Component):
             self.assertEqual(set(['mycomp2.MyComp2']), deleted_set)
     
             # now try modifying an existing file
+            time.sleep(2)  # Windows timestamp granularity is one second.
             fpath = os.path.join(self.tdir, 'mydrv.py')
             with open(fpath, 'w') as f:
                 f.write("""

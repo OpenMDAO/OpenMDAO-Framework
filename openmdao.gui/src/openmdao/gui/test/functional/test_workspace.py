@@ -282,7 +282,7 @@ f_x = Float(0.0, iotype='out')
     workspace_page.show_library()
     workspace_page.set_library_filter('In Project')
     time.sleep(2)
-    workspace_page.find_library_button('Plane').click()
+    workspace_page.find_library_button('Plane', 0.5).click()
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
     # Clean up.
@@ -335,7 +335,7 @@ f_x = Float(0.0, iotype='out')
     #workspace_page.show_library()
     #workspace_page.set_library_filter('In Project')
 
-    #workspace_page.find_library_button('Foo').click()
+    #workspace_page.find_library_button('Foo', 0.5).click()
     #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
     #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
 
@@ -463,7 +463,7 @@ def _test_objtree(browser):
     time.sleep(1)
     workspace_page.show_library()
     time.sleep(1)
-    workspace_page.find_library_button('MaxMin').click()
+    workspace_page.find_library_button('MaxMin', 0.5).click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
 
     # Maximize 'top' and 'top.maxmin'
@@ -549,7 +549,7 @@ def _test_editable_inputs(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('Basic_Model').click()
+    workspace_page.find_library_button('Basic_Model', 0.5).click()
     assembly_name = "sim"
     workspace_page.add_library_item_to_dataflow('basic_model.Basic_Model',
             assembly_name)
@@ -570,7 +570,7 @@ def _test_editable_inputs(browser):
 
     #Add VehicleSim to the dataflow
     workspace_page.show_library()
-    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.find_library_button('VehicleSim', 0.5).click()
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                         assembly_name)
     
@@ -629,7 +629,7 @@ def execute(self)
     try:
         message = NotifierPage.wait(editor_page, base_id='file-error')
     except Exception as exc:
-        print 'Exception waiting for file-error:', exc
+        print 'Exception waiting for file-error:', str(exc) or repr(exc)
         logging.exception('Waiting for file-error')
     NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
@@ -651,9 +651,8 @@ def __init__(self):
     browser.close()
     browser.switch_to_window(workspace_window)
     workspace_page.show_library()
-    workspace_page.set_library_filter('In Project')
     time.sleep(0.5)
-    workspace_page.find_library_button('Bug2').click()
+    workspace_page.find_library_button('Bug2', 0.5).click()
     workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
     message = NotifierPage.wait(workspace_page)
     eq(message, "NameError: unable to create object of type 'bug2.Bug2': __init__ failed")
@@ -719,6 +718,67 @@ def _test_driver_config(browser):
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_driver_config complete."
+
+
+def _test_remove(browser):
+    print "running _test_driver_config..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Show assembly information.
+    workspace_page.select_object('top')
+    top = workspace_page.get_dataflow_figure('top', '')
+    editor = top.editor_page(double_click=False)
+    editor.move(-100, 100)  # Move it away from context menu.
+    connections = top.connections_page()
+    properties = top.properties_page()
+
+    eq(editor.is_visible, True)
+    eq(connections.is_visible, True)
+    eq(properties.is_visible, True)
+
+    # Remove component.
+    top.remove()
+
+    eq(editor.is_visible, False)
+    eq(connections.is_visible, False)
+    eq(properties.is_visible, False)
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_remove complete."
+
+
+def _test_noslots(browser):
+    print "running _test_noslots..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+
+    # Display editor and check that no 'Slots' tab exists.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    editor = ext.editor_page(double_click=False)
+    eq(editor('inputs_tab').is_visible, True)  # This waits.
+    eq(editor('inputs_tab').is_present, True)  # These are quick tests.
+    eq(editor('slots_tab').is_present, False)
+    eq(editor('outputs_tab').is_present, True)
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_noslots complete."
 
 
 if __name__ == '__main__':
