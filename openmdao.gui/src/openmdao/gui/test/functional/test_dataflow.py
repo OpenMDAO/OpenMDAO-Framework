@@ -342,8 +342,6 @@ def _test_driverflows(browser):
 
     # Select different displays.
     top = workspace_page.get_dataflow_figure('top')
-    top.display_driverflows(True)
-    time.sleep(0.5)
     top.display_dataflows(False)
     time.sleep(0.5)
 
@@ -367,6 +365,8 @@ def _test_driverflows(browser):
     top.display_driverflows(False)
     time.sleep(0.5)
     top.display_dataflows(True)
+    time.sleep(0.5)
+    top.display_driverflows(True)
     time.sleep(0.5)
 
     # Clean up.
@@ -402,12 +402,10 @@ def _test_replace(browser):
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
 
-    top = workspace_page.get_dataflow_figure('top')
-    top.display_driverflows(True)
-
     # Verify preproc is a PreProc.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -424,6 +422,7 @@ def _test_replace(browser):
     workspace_page.replace('preproc', 'rosen_suzuki.ScalingPreProc')
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -440,6 +439,7 @@ def _test_replace(browser):
     # Verify postproc is a PostProc.
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -456,6 +456,7 @@ def _test_replace(browser):
     workspace_page.replace('postproc', 'rosen_suzuki.ScalingPostProc')
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -472,6 +473,7 @@ def _test_replace(browser):
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['cons_is_linear', 'ndarray', '[]', '', 'true',
@@ -483,6 +485,7 @@ def _test_replace(browser):
                            'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', '', ''])
@@ -491,6 +494,7 @@ def _test_replace(browser):
     # Verify comp is a OptRosenSuzukiComponent.
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -510,6 +514,7 @@ def _test_replace(browser):
                 " 'postproc.result_in': top: Can't find 'comp.result'")
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
