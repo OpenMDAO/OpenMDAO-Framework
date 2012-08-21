@@ -45,7 +45,7 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
     this.connections = {};
     this.margin = 20;
     this.drawDataFlows = true;
-    this.drawDriverFlows = false;
+    this.drawDriverFlows = true;
 
     if (this.pathname === '') {
         // global dataflow figure is transparent with no border
