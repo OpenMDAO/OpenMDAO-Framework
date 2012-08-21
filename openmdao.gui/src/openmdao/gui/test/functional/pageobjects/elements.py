@@ -49,19 +49,23 @@ class _BaseElement(object):
         """ Return RGBA values for ``background-color`` property. """
         return rgba(self.value_of_css_property('background-color'))
 
+    @property
     def is_present(self):
-        """ Return True if the element can be found. """
+        """ True if the element can be found. """
         try:
             found = self.element
             return True
         except NoSuchElementException:
             return False
 
+    @property
     def is_visible(self):
-        """ Return True if the element is displayed. """
+        """ True if the element is visible. """
         try:
             return self.element.is_displayed()
-        except (NoSuchElementException, ElementNotVisibleException):
+        except (NoSuchElementException,
+                ElementNotVisibleException,
+                StaleElementReferenceException):
             return False
 
     def value_of_css_property(self, name):
