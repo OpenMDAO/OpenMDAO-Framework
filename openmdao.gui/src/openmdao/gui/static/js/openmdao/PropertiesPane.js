@@ -96,6 +96,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     }
                 }
             });
+
             props.setData(properties);
         }
         else {
