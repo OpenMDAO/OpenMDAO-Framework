@@ -5,56 +5,124 @@ import traceback
 import cmd
 import jsonpickle
 import time
+import imp
+import ast
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
 
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, create, get_available_types
+from openmdao.main.project import project_from_archive, Project, parse_archive_name
+from openmdao.main.publisher import publish
+from openmdao.main.mp_support import has_interface, is_instance
+from openmdao.main.interfaces import IContainer, IComponent, IAssembly
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
-from openmdao.util.fileutil import find_files, file_md5, get_module_path
-
-from openmdao.main.project import project_from_archive, Project, parse_archive_name
-from openmdao.gui.projdirfactory import ProjDirFactory
-
-from openmdao.main.publisher import publish
-
-from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.interfaces import IContainer, IComponent, IAssembly
+from openmdao.util.fileutil import find_files, file_md5, get_module_path, find_module
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.gui.projdirfactory import ProjDirFactory
 
-class ProjImporter(object):
-    def __init__(self, projpath):
-        self.projpath = os.path.abspath(os.path.expanduser(projpath))
 
-    def __call__(self, path):
-        if path.startswith(self.projpath):  # FIXME ...
-            print "import from %s" % path
-            return self
+
+class CtorInstrumenter(ast.NodeTransformer):
+    """All constructor calls for classes in the specified set will
+    be replaced with a call to a wrapper function that records the
+    call before creating the instance.
+    """
+    def __init__(self, wrapper_name, cset):
+        self.wrapper_name = wrapper_name
+        self.cset = cset
+        self._local_classes = set()
+        super(CtorInstrumenter, self).__init__()
+    
+    def visit_ClassDef(self, node):
+        self._local_classes.add(node.name)
+        print "found class '%s'" % node.name
+
+    def visit_Call(self, node):
+        name = _get_long_name(node.func)
+        if not (name in self._local_classes or name in self.cset):
+            return self.generic_visit(node)
+        
+        return ast.copy_location(ast.Call(func=ast.Name(id=self.wrapper_name), 
+                                          args=[node.func] + node.args,
+                                          ctx=node.ctx, keywords=keywords,
+                                          starargs=node.startargs,
+                                          kwargs=node.kwargs), node)
+    
+
+class ProjFinder(object):
+    """A finder class for custom imports from an OpenMDAO project. In order for this
+    to work, an entry must be added to sys.path of the form top_dir+'.prj', where top_dir
+    is the top directory of the project where python files are kept.
+    """
+    def __init__(self, path):
+        """When path has the form mentioned above (top_dir+'.prj'), this
+        returns a ProjFinder instance that will be used to locate modules within the
+        project.
+        """
+        if path.endswith('.prj'):
+            self.projdir = path.rsplit('.',1)[0]
+            if os.path.isdir(self.projdir):
+                print "import from project %s" % self.projdir
+                return
         raise ImportError("can't import %s" % path)
 
-    def find_module(self, fullname, path=None):
-        print "finding... %s" % fullname
+    def find_module(self, modpath, path=None):
+        """This looks within the project for the specified module, returning a loader
+        if the module is found, and None if it isn't.
+        """
+        print "finding... %s" % modpath
+        path = find_module(modpath, path=[self.projdir])
+        if path is not None:
+            print '*** FOUND %s' % modpath
+            return ProjLoader(modpath, path)
     
-    # Consider using importlib.util.module_for_loader() to handle
-    # most of these details for you.
-    def load_module(self, fullname):
-        code = self.get_code(fullname)
-        ispkg = self.is_package(fullname)
-        mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
-        mod.__file__ = "<%s>" % self.__class__.__name__
+    
+class ProjLoader(object):
+    """This is the import loader for files within an OpenMDAO project.  We use it to instrument
+    the imported files so we can keep track of what classes have been instantiated so we know
+    when a project must be saved and reloaded.
+    """
+    def __init__(self, modpath, projpath):
+        self.projpath = projpath
+        self.path = find_module(modpath)
+        self.ispkg = isinstance(self.path, basestring) and os.path.basename(self.path) == '__init__.py'
+        
+    def translate(self, node):
+        """Take the specified AST and translate it into the instrumented version."""
+        return node
+    
+    def get_code(self, modpath):
+        """Opens the file, compiles it into an AST and then translates it into the instrumented
+        version before compiling that into bytecode.
+        """
+        with open(self.path, 'r') as f:
+            contents = f.read()
+            if not contents.endswith('\n'):
+                contents += '\n'
+            root = ast.parse(contents, mode='exec')
+            return compile(self.translate(root), self.path, 'exec')
+
+    def load_module(self, modpath):
+        """Creates a new module if one doesn't exist already, and then updates the
+        dict of that module based on the contents of the instrumented module file.
+        """
+        code = self.get_code(modpath)
+        mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
+        mod.__file__ = self.path
         mod.__loader__ = self
-        if ispkg:
+        if self.ispkg:
             mod.__path__ = []
-            mod.__package__ = fullname
+            mod.__package__ = modpath
         else:
-            mod.__package__ = fullname.rpartition('.')[0]
+            mod.__package__ = modpath.rpartition('.')[0]
         exec(code, mod.__dict__)
         return mod
 
@@ -488,6 +556,12 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
+                
+            # remove any old ProjImporter from sys.path_hooks
+            for hook in sys.path_hooks:
+                if isinstance(hook, ProjImporter):
+                    sys.path_hooks.remove(hook)
+                    break
             
             # install project specific importer
             sys.path_hooks.append(ProjImporter(self.files.getcwd()))

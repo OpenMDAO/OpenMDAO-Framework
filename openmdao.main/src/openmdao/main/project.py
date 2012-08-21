@@ -177,33 +177,6 @@ def filter_macro(lines):
             
     return filt_lines[::-1] # reverse the result
     
-
-class CtorInstrumenter(ast.NodeTransformer):
-    """All constructor calls for classes in the specified set will
-    be replaced with a call to a wrapper function that records the
-    call before creating the instance.
-    """
-    def __init__(self, wrapper_name, cset):
-        self.wrapper_name = wrapper_name
-        self.cset = cset
-        self._local_classes = set()
-        super(CtorInstrumenter, self).__init__()
-    
-    def visit_ClassDef(self, node):
-        self._local_classes.add(node.name)
-        print "found class '%s'" % node.name
-
-    def visit_Call(self, node):
-        name = _get_long_name(node.func)
-        if not (name in self._local_classes or name in self.cset):
-            return self.generic_visit(node)
-        
-        return ast.copy_location(ast.Call(func=ast.Name(id=self.wrapper_name), 
-                                          args=[node.func] + node.args,
-                                          ctx=node.ctx, keywords=keywords,
-                                          starargs=node.startargs,
-                                          kwargs=node.kwargs), node)
-    
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes
     from the imported version of the file for the __main__ version.
