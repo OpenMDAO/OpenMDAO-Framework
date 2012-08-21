@@ -173,7 +173,8 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     setupSelector(dst_cmp_selector);
 
     function loadData(data) {
-        if (!data || !data.Dataflow || !data.Dataflow.components) {
+        if (!data || !data.Dataflow || !data.Dataflow.components
+                  || !data.Dataflow.components.length) {
             // don't have what we need, probably something got deleted
             self.close();
         }

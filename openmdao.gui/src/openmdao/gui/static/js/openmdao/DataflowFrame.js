@@ -27,6 +27,10 @@ openmdao.DataflowFrame = function(id,model,pathname) {
                 }
                 pane.loadData(dataflow);
             }
+            else {
+// This doesn't work when deleting 'top' from 'top'.
+//                self.showDataflow('');
+            }
         }
     }
 
