@@ -1,3 +1,4 @@
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -16,9 +17,23 @@ class DialogPage(BasePageObject):
                    lambda browser: browser.find_element(*locator))
         super(DialogPage, self).__init__(browser, port, root)
 
+    @property
+    def is_visible(self):
+        """ True if dialog is visible. """
+        return self('dialog_title').is_visible
+
     def close(self):
         """ Close dialog. """
         self('close_button').click()
+
+    def move(self, delta_x, delta_y):
+        """ Move dialog. """
+        chain = ActionChains(self.browser)
+        chain = chain.click_and_hold(self('dialog_title').element)
+        chain = chain.move_by_offset(delta_x, delta_y)
+        chain = chain.release(None)
+        chain.perform()
+
 
 class NotifyDialog(DialogPage): 
     """The dialog that appears when there is an error""" 
