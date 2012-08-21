@@ -53,10 +53,14 @@ class _BaseElement(object):
     def is_present(self):
         """ True if the element can be found. """
         try:
-            found = self.element
-            return True
-        except NoSuchElementException:
+            if self._root is None:
+                self._browser.find_element(*self._locator)
+            else:
+                self._root.find_element(*self._locator)
+        except (NoSuchElementException,
+                StaleElementReferenceException):
             return False
+        return True
 
     @property
     def is_visible(self):
