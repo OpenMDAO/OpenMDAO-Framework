@@ -48,9 +48,15 @@ openmdao.PropertiesFrame = function(id,model) {
             outputs.loadData(properties.Outputs);
         }
         else {
-            nameHeader.html(self.pathname);
-            inputs.loadData([]);
-            outputs.loadData([]);
+            // Assume component was deleted.
+            if (self.elm.parent().hasClass('ui-dialog')) {
+                self.close();
+            }
+            else {
+                nameHeader.html('');
+                inputs.loadData([]);
+                outputs.loadData([]);
+            }
         }
     }
 
