@@ -40,6 +40,14 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     elm.append(propsDiv);
     props = new Slick.Grid(propsDiv, [], columns, options)
 
+
+    props.onBeforeCellEditorDestroy.subscribe(function(e, editor){
+        var args = editor.args
+        if(!openmdao.ValueEditor.isRegistered(args.item.type)){
+            debug.info(args)
+        }
+    })
+
     props.onBeforeEditCell.subscribe(function(row,cell){
         /*
          * TODO: If the datatype does not have a registered 
@@ -47,11 +55,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
          * some sort of alert needs to be provided
          */
         
-        if( !openmdao.ValueEditor.isRegistered(
+        /*if( !openmdao.ValueEditor.isRegistered(
                 props.getDataItem(cell.row).type)){
                 
             return false;        
-        }
+        }*/
                 
                 
 
@@ -60,7 +68,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             return false;
         }
 
-        return editable;
+        return true;
     })
 
     if (editable) {
