@@ -423,16 +423,43 @@ class ConsoleServer(cmd.Cmd):
 
     def get_workflow(self, pathname):
         flow = {}
-        drvr, root = self.get_container(pathname)
-        # allow for request on the parent assembly
-        if is_instance(drvr, Assembly):
-            drvr = drvr.get('driver')
-            pathname = pathname + '.driver'
-        if drvr:
-            try:
-                flow = drvr.get_workflow()
-            except Exception, err:
-                self._error(err, sys.exc_info())
+        if pathname:
+            drvr, root = self.get_container(pathname)
+            # allow for request on the parent assembly
+            if is_instance(drvr, Assembly):
+                drvr = drvr.get('driver')
+                pathname = pathname + '.driver'
+            if drvr:
+                try:
+                    flow = drvr.get_workflow()
+                except Exception, err:
+                    self._error(err, sys.exc_info())
+        else:
+            for k, v in self.proj.items():
+                if is_instance(v, Assembly):
+                    v = v.get('driver')
+                if is_instance(v, Driver):
+                    flow['pathname'] = v.get_pathname()
+                    flow['type'] = type(v).__module__ + '.' + type(v).__name__
+                    flow['workflow'] = []
+                    flow['valid'] = v.is_valid()
+                    for comp in v.workflow:
+                        pathname = comp.get_pathname()
+                        if is_instance(comp, Assembly) and comp.driver:
+                            flow['workflow'].append({
+                                'pathname': pathname,
+                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
+                                'driver':   comp.driver.get_workflow(),
+                                'valid':    comp.is_valid()
+                              })
+                        elif is_instance(comp, Driver):
+                            flow['workflow'].append(comp.get_workflow())
+                        else:
+                            flow['workflow'].append({
+                                'pathname': pathname,
+                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
+                                'valid':    comp.is_valid()
+                              })
         return jsonpickle.encode(flow)
 
     def get_attributes(self, pathname):
