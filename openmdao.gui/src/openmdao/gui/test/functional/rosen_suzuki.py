@@ -90,6 +90,13 @@ class Simulation(Assembly):
         self.driver.printvars = ['comp.opt_objective']
 
 
+class NestedSimulation(Assembly):
+
+    def configure(self):
+        self.add('sim', Simulation())
+        self.driver.workflow.add('sim')
+
+
 if __name__ == '__main__':
     sim = set_as_top(Simulation())
     flow = sim.get_dataflow()

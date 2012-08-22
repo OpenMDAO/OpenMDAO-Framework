@@ -247,6 +247,12 @@ class WorkspacePage(BasePageObject):
         self('save_button').click()
         NotifierPage.wait(self)
 
+    def reload_project(self):
+        """ Reload current project. """
+        self('project_menu').click()
+        self('reload_button').click()
+        WorkspacePage.verify(self.browser, self.port)
+
     def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
         WebDriverWait(self.browser, TMO).until(
@@ -345,11 +351,11 @@ class WorkspacePage(BasePageObject):
 
         chain = ActionChains(self.browser)
         if False:
-            chain = chain.drag_and_drop(library_item, target)
+            chain.drag_and_drop(library_item, target)
         else:
-            chain = chain.click_and_hold(library_item)
-            chain = chain.move_to_element_with_offset(target, 90, 90)
-            chain = chain.release(None)
+            chain.click_and_hold(library_item)
+            chain.move_to_element_with_offset(target, 90, 90)
+            chain.release(None)
         chain.perform()
 
         page = ValuePrompt(self.browser, self.port)
@@ -452,11 +458,11 @@ class WorkspacePage(BasePageObject):
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
         chain = ActionChains(self.browser)
-        chain = chain.click_and_hold(src.output_port)
+        chain.click_and_hold(src.output_port)
         # Using root rather than input_port since for some reason
         # even using a negative Y offset can select the parent's input.
-        chain = chain.move_to_element(dst.input_port)
-        chain = chain.release(None)
+        chain.move_to_element(dst.input_port)
+        chain.release(None)
         chain.perform()
         parent, dot, srcname = src.pathname.rpartition('.')
         parent, dot, dstname = dst.pathname.rpartition('.')
@@ -470,9 +476,9 @@ class WorkspacePage(BasePageObject):
         target = self.get_dataflow_figure(name).root
 
         chain = ActionChains(self.browser)
-        chain = chain.click_and_hold(library_item)
-        chain = chain.move_to_element_with_offset(target, 125, 30)
-        chain = chain.release(None)
+        chain.click_and_hold(library_item)
+        chain.move_to_element_with_offset(target, 125, 30)
+        chain.release(None)
         chain.perform()
 
         dialog = ConfirmationPage(self)
@@ -480,6 +486,16 @@ class WorkspacePage(BasePageObject):
             dialog.click_ok()
         else:
             dialog.click_cancel()
+
+    def get_workflow_figures(self):
+        """ Return workflow figure elements. """
+        time.sleep(0.5)  # Pause for stable display.
+        return self.browser.find_elements_by_class_name('WorkflowFigure')
+
+    def get_workflow_component_figures(self):
+        """ Return workflow component figure elements. """
+        time.sleep(0.5)  # Pause for stable display.
+        return self.browser.find_elements_by_class_name('WorkflowComponentFigure')
 
     def hide_left(self):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')
