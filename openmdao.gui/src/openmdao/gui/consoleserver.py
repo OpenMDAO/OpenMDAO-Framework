@@ -28,8 +28,11 @@ from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
+def _register_inst(typname):
+    print "registering %s" % typname
 
 def text_to_node(text):
+    """Given a python source string, return the corresponding AST node."""
     modnode = ast.parse(text, 'exec')
     if len(modnode.body) == 1:
         return modnode.body[0]
@@ -44,58 +47,26 @@ class CtorInstrumenter(ast.NodeTransformer):
         super(CtorInstrumenter, self).__init__()
     
     def visit_ClassDef(self, node):
+        text = None
         for stmt in node.body:
             if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
-                break # __init__ was found - visit_FunctionDef will transform it
+                stmt.name = '__%s_orig_init__' % node.name # __init__ was found - rename it to __orig_init__
+                break 
         else: # no __init__ found, make one
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    super(self.__class__, self).__init__(*args, **kwargs)
             """
-            funcbody = [ast.copy_location(ast.Call(func=ast.Name(id='__init__'), 
-                                          args=[node.func] + node.args,
-                                          ctx=node.ctx, keywords=keywords,
-                                          starargs=node.startargs,
-                                          kwargs=node.kwargs), node)]
-            node.body = [ast.FunctionDef(name='__init__', 
-                                         args=ast.arguments(args=[Name(id='self', ctx=Param())], 
-                                         vararg='args', kwarg='kwargs', defaults=[]), 
-                                         body=functbody, 
-                                         decorator_list=[])]+node.body
-#[FunctionDef(name='__init__', args=arguments(args=[Name(id='self', ctx=Param())], vararg='args', 
-# kwarg='kwargs', defaults=[]), body=[Expr(value=Call(func=Name(id='_register_class', ctx=Load()), 
-# args=[Call(func=Attribute(value=Str(s='.'), attr='join', ctx=Load()), 
-#args=[List(elts=[Attribute(value=Attribute(value=Name(id='self', ctx=Load()), attr='__class__', ctx=Load()),
-#attr='__module__', ctx=Load()), Attribute(value=Attribute(value=Name(id='self', ctx=Load()), 
-#attr='__class__', ctx=Load()), attr='__name__', ctx=Load())], ctx=Load())], keywords=[], 
-#starargs=None, kwargs=None)], keywords=[], starargs=None, kwargs=None)), 
-#Expr(value=Call(func=Attribute(value=Call(func=Name(id='super', ctx=Load()), 
-#args=[Attribute(value=Name(id='self', ctx=Load()), attr='__class__', ctx=Load()), 
-#Name(id='self', ctx=Load())], keywords=[], starargs=None, kwargs=None), attr='__init__', ctx=Load()), 
-#args=[], keywords=[], starargs=Name(id='args', ctx=Load()), kwargs=Name(id='kwargs', ctx=Load())))], 
-#decorator_list=[])]
-        self.generic_visit(node)
+        if text is None: # class has its own __init__ (name has been changed to __orig_init__)
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    self.__%s_orig_init__(*args, **kwargs)
+            """ % node.name
+        node.body = [ast.copy_location(text_to_node(text), node)]+node.body
         return node
 
-    def visit_FunctionDef(self, node):
-        #identifier name, arguments args, stmt* body, expr* decorator_list
-        # arguments = (expr* args, identifier? vararg, identifier? kwarg, expr* defaults)
-        if node.name == '__init__':
-            print "init function %s" % node.name
-        self.generic_visit(node)
-        return node
-    
-    #def visit_Call(self, node):
-        #name = _get_long_name(node.func)
-        #if not (name in self._local_classes or name in self.cset):
-            #return self.generic_visit(node)
-        
-        #return ast.copy_location(ast.Call(func=ast.Name(id=self.wrapper_name), 
-                                          #args=[node.func] + node.args,
-                                          #ctx=node.ctx, keywords=keywords,
-                                          #starargs=node.startargs,
-                                          #kwargs=node.kwargs), node)
-    
 
 class ProjFinder(object):
     """A finder class for custom imports from an OpenMDAO project. In order for this
@@ -110,7 +81,7 @@ class ProjFinder(object):
         if path.endswith('.prj'):
             self.projdir = path.rsplit('.',1)[0]
             if os.path.isdir(self.projdir):
-                print "import from project %s" % self.projdir
+                #print "import from project %s" % self.projdir
                 return
         raise ImportError("can't import %s" % path)
 
@@ -118,10 +89,8 @@ class ProjFinder(object):
         """This looks within the project for the specified module, returning a loader
         if the module is found, and None if it isn't.
         """
-        print "finding... %s" % modpath
         path = find_module(modpath, path=[self.projdir])
         if path is not None:
-            print '*** FOUND %s' % modpath
             return ProjLoader(modpath, path)
     
     
@@ -138,6 +107,7 @@ class ProjLoader(object):
     def translate(self, node):
         """Take the specified AST and translate it into the instrumented version."""
         node = CtorInstrumenter().visit(node)
+        node.body = [text_to_node('from openmdao.gui.consoleserver import _register_inst')]+node.body
         return node
     
     def get_code(self, modpath):
@@ -166,7 +136,6 @@ class ProjLoader(object):
             mod.__package__ = modpath.rpartition('.')[0]
         exec(code, mod.__dict__)
         return mod
-
 
 
 
@@ -607,14 +576,12 @@ class ConsoleServer(cmd.Cmd):
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
                 
-            # remove any old ProjImporter from sys.path_hooks
+            # make sure we have a ProjFinder in sys.path_hooks
             for hook in sys.path_hooks:
-                if isinstance(hook, ProjImporter):
-                    sys.path_hooks.remove(hook)
+                if hook is ProjFinder:
                     break
-            
-            # install project specific importer
-            sys.path_hooks.append(ProjImporter(self.files.getcwd()))
+            else:
+                sys.path_hooks = [ProjFinder]+sys.path_hooks
             
             # have to do things in a specific order here. First, create the files,
             # then point the ProjDirFactory at the files, then finally create the

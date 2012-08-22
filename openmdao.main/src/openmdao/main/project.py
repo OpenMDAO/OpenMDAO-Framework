@@ -337,14 +337,14 @@ class Project(object):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
         modeldir = self.path
-        sys.path = [modeldir]+sys.path
+        sys.path = [modeldir+'.prj']+sys.path
         logger.error("added %s to sys.path" % modeldir)
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir)
+            sys.path.remove(modeldir+'.prj')
         except:
             pass
 
