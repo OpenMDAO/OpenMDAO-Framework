@@ -23,10 +23,17 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
      */
     function updateFigures(json) {
         jQuery.each(json, function(idx,slot) {
-            var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name,
-                                          slot.klass, slot.filled);
-            figures[name] = fig;
-            slotsDiv.append(fig);
+            debug.info('SlotsPane.updateFigures() slot',idx,slot);
+            if (figures[slot.name]) {
+                figures[slot.name].setState(slot.klass, slot.filled);
+            }
+            else {
+                var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name,
+                                              slot.containertype, slot.klass,
+                                              slot.desc, slot.filled);
+                figures[name] = fig;
+                slotsDiv.append(fig);
+            }
         });
     }
 
