@@ -25,12 +25,41 @@ openmdao.ValueEditor = (function(){
     */
     var options = {
         defaultEditor : TextCellEditor,
-        defaultEditorEnabled : true
-        overridesEnabled : false
+        defaultEditorEnabled : true,
+        overridesEnabled : false,
+        unregisteredPromptEnabled : true
+    }
+
+
+    var constructEditor = function(editor, args){
+        return new editor(args)
+    }
+
+    var getEditor = function(dataType, args){
+        if(this.isRegistered(dataType)){
+            editor = this.getRegisteredEditor(datatype)
+            return constructEditor(editor, args)
+        }
+
+        if(this.defaultEditorEnabled()){
+            editor = this.getDefaultEditor()
+            return constructEditor(editor, args)
+        }
+
+        setFlag("editorNotSet")
+
+        if(this.unregisterdPromptEnabled()){
+            //Prompt user with error because 
+            //the datatype is not supported
+            //and there is no default editor
+        }
+
+        return null
     }
 
     function constructorFn(args){
         this.init(args)
+
     }
 
     /*
@@ -46,15 +75,29 @@ openmdao.ValueEditor = (function(){
     * to using TextCellEditor.
     */
     constructorFn.prototype.init = function(args){
+        this.superClass.init.call(args)
         var dataType = args.item.type
-        if(constructorFn.isRegistered(dataType)){
-            this.superClass.init.call(this, args)
-            this.editor = new editors[dataType](this.args) 
-        }
+        this.editor = getEditor(dataType, args)
+        this.flags = (function(){
+            
+            var flags = {
+                'editorNotSet' : false
+            }
+           
+            return { 
+                set : function(){},
+                reset : function(){},
+                check : function(){}
+            }
+        })();
+    }
 
-        else{
-            unregistered[dataType] = true
-        }
+    constructorFn.getRegisteredEditor = function(dataType){
+        return editors[dataType]
+    }
+
+    constructorFn.getDefaultEditor = function(){
+        return options.defaultEditor
     }
 
     /*
@@ -65,33 +108,51 @@ openmdao.ValueEditor = (function(){
     * are methods to be used to interface with 
     * ValueEditors options.
     */
-    constructorFn.overridesEnabled(){
+    constructorFn.overridesEnabled = function(){
         return options.enableOverrides
     }
 
-    constructorFn.enableOverrides(){
+    constructorFn.enableOverrides = function(){
         options.enableOverrides = true
     }
 
-    constructorFn.disableOverrides(){
+    constructorFn.disableOverrides = function(){
         options.enableOverrides = false
     }
 
-    constructorFn.defaultEditorEnabled(){
+    constructorFn.defaultEditorEnabled = function(){
         return options.defaultEditorEnabled
     }
 
-    constructorFn.enableDefaultEditor(){
+    constructorFn.enableDefaultEditor = function(){
         options.defaultEditorEnabled = true
     }
 
-    constructorFn.disableDefaultEditor(){
+    constructorFn.disableDefaultEditor = function(){
         options.defaultEditorEnabled = false
     }
 
-    constructorFn.setDefaultEditor(editor){
+    constructorFn.setDefaultEditor = function(editor){
         options.defaultEditor = defaultEditor
     }
+
+    constructorFn.enableUnregisteredPrompt = function(){
+        options.unregisterdPromptEnabled = true
+    }
+
+    constructorFn.disableUnregisteredPrompt = function(){
+        options.unregisterdPromptEnabled = false
+    }
+
+    constructorFn.unregisteredPromptEnabled = function(){
+        return options.unregisterPromptEnabled
+    }
+
+
+    constructorFn.mayRegisterEditor(dataType){
+        return !(this.isRegistered(dataType)) || this.overridesEnabled()
+    }
+
 
     /*
     * Editors is a private static property of ValueEditor.
@@ -105,7 +166,9 @@ openmdao.ValueEditor = (function(){
     *
     */
     constructorFn.registerEditor = function(name, constructor){
-        editors[name] = constructor
+        if(this.mayRegisterEditor(name)){
+            editors[name] = constructor
+        }
     }
 
     constructorFn.isRegistered = function(name){
@@ -136,7 +199,7 @@ openmdao.ValueEditor.prototype.serializeValue = function(){
 }
 
 openmdao.ValueEditor.prototype.loadValue = function(item){
-    if(!this.editor){
+    if(openmdao.ValueEditor.editorNotSet()){
         this.destroy()
     }
 
