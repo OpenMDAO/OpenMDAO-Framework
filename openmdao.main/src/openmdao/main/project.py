@@ -5,7 +5,7 @@ Routines for handling 'Projects' in Python.
 import os
 import sys
 import shutil
-from inspect import isclass #, getfile
+from inspect import isclass
 import tarfile
 import cPickle as pickle
 from tokenize import generate_tokens
@@ -22,7 +22,6 @@ from openmdao.main.factorymanager import create
 from openmdao.main.mp_support import is_instance
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.log import logger
-
 
 # extension for project files
 PROJ_FILE_EXT = '.proj'
@@ -177,7 +176,6 @@ def filter_macro(lines):
         filt_lines.append(line)
             
     return filt_lines[::-1] # reverse the result
-    
     
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes
