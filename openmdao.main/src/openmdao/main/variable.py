@@ -22,6 +22,15 @@ class Variable(TraitType):
         if 'vartypename' not in metadata:
             metadata['vartypename'] = self.__class__.__name__
         super(Variable, self).__init__(default_value=default_value, **metadata)
+        
+    def get_attribute(self, name, value):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. This class should always
+        be overloaded for use in your custom datatypes.
+        """
+        
+        attr = {}
+        return attr
 
 
 
