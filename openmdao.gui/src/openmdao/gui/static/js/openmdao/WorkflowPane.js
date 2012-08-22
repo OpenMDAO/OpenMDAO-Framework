@@ -184,4 +184,5 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
         }
     };
 
+    this.showWorkflow(pathname);
 };
