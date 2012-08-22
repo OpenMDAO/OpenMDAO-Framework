@@ -142,6 +142,10 @@ openmdao.WorkflowComponentFigure.prototype.createHTMLElement=function(){
     item.appendChild(this.bottom_left);
     item.appendChild(this.footer);
     item.appendChild(this.bottom_right);
+
+    var elm = jQuery(item);
+    elm.addClass("WorkflowComponentFigure");
+
     return item;
 };
 

@@ -30,6 +30,7 @@ def main():
                             'test_dataflow.py',
                             'test_dragdrop.py',
                             'test_project.py',
+                            'test_workflow.py',
                             'test_workspace.py'):
             msg = '    Running %s' % test_script
             print msg
