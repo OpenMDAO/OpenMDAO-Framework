@@ -149,8 +149,8 @@ class DataflowFigure(BasePageObject):
         chain = ActionChains(self.browser)
         # Default is centered which causes problems in some contexts.
         # Offset is apparently limited, (20, 20) had problems.
-        chain = chain.move_to_element_with_offset(self.root, 15, 15)
-        chain = chain.context_click(None)
+        chain.move_to_element_with_offset(self.root, 15, 15)
+        chain.context_click(None)
         chain.perform()
         time.sleep(0.5)
         self(name).click()
