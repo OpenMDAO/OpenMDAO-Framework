@@ -15,6 +15,7 @@ class ComponentPage(DialogPage):
     inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']")) 
     slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']")) 
     outputs_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']")) 
+    workflow_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']")) 
  
     inputs  = GridElement((By.ID, 'Inputs_props')) 
     outputs = GridElement((By.ID, 'Outputs_props')) 
@@ -49,6 +50,10 @@ class ComponentPage(DialogPage):
     def show_slots(self): 
         """switch to slots tab""" 
         self('slots_tab').element.click() 
+ 
+    def show_workflow(self): 
+        """switch to workflow tab""" 
+        self('workflow_tab').element.click() 
  
  
 class DriverPage(ComponentPage): 

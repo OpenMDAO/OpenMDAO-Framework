@@ -56,6 +56,7 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     this.titlebar.style.borderLeft="5px solid transparent";
     this.titlebar.style.whiteSpace="nowrap";
     this.titlebar.style.textAlign="left";
+    this.titlebar.className="WorkflowFigureTitleBar";
     //this.titlebar.style.backgroundImage="url(window_toolbar.png)";
     this.titlebar.innerHTML= this.name;
     item.appendChild(this.titlebar);
