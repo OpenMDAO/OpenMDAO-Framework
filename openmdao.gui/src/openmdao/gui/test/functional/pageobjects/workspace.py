@@ -20,6 +20,34 @@ from elements import ButtonElement, InputElement, GridElement, TextElement
 from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
 
 
+from elements import GenericElement, ButtonElement, TextElement
+
+
+class WorkflowFigure(BasePageObject):
+    """ Represents elements within a workflow figure. """
+
+    # parts of the WorkflowFigure div. Nothing here yet. Not sure
+    #   if needed
+    title_bar = TextElement((By.CLASS_NAME, 'WorkflowFigureTitleBar'))
+    figure_itself = GenericElement((By.XPATH, '.'))
+
+    # Context menu. Not needed yet but will need later
+
+    @property
+    def pathname(self):
+        """ Pathname of this component. """
+        return self._pathname
+
+    @pathname.setter
+    def pathname(self, path):
+        self._pathname = path
+
+    @property
+    def background_color(self):
+        """ Figure background-color property. """
+        return self.root.value_of_css_property('background-color')
+
+
 class WorkspacePage(BasePageObject):
 
     title_prefix = 'OpenMDAO:'
@@ -300,6 +328,24 @@ class WorkspacePage(BasePageObject):
                 if retry >= 2:
                     raise
 
+    def show_workflow(self, component_name):
+        """ Show workflow of `component_name`. """
+        self('objects_tab').click()
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+        time.sleep(0.5)
+        # Try to recover from context menu not getting displayed.
+        for retry in range(3):
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            try:
+                self('obj_workflow').click()
+                break
+            except TimeoutException:
+                if retry >= 2:
+                    raise
     def show_properties(self):
         """ Display properties. """
         self('properties_tab').click()
@@ -405,6 +451,42 @@ class WorkspacePage(BasePageObject):
                 else:
                     if fig_name == name:
                         fig = DataflowFigure(self.browser, self.port, figure)
+                        if prefix is not None:
+                            if prefix:
+                                fig.pathname = '%s.%s' % (prefix, name)
+                            else:
+                                fig.pathname = name
+                        return fig
+                finally:
+                    self.browser.implicitly_wait(TMO)
+        return None
+
+    def get_workflow_component_figures(self):
+        """ Return workflow component figures elements. """
+        time.sleep(0.5)  # Pause for stable display.
+        return self.browser.find_elements_by_class_name('WorkflowComponentFigure')
+
+    def get_workflow_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowFigure` for `name`. """
+        for retry in range(retries):
+            time.sleep(0.5)  # Pause for stable display.
+            figures = self.browser.find_elements_by_class_name('WorkflowFigure')
+            if not figures:
+                continue
+            fig_name = None
+            for figure in figures:
+                self.browser.implicitly_wait(1)
+                try:
+                    # figure name is the text of the only child of the WorkflowFigure div
+                    children = figure.find_elements_by_xpath('./*')
+                    fig_name = children[0].text
+                    #   could also try figure.childNodes[0].text
+                except StaleElementReferenceException:
+                    logging.warning('get_workflow_figure:'
+                                    ' StaleElementReferenceException')
+                else:
+                    if fig_name == name:
+                        fig = WorkflowFigure(self.browser, self.port, figure)
                         if prefix is not None:
                             if prefix:
                                 fig.pathname = '%s.%s' % (prefix, name)

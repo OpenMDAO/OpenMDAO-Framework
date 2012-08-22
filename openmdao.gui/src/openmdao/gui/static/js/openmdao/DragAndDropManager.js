@@ -218,28 +218,169 @@ openmdao.DragAndDropManager=function() {
     };
 
     /**********************************************************************
-       TODO: For handling drag and drop on workflows
+       For handling drag and drop on workflows
     **********************************************************************/
-    var workflow_figures= [];
+    var workflow_droppables= [];
+    var highlighting_workflow_droppables= new Hashtable();
+    var drop_workflow_target = null ;
 
     /** add workflow figure ID to the list. */
-    this.addWorkflowFigure = function(workflow_figure_id) {
-        workflow_figures.push( workflow_figure_id );
+    this.addWorkflowDroppable = function(workflow_figure_id) {
+        debug.info( "added workflow droppable ", workflow_figure_id ) ;
+        workflow_droppables.push( workflow_figure_id );
     };
 
     /** remove workflow figure from list. */
-    this.removeWorkflowFigure = function(workflow_figure_id) {
-        workflow_figures.splice(workflow_figures.indexOf(workflow_figure_id), 1);
+    this.removeWorkflowDroppable = function(workflow_figure_id) {
+        debug.info( "removed workflow droppable ", workflow_figure_id ) ;
+        workflow_droppables.splice(workflow_droppables.indexOf(workflow_figure_id), 1);
     };
 
     /** clear all workflow figures */
-    this.clearWorkflowFigures = function() {
-        workflow_figures = [] ;
+    this.clearWorkflowDroppables = function() {
+        debug.info( "cleared all workflow droppables ") ;
+        workflow_droppables = [] ;
+    };
+
+    // get workflow figure top div that contains the draggable, is visible and accepts the 
+    //    type of the draggable
+    this.getTopWorkflowDroppableForDropEvent = function(ev, ui) {
+        return openmdao.drag_and_drop_manager.drop_workflow_target ;
     };
 
 
+    // the input should be a jQuery object
+    this.draggableWorkflowOut = function(droppable, being_dropped_pathname) {
+        highlighting_workflow_droppables.remove(droppable[0].id);
+        debug.info( "draggableWorkflowOut id", droppable[0].id );
+        openmdao.drag_and_drop_manager.updateWorkflowHighlighting(being_dropped_pathname) ;
+    };
+
+    // gets called when the cursor goes inside the passed in parameter element, droppable
+    // the input should be a jQuery object
+    this.draggableWorkflowOver = function(droppable, being_dropped_pathname) {
+        var elm_calculated_zindex = this.computeCalculatedZindex( droppable ) ;
+        highlighting_workflow_droppables.put(droppable[0].id, elm_calculated_zindex );
+        debug.info( "draggableWorkflowOver id", droppable[0].id );
+        openmdao.drag_and_drop_manager.updateWorkflowHighlighting(being_dropped_pathname) ;
+    };
 
 
+    // Given the list of droppables that could potentially be 
+    //    dropped on given where the cursor is, figure out which is on top
+    //    and tell it to highlight itself. Unhighlight all the others
+   this.updateWorkflowHighlighting = function(being_dropped_pathname) {
 
+       // Find the div with the max id
+       var max_zindex = -10000 ;
+       var max_topmost_zindex = -10000 ;
+       var max_id = "" ;
+
+       //debug.info( "Starting calc of front div" ) ;
+       highlighting_workflow_droppables.each( function( id, zindex ) {
+           var div = $( id ) ;
+           var div_object = jQuery( div ) ;
+           var tmp_elm = div_object ;
+
+           //debug.info( "Is div", div.id, "in front?" ) ;
+           while ( tmp_elm.css( "z-index" ) == "auto" )
+           {
+               tmp_elm = tmp_elm.parent();
+           }
+           calculated_zindex = tmp_elm.css( "z-index" ) ;
+
+           var count = 0 ;
+           var max_count = 0 ;
+
+           // Find the zindex for the topmost element
+           tmp_elm = div_object  ;
+           var topmost_zindex = null ;
+           while ( 1 ) {
+               if ( tmp_elm.css( "z-index" ) != "auto" ) {
+                   topmost_zindex = tmp_elm.css( "z-index" ) ;
+               }
+               if ( ! tmp_elm.parent() ) {
+                   break ;
+               }
+               if ( tmp_elm.parent().is( "body" ) ) {
+                   break ;
+               }
+               tmp_elm = tmp_elm.parent() ;
+               count += 1 ;
+           }
+           topmost_zindex = tmp_elm.css( "z-index" ) ;
+
+           //debug.info( "topmost zindex for", div.id,"is", topmost_zindex, "with count", count ) ;
+
+           if ( topmost_zindex > max_topmost_zindex ) {
+               max_id = id ;
+               max_zindex = calculated_zindex ;
+               max_topmost_zindex = topmost_zindex ;
+               max_count = count ;
+           } else if ( topmost_zindex == max_topmost_zindex ) {
+               /* Use the count to break the tie */
+               if ( count > max_count )
+               {
+                   max_zindex = calculated_zindex ;
+                   max_id = id ;
+                   max_count = count ;
+               } else if ( count === max_count ) {
+                   /* If still tied, use the zindex to break the tie */
+                   if ( calculated_zindex > max_zindex )
+                   {
+                       max_id = id ;
+                       max_zindex = calculated_zindex ;
+                   }
+               }
+           }
+
+
+       } ) ;
+
+       //debug.info( "updated highlighting: max_zindex, max_topmost_zindex, max_id",
+                   //max_zindex, max_topmost_zindex, max_id ) ;
+
+       // Now only highlight the top one
+       highlighting_workflow_droppables.each( function( id, zindex ) {
+           var div = $( id ) ;
+           var div_object = jQuery( div ) ;
+           //debug.info( div_object.parent().children()[0].id, "compared to", div_object[0].id ) ;
+           //debug.info( "div_object class", div_object.attr("class") ) ;
+           var o = div_object.data('corresponding_openmdao_object');
+
+           var being_dropped_parent_pathname = openmdao.Util.getPath( being_dropped_pathname ) ;
+           var dropped_on_pathname  = div_object.data('pathname') ;
+           var dropped_on_parent_pathname = openmdao.Util.getPath( dropped_on_pathname ) ;
+
+
+           if ( id == max_id ) {
+               debug.info( "in drag and drop manager, workflow highlighting", div_object[0].id ) ;
+               if (
+                   being_dropped_parent_pathname === dropped_on_parent_pathname
+               ) {
+                   o.highlightAsDropTarget()
+                   openmdao.drag_and_drop_manager.drop_workflow_target = div_object ;
+               } else {
+                   openmdao.drag_and_drop_manager.drop_workflow_target = null ;
+               }
+           } else {
+               o.unhighlightAsDropTarget()
+           }
+       } ) ;
+
+   };
+
+
+    // clear all droppables
+    this.clearHighlightingWorkflowDroppables = function() {
+        debug.info( "clearHighlightingWorkflowDroppables" ) ;
+        highlighting_workflow_droppables.each( function( id, zindex ) { 
+            var div = $( id ) ;
+            var div_object = jQuery( div ) ;
+            var o = div_object.data('corresponding_openmdao_object');
+            o.unhighlightAsDropTarget()
+        } ) ;
+        highlighting_workflow_droppables.clear();
+    };
 
 }
