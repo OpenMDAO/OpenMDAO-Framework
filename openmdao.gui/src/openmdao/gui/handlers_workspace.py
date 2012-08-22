@@ -107,7 +107,7 @@ class CommandHandler(ReqHandler):
 
 
 class ComponentHandler(ReqHandler):
-    ''' add, remove or get a component
+    ''' add, get, or remove a component
     '''
 
     @web.authenticated
@@ -138,6 +138,23 @@ class ComponentHandler(ReqHandler):
             result = sys.exc_info()
         self.content_type = 'text/html'
         self.write(result)
+        
+    @web.authenticated
+    def get(self, name):
+        cserver = self.get_server()
+        attr = {}
+        try:
+            attr = cserver.get_attributes(name)
+        except Exception, err:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            print 'Error getting attributes on', name, ':', err
+        self.content_type = 'application/javascript'
+        self.write(attr)
+
+        
+class ObjectHandler(ReqHandler):
+    ''' get the data for a slotable object (including components)
+    '''
 
     @web.authenticated
     def get(self, name):
@@ -485,6 +502,7 @@ handlers = [
     web.url(r'/workspace/files/?',          FilesHandler),
     web.url(r'/workspace/geometry',         GeometryHandler),
     web.url(r'/workspace/model/?',          ModelHandler),
+    web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),

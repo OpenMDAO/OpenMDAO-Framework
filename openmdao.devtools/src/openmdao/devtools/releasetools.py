@@ -237,8 +237,6 @@ def finalize_release(parser, options):
         print "Only uploaded tutorials, no other action was taken. Now exiting"
         sys.exit(0)
 
-
-
     reldir = 'rel_%s' % options.version
     brname = 'release_%s' % options.version
     # check validity

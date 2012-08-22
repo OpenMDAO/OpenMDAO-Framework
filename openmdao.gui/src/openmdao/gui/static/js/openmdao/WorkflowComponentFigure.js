@@ -242,7 +242,7 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
 
     // properties
     menu.appendMenuItem(new draw2d.MenuItem("Edit",null,function(){
-        cf = new openmdao.ComponentFrame(model,pathname);
+        cf = new openmdao.ObjectFrame(model,pathname);
     }));
 
     // properties
@@ -276,7 +276,7 @@ openmdao.WorkflowComponentFigure.prototype.getContextMenu=function(){
 };
 
 openmdao.WorkflowComponentFigure.prototype.onDoubleClick=function(){
-    editor = new openmdao.ComponentFrame(this.openmdao_model,this.pathname);
+    editor = new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
 };
 
 /**

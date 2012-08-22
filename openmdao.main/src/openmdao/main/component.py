@@ -15,7 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str, Int, Property
+from enthought.traits.api import Bool, List, Dict, Str, Int, Property
 
 from zope.interface import implementedBy
 
@@ -1696,9 +1696,12 @@ class Component(Container):
 
             slots = []
             for name, value in self.traits().items():
+                
+                # Regular Slots
                 if value.is_trait_type(Slot):
                     attr = {}
                     attr['name'] = name
+                    attr['containertype'] = 'none'
                     attr['klass'] = value.trait_type.klass.__name__
                     inames = []
                     for klass in list(implementedBy(attr['klass'])):
@@ -1715,8 +1718,52 @@ class Component(Container):
                                 attr[field] = meta[field]
                             else:
                                 attr[field] = ''
-                        attr['type'] = meta['vartypename']
-                    slots.append(attr)
+                    
+                    # We can hide slots (e.g., the Workflow slot in drivers)
+                    if 'hidden' not in meta or meta['hidden']==False:
+                        slots.append(attr)
+                        
+                # List or Dict Slots
+                # Note: only supporting Slots as Dict value, not Dict key.
+                elif value.is_trait_type((List, Dict)) and \
+                     value.inner_traits[-1].is_trait_type(Slot):
+                    
+                    attr = {}
+                    attr['name'] = name
+                    attr['klass'] = \
+                        value.inner_traits[-1].trait_type.klass.__name__
+                    
+                    if value.is_trait_type(List):
+                        attr['containertype'] = 'list'
+                    else:
+                        attr['containertype'] = 'dict'
+                    
+                    inames = []
+                    for klass in list(implementedBy(attr['klass'])):
+                        inames.append(klass.__name__)
+                    attr['interfaces'] = inames
+                    
+                    # the "filled" key tells you what is filled
+                    # for lists: number of filled slots
+                    # for dicts: key names for filled slots
+                    if attr['containertype'] == 'list':
+                        attr['filled'] = len(getattr(self, name))
+                    else:
+                        attr['filled'] = getattr(self, name).keys()
+                        
+                    # relevant metadata should be in the outer trait
+                    meta = self.get_metadata(name)
+                    if meta:
+                        for field in ['desc']:    # just desc?
+                            if field in meta:
+                                attr[field] = meta[field]
+                            else:
+                                attr[field] = ''
+                    
+                    # We can hide slots (e.g., the Workflow slot in drivers)
+                    if 'hidden' not in meta or meta['hidden']==False:
+                        slots.append(attr)
+                        
             attrs['Slots'] = slots
 
         return attrs

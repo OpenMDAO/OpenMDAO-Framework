@@ -151,7 +151,7 @@ class WorkspacePage(BasePageObject):
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         NotifierPage.wait(self)
 
-    def find_library_button(self, name):
+    def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
         for retry in range(5):
             try:
@@ -163,7 +163,8 @@ class WorkspacePage(BasePageObject):
                 break
         else:
             raise err
-
+        if delay:
+            time.sleep(delay)
         return element
 
     def run(self, timeout=TMO):
@@ -339,6 +340,9 @@ class WorkspacePage(BasePageObject):
             except TimeoutException:
                 if retry >= 2:
                     raise
+    def show_properties(self):
+        """ Display properties. """
+        self('properties_tab').click()
 
     def show_library(self):
         # For some reason the first try never works, so the wait is set
@@ -347,7 +351,7 @@ class WorkspacePage(BasePageObject):
             try:
                 self('library_tab').click()
                 WebDriverWait(self.browser, 1).until(
-                    lambda browser: self('library_search').is_visible())
+                    lambda browser: self('library_search').is_visible)
             except TimeoutException:
                 if retry:
                     logging.warning('TimeoutException in show_library')
@@ -365,6 +369,7 @@ class WorkspacePage(BasePageObject):
                                 ' StaleElementReferenceException')
             else:
                 break
+        time.sleep(0.5)  # Wait for dropdown to go away.
 
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """

@@ -48,7 +48,7 @@ def _test_maxmin(browser):
        ['driver', 'top'])
     workspace_page.show_library()
     time.sleep(1)
-    workspace_page.find_library_button('MaxMin').click()
+    workspace_page.find_library_button('MaxMin', 0.5).click()
     workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
@@ -124,7 +124,7 @@ def _test_connect(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('Topp').click()
+    workspace_page.find_library_button('Topp', 0.5).click()
     workspace_page.add_library_item_to_dataflow('connect.Topp', 'top')
 
     # Connect components.
@@ -207,7 +207,7 @@ def _test_connections(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('VehicleSim').click()
+    workspace_page.find_library_button('VehicleSim', 0.5).click()
     asm_name = 'sim'
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
@@ -332,7 +332,7 @@ def _test_driverflows(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('Simulation').click()
+    workspace_page.find_library_button('Simulation', 0.5).click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -342,8 +342,6 @@ def _test_driverflows(browser):
 
     # Select different displays.
     top = workspace_page.get_dataflow_figure('top')
-    top.display_driverflows(True)
-    time.sleep(0.5)
     top.display_dataflows(False)
     time.sleep(0.5)
 
@@ -367,6 +365,8 @@ def _test_driverflows(browser):
     top.display_driverflows(False)
     time.sleep(0.5)
     top.display_dataflows(True)
+    time.sleep(0.5)
+    top.display_driverflows(True)
     time.sleep(0.5)
 
     # Clean up.
@@ -395,19 +395,17 @@ def _test_replace(browser):
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
     workspace_page.show_library()
-    workspace_page.find_library_button('Simulation').click()
+    workspace_page.find_library_button('Simulation', 0.5).click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
 
-    top = workspace_page.get_dataflow_figure('top')
-    top.display_driverflows(True)
-
     # Verify preproc is a PreProc.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -424,6 +422,7 @@ def _test_replace(browser):
     workspace_page.replace('preproc', 'rosen_suzuki.ScalingPreProc')
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -440,6 +439,7 @@ def _test_replace(browser):
     # Verify postproc is a PostProc.
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -456,6 +456,7 @@ def _test_replace(browser):
     workspace_page.replace('postproc', 'rosen_suzuki.ScalingPostProc')
     postproc = workspace_page.get_dataflow_figure('postproc', 'top')
     editor = postproc.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -471,7 +472,8 @@ def _test_replace(browser):
 
     # Verify driver is a CONMINdriver.
     driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page()
+    editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['cons_is_linear', 'ndarray', '[]', '', 'true',
@@ -482,7 +484,8 @@ def _test_replace(browser):
     workspace_page.replace('driver',
                            'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
     driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page()
+    editor = driver.editor_page(base_type='Driver')
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
        ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', '', ''])
@@ -491,6 +494,7 @@ def _test_replace(browser):
     # Verify comp is a OptRosenSuzukiComponent.
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',
@@ -510,6 +514,7 @@ def _test_replace(browser):
                 " 'postproc.result_in': top: Can't find 'comp.result'")
     comp = workspace_page.get_dataflow_figure('comp', 'top')
     editor = comp.editor_page()
+    editor.move(-100, 0)
     inputs = editor.get_inputs()
     expected = [
         ['directory',     'str',  '',      '',  'true',

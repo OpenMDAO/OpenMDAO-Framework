@@ -25,10 +25,10 @@ class DREA(ExternalCode):
 
     # Variables from MEflows and Geometry variable trees
     # -------------------------
-    flow_in = Slot(MEflows(), iotype='in')
-    flow_out = Slot(MEflows(), iotype='out')    
-    geo_in = Slot(Geometry(), iotype='in')
-    geo_out = Slot(Geometry(), iotype='out')
+    flow_in = Slot(MEflows, iotype='in')
+    flow_out = Slot(MEflows, iotype='out')    
+    geo_in = Slot(Geometry, iotype='in')
+    geo_out = Slot(Geometry, iotype='out')
     
     #mode parameter used to replace ist and ifab in control.in
     # -------------------------

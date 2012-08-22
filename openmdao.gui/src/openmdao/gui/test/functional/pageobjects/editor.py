@@ -87,7 +87,8 @@ class EditorPage(BasePageObject):
         return self.browser.execute_script("return openmdao.frames.code_pane.editor.getValue()")
     
     def get_tab_label(self):
-        return self.browser.execute_script("return openmdao.frames.code_pane.currentTablabel()")
+        label = self.browser.execute_script("return openmdao.frames.code_pane.currentTablabel()")
+        return ''.join(label.split('*')) # ignore changed / unchanged status
     
     def get_files(self):
         """ Return names in the file tree. """
@@ -164,8 +165,9 @@ class EditorPage(BasePageObject):
 
         page = ValuePrompt(self.browser, self.port)
         page.set_value(filename)
+        time.sleep(5)  # There seems to be some animation/flickering here.
 
-        self.edit_file(filename)
+        self.edit_file(filename, dclick=False)
 
         # Switch to editor textarea
         code_input_element = self.get_text_area()
@@ -184,20 +186,20 @@ class EditorPage(BasePageObject):
         element = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath(xpath))
         chain = ActionChains(self.browser)
-        if dclick:  # This has had issues...
-            for i in range(10):
-                try:
+        for i in range(10):
+            try:
+                if dclick:
                     chain.double_click(element).perform()
-                except StaleElementReferenceException:
-                    logging.warning('edit_file: StaleElementReferenceException')
-                    element = WebDriverWait(self.browser, 1).until(
-                        lambda browser: browser.find_element_by_xpath(xpath))
-                    chain = ActionChains(self.browser)
                 else:
-                    break
-        else:
-            chain.context_click(element).perform()
-            self('file_edit').click()
+                    chain.context_click(element).perform()
+                    self('file_edit').click()
+            except StaleElementReferenceException:
+                logging.warning('edit_file: StaleElementReferenceException')
+                element = WebDriverWait(self.browser, 1).until(
+                    lambda browser: browser.find_element_by_xpath(xpath))
+                chain = ActionChains(self.browser)
+            else:
+                break
 
     def get_text_area(self):
         code_input_element = WebDriverWait(self.browser, TMO).until(
@@ -213,11 +215,8 @@ class EditorPage(BasePageObject):
         self('editor_save_button').click()
         if overwrite:
             self('editor_overwrite_button').click()
-            
         if check:
-            time.sleep(0.5)
             NotifierPage.wait(self)
-
 
     def add_text_to_file(self, text):
         """ Add the given text to the current file.  """

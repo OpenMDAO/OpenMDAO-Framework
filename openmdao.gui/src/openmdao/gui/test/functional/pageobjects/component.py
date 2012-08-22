@@ -49,7 +49,7 @@ class ComponentPage(DialogPage):
  
     def show_slots(self): 
         """switch to slots tab""" 
-        self('slots_tab').element.click() 
+        self('slots_tab').click() 
  
     def show_workflow(self): 
         """switch to workflow tab""" 
@@ -59,17 +59,19 @@ class ComponentPage(DialogPage):
 class DriverPage(ComponentPage): 
     """ Driver editor page. """ 
  
-    parameters_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Parameters']")) 
-    workflow_tab     = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']")) 
-    objectives_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']")) 
-    equalities_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='EqConstr]")) 
-    inequalities_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='IneqConstr]")) 
+    parameters_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Parameters']")) 
+    workflow_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Workflow']")) 
+    objectives_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Objectives']")) 
+    constraints_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Constraints']")) 
  
-    parameters   = GridElement((By.ID, 'Parameters_parms')) 
-    objectives   = GridElement((By.ID, 'Objectives_objectives')) 
-    equalities   = GridElement((By.ID, 'EqConstraints_constraints')) 
-    inequalities = GridElement((By.ID, 'IneqConstraints_constraints')) 
+    parameters  = GridElement((By.ID, 'Parameters_parms')) 
+    objectives  = GridElement((By.ID, 'Objectives_objectives')) 
+    constraints = GridElement((By.ID, 'Constraints_constraints')) 
  
+    add_parameter  = ButtonElement((By.XPATH, "//div[text()='Add Parameter']"))
+    add_objective  = ButtonElement((By.XPATH, "//div[text()='Add Objective']"))
+    add_constraint = ButtonElement((By.XPATH, "//div[text()='Add Constraint']"))
+
     def get_parameters(self): 
         """ Return parameters grid. """ 
         self('parameters_tab').click() 
@@ -80,17 +82,63 @@ class DriverPage(ComponentPage):
         self('objectives_tab').click() 
         return self.objectives 
  
-    def get_eq_constraints(self): 
-        """ Return equality constraints grid. """ 
-        self('equalities_tab').click() 
-        return self.equalities 
- 
-    def get_ineq_constraints(self): 
+    def get_constraints(self): 
         """ Return constraints grid. """ 
-        self('inequalities_tab').click() 
-        return self.inequalities 
+        self('constraints_tab').click() 
+        return self.constraints
  
+    def new_parameter(self):
+        """ Return :class:`ParameterDialog`. """
+        self('add_parameter').click()
+        return ParameterDialog(self.browser, self.port,
+                               (By.XPATH, "//div[@id='parameter-dialog']/.."))
+
+    def new_objective(self):
+        """ Return :class:`ObjectiveDialog`. """
+        self('add_objective').click()
+        return ObjectiveDialog(self.browser, self.port,
+                               (By.XPATH, "//div[@id='objective-dialog']/.."))
+
+    def new_constraint(self):
+        """ Return :class:`ConstraintDialog`. """
+        self('add_constraint').click()
+        return ConstraintDialog(self.browser, self.port,
+                                (By.XPATH, "//div[@id='constraint-dialog']/.."))
+
  
+class ParameterDialog(DialogPage):
+    """ Dialog for adding a new parameter. """
+
+    target =  InputElement((By.ID, 'parameter-target'))
+    low    =  InputElement((By.ID, 'parameter-low'))
+    high   =  InputElement((By.ID, 'parameter-high'))
+    scaler =  InputElement((By.ID, 'parameter-scaler'))
+    adder  =  InputElement((By.ID, 'parameter-adder'))
+    name   =  InputElement((By.ID, 'parameter-name'))
+    ok     = ButtonElement((By.ID, 'parameter-ok'))
+    cancel = ButtonElement((By.ID, 'parameter-cancel'))
+
+
+class ObjectiveDialog(DialogPage):
+    """ Dialog for adding a new objective. """
+
+    expr   =  InputElement((By.ID, 'objective-expr'))
+    name   =  InputElement((By.ID, 'objective-name'))
+    ok     = ButtonElement((By.ID, 'objective-ok'))
+    cancel = ButtonElement((By.ID, 'objective-cancel'))
+
+
+class ConstraintDialog(DialogPage):
+    """ Dialog for adding a new constraint. """
+
+    expr   =  InputElement((By.ID, 'constraint-expr'))
+    scaler =  InputElement((By.ID, 'constraint-scaler'))
+    adder  =  InputElement((By.ID, 'constraint-adder'))
+    name   =  InputElement((By.ID, 'constraint-name'))
+    ok     = ButtonElement((By.ID, 'constraint-ok'))
+    cancel = ButtonElement((By.ID, 'constraint-cancel'))
+
+
 class AssemblyPage(ComponentPage): 
     """ Assembly editor page. """ 
  

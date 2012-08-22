@@ -68,7 +68,7 @@ openmdao.Model=function() {
             }
         }
         var topic = message[0],
-            callbacks = subscribers[message[0]];
+            callbacks = subscribers[message[0]].slice();  // Need a copy.
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
@@ -237,6 +237,23 @@ openmdao.Model=function() {
             jQuery.ajax({
                 type: 'GET',
                 url:  'component/'+name,
+                dataType: 'json',
+                data: {},
+                success: callback,
+                error: errorHandler
+            });
+        }
+    };
+
+    /** get  attributes of any slotable object */
+    this.getObject = function(name,callback,errorHandler) {
+        if (typeof callback !== 'function') {
+            return;
+        }
+        else {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'object/'+name,
                 dataType: 'json',
                 data: {},
                 success: callback,
