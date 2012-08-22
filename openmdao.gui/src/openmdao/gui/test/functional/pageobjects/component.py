@@ -48,7 +48,7 @@ class ComponentPage(DialogPage):
  
     def show_slots(self): 
         """switch to slots tab""" 
-        self('slots_tab').element.click() 
+        self('slots_tab').click() 
  
  
 class DriverPage(ComponentPage): 
