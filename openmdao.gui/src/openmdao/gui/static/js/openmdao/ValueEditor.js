@@ -14,52 +14,22 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ValueEditor = (function(){
 
     var editors = {}
-    var unregistered = {}
+    var defaultEditor = TextCellEditor
 
-    /*
-    * I am making a very poor assumption that the
-    * OpenMDAO GUI will eventually have a preferences
-    * menu for being able to edit some functionality
-    * of the GUI. Based off of this assumption, these
-    * are options that adjust the behavior of ValueEditor.
-    */
-    var options = {
-        defaultEditor : TextCellEditor,
-        defaultEditorEnabled : true,
-        overridesEnabled : false,
-        unregisteredPromptEnabled : true
-    }
-
-
-    var constructEditor = function(editor, args){
-        return new editor(args)
-    }
-
-    var getEditor = function(dataType, args){
-        if(this.isRegistered(dataType)){
-            editor = this.getRegisteredEditor(datatype)
-            return constructEditor(editor, args)
+    var getEditor = function(args){
+        try{
+            editorConstructor = editors[args.item.type]
         }
-
-        if(this.defaultEditorEnabled()){
-            editor = this.getDefaultEditor()
-            return constructEditor(editor, args)
+        catch(err){
+            editorConstructor = defaultEditor
         }
-
-        setFlag("editorNotSet")
-
-        if(this.unregisterdPromptEnabled()){
-            //Prompt user with error because 
-            //the datatype is not supported
-            //and there is no default editor
+        finally{
+            return new editorConstructor(args)
         }
-
-        return null
     }
 
     function constructorFn(args){
         this.init(args)
-
     }
 
     /*
@@ -76,81 +46,7 @@ openmdao.ValueEditor = (function(){
     */
     constructorFn.prototype.init = function(args){
         this.superClass.init.call(args)
-        var dataType = args.item.type
-        this.editor = getEditor(dataType, args)
-        this.flags = (function(){
-            
-            var flags = {
-                'editorNotSet' : false
-            }
-           
-            return { 
-                set : function(){},
-                reset : function(){},
-                check : function(){}
-            }
-        })();
-    }
-
-    constructorFn.getRegisteredEditor = function(dataType){
-        return editors[dataType]
-    }
-
-    constructorFn.getDefaultEditor = function(){
-        return options.defaultEditor
-    }
-
-    /*
-    * I am making a very poor assumption that the
-    * OpenMDAO GUI will eventually have a preferences
-    * menu for being able to edit some functionality
-    * of the GUI. Based off of this assumption, these
-    * are methods to be used to interface with 
-    * ValueEditors options.
-    */
-    constructorFn.overridesEnabled = function(){
-        return options.enableOverrides
-    }
-
-    constructorFn.enableOverrides = function(){
-        options.enableOverrides = true
-    }
-
-    constructorFn.disableOverrides = function(){
-        options.enableOverrides = false
-    }
-
-    constructorFn.defaultEditorEnabled = function(){
-        return options.defaultEditorEnabled
-    }
-
-    constructorFn.enableDefaultEditor = function(){
-        options.defaultEditorEnabled = true
-    }
-
-    constructorFn.disableDefaultEditor = function(){
-        options.defaultEditorEnabled = false
-    }
-
-    constructorFn.setDefaultEditor = function(editor){
-        options.defaultEditor = defaultEditor
-    }
-
-    constructorFn.enableUnregisteredPrompt = function(){
-        options.unregisterdPromptEnabled = true
-    }
-
-    constructorFn.disableUnregisteredPrompt = function(){
-        options.unregisterdPromptEnabled = false
-    }
-
-    constructorFn.unregisteredPromptEnabled = function(){
-        return options.unregisterPromptEnabled
-    }
-
-
-    constructorFn.mayRegisterEditor(dataType){
-        return !(this.isRegistered(dataType)) || this.overridesEnabled()
+        this.editor = getEditor(args)
     }
 
 
@@ -166,13 +62,7 @@ openmdao.ValueEditor = (function(){
     *
     */
     constructorFn.registerEditor = function(name, constructor){
-        if(this.mayRegisterEditor(name)){
-            editors[name] = constructor
-        }
-    }
-
-    constructorFn.isRegistered = function(name){
-        return (name in editors)
+        editors[name] = constructor
     }
 
     return constructorFn
@@ -199,10 +89,6 @@ openmdao.ValueEditor.prototype.serializeValue = function(){
 }
 
 openmdao.ValueEditor.prototype.loadValue = function(item){
-    if(openmdao.ValueEditor.editorNotSet()){
-        this.destroy()
-    }
-
     this.editor.loadValue(item)
 }
 
