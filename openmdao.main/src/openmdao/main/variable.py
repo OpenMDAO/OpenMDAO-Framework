@@ -14,7 +14,7 @@ from openmdao.main.interfaces import implements, IVariable
 namecheck_rgx = re.compile(
     '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
          
-gui_excludes = ['type', 'vartypename', 'iotype']
+gui_excludes = ['type', 'vartypename', 'iotype', 'copy']
             
 def is_legal_name(name):
     match = namecheck_rgx.match(name)
@@ -31,7 +31,7 @@ class Variable(TraitType):
             metadata['vartypename'] = self.__class__.__name__
         super(Variable, self).__init__(default_value=default_value, **metadata)
         
-    def get_attribute(self, name, value, meta):
+    def get_attribute(self, name, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. The basic functionality that
         most variables need is provided here; you can overload this for
@@ -40,14 +40,15 @@ class Variable(TraitType):
         name: str
           Name of variable
           
-        value: object
-          Value of variable
+        trait: CTrait
+          The variable's trait
           
         meta: dict
           Dictionary of metadata for this variable
         """
         
         attr = {}
+        value = trait.value
         
         attr['name'] = name
         attr['type'] = type(value).__name__

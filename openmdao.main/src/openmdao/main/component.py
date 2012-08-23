@@ -1557,15 +1557,17 @@ class Component(Container):
        
         inputs = []
         outputs = []
+        slots = []
+        
         # Add all inputs and outputs
         for name in self.list_inputs() + self.list_outputs():
             
-            value = self.get(name)
+            trait = self.get_trait(name)
             meta = self.get_metadata(name)
-            ttype = self.get_trait(name).trait_type
+            ttype = trait.trait_type
             
             # Each variable type provides its own basic attributes
-            io_attr, slot_attr = ttype.get_attribute(name, value, meta)
+            io_attr, slot_attr = ttype.get_attribute(name, trait, meta)
             
             io_attr['valid'] = self.get_valid([name])[0]
             
@@ -1591,10 +1593,34 @@ class Component(Container):
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
+                
+            # Process singleton slots.
+            if not io_only and slot_attr is not None:
+
+                # We can hide slots (e.g., the Workflow slot in drivers)
+                if 'hidden' not in meta or meta['hidden']==False:
+                    
+                    # the "filled" key tells you what is filled
+                    # for lists: number of filled slots
+                    if slot_attr['containertype'] == 'list':
+                        slot_attr['filled'] = len(getattr(self, name))
+                        
+                    # for dicts: key names for filled slots
+                    elif slot_attr['containertype'] == 'dict':
+                        slot_attr['filled'] = getattr(self, name).keys()
+                       
+                    # singleton slots, just check if it is there
+                    else:
+                        if getattr(self, name) is None:
+                            slot_attr['filled'] = False
+                        else:
+                            slot_attr['filled'] = True
+                    
+                    slots.append(slot_attr)
             
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
-
+        attrs['Slots'] = slots
 
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.
@@ -1683,38 +1709,11 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
-            slots = []
-            for name, value in self.traits().items():
+            '''for name, value in self.traits().items():
                 
-                # Regular Slots
-                if value.is_trait_type(Slot):
-                    attr = {}
-                    attr['name'] = name
-                    attr['containertype'] = 'none'
-                    attr['klass'] = value.trait_type.klass.__name__
-                    inames = []
-                    for klass in list(implementedBy(attr['klass'])):
-                        inames.append(klass.__name__)
-                    attr['interfaces'] = inames
-                    if getattr(self, name) is None:
-                        attr['filled'] = False
-                    else:
-                        attr['filled'] = True
-                    meta = self.get_metadata(name)
-                    if meta:
-                        for field in ['desc']:    # just desc?
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    
-                    # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden']==False:
-                        slots.append(attr)
-                        
                 # List or Dict Slots
                 # Note: only supporting Slots as Dict value, not Dict key.
-                elif value.is_trait_type((List, Dict)) and \
+                if value.is_trait_type((List, Dict)) and \
                      value.inner_traits[-1].is_trait_type(Slot):
                     
                     attr = {}
@@ -1732,14 +1731,6 @@ class Component(Container):
                         inames.append(klass.__name__)
                     attr['interfaces'] = inames
                     
-                    # the "filled" key tells you what is filled
-                    # for lists: number of filled slots
-                    # for dicts: key names for filled slots
-                    if attr['containertype'] == 'list':
-                        attr['filled'] = len(getattr(self, name))
-                    else:
-                        attr['filled'] = getattr(self, name).keys()
-                        
                     # relevant metadata should be in the outer trait
                     meta = self.get_metadata(name)
                     if meta:
@@ -1752,8 +1743,7 @@ class Component(Container):
                     # We can hide slots (e.g., the Workflow slot in drivers)
                     if 'hidden' not in meta or meta['hidden']==False:
                         slots.append(attr)
-                        
-            attrs['Slots'] = slots
+                        '''
 
         return attrs
 

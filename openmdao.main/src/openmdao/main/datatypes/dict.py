@@ -8,6 +8,7 @@ __all__ = ["Dict"]
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Dict as Enthought_Dict
 
+from openmdao.main.datatypes.slot import Slot
 from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
@@ -17,7 +18,7 @@ class Dict(Enthought_Dict):
     
     implements(IVariable)
     
-    def get_attribute(self, name, value, meta):
+    def get_attribute(self, name, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. Dicts are containers that
         have a key trait and a value trait.
@@ -25,14 +26,16 @@ class Dict(Enthought_Dict):
         name: str
           Name of variable
           
-        value: object
-          Value of variable
+        trait: CTrait
+          The variable's trait
           
         meta: dict
           Dictionary of metadata for this variable
         """
         
         attr = {}
+        slot_attr = None
+        value = trait.value
         
         attr['name'] = name
         attr['type'] = 'dict'
@@ -42,7 +45,14 @@ class Dict(Enthought_Dict):
             if field not in gui_excludes:
                 attr[field] = meta[field]
         
-        return attr, None
+        # Handling for a List of Slots
+        inner = trait.inner_traits[-1]
+        if inner.is_trait_type(Slot):
+                    
+            _, slot_attr = inner.trait_type.get_attribute(name, inner, meta)
+            slot_attr['containertype'] = 'dict'
+        
+        return attr, slot_attr
     
 
 '''

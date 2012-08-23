@@ -6,8 +6,11 @@ Trait for list variables.
 __all__ = ["List"]
 
 # pylint: disable-msg=E0611,F0401
+from zope.interface import implementedBy
+
 from enthought.traits.api import List as Enthought_List
 
+from openmdao.main.datatypes.slot import Slot
 from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
@@ -17,7 +20,7 @@ class List(Enthought_List):
     
     implements(IVariable)
     
-    def get_attribute(self, name, value, meta):
+    def get_attribute(self, name, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. Lists are containers and
         can have slots.
@@ -25,14 +28,16 @@ class List(Enthought_List):
         name: str
           Name of variable
           
-        value: object
-          Value of variable
+        trait: CTrait
+          The variable's trait
           
         meta: dict
           Dictionary of metadata for this variable
         """
         
         attr = {}
+        slot_attr = None
+        value = trait.value
         
         attr['name'] = name
         attr['type'] = 'list'
@@ -41,8 +46,15 @@ class List(Enthought_List):
         for field in meta:
             if field not in gui_excludes:
                 attr[field] = meta[field]
-        
-        return attr, None
+                
+        # Handling for a List of Slots
+        inner = trait.inner_traits[0]
+        if inner.is_trait_type(Slot):
+            
+            _, slot_attr = inner.trait_type.get_attribute(name, inner, meta)
+            slot_attr['containertype'] = 'list'
+
+        return attr, slot_attr
     
 '''
 # This was my original attempt to inherit from Variable instead. Unfortunately,

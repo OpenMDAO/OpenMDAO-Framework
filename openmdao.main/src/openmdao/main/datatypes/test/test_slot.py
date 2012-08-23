@@ -151,7 +151,7 @@ class SlotTestCase(unittest.TestCase):
                          'desc': 'Stuff2'} in slot_attrs)
         self.assertTrue({'name': 'sock',
                          'interfaces': [],
-                         'containertype': 'none',
+                         'containertype': 'singleton',
                          'filled': False,
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
@@ -161,13 +161,12 @@ class SlotTestCase(unittest.TestCase):
         top.list_sock.append(MyClass())
         top.list_sock.append(MyClass())
         top.dict_sock['Testing'] = MyClass()
+        top.sock = MyClass()
         # Note, only tested with one item in the dict because it is not ordered,
         # and hash order will vary on different platforms.
         
         attrs = top.get_attributes(io_only=False)
         slot_attrs = attrs['Slots']
-        for item in slot_attrs:
-            print item
         self.assertTrue({'name': 'list_sock',
                          'interfaces': [],
                          'containertype': 'list',
@@ -180,6 +179,12 @@ class SlotTestCase(unittest.TestCase):
                          'filled': ['Testing'],
                          'klass': 'MyClass',
                          'desc': 'Stuff2'} in slot_attrs)
+        self.assertTrue({'name': 'sock',
+                         'interfaces': [],
+                         'containertype': 'singleton',
+                         'filled': True,
+                         'klass': 'MyClass',
+                         'desc': 'Stuff0'} in slot_attrs)
 
 class MyIface(zope.interface.Interface):
     
