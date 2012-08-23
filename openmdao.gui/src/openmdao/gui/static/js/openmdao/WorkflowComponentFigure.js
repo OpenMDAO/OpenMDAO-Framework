@@ -57,6 +57,12 @@ openmdao.WorkflowComponentFigure.prototype.createHTMLElement=function(){
     var circleIMG = "url(/static/images/circle.png)";
 
     var item=document.createElement("div");
+
+    var elm = jQuery(item);
+    elm.addClass("WorkflowComponentFigure");
+    elm.data('name',this.name);
+    elm.data('pathname',this.pathname);
+
     item.id=this.id;
     item.style.color="black";
     item.style.position="absolute";
