@@ -5,6 +5,7 @@ import json
 import time
 
 from openmdao.gui.consoleserver import ConsoleServer
+from openmdao.main.publisher import Publisher
 
 
 class ConsoleServerTestCase(unittest.TestCase):
@@ -12,6 +13,7 @@ class ConsoleServerTestCase(unittest.TestCase):
     def setUp(self):
         self.path = os.path.dirname(os.path.abspath(__file__))
         self.cserver = ConsoleServer()
+        Publisher.silent = True # keep quiet about Publisher not being set up
 
     def test_simple(self):
         ''' load and inspect the simple example project

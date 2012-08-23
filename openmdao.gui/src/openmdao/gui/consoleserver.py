@@ -184,6 +184,7 @@ class ConsoleServer(cmd.Cmd):
         self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
+        
         try:
             self.files = FileManager('files', publish_updates=publish_updates)
         except Exception as err:

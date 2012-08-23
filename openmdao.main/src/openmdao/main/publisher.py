@@ -15,6 +15,7 @@ class Publisher(object):
 
     __publisher = None
     __enabled = True
+    silent = False
 
     def __init__(self, context, url, use_stream=True):
         # Socket to talk to pub socket
@@ -82,4 +83,5 @@ def publish(topic, msg):
     try:
         Publisher.get_instance().publish(topic, msg)
     except AttributeError:
-        raise RuntimeError("Publisher has not been initialized")
+        if not Publisher.silent:
+            raise RuntimeError("Publisher has not been initialized")
