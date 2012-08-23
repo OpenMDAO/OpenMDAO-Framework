@@ -50,9 +50,9 @@ def text_to_node(text):
     return modnode.body
 
 class CtorInstrumenter(ast.NodeTransformer):
-    """All __init__ calls for classes in the specified set will
-    be replaced with a call to a wrapper function that records the
-    call by calling _register_inst(typename) before creating the instance.
+    """All __init__ calls will be replaced with a call to a wrapper function
+    that records the call by calling _register_inst(typename) before creating
+    the instance.
     """
     def __init__(self):
         super(CtorInstrumenter, self).__init__()
@@ -67,15 +67,15 @@ class CtorInstrumenter(ast.NodeTransformer):
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
-    super(self.__class__, self).__init__(*args, **kwargs)
-            """
+    super(%s, self).__init__(*args, **kwargs)
+            """ % node.name
         if text is None: # class has its own __init__ (name has been changed to __orig_init__)
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     self.__%s_orig_init__(*args, **kwargs)
             """ % node.name
-        node.body = [ast.copy_location(text_to_node(text), node)]+node.body
+        node.body = [text_to_node(text)]+node.body
         return node
 
 
@@ -116,7 +116,10 @@ class ProjLoader(object):
     def translate(self, node):
         """Take the specified AST and translate it into the instrumented version."""
         node = CtorInstrumenter().visit(node)
-        node.body = [text_to_node('from openmdao.gui.consoleserver import _register_inst')]+node.body
+        node.body = [
+            ast.copy_location(
+                text_to_node('from openmdao.gui.consoleserver import _register_inst'),node)
+            ]+node.body
         return node
     
     def get_code(self, modpath):
@@ -127,7 +130,7 @@ class ProjLoader(object):
             contents = f.read()
             if not contents.endswith('\n'):
                 contents += '\n'
-            root = ast.parse(contents, mode='exec')
+            root = ast.parse(contents, filename=self.path, mode='exec')
             return compile(self.translate(root), self.path, 'exec')
 
     def load_module(self, modpath):
