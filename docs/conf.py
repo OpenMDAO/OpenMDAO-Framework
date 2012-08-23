@@ -168,19 +168,19 @@ html_last_updated_fmt = '%b %d, %Y'
 html_theme = "default"
 html_theme_options = {
      "headtextcolor": "#000099",
-     "headbgcolor": "#b2b2b2",
+     "headbgcolor": "#e2b530",
      "headfont": "Arial",
      "relbarbgcolor": "#000099",
      "relbartextcolor": "white",
      "relbarlinkcolor": "white",
-     "sidebarbgcolor": "#0066cc",
-     "sidebartextcolor": "#000099",
-     "sidebarlinkcolor": "white",
+     "sidebarbgcolor": "#c7c7c7",
+     "sidebartextcolor": "black",
+     "sidebarlinkcolor": "#000099",
      "footerbgcolor": "white",
-     "footertextcolor": "#0066cc",
+     "footertextcolor": "#000099",
      "textcolor": "black",
-     "codebgcolor": "#ffffd1",
-     "linkcolor": "#0066cc",
+     "codebgcolor": "#ffffa7",
+     "linkcolor": "#005ce6",
     }
 
 todo_include_todos = True
