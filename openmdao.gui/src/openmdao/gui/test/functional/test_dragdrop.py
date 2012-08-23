@@ -29,7 +29,6 @@ if sys.platform != 'win32':  # No testing on Windows yet.
             yield _test, browser
 
 
-
 def _test_drop_on_driver(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
@@ -67,7 +66,7 @@ def _test_workspace_dragdrop(browser):
         chain = drag_element_to(browser, assembly, div, False)
         check_highlighting(top('content_area').element, browser, True, "Top's content_area")
         release(chain)
-        
+
         #deal with the modal dialog
         name = (NameInstanceDialog(browser, top.port).create_and_dismiss())
         names.append(name)
@@ -173,7 +172,7 @@ def _test_drop_on_component_editor(browser):
         check_highlighting(editor_top('content_area').element, browser, True,
                            "Top in component editor's content_area")
         release(chain)
-        
+
         #deal with the modal dialog
         name = (NameInstanceDialog(browser, editor_top.port).create_and_dismiss())
         names.append(name)
@@ -334,12 +333,11 @@ def _test_simple_component_to_workflow(browser):
 
     eq(len(workspace_page.get_workflow_component_figures()), 1)
 
-
     # Drop the paraboloid component from the component tree onto the workflow for top
     workspace_page.expand_object('top')
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ( "top." + name )
-    paraboloid_component = WebDriverWait(browser, TMO).until(
-        lambda browser: browser.find_element_by_xpath(xpath))
+    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ("top." + name)
+    paraboloid_component = WebDriverWait(browser, TMO).until(lambda browser:
+        browser.find_element_by_xpath(xpath))
 
     top = workspace_page.get_workflow_figure('top')
 
@@ -349,9 +347,6 @@ def _test_simple_component_to_workflow(browser):
 
     time.sleep(1.5)  # Just so we can see it.
 
-    #import pdb; pdb.set_trace()
-
-    
     eq(len(workspace_page.get_workflow_component_figures()), 2)
 
     # Check to see that the new div inside the workflow is there
@@ -363,6 +358,7 @@ def _test_simple_component_to_workflow(browser):
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
     print "_test_simple_component_to_workflow complete."
+
 
 def _test_component_to_complex_workflow(browser):
     print "running _test_component_to_complex_workflow..."
@@ -402,7 +398,7 @@ def _test_component_to_complex_workflow(browser):
     #     workflow for VehicleSim2
     ########################################
     workspace_page.expand_object(vehicle_name)
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ( vehicle_name + "." + paraboloid_name )
+    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
     paraboloid_component = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element_by_xpath(xpath))
     vehicle_workflow_figure = workspace_page.get_workflow_figure(vehicle_name)
@@ -418,15 +414,15 @@ def _test_component_to_complex_workflow(browser):
     assert  (vehicle_name + "." + paraboloid_name) in pathnames
 
     ########################################
-    # Drop the paraboloid component from the component tree onto the 
+    # Drop the paraboloid component from the component tree onto the
     #     workflow for sim_acc under VehicleSim2
     ########################################
     # Need to do this again, for some reason. Cannot re-use the one from the previous section
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ( vehicle_name + "." + paraboloid_name )
+    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
     paraboloid_component = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element_by_xpath(xpath))
-    sim_acc_workflow_figure = workspace_page.get_workflow_figure("sim_acc") # returns a pageobject
-    
+    sim_acc_workflow_figure = workspace_page.get_workflow_figure("sim_acc")  # returns a pageobject
+
     chain = drag_element_to(browser, paraboloid_component, sim_acc_workflow_figure('figure_itself').element, False)
     check_highlighting(sim_acc_workflow_figure('figure_itself').element, browser, True, "sim_acc workflow")
     release(chain)
@@ -434,26 +430,26 @@ def _test_component_to_complex_workflow(browser):
     # Check to make sure there is one more workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 18)
     # Check to see that the new div inside the workflow is there
-    figs = workspace_page.get_workflow_component_figures() # returns Selenium WebElements
+    figs = workspace_page.get_workflow_component_figures()  # returns Selenium WebElements
     pathnames = [get_pathname(browser, fig) for fig in figs]
 
     # should have two instances of the vehicle_name.paraboloid_name
     pathnames_matching_vehicle_name_paraboloid_name = \
-           [ p for p in pathnames if p == ( vehicle_name + "." + paraboloid_name ) ]
+           [p for p in pathnames if p == (vehicle_name + "." + paraboloid_name)]
     #assert  ("sim_acc" + "." + paraboloid_name) in pathnames
     eq(len(pathnames_matching_vehicle_name_paraboloid_name), 2)
 
     ########################################
-    # Drop the paraboloid component from the component tree onto the 
+    # Drop the paraboloid component from the component tree onto the
     #     workflow for vehicle under sim_acc under VehicleSim2.
-    # This should NOT work since the paraboloid is not at the right leve
+    # This should NOT work since the paraboloid is not at the right level
     ########################################
     # Need to do this again, for some reason. Cannot re-use the one from the previous section
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ( vehicle_name + "." + paraboloid_name )
+    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
     paraboloid_component = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element_by_xpath(xpath))
-    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle") # returns a pageobject
-    
+    vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")  # returns a pageobject
+
     chain = drag_element_to(browser, paraboloid_component, vehicle_workflow_figure('figure_itself').element, False)
     check_highlighting(vehicle_workflow_figure('figure_itself').element, browser, False,
                        "vehicle workflow")
@@ -462,10 +458,10 @@ def _test_component_to_complex_workflow(browser):
     # Check to make sure there is no new workflow component figure
     eq(len(workspace_page.get_workflow_component_figures()), 18)
 
-
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
     print "_test_component_to_complex_workflow complete."
+
 
 def _test_drop_onto_layered_div(browser):
     print "running _test_drop_onto_layered_div..."
@@ -492,18 +488,18 @@ def _test_drop_onto_layered_div(browser):
     paraboloid_name = (NameInstanceDialog(browser, vehicle.port).create_and_dismiss())
 
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
-    sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city', vehicle_name )
+    sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city', vehicle_name)
     component_editor = sim_EPA_city_driver.editor_page()
     component_editor.show_workflow()
 
     # Check to make sure we have the expected number of
     #   workflow component figures before we add to it
-    eq(len(workspace_page.get_workflow_component_figures()), 5)
+    eq(len(workspace_page.get_workflow_component_figures()), 6)
 
     # Drag paraboloid component into sim_EPA_city workflow figure
     # should add to the list of workflow component figures
     workspace_page.expand_object(vehicle_name)
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ( vehicle_name + "." + paraboloid_name )
+    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
     paraboloid_component = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element_by_xpath(xpath))
 
@@ -513,7 +509,7 @@ def _test_drop_onto_layered_div(browser):
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
-    eq(len(workspace_page.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_component_figures()), 7)
     # Check to see that the new div inside the workflow is there
     figs = workspace_page.get_workflow_component_figures()
     pathnames = [get_pathname(browser, fig) for fig in figs]
@@ -523,7 +519,7 @@ def _test_drop_onto_layered_div(browser):
     #     sim_EPA_city workflow figure
     # should NOT add to the list of workflow component figures
     workspace_page.expand_object(vehicle_name)
-    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % ( vehicle_name + "." + paraboloid_name )
+    xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % (vehicle_name + "." + paraboloid_name)
     paraboloid_component = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element_by_xpath(xpath))
 
@@ -533,13 +529,11 @@ def _test_drop_onto_layered_div(browser):
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
-    eq(len(workspace_page.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_component_figures()), 7)
     # Check to see that the new div inside the workflow is there
     figs = workspace_page.get_workflow_component_figures()
     pathnames = [get_pathname(browser, fig) for fig in figs]
     assert  (vehicle_name + "." + paraboloid_name) in pathnames
-
-    
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -563,6 +557,7 @@ def closeout(projects_page, project_info_page, project_dict, workspace_page):
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
+
 
 def slot_drop(browser, element, slot, should_drop, message='Slot'):
     '''Drop an element on a slot'''
@@ -688,7 +683,7 @@ def put_assembly_on_grid(browser, workspace_page):
 
 def put_element_on_grid(browser, workspace_page, element_str):
     '''find and get the 'assembly', and the div for the grid object'''
-    
+
     assembly = workspace_page.find_library_button(element_str)
     grid = browser.find_element(*(By.XPATH, '//div[@id="-dataflow"]'))
 
@@ -760,9 +755,9 @@ def check_highlighting(element, browser, should_highlight=True, message='Element
     highlighted = ('background-color: rgb(207, 214, 254)' in style) \
                 or('highlighted.png' in style)
     eq(highlighted, should_highlight, message +
-        (' did not highlight (and should have) ' if should_highlight
-         	else ' highlighed (and should not have) ')
-        + 'when dragging a dropable element to it')
+        (' did not highlight (and should have) ' if should_highlight else
+         ' highlighed (and should not have) ')
+         + 'when dragging a dropable element to it')
 
 
 def getDropableElements(dataflow_figure):
