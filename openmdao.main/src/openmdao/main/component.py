@@ -15,7 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Dict, Str, Int, Property
+from enthought.traits.api import Property
 
 from zope.interface import implementedBy
 
@@ -35,7 +35,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Bool, List, Dict, Str, Int, Slot
 from openmdao.main.publisher import Publisher
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -1556,66 +1556,45 @@ class Component(Container):
                 implicit[target].append(constraint)
        
         inputs = []
-        for vname in self.list_inputs():
-            v = self.get(vname)
-            attr = {}
-            if not is_instance(v, Component):
-                attr['name'] = vname
-                attr['type'] = type(v).__name__
-                attr['value'] = str(v)
-                attr['valid'] = self.get_valid([vname])[0]
-                meta = self.get_metadata(vname)
-                if meta:
-                    for field in ['units', 'high', 'low', 'desc']:
-                        if field in meta:
-                            attr[field] = meta[field]
-                        else:
-                            attr[field] = ''
-                attr['connected'] = ''
-                if vname in connected_inputs:
-                    connections = self._depgraph.connections_to(vname)
-                    # there can be only one connection to an input
-                    attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
-
-                attr['implicit'] = ''
-                if "%s.%s" % (self.name, vname) in parameters:
-
-                    attr['implicit'] = str([driver_name.split('.')[0] for driver_name in parameters["%s.%s" % (self.name, vname)]])
-
-            inputs.append(attr)
-        attrs['Inputs'] = inputs
-
-
         outputs = []
-        for vname in self.list_outputs():
-            v = self.get(vname)
-            attr = {}
-            if not is_instance(v, Component):
-                attr['name'] = vname
-                attr['type'] = type(v).__name__
-                attr['value'] = str(v)
-                attr['valid'] = self.get_valid([vname])[0]
-                meta = self.get_metadata(vname)
-                if meta:
-                    for field in ['units', 'high', 'low', 'desc']:
-                        if field in meta:
-                            attr[field] = meta[field]
-                        else:
-                            attr[field] = ''
-                attr['connected'] = ''
-                if vname in connected_outputs:
-                    connections = self._depgraph.connections_to(vname)
-                    attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
+        # Add all inputs and outputs
+        for name in self.list_inputs() + self.list_outputs():
+            
+            value = self.get(name)
+            meta = self.get_metadata(name)
+            ttype = self.get_trait(name).trait_type
+            
+            # Each variable type provides its own basic attributes
+            io_attr, slot_attr = ttype.get_attribute(name, value, meta)
+            
+            io_attr['valid'] = self.get_valid([name])[0]
+            
+            io_attr['connected'] = ''
+            if name in connected_inputs:
+                connections = self._depgraph.connections_to(name)
+                # there can be only one connection to an input
+                io_attr['connected'] = \
+                    str([src for src, dst in connections]).replace('@xin.', '')
 
+            if name in connected_outputs:
+                connections = self._depgraph.connections_to(name)
+                io_attr['connected'] = \
+                    str([dst for src, dst in connections]).replace('@xout.', '')
 
-                attr['implicit'] = ''
-                if "%s.%s" % (self.name, vname) in implicit:
-                    attr['implicit'] = str([driver_name.split('.')[0] for \
-                                            driver_name in implicit["%s.%s" % (self.name, vname)]])
+            io_attr['implicit'] = ''
+            if "%s.%s" % (self.name, name) in parameters:
 
-
-            outputs.append(attr)
+                io_attr['implicit'] = str([driver_name.split('.')[0] for \
+                                           driver_name in parameters["%s.%s" % (self.name, name)]])
+            
+            if name in self.list_inputs():
+                inputs.append(io_attr)
+            else:
+                outputs.append(io_attr)
+            
+        attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
+
 
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.

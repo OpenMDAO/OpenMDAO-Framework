@@ -5,11 +5,10 @@ __all__ = ["Driver"]
 
 import fnmatch
 
-from enthought.traits.api import List
-
 # pylint: disable-msg=E0611,F0401
 
-from openmdao.main.interfaces import IDriver, ICaseRecorder, IHasEvents, implements
+from openmdao.main.interfaces import IDriver, ICaseRecorder, IHasEvents, \
+                                     implements
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.component import Component
@@ -18,12 +17,13 @@ from openmdao.main.case import Case
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.hasevents import HasEvents
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
+from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
+                                         HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.util.decorators import add_delegate
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
-from openmdao.main.datatypes.api import Slot, Str
+from openmdao.main.datatypes.api import List, Slot, Str
 
 
 @add_delegate(HasEvents)

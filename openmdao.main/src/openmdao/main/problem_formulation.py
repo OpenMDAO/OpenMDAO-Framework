@@ -2,12 +2,10 @@ import weakref
 
 import ordereddict
 
-from enthought.traits.api import Dict
-
 from openmdao.main.interfaces import Interface
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.assembly import Assembly
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Dict, Slot
 from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IArchitecture, implements, IHasConstraints,IHasParameters,IHasCouplingVars,IHasObjectives
 

@@ -210,11 +210,3 @@ class Float(Variable):
             return self._validator.validate(obj, name, pq.value)
         except Exception:
             self.error(obj, name, pq.value)
-
-    def get_attribute(self, name, value):
-        """Return the attribute dictionary for this variable. This dict is
-        used by the GUI to populate the edit UI.
-        """
-        
-        attr = {}
-        return attr

@@ -4,12 +4,11 @@ import copy
 
 from zope.interface import implementedBy
 
-from enthought.traits.api import Str
 from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.variable import Variable
 from openmdao.main.container import Container
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Slot, Str
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 

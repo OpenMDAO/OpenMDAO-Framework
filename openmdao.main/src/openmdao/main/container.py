@@ -24,7 +24,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
-from enthought.traits.api import HasTraits, Missing, Python, List, \
+from enthought.traits.api import HasTraits, Missing, Python, \
                                  push_exception_handler, TraitType, CTrait
 from enthought.traits.trait_handlers import TraitListObject
 from enthought.traits.has_traits import FunctionType, _clone_trait, \
@@ -35,7 +35,7 @@ from multiprocessing import connection
 
 from openmdao.main.variable import Variable, is_legal_name
 from openmdao.main.filevar import FileRef
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import List, Slot
 from openmdao.main.attrwrapper import AttrWrapper
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY

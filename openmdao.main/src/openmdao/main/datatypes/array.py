@@ -11,6 +11,7 @@ from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 from openmdao.main.index import get_indexed_value
+from openmdao.main.variable import gui_excludes
 
 # pylint: disable-msg=E0611,F0401
 try:
@@ -185,6 +186,32 @@ class Array(TraitArray):
             return super(Array, self).validate(obj, name, value)
         except Exception:
             self.error(obj, name, value)
+
+    def get_attribute(self, name, value, meta):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. 
+        
+        name: str
+          Name of variable
+          
+        value: object
+          Value of variable
+          
+        meta: dict
+          Dictionary of metadata for this variable
+        """
+        
+        attr = {}
+        
+        attr['name'] = name
+        attr['type'] = "array"
+        attr['value'] = str(value)
+        
+        for field in meta:
+            if field not in gui_excludes:
+                attr[field] = meta[field]
+        
+        return attr, None
 
             
 # register a flattener for Cases
