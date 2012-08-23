@@ -732,14 +732,18 @@ class ConsoleServer(cmd.Cmd):
                     if self._publish_comps[pathname] < 1:
                         del self._publish_comps[pathname]
 
-    def file_classes_changed(self, filename):
+    def file_has_instances(self, filename):
+        """Returns True if the given file (assumed to be a file in the project)
+        has classes that have been instantiated in the current process. Note that
+        this doesn't keep track of removes/deletions, so if an instance was created
+        earlier and then deleted, it will still be reported.
+        """
         global _instantiated_classes
         pdf = self.projdirfactory
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
             info = pdf._files.get(filename)
-            # if changed file contained classes and has already been imported..
             if info and _instantiated_classes.intersection(info.classes.keys()):
                 return True
         return False

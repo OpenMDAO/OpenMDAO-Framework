@@ -38,7 +38,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(type_info['modpath'], 'paraboloid.Paraboloid')
 
         components = json.loads(self.cserver.get_components())
-
+        
         # CREATE ASSEMBLY
         self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly', '')
 
@@ -104,9 +104,13 @@ class ConsoleServerTestCase(unittest.TestCase):
                         'openmdao.lib.drivers.conmindriver.CONMINdriver')
         self.assertEqual(len(attributes['Workflow']['workflow']), 0)
 
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), False)
+
         # CREATE PARABOLOID
         self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob')
 
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), True)
+        
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
 
