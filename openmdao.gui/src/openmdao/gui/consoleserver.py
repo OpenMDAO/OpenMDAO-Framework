@@ -7,6 +7,7 @@ import jsonpickle
 import time
 import imp
 import ast
+from threading import Lock
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -28,9 +29,15 @@ from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
+# use this to keep track of project classes that have been instantiated
+# so far, so we can determine if we need to force a Project save & reload
+_instantiated_classes = set()
+_instclass_lock = Lock()
+
 def _register_inst(typname):
-    print "registering %s" % typname
-    logger.error("registering %s" % typname)
+    global _instantiated_classes
+    with _instclass_lock:
+        _instantiated_classes.add(typname)
 
 def text_to_node(text):
     """Given a python source string, return the corresponding AST node. The outer
@@ -43,9 +50,9 @@ def text_to_node(text):
     return modnode.body
 
 class CtorInstrumenter(ast.NodeTransformer):
-    """All constructor calls for classes in the specified set will
+    """All __init__ calls for classes in the specified set will
     be replaced with a call to a wrapper function that records the
-    call before creating the instance.
+    call by calling _register_inst(typename) before creating the instance.
     """
     def __init__(self):
         super(CtorInstrumenter, self).__init__()
@@ -94,7 +101,7 @@ class ProjFinder(object):
         """
         path = find_module(modpath, path=[self.projdir])
         if path is not None:
-            return ProjLoader(modpath, path)
+            return ProjLoader(modpath, self.projdir)
     
     
 class ProjLoader(object):
@@ -103,8 +110,7 @@ class ProjLoader(object):
     when a project must be saved and reloaded.
     """
     def __init__(self, modpath, projpath):
-        self.projpath = projpath
-        self.path = find_module(modpath)
+        self.path = find_module(modpath, path=[projpath])
         self.ispkg = isinstance(self.path, basestring) and os.path.basename(self.path) == '__init__.py'
         
     def translate(self, node):
@@ -569,6 +575,9 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, filename):
+        global _instantiated_classes
+        _instantiated_classes.clear()
+        
         self.projfile = filename
         try:
             if self.proj:
@@ -723,12 +732,13 @@ class ConsoleServer(cmd.Cmd):
                         del self._publish_comps[pathname]
 
     def file_classes_changed(self, filename):
+        global _instantiated_classes
         pdf = self.projdirfactory
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
             info = pdf._files.get(filename)
             # if changed file contained classes and has already been imported..
-            if info and len(info.classes) > 0 and info.modpath in sys.modules:
+            if info and _instantiated_classes.intersection(info.classes.keys()):
                 return True
         return False

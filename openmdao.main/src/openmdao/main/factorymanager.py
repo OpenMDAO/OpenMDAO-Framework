@@ -53,7 +53,7 @@ def register_class_factory(factory):
     global _factories
     with _factory_lock:
         if factory not in _factories:
-            logger.error("adding new factory: %s" % factory)
+            logger.info("adding new factory: %s" % factory)
             _factories.append(factory)
         
 def remove_class_factory(factory):
@@ -64,7 +64,7 @@ def remove_class_factory(factory):
             if fct is factory:
                 if hasattr(factory, 'cleanup'):
                     factory.cleanup()
-                logger.error("removing factory: %s" % factory)
+                logger.info("removing factory: %s" % factory)
                 _factories.remove(factory)
                 return
 

@@ -182,6 +182,7 @@ class _FileInfo(object):
             # see any source updates.  :(
             if os.path.isfile(cmpfname):
                 os.remove(cmpfname)
+            logger.info("reloading module %s" % self.modpath)
             reload(sys.modules[self.modpath])
             self.modtime = mtime
         self._update_class_info()
@@ -217,7 +218,11 @@ class ProjDirFactory(Factory):
             changed_set = set()
             deleted_set = set()
             
-            sys.path = [self.watchdir]+sys.path
+            modeldir = watchdir+'.prj'
+            if modeldir not in sys.path:
+                sys.path = [modeldir]+sys.path
+                logger.info("added %s to sys.path" % modeldir)
+                
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
             

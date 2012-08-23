@@ -209,36 +209,36 @@ class Project(object):
         if os.path.isdir(projpath):
             self.activate()
         
-            # locate file containing state, create it if it doesn't exist
-            statefile = os.path.join(projpath, '_project_state')
-            if os.path.exists(statefile):
-                try:
-                    with open(statefile, 'r') as f:
-                        self._model_globals = pickle.load(f)
-                        # this part is just to handle cases where a project was saved
-                        # before _model_globals was changed to a _ProjDict
-                        if not isinstance(self._model_globals, _ProjDict):
-                            m = _ProjDict()
-                            m.update(self._model_globals)
-                            self._model_globals = m
-                            self._init_globals()
+            ## locate file containing state, create it if it doesn't exist
+            #statefile = os.path.join(projpath, '_project_state')
+            #if os.path.exists(statefile):
+                #try:
+                    #with open(statefile, 'r') as f:
+                        #self._model_globals = pickle.load(f)
+                        ## this part is just to handle cases where a project was saved
+                        ## before _model_globals was changed to a _ProjDict
+                        #if not isinstance(self._model_globals, _ProjDict):
+                            #m = _ProjDict()
+                            #m.update(self._model_globals)
+                            #self._model_globals = m
+                            #self._init_globals()
                             
-                except Exception, e:
-                    logger.error('Unable to restore project state: %s' % e)
-                    macro_exec = True
-            else:
-                macro_exec = True
-                logger.error("%s doesn't exist" % statefile)
+                #except Exception, e:
+                    #logger.error('Unable to restore project state: %s' % e)
+                    #macro_exec = True
+            #else:
+                #macro_exec = True
+                #logger.error("%s doesn't exist" % statefile)
+            macro_exec = True
             if macro_exec:
                 self._initialize()
             macro_file = os.path.join(self.path, '_project_macro')
             if os.path.isfile(macro_file):
                 if macro_exec:
-                    logger.error('Attempting to reconstruct project using macro')
+                    logger.info('Attempting to reconstruct project using macro')
                 self.load_macro(macro_file, execute=macro_exec)
         else:  # new project
             os.makedirs(projpath)
-            #os.mkdir(os.path.join(self.path, 'model'))
             self.activate()
             self._initialize()
             self.save()
@@ -333,9 +333,10 @@ class Project(object):
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
-        modeldir = self.path
-        sys.path = [modeldir+'.prj']+sys.path
-        logger.error("added %s to sys.path" % modeldir+'.prj')
+        modeldir = self.path+'.prj'
+        if modeldir not in sys.path:
+            sys.path = [modeldir]+sys.path
+            logger.error("added %s to sys.path" % modeldir)
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
