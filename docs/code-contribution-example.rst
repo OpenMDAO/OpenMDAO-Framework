@@ -175,9 +175,9 @@ repository (assuming the maintainers approve the change).
 
  *  Fill out the form that appears and then click the **Send pull request** button. 
     
-    The openMDAO maintainers will be notified, and one of them will review your pull request. In the upper middle of
-    the screen is a field that automatically shows your pull requests.  You should now show at least 1. Once your
-    branch it merged, the number will be reset.
+    The openMDAO maintainers will be notified, and one of them will review your pull request. In the
+    upper middle of the screen is a field that automatically shows your pull requests.  You should
+    now show at least 1. 
 
     
 

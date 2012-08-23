@@ -77,7 +77,7 @@ def upload (OpenMDAO_version):
     #stores list of gist_ids to notify the cookbook about
     gist_id_list = {}
 
-    #gets list of tutorials alrady on github
+    #gets list of tutorials already on github
     existingTutorials = getListOfExistingTutorials()
 
 
@@ -117,7 +117,7 @@ def getUsernamePass():
 
     """returns successfull authorization"""
 
-    print "Default username to upload gists to GitHub:"
+    print "Default username to upload gists to github:"
     print username
 
     useUsername = ""
@@ -182,14 +182,14 @@ def getPass():
 
 
 def authOK():
-    """ test username/password pair on github"""
+    """ Test username/password pair on GitHub"""
     r = requests.get(apiURL + "users/" + username + "/gists", auth=(username, password))
     return r.status_code == 200 or r.status_code == 201
 
 
 def getUploadFiles(directory, tutorialName):
     """
-    returns a list of files to upload to the tutoiral gist
+    Returns a list of files to upload to the tutorial gist
     """
 
     "filter out the files that we dont' want, retun the goodies"
@@ -199,7 +199,7 @@ def getUploadFiles(directory, tutorialName):
 
 def shouldUpload(f):
 
-    "returns if the file should be uploaded to the gist"
+    "Returns if the file should be uploaded to the gist"
     filename, extension = os.path.splitext(f)
 
     return extension in allowFiletype and not (filename in ignoreFilename)
@@ -229,9 +229,9 @@ def makeDesc(name, OpenMDAO_version, directory=None):
 
 def updateGist(name, gist_id, directory, files, OpenMDAO_version):
     """
-    Update any existnig files, add new ones, and delete files that no longer exist
+    Update any existing files, add new ones, and delete files that no longer exist.
 
-    Basically: rewrite the gist, but keep the same ID
+    Basically: rewrite the gist, but keep the same ID.
     """
 
     print "Updating gist #" + gist_id + ": " + name
@@ -270,9 +270,9 @@ def updateGist(name, gist_id, directory, files, OpenMDAO_version):
 def createGist(name, directory, files, OpenMDAO_version):
 
     """
-    Posts a new gist to github on behalf of 'username' field
+    Posts a new gist to GitHub on behalf of 'username' field.
 
-    Notify Cookbook of our existance
+    Notify Cookbook of our existance.
     """
 
     print"Uploading " + name + '...',
