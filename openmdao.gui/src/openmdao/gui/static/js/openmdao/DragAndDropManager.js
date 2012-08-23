@@ -4,7 +4,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.DragAndDropManager=function() {
 
     /***********************************************************************
-     *  deals with the problem that jQuery does not really handle layered 
+     *  deals with the problem that jQuery does not really handle layered
      *   divs with different zindex
      ***********************************************************************/
 
@@ -30,7 +30,7 @@ openmdao.DragAndDropManager=function() {
         droppables.clear();
     };
 
-    // get top div that contains the draggable, is visible and accepts the 
+    // get top div that contains the draggable, is visible and accepts the
     //    type of the draggable
     this.getTopDroppableForDropEvent = function(ev, ui) {
         return openmdao.drag_and_drop_manager.drop_target ;
@@ -55,17 +55,17 @@ openmdao.DragAndDropManager=function() {
 
     // clear all droppables
     this.clearHighlightingDroppables = function() {
-        highlighting_droppables.each( function( id, zindex ) { 
+        highlighting_droppables.each( function( id, zindex ) {
             var div = $( id ) ;
             var div_object = jQuery( div ) ;
             var o = div_object.data('corresponding_openmdao_object');
-            o.unhighlightAsDropTarget()
+            o.unhighlightAsDropTarget();
         } ) ;
         highlighting_droppables.clear();
     };
 
 
-    // Given the list of droppables that could potentially be 
+    // Given the list of droppables that could potentially be
     //    dropped on given where the cursor is, figure out which is on top
     //    and tell it to highlight itself. Unhighlight all the others
    this.updateHighlighting = function() {
@@ -82,7 +82,7 @@ openmdao.DragAndDropManager=function() {
            var tmp_elm = div_object ;
 
            //debug.info( "Is div", div.id, "in front?" ) ;
-           while ( tmp_elm.css( "z-index" ) == "auto" )
+           while ( tmp_elm.css( "z-index" ) === "auto" )
            {
                tmp_elm = tmp_elm.parent();
            }
@@ -94,8 +94,8 @@ openmdao.DragAndDropManager=function() {
            // Find the zindex for the topmost element
            tmp_elm = div_object  ;
            var topmost_zindex = null ;
-           while ( 1 ) {
-               if ( tmp_elm.css( "z-index" ) != "auto" ) {
+           while (true) {
+               if ( tmp_elm.css( "z-index" ) !== "auto" ) {
                    topmost_zindex = tmp_elm.css( "z-index" ) ;
                }
                if ( ! tmp_elm.parent() ) {
@@ -116,7 +116,7 @@ openmdao.DragAndDropManager=function() {
                max_zindex = calculated_zindex ;
                max_topmost_zindex = topmost_zindex ;
                max_count = count ;
-           } else if ( topmost_zindex == max_topmost_zindex ) {
+           } else if ( topmost_zindex === max_topmost_zindex ) {
                /* Use the count to break the tie */
                if ( count > max_count )
                {
@@ -146,7 +146,7 @@ openmdao.DragAndDropManager=function() {
            //debug.info( div_object.parent().children()[0].id, "compared to", div_object[0].id ) ;
            //debug.info( "div_object class", div_object.attr("class") ) ;
            var o = div_object.data('corresponding_openmdao_object');
-           if ( id == max_id ) {
+           if ( id === max_id ) {
                //debug.info( "in drag and drop manager, highlighting", div_object[0].id ) ;
                /* We only allow dropping onto Assemblies and a good way to check that
                   is the maxmin variable. We also allow dropping onto the top, which is the  */
@@ -167,24 +167,16 @@ openmdao.DragAndDropManager=function() {
                //         ||
                //         ( div_object.attr("class").indexOf("SlotFigure") !== -1 )
 
-               if (
-                   (div.id === "dataflow_pane" )
-                       ||
-                   ( div_object.attr("class").substring(0,14) === "DataflowFigure" )
-                       ||
-                   ( div_object.attr("class").indexOf("SlotFigure") !== -1 )
-                   
-
-
-
-               ) {
-                   o.highlightAsDropTarget()
+               if ((div.id === "dataflow_pane" ) ||
+                   (div_object.attr("class").substring(0,14) === "DataflowFigure") ||
+                   (div_object.attr("class").indexOf("SlotFigure") !== -1)) {
+                   o.highlightAsDropTarget();
                    openmdao.drag_and_drop_manager.drop_target = div_object ;
                } else {
                    openmdao.drag_and_drop_manager.drop_target = null ;
                }
            } else {
-               o.unhighlightAsDropTarget()
+               o.unhighlightAsDropTarget();
            }
        } ) ;
 
@@ -194,7 +186,7 @@ openmdao.DragAndDropManager=function() {
     //    has a non-auto zindex
     this.computeCalculatedZindex = function(elm) {
         var tmp_elm = elm  ;
-        while ( tmp_elm.css( "z-index" ) == "auto" )
+        while ( tmp_elm.css( "z-index" ) === "auto" )
         {
             tmp_elm = tmp_elm.parent();
         }
@@ -206,10 +198,10 @@ openmdao.DragAndDropManager=function() {
     this.computeTopmostZindex = function(elm) {
         var tmp_elm = elm  ;
         var topmost_zindex = null ;
-        while ( tmp_elm.parent() && ! tmp_elm.is("body") ) 
+        while ( tmp_elm.parent() && ! tmp_elm.is("body") )
         {
             tmp_elm = tmp_elm.parent() ;
-            if ( tmp_elm.css( "z-index" ) != "auto" ) {
+            if ( tmp_elm.css( "z-index" ) !== "auto" ) {
                 topmost_zindex = tmp_elm.css( "z-index" ) ;
             }
         }
@@ -242,7 +234,7 @@ openmdao.DragAndDropManager=function() {
         workflow_droppables = [] ;
     };
 
-    // get workflow figure top div that contains the draggable, is visible and accepts the 
+    // get workflow figure top div that contains the draggable, is visible and accepts the
     //    type of the draggable
     this.getTopWorkflowDroppableForDropEvent = function(ev, ui) {
         return openmdao.drag_and_drop_manager.drop_workflow_target ;
@@ -266,7 +258,7 @@ openmdao.DragAndDropManager=function() {
     };
 
 
-    // Given the list of droppables that could potentially be 
+    // Given the list of droppables that could potentially be
     //    dropped on given where the cursor is, figure out which is on top
     //    and tell it to highlight itself. Unhighlight all the others
    this.updateWorkflowHighlighting = function(being_dropped_pathname) {
@@ -283,7 +275,7 @@ openmdao.DragAndDropManager=function() {
            var tmp_elm = div_object ;
 
            //debug.info( "Is div", div.id, "in front?" ) ;
-           while ( tmp_elm.css( "z-index" ) == "auto" )
+           while ( tmp_elm.css( "z-index" ) === "auto" )
            {
                tmp_elm = tmp_elm.parent();
            }
@@ -295,8 +287,8 @@ openmdao.DragAndDropManager=function() {
            // Find the zindex for the topmost element
            tmp_elm = div_object  ;
            var topmost_zindex = null ;
-           while ( 1 ) {
-               if ( tmp_elm.css( "z-index" ) != "auto" ) {
+           while ( true ) {
+               if ( tmp_elm.css( "z-index" ) !== "auto" ) {
                    topmost_zindex = tmp_elm.css( "z-index" ) ;
                }
                if ( ! tmp_elm.parent() ) {
@@ -317,7 +309,7 @@ openmdao.DragAndDropManager=function() {
                max_zindex = calculated_zindex ;
                max_topmost_zindex = topmost_zindex ;
                max_count = count ;
-           } else if ( topmost_zindex == max_topmost_zindex ) {
+           } else if ( topmost_zindex === max_topmost_zindex ) {
                /* Use the count to break the tie */
                if ( count > max_count )
                {
@@ -353,18 +345,18 @@ openmdao.DragAndDropManager=function() {
            var dropped_on_parent_pathname = openmdao.Util.getPath( dropped_on_pathname ) ;
 
 
-           if ( id == max_id ) {
+           if ( id === max_id ) {
                debug.info( "in drag and drop manager, workflow highlighting", div_object[0].id ) ;
                if (
                    being_dropped_parent_pathname === dropped_on_parent_pathname
                ) {
-                   o.highlightAsDropTarget()
+                   o.highlightAsDropTarget();
                    openmdao.drag_and_drop_manager.drop_workflow_target = div_object ;
                } else {
                    openmdao.drag_and_drop_manager.drop_workflow_target = null ;
                }
            } else {
-               o.unhighlightAsDropTarget()
+               o.unhighlightAsDropTarget();
            }
        } ) ;
 
@@ -374,13 +366,14 @@ openmdao.DragAndDropManager=function() {
     // clear all droppables
     this.clearHighlightingWorkflowDroppables = function() {
         debug.info( "clearHighlightingWorkflowDroppables" ) ;
-        highlighting_workflow_droppables.each( function( id, zindex ) { 
+        highlighting_workflow_droppables.each( function( id, zindex ) {
             var div = $( id ) ;
             var div_object = jQuery( div ) ;
             var o = div_object.data('corresponding_openmdao_object');
-            o.unhighlightAsDropTarget()
+            o.unhighlightAsDropTarget();
         } ) ;
         highlighting_workflow_droppables.clear();
     };
 
-}
+};
+
