@@ -210,7 +210,6 @@ class ProjDirFactory(Factory):
         self._lock = threading.RLock()
         self.observer = None
         self.watchdir = watchdir
-        self.project = None
         self._files = {} # mapping of file pathnames to _FileInfo objects
         self._classes = {} # mapping of class names to _FileInfo objects
         try:

@@ -193,7 +193,7 @@ class _ProjDict(dict):
         return super(_ProjDict, self).__getitem__(name)
 
 class Project(object):
-    def __init__(self, projpath, projdirfactory=None):
+    def __init__(self, projpath):
         """Initializes a Project containing the project found in the 
         specified directory or creates a new project if one doesn't exist.
 
@@ -206,9 +206,6 @@ class Project(object):
         self._model_globals = _ProjDict()
         self._init_globals()
 
-        if projdirfactory:
-            projdirfactory.project = self
-        
         if os.path.isdir(projpath):
             self.activate()
         
@@ -338,7 +335,7 @@ class Project(object):
         SimulationRoot.chroot(self.path)
         modeldir = self.path
         sys.path = [modeldir+'.prj']+sys.path
-        logger.error("added %s to sys.path" % modeldir)
+        logger.error("added %s to sys.path" % modeldir+'.prj')
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""

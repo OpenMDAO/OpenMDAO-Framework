@@ -30,9 +30,13 @@ from openmdao.gui.projdirfactory import ProjDirFactory
 
 def _register_inst(typname):
     print "registering %s" % typname
+    logger.error("registering %s" % typname)
 
 def text_to_node(text):
-    """Given a python source string, return the corresponding AST node."""
+    """Given a python source string, return the corresponding AST node. The outer
+    Module node is removed so that the node corresponding to the given text can
+    be added to an existing AST.
+    """
     modnode = ast.parse(text, 'exec')
     if len(modnode.body) == 1:
         return modnode.body[0]
@@ -81,7 +85,6 @@ class ProjFinder(object):
         if path.endswith('.prj'):
             self.projdir = path.rsplit('.',1)[0]
             if os.path.isdir(self.projdir):
-                #print "import from project %s" % self.projdir
                 return
         raise ImportError("can't import %s" % path)
 
@@ -137,8 +140,6 @@ class ProjLoader(object):
         exec(code, mod.__dict__)
         return mod
 
-
-
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
         performs maintenance on root level containers/assemblies and
@@ -190,7 +191,7 @@ class ConsoleServer(cmd.Cmd):
             if has_interface(v, IContainer):
                 if v.name != k:
                     v.name = k
-            if is_instance(v, Assembly):
+            if is_instance(v, Assembly) and v._call_cpath_updated:
                 set_as_top(v)
 
     def publish_components(self):
@@ -592,7 +593,7 @@ class ConsoleServer(cmd.Cmd):
             self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            self.proj = Project(projdir, projdirfactory=self.projdirfactory)
+            self.proj = Project(projdir)
         except Exception, err:
             self._error(err, sys.exc_info())
 
