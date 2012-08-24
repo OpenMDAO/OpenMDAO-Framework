@@ -40,7 +40,6 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
     // all this is just to prevent drops from falling thru to underlying panes
     var true_dropdiv = slotsDiv.parent();
     true_dropdiv.data('corresponding_openmdao_object',this);
-    openmdao.drag_and_drop_manager.addDroppable(true_dropdiv);
 
     true_dropdiv.droppable ({
         accept: '.objtype',

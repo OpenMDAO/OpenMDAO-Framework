@@ -40,7 +40,6 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     fig.attr('title',desc);
 
     // set up as drop target
-    openmdao.drag_and_drop_manager.addDroppable(fig);
     fig.data('corresponding_openmdao_object',fig);
     fig.droppable ({
         accept: '.'+klass,
