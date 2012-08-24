@@ -17,8 +17,6 @@ import weakref
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Property
 
-from zope.interface import implementedBy
-
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
@@ -35,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.api import Bool, List, Dict, Str, Int, Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -1564,10 +1562,11 @@ class Component(Container):
             
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
+            value = getattr(self, name)
             ttype = trait.trait_type
             
             # Each variable type provides its own basic attributes
-            io_attr, slot_attr = ttype.get_attribute(name, trait, meta)
+            io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
             
             io_attr['valid'] = self.get_valid([name])[0]
             
@@ -1588,17 +1587,21 @@ class Component(Container):
 
                 io_attr['implicit'] = str([driver_name.split('.')[0] for \
                                            driver_name in parameters["%s.%s" % (self.name, name)]])
+                
+            if "%s.%s" % (self.name, name) in implicit:
+                io_attr['implicit'] = str([driver_name.split('.')[0] for 
+                                        driver_name in implicit["%s.%s" % (self.name, name)]])
             
             if name in self.list_inputs():
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
                 
-            # Process singleton slots.
+            # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
 
                 # We can hide slots (e.g., the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden']==False:
+                if 'hidden' not in meta or meta['hidden'] == False:
                     
                     # the "filled" key tells you what is filled
                     # for lists: number of filled slots
@@ -1656,7 +1659,7 @@ class Component(Container):
                 parameters = []
                 for key, parm in self.get_parameters().items():
                     if isinstance(parm, ParameterGroup):
-                        for name, target in zip(key,tuple(parm.targets)):
+                        for name, target in zip(key, tuple(parm.targets)):
                             attr = {}
                             attr['name']    = str(name)
                             attr['target']  = target
@@ -1708,42 +1711,6 @@ class Component(Container):
                     
             if constraint_pane:
                 attrs['Constraints'] = constraints
-
-            '''for name, value in self.traits().items():
-                
-                # List or Dict Slots
-                # Note: only supporting Slots as Dict value, not Dict key.
-                if value.is_trait_type((List, Dict)) and \
-                     value.inner_traits[-1].is_trait_type(Slot):
-                    
-                    attr = {}
-                    attr['name'] = name
-                    attr['klass'] = \
-                        value.inner_traits[-1].trait_type.klass.__name__
-                    
-                    if value.is_trait_type(List):
-                        attr['containertype'] = 'list'
-                    else:
-                        attr['containertype'] = 'dict'
-                    
-                    inames = []
-                    for klass in list(implementedBy(attr['klass'])):
-                        inames.append(klass.__name__)
-                    attr['interfaces'] = inames
-                    
-                    # relevant metadata should be in the outer trait
-                    meta = self.get_metadata(name)
-                    if meta:
-                        for field in ['desc']:    # just desc?
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    
-                    # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden']==False:
-                        slots.append(attr)
-                        '''
 
         return attrs
 

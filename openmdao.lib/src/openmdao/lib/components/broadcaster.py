@@ -1,5 +1,4 @@
-from openmdao.lib.datatypes.api import ListStr, Float
-from enthought.traits.api import Dict
+from openmdao.lib.datatypes.api import ListStr, Float, Dict
 
 from openmdao.main.api import Component
 from openmdao.main.interfaces import IComponent

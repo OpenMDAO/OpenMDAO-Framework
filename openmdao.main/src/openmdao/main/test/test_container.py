@@ -436,7 +436,7 @@ class ContainerTestCase(unittest.TestCase):
         attrs = c.get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         check = {'name': 'inp', 'value': '42.0', 'high': 200.0, 'connected': '', 'low': -200.0, 
-                         'units': '', 'type': 'float', 'desc': 'Stuff'}
+                         'type': 'float', 'desc': 'Stuff'}
         for key in check.keys():
             self.assertEqual( check[key], attrs["Inputs"][0][key] )
 

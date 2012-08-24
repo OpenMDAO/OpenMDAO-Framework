@@ -18,13 +18,16 @@ class Dict(Enthought_Dict):
     
     implements(IVariable)
     
-    def get_attribute(self, name, trait, meta):
+    def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. Dicts are containers that
         have a key trait and a value trait.
         
         name: str
           Name of variable
+          
+        value: object
+          The value of the variable
           
         trait: CTrait
           The variable's trait
@@ -35,11 +38,10 @@ class Dict(Enthought_Dict):
         
         attr = {}
         slot_attr = None
-        value = trait.value
         
         attr['name'] = name
         attr['type'] = 'dict'
-        attr['value'] = str(value)
+        attr['value'] = value
         
         for field in meta:
             if field not in gui_excludes:
@@ -49,7 +51,14 @@ class Dict(Enthought_Dict):
         inner = trait.inner_traits[-1]
         if inner.is_trait_type(Slot):
                     
-            _, slot_attr = inner.trait_type.get_attribute(name, inner, meta)
+            if len(value) < 1:
+                value = None
+            else:
+                # Just grab first item to get object type
+                value = value[value.keys()[0]]
+                
+            _, slot_attr = inner.trait_type.get_attribute(name, value, 
+                                                          inner, meta)
             slot_attr['containertype'] = 'dict'
         
         return attr, slot_attr

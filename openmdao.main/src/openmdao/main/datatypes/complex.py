@@ -25,7 +25,8 @@ class Complex(Variable):
         if desc is not None:
             metadata['desc'] = desc
 
-        self._validator = Enthought_Complex(default_value=default_value, **metadata)
+        self._validator = Enthought_Complex(default_value=default_value, 
+                                            **metadata)
             
         super(Complex, self).__init__(default_value=default_value, **metadata)
 

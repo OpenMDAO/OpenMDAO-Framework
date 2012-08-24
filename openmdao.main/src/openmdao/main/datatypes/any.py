@@ -6,7 +6,6 @@ Trait for a generic variable that has no validation.
 __all__ = ["Any"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Any as Enthought_Any
 
 from openmdao.main.variable import Variable
 
@@ -26,9 +25,4 @@ class Any(Variable):
             metadata['desc'] = desc
 
         super(Any, self).__init__(default_value=default_value, **metadata)
-
-    def create_editor(self):
-        """ User the one in the Enthought trait.
-        """
-        return self._validator.create_editor()
 

@@ -67,7 +67,7 @@ def get_closest_proxy(start_scope, pathname):
     obj = start_scope
     names = pathname.split('.')
     i = -1
-    for i,name in enumerate(names[:-1]):
+    for i, name in enumerate(names[:-1]):
         if isinstance(obj, Container):
             obj = getattr(obj, name)
         else:
@@ -207,7 +207,7 @@ class Container(SafeHasTraits):
         
     def _branch_moved(self):
         self._call_cpath_updated = True
-        for n,cont in self.items():
+        for n, cont in self.items():
             if is_instance(cont, Container):
                 cont._branch_moved()
  
@@ -774,7 +774,7 @@ class Container(SafeHasTraits):
     
     def list_vars(self):
         """Return a list of Variables in this Container."""
-        return [k for k,v in self.items(iotype=not_none)]
+        return [k for k, v in self.items(iotype=not_none)]
     
     def get_attributes(self, io_only=True):
         """ We use Container as a base class for objects that have traits
@@ -791,27 +791,50 @@ class Container(SafeHasTraits):
         attrs['type'] = type(self).__name__
 
         variables = []
-        for vname in self.list_vars() + self._added_traits.keys():
+        slots = []
+        #for name in self.list_vars() + self._added_traits.keys():
+        for name in set(self.list_vars()).union( \
+            set(self._added_traits.keys()) ):
             
-            var = self.get(vname)
             attr = {}
-                
-            attr['name'] = vname
-            attr['type'] = type(var).__name__
-            attr['value'] = str(var)
-            meta = self.get_metadata(vname)
-                
-            if meta:
-                for field in ['units', 'high', 'low', 'desc']:
-                    if field in meta:
-                        attr[field] = meta[field]
-                    else:
-                        attr[field] = ''
+            
+            var = self.get(name)
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            value = getattr(self, name)
+            ttype = trait.trait_type
+            
+            # Each variable type provides its own basic attributes
+            attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
                         
             # Container variables are not connectable
             attr['connected'] = ''
                     
             variables.append(attr)
+            
+            # Process singleton and contained slots.
+            if not io_only and slot_attr is not None:
+
+                # We can hide slots (e.g., the Workflow slot in drivers)
+                if 'hidden' not in meta or meta['hidden'] == False:
+                    
+                    # the "filled" key tells you what is filled
+                    # for lists: number of filled slots
+                    if slot_attr['containertype'] == 'list':
+                        slot_attr['filled'] = len(getattr(self, name))
+                        
+                    # for dicts: key names for filled slots
+                    elif slot_attr['containertype'] == 'dict':
+                        slot_attr['filled'] = getattr(self, name).keys()
+                       
+                    # singleton slots, just check if it is there
+                    else:
+                        if getattr(self, name) is None:
+                            slot_attr['filled'] = False
+                        else:
+                            slot_attr['filled'] = True
+                    
+                    slots.append(slot_attr)
             
         attrs["Inputs"] = variables
         return attrs
