@@ -248,8 +248,8 @@ def _test_slots(browser):
     #refresh
     caserec  = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
 
-    #check for font change
-    eq(False, not ("color: rgb(204, 0, 0)" in caserec.get_attribute('style')),
+    #check for class change
+    eq(False, ("filled" in caserec.get_attribute('class')),
         "Component dropped into CaseRecorder (should not have)")
 
     ##################################################
@@ -265,8 +265,8 @@ def _test_slots(browser):
     #refresh
     comp  = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
     
-    #check for font change
-    eq(True, not ("color: rgb(204, 0, 0)" in comp.get_attribute('style')),
+    #check for class change
+    eq(True, ("filled" in comp.get_attribute('class')),
         "Component did not drop into Component slot")
 
     #for the future:

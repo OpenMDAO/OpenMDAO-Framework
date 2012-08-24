@@ -6,7 +6,7 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
      *  private
      ***********************************************************************/
 
-    var slotDiv = '<div height="50" width="100" style="margin:10px;clear:both;" />',
+    var slotDiv = '<div height="50" width="100" class="SlotFigure" style="margin:10px;clear:both;" />',
         slotSVG = '<svg height="50" width="100">'
                 + '    <rect height="50" width="100" rx="15" ry="15" style="stroke-width:2; fill:white" />'
                 + '    <text id="name" x="50" y="20" text-anchor="middle">Name</text>'
@@ -28,6 +28,12 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
             i = i - 1;
         }
     }
+    if (filled) {
+        fig.width(100*filled);
+    }
+    else {
+        fig.width(100);
+    }
 
     // set id and tooltip
     fig.attr('id','SlotFigure-'+(pathname.replace('.','-')));
@@ -35,7 +41,6 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
 
     // set up as drop target
     openmdao.drag_and_drop_manager.addDroppable(fig);
-    fig.addClass("SlotFigure");
     fig.data('corresponding_openmdao_object',fig);
     fig.droppable ({
         accept: '.'+klass,
@@ -65,11 +70,13 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
 
     /** Highlight figure when cursor is over it and it can accept a drop */
     fig.highlightAsDropTarget=function(){
-        fig.find('rect').css({'fill': 'rgb(207, 214, 254)'});
+        fig.css({'background-color': 'rgb(207, 214, 254)'});
+        fig.find('rect').css({'fill': '#CFD6FE'});
     };
 
     /** Unhighlight figure when it can no longer accept a drop */
     fig.unhighlightAsDropTarget=function(){
+        fig.css({'background-color': 'transparent'});
         fig.find('rect').css({'fill': 'white'});
     };
 
@@ -84,12 +91,14 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
 
         debug.info('SlotFigure.setState()',filled,pathname,r,r.length,n,k);
 
-        // set colors & klass
+        // set colors & klass (TODO: use CSS to do this automatically?)
         if (filled) {
             r.css({'stroke-dasharray':'none', 'stroke':color});
+            fig.addClass("filled");
         }
         else {
             r.css({'stroke-dasharray':3, 'stroke':color});
+            fig.removeClass("filled");
         }
         n.css({'fill': color}).text(name);
         k.css({'fill': color}).text(klass);
