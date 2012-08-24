@@ -112,9 +112,7 @@ def _test_palette_update(browser):
                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
                                                 'optimization_unconstrained.py')
-
     # add first file from workspace
-    workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
 
     # Open code editor.and add second file from there
