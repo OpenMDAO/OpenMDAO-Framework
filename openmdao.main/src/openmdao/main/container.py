@@ -818,22 +818,6 @@ class Container(SafeHasTraits):
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] == False:
                     
-                    # the "filled" key tells you what is filled
-                    # for lists: number of filled slots
-                    if slot_attr['containertype'] == 'list':
-                        slot_attr['filled'] = len(getattr(self, name))
-                        
-                    # for dicts: key names for filled slots
-                    elif slot_attr['containertype'] == 'dict':
-                        slot_attr['filled'] = getattr(self, name).keys()
-                       
-                    # singleton slots, just check if it is there
-                    else:
-                        if getattr(self, name) is None:
-                            slot_attr['filled'] = False
-                        else:
-                            slot_attr['filled'] = True
-                    
                     slots.append(slot_attr)
             
         attrs["Inputs"] = variables

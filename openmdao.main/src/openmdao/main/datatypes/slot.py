@@ -126,8 +126,13 @@ class Slot(Variable):
         
         slot_attr = {}
         slot_attr['name'] = name
+        
         if value is not None and value is not []:
+            slot_attr['filled'] = True
             slot_attr['value'] = value.get_attributes()
+        else:
+            slot_attr['filled'] = False
+            
         slot_attr['klass'] = io_attr['type']
         slot_attr['containertype'] = 'singleton'
         

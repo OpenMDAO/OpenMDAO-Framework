@@ -52,14 +52,15 @@ class Dict(Enthought_Dict):
         if inner.is_trait_type(Slot):
                     
             if len(value) < 1:
-                value = None
+                inner_value = None
             else:
                 # Just grab first item to get object type
-                value = value[value.keys()[0]]
+                inner_value = value[value.keys()[0]]
                 
-            _, slot_attr = inner.trait_type.get_attribute(name, value, 
+            _, slot_attr = inner.trait_type.get_attribute(name, inner_value, 
                                                           inner, meta)
             slot_attr['containertype'] = 'dict'
+            slot_attr['filled'] = value.keys()
         
         return attr, slot_attr
     

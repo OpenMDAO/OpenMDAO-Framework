@@ -53,13 +53,14 @@ class List(Enthought_List):
         if inner.is_trait_type(Slot):
             
             if len(value) < 1:
-                value = None
+                inner_value = None
             else:
-                value = value[0]
+                inner_value = value[0]
                 
-            _, slot_attr = inner.trait_type.get_attribute(name, value, 
+            _, slot_attr = inner.trait_type.get_attribute(name, inner_value, 
                                                           inner, meta)
             slot_attr['containertype'] = 'list'
+            slot_attr['filled'] = len(value)
 
         return attr, slot_attr
     
