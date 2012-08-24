@@ -14,7 +14,6 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
                 + '</svg>',
         fig = jQuery(slotDiv)
             .append(slotSVG),
-        color = filled ? 'green' : 'red',
         name = openmdao.Util.getName(pathname);
 
     fig.find('#name').text(name);
@@ -38,6 +37,13 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     // set id and tooltip
     fig.attr('id','SlotFigure-'+(pathname.replace('.','-')));
     fig.attr('title',desc);
+
+    // open object editor on double click
+    fig.dblclick(function() {
+        if (fig.hasClass('filled')) {
+            var editor = new openmdao.ObjectFrame(model, pathname);
+        }
+    });
 
     // set up as drop target
     fig.data('corresponding_openmdao_object',fig);
@@ -68,13 +74,13 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     });
 
     /** Highlight figure when cursor is over it and it can accept a drop */
-    fig.highlightAsDropTarget=function(){
+    fig.highlightAsDropTarget=function() {
         fig.css({'background-color': 'rgb(207, 214, 254)'});
         fig.find('rect').css({'fill': '#CFD6FE'});
     };
 
     /** Unhighlight figure when it can no longer accept a drop */
-    fig.unhighlightAsDropTarget=function(){
+    fig.unhighlightAsDropTarget=function() {
         fig.css({'background-color': 'transparent'});
         fig.find('rect').css({'fill': 'white'});
     };
@@ -86,24 +92,23 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     this.setState = function(klass, filled) {
         var r = fig.find('rect'),
             n = fig.find('#name'),
-            k = fig.find('#klass');
-
-        debug.info('SlotFigure.setState()',filled,pathname,r,r.length,n,k);
+            k = fig.find('#klass'),
+            color = filled ? 'green' : 'red';
 
         // set colors & klass (TODO: use CSS to do this automatically?)
         if (filled) {
             r.css({'stroke-dasharray':'none', 'stroke':color});
-            fig.addClass("filled");
+            fig.addClass('filled');
         }
         else {
             r.css({'stroke-dasharray':3, 'stroke':color});
-            fig.removeClass("filled");
+            fig.removeClass('filled');
         }
         n.css({'fill': color}).text(name);
         k.css({'fill': color}).text(klass);
 
         // for list and dict, there is one additional unfilled slot entry
-        if (filled && r.length > 0) {
+        if (filled && r.length > 1) {
             r.filter(':last').css({'stroke-dasharray':3, 'stroke':'red'});
             n.filter(':last').css({'fill': 'red'});
             k.filter(':last').css({'fill': 'red'});
