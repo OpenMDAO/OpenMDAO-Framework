@@ -8,7 +8,7 @@ __all__ = ["Bool"]
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Bool as Enthought_Bool
 
-from openmdao.main.variable import Variable
+from openmdao.main.variable import Variable, gui_excludes
 
 class Bool(Variable):
     """A variable wrapper for a boolean variable.
@@ -39,3 +39,32 @@ class Bool(Variable):
         """
         return self._validator.create_editor()
 
+    def get_attribute(self, name, value, trait, meta):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. Bools need to turn
+        their value into a string for compatibility.
+        
+        name: str
+          Name of variable
+          
+        value: object
+          The value of the variable
+          
+        trait: CTrait
+          The variable's trait
+          
+        meta: dict
+          Dictionary of metadata for this variable
+        """
+        
+        attr = {}
+        
+        attr['name'] = name
+        attr['type'] = type(value).__name__
+        attr['value'] = str(value)
+        
+        for field in meta:
+            if field not in gui_excludes:
+                attr[field] = meta[field]
+        
+        return attr, None
