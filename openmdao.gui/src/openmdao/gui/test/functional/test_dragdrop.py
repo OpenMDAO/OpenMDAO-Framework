@@ -243,9 +243,10 @@ def _test_slots(browser):
     #failure:
     slot_drop(browser, execcomp, caserec, False, 'Component')
 
+    slot_id = 'SlotFigure-%s-%s'
+
     #refresh
-    labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-    caserec = get_slot_target(labels, 'CaseRecorder')
+    caserec  = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
 
     #check for font change
     eq(False, not ("color: rgb(204, 0, 0)" in caserec.get_attribute('style')),
@@ -262,9 +263,8 @@ def _test_slots(browser):
     NotifyDialog(browser, top.port).close()
 
     #refresh
-    labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-    comp = get_slot_target(labels, 'Component')
-
+    comp  = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
+    
     #check for font change
     eq(True, not ("color: rgb(204, 0, 0)" in comp.get_attribute('style')),
         "Component did not drop into Component slot")
@@ -588,18 +588,13 @@ def slot_reset(browser, workspace_page, editor=None, metamodel=None, remove_old=
 
     resize_editor(browser, workspace_page, editor)
 
-    #get an arbitrary element so we can do a 'find_elements_by_xpath' search
-    ele = metamodel('header').element
-
-    #search for the drop target labels
-    labels = ele.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-
     #find the slots (this is both the drop target and highlight area)
-    caseiter = get_slot_target(labels, 'CaseIterator')
-    caserec = get_slot_target(labels, 'CaseRecorder')
-    comp = get_slot_target(labels, 'Component')
+    slot_id = 'SlotFigure-%s-%s'
+    caseiter = browser.find_element(By.ID, slot_id % (meta_name, 'warm_start_data'))
+    caserec  = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
+    model    = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
 
-    return editor, metamodel, caseiter, caserec, comp, meta_name
+    return editor, metamodel, caseiter, caserec, model, meta_name
 
 
 def resize_editor(browser, workspace_page, editor):

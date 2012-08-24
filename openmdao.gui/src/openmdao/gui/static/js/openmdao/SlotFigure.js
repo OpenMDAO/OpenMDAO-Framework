@@ -30,14 +30,8 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     }
 
     // set id and tooltip
-    fig.attr('id','SlotFigure-'+pathname);
+    fig.attr('id','SlotFigure-'+(pathname.replace('.','-')));
     fig.attr('title',desc);
-
-    // store refs in object (not necessary?)
-    //fig.model = model;
-    //fig.pathname = name;
-    //fig.klass = klass;
-    //fig.filled = filled;
 
     // set up as drop target
     openmdao.drag_and_drop_manager.addDroppable(fig);
@@ -46,13 +40,16 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     fig.droppable ({
         accept: '.'+klass,
         out: function(ev,ui){
+            debug.info('SlotFigure out',pathname);
             fig.unhighlightAsDropTarget() ;
             openmdao.drag_and_drop_manager.draggableOut(fig);
         },
         over: function(ev,ui){
+            debug.info('SlotFigure over',pathname);
             openmdao.drag_and_drop_manager.draggableOver(fig);
         },
         drop: function(ev,ui) {
+            debug.info('SlotFigure drop',pathname);
             var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev, ui),
                 drop_function = top_div.droppable( 'option', 'actualDropHandler');
             drop_function(ev, ui);
@@ -68,7 +65,7 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
 
     /** Highlight figure when cursor is over it and it can accept a drop */
     fig.highlightAsDropTarget=function(){
-        fig.find('rect').css({'fill': 'gray'});
+        fig.find('rect').css({'fill': 'rgb(207, 214, 254)'});
     };
 
     /** Unhighlight figure when it can no longer accept a drop */
