@@ -18,7 +18,7 @@ from openmdao.main.api import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
-from openmdao.main.factorymanager import create
+from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.mp_support import is_instance
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.log import logger
@@ -229,14 +229,12 @@ class Project(object):
             #else:
                 #macro_exec = True
                 #logger.error("%s doesn't exist" % statefile)
-            macro_exec = True
-            if macro_exec:
-                self._initialize()
+            #if macro_exec:
+            self._initialize()
             macro_file = os.path.join(self.path, '_project_macro')
             if os.path.isfile(macro_file):
-                if macro_exec:
-                    logger.info('Attempting to reconstruct project using macro')
-                self.load_macro(macro_file, execute=macro_exec)
+                logger.info('Reconstructing project using macro')
+                self.load_macro(macro_file, execute=True, strict=True)
         else:  # new project
             os.makedirs(projpath)
             self.activate()
@@ -244,13 +242,18 @@ class Project(object):
             self.save()
 
     def _initialize(self):
-        self._model_globals['top'] = set_as_top(Assembly())
+        self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
         
     def _init_globals(self):
-        self._model_globals['create'] = create    # add create funct here so macros can call it
+        self._model_globals['create'] = self.create    # add create funct here so macros can call it
         self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
         self._model_globals['execfile'] = self.execfile
+        self._model_globals['set_as_top'] = set_as_top
 
+    def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
+        if server is None and res_desc is None and typname in self._model_globals:
+            return getattr(self._model_globals, typname)(**ctor_args)
+        return factory_create(typname, version, server, res_desc, **ctor_args)
 
     @property
     def name(self):
