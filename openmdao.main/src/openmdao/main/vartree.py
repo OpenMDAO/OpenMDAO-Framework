@@ -2,14 +2,12 @@
 """
 import copy
 
-from zope.interface import implementedBy
-
-from enthought.traits.api import Str
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.has_traits import FunctionType
 
 from openmdao.main.variable import Variable
 from openmdao.main.container import Container
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Slot, Str
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 
@@ -178,71 +176,40 @@ class VariableTree(Container):
             else:
                 connected = graph.get_connected_outputs()
             
-        # Keep track of slot names so we don't put them in the variable list.
-        slot_names = []
-        
-        # Do slots first for the same reason
-        slots = []
-        for name, value in self.traits().items():
-            if value.is_trait_type(Slot):
-                attr = {}
-                attr['name'] = name
-                attr['klass'] = value.trait_type.klass.__name__
-                inames = []
-                for klass in list(implementedBy(attr['klass'])):
-                    inames.append(klass.__name__)
-                attr['interfaces'] = inames
-                if getattr(self, name) is None:
-                    attr['filled'] = False
-                else:
-                    attr['filled'] = True
-                meta = self.get_metadata(name)
-                if meta:
-                    for field in ['desc']:    # just desc?
-                        if field in meta:
-                            attr[field] = meta[field]
-                        else:
-                            attr[field] = ''
-                    attr['type'] = meta['vartypename']
-                    
-                slots.append(attr)
-                slot_names.append(name)
-                
-        if not io_only:
-            attrs['Slots'] = slots
-                
         variables = []
-        for vname in self.list_vars():
-            if vname not in slot_names:
-                var = self.get(vname)
-                attr = {}
-                    
-                attr['name'] = vname
-                attr['type'] = type(var).__name__
-                attr['value'] = str(var)
-                #attr['valid'] = self.get_valid([vname])[0]
-                meta = self.get_metadata(vname)
-                    
-                if meta:
-                    for field in ['units', 'high', 'low', 'desc']:
-                        if field in meta:
-                            attr[field] = meta[field]
-                        else:
-                            attr[field] = ''
+        slots = []
+        for name in self.list_vars():
+            
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            value = getattr(self, name)
+            ttype = trait.trait_type
+            
+            # Each variable type provides its own basic attributes
+            attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
                             
-                attr['connected'] = ''
-                if vname in connected:
-                    connections = self.parent._depgraph.connections_to(vname)
+            attr['connected'] = ''
+            if name in connected:
+                connections = self.parent._depgraph.connections_to(name)
                     
-                    if self._iotype == 'in':
-                        # there can be only one connection to an input
-                        attr['connected'] = str([src for src, dst in \
-                                                 connections]).replace('@xin.', '')
-                    else:
-                        attr['connected'] = str([dst for src, dst in \
-                                                 connections]).replace('@xout.', '')
+                if self._iotype == 'in':
+                    # there can be only one connection to an input
+                    attr['connected'] = str([src for src, dst in \
+                                            connections]).replace('@xin.', '')
+                else:
+                    attr['connected'] = str([dst for src, dst in \
+                                            connections]).replace('@xout.', '')
                         
-                variables.append(attr)
+            variables.append(attr)
+            
+            # Process singleton and contained slots.
+            if not io_only and slot_attr is not None:
+
+                # We can hide slots (e.g., the Workflow slot in drivers)
+                if 'hidden' not in meta or meta['hidden'] == False:
+                    
+                    slots.append(slot_attr)
+            
             
         if self._iotype == 'in':
             panel = 'Inputs'
@@ -250,7 +217,7 @@ class VariableTree(Container):
             panel = 'Outputs'
             
         attrs[panel] = variables
-        
+        attrs['Slots'] = slots
         return attrs
             
 
