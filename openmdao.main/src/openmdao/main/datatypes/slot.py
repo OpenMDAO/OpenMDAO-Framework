@@ -19,7 +19,7 @@ from inspect import isclass
 from enthought.traits.api import Instance, Interface
 import zope.interface
 
-from openmdao.main.variable import Variable
+from openmdao.main.variable import Variable, gui_excludes
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IContainer
 
@@ -45,7 +45,8 @@ class Slot(Variable):
         self.klass = klass
         default_value = None
         
-        if has_interface(klass, IContainer) or (isclass(klass) and IContainer.implementedBy(klass)):
+        if has_interface(klass, IContainer) or (isclass(klass) and \
+                                            IContainer.implementedBy(klass)):
             self._is_container = True
         else:
             self._is_container = False
@@ -63,6 +64,8 @@ class Slot(Variable):
         super(Slot, self).__init__(default_value, **metadata)
 
     def validate ( self, obj, name, value ):
+        ''' wrapper around Enthought validate method'''
+        
         if value is None:
             if self._allow_none:
                 return value
@@ -85,8 +88,9 @@ class Slot(Variable):
         return value
 
     def post_setattr ( self, obj, name, value ):
-        # Containers must know their place within the hierarchy, so set their
-        # parent here.  This keeps side effects out of validate()
+        '''Containers must know their place within the hierarchy, so set their
+        parent here.  This keeps side effects out of validate()'''
+        
         if self._is_container and value is not None:
             if value.parent is not obj:
                 value.parent = obj
@@ -98,3 +102,47 @@ class Slot(Variable):
         obj.raise_exception("%s must provide interface '%s'" % 
                             (name, iface_name), TypeError)
         
+    def get_attribute(self, name, value, trait, meta):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. Slots also return an
+        attribute dictionary for the slot pane.
+        
+        name: str
+          Name of variable
+          
+        value: object
+          The value of the variable
+          
+        trait: CTrait
+          The variable's trait
+          
+        meta: dict
+          Dictionary of metadata for this variable
+        """
+
+        io_attr = {}
+        io_attr['name'] = name
+        io_attr['type'] = trait.trait_type.klass.__name__
+        
+        slot_attr = {}
+        slot_attr['name'] = name
+        
+        if value is not None and value is not []:
+            slot_attr['filled'] = True
+            slot_attr['value'] = value.get_attributes()
+        else:
+            slot_attr['filled'] = False
+            
+        slot_attr['klass'] = io_attr['type']
+        slot_attr['containertype'] = 'singleton'
+        
+        inames = []
+        for klass in list(zope.interface.implementedBy(slot_attr['klass'])):
+            inames.append(klass.__name__)
+        slot_attr['interfaces'] = inames
+        
+        for field in meta:
+            if field not in gui_excludes:
+                slot_attr[field] = meta[field]
+
+        return io_attr, slot_attr

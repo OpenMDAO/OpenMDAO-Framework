@@ -28,8 +28,8 @@ class DumbVT(VariableTree):
     def __init__(self):
         super(DumbVT, self).__init__()
         self.add('vt2', DumbVT2())
-        self.add('v1', Float(1.))
-        self.add('v2', Float(2.))
+        self.add('v1', Float(1., desc='vv1'))
+        self.add('v2', Float(2., desc='vv2'))
         self.add('data', File())
 
 class SimpleComp(Component):
@@ -178,21 +178,31 @@ class NamespaceTestCase(unittest.TestCase):
         # Check set_attributes on the vartrees
         attrs = self.asm.scomp1.cont_in.get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'v1', 'value': '1.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Inputs'])
-        self.assertTrue({'name': 'v2', 'value': '2.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Inputs'])
-        # The number shall be 3 (i.e., no slot stuck in the var list.)
-        self.assertEqual(len(attrs['Inputs']), 3)
+        self.assertTrue({'name': 'v1',
+                         'value': 1.0,
+                         'high': None,
+                         'connected': '',
+                         'low': None,
+                         'type': 'float',
+                         'desc': 'vv1'} in attrs['Inputs'])
+        self.assertTrue({'name': 'v2', 'value': 2.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv2'} in attrs['Inputs'])
+        # The number shall be 4 (because there is a File.)
+        self.assertEqual(len(attrs['Inputs']), 4)
         attrs = self.asm.scomp1.cont_out.get_attributes()
         self.assertTrue("Outputs" in attrs.keys())
-        self.assertTrue({'name': 'v1', 'value': '2.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Outputs'])
-        self.assertTrue({'name': 'v2', 'value': '3.0', 'high': None, 'connected': '', 'low': None, 'units': '', 'type': 'float', 'desc': ''} in attrs['Outputs'])
-        self.assertEqual(len(attrs['Outputs']), 3)
+        self.assertTrue({'name': 'v1', 'value': 2.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv1'} in attrs['Outputs'])
+        self.assertTrue({'name': 'v2', 'value': 3.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv2'} in attrs['Outputs'])
+        self.assertEqual(len(attrs['Outputs']), 4)
         
         # Slots panel too
         attrs = self.asm.scomp1.cont_in.get_attributes(io_only=False)
-        self.assertEqual(len(attrs['Inputs']), 3)
         self.assertTrue("Slots" in attrs.keys())
-        self.assertTrue({'name': 'vt2', 'interfaces': [], 'klass': 'VariableTree', 'type': 'Slot', 'filled': True, 'desc': ''} in attrs['Slots'])
+        self.assertEqual(len(attrs['Slots']), 1)
+        self.assertTrue(attrs['Slots'][0]['name'] == 'vt2')
+        self.assertTrue(attrs['Slots'][0]['interfaces'] == [])
+        self.assertTrue(attrs['Slots'][0]['klass'] == 'VariableTree')
+        self.assertTrue(attrs['Slots'][0]['containertype'] == 'singleton')
+        self.assertTrue(attrs['Slots'][0]['filled'] == True)
         
         # Now connect
         try:
