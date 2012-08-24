@@ -202,7 +202,7 @@ class FloatTestCase(unittest.TestCase):
         self.assertEqual(len(input_attrs), 3)
         self.assertTrue({'name': 'float1',
                          'type': 'float',
-                         'value': '3.1415926',
+                         'value': 3.1415926,
                          'high': 99.0,
                          'connected': '',
                          'low': 0.0,

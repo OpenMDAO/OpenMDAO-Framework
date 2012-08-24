@@ -56,7 +56,7 @@ class Variable(TraitType):
         
         attr['name'] = name
         attr['type'] = type(value).__name__
-        attr['value'] = str(value)
+        attr['value'] = value
         
         for field in meta:
             if field not in gui_excludes:
