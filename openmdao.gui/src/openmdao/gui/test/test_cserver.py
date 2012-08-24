@@ -193,7 +193,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         # WORKFLOW
         self.cserver.onecmd('prob.driver.workflow.add("p")')
-        driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))
+        driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))[0]
         self.assertTrue('pathname' in driver_flow)
         self.assertTrue('type'     in driver_flow)
         self.assertTrue('workflow' in driver_flow)

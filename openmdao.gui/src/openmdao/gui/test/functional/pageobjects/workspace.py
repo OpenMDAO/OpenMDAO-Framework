@@ -232,6 +232,7 @@ class WorkspacePage(BasePageObject):
         if file_path.endswith('.pyc'):
             file_path = file_path[:-1]
 
+        self('files_tab').click()
         self('file_menu').click()
         self('add_button').click()
 
@@ -388,19 +389,21 @@ class WorkspacePage(BasePageObject):
         time.sleep(1)
         return library_item
 
-    def add_library_item_to_dataflow(self, item_name, instance_name, check=True):
+    def add_library_item_to_dataflow(self, item_name, instance_name,
+                                     check=True, offset=None):
         """ Add component `item_name`, with name `instance_name`. """
         library_item = self.get_library_item(item_name)
 
         target = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath("//*[@id='-dataflow']"))
 
+        offset = offset or (90, 90)
         chain = ActionChains(self.browser)
         if False:
             chain.drag_and_drop(library_item, target)
         else:
             chain.click_and_hold(library_item)
-            chain.move_to_element_with_offset(target, 90, 90)
+            chain.move_to_element_with_offset(target, offset[0], offset[1])
             chain.release(None)
         chain.perform()
 

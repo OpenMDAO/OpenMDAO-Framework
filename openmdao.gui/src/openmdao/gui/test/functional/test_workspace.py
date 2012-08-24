@@ -741,6 +741,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
+    time.sleep(0.5)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
     eq(properties.is_visible, False)

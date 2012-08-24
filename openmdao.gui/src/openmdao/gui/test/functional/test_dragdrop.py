@@ -498,7 +498,7 @@ def _test_drop_onto_layered_div(browser):
 
     # Check to make sure we have the expected number of
     #   workflow component figures before we add to it
-    eq(len(workspace_page.get_workflow_component_figures()), 5)
+    eq(len(workspace_page.get_workflow_component_figures()), 22)
 
     # Drag paraboloid component into sim_EPA_city workflow figure
     # should add to the list of workflow component figures
@@ -513,7 +513,7 @@ def _test_drop_onto_layered_div(browser):
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
-    eq(len(workspace_page.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_component_figures()), 24)
     # Check to see that the new div inside the workflow is there
     figs = workspace_page.get_workflow_component_figures()
     pathnames = [get_pathname(browser, fig) for fig in figs]
@@ -533,7 +533,7 @@ def _test_drop_onto_layered_div(browser):
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
-    eq(len(workspace_page.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_component_figures()), 24)
     # Check to see that the new div inside the workflow is there
     figs = workspace_page.get_workflow_component_figures()
     pathnames = [get_pathname(browser, fig) for fig in figs]
