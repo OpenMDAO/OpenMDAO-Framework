@@ -39,3 +39,32 @@ class Bool(Variable):
         """
         return self._validator.create_editor()
 
+    def get_attribute(self, name, value, trait, meta):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. Bools need to turn
+        their value into a string for compatibility.
+        
+        name: str
+          Name of variable
+          
+        value: object
+          The value of the variable
+          
+        trait: CTrait
+          The variable's trait
+          
+        meta: dict
+          Dictionary of metadata for this variable
+        """
+        
+        attr = {}
+        
+        attr['name'] = name
+        attr['type'] = type(value).__name__
+        attr['value'] = str(value)
+        
+        for field in meta:
+            if field not in gui_excludes:
+                attr[field] = meta[field]
+        
+        return attr, None
