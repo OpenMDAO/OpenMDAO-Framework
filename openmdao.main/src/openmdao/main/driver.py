@@ -37,8 +37,8 @@ class Driver(Component):
                      desc='Case recorders for iteration data.')
 
     # Extra variables for printing
-    printvars = List(Str, iotype='in', desc='List of extra variables to '
-                               'output in the recorders.')
+    printvars = List(Str, iotype='in', 
+                     desc='List of extra variables to output in the recorders.')
 
     # set factory here so we see a default value in the docs, even
     # though we replace it with a new Dataflow in __init__

@@ -350,14 +350,14 @@ class Project(object):
             pass
 
     def save(self):
-        """ Save the state of the project model to its project directory.
+        """ Save the project model to its project directory.
         """
-        fname = os.path.join(self.path, '_project_state')
-        try:
-            with open(fname, 'wb') as f:
-                pickle.dump(self._model_globals, f)
-        except Exception as err:
-            logger.error("Failed to pickle the project: %s" % str(err))
+        #fname = os.path.join(self.path, '_project_state')
+        #try:
+            #with open(fname, 'wb') as f:
+                #pickle.dump(self._model_globals, f)
+        #except Exception as err:
+            #logger.error("Failed to pickle the project: %s" % str(err))
 
         if self._recorded_cmds:
             logger.info("Saving macro used to create project")
