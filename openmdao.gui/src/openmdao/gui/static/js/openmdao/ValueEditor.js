@@ -14,7 +14,19 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ValueEditor = (function(){
 
     var editors = {}
-    var unregistered = {}
+    var defaultEditor = TextCellEditor
+
+    var getEditor = function(args){
+        try{
+            editorConstructor = editors[args.item.type]
+        }
+        catch(err){
+            editorConstructor = defaultEditor
+        }
+        finally{
+            return new editorConstructor(args)
+        }
+    }
 
     function constructorFn(args){
         this.init(args)
@@ -33,16 +45,10 @@ openmdao.ValueEditor = (function(){
     * to using TextCellEditor.
     */
     constructorFn.prototype.init = function(args){
-        var dataType = args.item.type
-        if(constructorFn.isRegistered(dataType)){
-            this.superClass.init.call(this, args)
-            this.editor = new editors[dataType](this.args) 
-        }
-
-        else{
-            unregistered[dataType] = true
-        }
+        this.superClass.init.call(args)
+        this.editor = getEditor(args)
     }
+
 
     /*
     * Editors is a private static property of ValueEditor.
@@ -57,10 +63,6 @@ openmdao.ValueEditor = (function(){
     */
     constructorFn.registerEditor = function(name, constructor){
         editors[name] = constructor
-    }
-
-    constructorFn.isRegistered = function(name){
-        return (name in editors)
     }
 
     return constructorFn
@@ -87,10 +89,6 @@ openmdao.ValueEditor.prototype.serializeValue = function(){
 }
 
 openmdao.ValueEditor.prototype.loadValue = function(item){
-    if(!this.editor){
-        this.destroy()
-    }
-
     this.editor.loadValue(item)
 }
 

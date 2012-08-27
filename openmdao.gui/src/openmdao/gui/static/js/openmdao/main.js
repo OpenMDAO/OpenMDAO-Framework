@@ -15,6 +15,8 @@ jQuery(function() {
      */
     openmdao.ValueEditor.registerEditor("str", TextCellEditor)
     openmdao.ValueEditor.registerEditor("bool", TextCellEditor)
+    openmdao.ValueEditor.registerEditor("float", TextCellEditor)
+    openmdao.ValueEditor.registerEditor("int", TextCellEditor)
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
