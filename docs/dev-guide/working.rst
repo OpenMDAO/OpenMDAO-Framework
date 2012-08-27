@@ -1,4 +1,3 @@
-.
 .. index:: branch; working on
 
 .. _Working-on-Your-Branch:
@@ -272,19 +271,12 @@ message on the command line (inside quotation marks), type:
 
   git commit -am "<commit message>"
 
-If you omit the ``m`` option and press *Enter,* a text editor will open a
+If you omit the ``m`` option and press *Enter,* your default text editor will open a
 new file where you must enter the required commit message.  
 
 .. note:: It's very important to add the ``-a`` option to ``git commit``,
-   because if you don't, only the *staged* files will be committed.  This can lead
+   because if you don't, only the *staged* files will be committed. This can lead
    to very confusing behavior and should be avoided.
-
-One nice GitHub feature is that if you're working on a particular GitHub
-issue, you can include the text ``closes GH-???`` in your commit comment,
-replacing the ``???`` with the number of the GitHub issue, and GitHub will
-automatically close that issue for you when your commit makes its way back to
-the original repository.
-
 
 Running Tests
 -------------
@@ -456,8 +448,8 @@ earlier named *myfork*, use the ``git push`` command:
    git push myfork <branchname>
 
 
-Once that's done, ``myfork/<branchname>`` will have your changes and you can make a pull
-request to the OpenMDAO maintainers.  To issue a pull request, follow these steps:
+Once that's done, ``myfork/<branchname>`` will have your changes, and you can ask the
+OpenMDAO maintainers to merge, or *pull*, them to dev branch.  To issue a pull request, follow these steps:
 
 1. Go to the page for your personal OpenMDAO fork on GitHub. (You must be logged in to GitHub.)
 
@@ -474,38 +466,28 @@ request to the OpenMDAO maintainers.  To issue a pull request, follow these step
 |    
    
    Alternatively, pziegfeld could select ``OpenMDAO-Framework``, the fork listed under **Repositories**
-   (circled in green above). If she did that, when she goes to her personal OpenMDAO fork page she would
-   be on the `master` branch.  In the next figure, on the right side of the page, it shows that the 
-   *Current branch* (circled in green) is the master. 
+   (circled in green above). If she did that, when she goes to her personal OpenMDAO fork page she would be
+   on the `master` branch.  In the next figure it shows that the branch she is on (highlighted in yellow) is
+   the master. 
 
       
-.. figure:: personal_fork1.png
+.. figure:: PersonalFork8-21.png
    :align: center
    
    Example Page for a Personal OpenMDAO Fork 
   
    
-2. If you are on the master branch as in the above figure, you need to switch branches before issuing a
-   pull request. Click on down the arrow next to the current branch name. A drop-down list of branches will
-   appear in alphabetical order. Scroll down until you find the desired branch. If you mouse over the
-   branch name, it will be highlighted and a check mark will appear in front of it. Click on the branch
-   name to go to that branch. 
+2. If you are on the master branch, you need to switch branches before issuing a pull request. Click on down
+   the arrow next to the branch name. A drop-down list of branches will appear in alphabetical order.
+   Scroll down until you find the desired branch. If you mouse over the branch name, it will be highlighted
+   and a check mark will appear in front of it. Click on the branch name to go to that branch. 
 
 
-3. Once you're on the correct branch, click on the **Pull Request** button located in the upper right of
-   the page (circled in red above). 
+3. Once you're on the correct branch, click on the **Pull Request** button (highlighted in green). 
 
 
-4. You will be prompted to fill in a description of your changes. The message near the top of the page should read
-   something like:
+4. A new window will appear, and you will be prompted to fill in a description of your changes. Once
+   you have supplied a short description, click on the button to issue the pull request.
 
-   :: 
-   
-     You're asking OpenMDAO to pull 1 commit into OpenMDAO:dev from <userid>:<branchname>",
-     where <userid> is your GitHub userid and <branchname> is the name of the branch to
-     be pulled.  If the source and destination branches are correct, push the 
-     "Send Pull Request" button.  Otherwise, click on "Change Commits and modify the
-     branch names.
-
-After you have submitted your pull request, one of the maintainers will review the changes on your branch
-and decide whether to approve it.
+   One of the maintainers will review the changes on your branch and decide whether to approve it. If the maintainer
+   has a question or problem, you will be contacted.

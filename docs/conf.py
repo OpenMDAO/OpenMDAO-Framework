@@ -114,13 +114,13 @@ html_short_title = 'OpenMDAO Documentation v0.1.1'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'OpenMDAOLogo_200x56.png'
+html_logo = 'OpenMDAO_Logo_200w_padded.png'
 
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#html_favicon = 'favicon_OpenMDAO_Feb11b.ico'
+#html_favicon = 'favicon64_alt2.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -167,21 +167,20 @@ html_last_updated_fmt = '%b %d, %Y'
 
 html_theme = "default"
 html_theme_options = {
-     "headtextcolor": "darkred",
-     "headbgcolor": "gainsboro",
+     "headtextcolor": "#000099",
+     "headbgcolor": "#e2b530",
      "headfont": "Arial",
-     "relbarbgcolor": "black",
+     "relbarbgcolor": "#000099",
      "relbartextcolor": "white",
      "relbarlinkcolor": "white",
-     "sidebarbgcolor": "gainsboro",
-     "sidebartextcolor": "darkred",
-     "sidebarlinkcolor": "black",
-     "footerbgcolor": "gainsboro",
-     "footertextcolor": "darkred",
+     "sidebarbgcolor": "#c7c7c7",
+     "sidebartextcolor": "black",
+     "sidebarlinkcolor": "#000099",
+     "footerbgcolor": "white",
+     "footertextcolor": "#000099",
      "textcolor": "black",
-     "codebgcolor": "#FFFFCC",
-     "linkcolor": "darkred",
-     "codebgcolor": "#ffffcc",
+     "codebgcolor": "#ffffa7",
+     "linkcolor": "#005ce6",
     }
 
 todo_include_todos = True

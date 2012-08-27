@@ -190,7 +190,7 @@ Glossary
         An open source distributed version control system.
 
       **GitHub**
-        A web community where projects using the *git* version control system are
+        A web community where projects using the Git version control system are
         located.
 
       **GUI**

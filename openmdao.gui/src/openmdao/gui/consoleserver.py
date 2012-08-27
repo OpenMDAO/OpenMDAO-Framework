@@ -126,7 +126,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             comps = self._publish_comps.keys()
             for pathname in comps:
-                comp, root = self.get_container(pathname)
+                comp, root = self.get_container(pathname, report=False)
                 if comp is None:
                     del self._publish_comps[pathname]
                     publish(pathname, {})
@@ -275,7 +275,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         return jsonpickle.encode(self.proj._model_globals)
 
-    def get_container(self, pathname):
+    def get_container(self, pathname, report=True):
         ''' get the container with the specified pathname
             returns the container and the name of the root object
         '''
@@ -287,9 +287,18 @@ class ConsoleServer(cmd.Cmd):
                 cont = self.proj.get(root)
             else:
                 try:
-                    cont = self.proj.get(root).get(parts[1])
-                except Exception, err:
+                    root_obj = self.proj.get(root)
+                except Exception as err:
                     self._error(err, sys.exc_info())
+                else:
+                    try:
+                        cont = root_obj.get(parts[1])
+                    except AttributeError as error:
+                        # When publishing, don't report remove as an error.
+                        if report:
+                            self._error(err, sys.exc_info())
+                    except Exception as err:
+                        self._error(err, sys.exc_info())
         return cont, root
 
     def _get_components(self, cont, pathname=None):
@@ -445,16 +454,43 @@ class ConsoleServer(cmd.Cmd):
 
     def get_workflow(self, pathname):
         flow = {}
-        drvr, root = self.get_container(pathname)
-        # allow for request on the parent assembly
-        if is_instance(drvr, Assembly):
-            drvr = drvr.get('driver')
-            pathname = pathname + '.driver'
-        if drvr:
-            try:
-                flow = drvr.get_workflow()
-            except Exception, err:
-                self._error(err, sys.exc_info())
+        if pathname:
+            drvr, root = self.get_container(pathname)
+            # allow for request on the parent assembly
+            if is_instance(drvr, Assembly):
+                drvr = drvr.get('driver')
+                pathname = pathname + '.driver'
+            if drvr:
+                try:
+                    flow = drvr.get_workflow()
+                except Exception, err:
+                    self._error(err, sys.exc_info())
+        else:
+            for k, v in self.proj.items():
+                if is_instance(v, Assembly):
+                    v = v.get('driver')
+                if is_instance(v, Driver):
+                    flow['pathname'] = v.get_pathname()
+                    flow['type'] = type(v).__module__ + '.' + type(v).__name__
+                    flow['workflow'] = []
+                    flow['valid'] = v.is_valid()
+                    for comp in v.workflow:
+                        pathname = comp.get_pathname()
+                        if is_instance(comp, Assembly) and comp.driver:
+                            flow['workflow'].append({
+                                'pathname': pathname,
+                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
+                                'driver':   comp.driver.get_workflow(),
+                                'valid':    comp.is_valid()
+                              })
+                        elif is_instance(comp, Driver):
+                            flow['workflow'].append(comp.get_workflow())
+                        else:
+                            flow['workflow'].append({
+                                'pathname': pathname,
+                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
+                                'valid':    comp.is_valid()
+                              })
         return jsonpickle.encode(flow)
 
     def get_attributes(self, pathname):

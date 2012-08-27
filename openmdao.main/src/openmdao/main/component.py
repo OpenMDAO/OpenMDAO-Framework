@@ -15,9 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str, Int, Property
-
-from zope.interface import implementedBy
+from enthought.traits.api import Property
 
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
@@ -35,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -1515,100 +1513,104 @@ class Component(Container):
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
         """
+        
         attrs = {}
-
         attrs['type'] = type(self).__name__
 
-        if has_interface(self, IComponent):
-            inputs = []
-            assembly = None
-            parameters = {}
-            objectives = {}
+        parameters = {}
+        implicit = {}
 
-            try:
-                assembly = self.parent if self.parent else self
-                dataflow = assembly.get_dataflow()
-                for parameter, target in dataflow['parameters']:
-                    if not target in parameters:
-                        parameters[target] = []
+        # We need connection information before we process the variables.
+        if self.parent is None:
+            connected_inputs = []
+            connected_outputs = []
+        else:
+            connected_inputs = self._depgraph.get_connected_inputs()
+            connected_outputs = self._depgraph.get_connected_outputs()
 
-                    parameters[target].append(parameter)
-                
-                for target, objective in dataflow['objectives']:
-                    if not target in objectives:
-                        objectives[target] = []
-
-                    objectives[target].append(objective)
-            except:
-                pass
+        # Additionally, we need to know if anything is connected to a
+        # param, objective, or constraint.
+        # Objectives and constraints are "implicit" connections. Parameters
+        # are as well, though they lock down their variable targets.
+        if self.parent:
             
-            if self.parent is None:
-                connected_inputs = []
-                connected_outputs = []
+            dataflow = self.parent.get_dataflow()
+            for parameter, target in dataflow['parameters']:
+                if not target in parameters:
+                    parameters[target] = []
+
+                parameters[target].append(parameter)
+            
+            for target, objective in dataflow['objectives']:
+                if target not in implicit:
+                    implicit[target] = []
+
+                implicit[target].append(objective)
+                
+            for target, constraint in dataflow['constraints']:
+                if target not in implicit:
+                    implicit[target] = []
+    
+                implicit[target].append(constraint)
+       
+        inputs = []
+        outputs = []
+        slots = []
+        
+        # Add all inputs and outputs
+        for name in self.list_inputs() + self.list_outputs():
+            
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            value = getattr(self, name)
+            ttype = trait.trait_type
+            
+            # Each variable type provides its own basic attributes
+            io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+            
+            io_attr['valid'] = self.get_valid([name])[0]
+            
+            io_attr['connected'] = ''
+            if name in connected_inputs:
+                connections = self._depgraph.connections_to(name)
+                # there can be only one connection to an input
+                io_attr['connected'] = \
+                    str([src for src, dst in connections]).replace('@xin.', '')
+
+            if name in connected_outputs:
+                connections = self._depgraph.connections_to(name)
+                io_attr['connected'] = \
+                    str([dst for src, dst in connections]).replace('@xout.', '')
+
+            io_attr['implicit'] = ''
+            if "%s.%s" % (self.name, name) in parameters:
+
+                io_attr['implicit'] = str([driver_name.split('.')[0] for \
+                                           driver_name in parameters["%s.%s" % (self.name, name)]])
+                
+            if "%s.%s" % (self.name, name) in implicit:
+                io_attr['implicit'] = str([driver_name.split('.')[0] for 
+                                        driver_name in implicit["%s.%s" % (self.name, name)]])
+            
+            if name in self.list_inputs():
+                inputs.append(io_attr)
             else:
-                connected_inputs = self._depgraph.get_connected_inputs()
-                connected_outputs = self._depgraph.get_connected_outputs()
+                outputs.append(io_attr)
+                
+            # Process singleton and contained slots.
+            if not io_only and slot_attr is not None:
 
-            for vname in self.list_inputs():
-                v = self.get(vname)
-                attr = {}
-                if not is_instance(v, Component):
-                    attr['name'] = vname
-                    attr['type'] = type(v).__name__
-                    attr['value'] = str(v)
-                    attr['valid'] = self.get_valid([vname])[0]
-                    meta = self.get_metadata(vname)
-                    if meta:
-                        for field in ['units', 'high', 'low', 'desc']:
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    attr['connected'] = ''
-                    if vname in connected_inputs:
-                        connections = self._depgraph.connections_to(vname)
-                        # there can be only one connection to an input
-                        attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
+                # We can hide slots (e.g., the Workflow slot in drivers)
+                if 'hidden' not in meta or meta['hidden'] == False:
+                    
+                    slots.append(slot_attr)
+            
+        attrs['Inputs'] = inputs
+        attrs['Outputs'] = outputs
+        attrs['Slots'] = slots
 
-                    attr['implicit'] = ''
-                    if "%s.%s" % (self.name, vname) in parameters:
-
-                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in parameters["%s.%s" % (self.name, vname)]])
-
-                inputs.append(attr)
-            attrs['Inputs'] = inputs
-
-
-            outputs = []
-            for vname in self.list_outputs():
-                v = self.get(vname)
-                attr = {}
-                if not is_instance(v, Component):
-                    attr['name'] = vname
-                    attr['type'] = type(v).__name__
-                    attr['value'] = str(v)
-                    attr['valid'] = self.get_valid([vname])[0]
-                    meta = self.get_metadata(vname)
-                    if meta:
-                        for field in ['units', 'high', 'low', 'desc']:
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    attr['connected'] = ''
-                    if vname in connected_outputs:
-                        connections = self._depgraph.connections_to(vname)
-                        attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
-
-
-                    attr['implicit'] = ''
-                    if "%s.%s" % (self.name, vname) in objectives:
-                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in objectives["%s.%s" % (self.name, vname)]])
-
-
-                outputs.append(attr)
-            attrs['Outputs'] = outputs
-
+        # Object Editor has additional panes for Workflow, Dataflow,
+        # Objectives, Parameters, Constraints, and Slots.
         if not io_only:
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
@@ -1641,7 +1643,7 @@ class Component(Container):
                 parameters = []
                 for key, parm in self.get_parameters().items():
                     if isinstance(parm, ParameterGroup):
-                        for name, target in zip(key,tuple(parm.targets)):
+                        for name, target in zip(key, tuple(parm.targets)):
                             attr = {}
                             attr['name']    = str(name)
                             attr['target']  = target
@@ -1693,35 +1695,6 @@ class Component(Container):
                     
             if constraint_pane:
                 attrs['Constraints'] = constraints
-
-            slots = []
-            for name, value in self.traits().items():
-                if value.is_trait_type(Slot):
-                    attr = {}
-                    attr['name'] = name
-                    attr['klass'] = value.trait_type.klass.__name__
-                    inames = []
-                    for klass in list(implementedBy(attr['klass'])):
-                        inames.append(klass.__name__)
-                    attr['interfaces'] = inames
-                    if getattr(self, name) is None:
-                        attr['filled'] = False
-                    else:
-                        attr['filled'] = True
-                    meta = self.get_metadata(name)
-                    if meta:
-                        for field in ['desc']:    # just desc?
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                        attr['type'] = meta['vartypename']
-                    
-                    # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden']==False:
-                        slots.append(attr)
-                        
-            attrs['Slots'] = slots
 
         return attrs
 

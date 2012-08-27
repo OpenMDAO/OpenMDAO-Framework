@@ -20,6 +20,34 @@ from elements import ButtonElement, InputElement, GridElement, TextElement
 from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
 
 
+from elements import GenericElement, ButtonElement, TextElement
+
+
+class WorkflowFigure(BasePageObject):
+    """ Represents elements within a workflow figure. """
+
+    # parts of the WorkflowFigure div. Nothing here yet. Not sure
+    #   if needed
+    title_bar = TextElement((By.CLASS_NAME, 'WorkflowFigureTitleBar'))
+    figure_itself = GenericElement((By.XPATH, '.'))
+
+    # Context menu. Not needed yet but will need later
+
+    @property
+    def pathname(self):
+        """ Pathname of this component. """
+        return self._pathname
+
+    @pathname.setter
+    def pathname(self, path):
+        self._pathname = path
+
+    @property
+    def background_color(self):
+        """ Figure background-color property. """
+        return self.root.value_of_css_property('background-color')
+
+
 class WorkspacePage(BasePageObject):
 
     title_prefix = 'OpenMDAO:'
@@ -123,7 +151,7 @@ class WorkspacePage(BasePageObject):
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         NotifierPage.wait(self)
 
-    def find_library_button(self, name):
+    def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
         for retry in range(5):
             try:
@@ -135,7 +163,8 @@ class WorkspacePage(BasePageObject):
                 break
         else:
             raise err
-
+        if delay:
+            time.sleep(delay)
         return element
 
     def run(self, timeout=TMO):
@@ -246,6 +275,12 @@ class WorkspacePage(BasePageObject):
         self('save_button').click()
         NotifierPage.wait(self)
 
+    def reload_project(self):
+        """ Reload current project. """
+        self('project_menu').click()
+        self('reload_button').click()
+        WorkspacePage.verify(self.browser, self.port)
+
     def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
         WebDriverWait(self.browser, TMO).until(
@@ -293,6 +328,28 @@ class WorkspacePage(BasePageObject):
                 if retry >= 2:
                     raise
 
+    def show_workflow(self, component_name):
+        """ Show workflow of `component_name`. """
+        self('objects_tab').click()
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+        time.sleep(0.5)
+        # Try to recover from context menu not getting displayed.
+        for retry in range(3):
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            try:
+                self('obj_workflow').click()
+                break
+            except TimeoutException:
+                if retry >= 2:
+                    raise
+    def show_properties(self):
+        """ Display properties. """
+        self('properties_tab').click()
+
     def show_library(self):
         # For some reason the first try never works, so the wait is set
         # low and we expect to retry at least once.
@@ -300,7 +357,7 @@ class WorkspacePage(BasePageObject):
             try:
                 self('library_tab').click()
                 WebDriverWait(self.browser, 1).until(
-                    lambda browser: self('library_search').is_visible())
+                    lambda browser: self('library_search').is_visible)
             except TimeoutException:
                 if retry:
                     logging.warning('TimeoutException in show_library')
@@ -318,6 +375,7 @@ class WorkspacePage(BasePageObject):
                                 ' StaleElementReferenceException')
             else:
                 break
+        time.sleep(0.5)  # Wait for dropdown to go away.
 
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
@@ -339,11 +397,11 @@ class WorkspacePage(BasePageObject):
 
         chain = ActionChains(self.browser)
         if False:
-            chain = chain.drag_and_drop(library_item, target)
+            chain.drag_and_drop(library_item, target)
         else:
-            chain = chain.click_and_hold(library_item)
-            chain = chain.move_to_element_with_offset(target, 90, 90)
-            chain = chain.release(None)
+            chain.click_and_hold(library_item)
+            chain.move_to_element_with_offset(target, 90, 90)
+            chain.release(None)
         chain.perform()
 
         page = ValuePrompt(self.browser, self.port)
@@ -403,6 +461,42 @@ class WorkspacePage(BasePageObject):
                     self.browser.implicitly_wait(TMO)
         return None
 
+    def get_workflow_component_figures(self):
+        """ Return workflow component figures elements. """
+        time.sleep(0.5)  # Pause for stable display.
+        return self.browser.find_elements_by_class_name('WorkflowComponentFigure')
+
+    def get_workflow_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowFigure` for `name`. """
+        for retry in range(retries):
+            time.sleep(0.5)  # Pause for stable display.
+            figures = self.browser.find_elements_by_class_name('WorkflowFigure')
+            if not figures:
+                continue
+            fig_name = None
+            for figure in figures:
+                self.browser.implicitly_wait(1)
+                try:
+                    # figure name is the text of the only child of the WorkflowFigure div
+                    children = figure.find_elements_by_xpath('./*')
+                    fig_name = children[0].text
+                    #   could also try figure.childNodes[0].text
+                except StaleElementReferenceException:
+                    logging.warning('get_workflow_figure:'
+                                    ' StaleElementReferenceException')
+                else:
+                    if fig_name == name:
+                        fig = WorkflowFigure(self.browser, self.port, figure)
+                        if prefix is not None:
+                            if prefix:
+                                fig.pathname = '%s.%s' % (prefix, name)
+                            else:
+                                fig.pathname = name
+                        return fig
+                finally:
+                    self.browser.implicitly_wait(TMO)
+        return None
+
     def get_dataflow_component_names(self):
         """ Return names of dataflow components. """
         names = []
@@ -446,11 +540,11 @@ class WorkspacePage(BasePageObject):
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
         chain = ActionChains(self.browser)
-        chain = chain.click_and_hold(src.output_port)
+        chain.click_and_hold(src.output_port)
         # Using root rather than input_port since for some reason
         # even using a negative Y offset can select the parent's input.
-        chain = chain.move_to_element(dst.input_port)
-        chain = chain.release(None)
+        chain.move_to_element(dst.input_port)
+        chain.release(None)
         chain.perform()
         parent, dot, srcname = src.pathname.rpartition('.')
         parent, dot, dstname = dst.pathname.rpartition('.')
@@ -464,9 +558,9 @@ class WorkspacePage(BasePageObject):
         target = self.get_dataflow_figure(name).root
 
         chain = ActionChains(self.browser)
-        chain = chain.click_and_hold(library_item)
-        chain = chain.move_to_element_with_offset(target, 125, 30)
-        chain = chain.release(None)
+        chain.click_and_hold(library_item)
+        chain.move_to_element_with_offset(target, 125, 30)
+        chain.release(None)
         chain.perform()
 
         dialog = ConfirmationPage(self)
@@ -474,6 +568,16 @@ class WorkspacePage(BasePageObject):
             dialog.click_ok()
         else:
             dialog.click_cancel()
+
+    def get_workflow_figures(self):
+        """ Return workflow figure elements. """
+        time.sleep(0.5)  # Pause for stable display.
+        return self.browser.find_elements_by_class_name('WorkflowFigure')
+
+    def get_workflow_component_figures(self):
+        """ Return workflow component figure elements. """
+        time.sleep(0.5)  # Pause for stable display.
+        return self.browser.find_elements_by_class_name('WorkflowComponentFigure')
 
     def hide_left(self):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')

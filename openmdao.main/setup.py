@@ -79,6 +79,12 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
       openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
       openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
+      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
+      openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List
+      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
+      openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
+      openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
+      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
       
       """,
     )
