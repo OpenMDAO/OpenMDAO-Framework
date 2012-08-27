@@ -152,7 +152,7 @@ def _test_connect(browser):
     eq(inputs[2].value, ['e_in', '1'])
     inputs[2][1] = '3'
     inputs = props.inputs
-    eq(inputs[3].value, ['f_in', '0.0'])
+    eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
     eq(inputs[5].value, ['i_in', '0'])

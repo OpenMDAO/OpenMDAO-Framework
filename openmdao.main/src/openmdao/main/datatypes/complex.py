@@ -14,7 +14,7 @@ class Complex(Variable):
     """A variable wrapper for a complex variable.
        """
     
-    def __init__(self, default_value=None, iotype=None, desc=None, 
+    def __init__(self, default_value=(0.+0.j), iotype=None, desc=None, 
                  **metadata):
 
         # Put iotype in the metadata dictionary
