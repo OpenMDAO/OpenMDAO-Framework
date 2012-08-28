@@ -890,8 +890,9 @@ class Assembly (Component):
                                                             comp.name+'.'+rest])
                                 elif isinstance(inst, (HasObjective,
                                                        HasObjectives)):
-                                    for name, expr in inst._objectives.items():
-                                        objectives.append([str(expr),
+                                    for path in inst.get_referenced_varpaths():
+                                        name, dot, rest = path.partition('.')
+                                        objectives.append([path,
                                                            comp.name+'.'+name])
 
             # list of connections (convert tuples to lists)

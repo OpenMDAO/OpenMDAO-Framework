@@ -14,7 +14,7 @@ class Bool(Variable):
     """A variable wrapper for a boolean variable.
        """
     
-    def __init__(self, default_value=None, iotype=None, desc=None, 
+    def __init__(self, default_value=False, iotype=None, desc=None, 
                  **metadata):
 
         # Put iotype in the metadata dictionary

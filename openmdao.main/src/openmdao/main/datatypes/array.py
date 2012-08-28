@@ -212,7 +212,7 @@ class Array(TraitArray):
         attr = {}
         
         attr['name'] = name
-        attr['type'] = "array"
+        attr['type'] = "ndarray"
         attr['value'] = str(value)
         
         for field in meta:
