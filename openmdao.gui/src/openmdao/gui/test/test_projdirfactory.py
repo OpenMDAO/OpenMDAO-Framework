@@ -10,6 +10,7 @@ from openmdao.util.fileutil import build_directory, get_module_path, find_files
 from openmdao.gui.projdirfactory import ProjDirFactory
 from openmdao.main.driver import Driver
 from openmdao.main.component import Component
+from openmdao.main.publisher import Publisher
 
 _dstruct = {
     "mycomp.py":
@@ -39,12 +40,11 @@ class MyDrv2(Driver):
 class ProjDirFactoryTestCase(unittest.TestCase):
 
     def setUp(self):
+        Publisher.silent = True
         self.tdir = tempfile.mkdtemp()
         build_directory(_dstruct, topdir=self.tdir)
-        sys.path = [self.tdir] + sys.path
 
     def tearDown(self):
-        sys.path.remove(self.tdir)
         for pyfile in find_files(self.tdir, "*.py"):
             modpath = get_module_path(pyfile)
             if modpath in sys.modules:
@@ -52,12 +52,12 @@ class ProjDirFactoryTestCase(unittest.TestCase):
         shutil.rmtree(self.tdir)
 
     def test_with_observer(self):
+        sys.path = [self.tdir] + sys.path
         pdf = ProjDirFactory(self.tdir)
         try:
             expected = ['mydrv.MyDrv', 'mydrv.MyDrv2', 'mycomp.MyComp']
             types = dict(pdf.get_available_types())
             typenames = types.keys()
-            print "typenames = %s" % typenames
             self.assertEqual(set(typenames), set(expected))
             self.assertEqual(set(types['mydrv.MyDrv']['ifaces']), 
                              set(['IContainer', 'IComponent', 'IDriver','IHasEvents']))

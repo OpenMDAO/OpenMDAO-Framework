@@ -279,7 +279,7 @@ class FileHandler(ReqHandler):
         else:
             force = int(self.get_argument('force', default=0))
             if not force and filename.endswith('.py'):
-                ret = cserver.file_classes_changed(filename)
+                ret = cserver.file_has_instances(filename)
                 if ret:
                     self.send_error(409)  # user will be prompted to overwrite classes
                     return

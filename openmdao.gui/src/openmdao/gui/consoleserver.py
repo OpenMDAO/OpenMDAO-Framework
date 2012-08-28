@@ -5,30 +5,149 @@ import traceback
 import cmd
 import jsonpickle
 import time
+import imp
+import ast
+from threading import Lock
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
 
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, create, get_available_types
+from openmdao.main.project import project_from_archive, Project, parse_archive_name
+from openmdao.main.publisher import publish
+from openmdao.main.mp_support import has_interface, is_instance
+from openmdao.main.interfaces import IContainer, IComponent, IAssembly
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
-from openmdao.util.fileutil import find_files, file_md5, get_module_path
-
-from openmdao.main.project import project_from_archive, Project, parse_archive_name
-from openmdao.gui.projdirfactory import ProjDirFactory
-
-from openmdao.main.publisher import publish
-
-from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.interfaces import IContainer, IComponent, IAssembly
+from openmdao.util.fileutil import find_files, file_md5, get_module_path, find_module
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.gui.projdirfactory import ProjDirFactory
 
+# use this to keep track of project classes that have been instantiated
+# so far, so we can determine if we need to force a Project save & reload
+_instantiated_classes = set()
+_instclass_lock = Lock()
+
+def _register_inst(typname):
+    global _instantiated_classes
+    with _instclass_lock:
+        _instantiated_classes.add(typname)
+
+def text_to_node(text):
+    """Given a python source string, return the corresponding AST node. The outer
+    Module node is removed so that the node corresponding to the given text can
+    be added to an existing AST.
+    """
+    modnode = ast.parse(text, 'exec')
+    if len(modnode.body) == 1:
+        return modnode.body[0]
+    return modnode.body
+
+class CtorInstrumenter(ast.NodeTransformer):
+    """All __init__ calls will be replaced with a call to a wrapper function
+    that records the call by calling _register_inst(typename) before creating
+    the instance.
+    """
+    def __init__(self):
+        super(CtorInstrumenter, self).__init__()
+    
+    def visit_ClassDef(self, node):
+        text = None
+        for stmt in node.body:
+            if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
+                stmt.name = '__%s_orig_init__' % node.name # __init__ was found - rename it to __orig_init__
+                break 
+        else: # no __init__ found, make one
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    super(%s, self).__init__(*args, **kwargs)
+            """ % node.name
+        if text is None: # class has its own __init__ (name has been changed to __orig_init__)
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    self.__%s_orig_init__(*args, **kwargs)
+            """ % node.name
+        node.body = [text_to_node(text)]+node.body
+        return node
+
+
+class ProjFinder(object):
+    """A finder class for custom imports from an OpenMDAO project. In order for this
+    to work, an entry must be added to sys.path of the form top_dir+'.prj', where top_dir
+    is the top directory of the project where python files are kept.
+    """
+    def __init__(self, path):
+        """When path has the form mentioned above (top_dir+'.prj'), this
+        returns a ProjFinder instance that will be used to locate modules within the
+        project.
+        """
+        if path.endswith('.prj'):
+            self.projdir = path.rsplit('.',1)[0]
+            if os.path.isdir(self.projdir):
+                return
+        raise ImportError("can't import %s" % path)
+
+    def find_module(self, modpath, path=None):
+        """This looks within the project for the specified module, returning a loader
+        if the module is found, and None if it isn't.
+        """
+        path = find_module(modpath, path=[self.projdir])
+        if path is not None:
+            return ProjLoader(modpath, self.projdir)
+    
+    
+class ProjLoader(object):
+    """This is the import loader for files within an OpenMDAO project.  We use it to instrument
+    the imported files so we can keep track of what classes have been instantiated so we know
+    when a project must be saved and reloaded.
+    """
+    def __init__(self, modpath, projpath):
+        self.path = find_module(modpath, path=[projpath])
+        self.ispkg = isinstance(self.path, basestring) and os.path.basename(self.path) == '__init__.py'
+        
+    def translate(self, node):
+        """Take the specified AST and translate it into the instrumented version."""
+        node = CtorInstrumenter().visit(node)
+        node.body = [
+            ast.copy_location(
+                text_to_node('from openmdao.gui.consoleserver import _register_inst'),node)
+            ]+node.body
+        return node
+    
+    def get_code(self, modpath):
+        """Opens the file, compiles it into an AST and then translates it into the instrumented
+        version before compiling that into bytecode.
+        """
+        with open(self.path, 'r') as f:
+            contents = f.read()
+            if not contents.endswith('\n'):
+                contents += '\n'
+            root = ast.parse(contents, filename=self.path, mode='exec')
+            return compile(self.translate(root), self.path, 'exec')
+
+    def load_module(self, modpath):
+        """Creates a new module if one doesn't exist already, and then updates the
+        dict of that module based on the contents of the instrumented module file.
+        """
+        code = self.get_code(modpath)
+        mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
+        mod.__file__ = self.path
+        mod.__loader__ = self
+        if self.ispkg:
+            mod.__path__ = []
+            mod.__package__ = modpath
+        else:
+            mod.__package__ = modpath.rpartition('.')[0]
+        exec(code, mod.__dict__)
+        return mod
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -68,6 +187,7 @@ class ConsoleServer(cmd.Cmd):
         self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
+        
         try:
             self.files = FileManager('files', publish_updates=publish_updates)
         except Exception as err:
@@ -81,7 +201,7 @@ class ConsoleServer(cmd.Cmd):
             if has_interface(v, IContainer):
                 if v.name != k:
                     v.name = k
-            if is_instance(v, Assembly):
+            if is_instance(v, Assembly) and v._call_cpath_updated:
                 set_as_top(v)
 
     def publish_components(self):
@@ -486,6 +606,9 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, filename):
+        global _instantiated_classes
+        _instantiated_classes.clear()
+        
         self.projfile = filename
         try:
             if self.proj:
@@ -493,6 +616,14 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
+                
+            # make sure we have a ProjFinder in sys.path_hooks
+            for hook in sys.path_hooks:
+                if hook is ProjFinder:
+                    break
+            else:
+                sys.path_hooks = [ProjFinder]+sys.path_hooks
+            
             # have to do things in a specific order here. First, create the files,
             # then point the ProjDirFactory at the files, then finally create the
             # Project. Executing the project macro (which happens in the Project __init__)
@@ -502,7 +633,7 @@ class ConsoleServer(cmd.Cmd):
             self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            self.proj = Project(projdir, projdirfactory=self.projdirfactory)
+            self.proj = Project(projdir)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -631,13 +762,18 @@ class ConsoleServer(cmd.Cmd):
                     if self._publish_comps[pathname] < 1:
                         del self._publish_comps[pathname]
 
-    def file_classes_changed(self, filename):
+    def file_has_instances(self, filename):
+        """Returns True if the given file (assumed to be a file in the project)
+        has classes that have been instantiated in the current process. Note that
+        this doesn't keep track of removes/deletions, so if an instance was created
+        earlier and then deleted, it will still be reported.
+        """
+        global _instantiated_classes
         pdf = self.projdirfactory
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
             info = pdf._files.get(filename)
-            # if changed file contained classes and has already been imported..
-            if info and len(info.classes) > 0 and info.modpath in sys.modules:
+            if info and _instantiated_classes.intersection(info.classes.keys()):
                 return True
         return False
