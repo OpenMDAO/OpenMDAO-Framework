@@ -15,9 +15,7 @@ import weakref
 
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Dict, Str, Int, Property
-
-from zope.interface import implementedBy
+from enthought.traits.api import Property
 
 from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
@@ -35,7 +33,7 @@ from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.main.depgraph import DependencyGraph
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -505,9 +503,7 @@ class Component(Container):
                     if tracing.TRACER is not None and \
                         not obj_has_interface(self, IAssembly) and \
                         not obj_has_interface(self, IDriver):
-
-                        tracing.TRACER.debug(self.get_itername())
-
+                            tracing.TRACER.debug(self.get_itername())
                     self.execute()
 
                 self._post_execute()
@@ -1506,14 +1502,10 @@ class Component(Container):
                     lst.append((key, val))
                 pub.publish_list(lst)
 
-    def get_attributes(self, io_only=True):
+    def get_attributes(self, ioOnly=True):
         """ get attributes of component. includes inputs and ouputs and, if
-        io_only is not true, a dictionary of attributes for each interface
-        implemented by the component.  Used by the GUI.
-
-        io_only: Bool
-            Set to true if we only want to populate the input and output
-            fields of the attributes dictionary.
+            ioOnly is not true, a dictionary of attributes for each interface
+            implemented by the component
         """
         attrs = {}
 
@@ -1521,27 +1513,7 @@ class Component(Container):
 
         if has_interface(self, IComponent):
             inputs = []
-            assembly = None
-            parameters = {}
-            objectives = {}
 
-            try:
-                assembly = self.parent if self.parent else self
-                dataflow = assembly.get_dataflow()
-                for parameter, target in dataflow['parameters']:
-                    if not target in parameters:
-                        parameters[target] = []
-
-                    parameters[target].append(parameter)
-                
-                for target, objective in dataflow['objectives']:
-                    if not target in objectives:
-                        objectives[target] = []
-
-                    objectives[target].append(objective)
-            except:
-                pass
-            
             if self.parent is None:
                 connected_inputs = []
                 connected_outputs = []
@@ -1549,15 +1521,15 @@ class Component(Container):
                 connected_inputs = self._depgraph.get_connected_inputs()
                 connected_outputs = self._depgraph.get_connected_outputs()
 
+#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_inputs:',connected_inputs
+#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_outputs:',connected_outputs
+            
             for vname in self.list_inputs():
                 v = self.get(vname)
                 attr = {}
                 if not is_instance(v, Component):
                     attr['name'] = vname
                     attr['type'] = type(v).__name__
-                    print type(v)
-                    print v
-                    print dir(v)
                     attr['value'] = str(v)
                     attr['valid'] = self.get_valid([vname])[0]
                     meta = self.get_metadata(vname)
@@ -1570,17 +1542,11 @@ class Component(Container):
                     attr['connected'] = ''
                     if vname in connected_inputs:
                         connections = self._depgraph.connections_to(vname)
+#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() input',vname,'connections:',connections
                         # there can be only one connection to an input
                         attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
-
-                    attr['implicit'] = ''
-                    if "%s.%s" % (self.name, vname) in parameters:
-
-                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in parameters["%s.%s" % (self.name, vname)]])
-
                 inputs.append(attr)
             attrs['Inputs'] = inputs
-
 
             outputs = []
             for vname in self.list_outputs():
@@ -1601,18 +1567,12 @@ class Component(Container):
                     attr['connected'] = ''
                     if vname in connected_outputs:
                         connections = self._depgraph.connections_to(vname)
+#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() output',vname,'connections:',connections
                         attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
-
-
-                    attr['implicit'] = ''
-                    if "%s.%s" % (self.name, vname) in objectives:
-                        attr['implicit'] = str([driver_name.split('.')[0] for driver_name in objectives["%s.%s" % (self.name, vname)]])
-
-
                 outputs.append(attr)
             attrs['Outputs'] = outputs
 
-        if not io_only:
+        if not ioOnly:
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
 
@@ -1642,30 +1602,18 @@ class Component(Container):
 
             if has_interface(self, IHasParameters):
                 parameters = []
-                for key, parm in self.get_parameters().items():
-                    if isinstance(parm, ParameterGroup):
-                        for name, target in zip(key,tuple(parm.targets)):
-                            attr = {}
-                            attr['name']    = str(name)
-                            attr['target']  = target
-                            attr['low']     = parm.low
-                            attr['high']    = parm.high
-                            attr['scaler']  = parm.scaler
-                            attr['adder']   = parm.adder
-                            attr['fd_step'] = parm.fd_step
-                            #attr['scope']   = parm.scope.name
-                            parameters.append(attr)
-                    else:
-                        attr = {}
-                        attr['name']    = str(key)
-                        attr['target']  = parm.target
-                        attr['low']     = parm.low
-                        attr['high']    = parm.high
-                        attr['scaler']  = parm.scaler
-                        attr['adder']   = parm.adder
-                        attr['fd_step'] = parm.fd_step
-                        #attr['scope']   = parm.scope.name
-                        parameters.append(attr)
+                parms = self.get_parameters()
+                for key, parm in parms.iteritems():
+                    attr = {}
+                    attr['name']    = str(key)
+                    attr['target']  = parm.target
+                    attr['low']     = parm.low
+                    attr['high']    = parm.high
+                    attr['scaler']  = parm.scaler
+                    attr['adder']   = parm.adder
+                    attr['fd_step'] = parm.fd_step
+                    #attr['scope']   = parm.scope.name
+                    parameters.append(attr)
                 attrs['Parameters'] = parameters
 
             constraints = []
@@ -1699,12 +1647,9 @@ class Component(Container):
 
             slots = []
             for name, value in self.traits().items():
-                
-                # Regular Slots
                 if value.is_trait_type(Slot):
                     attr = {}
                     attr['name'] = name
-                    attr['containertype'] = 'none'
                     attr['klass'] = value.trait_type.klass.__name__
                     inames = []
                     for klass in list(implementedBy(attr['klass'])):
@@ -1721,56 +1666,11 @@ class Component(Container):
                                 attr[field] = meta[field]
                             else:
                                 attr[field] = ''
-                    
-                    # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden']==False:
-                        slots.append(attr)
-                        
-                # List or Dict Slots
-                # Note: only supporting Slots as Dict value, not Dict key.
-                elif value.is_trait_type((List, Dict)) and \
-                     value.inner_traits[-1].is_trait_type(Slot):
-                    
-                    attr = {}
-                    attr['name'] = name
-                    attr['klass'] = \
-                        value.inner_traits[-1].trait_type.klass.__name__
-                    
-                    if value.is_trait_type(List):
-                        attr['containertype'] = 'list'
-                    else:
-                        attr['containertype'] = 'dict'
-                    
-                    inames = []
-                    for klass in list(implementedBy(attr['klass'])):
-                        inames.append(klass.__name__)
-                    attr['interfaces'] = inames
-                    
-                    # the "filled" key tells you what is filled
-                    # for lists: number of filled slots
-                    # for dicts: key names for filled slots
-                    if attr['containertype'] == 'list':
-                        attr['filled'] = len(getattr(self, name))
-                    else:
-                        attr['filled'] = getattr(self, name).keys()
-                        
-                    # relevant metadata should be in the outer trait
-                    meta = self.get_metadata(name)
-                    if meta:
-                        for field in ['desc']:    # just desc?
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    
-                    # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden']==False:
-                        slots.append(attr)
-                        
+                        attr['type'] = meta['vartypename']
+                    slots.append(attr)
             attrs['Slots'] = slots
 
         return attrs
-
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
     """prints out validity status of all input and output traits

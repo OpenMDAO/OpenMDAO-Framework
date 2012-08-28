@@ -194,7 +194,21 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
             
-            
+    def test_attributes(self):
+        attrs = self.hobj.get_attributes(io_only=False)
+        input_attrs = attrs['Inputs']
+        for item in input_attrs:
+            print item
+        self.assertEqual(len(input_attrs), 3)
+        self.assertTrue({'name': 'float1',
+                         'type': 'float',
+                         'value': 3.1415926,
+                         'high': 99.0,
+                         'connected': '',
+                         'low': 0.0,
+                         'units': 'ft',
+                         'desc': 'Stuff'} in input_attrs)
+
 if __name__ == "__main__":
     unittest.main()
 
