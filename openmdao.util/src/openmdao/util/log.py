@@ -74,8 +74,6 @@ else:
                   (datetime.datetime.now(), os.getpid()))
     _tmplog.close()
     
-# FIXME: We currently have a problem with multiple gui processes writing to the same file,
-
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
 logging.basicConfig(level=logging.WARNING,
                     datefmt='%b %d %H:%M:%S',
