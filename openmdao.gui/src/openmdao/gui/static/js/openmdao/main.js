@@ -14,9 +14,10 @@ jQuery(function() {
      * Register value editors for supported OpenMDAO data types.
      */
     openmdao.ValueEditor.registerEditor("str", TextCellEditor)
-    openmdao.ValueEditor.registerEditor("bool", TextCellEditor)
+    openmdao.ValueEditor.registerEditor("bool", BoolEditor)
     openmdao.ValueEditor.registerEditor("float", TextCellEditor)
-    openmdao.ValueEditor.registerEditor("int", TextCellEditor)
+    openmdao.ValueEditor.registerEditor("int", IntegerCellEditor)
+    openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor)
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({

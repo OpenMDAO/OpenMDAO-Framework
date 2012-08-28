@@ -7,7 +7,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 * please be sure to read the comments from here to the end of
 * the file.
 *
-* The comments will hoepfully explain how to properly set up your
+* The comments will hopefully explain how to properly set up your
 * editor, as well as explain some the tools used in the process.
 */
 

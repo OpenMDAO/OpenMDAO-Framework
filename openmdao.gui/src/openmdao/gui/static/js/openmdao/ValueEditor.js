@@ -8,7 +8,7 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 * to use based off of the 'type' attribute, then calls
 * the appropriate method of the datatype editor.
 *
-* For more information on the delegation patttern,
+* For more information on the delegation pattern,
 * visit http://en.wikipedia.org/wiki/Delegation_pattern
 */
 openmdao.ValueEditor = (function(){
