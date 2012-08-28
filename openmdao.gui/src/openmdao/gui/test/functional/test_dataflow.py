@@ -254,7 +254,7 @@ def _test_connections(browser):
 
     # reconnect transmission RPM to engine RPM
     conn_page.connect_vars('transmission.RPM', 'engine.RPM')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(len(conn_page.get_variable_figures()), 2)
     eq(sorted(conn_page.get_variable_names()),
        ['RPM', 'RPM'])
