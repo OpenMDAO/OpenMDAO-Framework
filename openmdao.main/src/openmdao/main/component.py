@@ -503,7 +503,9 @@ class Component(Container):
                     if tracing.TRACER is not None and \
                         not obj_has_interface(self, IAssembly) and \
                         not obj_has_interface(self, IDriver):
-                            tracing.TRACER.debug(self.get_itername())
+
+                        tracing.TRACER.debug(self.get_itername())
+
                     self.execute()
 
                 self._post_execute()
@@ -1502,77 +1504,126 @@ class Component(Container):
                     lst.append((key, val))
                 pub.publish_list(lst)
 
-    def get_attributes(self, ioOnly=True):
+    def get_attributes(self, io_only=True):
         """ get attributes of component. includes inputs and ouputs and, if
-            ioOnly is not true, a dictionary of attributes for each interface
-            implemented by the component
-        """
-        attrs = {}
+        io_only is not true, a dictionary of attributes for each interface
+        implemented by the component.  Used by the GUI.
 
+        io_only: Bool
+            Set to true if we only want to populate the input and output
+            fields of the attributes dictionary.
+        """
+        
+        attrs = {}
         attrs['type'] = type(self).__name__
 
-        if has_interface(self, IComponent):
-            inputs = []
+        parameters = {}
+        implicit = {}
 
-            if self.parent is None:
-                connected_inputs = []
-                connected_outputs = []
-            else:
-                connected_inputs = self._depgraph.get_connected_inputs()
-                connected_outputs = self._depgraph.get_connected_outputs()
+        # We need connection information before we process the variables.
+        if self.parent is None:
+            connected_inputs = []
+            connected_outputs = []
+        else:
+            connected_inputs = self._depgraph.get_connected_inputs()
+            connected_outputs = self._depgraph.get_connected_outputs()
 
-#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_inputs:',connected_inputs
-#            print 'DEBUG:',self.get_pathname(),'.get_attributes() connected_outputs:',connected_outputs
+        # Additionally, we need to know if anything is connected to a
+        # param, objective, or constraint.
+        # Objectives and constraints are "implicit" connections. Parameters
+        # are as well, though they lock down their variable targets.
+        if self.parent:
             
-            for vname in self.list_inputs():
-                v = self.get(vname)
-                attr = {}
-                if not is_instance(v, Component):
-                    attr['name'] = vname
-                    attr['type'] = type(v).__name__
-                    attr['value'] = str(v)
-                    attr['valid'] = self.get_valid([vname])[0]
-                    meta = self.get_metadata(vname)
-                    if meta:
-                        for field in ['units', 'high', 'low', 'desc']:
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    attr['connected'] = ''
-                    if vname in connected_inputs:
-                        connections = self._depgraph.connections_to(vname)
-#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() input',vname,'connections:',connections
-                        # there can be only one connection to an input
-                        attr['connected'] = str([src for src, dst in connections]).replace('@xin.', '')
-                inputs.append(attr)
-            attrs['Inputs'] = inputs
+            dataflow = self.parent.get_dataflow()
+            for parameter, target in dataflow['parameters']:
+                if not target in parameters:
+                    parameters[target] = []
 
-            outputs = []
-            for vname in self.list_outputs():
-                v = self.get(vname)
-                attr = {}
-                if not is_instance(v, Component):
-                    attr['name'] = vname
-                    attr['type'] = type(v).__name__
-                    attr['value'] = str(v)
-                    attr['valid'] = self.get_valid([vname])[0]
-                    meta = self.get_metadata(vname)
-                    if meta:
-                        for field in ['units', 'high', 'low', 'desc']:
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                    attr['connected'] = ''
-                    if vname in connected_outputs:
-                        connections = self._depgraph.connections_to(vname)
-#                        print 'DEBUG:',self.get_pathname(),'.get_attributes() output',vname,'connections:',connections
-                        attr['connected'] = str([dst for src, dst in connections]).replace('@xout.', '')
-                outputs.append(attr)
-            attrs['Outputs'] = outputs
+                parameters[target].append(parameter)
+            
+            for target, objective in dataflow['objectives']:
+                if target not in implicit:
+                    implicit[target] = []
 
-        if not ioOnly:
+                implicit[target].append(objective)
+                
+            for target, constraint in dataflow['constraints']:
+                if target not in implicit:
+                    implicit[target] = []
+    
+                implicit[target].append(constraint)
+       
+        inputs = []
+        outputs = []
+        slots = []
+        
+        # Add all inputs and outputs
+        for name in self.list_inputs() + self.list_outputs():
+            
+            trait = self.get_trait(name)
+            meta = self.get_metadata(name)
+            value = getattr(self, name)
+            ttype = trait.trait_type
+            
+            # Each variable type provides its own basic attributes
+            io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+            
+            io_attr['valid'] = self.get_valid([name])[0]
+            
+            io_attr['connected'] = ''
+            if name in connected_inputs:
+                connections = self._depgraph.connections_to(name)
+                # there can be only one connection to an input
+                io_attr['connected'] = \
+                    str([src for src, dst in connections]).replace('@xin.', '')
+
+            if name in connected_outputs:
+                connections = self._depgraph.connections_to(name)
+                io_attr['connected'] = \
+                    str([dst for src, dst in connections]).replace('@xout.', '')
+
+            io_attr['implicit'] = ''
+            if "%s.%s" % (self.name, name) in parameters:
+
+                io_attr['implicit'] = str([driver_name.split('.')[0] for \
+                                           driver_name in parameters["%s.%s" % (self.name, name)]])
+                
+            if "%s.%s" % (self.name, name) in implicit:
+                io_attr['implicit'] = str([driver_name.split('.')[0] for 
+                                        driver_name in implicit["%s.%s" % (self.name, name)]])
+            
+            if name in self.list_inputs():
+                inputs.append(io_attr)
+            else:
+                outputs.append(io_attr)
+                
+            # Process singleton and contained slots.
+            if not io_only and slot_attr is not None:
+
+                # We can hide slots (e.g., the Workflow slot in drivers)
+                if 'hidden' not in meta or meta['hidden'] == False:
+                    
+                    slots.append(slot_attr)
+            
+        attrs['Inputs'] = inputs
+        attrs['Outputs'] = outputs
+        attrs['Slots'] = slots
+
+        # Object Editor has additional panes for Workflow, Dataflow,
+        # Objectives, Parameters, Constraints, and Slots.
+        if not io_only:
+            # Add Slots that are not inputs or outputs
+            for name, value in self.traits().items():
+                if value.is_trait_type(Slot):
+                    trait = self.get_trait(name)
+                    meta = self.get_metadata(name)
+                    value = getattr(self, name)
+                    ttype = trait.trait_type
+                    # We can hide slots (e.g., the Workflow slot in drivers)
+                    if 'hidden' not in meta or meta['hidden']==False:
+                        io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+                        attrs['Slots'].append(slot_attr)
+
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
 
@@ -1602,18 +1653,30 @@ class Component(Container):
 
             if has_interface(self, IHasParameters):
                 parameters = []
-                parms = self.get_parameters()
-                for key, parm in parms.iteritems():
-                    attr = {}
-                    attr['name']    = str(key)
-                    attr['target']  = parm.target
-                    attr['low']     = parm.low
-                    attr['high']    = parm.high
-                    attr['scaler']  = parm.scaler
-                    attr['adder']   = parm.adder
-                    attr['fd_step'] = parm.fd_step
-                    #attr['scope']   = parm.scope.name
-                    parameters.append(attr)
+                for key, parm in self.get_parameters().items():
+                    if isinstance(parm, ParameterGroup):
+                        for name, target in zip(key, tuple(parm.targets)):
+                            attr = {}
+                            attr['name']    = str(name)
+                            attr['target']  = target
+                            attr['low']     = parm.low
+                            attr['high']    = parm.high
+                            attr['scaler']  = parm.scaler
+                            attr['adder']   = parm.adder
+                            attr['fd_step'] = parm.fd_step
+                            #attr['scope']   = parm.scope.name
+                            parameters.append(attr)
+                    else:
+                        attr = {}
+                        attr['name']    = str(key)
+                        attr['target']  = parm.target
+                        attr['low']     = parm.low
+                        attr['high']    = parm.high
+                        attr['scaler']  = parm.scaler
+                        attr['adder']   = parm.adder
+                        attr['fd_step'] = parm.fd_step
+                        #attr['scope']   = parm.scope.name
+                        parameters.append(attr)
                 attrs['Parameters'] = parameters
 
             constraints = []
@@ -1645,32 +1708,8 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
-            slots = []
-            for name, value in self.traits().items():
-                if value.is_trait_type(Slot):
-                    attr = {}
-                    attr['name'] = name
-                    attr['klass'] = value.trait_type.klass.__name__
-                    inames = []
-                    for klass in list(implementedBy(attr['klass'])):
-                        inames.append(klass.__name__)
-                    attr['interfaces'] = inames
-                    if getattr(self, name) is None:
-                        attr['filled'] = False
-                    else:
-                        attr['filled'] = True
-                    meta = self.get_metadata(name)
-                    if meta:
-                        for field in ['desc']:    # just desc?
-                            if field in meta:
-                                attr[field] = meta[field]
-                            else:
-                                attr[field] = ''
-                        attr['type'] = meta['vartypename']
-                    slots.append(attr)
-            attrs['Slots'] = slots
-
         return attrs
+
 
 def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no cover
     """prints out validity status of all input and output traits
@@ -1694,4 +1733,3 @@ def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no c
     _show_validity_(comp, recurse, exclude, valid, result)
     for name, val in sorted([(n, v) for n, v in result.items()], key=lambda v: v[0]):
         print '%s: %s' % (name, val)
-
