@@ -48,6 +48,7 @@ import SocketServer
 import struct
 import sys
 import threading
+import datetime
 
 from multiprocessing.process import current_process
 
@@ -60,12 +61,8 @@ LOG_CRITICAL = logging.CRITICAL
 LOG_DEBUG2 = logging.DEBUG - 2  # Protocol debug, etc.
 LOG_DEBUG3 = logging.DEBUG - 3  # Even lower-level stuff.
 
-if sys.platform == 'win32' and current_process().name != 'MainProcess':
-    _mode = 'a'  # Avoid mangling by subprocesses.
-else:
-    _mode = 'w'
+_mode = 'a'  # Avoid mangling by subprocesses.
 _filename = 'openmdao_log.txt'
-_filename = 'openmdao_log_%d.txt' % os.getpid()
 
 # Ensure we can write to the log file.
 try:
@@ -73,6 +70,8 @@ try:
 except IOError:
     _filename = 'openmdao_log_%d.txt' % os.getpid()
 else:
+    _tmplog.write("\n\n*********** BEGIN NEW LOG ************** (%s) PID=%s\n\n" % 
+                  (datetime.datetime.now(), os.getpid()))
     _tmplog.close()
     
 # FIXME: We currently have a problem with multiple gui processes writing to the same file,
