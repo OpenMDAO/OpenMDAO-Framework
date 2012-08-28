@@ -140,6 +140,7 @@ class ConsoleServer(cmd.Cmd):
     @modifies_model
     def onecmd(self, line):
         self._hist.append(line)
+        print "consoleserver.onecmd:",line
         try:
             cmd.Cmd.onecmd(self, line)
         except Exception, err:
