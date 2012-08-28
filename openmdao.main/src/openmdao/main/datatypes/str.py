@@ -14,7 +14,7 @@ class Str(Variable):
     """A variable wrapper for a string variable.
        """
     
-    def __init__(self, default_value=None, iotype=None, desc=None, 
+    def __init__(self, default_value='', iotype=None, desc=None, 
                  **metadata):
 
         # Put iotype in the metadata dictionary

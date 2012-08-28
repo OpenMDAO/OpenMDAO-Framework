@@ -1633,6 +1633,18 @@ class Component(Container):
         # Object Editor has additional panes for Workflow, Dataflow,
         # Objectives, Parameters, Constraints, and Slots.
         if not io_only:
+            # Add Slots that are not inputs or outputs
+            for name, value in self.traits().items():
+                if value.is_trait_type(Slot):
+                    trait = self.get_trait(name)
+                    meta = self.get_metadata(name)
+                    value = getattr(self, name)
+                    ttype = trait.trait_type
+                    # We can hide slots (e.g., the Workflow slot in drivers)
+                    if 'hidden' not in meta or meta['hidden']==False:
+                        io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+                        attrs['Slots'].append(slot_attr)
+
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
 

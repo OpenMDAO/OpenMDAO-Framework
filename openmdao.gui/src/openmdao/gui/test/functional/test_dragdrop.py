@@ -30,6 +30,7 @@ if sys.platform != 'win32':  # No testing on Windows yet.
 
 
 def _test_drop_on_driver(browser):
+    print "running _test_drop_on_driver..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'comnindriver', 'top', and 'driver' objects
@@ -53,9 +54,11 @@ def _test_drop_on_driver(browser):
         'CONMINdriver', "Dropping CONMINdriver onto existing driver did not replace it")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_drop_on_driver complete."
 
 
 def _test_workspace_dragdrop(browser):
+    print "running _test_workspace_dragdrop..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
@@ -93,18 +96,22 @@ def _test_workspace_dragdrop(browser):
             "dragged onto one of its drop areas.\nIt was created somewhere else")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_workspace_dragdrop complete."
 
 
 def _test_drop_on_grid(browser):
+    print "running _test_drop_on_grid..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #other tests also need to put an assembly on the grid, so put in seperate method
     put_assembly_on_grid(browser, workspace_page)
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_drop_on_grid complete."
 
 
 def _test_drop_on_existing_assembly(browser):
+    print "running _test_drop_on_existing_assembly..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     assembly = workspace_page.find_library_button('Assembly')
@@ -151,9 +158,11 @@ def _test_drop_on_existing_assembly(browser):
         "Dragging Assembly onto Assembly did not create a new instance on page")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_drop_on_existing_assembly complete."
 
 
 def _test_drop_on_component_editor(browser):
+    print "running _test_drop_on_component_editor..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
@@ -200,9 +209,11 @@ def _test_drop_on_component_editor(browser):
             "dragged onto one of its drop areas.\nIt was created somewhere else")
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_drop_on_component_editor complete."
 
 
 def _test_drop_on_component_editor_grid(browser):
+    print "running _test_drop_on_component_editor_grid..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
     assembly = workspace_page.find_library_button('Assembly')
@@ -226,9 +237,11 @@ def _test_drop_on_component_editor_grid(browser):
      # the UI box will appear and screw the test if it did
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_drop_on_component_editor_grid complete."
 
 
 def _test_slots(browser):
+    print "running _test_slots..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     top = workspace_page.get_dataflow_figure('top')
@@ -299,6 +312,7 @@ def _test_slots(browser):
     """
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_slots complete."
 
 
 def _test_simple_component_to_workflow(browser):

@@ -5,6 +5,7 @@ import json
 import time
 
 from openmdao.gui.consoleserver import ConsoleServer
+from openmdao.main.publisher import Publisher
 
 
 class ConsoleServerTestCase(unittest.TestCase):
@@ -12,6 +13,7 @@ class ConsoleServerTestCase(unittest.TestCase):
     def setUp(self):
         self.path = os.path.dirname(os.path.abspath(__file__))
         self.cserver = ConsoleServer()
+        Publisher.silent = True # keep quiet about Publisher not being set up
 
     def test_simple(self):
         ''' load and inspect the simple example project
@@ -36,7 +38,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(type_info['modpath'], 'paraboloid.Paraboloid')
 
         components = json.loads(self.cserver.get_components())
-
+        
         # CREATE ASSEMBLY
         self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly', '')
 
@@ -102,9 +104,13 @@ class ConsoleServerTestCase(unittest.TestCase):
                         'openmdao.lib.drivers.conmindriver.CONMINdriver')
         self.assertEqual(len(attributes['Workflow']['workflow']), 0)
 
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), False)
+
         # CREATE PARABOLOID
         self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob')
 
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), True)
+        
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
 
