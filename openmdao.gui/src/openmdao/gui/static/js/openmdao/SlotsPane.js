@@ -24,12 +24,12 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
     function updateFigures(json) {
         jQuery.each(json, function(idx,slot) {
             if (figures[slot.name]) {
-                figures[slot.name].setState(slot.klass, slot.filled);
+                figures[slot.name].setValue(slot.value);
             }
             else {
                 var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name,
                                               slot.containertype, slot.klass,
-                                              slot.desc, slot.filled);
+                                              slot.desc, slot.value);
                 figures[name] = fig;
                 slotsDiv.append(fig);
             }

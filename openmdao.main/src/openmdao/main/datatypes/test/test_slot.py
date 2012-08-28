@@ -2,10 +2,8 @@
 import unittest
 import pickle
 
-from enthought.traits.api import Int
-
 from openmdao.main.api import Assembly, Component, Container, Case
-from openmdao.main.datatypes.api import Slot, List, Dict, Str
+from openmdao.main.datatypes.api import Slot, Int, List, Dict, Str
 from openmdao.main.interfaces import implements, ICaseIterator
 from openmdao.util.testutil import assert_raises
 
@@ -151,7 +149,7 @@ class SlotTestCase(unittest.TestCase):
                          'desc': 'Stuff2'} in slot_attrs)
         self.assertTrue({'name': 'sock',
                          'interfaces': [],
-                         'containertype': 'none',
+                         'containertype': 'singleton',
                          'filled': False,
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
@@ -161,13 +159,15 @@ class SlotTestCase(unittest.TestCase):
         top.list_sock.append(MyClass())
         top.list_sock.append(MyClass())
         top.dict_sock['Testing'] = MyClass()
+        
+        top.sock = MyClass()
         # Note, only tested with one item in the dict because it is not ordered,
         # and hash order will vary on different platforms.
         
         attrs = top.get_attributes(io_only=False)
         slot_attrs = attrs['Slots']
         for item in slot_attrs:
-            print item
+            item.pop('value')
         self.assertTrue({'name': 'list_sock',
                          'interfaces': [],
                          'containertype': 'list',
@@ -180,6 +180,12 @@ class SlotTestCase(unittest.TestCase):
                          'filled': ['Testing'],
                          'klass': 'MyClass',
                          'desc': 'Stuff2'} in slot_attrs)
+        self.assertTrue({'name': 'sock',
+                         'interfaces': [],
+                         'containertype': 'singleton',
+                         'filled': True,
+                         'klass': 'MyClass',
+                         'desc': 'Stuff0'} in slot_attrs)
 
 class MyIface(zope.interface.Interface):
     
@@ -188,17 +194,21 @@ class MyIface(zope.interface.Interface):
     def myfunct(a, b):
         """some function"""
     
-class MyClass(object):
+class MyClass(Container):
     implements(MyIface)
     
     def __init__(self):
+        
+        super(MyClass, self).__init__()
         self.x = 1
 
     def myfunct(a, b):
         return a+b
     
-class MyOtherClass(object):
+class MyOtherClass(Container):
     def __init__(self):
+        
+        super(MyOtherClass, self).__init__()
         self.x = 1
 
     def myfunct(a, b):

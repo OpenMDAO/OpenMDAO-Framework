@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
+openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,value) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -17,27 +17,11 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
             .append(slotSVG),
         name = openmdao.Util.getName(pathname);
 
+    // set name, id, tooltip and width
     fig.find('#name').text(name);
-    fig.find('#klass').text(klass);
-
-    if ((containertype === 'list') && filled) {
-        // add a rect for each filled list entry
-        var i = filled;
-        while(i > 0) {
-            fig.append(slotSVG);
-            i = i - 1;
-        }
-    }
-    if (filled) {
-        fig.width(100*filled);
-    }
-    else {
-        fig.width(100);
-    }
-
-    // set id and tooltip
     fig.attr('id','SlotFigure-'+(pathname.replace('.','-')));
     fig.attr('title',desc);
+    fig.width(100);
 
     // open object editor on double click
     fig.dblclick(function() {
@@ -87,20 +71,39 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
      *  protected
      ***********************************************************************/
 
-    this.setState = function(klass, filled) {
+    this.setValue = function(value) {
         var r = fig.find('rect'),
             n = fig.find('#name'),
             k = fig.find('#klass'),
+            filled = (value !== null),
             color = filled ? 'green' : 'red';
 
-        // set colors & klass (TODO: use CSS to do this automatically?)
         if (filled) {
-            r.css({'stroke-dasharray':'none', 'stroke':color});
+            // set colors & klass (TODO: use CSS to do this automatically?)
             fig.addClass('filled');
+            r.css({'stroke-dasharray':'none', 'stroke':color});
+
+            if ((containertype === 'singleton')) {
+                fig.find('#klass').text(value.type);
+            }
+            else if ((containertype === 'list')) {
+                // rebuild figure with a rect for each filled list entry
+                r.remove();
+                var i = 0;
+                while(i < value.length) {
+                    fig.append(slotSVG);
+                    fig.find('#klass').filter(':last').text(value[i].type);
+                    i = i + 1;
+                }
+                r = fig.find('rect');
+                n = fig.find('#name');
+                k = fig.find('#klass');
+                fig.width(100*value.length);
+            }
         }
         else {
-            r.css({'stroke-dasharray':3, 'stroke':color});
             fig.removeClass('filled');
+            r.css({'stroke-dasharray':3, 'stroke':color});
         }
         n.css({'fill': color}).text(name);
         k.css({'fill': color}).text(klass);
@@ -114,7 +117,7 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     };
 
     // set initial state & return it
-    this.setState(klass, filled);
+    this.setValue(value);
     return fig;
 };
 

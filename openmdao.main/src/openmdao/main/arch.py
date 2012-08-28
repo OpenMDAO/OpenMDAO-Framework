@@ -1,11 +1,10 @@
 
 from zope.interface import implements
-from enthought.traits.api import List
 
 from openmdao.main.api import Container
 from openmdao.main.interfaces import IArchitecture, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import List, Slot
 
 
 class Architecture(Container):

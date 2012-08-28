@@ -20,7 +20,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.container import find_trait_and_value
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Slot
 from openmdao.main.driver import Driver, Run_Once
 from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
@@ -890,8 +890,9 @@ class Assembly (Component):
                                                             comp.name+'.'+rest])
                                 elif isinstance(inst, (HasObjective,
                                                        HasObjectives)):
-                                    for name, expr in inst._objectives.items():
-                                        objectives.append([str(expr),
+                                    for path in inst.get_referenced_varpaths():
+                                        name, dot, rest = path.partition('.')
+                                        objectives.append([path,
                                                            comp.name+'.'+name])
 
             # list of connections (convert tuples to lists)
