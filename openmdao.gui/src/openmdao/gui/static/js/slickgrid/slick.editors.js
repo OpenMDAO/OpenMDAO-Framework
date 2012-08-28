@@ -608,8 +608,8 @@
             };
 
             this.init();
-        },
-    }
+        }
+    };
 
     $.extend(window, SlickEditor);
 

@@ -246,10 +246,10 @@
             };
 
             this.init();
-        },
+        }
 
 
-    }
+    };
 
     $.extend(window, customEditors);
 
