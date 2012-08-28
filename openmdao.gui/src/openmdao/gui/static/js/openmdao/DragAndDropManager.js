@@ -4,19 +4,26 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.DragAndDropManager=function() {
 
     /***********************************************************************
-     *  deals with the problem that jQuery does not really handle layered
-     *   divs with different zindex
+     * Keep a hash table of all drop targets that are currently under a
+     * dragged object.
+     *
+     * Drop targets (droppables) are added via the 'draggableOver'
+     * method and removed with the 'draggableOut' method.
+     *
+     * The 'draggableOver' method will also call the 'updateHighlighting'
+     * function, which will highlight the drop target with the highest
+     * z-index and set it to be the current drop target. (It will also
+     * remove the highlighting from all other drop targets)
      ***********************************************************************/
 
     var self = this,
         droppables= new Hashtable();
 
-    this.drop_target = null;
+    self.drop_target = null;
 
-    // get top div that contains the draggable, is visible and accepts the
-    //    type of the draggable
+    // get the current drop target, which is the highlighted target
     this.getTopDroppableForDropEvent = function(ev, ui) {
-        return openmdao.drag_and_drop_manager.drop_target;
+        return self.drop_target;
     };
 
     // gets called when the cursor goes outside the passed in droppable element
@@ -56,7 +63,7 @@ openmdao.DragAndDropManager=function() {
             max_id = "";
 
         //debug.info( "Starting calc of front div" ) ;
-        droppables.each(function( id, zindex) {
+        droppables.each(function(id, zindex) {
             var div = $(id),
                 div_object = jQuery(div),
                 tmp_elm = div_object,
@@ -73,7 +80,7 @@ openmdao.DragAndDropManager=function() {
             tmp_elm = div_object;
             var topmost_zindex = null;
             while (! tmp_elm.is("body")) {
-                if (tmp_elm.css( "z-index" ) !== "auto" ) {
+                if (tmp_elm.css("z-index") !== "auto") {
                     topmost_zindex = tmp_elm.css("z-index");
                 }
                 if (! tmp_elm.parent() || tmp_elm.parent().is("body")) {
@@ -119,10 +126,10 @@ openmdao.DragAndDropManager=function() {
                     (div_object.attr("class").substring(0,14) === "DataflowFigure") ||
                     (div_object.attr("class").indexOf("SlotFigure") !== -1)) {
                     o.highlightAsDropTarget();
-                    openmdao.drag_and_drop_manager.drop_target = div_object;
+                    self.drop_target = div_object;
                 }
                 else {
-                    openmdao.drag_and_drop_manager.drop_target = null;
+                    self.drop_target = null;
                 }
             }
             else {

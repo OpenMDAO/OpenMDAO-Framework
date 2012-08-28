@@ -23,7 +23,6 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
      */
     function updateFigures(json) {
         jQuery.each(json, function(idx,slot) {
-            debug.info('SlotsPane.updateFigures() slot',idx,slot);
             if (figures[slot.name]) {
                 figures[slot.name].setState(slot.klass, slot.filled);
             }
@@ -40,7 +39,6 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
     // all this is just to prevent drops from falling thru to underlying panes
     var true_dropdiv = slotsDiv.parent();
     true_dropdiv.data('corresponding_openmdao_object',this);
-
     true_dropdiv.droppable ({
         accept: '.objtype',
         out: function(ev,ui) {
@@ -64,13 +62,12 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
         }
     });
 
-    // TODO: Do I really need these ?
     this.highlightAsDropTarget=function() {
-        debug.info ("highlight slotspane", slotsDiv[0].id ) ;
+        // do nothing, but needed for DragAndDropManager
     };
 
     this.unhighlightAsDropTarget=function() {
-        debug.info ("unhighlight slotspane", slotsDiv[0].id ) ;
+        // do nothing, but needed for DragAndDropManager
     };
 
     /***********************************************************************
