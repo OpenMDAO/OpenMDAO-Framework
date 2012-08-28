@@ -46,31 +46,38 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
         }
     });
 
+    /** Highlight figure when cursor is over it and it can accept a drop */
+    fig.highlightAsDropTarget=function() {
+        fig.css({'background-color': 'rgb(207, 214, 254)'});
+        fig.find('rect').css({'fill': '#CFD6FE'});
+    };
+
+    /** Unhighlight figure when it can no longer accept a drop */
+    fig.unhighlightAsDropTarget=function() {
+        fig.css({'background-color': 'transparent'});
+        fig.find('rect').css({'fill': 'white'});
+    };
+
     // set up as drop target
-    fig.data('corresponding_openmdao_object',self);
+    fig.data('corresponding_openmdao_object',fig);
     fig.droppable ({
         accept: '.'+klass,
         out: function(ev,ui) {
-            var o = elm.data('corresponding_openmdao_object');
-            o.unhighlightAsDropTarget() ;
+            fig.unhighlightAsDropTarget() ;
             openmdao.drag_and_drop_manager.draggableOut(fig);
         },
         over: function(ev,ui) {
-            debug.info('SlotFigure over',pathname);
             openmdao.drag_and_drop_manager.draggableOver(fig);
         },
         drop: function(ev,ui) {
-            debug.info('SlotFigure drop',pathname);
             var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev, ui),
                 drop_function = top_div.droppable('option', 'actualDropHandler');
-            debug.info('SlotFigure.drop()  top_div:',top_div,'drop_function:',drop_function);
             drop_function(ev, ui);
         },
         actualDropHandler: function(ev,ui) {
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedPath = droppedObject.attr("modpath"),
                 cmd = openmdao.Util.getPath(pathname)+'.add("'+name+'", create("'+droppedPath+'"))';
-            debug.info('SlotFigure.drop() cmd:',cmd);
             model.issueCommand(cmd);
             openmdao.drag_and_drop_manager.clearHighlightingDroppables();
         }
@@ -79,18 +86,6 @@ openmdao.SlotFigure=function(model,pathname,containertype,klass,desc,filled) {
     /***********************************************************************
      *  protected
      ***********************************************************************/
-
-    /** Highlight figure when cursor is over it and it can accept a drop */
-    this.highlightAsDropTarget=function() {
-        fig.css({'background-color': 'rgb(207, 214, 254)'});
-        fig.find('rect').css({'fill': '#CFD6FE'});
-    };
-
-    /** Unhighlight figure when it can no longer accept a drop */
-    this.unhighlightAsDropTarget=function() {
-        fig.css({'background-color': 'transparent'});
-        fig.find('rect').css({'fill': 'white'});
-    };
 
     this.setState = function(klass, filled) {
         var r = fig.find('rect'),

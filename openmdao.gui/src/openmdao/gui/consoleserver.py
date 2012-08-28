@@ -4,18 +4,17 @@ import sys
 import traceback
 import cmd
 import jsonpickle
-import time
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
 
 from openmdao.main.api import Assembly, Component, Driver, logger, \
-                              set_as_top, create, get_available_types
+                              set_as_top, get_available_types
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
-from openmdao.util.fileutil import find_files, file_md5, get_module_path
+from openmdao.util.fileutil import file_md5
 
 from openmdao.main.project import project_from_archive, Project, parse_archive_name
 from openmdao.gui.projdirfactory import ProjDirFactory
@@ -64,7 +63,7 @@ class ConsoleServer(cmd.Cmd):
         self.exc_info = None
         self.publish_updates = publish_updates
         self._publish_comps = {}
-        
+
         self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
@@ -140,7 +139,6 @@ class ConsoleServer(cmd.Cmd):
     @modifies_model
     def onecmd(self, line):
         self._hist.append(line)
-        print "consoleserver.onecmd:",line
         try:
             cmd.Cmd.onecmd(self, line)
         except Exception, err:
@@ -161,10 +159,11 @@ class ConsoleServer(cmd.Cmd):
             else:
                 return None, None, line
         i, n = 0, len(line)
-        while i < n and line[i] in self.identchars: i = i+1
+        while i < n and line[i] in self.identchars:
+            i = i + 1
         cmd, arg = line[:i], line[i:].strip()
         return cmd, arg, line
-    
+
     def emptyline(self):
         # Default for empty line is to repeat last command - yuck
         if self._partial_cmd:
@@ -215,7 +214,7 @@ class ConsoleServer(cmd.Cmd):
         ''' execfile in server's globals.
         '''
         try:
-            self.proj.command("execfile('%s', '%s')" % 
+            self.proj.command("execfile('%s', '%s')" %
                                  (filename, file_md5(filename)))
         except Exception, err:
             self._error(err, sys.exc_info())
@@ -263,7 +262,7 @@ class ConsoleServer(cmd.Cmd):
                 else:
                     try:
                         cont = root_obj.get(parts[1])
-                    except AttributeError as error:
+                    except AttributeError as err:
                         # When publishing, don't report remove as an error.
                         if report:
                             self._error(err, sys.exc_info())

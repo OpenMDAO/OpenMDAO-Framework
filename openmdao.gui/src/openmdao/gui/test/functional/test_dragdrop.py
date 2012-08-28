@@ -155,6 +155,7 @@ def _test_drop_on_component_editor(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
+    workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
@@ -203,6 +204,7 @@ def _test_drop_on_component_editor(browser):
 def _test_drop_on_component_editor_grid(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
+    workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
@@ -375,6 +377,7 @@ def _test_component_to_complex_workflow(browser):
 
     # add VehicleSim2 to the globals
     workspace_page.show_library()
+    workspace_page.set_library_filter('In Project')
     vehicle_name = put_element_on_grid(browser, workspace_page, "VehicleSim2")
 
     # Drag paraboloid element into vehicle dataflow figure
@@ -478,6 +481,7 @@ def _test_drop_onto_layered_div(browser):
 
     # add VehicleSim2 to the globals
     workspace_page.show_library()
+    workspace_page.set_library_filter('In Project')
     vehicle_name = put_element_on_grid(browser, workspace_page, "VehicleSim2")
 
     # add Paraboloid to VehicleSim dataflow assembly
