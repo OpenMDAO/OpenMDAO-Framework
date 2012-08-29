@@ -16,21 +16,14 @@ openmdao.ValueEditor = (function(){
     var editors = {}
     var defaultEditor = TextCellEditor
 
-    var getEditor = function(args){
-        try{
-            editorConstructor = editors[args.item.type]
-        }
-        catch(err){
-            editorConstructor = defaultEditor
-        }
-        finally{
-            return new editorConstructor(args)
-        }
-    }
-
     function constructorFn(args){
         this.init(args)
+        this.editorNotFound = false;
     }
+
+    constructorFn.overridesEnabled = false
+    constructorFn.defaultEditorEnabled = true;
+    constructorFn.promptEnabled = false;
 
     /*
      * Make the constructor of ValueEditor inherit CellEditor
@@ -45,8 +38,40 @@ openmdao.ValueEditor = (function(){
     * to using TextCellEditor.
     */
     constructorFn.prototype.init = function(args){
-        this.superClass.init.call(args)
-        this.editor = getEditor(args)
+
+        var editorExists = function(dataType){
+            if(dataType in editors){
+                return true
+            }
+
+            if(constructorFn.defaultEditorEnabled){
+                return true
+            }
+
+            return false
+        }
+
+        var getEditor = function(args){
+            if(args.item.type in editors){
+                editorConstructor = editors[args.item.type]
+                return new editorConstructor(args)
+            }
+            else{
+                editorConstructor = defaultEditor
+                return new editorConstructor(args)
+            }
+        }
+
+        if(editorExists(args.item.type))
+        {
+            this.superClass.init.call(args)
+            this.editor = getEditor(args)
+        }
+        else{
+            debug.error("No editor registered for the datatype " + args.item.type)
+            args.cancelChanges()
+            this.mumps = true
+        }
     }
 
 
@@ -62,7 +87,18 @@ openmdao.ValueEditor = (function(){
     *
     */
     constructorFn.registerEditor = function(name, constructor){
-        editors[name] = constructor
+        if(name in editors){
+            if(constructorFn.overridesEnabled){
+                editors[name] = constructor
+            }
+            else{
+                //Log error
+                debug.error("Cannot override existing constructor: " + name)
+            }
+        }
+        else{
+            editors[name] = constructor
+        }
     }
 
     return constructorFn
@@ -70,9 +106,8 @@ openmdao.ValueEditor = (function(){
 })();
 
 openmdao.ValueEditor.prototype.destroy = function(){
-    if(this.editor)
-    {
-        this.editor.destroy() 
+    if(!this.mumps){
+        this.editor.destroy()    
     }
 }
 
@@ -80,23 +115,30 @@ openmdao.ValueEditor.prototype.focus = function(){
     this.editor.focus()
 }
 
-openmdao.ValueEditor.prototype.isValueChanged = function(){ 
-    return this.editor.isValueChanged(); 
+openmdao.ValueEditor.prototype.isValueChanged = function(){
+    if(!this.mumps){
+        return this.editor.isValueChanged();
+    }
+    return false;
 }
 
-openmdao.ValueEditor.prototype.serializeValue = function(){ 
-    return this.editor.serializeValue(); 
+openmdao.ValueEditor.prototype.serializeValue = function(){
+    if(!this.mumps){
+        return this.editor.serializeValue(); 
+    }
 }
 
 openmdao.ValueEditor.prototype.loadValue = function(item){
-    this.editor.loadValue(item)
+    if(!this.mumps){
+        this.editor.loadValue(item)
+    }
 }
 
 openmdao.ValueEditor.prototype.applyValue = function(item, state){
     this.editor.applyValue(item, state)
 }
 
-openmdao.ValueEditor.prototype.validate = function(){ 
+openmdao.ValueEditor.prototype.validate = function(){
     return this.editor.validate()
 }
 
