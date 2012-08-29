@@ -37,6 +37,18 @@ Source Documentation
 
 .. _openmdao.lib.casehandler.api.py: 
 
+.. _openmdao.main.datatypes.any.py:
+
+.. _openmdao.main.datatypes.bool.py: 
+
+.. _openmdao.main.datatypes.complex.py: 
+
+.. _openmdao.main.datatypes.dict.py:
+
+.. _openmdao.main.datatypes.list.py: 
+
+.. _openmdao.main.datatypes.str.py: 
+
 
 .. toctree::
    :maxdepth: 3 
