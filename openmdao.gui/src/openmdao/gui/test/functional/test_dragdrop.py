@@ -2,6 +2,7 @@
 Tests of overall workspace functions.
 """
 
+import logging
 import pkg_resources
 import sys
 import time
@@ -13,6 +14,8 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
+
+    from selenium.common.exceptions import StaleElementReferenceException
 
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
@@ -277,8 +280,18 @@ def _test_slots(browser):
     NotifyDialog(browser, top.port).close()
 
     #refresh
-    labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-    comp = get_slot_target(labels, 'Component')
+    for retry in range(3):
+        labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
+        try:
+            comp = get_slot_target(labels, 'Component')
+        except StaleElementReferenceException:
+            if retry < 2:
+                logging.warning('get_slot_target(Component):'
+                                ' StaleElementReferenceException')
+            else:
+                raise
+        else:
+            break
 
     #check for font change
     eq(True, not ("color: rgb(204, 0, 0)" in comp.get_attribute('style')),
