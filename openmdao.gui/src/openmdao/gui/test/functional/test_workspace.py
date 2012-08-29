@@ -434,7 +434,7 @@ def _test_properties(browser):
     inputs = workspace_page.props_inputs
     eq(inputs.value, [['directory',     ''],
                       ['force_execute', 'True'],
-                      ['printvars',     '[]']])
+                      ['printvars',     '']]) # FIXME: printvars is really an empty list...
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])

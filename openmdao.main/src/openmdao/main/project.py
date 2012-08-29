@@ -5,7 +5,7 @@ Routines for handling 'Projects' in Python.
 import os
 import sys
 import shutil
-from inspect import isclass #, getfile
+from inspect import isclass
 import tarfile
 import cPickle as pickle
 from tokenize import generate_tokens
@@ -18,11 +18,10 @@ from openmdao.main.api import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
-from openmdao.main.factorymanager import create
+from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.mp_support import is_instance
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5
 from openmdao.util.log import logger
-
 
 # extension for project files
 PROJ_FILE_EXT = '.proj'
@@ -178,7 +177,6 @@ def filter_macro(lines):
             
     return filt_lines[::-1] # reverse the result
     
-    
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes
     from the imported version of the file for the __main__ version.
@@ -195,7 +193,7 @@ class _ProjDict(dict):
         return super(_ProjDict, self).__getitem__(name)
 
 class Project(object):
-    def __init__(self, projpath, projdirfactory=None):
+    def __init__(self, projpath):
         """Initializes a Project containing the project found in the 
         specified directory or creates a new project if one doesn't exist.
 
@@ -208,54 +206,54 @@ class Project(object):
         self._model_globals = _ProjDict()
         self._init_globals()
 
-        if projdirfactory:
-            projdirfactory.project = self
-        
         if os.path.isdir(projpath):
             self.activate()
         
-            # locate file containing state, create it if it doesn't exist
-            statefile = os.path.join(projpath, '_project_state')
-            if os.path.exists(statefile):
-                try:
-                    with open(statefile, 'r') as f:
-                        self._model_globals = pickle.load(f)
-                        # this part is just to handle cases where a project was saved
-                        # before _model_globals was changed to a _ProjDict
-                        if not isinstance(self._model_globals, _ProjDict):
-                            m = _ProjDict()
-                            m.update(self._model_globals)
-                            self._model_globals = m
-                            self._init_globals()
+            ## locate file containing state, create it if it doesn't exist
+            #statefile = os.path.join(projpath, '_project_state')
+            #if os.path.exists(statefile):
+                #try:
+                    #with open(statefile, 'r') as f:
+                        #self._model_globals = pickle.load(f)
+                        ## this part is just to handle cases where a project was saved
+                        ## before _model_globals was changed to a _ProjDict
+                        #if not isinstance(self._model_globals, _ProjDict):
+                            #m = _ProjDict()
+                            #m.update(self._model_globals)
+                            #self._model_globals = m
+                            #self._init_globals()
                             
-                except Exception, e:
-                    logger.error('Unable to restore project state: %s' % e)
-                    macro_exec = True
-            else:
-                macro_exec = True
-                logger.error("%s doesn't exist" % statefile)
-            if macro_exec:
-                self._initialize()
+                #except Exception, e:
+                    #logger.error('Unable to restore project state: %s' % e)
+                    #macro_exec = True
+            #else:
+                #macro_exec = True
+                #logger.error("%s doesn't exist" % statefile)
+            #if macro_exec:
+            self._initialize()
             macro_file = os.path.join(self.path, '_project_macro')
             if os.path.isfile(macro_file):
-                if macro_exec:
-                    logger.error('Attempting to reconstruct project using macro')
-                self.load_macro(macro_file, execute=macro_exec)
+                logger.info('Reconstructing project using macro')
+                self.load_macro(macro_file, execute=True, strict=True)
         else:  # new project
             os.makedirs(projpath)
-            #os.mkdir(os.path.join(self.path, 'model'))
             self.activate()
             self._initialize()
             self.save()
 
     def _initialize(self):
-        self._model_globals['top'] = set_as_top(Assembly())
+        self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
         
     def _init_globals(self):
-        self._model_globals['create'] = create    # add create funct here so macros can call it
+        self._model_globals['create'] = self.create    # add create funct here so macros can call it
         self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
         self._model_globals['execfile'] = self.execfile
+        self._model_globals['set_as_top'] = set_as_top
 
+    def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
+        if server is None and res_desc is None and typname in self._model_globals:
+            return getattr(self._model_globals, typname)(**ctor_args)
+        return factory_create(typname, version, server, res_desc, **ctor_args)
 
     @property
     def name(self):
@@ -338,27 +336,28 @@ class Project(object):
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
-        modeldir = self.path
-        sys.path = [modeldir]+sys.path
-        logger.error("added %s to sys.path" % modeldir)
+        modeldir = self.path+'.prj'
+        if modeldir not in sys.path:
+            sys.path = [modeldir]+sys.path
+            logger.error("added %s to sys.path" % modeldir)
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir)
+            sys.path.remove(modeldir+'.prj')
         except:
             pass
 
     def save(self):
-        """ Save the state of the project model to its project directory.
+        """ Save the project model to its project directory.
         """
-        fname = os.path.join(self.path, '_project_state')
-        try:
-            with open(fname, 'wb') as f:
-                pickle.dump(self._model_globals, f)
-        except Exception as err:
-            logger.error("Failed to pickle the project: %s" % str(err))
+        #fname = os.path.join(self.path, '_project_state')
+        #try:
+            #with open(fname, 'wb') as f:
+                #pickle.dump(self._model_globals, f)
+        #except Exception as err:
+            #logger.error("Failed to pickle the project: %s" % str(err))
 
         if self._recorded_cmds:
             logger.info("Saving macro used to create project")
