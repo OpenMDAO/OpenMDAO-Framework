@@ -133,7 +133,7 @@ class Slot(Variable):
         elif value is []:
             slot_attr['value'] = []
         else:
-            slot_attr['value'] = value.get_attributes()
+            slot_attr['value'] = type(value).__name__
 
         slot_attr['klass'] = io_attr['type']
         slot_attr['containertype'] = 'singleton'

@@ -219,6 +219,7 @@ class ConsoleServer(cmd.Cmd):
             comps = self._publish_comps.keys()
             for pathname in comps:
                 comp, root = self.get_container(pathname, report=False)
+                print 'DEBUG: cserver publish_comp', pathname, comp, root
                 if comp is None:
                     del self._publish_comps[pathname]
                     publish(pathname, {})
@@ -738,7 +739,7 @@ class ConsoleServer(cmd.Cmd):
         print "Installing", distribution, "from", url
         easy_install.main(["-U", "-f", url, distribution])
 
-    def publish(self, pathname, publish):
+    def add_subscriber(self, pathname, publish):
         ''' publish the specified topic
         '''
         if pathname in ['', 'components', 'files', 'types',

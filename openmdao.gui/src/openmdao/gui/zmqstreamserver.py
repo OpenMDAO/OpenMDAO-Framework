@@ -73,15 +73,16 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             self.message_count += 1
             topic = message[0]
             content = pickle.loads(message[1])
-            
+            print 'DEBUG: ZMQStreamServer writing topic',topic
             try:
                 number = float(content)
             except (ValueError, TypeError):
                 message = jsonpickle.encode([topic, content])
             else:
                 message = jsonpickle.encode([topic, number])
-            
+            print 'DEBUG: ZMQStreamServer writing message =====================' #,message
             message = make_unicode(message)  # tornado websocket wants unicode
+            print 'DEBUG: ZMQStreamServer writing message =====================' #,message
             self.write_message(message)
 
     def on_message(self, message):

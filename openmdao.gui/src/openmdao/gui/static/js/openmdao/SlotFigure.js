@@ -106,7 +106,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             if (slot.containertype === 'singleton') {
                 r.css({'stroke-dasharray':'none', 'stroke':color});
                 n.css({'fill': color});
-                k.css({'fill': color}).text(value.type);
+                k.css({'fill': color}).text(value);
             }
             else if (slot.containertype === 'list') {
                 // rebuild figure with a rect for each filled list entry
@@ -128,7 +128,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 // set last to unfilled
                 r.filter(':last').css({'stroke-dasharray':3, 'stroke':'red'});
                 n.filter(':last').css({'fill': 'red'}).text(slot.name);
-                k.filter(':last').css({'fill': 'red'}).text(slot.klass);
+                k.filter(':last').css({'fill': 'red'}).text(slot.klass+'[]');
 
                 fig.width(100*(value.length+1));
             }
@@ -140,7 +140,12 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             fig.removeClass('filled');
             r.css({'stroke-dasharray':3, 'stroke':color});
             n.css({'fill': color}).text(slot.name);
-            k.css({'fill': color}).text(slot.klass);
+            if (slot.containertype === 'list') {
+                k.css({'fill': color}).text(slot.klass+'[]');
+            }
+            else {
+                k.css({'fill': color}).text(slot.klass);
+            }
         }
     };
 
