@@ -612,9 +612,7 @@ class Container(SafeHasTraits):
         elif is_instance(obj, TraitType):
             self.add_trait(name, obj)
         else:
-            self.raise_exception("'"+str(type(obj))+
-                    "' object is not an instance of Container.",
-                    TypeError)
+            setattr(self, name, obj)
         return obj
 
     def _check_recursion(self, obj):

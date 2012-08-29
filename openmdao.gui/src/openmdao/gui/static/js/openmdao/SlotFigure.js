@@ -7,6 +7,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
      ***********************************************************************/
 
     var self = this,
+        id = 'SlotFigure-'+(pathname.replace('.','-')),
         slotDiv = '<div class="SlotFigure" style="margin:10px;clear:both;" />',
         slotSVG = '<svg height="50" width="100">'
                 + '    <rect height="50" width="100" rx="15" ry="15" style="stroke-width:2; fill:white" />'
@@ -14,15 +15,36 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 + '    <text id="klass" x="50" y="40" font-style="italic" text-anchor="middle">Klass</text>'
                 + '</svg>',
         fig = jQuery(slotDiv)
-            .append(slotSVG);
+            .append(slotSVG),
+        contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
+            .appendTo(fig);
 
     // set name, id, tooltip and width
     fig.find('#name').text(slot.name);
-    fig.attr('id','SlotFigure-'+(pathname.replace('.','-')));
+    fig.attr('id',id);
     fig.attr('title',slot.desc);
     fig.width(100);
 
-    // open object editor on double click
+    // create context menu
+    contextMenu.append(jQuery('<li>Remove Contents</li>').click(function(ev) {
+        if (fig.hasClass('filled')) {
+            var slotParent = openmdao.Util.getPath(pathname),
+                cmd = (slot.containertype === 'list' ?
+                    pathname+' =  []' :
+                    pathname+' =  None');
+            model.issueCommand(cmd);
+        }
+        else {
+            openmdao.Util.notify('Slot is already empty!');
+        }
+    }));
+
+    /** provide access to fig's context menu (for use after fig is in the DOM */
+    fig.getContextMenu = function() {
+        return contextMenu;
+    };
+
+    /** open object editor on double click */
     fig.dblclick(function() {
         if (fig.hasClass('filled')) {
             var editor = new openmdao.ObjectFrame(model, pathname);
@@ -31,14 +53,12 @@ openmdao.SlotFigure=function(model,pathname,slot) {
 
     /** Highlight figure when cursor is over it and it can accept a drop */
     fig.highlightAsDropTarget=function() {
-        fig.css({'background-color': 'rgb(207, 214, 254)'});
-        fig.find('rect').css({'fill': '#CFD6FE'});
+        fig.find('rect').filter(':last').css({'fill': '#CFD6FE'});
     };
 
     /** Unhighlight figure when it can no longer accept a drop */
     fig.unhighlightAsDropTarget=function() {
-        fig.css({'background-color': 'transparent'});
-        fig.find('rect').css({'fill': 'white'});
+        fig.find('rect').filter(':last').css({'fill': 'white'});
     };
 
     // set up as drop target
@@ -60,13 +80,10 @@ openmdao.SlotFigure=function(model,pathname,slot) {
         actualDropHandler: function(ev,ui) {
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedPath = droppedObject.attr("modpath"),
-                // supposed to use add() but can only add() containers...
-                //cmd = openmdao.Util.getPath(pathname)
-                //      '.add("'+name+'", create("'+droppedPath+'"))';
-                cmd = pathname
-                    + (slot.containertype === 'list' ?
-                        '.append(create("'+droppedPath+'"))' :
-                        ' = create("'+droppedPath+'")');
+                slotParent = openmdao.Util.getPath(pathname),
+                cmd = (slot.containertype === 'list' ?
+                    pathname + '.append(create("'+droppedPath+'"))' :
+                    slotParent + '.add("'+slot.name+'", create("'+droppedPath+'"))');
             model.issueCommand(cmd);
             openmdao.drag_and_drop_manager.clearHighlightingDroppables();
         }
@@ -80,7 +97,8 @@ openmdao.SlotFigure=function(model,pathname,slot) {
         var r = fig.find('rect'),
             n = fig.find('#name'),
             k = fig.find('#klass'),
-            filled = (value !== null),
+            filled = (slot.containertype === 'singleton' && value !== null) ||
+                     (slot.containertype === 'list' && value.length > 0),
             color = filled ? 'green' : 'red';
 
         if (filled) {
