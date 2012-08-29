@@ -1,6 +1,8 @@
 import sys
 import os
 import re
+import ast
+
 import jsonpickle
 
 from tornado import web
@@ -277,13 +279,20 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
-            force = int(self.get_argument('force', default=0))
-            if not force and filename.endswith('.py'):
-                ret = cserver.file_has_instances(filename)
-                if ret:
-                    self.send_error(409)  # user will be prompted to overwrite classes
-                    return
             contents = self.get_argument('contents', default='')
+            force = int(self.get_argument('force', default=0))
+            if filename.endswith('.py'):
+                try:
+                    ast.parse(contents, filename=filename, mode='exec')
+                except SyntaxError as syn_err:
+                    publish('console_errors', "Can't save file %s: %s" % (filename, str(syn_err)))
+                    self.send_error(500)
+                    return
+                if not force:
+                    ret = cserver.file_has_instances(filename)
+                    if ret:
+                        self.send_error(409)  # user will be prompted to overwrite classes
+                        return
             self.write(str(cserver.write_file(filename, contents)))
 
     @web.authenticated
