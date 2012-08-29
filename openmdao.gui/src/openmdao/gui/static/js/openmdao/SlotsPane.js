@@ -27,10 +27,8 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
                 figures[slot.name].setValue(slot.value);
             }
             else {
-                var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name,
-                                              slot.containertype, slot.klass,
-                                              slot.desc, slot.value);
-                figures[name] = fig;
+                var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name, slot);
+                figures[slot.name] = fig;
                 slotsDiv.append(fig);
             }
         });

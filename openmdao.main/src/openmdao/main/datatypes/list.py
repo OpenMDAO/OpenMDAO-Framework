@@ -60,7 +60,12 @@ class List(Enthought_List):
             _, slot_attr = inner.trait_type.get_attribute(name, inner_value, 
                                                           inner, meta)
             slot_attr['containertype'] = 'list'
-            slot_attr['filled'] = len(value)
+
+            # for the value, just report the types of the list entries
+            valtypes = []
+            for val in value:
+                valtypes.append(type(val).__name__)
+            slot_attr['value'] = valtypes
 
         return attr, slot_attr
     

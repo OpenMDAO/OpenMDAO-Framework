@@ -1553,7 +1553,8 @@ class Component(Container):
         slots = []
 
         # Add all inputs and outputs
-        for name in self.list_inputs() + self.list_outputs():
+        io_list = self.list_inputs() + self.list_outputs()
+        for name in io_list:
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
@@ -1605,7 +1606,7 @@ class Component(Container):
         if not io_only:
             # Add Slots that are not inputs or outputs
             for name, value in self.traits().items():
-                if value.is_trait_type(Slot):
+                if name not in io_list and (value.is_trait_type(Slot) or value.is_trait_type(List)):
                     trait = self.get_trait(name)
                     meta = self.get_metadata(name)
                     value = getattr(self, name)
@@ -1613,7 +1614,8 @@ class Component(Container):
                     # We can hide slots (e.g., the Workflow slot in drivers)
                     if 'hidden' not in meta or meta['hidden'] == False:
                         io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-                        attrs['Slots'].append(slot_attr)
+                        if slot_attr is not None:
+                            attrs['Slots'].append(slot_attr)
 
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
