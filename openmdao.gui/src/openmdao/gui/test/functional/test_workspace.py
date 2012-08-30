@@ -56,12 +56,12 @@ def _test_editfile(browser):
     dlg = workspace_page.new_file_dialog()
     dlg.set_text(file1)
     dlg.click_ok()
-    time.sleep(0.5)
+    time.sleep(2)  # Wait for background animation to complete.
     file2 = 'test2.py'
     dlg = workspace_page.new_file_dialog()
     dlg.set_text(file2)
     dlg.click_ok()
-    time.sleep(1.0)
+    time.sleep(2)  # Wait for background animation to complete.
 
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
