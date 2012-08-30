@@ -2,6 +2,7 @@
 Tests of overall workspace functions.
 """
 
+import logging
 import pkg_resources
 import sys
 import time
@@ -13,6 +14,8 @@ if sys.platform != 'win32':  # No testing on Windows yet.
     from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
+
+    from selenium.common.exceptions import StaleElementReferenceException
 
     from util import main, setup_server, teardown_server, generate, \
                      begin, new_project
@@ -40,7 +43,8 @@ def _test_drop_on_driver(browser):
 
     div = getDropableElements(driver_element)[0]
     chain = drag_element_to(browser, conmindriver, div, True)
-    check_highlighting(driver_element('content_area').element, browser, True, "Driver's content_area")
+    check_highlighting(driver_element('content_area').element, browser, True,
+                       "Driver's content_area")
     release(chain)
 
     # brings up a confirm dialog for replacing the existing driver.
@@ -67,7 +71,8 @@ def _test_workspace_dragdrop(browser):
     names = []
     for div in getDropableElements(top):
         chain = drag_element_to(browser, assembly, div, False)
-        check_highlighting(top('content_area').element, browser, True, "Top's content_area")
+        check_highlighting(top('content_area').element, browser, True,
+                           "Top's content_area")
         release(chain)
 
         #deal with the modal dialog
@@ -138,7 +143,7 @@ def _test_drop_on_existing_assembly(browser):
     div = getDropableElements(middle_figure)[0]
     chain = drag_element_to(browser, assembly, div, True)
     check_highlighting(middle_figure('content_area').element, browser, True,
-        "Assembly's content_area")
+                       "Assembly's content_area")
     release(chain)
 
     inner_name = (NameInstanceDialog(browser,
@@ -275,8 +280,18 @@ def _test_slots(browser):
     NotifyDialog(browser, top.port).close()
 
     #refresh
-    labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-    comp = get_slot_target(labels, 'Component')
+    for retry in range(3):
+        labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
+        try:
+            comp = get_slot_target(labels, 'Component')
+        except StaleElementReferenceException:
+            if retry < 2:
+                logging.warning('get_slot_target(Component):'
+                                ' StaleElementReferenceException')
+            else:
+                raise
+        else:
+            break
 
     #check for font change
     eq(True, not ("color: rgb(204, 0, 0)" in comp.get_attribute('style')),
@@ -322,9 +337,6 @@ def _test_simple_component_to_workflow(browser):
                                                 'paraboloid.py')
 
     # add first file from workspace
-
-    #  timeout...
-    workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
 
     # view library
@@ -356,7 +368,8 @@ def _test_simple_component_to_workflow(browser):
     top = workspace_page.get_workflow_figure('top')
 
     chain = drag_element_to(browser, paraboloid_component, top('figure_itself').element, False)
-    check_highlighting(top('figure_itself').element, browser, True, "Top's workflow")
+    check_highlighting(top('figure_itself').element, browser, True,
+                       "Top's workflow")
     release(chain)
 
     time.sleep(1.5)  # Just so we can see it.
@@ -383,7 +396,6 @@ def _test_component_to_complex_workflow(browser):
                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                             'vehicle_threesim.py')
-    workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
     workspace_page.add_file(file2_path)
 
@@ -416,8 +428,10 @@ def _test_component_to_complex_workflow(browser):
     paraboloid_component = WebDriverWait(browser, TMO).until(
         lambda browser: browser.find_element_by_xpath(xpath))
     vehicle_workflow_figure = workspace_page.get_workflow_figure(vehicle_name)
-    chain = drag_element_to(browser, paraboloid_component, vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element, browser, True, "Three Sim Vehicle workflow")
+    chain = drag_element_to(browser, paraboloid_component,
+                        vehicle_workflow_figure('figure_itself').element, False)
+    check_highlighting(vehicle_workflow_figure('figure_itself').element,
+                       browser, True, "Three Sim Vehicle workflow")
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
@@ -437,8 +451,10 @@ def _test_component_to_complex_workflow(browser):
         lambda browser: browser.find_element_by_xpath(xpath))
     sim_acc_workflow_figure = workspace_page.get_workflow_figure("sim_acc")  # returns a pageobject
 
-    chain = drag_element_to(browser, paraboloid_component, sim_acc_workflow_figure('figure_itself').element, False)
-    check_highlighting(sim_acc_workflow_figure('figure_itself').element, browser, True, "sim_acc workflow")
+    chain = drag_element_to(browser, paraboloid_component,
+                        sim_acc_workflow_figure('figure_itself').element, False)
+    check_highlighting(sim_acc_workflow_figure('figure_itself').element,
+                       browser, True, "sim_acc workflow")
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
@@ -464,9 +480,10 @@ def _test_component_to_complex_workflow(browser):
         lambda browser: browser.find_element_by_xpath(xpath))
     vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")  # returns a pageobject
 
-    chain = drag_element_to(browser, paraboloid_component, vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element, browser, False,
-                       "vehicle workflow")
+    chain = drag_element_to(browser, paraboloid_component,
+                        vehicle_workflow_figure('figure_itself').element, False)
+    check_highlighting(vehicle_workflow_figure('figure_itself').element,
+                       browser, False, "vehicle workflow")
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is no new workflow component figure
@@ -486,7 +503,6 @@ def _test_drop_onto_layered_div(browser):
                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                             'vehicle_threesim.py')
-    workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
     workspace_page.add_file(file2_path)
 
@@ -497,18 +513,20 @@ def _test_drop_onto_layered_div(browser):
     # add Paraboloid to VehicleSim dataflow assembly
     vehicle = workspace_page.get_dataflow_figure(vehicle_name)
     paraboloid = workspace_page.find_library_button('Paraboloid')
-    chain = drag_element_to(browser, paraboloid, vehicle('content_area').element, False)
+    chain = drag_element_to(browser, paraboloid,
+                            vehicle('content_area').element, False)
     release(chain)
     paraboloid_name = (NameInstanceDialog(browser, vehicle.port).create_and_dismiss())
 
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city', vehicle_name)
-    component_editor = sim_EPA_city_driver.editor_page()
-    component_editor.show_workflow()
+    driver_editor = sim_EPA_city_driver.editor_page(base_type='Driver')
+    driver_editor.show_workflow()
 
     # Check to make sure we have the expected number of
     #   workflow component figures before we add to it
-    eq(len(workspace_page.get_workflow_component_figures()), 6)
+    eq(len(driver_editor.get_workflow_component_figures()), 5)
+    eq(len(workspace_page.get_workflow_component_figures()), 22)
 
     # Drag paraboloid component into sim_EPA_city workflow figure
     # should add to the list of workflow component figures
@@ -518,12 +536,15 @@ def _test_drop_onto_layered_div(browser):
         lambda browser: browser.find_element_by_xpath(xpath))
 
     vehicle_workflow_figure = workspace_page.get_workflow_figure("sim_EPA_city")
-    chain = drag_element_to(browser, paraboloid_component, vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element, browser, True, "Three Sim Vehicle workflow")
+    chain = drag_element_to(browser, paraboloid_component,
+                        vehicle_workflow_figure('figure_itself').element, False)
+    check_highlighting(vehicle_workflow_figure('figure_itself').element,
+                       browser, True, "Three Sim Vehicle workflow")
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
-    eq(len(workspace_page.get_workflow_component_figures()), 7)
+    eq(len(driver_editor.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_component_figures()), 24)
     # Check to see that the new div inside the workflow is there
     figs = workspace_page.get_workflow_component_figures()
     pathnames = [get_pathname(browser, fig) for fig in figs]
@@ -538,12 +559,15 @@ def _test_drop_onto_layered_div(browser):
         lambda browser: browser.find_element_by_xpath(xpath))
 
     vehicle_workflow_figure = workspace_page.get_workflow_figure("vehicle")
-    chain = drag_element_to(browser, paraboloid_component, vehicle_workflow_figure('figure_itself').element, False)
-    check_highlighting(vehicle_workflow_figure('figure_itself').element, browser, False, "Three Sim Vehicle workflow")
+    chain = drag_element_to(browser, paraboloid_component,
+                        vehicle_workflow_figure('figure_itself').element, False)
+    check_highlighting(vehicle_workflow_figure('figure_itself').element,
+                       browser, False, "Three Sim Vehicle workflow")
     release(chain)
     time.sleep(1.5)  # Just so we can see it.
     # Check to make sure there is one more workflow component figure
-    eq(len(workspace_page.get_workflow_component_figures()), 7)
+    eq(len(driver_editor.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_component_figures()), 24)
     # Check to see that the new div inside the workflow is there
     figs = workspace_page.get_workflow_component_figures()
     pathnames = [get_pathname(browser, fig) for fig in figs]
@@ -576,7 +600,8 @@ def closeout(projects_page, project_info_page, project_dict, workspace_page):
 def slot_drop(browser, element, slot, should_drop, message='Slot'):
     '''Drop an element on a slot'''
     chain = drag_element_to(browser, element, slot, should_drop)
-    check_highlighting(slot, browser, should_highlight=should_drop, message=message)
+    check_highlighting(slot, browser, should_highlight=should_drop,
+                       message=message)
     release(chain)
 
 
@@ -698,13 +723,22 @@ def put_assembly_on_grid(browser, workspace_page):
 def put_element_on_grid(browser, workspace_page, element_str):
     '''find and get the 'assembly', and the div for the grid object'''
 
-    assembly = workspace_page.find_library_button(element_str)
-    grid = browser.find_element(*(By.XPATH, '//div[@id="-dataflow"]'))
+    for retry in range(3):
+        try:
+            assembly = workspace_page.find_library_button(element_str)
+            chain = ActionChains(browser)
+            chain.click_and_hold(assembly)
+            chain.move_by_offset(-100, 0).perform()
+        except StaleElementReferenceException:
+            if retry < 2:
+                logging.warning('put_element_on_grid %s:'
+                                ' StaleElementReferenceException', element_str)
+            else:
+                raise
+        else:
+            break
 
-    chain = ActionChains(browser)
-    chain.click_and_hold(assembly)
-    chain.move_by_offset(-100, 0).perform()
-
+    grid = browser.find_element_by_xpath('//div[@id="-dataflow"]')
     check_highlighting(grid, browser, True, "Grid")
     release(chain)
 
