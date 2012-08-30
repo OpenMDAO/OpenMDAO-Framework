@@ -124,8 +124,8 @@ class ComponentHandler(ReqHandler):
             cserver = self.get_server()
             cserver.add_component(name, type, parent)
         except Exception, e:
-            publish('console_errors', str(e))
             result = sys.exc_info()
+            cserver._error(e, result)
         self.content_type = 'text/html'
         self.write(result)
 
@@ -285,8 +285,9 @@ class FileHandler(ReqHandler):
                 try:
                     ast.parse(contents, filename=filename, mode='exec')
                 except SyntaxError as syn_err:
-                    publish('console_errors', "Can't save file %s: %s" % (filename, str(syn_err)))
-                    self.send_error(500)
+                    cserver.send_pub_msg("Can't save file %s due to syntax error: %s" % (filename,str(syn_err)),
+                                         'file_errors')
+                    self.send_error(400)
                     return
                 if not force:
                     ret = cserver.file_has_instances(filename)

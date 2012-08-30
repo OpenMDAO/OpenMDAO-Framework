@@ -100,6 +100,11 @@ class ConsoleServer(cmd.Cmd):
                 else:
                     publish(pathname, comp.get_attributes(io_only=False))
 
+    def send_pub_msg(self, msg, topic):
+        ''' publish the given message with the given topic
+        '''
+        publish(topic, msg)
+
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
         '''

@@ -41,6 +41,8 @@ openmdao.Model=function() {
 
     /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
+        //debug.info("handling out message:");
+        //debug.info(message);
         var callbacks = subscribers.outstream;
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
@@ -53,12 +55,17 @@ openmdao.Model=function() {
                 }
             }
         }
+        //else {
+        //    debug.info("no callbacks for out message!");
+        //}
     }
 
     /** handle a published message, which has a topic
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
+        //debug.info("pub message:");
+        //debug.info(message)
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
@@ -69,6 +76,7 @@ openmdao.Model=function() {
         }
         var topic = message[0],
             callbacks = subscribers[message[0]].slice();  // Need a copy.
+        //debug.info("topic = "+topic)
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
@@ -80,6 +88,9 @@ openmdao.Model=function() {
                 }
             }
         }
+        //else {
+        //    debug.info("no callbacks for pub message topic "+topic);
+        //}
     }
 
     /***********************************************************************
@@ -422,7 +433,7 @@ openmdao.Model=function() {
             //error: errorHandler,
             statusCode: {
                 409: handler409,
-                500: errorHandler
+                400: errorHandler
              }
         });
     };
