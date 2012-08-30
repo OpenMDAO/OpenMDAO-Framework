@@ -430,10 +430,9 @@ openmdao.Model=function() {
             url:  'file/'+filepath.replace(/\\/g,'/'),
             data: { 'contents': contents, 'force': force },
             success: callback,
-            //error: errorHandler,
+            error: errorHandler,
             statusCode: {
-                409: handler409,
-                400: errorHandler
+                409: handler409
              }
         });
     };

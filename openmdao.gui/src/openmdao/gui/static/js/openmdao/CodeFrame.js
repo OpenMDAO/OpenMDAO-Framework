@@ -185,7 +185,9 @@ openmdao.CodeFrame = function(id,model) {
         debug.info("file save failed: "+textStatus);
         debug.info(jqXHR);
         debug.info(errorThrown);
-        openmdao.Util.notify(textStatus, 'File Error', 'file-error');
+        if (jqXHR.status != 409) {
+            openmdao.Util.notify(textStatus, 'File Error', 'file-error');
+        }
     }
 
     function handle409(jqXHR, textStatus, errorThrown) {
@@ -249,7 +251,7 @@ openmdao.CodeFrame = function(id,model) {
                                 file_tabs.tabs("remove", tab_id);
                                 waitClose = [];
                             }
-                         }, null, handle409);
+                         }, failedSave, handle409);
         }
     }
 
