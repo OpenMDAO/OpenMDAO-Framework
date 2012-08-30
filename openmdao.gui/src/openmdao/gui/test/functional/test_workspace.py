@@ -610,7 +610,7 @@ def _test_console_errors(browser):
                 " specified.")
     editor.close()
 
-    # Save file with syntax error.
+    # Attempt to save file with syntax error.
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
     editor_window = browser.current_window_handle
@@ -631,7 +631,6 @@ def execute(self)
     except Exception as exc:
         print 'Exception waiting for file-error:', str(exc) or repr(exc)
         logging.exception('Waiting for file-error')
-    NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
     eq(message, 'invalid syntax (bug.py, line 6)')

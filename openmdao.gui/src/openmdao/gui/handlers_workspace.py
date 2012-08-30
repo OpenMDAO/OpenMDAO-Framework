@@ -285,8 +285,7 @@ class FileHandler(ReqHandler):
                 try:
                     ast.parse(contents, filename=filename, mode='exec')
                 except SyntaxError as syn_err:
-                    cserver.send_pub_msg("Can't save file %s due to syntax error: %s" % (filename,str(syn_err)),
-                                         'file_errors')
+                    cserver.send_pub_msg(str(syn_err), 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
