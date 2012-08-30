@@ -12,7 +12,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
-import cPickle as pickle
+import pickle
 import jsonpickle
 
 debug = True
@@ -24,6 +24,7 @@ def DEBUG(msg):
 
 
 def make_unicode(content):
+    print 'DEBUG: make_unicode type:',type(content)
     if type(content) == str:
         # Ignore errors even if the string is not proper UTF-8 or has
         # broken marker bytes.
@@ -70,20 +71,40 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             message = make_unicode(message)  # tornado websocket wants unicode
             self.write_message(message)
         elif len(message) == 2:
+            print 'DEBUG: ZMQStreamServer recv beg ====================='
+            print message
+            print 'DEBUG: ZMQStreamServer recv end ====================='
             self.message_count += 1
             topic = message[0]
-            content = pickle.loads(message[1])
-            print 'DEBUG: ZMQStreamServer writing topic',topic
+            print 'DEBUG: ZMQStreamServer recv topic ==>', topic
+            try:
+                content = pickle.loads(message[1])
+            except Exception, err:
+                print 'ERROR loading pickle from message:',err
+                exc_type, exc_value, exc_traceback = sys.exc_info
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+            print 'DEBUG: ZMQStreamServer recv content ==>', content
+            print 'DEBUG: ZMQStreamServer converting to json ====================='
             try:
                 number = float(content)
             except (ValueError, TypeError):
                 message = jsonpickle.encode([topic, content])
             else:
                 message = jsonpickle.encode([topic, number])
-            print 'DEBUG: ZMQStreamServer writing message =====================' #,message
-            message = make_unicode(message)  # tornado websocket wants unicode
-            print 'DEBUG: ZMQStreamServer writing message =====================' #,message
+            print 'DEBUG: ZMQStreamServer converting to unicode ====================='
+            try:
+                message = make_unicode(message)  # tornado websocket wants unicode
+            except Exception, err:
+                print 'ERROR converting to unicode:',err
+                exc_type, exc_value, exc_traceback = sys.exc_info
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+            print message
+            print 'DEBUG: ZMQStreamServer writing message ====================='
             self.write_message(message)
+            print 'DEBUG:'
+            print 'DEBUG:'
+            print 'DEBUG:'
+            print 'DEBUG:'
 
     def on_message(self, message):
         pass

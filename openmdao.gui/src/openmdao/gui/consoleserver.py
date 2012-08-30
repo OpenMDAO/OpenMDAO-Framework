@@ -222,8 +222,11 @@ class ConsoleServer(cmd.Cmd):
                 print 'DEBUG: cserver publish_comp', pathname, comp, root
                 if comp is None:
                     del self._publish_comps[pathname]
+                    print 'DEBUG: cserver', pathname, 'deleted'
                     publish(pathname, {})
                 else:
+                    print 'DEBUG: cserver', pathname, comp.get_attributes(io_only=False)
+                    print 'DEBUG: cserver ============================================'
                     publish(pathname, comp.get_attributes(io_only=False))
 
     def _error(self, err, exc_info):
