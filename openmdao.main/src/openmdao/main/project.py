@@ -11,6 +11,7 @@ import cPickle as pickle
 from tokenize import generate_tokens
 import token
 from cStringIO import StringIO
+import traceback
 
 from pkg_resources import get_distribution, DistributionNotFound
 
@@ -321,7 +322,7 @@ class Project(object):
 
         if err:
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
-            logger.error("%s" % exc_info[2])
+            logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
             raise err
         else:

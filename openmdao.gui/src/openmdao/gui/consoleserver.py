@@ -68,13 +68,13 @@ class CtorInstrumenter(ast.NodeTransformer):
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     super(%s, self).__init__(*args, **kwargs)
-            """ % node.name
+""" % node.name
         if text is None: # class has its own __init__ (name has been changed to __orig_init__)
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     self.__%s_orig_init__(*args, **kwargs)
-            """ % node.name
+""" % node.name
         node.body = [text_to_node(text)]+node.body
         return node
 
@@ -210,6 +210,7 @@ class ConsoleServer(cmd.Cmd):
         try:
             publish('components', self.get_components())
             publish('', {'Dataflow': self.get_dataflow('')})
+            publish('', {'Workflow': self.get_workflow('')})
         except Exception as err:
             self._error(err, sys.exc_info())
         else:
@@ -542,7 +543,7 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(dataflow)
 
     def get_workflow(self, pathname):
-        flow = {}
+        flows = []
         if pathname:
             drvr, root = self.get_container(pathname)
             # allow for request on the parent assembly
@@ -554,11 +555,13 @@ class ConsoleServer(cmd.Cmd):
                     flow = drvr.get_workflow()
                 except Exception, err:
                     self._error(err, sys.exc_info())
+                flows.append(flow)
         else:
             for k, v in self.proj.items():
                 if is_instance(v, Assembly):
                     v = v.get('driver')
                 if is_instance(v, Driver):
+                    flow = {}
                     flow['pathname'] = v.get_pathname()
                     flow['type'] = type(v).__module__ + '.' + type(v).__name__
                     flow['workflow'] = []
@@ -580,7 +583,8 @@ class ConsoleServer(cmd.Cmd):
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'valid':    comp.is_valid()
                               })
-        return jsonpickle.encode(flow)
+                    flows.append(flow)
+        return jsonpickle.encode(flows)
 
     def get_attributes(self, pathname):
         attr = {}

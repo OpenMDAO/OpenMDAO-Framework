@@ -217,7 +217,7 @@ Debugging Via Log Messages
 --------------------------
 
 You may have noticed that a file with a name of the form
-``openmdao_log_<pid>.txt`` was created during the above Python run.
+``openmdao_log_.txt`` was created during the above Python run.
 This file is written using the standard Python ``logging`` package.
 Many of the OpenMDAO modules will write to the log file to record errors,
 warnings, debugging information, etc.  The format of the message is:
