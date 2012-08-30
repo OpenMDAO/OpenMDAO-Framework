@@ -794,6 +794,7 @@ class Component(Container):
             groups = [(HasConstraints, HasEqConstraints, HasIneqConstraints),
                       (HasObjective, HasObjectives)]
             matches = {}
+            tset = set(target._delegates_.keys())
             # should be safe assuming only one delegate of each type here, since
             # multiples would simply overwrite each other
             for tname, tdel in target._delegates_.items():

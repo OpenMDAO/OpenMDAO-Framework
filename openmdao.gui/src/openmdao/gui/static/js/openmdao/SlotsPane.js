@@ -25,7 +25,7 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
         jQuery.each(json, function(idx,slot) {
             if (figures[slot.name]) {
                 // update existing slot figure
-                figures[slot.name].setValue(slot.value);
+                figures[slot.name].setState(slot.filled);
             }
             else {
                 // create a new slot figure

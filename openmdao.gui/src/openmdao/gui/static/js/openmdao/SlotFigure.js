@@ -7,7 +7,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
      ***********************************************************************/
 
     var self = this,
-        id = 'SlotFigure-'+(pathname.replace('.','-')),
+        id = 'SlotFigure-'+pathname.replace(/\./g,'-'),
         slotDiv = '<div class="SlotFigure" style="margin:10px;clear:both;" />',
         slotSVG = '<svg height="50" width="100">'
                 + '    <rect height="50" width="100" rx="15" ry="15" style="stroke-width:2; fill:white" />'
@@ -93,7 +93,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
      *  protected
      ***********************************************************************/
 
-    this.setValue = function(value) {
+    this.setState = function(value) {
         var r = fig.find('rect'),
             n = fig.find('#name'),
             k = fig.find('#klass'),
@@ -150,7 +150,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
     };
 
     // set initial state & return it
-    this.setValue(slot.value);
+    this.setState(slot.filled);
     return fig;
 };
 

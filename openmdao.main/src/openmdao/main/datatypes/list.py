@@ -65,7 +65,7 @@ class List(Enthought_List):
             valtypes = []
             for val in value:
                 valtypes.append(type(val).__name__)
-            slot_attr['value'] = valtypes
+            slot_attr['filled'] = valtypes
 
         return attr, slot_attr
     

@@ -129,11 +129,11 @@ class Slot(Variable):
         slot_attr['name'] = name
 
         if value is None:
-            slot_attr['value'] = None
+            slot_attr['filled'] = None
         elif value is []:
-            slot_attr['value'] = []
+            slot_attr['filled'] = []
         else:
-            slot_attr['value'] = type(value).__name__
+            slot_attr['filled'] = type(value).__name__
 
         slot_attr['klass'] = io_attr['type']
         slot_attr['containertype'] = 'singleton'

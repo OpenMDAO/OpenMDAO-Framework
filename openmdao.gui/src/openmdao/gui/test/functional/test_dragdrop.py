@@ -765,7 +765,13 @@ def release(chain):
 
 def check_highlighting(element, browser, should_highlight=True, message='Element'):
     '''check to see that the background-color of the element is rgb(207, 214, 254)'''
+    elid = element.get_attribute('id')
     style = element.get_attribute('style')
+    print 'highlight el:',elid,style
+    if elid.find('SlotFigure') == 0:
+        rect = element.find_element_by_xpath("./svg/rect")
+        print 'highlight rect:',rect
+#        fill = element.find_element_by_xpath("..").get_attribute('fill')
     highlighted = ('background-color: rgb(207, 214, 254)' in style) \
                 or('highlighted.png' in style)
     eq(highlighted, should_highlight, message +
