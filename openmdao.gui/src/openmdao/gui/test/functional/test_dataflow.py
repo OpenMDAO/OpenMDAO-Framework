@@ -168,6 +168,7 @@ def _test_connect(browser):
     # Verify outputs.
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     editor = comp2.editor_page()
+    editor.move(-100, 0)
     eq(editor.dialog_title, 'Connectable: top.comp2')
     outputs = editor.get_outputs()
     expected = [
@@ -348,6 +349,7 @@ def _test_driverflows(browser):
     # While only driver flows are displayed, check on context menu.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.input_edit_driver('top.driver')
+    editor.move(-100, 0)
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [

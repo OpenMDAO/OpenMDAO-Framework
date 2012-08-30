@@ -279,6 +279,7 @@ def _test_slots(browser):
     NotifyDialog(browser, top.port).close()
 
     #refresh
+    time.sleep(1.0)  # give it a second to update the figure
     comp = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
 
     #check for class change
@@ -509,6 +510,7 @@ def _test_drop_onto_layered_div(browser):
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city', vehicle_name)
     component_editor = sim_EPA_city_driver.editor_page()
+    component_editor.move(-100,0)
     component_editor.show_workflow()
 
     # Check to make sure we have the expected number of
@@ -603,9 +605,10 @@ def slot_reset(browser, workspace_page, editor=None, metamodel=None, remove_old=
 
     #open the 'edit' dialog on metamodel
     editor = metamodel.editor_page(False)
+    editor.move(-100,0)
     editor.show_slots()
 
-    resize_editor(browser, workspace_page, editor)
+#    resize_editor(browser, workspace_page, editor)
 
     #find the slots (this is both the drop target and highlight area)
     slot_id = 'SlotFigure-%s-%s'
@@ -765,15 +768,14 @@ def release(chain):
 
 def check_highlighting(element, browser, should_highlight=True, message='Element'):
     '''check to see that the background-color of the element is rgb(207, 214, 254)'''
-    elid = element.get_attribute('id')
-    style = element.get_attribute('style')
-    print 'highlight el:',elid,style
-    if elid.find('SlotFigure') == 0:
-        rect = element.find_element_by_xpath("./svg/rect")
-        print 'highlight rect:',rect
-#        fill = element.find_element_by_xpath("..").get_attribute('fill')
+    if 'SlotFigure' in element.get_attribute('class'):
+        rect = element.find_element_by_css_selector('rect')
+        style = rect.get_attribute('style')
+    else:
+        style = element.get_attribute('style')
     highlighted = ('background-color: rgb(207, 214, 254)' in style) \
-                or('highlighted.png' in style)
+                or ('highlighted.png' in style) \
+                or ('fill: #cfd6fe' in style)
     eq(highlighted, should_highlight, message +
         (' did not highlight (and should have) ' if should_highlight else
          ' highlighed (and should not have) ')
