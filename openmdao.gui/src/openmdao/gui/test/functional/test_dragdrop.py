@@ -723,13 +723,22 @@ def put_assembly_on_grid(browser, workspace_page):
 def put_element_on_grid(browser, workspace_page, element_str):
     '''find and get the 'assembly', and the div for the grid object'''
 
-    assembly = workspace_page.find_library_button(element_str)
-    grid = browser.find_element(*(By.XPATH, '//div[@id="-dataflow"]'))
+    for retry in range(3):
+        try:
+            assembly = workspace_page.find_library_button(element_str)
+            chain = ActionChains(browser)
+            chain.click_and_hold(assembly)
+            chain.move_by_offset(-100, 0).perform()
+        except StaleElementReferenceException:
+            if retry < 2:
+                logging.warning('put_element_on_grid %s:'
+                                ' StaleElementReferenceException', element_str)
+            else:
+                raise
+        else:
+            break
 
-    chain = ActionChains(browser)
-    chain.click_and_hold(assembly)
-    chain.move_by_offset(-100, 0).perform()
-
+    grid = browser.find_element_by_xpath('//div[@id="-dataflow"]')
     check_highlighting(grid, browser, True, "Grid")
     release(chain)
 
