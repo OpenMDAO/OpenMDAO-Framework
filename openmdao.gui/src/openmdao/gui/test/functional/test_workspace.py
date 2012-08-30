@@ -56,12 +56,12 @@ def _test_editfile(browser):
     dlg = workspace_page.new_file_dialog()
     dlg.set_text(file1)
     dlg.click_ok()
-    time.sleep(0.5)
+    time.sleep(2)  # Wait for background animation to complete.
     file2 = 'test2.py'
     dlg = workspace_page.new_file_dialog()
     dlg.set_text(file2)
     dlg.click_ok()
-    time.sleep(1.0)
+    time.sleep(2)  # Wait for background animation to complete.
 
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
@@ -112,9 +112,7 @@ def _test_palette_update(browser):
                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
                                                 'optimization_unconstrained.py')
-
     # add first file from workspace
-    workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
 
     # Open code editor.and add second file from there
@@ -740,6 +738,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
+    time.sleep(0.5)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
     eq(properties.is_visible, False)

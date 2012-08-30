@@ -245,6 +245,7 @@ def _test_connections(browser):
     # disconnect transmission
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
+    time.sleep(0.5)
 
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')

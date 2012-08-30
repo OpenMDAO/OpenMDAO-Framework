@@ -27,6 +27,129 @@ from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
+<<<<<<< HEAD
+=======
+# use this to keep track of project classes that have been instantiated
+# so far, so we can determine if we need to force a Project save & reload
+_instantiated_classes = set()
+_instclass_lock = Lock()
+
+def _register_inst(typname):
+    global _instantiated_classes
+    with _instclass_lock:
+        _instantiated_classes.add(typname)
+
+def text_to_node(text):
+    """Given a python source string, return the corresponding AST node. The outer
+    Module node is removed so that the node corresponding to the given text can
+    be added to an existing AST.
+    """
+    modnode = ast.parse(text, 'exec')
+    if len(modnode.body) == 1:
+        return modnode.body[0]
+    return modnode.body
+
+class CtorInstrumenter(ast.NodeTransformer):
+    """All __init__ calls will be replaced with a call to a wrapper function
+    that records the call by calling _register_inst(typename) before creating
+    the instance.
+    """
+    def __init__(self):
+        super(CtorInstrumenter, self).__init__()
+    
+    def visit_ClassDef(self, node):
+        text = None
+        for stmt in node.body:
+            if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
+                stmt.name = '__%s_orig_init__' % node.name # __init__ was found - rename it to __orig_init__
+                break 
+        else: # no __init__ found, make one
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    super(%s, self).__init__(*args, **kwargs)
+""" % node.name
+        if text is None: # class has its own __init__ (name has been changed to __orig_init__)
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    self.__%s_orig_init__(*args, **kwargs)
+""" % node.name
+        node.body = [text_to_node(text)]+node.body
+        return node
+
+
+class ProjFinder(object):
+    """A finder class for custom imports from an OpenMDAO project. In order for this
+    to work, an entry must be added to sys.path of the form top_dir+'.prj', where top_dir
+    is the top directory of the project where python files are kept.
+    """
+    def __init__(self, path):
+        """When path has the form mentioned above (top_dir+'.prj'), this
+        returns a ProjFinder instance that will be used to locate modules within the
+        project.
+        """
+        if path.endswith('.prj'):
+            self.projdir = path.rsplit('.',1)[0]
+            if os.path.isdir(self.projdir):
+                return
+        raise ImportError("can't import %s" % path)
+
+    def find_module(self, modpath, path=None):
+        """This looks within the project for the specified module, returning a loader
+        if the module is found, and None if it isn't.
+        """
+        path = find_module(modpath, path=[self.projdir])
+        if path is not None:
+            return ProjLoader(modpath, self.projdir)
+    
+    
+class ProjLoader(object):
+    """This is the import loader for files within an OpenMDAO project.  We use it to instrument
+    the imported files so we can keep track of what classes have been instantiated so we know
+    when a project must be saved and reloaded.
+    """
+    def __init__(self, modpath, projpath):
+        self.path = find_module(modpath, path=[projpath])
+        self.ispkg = isinstance(self.path, basestring) and os.path.basename(self.path) == '__init__.py'
+        
+    def translate(self, node):
+        """Take the specified AST and translate it into the instrumented version."""
+        node = CtorInstrumenter().visit(node)
+        node.body = [
+            ast.copy_location(
+                text_to_node('from openmdao.gui.consoleserver import _register_inst'),node)
+            ]+node.body
+        return node
+    
+    def get_code(self, modpath):
+        """Opens the file, compiles it into an AST and then translates it into the instrumented
+        version before compiling that into bytecode.
+        """
+        with open(self.path, 'r') as f:
+            contents = f.read()
+            if not contents.endswith('\n'):
+                contents += '\n'
+            root = ast.parse(contents, filename=self.path, mode='exec')
+            return compile(self.translate(root), self.path, 'exec')
+
+    def load_module(self, modpath):
+        """Creates a new module if one doesn't exist already, and then updates the
+        dict of that module based on the contents of the instrumented module file.
+        """
+        code = self.get_code(modpath)
+        mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
+        mod.__file__ = self.path
+        mod.__loader__ = self
+        if self.ispkg:
+            mod.__path__ = []
+            mod.__package__ = modpath
+        else:
+            mod.__package__ = modpath.rpartition('.')[0]
+        exec(code, mod.__dict__)
+        return mod
+
+>>>>>>> 8f25aa27b92182be1e7662438ba9143218c8955e
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
         performs maintenance on root level containers/assemblies and
@@ -88,6 +211,7 @@ class ConsoleServer(cmd.Cmd):
         try:
             publish('components', self.get_components())
             publish('', {'Dataflow': self.get_dataflow('')})
+            publish('', {'Workflow': self.get_workflow('')})
         except Exception as err:
             self._error(err, sys.exc_info())
         else:
@@ -425,7 +549,7 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(dataflow)
 
     def get_workflow(self, pathname):
-        flow = {}
+        flows = []
         if pathname:
             drvr, root = self.get_container(pathname)
             # allow for request on the parent assembly
@@ -437,11 +561,13 @@ class ConsoleServer(cmd.Cmd):
                     flow = drvr.get_workflow()
                 except Exception, err:
                     self._error(err, sys.exc_info())
+                flows.append(flow)
         else:
             for k, v in self.proj.items():
                 if is_instance(v, Assembly):
                     v = v.get('driver')
                 if is_instance(v, Driver):
+                    flow = {}
                     flow['pathname'] = v.get_pathname()
                     flow['type'] = type(v).__module__ + '.' + type(v).__name__
                     flow['workflow'] = []
@@ -463,7 +589,8 @@ class ConsoleServer(cmd.Cmd):
                                 'type':     type(comp).__module__ + '.' + type(comp).__name__,
                                 'valid':    comp.is_valid()
                               })
-        return jsonpickle.encode(flow)
+                    flows.append(flow)
+        return jsonpickle.encode(flows)
 
     def get_attributes(self, pathname):
         attr = {}
