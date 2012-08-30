@@ -83,13 +83,13 @@ class CtorInstrumenter(ast.NodeTransformer):
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     super(%s, self).__init__(*args, **kwargs)
-            """ % node.name
+""" % node.name
         if text is None: # class has its own __init__ (name has been changed to __orig_init__)
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     self.__%s_orig_init__(*args, **kwargs)
-            """ % node.name
+""" % node.name
         node.body = [text_to_node(text)]+node.body
         return node
 
