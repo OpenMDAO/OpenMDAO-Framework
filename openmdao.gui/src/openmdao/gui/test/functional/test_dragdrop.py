@@ -33,19 +33,8 @@ def _test_drop_on_driver(browser):
     print "running _test_drop_on_driver..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    #find and get the 'comnindriver', 'top', and 'driver' objects
-    conmindriver = workspace_page.find_library_button('CONMINdriver')
-    top = workspace_page.get_dataflow_figure('top')
-    driver_element = workspace_page.get_dataflow_figure('driver')
-
-    div = getDropableElements(driver_element)[0]
-    chain = drag_element_to(browser, conmindriver, div, True)
-    check_highlighting(driver_element('content_area').element, browser, True, "Driver's content_area")
-    release(chain)
-
-    # brings up a confirm dialog for replacing the existing driver.
-    dialog = ConfirmationPage(top)
-    dialog.click_ok()
+    # replace the 'top' assembly driver with a CONMINdriver
+    replace_driver(browser, workspace_page, 'top', 'CONMINdriver')
 
     # Check to see that the content area for the driver is now CONMINdriver
     driver_element = workspace_page.get_dataflow_figure('driver')
@@ -252,8 +241,8 @@ def _test_slots(browser):
     execcomp = workspace_page.find_library_button('ExecComp')
 
     ##################################################
-    # First part of test: Drag and drop ExecComp from the Library to
-    #  onto the recorder slot of a MetaModel. This should fail.
+    # First part of test: Drag and drop ExecComp from the Library
+    # onto the recorder slot of a MetaModel. This should fail.
     ##################################################
     #drag one success and one failure onto slots
     #failure:
@@ -262,6 +251,7 @@ def _test_slots(browser):
     slot_id = 'SlotFigure-%s-%s'
 
     #refresh
+    time.sleep(1.0)  # give it a second to update the figure
     caserec = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
 
     #check for class change
@@ -269,10 +259,10 @@ def _test_slots(browser):
         "Component dropped into CaseRecorder (should not have)")
 
     ##################################################
-    # Second part of test: Drag and drop ExecComp from the Library to
-    #  onto the model ( IComponent)  slot of a MetaModel. This should be successful
-    #  even though a dialog will popup with this notification message:
-    #     RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
+    # Second part of test: Drag and drop ExecComp from the Library onto the
+    # model (IComponent) slot of a MetaModel. This should be successful even
+    # though a dialog will popup with this notification message:
+    #   RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
     ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
 
@@ -317,6 +307,54 @@ def _test_slots(browser):
     print "_test_slots complete."
 
 
+def _test_list_slot(browser):
+    """ this test uses a DOEdriver to test dropping on slots, specifically for
+    dropping onto a list slot, which the DOEdriver happens to contain one of
+    """
+    print "running _test_list_slot..."
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # replace the 'top' assembly driver with a DOEdriver
+    replace_driver(browser, workspace_page, 'top', 'DOEdriver')
+
+    #open the object editor dialog for the DOEdriver
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(False)
+    editor.move(-100, 0)
+    editor.show_slots()
+
+    # get the slot figures
+    slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'recorders')
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # drop a DumpCaseRecorder onto the recorders slot
+    workspace_page.set_library_filter('ICaseRecorder')
+    case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
+    slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+
+    # TODO: FIX THE DAMN UPDATE BUG
+
+    #refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    #check for class change
+    eq(True, ("filled" in recorders_slot.get_attribute('class')),
+        "DumpCaseRecorder did not drop into CaseRecorder")
+
+    # TODO: check that recorders fig now has one filled and one empty rect
+    # TODO: check that the klass text is now DumpCaseRecorder
+
+    # drop another CaseRecorder onto the recorders slot
+    case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
+    slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+
+    # TODO: check that recorders fig now has two filled and one empty rect
+    # TODO: check that the klass text is now DumpCaseRecorder, CSVCaseRecorder
+
+    print "_test_list_slot complete."
+
+
 def _test_simple_component_to_workflow(browser):
     print "running _test_simple_component_to_workflow..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
@@ -326,8 +364,6 @@ def _test_simple_component_to_workflow(browser):
                                                 'paraboloid.py')
 
     # add first file from workspace
-
-    #  timeout...
     workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
 
@@ -510,7 +546,7 @@ def _test_drop_onto_layered_div(browser):
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city', vehicle_name)
     component_editor = sim_EPA_city_driver.editor_page()
-    component_editor.move(-100,0)
+    component_editor.move(-100, 0)
     component_editor.show_workflow()
 
     # Check to make sure we have the expected number of
@@ -605,10 +641,10 @@ def slot_reset(browser, workspace_page, editor=None, metamodel=None, remove_old=
 
     #open the 'edit' dialog on metamodel
     editor = metamodel.editor_page(False)
-    editor.move(-100,0)
+    editor.move(-100, 0)
     editor.show_slots()
 
-#    resize_editor(browser, workspace_page, editor)
+    #resize_editor(browser, workspace_page, editor)
 
     #find the slots (this is both the drop target and highlight area)
     slot_id = 'SlotFigure-%s-%s'
@@ -794,6 +830,22 @@ def getDropableElements(dataflow_figure):
     # add back 'top_left' 'bottom_left' at some point. right now that test fails
     arr = ['content_area', 'header', 'footer', 'bottom_right', 'top_right']
     return [dataflow_figure(area).element for area in arr]
+
+
+def replace_driver(browser, workspace_page, assembly_name, driver_type):
+    #find and get the 'comnindriver', 'top', and 'driver' objects
+    newdriver = workspace_page.find_library_button(driver_type)
+    assembly = workspace_page.get_dataflow_figure(assembly_name)
+    driver_element = workspace_page.get_dataflow_figure('driver')
+
+    div = getDropableElements(driver_element)[0]
+    chain = drag_element_to(browser, newdriver, div, True)
+    check_highlighting(driver_element('content_area').element, browser, True, "Driver's content_area")
+    release(chain)
+
+    # brings up a confirm dialog for replacing the existing driver.
+    dialog = ConfirmationPage(assembly)
+    dialog.click_ok()
 
 
 if __name__ == '__main__':
