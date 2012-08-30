@@ -56,6 +56,7 @@
 
 
         ArrayEditor : function(args) {
+	    debug.info(args)
 	    var var_name = args.item['name'];
 	    var grid = args.grid;
 	    var var_item = args.item;

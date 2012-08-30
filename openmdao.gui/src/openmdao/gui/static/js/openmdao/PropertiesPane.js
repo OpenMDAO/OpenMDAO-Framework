@@ -74,6 +74,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             //need to be highlighted
             var editableCells = {};
             jQuery.each(properties, function(index, value){
+                console.log(properties);
                 if("connected" in value){
                     cellCssStyles = ""
                     
