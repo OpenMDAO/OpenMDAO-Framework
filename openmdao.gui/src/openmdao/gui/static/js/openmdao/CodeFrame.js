@@ -290,9 +290,13 @@ openmdao.CodeFrame = function(id,model) {
         newfile.setUndoManager(new UndoManager());
         newfile.setMode(mode);
         newfile.on('change', function(evt) {
-            if (! sessions[fname_nodot][3]) {
+            if (sessions[fname_nodot][0].getValue() != contents) {
                 renameTab("#"+fname_nodot, filepath+"*");
                 sessions[fname_nodot][3] = true;
+            }
+            else {
+                renameTab("#"+fname_nodot, filepath);
+                sessions[fname_nodot][3] = false;
             }
         });
         editor.setSession(newfile);
