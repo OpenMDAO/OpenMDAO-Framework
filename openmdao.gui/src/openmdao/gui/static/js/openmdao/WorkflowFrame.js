@@ -21,7 +21,11 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
         }
         else {
             if (message[1].hasOwnProperty('Workflow')) {
-                pane.loadData(message[1].Workflow);
+                var workflow = message[1].Workflow;
+                if (typeof workflow === 'string') {
+                    workflow = jQuery.parseJSON(workflow);
+                }
+                pane.loadData(workflow);
             }
         }
     }
@@ -37,11 +41,11 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
 
     /** set the pathname of the object for which to display the workflow */
     this.showWorkflow = function(path) {
+        // if not already showing workflow for this pathname
         if (path !== self.pathname) {
             if (self.pathname !== false) {
                 model.removeListener(self.pathname, handleMessage);
             }
-            // if not already showing workflow for this pathname
             self.pathname = path;
             self.setTitle('Workflow: '+path);
             pane.showWorkflow(path);

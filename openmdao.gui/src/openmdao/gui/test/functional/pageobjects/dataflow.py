@@ -1,13 +1,17 @@
+import logging
 import time
 
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
+from selenium.common.exceptions import StaleElementReferenceException
+
 from basepageobject import BasePageObject, TMO
 from elements import GenericElement, ButtonElement, TextElement
 from component import ComponentPage, DriverPage, PropertiesPage, AssemblyPage
 from connections import ConnectionsPage
+
 
 class DataflowFigure(BasePageObject):
     """ Represents elements within a dataflow figure. """
@@ -24,8 +28,6 @@ class DataflowFigure(BasePageObject):
     bottom_right = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomRight'))
     footer = GenericElement((By.CLASS_NAME, 'DataflowFigureFooter'))
 
-
-
     # Context menu.
     edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
     properties_button  = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
@@ -41,7 +43,6 @@ class DataflowFigure(BasePageObject):
     # Port context menus.
     edit_connections   = ButtonElement((By.XPATH, "../div/a[text()='Edit Connections']"))
     edit_driver        = ButtonElement((By.XPATH, "../div/a[text()='Edit Driver']"))
-
 
     @property
     def pathname(self):
@@ -154,4 +155,91 @@ class DataflowFigure(BasePageObject):
         chain.perform()
         time.sleep(0.5)
         self(name).click()
+
+
+def find_dataflow_figures(page):
+    """ Return dataflow figure elements in `page`. """
+    root = page.root or page.browser
+    time.sleep(0.5)  # Pause for stable display.
+    return root.find_elements_by_class_name('DataflowFigure')
+
+
+def find_dataflow_figure(page, name, prefix=None, retries=5):
+    """ Return :class:`DataflowFigure` for `name` in `page`. """
+    root = page.root or page.browser
+    for retry in range(retries):
+        time.sleep(0.5)  # Pause for stable display.
+        figures = root.find_elements_by_class_name('DataflowFigure')
+        if not figures:
+            continue
+        fig_name = None
+        for figure in figures:
+            page.browser.implicitly_wait(1)
+            try:
+                header = figure.find_elements_by_class_name('DataflowFigureHeader')
+                if len(header) == 0:
+                    # the outermost figure (globals) has no header or name
+                    if name == '' and prefix is None:
+                        fig = DataflowFigure(page.browser, page.port, figure)
+                        return fig
+                    else:
+                        continue
+                fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
+            except StaleElementReferenceException:
+                logging.warning('get_dataflow_figure:'
+                                ' StaleElementReferenceException')
+            else:
+                if fig_name == name:
+                    fig = DataflowFigure(page.browser, page.port, figure)
+                    if prefix is not None:
+                        if prefix:
+                            fig.pathname = '%s.%s' % (prefix, name)
+                        else:
+                            fig.pathname = name
+                    return fig
+            finally:
+                page.browser.implicitly_wait(TMO)
+    return None
+
+
+def find_dataflow_component_names(page):
+    """ Return names of dataflow components in `page`. """
+    root = page.root or page.browser
+    names = []
+
+    # Assume there should be at least 1, wait for number to not change.
+    n_found = 0
+    for retry in range(10):
+        time.sleep(0.5)  # Pause for stable display.
+        dataflow_component_headers = \
+            root.find_elements_by_class_name('DataflowFigureHeader')
+        if dataflow_component_headers:
+            n_headers = len(dataflow_component_headers)
+            if n_found:
+                if n_headers == n_found:
+                    return [h.text for h in dataflow_component_headers]
+            n_found = n_headers
+    else:
+        logging.error('get_dataflow_component_names: n_found %s', n_found)
+        return names
+
+    #for i in range(len(dataflow_component_headers)):
+        #for retry in range(10):  # This has had issues...
+            #try:
+                #names.append(root.find_elements_by_class_name('DataflowFigureHeader')[i].text)
+            #except StaleElementReferenceException:
+                #logging.warning('get_dataflow_component_names:'
+                                #' StaleElementReferenceException')
+            #except IndexError:
+                #logging.warning('get_dataflow_component_names:'
+                                #' IndexError for i=%s, headers=%s',
+                                #i, len(dataflow_component_headers))
+            #else:
+                #break
+
+    #if len(names) != len(dataflow_component_headers):
+        #logging.error('get_dataflow_component_names:'
+                      #' expecting %d names, got %s',
+                      #len(dataflow_component_headers), names)
+    #return names
 
