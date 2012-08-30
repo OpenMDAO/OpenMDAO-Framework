@@ -186,7 +186,7 @@ openmdao.CodeFrame = function(id,model) {
         debug.info(jqXHR);
         debug.info(errorThrown);
         if (jqXHR.status != 409) {
-            openmdao.Util.notify(textStatus, 'File Error', 'file-error');
+            openmdao.Util.notify(jqXHR.responseXML, 'File Error', 'file-error');
         }
     }
 
