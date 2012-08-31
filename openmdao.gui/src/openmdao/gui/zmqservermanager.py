@@ -3,6 +3,7 @@ import sys
 import traceback
 
 from openmdao.main.zmqrpc import ZMQ_RPC
+from openmdao.main.publisher import Publisher, publish
 from openmdao.util.network import get_unused_ip_port
 from openmdao.gui.zmqserver import ZMQServer
 from openmdao.gui.zmqstreamserver import ZMQStreamServer
