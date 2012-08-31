@@ -966,7 +966,15 @@ class Container(SafeHasTraits):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
         else:
-            obj = getattr(self, path, Missing)
+            # TODO: fix this...
+            if '[' in path:
+                path,idx = path.replace(']','').split('[')
+                if path and idx.isdigit():
+                    obj = getattr(self, path, Missing)[int(idx)]
+                else:
+                    return self._get_failed(path, index)
+            else:
+                obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
             return get_indexed_value(obj, '', index)

@@ -45,9 +45,16 @@ openmdao.SlotFigure=function(model,pathname,slot) {
     };
 
     /** open object editor on double click */
-    fig.dblclick(function() {
+    fig.dblclick(function(e) {
         if (fig.hasClass('filled')) {
-            var editor = new openmdao.ObjectFrame(model, pathname);
+            if (slot.containertype === 'singleton') {
+                new openmdao.ObjectFrame(model, pathname);
+            }
+            else {
+                figOffset = fig.offset();
+                idx = Math.floor((e.pageX - figOffset.left) / 100);
+                new openmdao.ObjectFrame(model, pathname+'['+idx+']');
+            }
         }
     });
 
