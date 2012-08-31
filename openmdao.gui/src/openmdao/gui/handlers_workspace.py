@@ -1,6 +1,8 @@
 import sys
 import os
 import re
+import ast
+
 import jsonpickle
 
 from tornado import web
@@ -122,8 +124,8 @@ class ComponentHandler(ReqHandler):
             cserver = self.get_server()
             cserver.add_component(name, type, parent)
         except Exception, e:
-            publish('console_errors', str(e))
             result = sys.exc_info()
+            cserver._error(e, result)
         self.content_type = 'text/html'
         self.write(result)
 
@@ -277,13 +279,20 @@ class FileHandler(ReqHandler):
         if isFolder:
             self.write(cserver.ensure_dir(filename))
         else:
-            force = int(self.get_argument('force', default=0))
-            if not force and filename.endswith('.py'):
-                ret = cserver.file_has_instances(filename)
-                if ret:
-                    self.send_error(409)  # user will be prompted to overwrite classes
-                    return
             contents = self.get_argument('contents', default='')
+            force = int(self.get_argument('force', default=0))
+            if filename.endswith('.py'):
+                try:
+                    ast.parse(contents, filename=filename, mode='exec')
+                except SyntaxError as syn_err:
+                    cserver.send_pub_msg(str(syn_err), 'file_errors')
+                    self.send_error(400)
+                    return
+                if not force:
+                    ret = cserver.file_has_instances(filename)
+                    if ret:
+                        self.send_error(409)  # user will be prompted to overwrite classes
+                        return
             self.write(str(cserver.write_file(filename, contents)))
 
     @web.authenticated
