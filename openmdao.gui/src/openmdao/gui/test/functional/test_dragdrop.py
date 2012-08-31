@@ -385,7 +385,7 @@ def _test_list_slot(browser):
     eq(True, ("filled" in recorders_slot.get_attribute('class')),
         "CSVCaseRecorder did not drop into recorders slot")
 
-    # check that recorders fig now has one filled and one empty rect
+    # check that recorders fig now has two filled and one empty rect
     svg_elems = recorders_slot.find_elements_by_css_selector('svg')
     eq(len(svg_elems),3)
 
@@ -413,7 +413,33 @@ def _test_list_slot(browser):
     eq(klass, 'ICaseRecorder[]',
         "Unfilled slot element should show the correct klass (ICaseRecorder[])")
 
-    # TODO: run it and makes sure it doesn't bomb (it will as of this writing)
+    # drop another CaseRecorder onto the recorders slot
+    case_recorder = workspace_page.find_library_button('DBCaseRecorder')
+    slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check that recorders fig now has four total rects
+    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
+    eq(len(svg_elems),4)
+
+    # remove an item from the list (the only context menu option)
+    menu_item_remove = recorders_slot.find_element_by_css_selector('ul li');
+    chain = ActionChains(browser)
+    chain.move_to_element(svg_elems[0])
+    chain.context_click(recorders_slot).perform()
+    menu_item_remove.click()
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check that recorders fig now has only three rect
+    # TODO: check that the correct one was removed
+    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
+    eq(len(svg_elems),3)
 
     print "_test_list_slot complete."
 

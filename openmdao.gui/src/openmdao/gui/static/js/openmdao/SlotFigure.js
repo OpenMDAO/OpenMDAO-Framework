@@ -26,12 +26,17 @@ openmdao.SlotFigure=function(model,pathname,slot) {
     fig.width(100);
 
     // create context menu
-    contextMenu.append(jQuery('<li>Remove Contents</li>').click(function(ev) {
+    contextMenu.append(jQuery('<li>Remove Contents</li>').click(function(e) {
         if (fig.hasClass('filled')) {
-            var slotParent = openmdao.Util.getPath(pathname),
-                cmd = (slot.containertype === 'list' ?
-                    pathname+' =  []' :
-                    pathname+' =  None');
+            var figOffset, idx, cmd;
+            if (slot.containertype === 'list') {
+                figOffset = fig.offset();
+                idx = Math.floor((e.pageX - figOffset.left) / 100);
+                cmd = 'del '+pathname+'['+ idx+']';
+            }
+            else {
+                 cmd = pathname+' =  None';
+            }
             model.issueCommand(cmd);
         }
         else {
@@ -51,8 +56,8 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 new openmdao.ObjectFrame(model, pathname);
             }
             else {
-                figOffset = fig.offset();
-                idx = Math.floor((e.pageX - figOffset.left) / 100);
+                var figOffset = fig.offset();
+                    idx = Math.floor((e.pageX - figOffset.left) / 100);
                 new openmdao.ObjectFrame(model, pathname+'['+idx+']');
             }
         }

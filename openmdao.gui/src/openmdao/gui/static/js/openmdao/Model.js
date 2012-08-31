@@ -76,7 +76,7 @@ openmdao.Model=function() {
         }
         var topic = message[0],
             callbacks = [];
-        debug.info('Model.handlePubMessage()',topic,message);
+        //debug.info('Model.handlePubMessage()',topic,message);
         if (subscribers.hasOwnProperty(message[0]) && subscribers[message[0]].length > 0) {
             callbacks = subscribers[message[0]].slice();  // Need a copy.
             for (i = 0; i < callbacks.length; i++) {
