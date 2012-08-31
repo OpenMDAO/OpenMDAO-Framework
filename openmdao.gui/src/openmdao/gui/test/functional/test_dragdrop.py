@@ -323,49 +323,97 @@ def _test_slots(browser):
 
 
 def _test_list_slot(browser):
-    """ this test uses a DOEdriver to test dropping on slots, specifically for
-    dropping onto a list slot, which the DOEdriver happens to contain one of
-    """
     print "running _test_list_slot..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    # replace the 'top' assembly driver with a DOEdriver
-    replace_driver(browser, workspace_page, 'top', 'DOEdriver')
-
-    #open the object editor dialog for the DOEdriver
+    #open the object editor dialog for the driver
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(False)
     editor.move(-100, 0)
     editor.show_slots()
 
-    # get the slot figures
+    # get the recorders slot figure
     slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'recorders')
     recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check that slot is not filled
+    eq(False, ("filled" in recorders_slot.get_attribute('class')),
+        "recorders slot is showing as filled when it should not be")
 
     # drop a DumpCaseRecorder onto the recorders slot
     workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
 
-    # TODO: FIX THE DAMN UPDATE BUG
-
-    #refresh
+    # refresh
     time.sleep(1.0)  # give it a second to update the figure
     recorders_slot = browser.find_element(By.ID, slot_id)
 
-    #check for class change
+    # check for class change (should now be fille)
     eq(True, ("filled" in recorders_slot.get_attribute('class')),
-        "DumpCaseRecorder did not drop into CaseRecorder")
+        "DumpCaseRecorder did not drop into recorders slot")
 
-    # TODO: check that recorders fig now has one filled and one empty rect
-    # TODO: check that the klass text is now DumpCaseRecorder
+    # check that recorders fig now has one filled and one empty rect
+    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
+    eq(len(svg_elems),2)
+
+    rect = svg_elems[0].find_element_by_css_selector('rect')
+    eq(True, ('stroke: #008000' in rect.get_attribute('style')),
+        "Filled slot element should be green")
+
+    klass= svg_elems[0].find_element_by_css_selector('text#klass').text
+    eq(klass, 'DumpCaseRecorder',
+        "Filled slot element should show the correct type (DumpCaseRecorder)")
+
+    rect = svg_elems[1].find_element_by_css_selector('rect')
+    eq(True, ('stroke: #ff0000' in rect.get_attribute('style')),
+        "Unfilled slot element should be red")
+
+    klass= svg_elems[1].find_element_by_css_selector('text#klass').text
+    eq(klass, 'ICaseRecorder[]',
+        "Unfilled slot element should show the correct klass (ICaseRecorder[])")
 
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
     slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
 
-    # TODO: check that recorders fig now has two filled and one empty rect
-    # TODO: check that the klass text is now DumpCaseRecorder, CSVCaseRecorder
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check for class change (it should not change... still filled)
+    eq(True, ("filled" in recorders_slot.get_attribute('class')),
+        "CSVCaseRecorder did not drop into recorders slot")
+
+    # check that recorders fig now has one filled and one empty rect
+    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
+    eq(len(svg_elems),3)
+
+    rect = svg_elems[0].find_element_by_css_selector('rect')
+    eq(True, ('stroke: #008000' in rect.get_attribute('style')),
+        "Filled slot element should be green")
+
+    klass= svg_elems[0].find_element_by_css_selector('text#klass').text
+    eq(klass, 'DumpCaseRecorder',
+        "Filled slot element should show the correct type (DumpCaseRecorder)")
+
+    rect = svg_elems[1].find_element_by_css_selector('rect')
+    eq(True, ('stroke: #008000' in rect.get_attribute('style')),
+        "Filled slot element should be green")
+
+    klass= svg_elems[1].find_element_by_css_selector('text#klass').text
+    eq(klass, 'CSVCaseRecorder',
+        "Filled slot element should show the correct type (CSVCaseRecorder)")
+
+    rect = svg_elems[2].find_element_by_css_selector('rect')
+    eq(True, ('stroke: #ff0000' in rect.get_attribute('style')),
+        "Unfilled slot element should be red")
+
+    klass= svg_elems[2].find_element_by_css_selector('text#klass').text
+    eq(klass, 'ICaseRecorder[]',
+        "Unfilled slot element should show the correct klass (ICaseRecorder[])")
+
+    # TODO: run it and makes sure it doesn't bomb (it will as of this writing)
 
     print "_test_list_slot complete."
 
@@ -841,7 +889,13 @@ def release(chain):
 def check_highlighting(element, browser, should_highlight=True, message='Element'):
     '''check to see that the background-color of the element is rgb(207, 214, 254)'''
     if 'SlotFigure' in element.get_attribute('class'):
-        rect = element.find_element_by_css_selector('rect')
+        # a slot figure is a div containing a ul element (the context menu) and
+        # one or more svg elements, each of which contains a rect and two texts
+        # the rect fill style is what we need to check for highlighting
+        svg = element.find_elements_by_css_selector('svg')[-1]
+        rect = svg.find_element_by_css_selector('rect')
+        #name = svg.find_element_by_css_selector('text#name').text
+        #klass= svg.find_element_by_css_selector('text#klass').text
         style = rect.get_attribute('style')
     else:
         style = element.get_attribute('style')
