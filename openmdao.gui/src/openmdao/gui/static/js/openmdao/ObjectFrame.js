@@ -4,7 +4,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ObjectFrame = function(model,pathname,tabName) {
     // TODO: hack alert... mangling pathname
     openmdao.ObjectFrame.prototype.init.call(this,
-        'CE-'+pathname.replace(/\./g,'-'),'Object: '+pathname);
+        'CE-'+pathname.replace(/(\.|\[|\])/g,'-'),'Object: '+pathname);
 
     this.initiallySelected = tabName || 'Inputs';
 
@@ -41,7 +41,7 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
                 }
             }
             // Don't show empty slots tab.
-            else if (name != 'Slots' || val.length) {
+            else if (name !== 'Slots' || val.length) {
                 if (name.length > 12) {
                     tabname = name.substr(0,12);
                 }

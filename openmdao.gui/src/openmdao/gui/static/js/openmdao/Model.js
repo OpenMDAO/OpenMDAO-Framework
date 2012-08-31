@@ -41,6 +41,8 @@ openmdao.Model=function() {
 
     /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
+        //debug.info("handling out message:");
+        //debug.info(message);
         var callbacks = subscribers.outstream;
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
@@ -53,12 +55,17 @@ openmdao.Model=function() {
                 }
             }
         }
+        //else {
+        //    debug.info("no callbacks for out message!");
+        //}
     }
 
     /** handle a published message, which has a topic
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
+        //debug.info("pub message:");
+        //debug.info(message)
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
@@ -71,7 +78,7 @@ openmdao.Model=function() {
             callbacks = [];
         debug.info('Model.handlePubMessage()',topic,message);
         if (subscribers.hasOwnProperty(message[0]) && subscribers[message[0]].length > 0) {
-            callbacks = subscribers[message[0]].slice();   // Need a copy.?
+            callbacks = subscribers[message[0]].slice();  // Need a copy.
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
                     callbacks[i](message);

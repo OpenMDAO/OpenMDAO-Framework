@@ -225,15 +225,6 @@ def _test_connections(browser):
     eq(conn_page.target_component, '<Assembly>')
     eq(conn_page.check_variable_figures(), 0)
 
-    # one connection between transmission and engine (RPM)
-    conn_page.set_source_component('transmission')
-    conn_page.set_target_component('engine')
-    eq(conn_page.source_variable, '')
-    eq(conn_page.target_variable, '')
-    eq(len(conn_page.get_variable_figures()), 2)
-    eq(sorted(conn_page.get_variable_names()),
-       ['RPM', 'RPM'])
-
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
@@ -243,9 +234,19 @@ def _test_connections(browser):
     eq(sorted(conn_page.get_variable_names()),
        ['engine_torque', 'engine_weight', 'mass_engine', 'torque'])
 
+    # one connection between transmission and engine (RPM)
+    conn_page.set_source_component('transmission')
+    conn_page.set_target_component('engine')
+    eq(conn_page.source_variable, '')
+    eq(conn_page.target_variable, '')
+    eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['RPM', 'RPM'])
+
     # disconnect transmission
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
+    time.sleep(0.5)
 
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
