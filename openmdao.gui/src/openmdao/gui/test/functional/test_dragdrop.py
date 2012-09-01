@@ -274,18 +274,7 @@ def _test_slots(browser):
 
     #refresh
     time.sleep(1.0)  # give it a second to update the figure
-    for retry in range(3):
-        labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-        try:
-            comp = get_slot_target(labels, 'Component')
-        except StaleElementReferenceException:
-            if retry < 2:
-                logging.warning('get_slot_target(Component):'
-                                ' StaleElementReferenceException')
-            else:
-                raise
-        else:
-            break
+    comp = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
 
     #check for class change
     eq(True, ("filled" in comp.get_attribute('class')),
