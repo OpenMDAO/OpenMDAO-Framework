@@ -10,12 +10,17 @@ openmdao.SlotFigure=function(model,pathname,slot) {
         id = 'SlotFigure-'+pathname.replace(/\./g,'-'),
         slotDiv = '<div class="SlotFigure" style="margin:10px;clear:both;" />',
         slotSVG = '<svg height="50" width="100">'
-                + '    <rect height="50" width="100" rx="15" ry="15" style="stroke-width:2; fill:white" />'
+                + '    <rect height="50" width="100" rx="15" ry="15";" />'
                 + '    <text id="name" x="50" y="20" text-anchor="middle">Name</text>'
                 + '    <text id="klass" x="50" y="40" font-style="italic" text-anchor="middle">Klass</text>'
                 + '</svg>',
         fig = jQuery(slotDiv)
             .append(slotSVG),
+        // '#26B3F7'=light blue, '#0b3d95'=darker blue
+        filledRectCSS = {'stroke-width':4, 'stroke-dasharray':'none', 'stroke':'#0b3d95', 'fill': 'gray'},
+        filledTextCSS = {'fill': 'black'},
+        unfilledRectCSS = {'stroke-width':2, 'stroke-dasharray':8, 'stroke':'gray', 'fill': 'none'},
+        unfilledTextCSS = {'fill': 'gray'},
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
             .appendTo(fig);
 
@@ -70,7 +75,12 @@ openmdao.SlotFigure=function(model,pathname,slot) {
 
     /** Unhighlight figure when it can no longer accept a drop */
     fig.unhighlightAsDropTarget=function() {
-        fig.find('rect').filter(':last').css({'fill': 'white'});
+        if (fig.hasClass('filled') && slot.containertype === 'singleton') {
+            fig.find('rect').filter(':last').css(filledRectCSS);
+        }
+        else {
+            fig.find('rect').filter(':last').css(unfilledRectCSS);
+        }
     };
 
     // set up as drop target
@@ -110,15 +120,14 @@ openmdao.SlotFigure=function(model,pathname,slot) {
             n = fig.find('#name'),
             k = fig.find('#klass'),
             filled = (slot.containertype === 'singleton' && value !== null) ||
-                     (slot.containertype === 'list' && value.length > 0),
-            color = filled ? 'green' : 'red';
+                     (slot.containertype === 'list' && value.length > 0);
 
         if (filled) {
-            fig.addClass('filled');  // TODO: set colors etc via CSS?
+            fig.addClass('filled');
             if (slot.containertype === 'singleton') {
-                r.css({'stroke-dasharray':'none', 'stroke':color});
-                n.css({'fill': color});
-                k.css({'fill': color}).text(value);
+                r.css(filledRectCSS);
+                n.css(filledTextCSS);
+                k.css(filledTextCSS).text(value);
             }
             else if (slot.containertype === 'list') {
                 // rebuild figure with a rect for each filled list entry
@@ -133,14 +142,14 @@ openmdao.SlotFigure=function(model,pathname,slot) {
                 fig.append(slotSVG);  // add empty spot for adding to list
 
                 // set all to filled
-                r = fig.find('rect').css({'stroke-dasharray':'none', 'stroke':color});
-                n = fig.find('#name').css({'fill': color});
-                k = fig.find('#klass').css({'fill': color});
+                r = fig.find('rect').css(filledRectCSS);
+                n = fig.find('#name').css(filledTextCSS);
+                k = fig.find('#klass').css(filledTextCSS);
 
                 // set last to unfilled
-                r.filter(':last').css({'stroke-dasharray':3, 'stroke':'red'});
-                n.filter(':last').css({'fill': 'red'}).text(slot.name);
-                k.filter(':last').css({'fill': 'red'}).text(slot.klass+'[]');
+                r.filter(':last').css(unfilledRectCSS);
+                n.filter(':last').css(unfilledTextCSS).text(slot.name);
+                k.filter(':last').css(unfilledTextCSS).text(slot.klass+'[]');
 
                 fig.width(100*(value.length+1));
             }
@@ -150,13 +159,13 @@ openmdao.SlotFigure=function(model,pathname,slot) {
         }
         else {
             fig.removeClass('filled');
-            r.css({'stroke-dasharray':3, 'stroke':color});
-            n.css({'fill': color}).text(slot.name);
+            r.css(unfilledRectCSS);
+            n.css(unfilledTextCSS).text(slot.name);
             if (slot.containertype === 'list') {
-                k.css({'fill': color}).text(slot.klass+'[]');
+                k.css(unfilledTextCSS).text(slot.klass+'[]');
             }
             else {
-                k.css({'fill': color}).text(slot.klass);
+                k.css(unfilledTextCSS).text(slot.klass);
             }
         }
     };

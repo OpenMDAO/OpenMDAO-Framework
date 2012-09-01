@@ -347,16 +347,16 @@ def _test_list_slot(browser):
     eq(len(svg_elems),2)
 
     rect = svg_elems[0].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #008000' in rect.get_attribute('style')),
-        "Filled slot element should be green")
+    eq(True, ('stroke: #0b3d95' in rect.get_attribute('style')),
+        "Filled slot element should be outlined in blue")
 
     klass= svg_elems[0].find_element_by_css_selector('text#klass').text
     eq(klass, 'DumpCaseRecorder',
         "Filled slot element should show the correct type (DumpCaseRecorder)")
 
     rect = svg_elems[1].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #ff0000' in rect.get_attribute('style')),
-        "Unfilled slot element should be red")
+    eq(True, ('stroke: #808080' in rect.get_attribute('style')),
+        "Unfilled slot element should be outlined in gray")
 
     klass= svg_elems[1].find_element_by_css_selector('text#klass').text
     eq(klass, 'ICaseRecorder[]',
@@ -379,24 +379,24 @@ def _test_list_slot(browser):
     eq(len(svg_elems),3)
 
     rect = svg_elems[0].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #008000' in rect.get_attribute('style')),
-        "Filled slot element should be green")
+    eq(True, ('stroke: #0b3d95' in rect.get_attribute('style')),
+        "Filled slot element should be outlined in blue")
 
     klass= svg_elems[0].find_element_by_css_selector('text#klass').text
     eq(klass, 'DumpCaseRecorder',
         "Filled slot element should show the correct type (DumpCaseRecorder)")
 
     rect = svg_elems[1].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #008000' in rect.get_attribute('style')),
-        "Filled slot element should be green")
+    eq(True, ('stroke: #0b3d95' in rect.get_attribute('style')),
+        "Filled slot element should be outlined in blue")
 
     klass= svg_elems[1].find_element_by_css_selector('text#klass').text
     eq(klass, 'CSVCaseRecorder',
         "Filled slot element should show the correct type (CSVCaseRecorder)")
 
     rect = svg_elems[2].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #ff0000' in rect.get_attribute('style')),
-        "Unfilled slot element should be red")
+    eq(True, ('stroke: #808080' in rect.get_attribute('style')),
+        "Unfilled slot element should be outlined in gray")
 
     klass= svg_elems[2].find_element_by_css_selector('text#klass').text
     eq(klass, 'ICaseRecorder[]',
