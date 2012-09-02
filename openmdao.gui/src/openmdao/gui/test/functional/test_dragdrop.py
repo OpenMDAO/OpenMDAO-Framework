@@ -338,29 +338,23 @@ def _test_list_slot(browser):
     time.sleep(1.0)  # give it a second to update the figure
     recorders_slot = browser.find_element(By.ID, slot_id)
 
-    # check for class change (should now be fille)
+    # check for class change (should now be filled)
     eq(True, ("filled" in recorders_slot.get_attribute('class')),
         "DumpCaseRecorder did not drop into recorders slot")
 
     # check that recorders fig now has one filled and one empty rect
-    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
-    eq(len(svg_elems),2)
-
-    rect = svg_elems[0].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #0b3d95' in rect.get_attribute('style')),
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects),2)
+    eq(True, ('stroke: #0b3d95' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
-
-    klass= svg_elems[0].find_element_by_css_selector('text#klass').text
-    eq(klass, 'DumpCaseRecorder',
-        "Filled slot element should show the correct type (DumpCaseRecorder)")
-
-    rect = svg_elems[1].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #808080' in rect.get_attribute('style')),
+    eq(True, ('stroke: #808080' in rects[1].get_attribute('style')),
         "Unfilled slot element should be outlined in gray")
 
-    klass= svg_elems[1].find_element_by_css_selector('text#klass').text
-    eq(klass, 'ICaseRecorder[]',
-        "Unfilled slot element should show the correct klass (ICaseRecorder[])")
+    klass = recorders_slot.find_elements_by_css_selector('text#klass')
+    eq(klass[0].text, 'DumpCaseRecorder',
+        "Filled slot element should show the correct type (DumpCaseRecorder)")
+    eq(klass[1].text, 'ICaseRecorder',
+        "Unfilled slot element should show the correct klass (ICaseRecorder)")
 
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
@@ -375,32 +369,22 @@ def _test_list_slot(browser):
         "CSVCaseRecorder did not drop into recorders slot")
 
     # check that recorders fig now has two filled and one empty rect
-    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
-    eq(len(svg_elems),3)
-
-    rect = svg_elems[0].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #0b3d95' in rect.get_attribute('style')),
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects),3)
+    eq(True, ('stroke: #0b3d95' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
-
-    klass= svg_elems[0].find_element_by_css_selector('text#klass').text
-    eq(klass, 'DumpCaseRecorder',
-        "Filled slot element should show the correct type (DumpCaseRecorder)")
-
-    rect = svg_elems[1].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #0b3d95' in rect.get_attribute('style')),
+    eq(True, ('stroke: #0b3d95' in rects[1].get_attribute('style')),
         "Filled slot element should be outlined in blue")
-
-    klass= svg_elems[1].find_element_by_css_selector('text#klass').text
-    eq(klass, 'CSVCaseRecorder',
-        "Filled slot element should show the correct type (CSVCaseRecorder)")
-
-    rect = svg_elems[2].find_element_by_css_selector('rect')
-    eq(True, ('stroke: #808080' in rect.get_attribute('style')),
+    eq(True, ('stroke: #808080' in rects[2].get_attribute('style')),
         "Unfilled slot element should be outlined in gray")
 
-    klass= svg_elems[2].find_element_by_css_selector('text#klass').text
-    eq(klass, 'ICaseRecorder[]',
-        "Unfilled slot element should show the correct klass (ICaseRecorder[])")
+    klass = recorders_slot.find_elements_by_css_selector('text#klass')
+    eq(klass[0].text, 'DumpCaseRecorder',
+        "Filled slot element should show the correct type (DumpCaseRecorder)")
+    eq(klass[1].text, 'CSVCaseRecorder',
+        "Filled slot element should show the correct type (CSVCaseRecorder)")
+    eq(klass[2].text, 'ICaseRecorder',
+        "Unfilled slot element should show the correct klass (ICaseRecorder)")
 
     # drop another CaseRecorder onto the recorders slot
     case_recorder = workspace_page.find_library_button('DBCaseRecorder')
@@ -411,13 +395,13 @@ def _test_list_slot(browser):
     recorders_slot = browser.find_element(By.ID, slot_id)
 
     # check that recorders fig now has four total rects
-    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
-    eq(len(svg_elems),4)
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects),4)
 
     # remove an item from the list (the only context menu option)
     menu_item_remove = recorders_slot.find_element_by_css_selector('ul li');
     chain = ActionChains(browser)
-    chain.move_to_element(svg_elems[0])
+    chain.move_to_element_with_offset(recorders_slot, 25, 25)
     chain.context_click(recorders_slot).perform()
     menu_item_remove.click()
 
@@ -427,8 +411,8 @@ def _test_list_slot(browser):
 
     # check that recorders fig now has only three rect
     # TODO: check that the correct one was removed
-    svg_elems = recorders_slot.find_elements_by_css_selector('svg')
-    eq(len(svg_elems),3)
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects),3)
 
     print "_test_list_slot complete."
 
@@ -907,10 +891,7 @@ def check_highlighting(element, browser, should_highlight=True, message='Element
         # a slot figure is a div containing a ul element (the context menu) and
         # one or more svg elements, each of which contains a rect and two texts
         # the rect fill style is what we need to check for highlighting
-        svg = element.find_elements_by_css_selector('svg')[-1]
-        rect = svg.find_element_by_css_selector('rect')
-        #name = svg.find_element_by_css_selector('text#name').text
-        #klass= svg.find_element_by_css_selector('text#klass').text
+        rect = element.find_elements_by_css_selector('svg rect')[-1]
         style = rect.get_attribute('style')
     else:
         style = element.get_attribute('style')
