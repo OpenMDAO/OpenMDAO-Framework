@@ -26,8 +26,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
         fig = slot.containertype === 'singleton' ?
                 jQuery(slotDiv).append(slotSVG) :
                 jQuery(slotDiv).append(lbrkSVG).append(slotSVG).append(commSVG).append(rbrkSVG),
-        // '#26B3F7'=light blue, '#0b3d95'=darker blue
-        filledRectCSS = {'stroke-width':4, 'stroke-dasharray':'none', 'stroke':'#0b3d95', 'fill': 'gray'},
+        filledRectCSS = {'stroke-width':4, 'stroke-dasharray':'none', 'stroke':'#0b93d5', 'fill': 'gray'},
         filledTextCSS = {'fill': 'black'},
         unfilledRectCSS = {'stroke-width':2, 'stroke-dasharray':8, 'stroke':'gray', 'fill': 'none'},
         unfilledTextCSS = {'fill': 'gray'},

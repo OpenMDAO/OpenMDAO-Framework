@@ -345,7 +345,7 @@ def _test_list_slot(browser):
     # check that recorders fig now has one filled and one empty rect
     rects = recorders_slot.find_elements_by_css_selector('rect')
     eq(len(rects),2)
-    eq(True, ('stroke: #0b3d95' in rects[0].get_attribute('style')),
+    eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
     eq(True, ('stroke: #808080' in rects[1].get_attribute('style')),
         "Unfilled slot element should be outlined in gray")
@@ -371,9 +371,9 @@ def _test_list_slot(browser):
     # check that recorders fig now has two filled and one empty rect
     rects = recorders_slot.find_elements_by_css_selector('rect')
     eq(len(rects),3)
-    eq(True, ('stroke: #0b3d95' in rects[0].get_attribute('style')),
+    eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
-    eq(True, ('stroke: #0b3d95' in rects[1].get_attribute('style')),
+    eq(True, ('stroke: #0b93d5' in rects[1].get_attribute('style')),
         "Filled slot element should be outlined in blue")
     eq(True, ('stroke: #808080' in rects[2].get_attribute('style')),
         "Unfilled slot element should be outlined in gray")
