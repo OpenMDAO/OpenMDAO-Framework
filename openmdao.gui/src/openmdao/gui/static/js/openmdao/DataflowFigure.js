@@ -350,6 +350,24 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
         var model = this.openmdao_model,
             name = this.name,
             pathname = this.pathname;
+
+        this.outputPort.onDragstart = function(x, y) {
+            var dragStarted = draw2d.OutputPort.prototype.onDragstart.call(this, x, y);
+            // Fix connectionLine's z-index.
+            if (dragStarted) {
+                this.parentNode.workflow.connectionLine.setZOrder(this.getZOrder());
+            }
+            return dragStarted;
+        };
+
+        this.inputPort.onDragEnter = function(port) {
+            draw2d.InputPort.prototype.onDragEnter.call(this, port);
+            // Fix corona's z-index.
+            if (this.corona) {
+                this.corona.setZOrder(this.getZOrder());
+            }
+        };
+
         this.outputPort.createCommand = function(request) {
             if(request.getPolicy() === draw2d.EditPolicy.CONNECT) {
                 if(request.source.parentNode.id===request.target.parentNode.id){
