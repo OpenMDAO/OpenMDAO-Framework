@@ -705,8 +705,8 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
 
     var flow_colors = {
         data:       new draw2d.Color(100,100,100),
-        parameter:  new draw2d.Color(200,000,000),
-        constraint: new draw2d.Color(000,200,000),
+        parameter:  new draw2d.Color(000,000,200),
+        constraint: new draw2d.Color(000,000,200),
         objective:  new draw2d.Color(000,000,200)
     };
 
@@ -720,6 +720,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
 
         if (!con) {
             con = new draw2d.Connection();
+            con.setLineWidth(2);
             con.setCoronaWidth(10);
             con.setColor(flow_colors[type]);
 
