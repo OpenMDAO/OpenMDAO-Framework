@@ -25,6 +25,7 @@ ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
 
+
 def replace_uuid(msg):
     """ Replace UUID in `msg` with ``UUID``. """
     pattern = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
@@ -36,22 +37,23 @@ def rosen_suzuki(x0, x1, x2, x3):
     return x0**2 - 5.*x0 + x1**2 - 5.*x1 + \
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
 
+
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
     x0 = Float(1., iotype='in')
-    y0 = Float(1., iotype='in') #used just to get ParameterGroup
+    y0 = Float(1., iotype='in')  # used just to get ParameterGroup
     x1 = Float(1., iotype='in')
     x2 = Float(1., iotype='in')
     x3 = Float(1., iotype='in')
     err_event = Event()
     stop_exec = Bool(False, iotype='in')
     rosen_suzuki = Float(0., iotype='out')
-    
+
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
         self._raise_err = False
-    
+
     def _err_event_fired(self):
         self._raise_err = True
 
@@ -62,6 +64,7 @@ class DrivenComponent(Component):
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
+
 
 class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
@@ -111,10 +114,10 @@ class TestCaseDOE(unittest.TestCase):
         logging.debug('test_sequential_errors')
         self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True, retry=True)
-        
+
     def test_sequential_errors_abort(self):
         self.run_cases(sequential=True, forced_errors=True)
-        
+
     def test_no_parameter(self):
         logging.debug('')
         logging.debug('test_no_parameter')
@@ -123,7 +126,7 @@ class TestCaseDOE(unittest.TestCase):
         except AttributeError as err:
             self.assertEqual(str(err), "driver: Can't add parameter"
                              " 'foobar.blah' because it doesn't exist.")
-            
+
     def test_event_removal(self):
         self.model.driver.add_event('driven.err_event')
         lst = self.model.driver.get_events()
@@ -131,7 +134,7 @@ class TestCaseDOE(unittest.TestCase):
         self.model.driver.remove_event('driven.err_event')
         lst = self.model.driver.get_events()
         self.assertEqual(lst, [])
-        
+
     def test_param_removal(self):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
@@ -160,7 +163,7 @@ class TestCaseDOE(unittest.TestCase):
         self.model.driver.recorders = [results]
         self.model.driver.error_policy = 'RETRY'
         self.model.driver.case_outputs.append('driven.sum_z')
-        
+
         self.model.run()
 
         self.assertEqual(len(results),
@@ -193,28 +196,28 @@ class TestCaseDOE(unittest.TestCase):
 
         self.model.driver.recorders = []
         self.model.run()
-        
+
     def test_output_error(self):
-        class Dummy(Component): 
+        class Dummy(Component):
             x = Float(0, iotype="in")
             y = Float(0, iotype="out")
             z = Float(0, iotype="out")
-            
-            def execute(self): 
-                self.y = 10+self.x
-                
-        class Analysis(Assembly): 
-            
+
+            def execute(self):
+                self.y = 10 + self.x
+
+        class Analysis(Assembly):
+
             def configure(self):
                 self.add('d', Dummy())
                 self.add('driver', DOEdriver())
-                self.driver.DOEgenerator = FullFactorial(2) 
+                self.driver.DOEgenerator = FullFactorial(2)
                 self.driver.recorders = [DumpCaseRecorder()]
-                self.driver.add_parameter('d.x', low=0, high=10)     
+                self.driver.add_parameter('d.x', low=0, high=10)
                 self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
-                
+
         a = Analysis()
-        
+
         try:
             a.run()
         except Exception as err:
@@ -224,10 +227,9 @@ class TestCaseDOE(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-
     def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
-        
+
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
@@ -249,10 +251,10 @@ class TestCaseDOE(unittest.TestCase):
         ff.num_parameters = 4
         for case in self.model.driver._get_cases():
             print case
-        
+
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
-        
+
         for case in self.model.driver.recorders[0].cases:
             if forced_errors:
                 expected = 'driven \(UUID.[0-9]+-1\): Forced error'
@@ -261,7 +263,7 @@ class TestCaseDOE(unittest.TestCase):
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))
+                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]))
 
     def test_rerun(self):
         logging.debug('')
@@ -298,7 +300,7 @@ class MyModel2(Assembly):
         for name in ['x1', 'x2', 'x3']:
             self.driver.add_parameter("driven.%s" % name,
                                       low=-10., high=10., scaler=20., adder=10.)
-                
+
 
 class TestCaseNeighborhoodDOE(unittest.TestCase):
     """ Test NeighborhoodDOEdriver. """
@@ -330,10 +332,10 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         logging.debug('test_sequential_errors')
         self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True, retry=True)
-        
+
     def test_sequential_errors_abort(self):
         self.run_cases(sequential=True, forced_errors=True)
-        
+
     def test_no_parameter(self):
         logging.debug('')
         logging.debug('test_no_parameter')
@@ -342,7 +344,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         except AttributeError as err:
             self.assertEqual(str(err), "driver: Can't add parameter"
                              " 'foobar.blah' because it doesn't exist.")
-            
+
     def test_event_removal(self):
         self.model.driver.add_event('driven.err_event')
         lst = self.model.driver.get_events()
@@ -350,7 +352,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         self.model.driver.remove_event('driven.err_event')
         lst = self.model.driver.get_events()
         self.assertEqual(lst, [])
-        
+
     def test_param_removal(self):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
@@ -379,10 +381,10 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         self.model.driver.recorders = [results]
         self.model.driver.error_policy = 'RETRY'
         self.model.driver.case_outputs.append('driven.sum_z')
-        
+
         self.model.run()
 
-        self.assertEqual(len(results), 1+self.model.driver.DOEgenerator.num_samples)
+        self.assertEqual(len(results), 1 + self.model.driver.DOEgenerator.num_samples)
         for case in results.cases:
             expected = "driver: Exception getting case outputs: " \
                        "driven \(UUID.[0-9]+-1\): " \
@@ -411,28 +413,28 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
 
         self.model.driver.recorders = []
         self.model.run()
-        
+
     def test_output_error(self):
-        class Dummy(Component): 
+        class Dummy(Component):
             x = Float(0, iotype="in")
             y = Float(0, iotype="out")
             z = Float(0, iotype="out")
-            
-            def execute(self): 
-                self.y = 10+self.x
-                
-        class Analysis(Assembly): 
-            
+
+            def execute(self):
+                self.y = 10 + self.x
+
+        class Analysis(Assembly):
+
             def configure(self):
                 self.add('d', Dummy())
                 self.add('driver', NeighborhoodDOEdriver())
-                self.driver.DOEgenerator = FullFactorial(2) 
+                self.driver.DOEgenerator = FullFactorial(2)
                 self.driver.recorders = [DumpCaseRecorder()]
-                self.driver.add_parameter('d.x', low=0, high=10)     
+                self.driver.add_parameter('d.x', low=0, high=10)
                 self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
-                
+
         a = Analysis()
-        
+
         try:
             a.run()
         except Exception as err:
@@ -442,10 +444,9 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-
     def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
-        
+
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
         self.model.driver.recorders = [results]
@@ -467,10 +468,10 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         ff.num_parameters = 4
         for case in self.model.driver._get_cases():
             print case
-        
+
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
-        
+
         for case in self.model.driver.recorders[0].cases:
             if forced_errors:
                 expected = 'driven \(UUID.[0-9]+-1\): Forced error'
@@ -479,11 +480,10 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s'%i] for i in range(4)]))                
-        
+                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]))
+
 
 if __name__ == "__main__":
     sys.argv.append('--cover-package=openmdao.lib.drivers')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

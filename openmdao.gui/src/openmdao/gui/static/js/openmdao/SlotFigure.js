@@ -8,7 +8,7 @@ openmdao.SlotFigure=function(model,pathname,slot) {
 
     var self = this,
         id = 'SlotFigure-'+pathname.replace(/\./g,'-'),
-        slotDiv = '<div class="SlotFigure" style="margin:10px;" />',
+        slotDiv = '<div class="SlotFigure" style="margin:10px; clear:both;" />',
         slotSVG = '<svg height="60" width="100">'
                 + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15";" />'
                 + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
@@ -32,14 +32,6 @@ openmdao.SlotFigure=function(model,pathname,slot) {
         unfilledTextCSS = {'fill': 'gray'},
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
             .appendTo(fig);
-
-    // list slots need their own row
-    if (slot.containertype === 'list') {
-        fig.css({'clear':'both'});
-    }
-    else {
-        fig.css({'float':'left'});
-    }
 
     // set name, id, tooltip and width
     fig.find('#name').text(slot.name);
