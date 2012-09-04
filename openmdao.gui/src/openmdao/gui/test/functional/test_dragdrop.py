@@ -315,11 +315,36 @@ def _test_list_slot(browser):
     print "running _test_list_slot..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    #open the object editor dialog for the driver
+    # replace the 'top' assembly driver with a DOEdriver
+    # (this additionally verifies that an issue with DOEdriver slots is fixed)
+    replace_driver(browser, workspace_page, 'top', 'DOEdriver')
+
+    # open the object editor dialog for the driver
     driver = workspace_page.get_dataflow_figure('driver', 'top')
     editor = driver.editor_page(False)
     editor.move(-100, 0)
     editor.show_slots()
+
+    # get the generator slot figure
+    slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'DOEgenerator')
+    generator_slot = browser.find_element(By.ID, slot_id)
+
+    # check that slot is not filled
+    eq(False, ("filled" in generator_slot.get_attribute('class')),
+        "generator slot is showing as filled when it should not be")
+
+    # drop a FullFactorial onto the generator slot
+    workspace_page.set_library_filter('DOEgenerator')
+    generator = workspace_page.find_library_button('FullFactorial')
+    slot_drop(browser, generator, generator_slot, True, 'generator')
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    generator_slot = browser.find_element(By.ID, slot_id)
+
+    # check for class change (should now be filled)
+    eq(True, ("filled" in generator_slot.get_attribute('class')),
+        "FullFactorial did not drop into generator slot")
 
     # get the recorders slot figure
     slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'recorders')
@@ -692,6 +717,7 @@ def closeout(projects_page, project_info_page, project_dict, workspace_page):
 def slot_drop(browser, element, slot, should_drop, message='Slot'):
     '''Drop an element on a slot'''
     chain = drag_element_to(browser, element, slot, should_drop)
+    time.sleep(1.0)  # give it a second to update the figure
     check_highlighting(slot, browser, should_highlight=should_drop,
                        message=message)
     release(chain)
