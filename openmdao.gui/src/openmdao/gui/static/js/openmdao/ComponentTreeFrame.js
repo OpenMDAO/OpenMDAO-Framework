@@ -107,6 +107,20 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                 }
             });
             jQuery('#'+id+' a').addClass("component"); // so that the WorkflowFigure droppable knows what to accept
+
+            /* add classes so that the items in the component tree are specific
+               to what they are: assembly, driver or component */
+            jQuery('#'+id+' li').each(function () {
+                if ( this.getAttribute("interfaces").indexOf("IAssembly") >= 0 ) {
+                    this.children[1].children[0].addClass( "jstree-assembly" ) ;
+                } else if ( this.getAttribute("interfaces").indexOf("IDriver") >= 0 ) {
+                    this.children[1].children[0].addClass( "jstree-driver" ) ;
+                } else if ( this.getAttribute("interfaces").indexOf("IComponent") >= 0 ) {
+                    this.children[1].children[0].addClass( "jstree-component" ) ;
+                }
+            });
+
+
         });
         // .one("reselect.jstree", function (e, data) { });
 
