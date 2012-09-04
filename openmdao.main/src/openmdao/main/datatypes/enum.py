@@ -8,7 +8,7 @@ __all__ = ["Enum"]
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Enum as TraitEnum
 
-from openmdao.main.variable import Variable
+from openmdao.main.variable import Variable, gui_excludes
 
 class Enum(Variable):
     """A variable wrapper for an enumeration, which is a variable that

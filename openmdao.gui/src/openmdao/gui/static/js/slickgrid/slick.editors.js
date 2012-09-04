@@ -70,7 +70,6 @@
             var $input;
             var defaultValue;
             var scope = this;
-            console.log(args);
             this.init = function() {
                 $input = $("<INPUT type=text class='editor-text' />")
                     .appendTo(args.container)

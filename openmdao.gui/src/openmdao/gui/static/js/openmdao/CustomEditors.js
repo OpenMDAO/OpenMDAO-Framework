@@ -3,6 +3,55 @@
 
     var customEditors = {
 
+        EnumEditor : function(args) {
+            var $select;
+            var defaultValue;
+	    var values = args.item.values;
+            var scope = this;
+
+            this.init = function() {
+                $select = $("<SELECT tabIndex='0' class='editor-yesno'/>");
+		for (var i = 0; i < values.length; i++) {$("<OPTION value='"+values[i]+"'>"+values[i]+"</OPTION>").appendTo($select);} 
+                $select.appendTo(args.container);
+                $select.focus();
+            };
+
+            this.destroy = function() {
+                $select.remove();
+            };
+
+            this.focus = function() {
+                $select.focus();
+            };
+
+            this.loadValue = function(item) {
+                defaultValue = item[args.column.field];
+                $select.val(defaultValue);
+                $select.select();
+            };
+
+            this.serializeValue = function() {
+                return $select.val()
+            };
+
+            this.applyValue = function(item,state) {
+                item[args.column.field] = state;
+            };
+           
+            this.isValueChanged = function() {
+                return ($select.val() != defaultValue);
+            };
+
+            this.validate = function() {
+                return {
+                    valid: true,
+                    msg: null
+                };
+            };
+
+            this.init();
+        },
+
         BoolEditor : function(args) {
             var $select;
             var defaultValue;
@@ -212,7 +261,6 @@
 		    
                     }
 		    new_state = new_state.join(", ");
-		    console.log(new_state);
 		    return new_state;
 			    }				
 		else {
