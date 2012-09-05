@@ -411,11 +411,13 @@ class ConsoleServer(cmd.Cmd):
             components = []
             for k, v in self.proj.items():
                 if is_instance(v, Component):
+                    inames = [cls.__name__
+                              for cls in list(implementedBy(v.__class__))]
                     components.append({'name': k,
                                        'pathname': k,
                                        'type': type(v).__name__,
                                        'valid': v.is_valid(),
-                                       'is_assembly': is_instance(v, Assembly),
+                                       'interfaces': inames,
                                        'python_id': id(v)
                                       })
             dataflow['components'] = components
