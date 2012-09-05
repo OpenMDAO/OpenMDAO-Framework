@@ -766,7 +766,7 @@ def closeout(projects_page, project_info_page, project_dict, workspace_page):
 
 def slot_drop(browser, element, slot, should_drop, message='Slot'):
     '''Drop an element on a slot'''
-    chain = drag_element_to(browser, element, slot, should_drop)
+    chain = drag_element_to(browser, element, slot, True)
     time.sleep(1.0)  # give it a second to update the figure
     check_highlighting(slot, browser, should_highlight=should_drop,
                        message=message)
@@ -965,7 +965,7 @@ def check_highlighting(element, browser, should_highlight=True, message='Element
     if 'SlotFigure' in element.get_attribute('class'):
         # a slot figure is a div containing a ul element (the context menu) and
         # one or more svg elements, each of which contains a rect and two texts
-        # the rect fill style is what we need to check for highlighting
+        # the last rect fill style is what we need to check for highlighting
         rect = element.find_elements_by_css_selector('svg rect')[-1]
         style = rect.get_attribute('style')
     else:
