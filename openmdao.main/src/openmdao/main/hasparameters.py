@@ -512,6 +512,31 @@ class HasParameters(object):
                 param.set(param.start, self._get_scope())
         self._parent._invalidate()
 
+    def set_parameter_by_name(self, name, value, case=None, scope=None): 
+        """Sets a single parameter by its name attribute.
+        
+        name: str
+            Name of the parameter. This is either the name alias given when
+            the parameter was added, or the variable path of the parameter's
+            target if no name was given.
+            
+        value: object (typically a float)
+            Value of the parameter to be set.
+            
+        case: Case (optional)
+            If supplied, the values will be associated with their corresponding
+            targets and added as inputs to the Case instead of being set directly
+            into the model.
+        """
+
+        param = self._parameters[name]
+        if case is None:
+            param.set(value, self._get_scope(scope))
+        else:
+            for target in param.targets:
+                case.add_input(target, value)
+            return case
+
     def set_parameters(self, values, case=None, scope=None): 
         """Pushes the values in the iterator 'values' into the corresponding 
         variables in the model.  If the 'case' arg is supplied, the values
