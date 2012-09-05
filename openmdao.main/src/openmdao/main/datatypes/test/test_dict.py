@@ -19,10 +19,10 @@ class DictTestCase(unittest.TestCase):
         # while here, let's test the get_attributes
         attrs = comp.get_attributes(True)
         attr = attrs['Inputs']
-        self.assertTrue( { 'key_type' : 'int',
+        self.assertTrue( { 'key_type' : 'Int',
                            'name' : 'arr',
                            'value' : {1:2.0},
-                           'value_type' : 'float',
+                           'value_type' : 'Float',
                            'valid' : True,
                            'connected' : '',
                            'type' : 'dict',
