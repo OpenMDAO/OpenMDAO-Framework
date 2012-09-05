@@ -141,7 +141,6 @@ class SlotTestCase(unittest.TestCase):
                          'filled': 0,
                          'klass': 'MyClass',
                          'desc': 'Stuff'} in slot_attrs)
-        print slot_attrs
         self.assertTrue({'name': 'dict_sock',
                          'interfaces': [],
                          'containertype': 'dict',
