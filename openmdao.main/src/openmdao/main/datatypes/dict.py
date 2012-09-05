@@ -18,6 +18,25 @@ class Dict(Enthought_Dict):
     
     implements(IVariable)
     
+    def __init__(self, key_trait = None, value_trait = None, value = None,
+                   items = True, iotype=None, desc=None, **metadata):
+
+        # Put iotype in the metadata dictionary
+        if iotype is not None:
+            metadata['iotype'] = iotype
+            
+        # Put desc in the metadata dictionary
+        if desc is not None:
+            metadata['desc'] = desc
+            
+        # save local copy of key and value trait
+        self.key_trait = key_trait
+        self.value_trait = value_trait
+            
+        super(Dict, self).__init__(key_trait, value_trait, value, 
+                                   items, **metadata)
+
+    
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. Dicts are containers that
@@ -47,6 +66,9 @@ class Dict(Enthought_Dict):
             if field not in gui_excludes:
                 attr[field] = meta[field]
         
+        attr['key_type'] = type(self.key_trait.trait_type).__name__
+        attr['value_type'] = type(self.value_trait.trait_type).__name__
+        
         # Handling for a List of Slots
         inner = trait.inner_traits[-1]
         if inner.is_trait_type(Slot):
@@ -61,6 +83,6 @@ class Dict(Enthought_Dict):
                                                           inner, meta)
             slot_attr['containertype'] = 'dict'
             slot_attr['filled'] = value.keys()
-        
+            
         return attr, slot_attr
     
