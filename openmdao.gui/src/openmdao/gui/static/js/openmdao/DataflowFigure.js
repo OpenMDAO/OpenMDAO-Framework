@@ -1,20 +1,33 @@
 var openmdao = ( openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
+openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces){
+    debug.info('DataflowFigure', pathname, type, interfaces);
     this.openmdao_model = model;
     this.pathname = pathname;
     this.name = openmdao.Util.getName(pathname);
     this.type = type || '';
     this.valid = valid;
-    this.maxmin = maxmin;
-    if (arguments.length < 5)  // Refresh doesn't pass all arguments.
-        this.maxmin = pathname == '' ? '' : '+'
+
+    if (arguments.length < 5) { // Refresh doesn't pass all arguments.
+        this.baseType = pathname === '' ? 'Component' : 'Assembly'
+    }
+    else {
+        if (interfaces.indexOf('IAssembly') >= 0)
+            this.baseType = 'Assembly';
+        else if (interfaces.indexOf('IDriver') >= 0)
+            this.baseType = 'Driver';
+        else
+            this.baseType = 'Component';
+    }
+    this.maxmin = this.baseType === 'Assembly' ? '+' : '';
 
     this.cornerWidth=15;
     this.cornerHeight=15;
 
     this.outputPort=null;
     this.inputPort=null;
+    this.fbOutputPort=null;
+    this.fbInputPort=null;
 
     draw2d.CompartmentFigure.call(this);
 
@@ -40,6 +53,7 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
 
     this.inputsFigure = null;
     this.outputsFigure = null;
+    this.fbOutputsFigure = null;
 
     this.figures = {};
     this.connections = {};
@@ -67,7 +81,6 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, maxmin){
         topic = pathname+'.exec_state';
         model.addListener(topic,this.setExecState.bind(this));
     }
-
 };
 
 openmdao.DataflowFigure.prototype=new draw2d.CompartmentFigure();
@@ -254,42 +267,22 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                 openmdao.drag_and_drop_manager.clearHighlightingDroppables() ;
                 openmdao.drag_and_drop_manager.clearDroppables() ;
 
-
-
                 var o = elm.data('corresponding_openmdao_object');
 
                 if ( o.maxmin != '' ) {
-                
                     openmdao.Util.promptForValue('Enter name for new '+droppedName,
                                                  function(name) {
                                                      model.addComponent(droppedPath,name,elm.data("pathname"));
-                                                 }
-                                                );
-                } else {
-
-
-                   openmdao.Util.confirm('Replace '+ elm.data("pathname") +' with ' + droppedName,
+                                                 });
+                }
+                else {
+                    openmdao.Util.confirm('Replace '+ elm.data("pathname") +' with ' + droppedName,
                         function() {
                             model.replaceComponent( elm.data("pathname"), droppedPath);
-                        }
-                    );
-
-
+                        });
                 }
-
             }
-        }
-                      ) ;
-
-
-
- 
-
-
-
-
-        
-        
+        }) ;
     }
 
     return item;
@@ -324,8 +317,6 @@ openmdao.DataflowFigure.prototype.unhighlightAsDropTarget=function(){
     // debug.info ("unhighlight", this.name ) ;
 };
 
-
-
 /** double clicking on figure brings up a component editor on the component */
 openmdao.DataflowFigure.prototype.onDoubleClick=function(){
     editor = new openmdao.ObjectFrame(this.openmdao_model,this.pathname);
@@ -347,11 +338,25 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
         this.outputPort.setCanDrag(true);
         this.outputPort.setId(this.pathname+"-output");
 
+        this.fbOutputPort=new draw2d.OutputPort();
+        this.fbOutputPort.setWorkflow(wkflw);
+        this.fbOutputPort.setName("fbOutput");
+        this.fbOutputPort.setCanDrag(true);
+        this.fbOutputPort.setId(this.pathname+"-fbOutput");
+
+        if (this.baseType === 'Driver') {
+            this.fbInputPort=new draw2d.InputPort();
+            this.fbInputPort.setWorkflow(wkflw);
+            this.fbInputPort.setName("fbInput");
+            this.fbInputPort.setCanDrag(false);
+            this.fbInputPort.setId(this.pathname+"-fbInput");
+        }
+
         var model = this.openmdao_model,
             name = this.name,
             pathname = this.pathname;
 
-        this.outputPort.onDragstart = function(x, y) {
+        var onDragstart = function(x, y) {
             var dragStarted = draw2d.OutputPort.prototype.onDragstart.call(this, x, y);
             // Fix connectionLine's z-index.
             if (dragStarted) {
@@ -359,16 +364,22 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
             }
             return dragStarted;
         };
+        this.outputPort.onDragstart = onDragstart;
+        this.fbOutputPort.onDragstart = onDragstart;
 
-        this.inputPort.onDragEnter = function(port) {
+        var onDragEnter = function(port) {
             draw2d.InputPort.prototype.onDragEnter.call(this, port);
             // Fix corona's z-index.
             if (this.corona) {
                 this.corona.setZOrder(this.getZOrder());
             }
         };
+        this.inputPort.onDragEnter = onDragEnter;
+        if (this.baseType === 'Driver') {
+            this.fbInputPort.onDragEnter = onDragEnter;
+        }
 
-        this.outputPort.createCommand = function(request) {
+        var createCommand = function(request) {
             if(request.getPolicy() === draw2d.EditPolicy.CONNECT) {
                 if(request.source.parentNode.id===request.target.parentNode.id){
                     return null;
@@ -382,16 +393,24 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
                 return null;
             }
         };
+        this.outputPort.createCommand = createCommand;
+        this.fbOutputPort.createCommand = createCommand;
 
         this.addPort(this.inputPort,this.width/2,0);
         this.addPort(this.outputPort,this.width+5,this.height/2);
+        this.addPort(this.fbOutputPort,-5,this.height/2);
+        if (this.baseType === 'Driver') {
+            this.addPort(this.fbInputPort,this.width/2,this.height);
+        }
     }
 };
 
 /** determine if either the input or output port is connected to anything */
 openmdao.DataflowFigure.prototype.isConnected=function(){
     return ((this.outputPort.getConnections().size > 0) ||
-            (this.inputPort.getConnections().size > 0));
+            (this.inputPort.getConnections().size > 0) ||
+            (this.fbOutputPort.getConnections().size > 0) ||
+            (this.fbInputPort && this.fbInputPort.getConnections().size > 0));
 };
 
 /** hook into drag start to detect click on max/min button */
@@ -433,6 +452,12 @@ openmdao.DataflowFigure.prototype.setDimension=function(w,h){
     }
     if (this.hasOwnProperty('inputPort') && this.inputPort!==null) {
         this.inputPort.setPosition(this.width/2,0);
+    }
+    if (this.hasOwnProperty('fbOutputPort') && this.fbOutputPort!==null) {
+        this.fbOutputPort.setPosition(-5,this.height/2);
+    }
+    if (this.hasOwnProperty('fbInputPort') && this.fbInputPort!==null) {
+        this.fbInputPort.setPosition(this.width/2,this.height);
     }
 };
 
@@ -587,6 +612,12 @@ openmdao.DataflowFigure.prototype.minimize=function(){
             self.outputsFigure = null;
         }
 
+        if (self.fbOutputsFigure) {
+            workflow.removeFigure(self.fbOutputsFigure);
+            self.removeChild(self.fbOutputsFigure);
+            self.fbOutputsFigure = null;
+        }
+
         self.setContent(self.contentHTML);
         self.setDimension(self.getMinWidth(),self.getMinHeight());
 
@@ -645,7 +676,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         var name = comp.name,
             type = comp.type,
             valid = comp.valid,
-            maxmin = comp.is_assembly ? '+' : '',
+            interfaces = comp.interfaces,
             precedence = idx,  // Used to maintain original ordering.
             fig = self.figures[name];
 
@@ -676,7 +707,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 figname = name;
             }
             fig = new openmdao.DataflowFigure(self.openmdao_model,
-                                              figname, type, valid, maxmin);
+                                              figname, type, valid, interfaces);
             fig.pythonID = comp.python_id;
             fig.precedence = precedence;
             self.figures[name] = fig;
@@ -703,10 +734,17 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         workflow.addFigure(self.outputsFigure,0,0);
     }
 
+    if (!self.fbOutputsFigure) {
+        self.fbOutputsFigure = new draw2d.Node();
+        self.fbOutputsFigure.html.style.border = 'none';
+        self.addChild(this.fbOutputsFigure);
+        workflow.addFigure(self.fbOutputsFigure,0,0);
+    }
+
     var flow_colors = {
         data:       new draw2d.Color(100,100,100),
-        parameter:  new draw2d.Color(200,000,000),
-        constraint: new draw2d.Color(000,200,000),
+        parameter:  new draw2d.Color(000,000,200),
+        constraint: new draw2d.Color(000,000,200),
         objective:  new draw2d.Color(000,000,200)
     };
 
@@ -720,13 +758,16 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
 
         if (!con) {
             con = new draw2d.Connection();
+            con.setLineWidth(2);
             con.setCoronaWidth(10);
             con.setColor(flow_colors[type]);
 
             if (src_name.length > 0) {
-                con.setSource(src_fig.getPort("output"));
-//                if (type != 'data')
-//                    con.setRouter(new draw2d.BezierConnectionRouter());
+                if (type === 'data' || type === 'parameter') {
+                    con.setSource(src_fig.getPort("output"));
+                } else {
+                    con.setSource(src_fig.getPort("fbOutput"));
+                }
                 con.setZOrder(self.getZOrder()+2);
             }
             else {
@@ -742,10 +783,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             }
 
             if (dst_name.length > 0) {
-                con.setTarget(dst_fig.getPort("input"));
+                if (type === 'data' || type === 'parameter') {
+                    con.setTarget(dst_fig.getPort("input"));
+                } else {
+                    con.setTarget(dst_fig.getPort("fbInput"));
+                }
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
-//                if (type != 'data')
-//                    con.setRouter(new draw2d.BezierConnectionRouter());
                 con.setZOrder(self.getZOrder()+2);
             }
             else {
@@ -754,7 +797,11 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 dst_port.setName(con_name);
                 dst_port.setCanDrag(false);
                 dst_port.setId(con_name);
-                self.outputsFigure.addPort(dst_port,0,0);
+                if (type === 'data') {
+                    self.outputsFigure.addPort(dst_port,0,0);
+                } else {
+                    self.fbOutputsFigure.addPort(dst_port,0,0);
+                }
                 con.setTarget(dst_port);
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                 con.setRouter(null);
@@ -881,14 +928,21 @@ openmdao.DataflowFigure.prototype.layout=function() {
             unconnected.push(fig);
         }
     });
+
     // Maintain original order in spite of replacements.
     connected.sort(compare);
     unconnected.sort(compare);
 
-    // add some room for incoming arrowheads
-    if ((this.drawDriverFlows) ||
-        (self.inputsFigure && self.inputsFigure.getPorts().size > 0)) {
-        y = y + self.cornerHeight;
+    // Add some room for incoming arrowheads.
+    if (connected.length > 0) {
+        var first = connected[0];
+        if (first.inputPort.getConnections().size > 0) {
+            y += this.cornerHeight;
+        }
+        if (first.fbOutputPort.getConnections().size > 0) {
+            x  += this.cornerWidth;
+            x0 += this.cornerWidth;
+        }
     }
 
     // connected components are laid out diagonally (top left to bottom right)
@@ -897,6 +951,14 @@ openmdao.DataflowFigure.prototype.layout=function() {
         x = x + fig.getWidth()  + margin;
         y = y + fig.getHeight() + margin;
     });
+
+    // Add some room for incoming arrowheads to a trailing driver.
+    if (connected.length > 0) {
+        var last = connected[connected.length-1];
+        if (last.fbInputPort && last.fbInputPort.getConnections().size > 0) {
+            y += this.cornerHeight;
+        }
+    }
 
     // unconnected components are laid out in rows
     x = x0 + margin;
@@ -934,7 +996,7 @@ openmdao.DataflowFigure.prototype.layout=function() {
             var srcY = src_port.getAbsoluteY(),
                 Y0 = self.outputsFigure.getAbsoluteY();
             dst_port.setPosition(0,srcY-Y0);
-      }
+        }
     });
 
     // layout parent to accomodate new size
@@ -980,14 +1042,37 @@ openmdao.DataflowFigure.prototype.resize=function(){
     width  = xmax-xmin+this.margin*2;
     height = ymax-ymin+this.margin*2 + this.cornerHeight;
 
-    if ((this.drawDriverFlows) ||
-        (this.inputsFigure && this.inputsFigure.getPorts().size > 0)) {
-        height = height + this.cornerHeight;
-    }
+    // Adjust for connections.
+    var connected = [],
+        unconnected = 0,
+        compare = function(fig1, fig2) { return fig1.precedence - fig2.precedence; };
 
-    if ((this.drawDriverFlows) ||
-        (this.outputsFigure && this.outputsFigure.getPorts().size > 0)) {
-        width = width + this.cornerWidth;
+    jQuery.each(this.figures, function(idx,fig) {
+        if (fig.isConnected()) {
+            connected.push(fig);
+        }
+        else {
+            unconnected += 1;
+        }
+    });
+    connected.sort(compare);
+    if (connected.length > 0) {
+        var first = connected[0];
+        if (first.inputPort.getConnections().size > 0) {
+            height += this.cornerHeight;
+        }
+        if (first.fbOutputPort.getConnections().size > 0) {
+            width += this.cornerWidth;
+        }
+        var last = connected[connected.length-1];
+        if (last.outputPort.getConnections().size > 0) {
+            width += this.cornerWidth;
+        }
+        if (unconnected.length === 0) {
+            if (last.fbInputPort && last.fbInputPort.getConnections().size > 0) {
+                height += this.cornerHeight;
+            }
+        }
     }
 
     this.setDimension(width,height);
@@ -1002,6 +1087,12 @@ openmdao.DataflowFigure.prototype.resize=function(){
         this.outputsFigure.setDimension(1, height - this.cornerHeight - this.margin);
         this.outputsFigure.setPosition(x0 + width - 2,
                                        y0 + this.cornerHeight);
+    }
+
+    if (this.fbOutputsFigure) {
+        this.fbOutputsFigure.setDimension(1, height - this.cornerHeight - this.margin);
+        this.fbOutputsFigure.setPosition(x0 + 2,
+                                         y0 + this.cornerHeight);
     }
 };
 
