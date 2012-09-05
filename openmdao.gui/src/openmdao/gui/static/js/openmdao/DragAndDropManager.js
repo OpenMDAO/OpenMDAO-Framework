@@ -254,19 +254,11 @@ openmdao.DragAndDropManager=function() {
         workflow_droppables.each(function(id, zindex) {
             var div = $(id),
                 div_object = jQuery(div),
-                o = div_object.data('corresponding_openmdao_object'),
-                dropped_parent = openmdao.Util.getPath(dropped_pathname),
-                target_pathname = div_object.data('pathname'),
-                target_parent = openmdao.Util.getPath(target_pathname);
+                o = div_object.data('corresponding_openmdao_object');
 
             if (id === max_id) {
-                if (dropped_parent === target_parent) {
-                    o.highlightAsDropTarget();
-                    openmdao.drag_and_drop_manager.drop_workflow_target = div_object;
-                }
-                else {
-                   openmdao.drag_and_drop_manager.drop_workflow_target = null;
-                }
+                o.highlightAsDropTarget();
+                openmdao.drag_and_drop_manager.drop_workflow_target = div_object;
             }
             else {
                 o.unhighlightAsDropTarget();

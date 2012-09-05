@@ -354,6 +354,9 @@ def _test_list_slot(browser):
     eq(False, ("filled" in recorders_slot.get_attribute('class')),
         "recorders slot is showing as filled when it should not be")
 
+    # set center pane to workflow to make sure workflow doesn't steal drops
+    workspace_page('workflow_tab').click()
+
     # drop a DumpCaseRecorder onto the recorders slot
     workspace_page.set_library_filter('ICaseRecorder')
     case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
@@ -369,7 +372,7 @@ def _test_list_slot(browser):
 
     # check that recorders fig now has one filled and one empty rect
     rects = recorders_slot.find_elements_by_css_selector('rect')
-    eq(len(rects),2)
+    eq(len(rects), 2)
     eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
     eq(True, ('stroke: #808080' in rects[1].get_attribute('style')),
@@ -395,7 +398,7 @@ def _test_list_slot(browser):
 
     # check that recorders fig now has two filled and one empty rect
     rects = recorders_slot.find_elements_by_css_selector('rect')
-    eq(len(rects),3)
+    eq(len(rects), 3)
     eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
         "Filled slot element should be outlined in blue")
     eq(True, ('stroke: #0b93d5' in rects[1].get_attribute('style')),
@@ -421,10 +424,10 @@ def _test_list_slot(browser):
 
     # check that recorders fig now has four total rects
     rects = recorders_slot.find_elements_by_css_selector('rect')
-    eq(len(rects),4)
+    eq(len(rects), 4)
 
     # remove an item from the list (the only context menu option)
-    menu_item_remove = recorders_slot.find_element_by_css_selector('ul li');
+    menu_item_remove = recorders_slot.find_element_by_css_selector('ul li')
     chain = ActionChains(browser)
     chain.move_to_element_with_offset(recorders_slot, 25, 25)
     chain.context_click(recorders_slot).perform()
@@ -437,7 +440,7 @@ def _test_list_slot(browser):
     # check that recorders fig now has only three rect
     # TODO: check that the correct one was removed
     rects = recorders_slot.find_elements_by_css_selector('rect')
-    eq(len(rects),3)
+    eq(len(rects), 3)
 
     print "_test_list_slot complete."
 
@@ -482,9 +485,56 @@ def _test_simple_component_to_workflow(browser):
     top = workspace_page.get_workflow_figure('top')
 
     chain = drag_element_to(browser, paraboloid_component, top('figure_itself').element, False)
-    check_highlighting(top('figure_itself').element, browser, True,
-                       "Top's workflow")
+    check_highlighting(top('figure_itself').element, browser, True, "Top's workflow")
     release(chain)
+
+    time.sleep(1.5)  # Just so we can see it.
+
+    eq(len(workspace_page.get_workflow_component_figures()), 2)
+
+    # Check to see that the new div inside the workflow is there
+    figs = workspace_page.get_workflow_component_figures()
+    pathnames = [get_pathname(browser, fig) for fig in figs]
+
+    assert  ("top." + name) in pathnames
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_simple_component_to_workflow complete."
+
+
+def _test_library_to_workflow(browser):
+    print "running _test_library_to_workflow..."
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Get file paths
+    file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'paraboloid.py')
+
+    # add first file from workspace
+    workspace_page.add_file(file1_path)
+
+    # view library
+    workspace_page.show_library()
+
+    # View the Workflow Pane.
+    workspace_page('workflow_tab').click()
+
+    # Show the top level workflow
+    workspace_page.show_workflow('top')
+    time.sleep(0.5)  # Just so we can see it.
+
+    eq(len(workspace_page.get_workflow_component_figures()), 1)
+
+    # Drop the paraboloid component from the library onto the workflow for top
+    top = workspace_page.get_workflow_figure('top')
+    paraboloid = workspace_page.find_library_button('Paraboloid')
+    chain = drag_element_to(browser, paraboloid, top('figure_itself').element, True)
+    chain.move_by_offset(int(paraboloid.value_of_css_property('width')[:-2])/3, 1).perform()
+    check_highlighting(top('figure_itself').element, browser, True, "Top's workflow")
+    release(chain)
+    #deal with the modal dialog
+    name = (NameInstanceDialog(browser, top.port).create_and_dismiss())
 
     time.sleep(1.5)  # Just so we can see it.
 
@@ -902,7 +952,6 @@ def drag_element_to(browser, element, drag_to, centerx):
         chain.move_by_offset(int(drag_to.value_of_css_property('width')[:-2])/2, 1).perform()
     else:
         chain.move_by_offset(2, 1).perform()
-
     return chain
 
 
