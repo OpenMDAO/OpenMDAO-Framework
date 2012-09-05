@@ -8,6 +8,8 @@ import cStringIO
 import threading
 import re
 
+from zope.interface import implementedBy
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
 import networkx as nx
@@ -867,11 +869,13 @@ class Assembly (Component):
                 if not name.startswith('@'):
                     comp = self.get(name)
                     if is_instance(comp, Component):
+                        inames = [cls.__name__ 
+                                  for cls in list(implementedBy(comp.__class__))]
                         components.append({'name': comp.name,
                                            'pathname': comp.get_pathname(),
                                            'type': type(comp).__name__,
                                            'valid': comp.is_valid(),
-                                           'is_assembly': is_instance(comp, Assembly),
+                                           'interfaces': inames,
                                            'python_id': id(comp)
                                           })
 

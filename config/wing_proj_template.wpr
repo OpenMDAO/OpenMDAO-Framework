@@ -421,9 +421,9 @@ guimgr.overall-gui-state = {'windowing-policy': 'combined-window',
                  'splits': 2,
                  'tab_location': 'left',
                  'user_data': {}},
-        'window-alloc': (1102,
+        'window-alloc': (202,
                          64,
-                         1331,
+                         1231,
                          958)}]}
 proj.env-vars = {None: ('default',
                         [''])}
