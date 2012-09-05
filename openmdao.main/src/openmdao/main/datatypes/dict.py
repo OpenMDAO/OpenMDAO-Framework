@@ -42,6 +42,8 @@ class Dict(Enthought_Dict):
         attr['name'] = name
         attr['type'] = 'dict'
         attr['value'] = value
+        attr['key_type'] = type(value.keys()[0]).__name__
+        attr['value_type'] = type(value.values()[0]).__name__
         
         for field in meta:
             if field not in gui_excludes:
@@ -61,6 +63,6 @@ class Dict(Enthought_Dict):
                                                           inner, meta)
             slot_attr['containertype'] = 'dict'
             slot_attr['filled'] = value.keys()
-        
+            
         return attr, slot_attr
     
