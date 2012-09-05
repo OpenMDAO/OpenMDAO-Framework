@@ -104,77 +104,91 @@ def add_init_monitors(node):
         ]+node.body
     return node
 
-
 class ProjFinder(object):
     """A finder class for custom imports from an OpenMDAO project. In order for this
     to work, an entry must be added to sys.path of the form top_dir+'.prj', where top_dir
     is the top directory of the project where python files are kept.
     """
-    def __init__(self, path):
-        """When path has the form mentioned above (top_dir+'.prj'), this
+    def __init__(self, path_entry):
+        """When path_entry has the form mentioned above (top_dir+'.prj'), this
         returns a ProjFinder instance that will be used to locate modules within the
         project.
         """
-        logger.error("ProjFinder(%s)" % path)
-        if path.endswith('.prj'):
-            self.projdir = path.rsplit('.',1)[0]
+        if path_entry.endswith('.prj') and os.path.isdir(path_entry):
+            self.path_entry = path_entry
+            self.projdir = os.path.join(self.path_entry, 'model')
             if os.path.isdir(self.projdir):
                 return
-        raise ImportError("can't import %s" % path)
+        raise ImportError("can't import from %s" % path_entry)
 
     def find_module(self, modpath, path=None):
         """This looks within the project for the specified module, returning a loader
         if the module is found, and None if it isn't.
         """
-        print "looking for module %s" % modpath
-        print "path = %s" % path
-        path = path or util_findmodule(modpath, path=[self.projdir])
-        if path is not None:
-            print "found module file for %s" % modpath
-            return ProjLoader(modpath, self.projdir, path)
-        else:
-            print "blah"
+        if path is None:
+            path = self.path_entry
+        fpath = util_findmodule(modpath, path=[self.projdir])
+        if fpath:
+            return ProjLoader(path)
 
 class ProjLoader(object):
     """This is the import loader for files within an OpenMDAO project.  We use it to instrument
     the imported files so we can keep track of what classes have been instantiated so we know
     when a project must be saved and reloaded.
     """
-    def __init__(self, modpath, projpath, path):
-        self.path = path
-        #self.ispkg = isinstance(path, basestring) and os.path.basename(path) == '__init__.py'
+    def __init__(self, path_entry):
+        self.path_entry = path_entry
+        self.projdir = os.path.join(self.path_entry, 'model')
         
+    def _get_filename(self, modpath):
+        parts = [self.projdir]+modpath.split('.')
+        path = os.path.join(*parts)
+        if os.path.isdir(path):
+            return os.path.join(path, '__init__.py')
+        else:
+            return path + '.py'
+                
     def is_package(self, modpath):
-        return os.path.basename(self.path) == '__init__.py'
+        fpath = self._get_filename(modpath)
+        return os.path.basename(fpath) == '__init__.py' and os.path.isfile(fpath)
+        
+    def get_source(self, modpath):
+        with open(self._get_filename(modpath), 'r') as f:
+            return f.read()
         
     def get_code(self, modpath):
         """Opens the file, compiles it into an AST and then translates it into the instrumented
         version before compiling that into bytecode.
         """
-        with open(self.path, 'r') as f:
-            contents = f.read()
-            if not contents.endswith('\n'):
-                contents += '\n' # to make ast.parse happy :(
-            root = ast.parse(contents, filename=self.path, mode='exec')
-            return compile(add_init_monitors(root), self.path, 'exec')
+        contents = self.get_source(modpath)
+        if not contents.endswith('\n'):
+            contents += '\n' # to make ast.parse happy :(
+        fname = self._get_filename(modpath)
+        root = ast.parse(contents, filename=fname, mode='exec')
+        return compile(add_init_monitors(root), fname, 'exec')
 
     def load_module(self, modpath):
         """Creates a new module if one doesn't exist already, and then updates the
         dict of that module based on the contents of the instrumented module file.
         """
-        m = sys.modules.get(modpath)
-        if m:
-            return m
-        code = self.get_code(modpath)
-        mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
-        mod.__file__ = self.path
-        mod.__loader__ = self
-        if self.is_package(modpath):
-            mod.__path__ = []
-            mod.__package__ = modpath
+        if modpath in sys.modules:
+            mod = sys.modules[modpath]
         else:
-            mod.__package__ = modpath.rpartition('.')[0]
+            mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
+        
+        mod.__file__ = self._get_filename(modpath)
+        mod.__name__ = modpath
+        mod.__loader__ = self
+        mod.__package__ = '.'.join(modpath.split('.')[:-1])
+        
+        if self.is_package(modpath):
+            mod.__path__ = [ self.path_entry ]
+        else:
+            mod.__path__ = self.path_entry
+            
+        code = self.get_code(modpath)
         exec(code, mod.__dict__)
+        
         return mod
 
 def parse_archive_name(pathname):

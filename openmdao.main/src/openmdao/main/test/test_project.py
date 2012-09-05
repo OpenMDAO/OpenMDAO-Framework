@@ -149,28 +149,39 @@ class ProjFinderTestCase(unittest.TestCase):
             
     def test_importing(self):
         dirstruct = {
-            'top.py': """
+            'myproj.prj': {
+                'model': {
+                'top.py': """
 from openmdao.main.api import Component
 class MyClass(Component):
     pass
 """,
-            'pkgdir': {
-                '__init__.py': '',
-                'pkgfile.py': 'from openmdao.main.api import Component, Assembly'
-                },
-            'plaindir': {
-                'plainfile.py': 'from openmdao.main.api import Component, Assembly'
+                'pkgdir': {
+                    '__init__.py': '',
+                    'pkgfile.py': 'from openmdao.main.api import Component, Assembly',
+                    'pkgdir2': {
+                          '__init__.py': '',
+                          'pkgfile2.py': 'from openmdao.main.api import Component, Assembly'
+                        }
+                 },
+                'plaindir': {
+                    'plainfile.py': 'from openmdao.main.api import Component, Assembly'
+                 },
+             },
                 },
         }
 
-        build_directory(dirstruct)
+        build_directory(dirstruct, topdir='/tmp')
         try:
             sys.path_hooks = [ProjFinder]+sys.path_hooks
-            sys.path = [os.getcwd()+'.prj']+sys.path
+            #sys.path = [os.path.join(os.getcwd(), 'myproj.prj')]+sys.path
+            sys.path = [os.path.join('/tmp', 'myproj.prj')]+sys.path
             __import__('top')
             __import__('pkgdir.pkgfile')
+            __import__('pkgdir.pkgdir2.pkgfile2')
         finally:
             sys.path = sys.path[1:]
+            shutil.rmtree(os.path.join('/tmp','myproj.prj'))
 
 if __name__ == "__main__":
     unittest.main()
