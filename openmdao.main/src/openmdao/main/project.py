@@ -5,28 +5,164 @@ Routines for handling 'Projects' in Python.
 import os
 import sys
 import shutil
-from inspect import isclass #, getfile
+from inspect import isclass
 import tarfile
 import cPickle as pickle
 from tokenize import generate_tokens
 import token
 from cStringIO import StringIO
+import imp
+import ast
+from threading import RLock
+import traceback
 
 from pkg_resources import get_distribution, DistributionNotFound
 
-from openmdao.main.api import Container
+from openmdao.main.container import Container
 from openmdao.main.assembly import Assembly, set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
-from openmdao.main.factorymanager import create
+from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.mp_support import is_instance
-from openmdao.util.fileutil import get_module_path, expand_path, file_md5
+from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files, find_module
 from openmdao.util.log import logger
-
 
 # extension for project files
 PROJ_FILE_EXT = '.proj'
 
+
+# use this to keep track of project classes that have been instantiated
+# so far, so we can determine if we need to force a Project save & reload
+_instantiated_classes = set()
+_instclass_lock = RLock()
+
+def _clear_insts():
+    global _instantiated_classes
+    with _instclass_lock:
+        _instantiated_classes.clear()
+
+def _register_inst(typname):
+    global _instantiated_classes
+    with _instclass_lock:
+        _instantiated_classes.add(typname)
+        
+def _match_insts(classes):
+    global _instantiated_classes
+    logger.error("classes: ")
+    logger.error("%s" % classes)
+    logger.error("\n_instantiated_classes:")
+    logger.error("%s" % _instantiated_classes)
+    return _instantiated_classes.intersection(classes)
+
+def text_to_node(text):
+    """Given a python source string, return the corresponding AST node. The outer
+    Module node is removed so that the node corresponding to the given text can
+    be added to an existing AST.
+    """
+    modnode = ast.parse(text, 'exec')
+    if len(modnode.body) == 1:
+        return modnode.body[0]
+    return modnode.body
+
+class CtorInstrumenter(ast.NodeTransformer):
+    """All __init__ calls will be replaced with a call to a wrapper function
+    that records the call by calling _register_inst(typename) before creating
+    the instance.
+    """
+    def __init__(self):
+        super(CtorInstrumenter, self).__init__()
+    
+    def visit_ClassDef(self, node):
+        text = None
+        for stmt in node.body:
+            if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
+                stmt.name = '__%s_orig_init__' % node.name # __init__ was found - rename it to __orig_init__
+                break 
+        else: # no __init__ found, make one
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    super(%s, self).__init__(*args, **kwargs)
+""" % node.name
+        if text is None: # class has its own __init__ (name has been changed to __orig_init__)
+            text = """
+def __init__(self, *args, **kwargs):
+    _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
+    self.__%s_orig_init__(*args, **kwargs)
+""" % node.name
+        node.body = [text_to_node(text)]+node.body
+        return node
+
+def add_init_monitors(node):
+    """Take the specified AST and translate it into the instrumented version,
+    which will record all instances"""
+    node = CtorInstrumenter().visit(node)
+    node.body = [
+        ast.copy_location(
+            text_to_node('from openmdao.main.project import _register_inst'),node)
+        ]+node.body
+    return node
+
+
+class ProjFinder(object):
+    """A finder class for custom imports from an OpenMDAO project. In order for this
+    to work, an entry must be added to sys.path of the form top_dir+'.prj', where top_dir
+    is the top directory of the project where python files are kept.
+    """
+    def __init__(self, path):
+        """When path has the form mentioned above (top_dir+'.prj'), this
+        returns a ProjFinder instance that will be used to locate modules within the
+        project.
+        """
+        if path.endswith('.prj'):
+            self.projdir = path.rsplit('.',1)[0]
+            if os.path.isdir(self.projdir):
+                return
+        raise ImportError("can't import %s" % path)
+
+    def find_module(self, modpath, path=None):
+        """This looks within the project for the specified module, returning a loader
+        if the module is found, and None if it isn't.
+        """
+        path = find_module(modpath, path=[self.projdir])
+        if path is not None:
+            return ProjLoader(modpath, self.projdir)
+
+class ProjLoader(object):
+    """This is the import loader for files within an OpenMDAO project.  We use it to instrument
+    the imported files so we can keep track of what classes have been instantiated so we know
+    when a project must be saved and reloaded.
+    """
+    def __init__(self, modpath, projpath):
+        self.path = find_module(modpath, path=[projpath])
+        self.ispkg = isinstance(self.path, basestring) and os.path.basename(self.path) == '__init__.py'
+        
+    def get_code(self, modpath):
+        """Opens the file, compiles it into an AST and then translates it into the instrumented
+        version before compiling that into bytecode.
+        """
+        with open(self.path, 'r') as f:
+            contents = f.read()
+            if not contents.endswith('\n'):
+                contents += '\n'
+            root = ast.parse(contents, filename=self.path, mode='exec')
+            return compile(add_init_monitors(root), self.path, 'exec')
+
+    def load_module(self, modpath):
+        """Creates a new module if one doesn't exist already, and then updates the
+        dict of that module based on the contents of the instrumented module file.
+        """
+        code = self.get_code(modpath)
+        mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
+        mod.__file__ = self.path
+        mod.__loader__ = self
+        if self.ispkg:
+            mod.__path__ = []
+            mod.__package__ = modpath
+        else:
+            mod.__package__ = modpath.rpartition('.')[0]
+        exec(code, mod.__dict__)
+        return mod
 
 def parse_archive_name(pathname):
     """Return the name of the project given the pathname of a project
@@ -178,7 +314,6 @@ def filter_macro(lines):
             
     return filt_lines[::-1] # reverse the result
     
-    
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes
     from the imported version of the file for the __main__ version.
@@ -195,7 +330,7 @@ class _ProjDict(dict):
         return super(_ProjDict, self).__getitem__(name)
 
 class Project(object):
-    def __init__(self, projpath, projdirfactory=None):
+    def __init__(self, projpath):
         """Initializes a Project containing the project found in the 
         specified directory or creates a new project if one doesn't exist.
 
@@ -208,54 +343,54 @@ class Project(object):
         self._model_globals = _ProjDict()
         self._init_globals()
 
-        if projdirfactory:
-            projdirfactory.project = self
-        
         if os.path.isdir(projpath):
             self.activate()
         
-            # locate file containing state, create it if it doesn't exist
-            statefile = os.path.join(projpath, '_project_state')
-            if os.path.exists(statefile):
-                try:
-                    with open(statefile, 'r') as f:
-                        self._model_globals = pickle.load(f)
-                        # this part is just to handle cases where a project was saved
-                        # before _model_globals was changed to a _ProjDict
-                        if not isinstance(self._model_globals, _ProjDict):
-                            m = _ProjDict()
-                            m.update(self._model_globals)
-                            self._model_globals = m
-                            self._init_globals()
+            ## locate file containing state, create it if it doesn't exist
+            #statefile = os.path.join(projpath, '_project_state')
+            #if os.path.exists(statefile):
+                #try:
+                    #with open(statefile, 'r') as f:
+                        #self._model_globals = pickle.load(f)
+                        ## this part is just to handle cases where a project was saved
+                        ## before _model_globals was changed to a _ProjDict
+                        #if not isinstance(self._model_globals, _ProjDict):
+                            #m = _ProjDict()
+                            #m.update(self._model_globals)
+                            #self._model_globals = m
+                            #self._init_globals()
                             
-                except Exception, e:
-                    logger.error('Unable to restore project state: %s' % e)
-                    macro_exec = True
-            else:
-                macro_exec = True
-                logger.error("%s doesn't exist" % statefile)
-            if macro_exec:
-                self._initialize()
+                #except Exception, e:
+                    #logger.error('Unable to restore project state: %s' % e)
+                    #macro_exec = True
+            #else:
+                #macro_exec = True
+                #logger.error("%s doesn't exist" % statefile)
+            #if macro_exec:
+            self._initialize()
             macro_file = os.path.join(self.path, '_project_macro')
             if os.path.isfile(macro_file):
-                if macro_exec:
-                    logger.error('Attempting to reconstruct project using macro')
-                self.load_macro(macro_file, execute=macro_exec)
+                logger.info('Reconstructing project using macro')
+                self.load_macro(macro_file, execute=True, strict=True)
         else:  # new project
             os.makedirs(projpath)
-            #os.mkdir(os.path.join(self.path, 'model'))
             self.activate()
             self._initialize()
             self.save()
 
     def _initialize(self):
-        self._model_globals['top'] = set_as_top(Assembly())
+        self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
         
     def _init_globals(self):
-        self._model_globals['create'] = create    # add create funct here so macros can call it
+        self._model_globals['create'] = self.create    # add create funct here so macros can call it
         self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
         self._model_globals['execfile'] = self.execfile
+        self._model_globals['set_as_top'] = set_as_top
 
+    def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
+        if server is None and res_desc is None and typname in self._model_globals:
+            return getattr(self._model_globals, typname)(**ctor_args)
+        return factory_create(typname, version, server, res_desc, **ctor_args)
 
     @property
     def name(self):
@@ -275,7 +410,10 @@ class Project(object):
             logger.warning("file '%s' has been modified since the last time it was exec'd" % fname)
         with open(fname) as f:
             contents = f.read()
-        exec contents in self._model_globals
+        if contents[-1] != '\n':
+            contents += '\n'
+        node = add_init_monitors(ast.parse(contents, filename=fname, mode='exec'))
+        exec compile(node, fname, 'exec') in self._model_globals
         
         # make the recorded execfile command use the current md5 hash
         self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
@@ -323,7 +461,7 @@ class Project(object):
 
         if err:
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
-            logger.error("%s" % exc_info[2])
+            logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
             raise err
         else:
@@ -338,27 +476,28 @@ class Project(object):
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
-        modeldir = self.path
-        sys.path = [modeldir]+sys.path
-        logger.error("added %s to sys.path" % modeldir)
+        modeldir = self.path+'.prj'
+        if modeldir not in sys.path:
+            sys.path = [modeldir]+sys.path
+            logger.error("added %s to sys.path" % modeldir)
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir)
+            sys.path.remove(modeldir+'.prj')
         except:
             pass
 
     def save(self):
-        """ Save the state of the project model to its project directory.
+        """ Save the project model to its project directory.
         """
-        fname = os.path.join(self.path, '_project_state')
-        try:
-            with open(fname, 'wb') as f:
-                pickle.dump(self._model_globals, f)
-        except Exception as err:
-            logger.error("Failed to pickle the project: %s" % str(err))
+        #fname = os.path.join(self.path, '_project_state')
+        #try:
+            #with open(fname, 'wb') as f:
+                #pickle.dump(self._model_globals, f)
+        #except Exception as err:
+            #logger.error("Failed to pickle the project: %s" % str(err))
 
         if self._recorded_cmds:
             logger.info("Saving macro used to create project")

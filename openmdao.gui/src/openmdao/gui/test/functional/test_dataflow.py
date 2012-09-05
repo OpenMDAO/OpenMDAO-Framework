@@ -152,7 +152,7 @@ def _test_connect(browser):
     eq(inputs[2].value, ['e_in', '1'])
     inputs[2][1] = '3'
     inputs = props.inputs
-    eq(inputs[3].value, ['f_in', '0.0'])
+    eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
     eq(inputs[5].value, ['i_in', '0'])
@@ -224,15 +224,6 @@ def _test_connections(browser):
     eq(conn_page.target_component, '<Assembly>')
     eq(conn_page.check_variable_figures(), 0)
 
-    # one connection between transmission and engine (RPM)
-    conn_page.set_source_component('transmission')
-    conn_page.set_target_component('engine')
-    eq(conn_page.source_variable, '')
-    eq(conn_page.target_variable, '')
-    eq(len(conn_page.get_variable_figures()), 2)
-    eq(sorted(conn_page.get_variable_names()),
-       ['RPM', 'RPM'])
-
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
@@ -242,9 +233,19 @@ def _test_connections(browser):
     eq(sorted(conn_page.get_variable_names()),
        ['engine_torque', 'engine_weight', 'mass_engine', 'torque'])
 
+    # one connection between transmission and engine (RPM)
+    conn_page.set_source_component('transmission')
+    conn_page.set_target_component('engine')
+    eq(conn_page.source_variable, '')
+    eq(conn_page.target_variable, '')
+    eq(len(conn_page.get_variable_figures()), 2)
+    eq(sorted(conn_page.get_variable_names()),
+       ['RPM', 'RPM'])
+
     # disconnect transmission
     tranny = workspace_page.get_dataflow_figure('transmission', 'sim.vehicle')
     tranny.disconnect()
+    time.sleep(0.5)
 
     # now there are no connections between transmission and engine
     conn_page.set_source_component('transmission')
@@ -429,7 +430,7 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
          'If True, always execute even if all IO traits are valid.', '', ''],
-        ['scaler', 'float', '1.0', '', 'true', '', '', ''],
+        ['scaler', 'float', '1', '', 'true', '', '', ''],
         ['x_in', 'ndarray', '[ 1. 1. 1. 1.]', '', 'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
@@ -446,7 +447,7 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
          'If True, always execute even if all IO traits are valid.', '', ''],
-        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']", ''],
+        ['result_in', 'float', '0', '', 'false', '', "['parent.comp.result']", ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -463,8 +464,8 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
          'If True, always execute even if all IO traits are valid.', '', ''],
-        ['result_in', 'float', '0.0', '', 'false', '', "['parent.comp.result']", ''],
-        ['scaler', 'float', '1.0', '', 'true', '', '', ''],
+        ['result_in', 'float', '0', '', 'false', '', "['parent.comp.result']", ''],
+        ['scaler', 'float', '1', '', 'true', '', '', ''],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -488,7 +489,7 @@ def _test_replace(browser):
     editor.move(-100, 0)
     inputs = editor.get_inputs()
     eq(inputs.value[0],
-       ['accuracy', 'float', '1e-06', '', 'true', 'Convergence accuracy', '', ''])
+       ['accuracy', 'float', '0.000001', '', 'true', 'Convergence accuracy', '', ''])
     editor.close()
 
     # Verify comp is a OptRosenSuzukiComponent.
@@ -501,7 +502,7 @@ def _test_replace(browser):
          'If non-blank, the directory to execute in.', '', ''],
         ['force_execute', 'bool', 'False', '',  'true',
          'If True, always execute even if all IO traits are valid.', '', ''],
-        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']", ''],
+        ['x', 'ndarray', '[]', '', 'false', '', "['parent.preproc.x_out']", "['driver']"],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])

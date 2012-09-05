@@ -5,6 +5,7 @@ import json
 import time
 
 from openmdao.gui.consoleserver import ConsoleServer
+from openmdao.main.publisher import Publisher
 
 
 class ConsoleServerTestCase(unittest.TestCase):
@@ -12,6 +13,7 @@ class ConsoleServerTestCase(unittest.TestCase):
     def setUp(self):
         self.path = os.path.dirname(os.path.abspath(__file__))
         self.cserver = ConsoleServer()
+        Publisher.silent = True # keep quiet about Publisher not being set up
 
     def test_simple(self):
         ''' load and inspect the simple example project
@@ -36,7 +38,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(type_info['modpath'], 'paraboloid.Paraboloid')
 
         components = json.loads(self.cserver.get_components())
-
+        
         # CREATE ASSEMBLY
         self.cserver.add_component('prob', 'openmdao.main.assembly.Assembly', '')
 
@@ -102,9 +104,13 @@ class ConsoleServerTestCase(unittest.TestCase):
                         'openmdao.lib.drivers.conmindriver.CONMINdriver')
         self.assertEqual(len(attributes['Workflow']['workflow']), 0)
 
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), False)
+
         # CREATE PARABOLOID
         self.cserver.add_component('p', 'paraboloid.Paraboloid', 'prob')
 
+        self.assertEqual(self.cserver.file_has_instances('/paraboloid.py'), True)
+        
         attributes = json.loads(self.cserver.get_attributes('prob.p'))
         self.assertEqual(attributes['type'], 'Paraboloid')
 
@@ -112,23 +118,25 @@ class ConsoleServerTestCase(unittest.TestCase):
         inputs = attributes['Inputs']
         self.assertEqual(len(inputs), 4)
         found_x = found_y = False
-        for input in inputs:
-            self.assertTrue('desc'  in input)
-            self.assertTrue('high'  in input)
-            self.assertTrue('low'   in input)
-            self.assertTrue('name'  in input)
-            self.assertTrue('type'  in input)
-            self.assertTrue('units' in input)
-            self.assertTrue('valid' in input)
-            self.assertTrue('value' in input)
-            if input['name'] == 'x':
+        for item in inputs:
+            self.assertTrue('desc'  in item)
+            self.assertTrue('name'  in item)
+            self.assertTrue('type'  in item)
+            # KTM - commented this out, because none of these have units, low
+            # or high attributes.
+            #self.assertTrue('units' in item)
+            #self.assertTrue('high'  in item)
+            #self.assertTrue('low'   in item)
+            self.assertTrue('valid' in item)
+            self.assertTrue('value' in item)
+            if item['name'] == 'x':
                 found_x = True
-                self.assertEqual(input['type'], 'float')
-                self.assertEqual(input['desc'], 'The variable x')
-            if input['name'] == 'y':
+                self.assertEqual(item['type'], 'float')
+                self.assertEqual(item['desc'], 'The variable x')
+            if item['name'] == 'y':
                 found_y = True
-                self.assertEqual(input['type'], 'float')
-                self.assertEqual(input['desc'], 'The variable y')
+                self.assertEqual(item['type'], 'float')
+                self.assertEqual(item['desc'], 'The variable y')
         self.assertTrue(found_x)
         self.assertTrue(found_y)
 
@@ -138,11 +146,13 @@ class ConsoleServerTestCase(unittest.TestCase):
         found_f_xy = False
         for output in outputs:
             self.assertTrue('desc'  in output)
-            self.assertTrue('high'  in output)
-            self.assertTrue('low'   in output)
             self.assertTrue('name'  in output)
             self.assertTrue('type'  in output)
-            self.assertTrue('units' in output)
+            # KTM - commented this out, because none of these have units, low
+            # or high attributes.
+            #self.assertTrue('units' in output)
+            #self.assertTrue('high'  in output)
+            #self.assertTrue('low'   in output)
             self.assertTrue('valid' in output)
             self.assertTrue('value' in output)
             if output['name'] == 'f_xy':
@@ -193,7 +203,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         # WORKFLOW
         self.cserver.onecmd('prob.driver.workflow.add("p")')
-        driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))
+        driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))[0]
         self.assertTrue('pathname' in driver_flow)
         self.assertTrue('type'     in driver_flow)
         self.assertTrue('workflow' in driver_flow)

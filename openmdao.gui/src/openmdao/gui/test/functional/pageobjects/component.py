@@ -3,10 +3,11 @@ import string
  
 from selenium.webdriver.common.by import By 
  
+from basepageobject import TMO 
 from dialog import DialogPage 
 from elements import ButtonElement, GridElement, TextElement, InputElement 
+from workflow import find_workflow_component_figures
 from util import NotifierPage 
-from basepageobject import TMO 
  
  
 class ComponentPage(DialogPage): 
@@ -50,6 +51,7 @@ class ComponentPage(DialogPage):
         """switch to slots tab""" 
         self('slots_tab').click() 
  
+
  
 class DriverPage(ComponentPage): 
     """ Driver editor page. """ 
@@ -100,7 +102,15 @@ class DriverPage(ComponentPage):
         return ConstraintDialog(self.browser, self.port,
                                 (By.XPATH, "//div[@id='constraint-dialog']/.."))
 
+    def show_workflow(self): 
+        """switch to workflow tab""" 
+        self('workflow_tab').click() 
  
+    def get_workflow_component_figures(self):
+        """ Return workflow component figure elements. """
+        return find_workflow_component_figures(self)
+ 
+
 class ParameterDialog(DialogPage):
     """ Dialog for adding a new parameter. """
 

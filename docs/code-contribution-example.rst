@@ -70,14 +70,36 @@ repository (assuming the maintainers approve the change).
     
       python go-openmdao-dev.py
 
-#.  Activate the environment.
+#.  Activate the environment. 
+
+    First, change to the ``devenv`` directory.
 
     ::
     
       cd devenv
-      ./bin/activate
+    
+    
+    If you're on Linux, you must be running bash to activate the virtual environment. If you're not
+    running it, to start it, type:
+
+    ::
+    
+      bash
+      
+    Next, if you're on Linux or OS X, type the following:
+
+    ::
+
+      . bin/activate
 
 
+    If you're on Windows, type:
+
+    ::
+
+      Scripts\activate
+     
+    
 #.  Make changes to the code and update the tests. (For more information, see :ref:`Adding-New-Tests`.)  
 
 #.  It's a good idea to run pylint to check for any bugs in your code. If you do not
@@ -175,9 +197,9 @@ repository (assuming the maintainers approve the change).
 
  *  Fill out the form that appears and then click the **Send pull request** button. 
     
-    The openMDAO maintainers will be notified, and one of them will review your pull request. In the upper middle of
-    the screen is a field that automatically shows your pull requests.  You should now show at least 1. Once your
-    branch it merged, the number will be reset.
+    The openMDAO maintainers will be notified, and one of them will review your pull request. In the
+    upper middle of the screen is a field that automatically shows your pull requests.  You should
+    now show at least 1. 
 
     
 

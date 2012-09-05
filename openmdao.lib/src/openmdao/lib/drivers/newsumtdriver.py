@@ -29,15 +29,14 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
+from openmdao.lib.datatypes.api import Array, Float, Int
 from openmdao.main.api import Case, ExprEvaluator
-from openmdao.main.datatypes.array import Array
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
-from openmdao.lib.datatypes.api import Float, Int
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
                                      IHasObjective, implements, IOptimizer
 

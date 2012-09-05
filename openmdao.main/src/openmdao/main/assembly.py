@@ -17,10 +17,10 @@ from networkx.algorithms.components import strongly_connected_components
 from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitecture, IComponent, IContainer,\
                                      ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
-from openmdao.main.container import find_trait_and_value
+from openmdao.main.container import find_trait_and_value, _copydict
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import Slot
 from openmdao.main.driver import Driver, Run_Once
 from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints
@@ -492,7 +492,13 @@ class Assembly (Component):
         else: 
             newtrait = PassthroughTrait(validation_trait=trait, **metadata)
         self.add_trait(newname, newtrait)
-        setattr(self, newname, self.get(pathname))
+        
+        # Copy trait value according to 'copy' attribute in the trait
+        val = self.get(pathname)
+        ttype = trait.trait_type
+        if ttype.copy:
+            val = _copydict[ttype.copy](val)  
+        setattr(self, newname, val)
 
         if iotype == 'in':
             self.connect(newname, pathname)
@@ -890,8 +896,9 @@ class Assembly (Component):
                                                             comp.name+'.'+rest])
                                 elif isinstance(inst, (HasObjective,
                                                        HasObjectives)):
-                                    for name, expr in inst._objectives.items():
-                                        objectives.append([str(expr),
+                                    for path in inst.get_referenced_varpaths():
+                                        name, dot, rest = path.partition('.')
+                                        objectives.append([path,
                                                            comp.name+'.'+name])
 
             # list of connections (convert tuples to lists)

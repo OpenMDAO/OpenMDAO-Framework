@@ -17,17 +17,29 @@ Source Documentation
 
 .. _zope.interface.py:
 
-.. _openmdao.main.datatypes.int.py:
-
-.. _openmdao.main.datatypes.slot.py:
+.. _openmdao.main.datatypes.any.py:
 
 .. _openmdao.main.datatypes.array.py:
+
+.. _openmdao.main.datatypes.bool.py:
+
+.. _openmdao.main.datatypes.complex.py:
+
+.. _openmdao.main.datatypes.dict.py:
 
 .. _openmdao.main.datatypes.enum.py:
 
 .. _openmdao.main.datatypes.file.py:
 
 .. _openmdao.main.datatypes.float.py:
+
+.. _openmdao.main.datatypes.int.py:
+
+.. _openmdao.main.datatypes.list.py:
+
+.. _openmdao.main.datatypes.slot.py:
+
+.. _openmdao.main.datatypes.str.py:
 
 .. _openmdao.lib.doegenerators.api:
 
@@ -36,7 +48,6 @@ Source Documentation
 .. _fullfactorial.py: 
 
 .. _openmdao.lib.casehandler.api.py: 
-
 
 .. toctree::
    :maxdepth: 3 

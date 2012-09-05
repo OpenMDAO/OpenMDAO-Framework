@@ -37,20 +37,21 @@ class ProjectTestCase(unittest.TestCase):
         finally:
             os.chdir(self.startdir)
 
-    def _fill_project(self, top):
-        comp1 = top.add('comp1', Multiplier())
-        comp2 = top.add('comp2', Multiplier())
+    def _fill_project(self, proj):
+        top = proj.get('top')
+        proj.command('top.add("comp1", create("openmdao.main.test.test_project.Multiplier"))')
+        proj.command('top.add("comp2", create("openmdao.main.test.test_project.Multiplier"))')
         
-        top.driver.workflow.add(['comp1', 'comp2'])
+        proj.command("top.driver.workflow.add(['comp1', 'comp2'])")
         
-        top.comp1.mult = 2.0
-        top.comp2.mult = 4.0
-        top.connect('comp1.rval_out', 'comp2.rval_in')
-        top.comp1.rval_in = 5.0
+        proj.command('top.comp1.mult = 2.0')
+        proj.command('top.comp2.mult = 4.0')
+        proj.command("top.connect('comp1.rval_out', 'comp2.rval_in')")
+        proj.command("top.comp1.rval_in = 5.0")
         
     def test_project_export_import(self):
         proj = Project(os.path.join(self.tdir, 'proj1'))
-        self._fill_project(proj.get('top'))
+        self._fill_project(proj)
         
         proj.export(destdir=self.tdir)
         proj.deactivate()
@@ -74,11 +75,11 @@ class ProjectTestCase(unittest.TestCase):
     def test_using(self):
         proj = Project('a_proj')
         top = proj.get('top')
-        self._fill_project(top)
+        self._fill_project(proj)
         top.run()
         self.assertEqual(top.comp1.rval_out, 10.)
         self.assertEqual(top.comp2.rval_out, 40.)
-        top.comp1.rval_in = 0.5
+        proj.command("top.comp1.rval_in = 0.5")
         os.chdir(self.tdir)
         proj.export(projname='fooproj')
         
@@ -91,7 +92,7 @@ class ProjectTestCase(unittest.TestCase):
             
     def test_localfile_factory(self):
         proj = Project(os.path.join(self.tdir, 'proj2'))
-        self._fill_project(proj.get('top'))
+        self._fill_project(proj)
         
     def test_filter_macro(self):
         lines = [

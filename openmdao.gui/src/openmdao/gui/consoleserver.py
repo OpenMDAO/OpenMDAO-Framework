@@ -11,24 +11,21 @@ from zope.interface import implementedBy
 
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, create, get_available_types
+from openmdao.main.project import project_from_archive, Project, parse_archive_name, \
+                                  ProjFinder, _clear_insts, _match_insts
+from openmdao.main.publisher import publish
+from openmdao.main.mp_support import has_interface, is_instance
+from openmdao.main.interfaces import IContainer, IComponent, IAssembly
+from openmdao.main.factorymanager import register_class_factory, remove_class_factory
 
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
-from openmdao.util.fileutil import find_files, file_md5, get_module_path
-
-from openmdao.main.project import project_from_archive, Project, parse_archive_name
-from openmdao.gui.projdirfactory import ProjDirFactory
-
-from openmdao.main.publisher import publish
-
-from openmdao.main.mp_support import has_interface, is_instance
-from openmdao.main.interfaces import IContainer, IComponent, IAssembly
+from openmdao.util.fileutil import find_files, file_md5, get_module_path, find_module
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
-from openmdao.main.factorymanager import register_class_factory, remove_class_factory
-
+from openmdao.gui.projdirfactory import ProjDirFactory
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -68,6 +65,7 @@ class ConsoleServer(cmd.Cmd):
         self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
+        
         try:
             self.files = FileManager('files', publish_updates=publish_updates)
         except Exception as err:
@@ -81,7 +79,7 @@ class ConsoleServer(cmd.Cmd):
             if has_interface(v, IContainer):
                 if v.name != k:
                     v.name = k
-            if is_instance(v, Assembly):
+            if is_instance(v, Assembly) and v._call_cpath_updated:
                 set_as_top(v)
 
     def publish_components(self):
@@ -90,6 +88,7 @@ class ConsoleServer(cmd.Cmd):
         try:
             publish('components', self.get_components())
             publish('', {'Dataflow': self.get_dataflow('')})
+            publish('', {'Workflow': self.get_workflow('')})
         except Exception as err:
             self._error(err, sys.exc_info())
         else:
@@ -101,6 +100,11 @@ class ConsoleServer(cmd.Cmd):
                     publish(pathname, {})
                 else:
                     publish(pathname, comp.get_attributes(io_only=False))
+
+    def send_pub_msg(self, msg, topic):
+        ''' publish the given message with the given topic
+        '''
+        publish(topic, msg)
 
     def _error(self, err, exc_info):
         ''' print error message and save stack trace in case it's requested
@@ -422,18 +426,48 @@ class ConsoleServer(cmd.Cmd):
         return jsonpickle.encode(dataflow)
 
     def get_workflow(self, pathname):
-        flow = {}
-        drvr, root = self.get_container(pathname)
-        # allow for request on the parent assembly
-        if is_instance(drvr, Assembly):
-            drvr = drvr.get('driver')
-            pathname = pathname + '.driver'
-        if drvr:
-            try:
-                flow = drvr.get_workflow()
-            except Exception, err:
-                self._error(err, sys.exc_info())
-        return jsonpickle.encode(flow)
+        flows = []
+        if pathname:
+            drvr, root = self.get_container(pathname)
+            # allow for request on the parent assembly
+            if is_instance(drvr, Assembly):
+                drvr = drvr.get('driver')
+                pathname = pathname + '.driver'
+            if drvr:
+                try:
+                    flow = drvr.get_workflow()
+                except Exception, err:
+                    self._error(err, sys.exc_info())
+                flows.append(flow)
+        else:
+            for k, v in self.proj.items():
+                if is_instance(v, Assembly):
+                    v = v.get('driver')
+                if is_instance(v, Driver):
+                    flow = {}
+                    flow['pathname'] = v.get_pathname()
+                    flow['type'] = type(v).__module__ + '.' + type(v).__name__
+                    flow['workflow'] = []
+                    flow['valid'] = v.is_valid()
+                    for comp in v.workflow:
+                        pathname = comp.get_pathname()
+                        if is_instance(comp, Assembly) and comp.driver:
+                            flow['workflow'].append({
+                                'pathname': pathname,
+                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
+                                'driver':   comp.driver.get_workflow(),
+                                'valid':    comp.is_valid()
+                              })
+                        elif is_instance(comp, Driver):
+                            flow['workflow'].append(comp.get_workflow())
+                        else:
+                            flow['workflow'].append({
+                                'pathname': pathname,
+                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
+                                'valid':    comp.is_valid()
+                              })
+                    flows.append(flow)
+        return jsonpickle.encode(flows)
 
     def get_attributes(self, pathname):
         attr = {}
@@ -459,6 +493,8 @@ class ConsoleServer(cmd.Cmd):
 
     @modifies_model
     def load_project(self, filename):
+        _clear_insts()
+        
         self.projfile = filename
         try:
             if self.proj:
@@ -466,6 +502,14 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
+                
+            # make sure we have a ProjFinder in sys.path_hooks
+            for hook in sys.path_hooks:
+                if hook is ProjFinder:
+                    break
+            else:
+                sys.path_hooks = [ProjFinder]+sys.path_hooks
+            
             # have to do things in a specific order here. First, create the files,
             # then point the ProjDirFactory at the files, then finally create the
             # Project. Executing the project macro (which happens in the Project __init__)
@@ -475,7 +519,7 @@ class ConsoleServer(cmd.Cmd):
             self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
-            self.proj = Project(projdir, projdirfactory=self.projdirfactory)
+            self.proj = Project(projdir)
         except Exception, err:
             self._error(err, sys.exc_info())
 
@@ -604,13 +648,17 @@ class ConsoleServer(cmd.Cmd):
                     if self._publish_comps[pathname] < 1:
                         del self._publish_comps[pathname]
 
-    def file_classes_changed(self, filename):
+    def file_has_instances(self, filename):
+        """Returns True if the given file (assumed to be a file in the project)
+        has classes that have been instantiated in the current process. Note that
+        this doesn't keep track of removes/deletions, so if an instance was created
+        earlier and then deleted, it will still be reported.
+        """
         pdf = self.projdirfactory
         if pdf:
             filename = filename.lstrip('/')
             filename = os.path.join(self.proj.path, filename)
             info = pdf._files.get(filename)
-            # if changed file contained classes and has already been imported..
-            if info and len(info.classes) > 0 and info.modpath in sys.modules:
+            if info and _match_insts(info.classes.keys()):
                 return True
         return False

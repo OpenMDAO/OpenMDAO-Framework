@@ -190,7 +190,7 @@ Glossary
         An open source distributed version control system.
 
       **GitHub**
-        A web community where projects using the *git* version control system are
+        A web community where projects using the Git version control system are
         located.
 
       **GUI**
@@ -316,7 +316,7 @@ Glossary
         The Open Source Initiative (OSI) is a non-profit corporation formed to educate
         the community about open source (OS), to advocate for the benefits of OS, and to build
         bridges among different constituencies in the open-source community.  For more
-        information, see `Open Source Initiative <http://www.opensource.org>`_. 
+        information, see `Open Source Initiative <http://opensource.org>`_. 
            
       
       **PBS**

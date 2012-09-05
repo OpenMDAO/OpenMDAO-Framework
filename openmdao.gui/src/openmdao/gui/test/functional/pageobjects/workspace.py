@@ -14,9 +14,13 @@ from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from connections import ConnectionsPage
-from dataflow import DataflowFigure
+from dataflow import DataflowFigure, find_dataflow_figures, \
+                     find_dataflow_figure, find_dataflow_component_names
 from editor import EditorPage
-from elements import ButtonElement, InputElement, GridElement, TextElement
+from elements import ButtonElement, GenericElement, GridElement, InputElement, \
+                     TextElement
+from workflow import WorkflowFigure, find_workflow_figure, \
+                     find_workflow_figures, find_workflow_component_figures
 from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
 
 
@@ -204,6 +208,7 @@ class WorkspacePage(BasePageObject):
         if file_path.endswith('.pyc'):
             file_path = file_path[:-1]
 
+        self('files_tab').click()
         self('file_menu').click()
         self('add_button').click()
 
@@ -246,6 +251,12 @@ class WorkspacePage(BasePageObject):
         self('project_menu').click()
         self('save_button').click()
         NotifierPage.wait(self)
+
+    def reload_project(self):
+        """ Reload current project. """
+        self('project_menu').click()
+        self('reload_button').click()
+        WorkspacePage.verify(self.browser, self.port)
 
     def get_objects_attribute(self, attribute, visible=False):
         """ Return list of `attribute` values for all objects. """
@@ -294,6 +305,25 @@ class WorkspacePage(BasePageObject):
                 if retry >= 2:
                     raise
 
+    def show_workflow(self, component_name):
+        """ Show workflow of `component_name`. """
+        self('objects_tab').click()
+        xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+        time.sleep(0.5)
+        # Try to recover from context menu not getting displayed.
+        for retry in range(3):
+            chain = ActionChains(self.browser)
+            chain.context_click(element).perform()
+            try:
+                self('obj_workflow').click()
+                break
+            except TimeoutException:
+                if retry >= 2:
+                    raise
+
     def show_properties(self):
         """ Display properties. """
         self('properties_tab').click()
@@ -336,20 +366,22 @@ class WorkspacePage(BasePageObject):
         time.sleep(1)
         return library_item
 
-    def add_library_item_to_dataflow(self, item_name, instance_name, check=True):
+    def add_library_item_to_dataflow(self, item_name, instance_name,
+                                     check=True, offset=None):
         """ Add component `item_name`, with name `instance_name`. """
         library_item = self.get_library_item(item_name)
 
         target = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_xpath("//*[@id='-dataflow']"))
 
+        offset = offset or (90, 90)
         chain = ActionChains(self.browser)
         if False:
-            chain = chain.drag_and_drop(library_item, target)
+            chain.drag_and_drop(library_item, target)
         else:
-            chain = chain.click_and_hold(library_item)
-            chain = chain.move_to_element_with_offset(target, 90, 90)
-            chain = chain.release(None)
+            chain.click_and_hold(library_item)
+            chain.move_to_element_with_offset(target, offset[0], offset[1])
+            chain.release(None)
         chain.perform()
 
         page = ValuePrompt(self.browser, self.port)
@@ -370,93 +402,24 @@ class WorkspacePage(BasePageObject):
 
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
-        time.sleep(0.5)  # Pause for stable display.
-        return self.browser.find_elements_by_class_name('DataflowFigure')
+        return find_dataflow_figures(self)
 
     def get_dataflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`DataflowFigure` for `name`. """
-        for retry in range(retries):
-            time.sleep(0.5)  # Pause for stable display.
-            figures = self.browser.find_elements_by_class_name('DataflowFigure')
-            if not figures:
-                continue
-            fig_name = None
-            for figure in figures:
-                self.browser.implicitly_wait(1)
-                try:
-                    header = figure.find_elements_by_class_name('DataflowFigureHeader')
-                    if len(header) == 0:
-                        # the outermost figure (globals) has no header or name
-                        if name == '' and prefix is None:
-                            fig = DataflowFigure(self.browser, self.port, figure)
-                            return fig
-                        else:
-                            continue
-                    fig_name = figure.find_elements_by_class_name('DataflowFigureHeader')[0].text
-                except StaleElementReferenceException:
-                    logging.warning('get_dataflow_figure:'
-                                    ' StaleElementReferenceException')
-                else:
-                    if fig_name == name:
-                        fig = DataflowFigure(self.browser, self.port, figure)
-                        if prefix is not None:
-                            if prefix:
-                                fig.pathname = '%s.%s' % (prefix, name)
-                            else:
-                                fig.pathname = name
-                        return fig
-                finally:
-                    self.browser.implicitly_wait(TMO)
-        return None
+        return find_dataflow_figure(self, name, prefix, retries)
 
     def get_dataflow_component_names(self):
         """ Return names of dataflow components. """
-        names = []
-
-        # Assume there should be at least 1, wait for number to not change.
-        n_found = 0
-        for retry in range(10):
-            time.sleep(0.5)  # Pause for stable display.
-            dataflow_component_headers = \
-                self.browser.find_elements_by_class_name('DataflowFigureHeader')
-            if dataflow_component_headers:
-                n_headers = len(dataflow_component_headers)
-                if n_found:
-                    if n_headers == n_found:
-                        return [h.text for h in dataflow_component_headers]
-                n_found = n_headers
-        else:
-            logging.error('get_dataflow_component_names: n_found %s', n_found)
-            return names
-
-        #for i in range(len(dataflow_component_headers)):
-            #for retry in range(10):  # This has had issues...
-                #try:
-                    #names.append(self.browser.find_elements_by_class_name('DataflowFigureHeader')[i].text)
-                #except StaleElementReferenceException:
-                    #logging.warning('get_dataflow_component_names:'
-                                    #' StaleElementReferenceException')
-                #except IndexError:
-                    #logging.warning('get_dataflow_component_names:'
-                                    #' IndexError for i=%s, headers=%s',
-                                    #i, len(dataflow_component_headers))
-                #else:
-                    #break
-
-        #if len(names) != len(dataflow_component_headers):
-            #logging.error('get_dataflow_component_names:'
-                          #' expecting %d names, got %s',
-                          #len(dataflow_component_headers), names)
-        #return names
+        return find_dataflow_component_names(self)
 
     def connect(self, src, dst):
         """ Return :class:`ConnectionsPage` for connecting `src` to `dst`. """
         chain = ActionChains(self.browser)
-        chain = chain.click_and_hold(src.output_port)
+        chain.click_and_hold(src.output_port)
         # Using root rather than input_port since for some reason
         # even using a negative Y offset can select the parent's input.
-        chain = chain.move_to_element(dst.input_port)
-        chain = chain.release(None)
+        chain.move_to_element(dst.input_port)
+        chain.release(None)
         chain.perform()
         parent, dot, srcname = src.pathname.rpartition('.')
         parent, dot, dstname = dst.pathname.rpartition('.')
@@ -470,9 +433,9 @@ class WorkspacePage(BasePageObject):
         target = self.get_dataflow_figure(name).root
 
         chain = ActionChains(self.browser)
-        chain = chain.click_and_hold(library_item)
-        chain = chain.move_to_element_with_offset(target, 125, 30)
-        chain = chain.release(None)
+        chain.click_and_hold(library_item)
+        chain.move_to_element_with_offset(target, 125, 30)
+        chain.release(None)
         chain.perform()
 
         dialog = ConfirmationPage(self)
@@ -480,6 +443,18 @@ class WorkspacePage(BasePageObject):
             dialog.click_ok()
         else:
             dialog.click_cancel()
+
+    def get_workflow_figures(self):
+        """ Return workflow figure elements. """
+        return find_workflow_figures(self)
+
+    def get_workflow_component_figures(self):
+        """ Return workflow component figure elements. """
+        return find_workflow_component_figures(self)
+
+    def get_workflow_figure(self, name, prefix=None, retries=5):
+        """ Return :class:`WorkflowFigure` for `name`. """
+        return find_workflow_figure(self, name, prefix, retries)
 
     def hide_left(self):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')
