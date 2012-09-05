@@ -238,21 +238,21 @@ nav ul ul a:hover {
 }
 
 /* specific icons for the items in the file editor tree */
-#file_pane a > ins.jstree-folder {
+#file_pane a > ins.jstree-folder, #ftree_pane a > ins.jstree-folder {
     background-image:url("/static/images/icons.png"); 
     background-repeat:no-repeat; 
     background-color:transparent; 
     background-position:-96px 0px !important;
 }
 
-#file_pane a > ins.jstree-file {
+#file_pane a > ins.jstree-file, #ftree_pane a > ins.jstree-file {
     background-image:url("/static/images/icons.png"); 
     background-repeat:no-repeat; 
     background-color:transparent; 
     background-position:-128px 0px;
 }
 
-#file_pane a > ins.jstree-python-file {
+#file_pane a > ins.jstree-python-file, #ftree_pane a > ins.jstree-python-file {
     background-image:url("/static/images/icons.png"); 
     background-repeat:no-repeat; 
     background-color:transparent; 
