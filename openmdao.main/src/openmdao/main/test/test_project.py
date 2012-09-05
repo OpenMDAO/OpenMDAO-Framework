@@ -1,12 +1,13 @@
+import os
+import sys
 import unittest
 import tempfile
-import os
 import shutil
 
-from openmdao.util.fileutil import find_files
+from openmdao.util.fileutil import find_files, build_directory
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
-                                  filter_macro
+                                  filter_macro, ProjFinder
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -132,6 +133,44 @@ class ProjectTestCase(unittest.TestCase):
         filtered = filter_macro(lines)
         self.assertEqual(filtered, expected)
         
+class ProjFinderTestCase(unittest.TestCase):
+    def setUp(self):
+        self.startdir = os.getcwd()
+        self.tdir = tempfile.mkdtemp()
+        os.chdir(self.tdir)
+        
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.tdir)
+        except:
+            pass
+        finally:
+            os.chdir(self.startdir)
+            
+    def test_importing(self):
+        dirstruct = {
+            'top.py': """
+from openmdao.main.api import Component
+class MyClass(Component):
+    pass
+""",
+            'pkgdir': {
+                '__init__.py': '',
+                'pkgfile.py': 'from openmdao.main.api import Component, Assembly'
+                },
+            'plaindir': {
+                'plainfile.py': 'from openmdao.main.api import Component, Assembly'
+                },
+        }
+
+        build_directory(dirstruct)
+        try:
+            sys.path_hooks = [ProjFinder]+sys.path_hooks
+            sys.path = [os.getcwd()+'.prj']+sys.path
+            __import__('top')
+            __import__('pkgdir.pkgfile')
+        finally:
+            sys.path = sys.path[1:]
 
 if __name__ == "__main__":
     unittest.main()

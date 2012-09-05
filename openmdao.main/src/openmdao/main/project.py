@@ -24,7 +24,8 @@ from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.mp_support import is_instance
-from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files, find_module
+from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files
+from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
 
 # extension for project files
@@ -114,6 +115,7 @@ class ProjFinder(object):
         returns a ProjFinder instance that will be used to locate modules within the
         project.
         """
+        logger.error("ProjFinder(%s)" % path)
         if path.endswith('.prj'):
             self.projdir = path.rsplit('.',1)[0]
             if os.path.isdir(self.projdir):
@@ -124,18 +126,26 @@ class ProjFinder(object):
         """This looks within the project for the specified module, returning a loader
         if the module is found, and None if it isn't.
         """
-        path = find_module(modpath, path=[self.projdir])
+        print "looking for module %s" % modpath
+        print "path = %s" % path
+        path = path or util_findmodule(modpath, path=[self.projdir])
         if path is not None:
-            return ProjLoader(modpath, self.projdir)
+            print "found module file for %s" % modpath
+            return ProjLoader(modpath, self.projdir, path)
+        else:
+            print "blah"
 
 class ProjLoader(object):
     """This is the import loader for files within an OpenMDAO project.  We use it to instrument
     the imported files so we can keep track of what classes have been instantiated so we know
     when a project must be saved and reloaded.
     """
-    def __init__(self, modpath, projpath):
-        self.path = find_module(modpath, path=[projpath])
-        self.ispkg = isinstance(self.path, basestring) and os.path.basename(self.path) == '__init__.py'
+    def __init__(self, modpath, projpath, path):
+        self.path = path
+        #self.ispkg = isinstance(path, basestring) and os.path.basename(path) == '__init__.py'
+        
+    def is_package(self, modpath):
+        return os.path.basename(self.path) == '__init__.py'
         
     def get_code(self, modpath):
         """Opens the file, compiles it into an AST and then translates it into the instrumented
@@ -144,7 +154,7 @@ class ProjLoader(object):
         with open(self.path, 'r') as f:
             contents = f.read()
             if not contents.endswith('\n'):
-                contents += '\n'
+                contents += '\n' # to make ast.parse happy :(
             root = ast.parse(contents, filename=self.path, mode='exec')
             return compile(add_init_monitors(root), self.path, 'exec')
 
@@ -152,11 +162,14 @@ class ProjLoader(object):
         """Creates a new module if one doesn't exist already, and then updates the
         dict of that module based on the contents of the instrumented module file.
         """
+        m = sys.modules.get(modpath)
+        if m:
+            return m
         code = self.get_code(modpath)
         mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
         mod.__file__ = self.path
         mod.__loader__ = self
-        if self.ispkg:
+        if self.is_package(modpath):
             mod.__path__ = []
             mod.__package__ = modpath
         else:
