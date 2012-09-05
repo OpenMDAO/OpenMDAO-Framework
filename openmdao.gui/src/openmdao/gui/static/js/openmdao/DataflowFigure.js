@@ -263,7 +263,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
                     o = elm.data('corresponding_openmdao_object');
 
                 openmdao.drag_and_drop_manager.clearHighlightingDroppables();
-                openmdao.drag_and_drop_manager.clearDroppables();
 
                 if (o.maxmin !== '') {
                     openmdao.Util.promptForValue('Enter name for new '+droppedName,
