@@ -28,9 +28,9 @@ from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
 
-# extension for project files
+# extension for project files and directories
 PROJ_FILE_EXT = '.proj'
-
+PROJ_DIR_EXT = '.projdir'
 
 # use this to keep track of project classes that have been instantiated
 # so we can determine if we need to force a Project save & reload.
@@ -106,15 +106,15 @@ def add_init_monitors(node):
 
 class ProjFinder(object):
     """A finder class for custom imports from an OpenMDAO project. In order for this
-    to work, an entry must be added to sys.path of the form top_dir+'.prj', where top_dir
+    to work, an entry must be added to sys.path of the form top_dir+PROJ_DIR_EXT, where top_dir
     is the top directory of the project where python files are kept.
     """
     def __init__(self, path_entry):
-        """When path_entry has the form mentioned above (top_dir+'.prj'), this
+        """When path_entry has the form mentioned above (top_dir+PROJ_DIR_EXT), this
         returns a ProjFinder instance that will be used to locate modules within the
         project.
         """
-        if path_entry.endswith('.prj') and os.path.isdir(path_entry):
+        if path_entry.endswith(PROJ_DIR_EXT) and os.path.isdir(path_entry):
             self.path_entry = path_entry
             self.projdir = os.path.join(self.path_entry, 'model')
             if os.path.isdir(self.projdir):

@@ -148,8 +148,9 @@ class ProjFinderTestCase(unittest.TestCase):
             os.chdir(self.startdir)
             
     def test_importing(self):
+        projdirname = 'myproj.projdir'
         dirstruct = {
-            'myproj.prj': {
+            projdirname: {
                 'model': {
                 'top.py': """
 from openmdao.main.api import Component
@@ -179,13 +180,13 @@ if not matches:
 """,
                  },
              },
-                },
+           },
         }
 
         build_directory(dirstruct, topdir=os.getcwd())
         try:
             sys.path_hooks = [ProjFinder]+sys.path_hooks
-            sys.path = [os.path.join(os.getcwd(), 'myproj.prj')]+sys.path
+            sys.path = [os.path.join(os.getcwd(), projdirname)]+sys.path
             __import__('top')
             __import__('pkgdir.pkgfile')
             __import__('pkgdir.pkgdir2.pkgfile2')
