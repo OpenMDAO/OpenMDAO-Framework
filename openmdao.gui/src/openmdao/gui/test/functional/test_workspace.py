@@ -780,6 +780,32 @@ def _test_noslots(browser):
     project_info_page.delete_project()
     print "_test_noslots complete."
 
+def _test_savechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+
+    workspace_page.close_workspace()
+    //find dialog box
+    
+    //click on correct button.
+    
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_savechanges complete."
+
+
 
 if __name__ == '__main__':
     main()
