@@ -75,9 +75,10 @@ openmdao.Model=function() {
             }
         }
         var topic = message[0],
+            callbacks = [];
+        //debug.info('Model.handlePubMessage()',topic,message);
+        if (subscribers.hasOwnProperty(message[0]) && subscribers[message[0]].length > 0) {
             callbacks = subscribers[message[0]].slice();  // Need a copy.
-        //debug.info("topic = "+topic)
-        if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
                 if (typeof callbacks[i] === 'function') {
                     callbacks[i](message);
@@ -88,9 +89,9 @@ openmdao.Model=function() {
                 }
             }
         }
-        //else {
-        //    debug.info("no callbacks for pub message topic "+topic);
-        //}
+        else {
+            debug.warn('Model.handlePubMessage() no subscribers for', topic);
+        }
     }
 
     /***********************************************************************
@@ -497,7 +498,7 @@ openmdao.Model=function() {
         self.issueCommand(cmd, callback, errorHandler, null);
     };
     */
-    
+
     /** execute the model */
     this.runModel = function() {
         // make the call
