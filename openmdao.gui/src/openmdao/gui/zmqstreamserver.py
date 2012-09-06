@@ -1,6 +1,5 @@
 import sys
 import os
-import time
 import traceback
 import subprocess
 
@@ -12,7 +11,6 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 from tornado import httpserver, web, websocket
 
-import cPickle as pickle
 import jsonpickle
 
 debug = True
@@ -41,12 +39,8 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def initialize(self, addr):
         self.addr = addr
-        self.message_count = 0
-        self.time_opened = 0
-        self.time_closed = 0
 
     def open(self):
-        self.time_opened = time.time()
         stream = None
         try:
             context = zmq.Context()
@@ -55,10 +49,9 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             socket.setsockopt(zmq.SUBSCRIBE, '')
             stream = ZMQStream(socket)
         except Exception, err:
-            print 'Error getting ZMQ stream:', err
             exc_type, exc_value, exc_traceback = sys.exc_info()
+            print 'ZMQStreamHandler ERROR getting ZMQ stream:', err
             traceback.print_exception(exc_type, exc_value, exc_traceback)
-            traceback.print_tb(exc_traceback, limit=30)
             if stream and not stream.closed():
                 stream.close()
         else:
@@ -69,19 +62,31 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             message = message[0]
             message = make_unicode(message)  # tornado websocket wants unicode
             self.write_message(message)
+
         elif len(message) == 2:
-            self.message_count += 1
             topic = message[0]
-            content = pickle.loads(message[1])
-            
+            content = message[1]
+
+            # package topic and content into a single json object
             try:
-                number = float(content)
-            except (ValueError, TypeError):
+                content = jsonpickle.decode(content)
                 message = jsonpickle.encode([topic, content])
-            else:
-                message = jsonpickle.encode([topic, number])
-            
-            message = make_unicode(message)  # tornado websocket wants unicode
+            except Exception, err:
+                exc_type, exc_value, exc_traceback = sys.exc_info
+                print 'ZMQStreamHandler ERROR decoding/encoding message:', topic, err
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return
+
+            # convert to unicode (tornado websocket wants unicode)
+            try:
+                message = make_unicode(message)
+            except Exception, err:
+                exc_type, exc_value, exc_traceback = sys.exc_info
+                print 'ZMQStreamHandler ERROR converting message to unicode:', topic, err
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                return
+
+            # write message to websocket
             self.write_message(message)
 
     def on_message(self, message):
@@ -89,12 +94,6 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
 
     def on_close(self):
         DEBUG('zmqstream connection closed')
-        if debug:
-            total_time = time.time() - self.time_opened
-            rate = self.message_count / total_time
-            if self.message_count > 0:
-                print '%d messages in %d secs (%d msg/sec)' \
-                    % (self.message_count, total_time, rate)
 
 
 class ZMQStreamApp(web.Application):

@@ -512,7 +512,15 @@ openmdao.Util = {
         }
 
         connect();
-
+        /*debug.info('websocket connected');
+        debug.info('addr='+addr);
+        debug.info('retry='+retry);
+        debug.info('delay='+delay);
+        debug.info('handler:');
+        debug.info(handler);
+        debug.info('errhandler:');
+        debug.info(errHandler);
+        */
         return socket;
     },
 

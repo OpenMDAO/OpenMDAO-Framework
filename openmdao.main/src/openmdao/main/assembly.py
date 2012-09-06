@@ -8,6 +8,8 @@ import cStringIO
 import threading
 import re
 
+from zope.interface import implementedBy
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
 import networkx as nx
@@ -17,7 +19,7 @@ from networkx.algorithms.components import strongly_connected_components
 from openmdao.main.interfaces import implements, IAssembly, IDriver, IArchitecture, IComponent, IContainer,\
                                      ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
-from openmdao.main.container import find_trait_and_value
+from openmdao.main.container import find_trait_and_value, _copydict
 from openmdao.main.component import Component
 from openmdao.main.variable import Variable
 from openmdao.main.datatypes.api import Slot
@@ -492,7 +494,13 @@ class Assembly (Component):
         else: 
             newtrait = PassthroughTrait(validation_trait=trait, **metadata)
         self.add_trait(newname, newtrait)
-        setattr(self, newname, self.get(pathname))
+        
+        # Copy trait value according to 'copy' attribute in the trait
+        val = self.get(pathname)
+        ttype = trait.trait_type
+        if ttype.copy:
+            val = _copydict[ttype.copy](val)  
+        setattr(self, newname, val)
 
         if iotype == 'in':
             self.connect(newname, pathname)
@@ -861,11 +869,13 @@ class Assembly (Component):
                 if not name.startswith('@'):
                     comp = self.get(name)
                     if is_instance(comp, Component):
+                        inames = [cls.__name__ 
+                                  for cls in list(implementedBy(comp.__class__))]
                         components.append({'name': comp.name,
                                            'pathname': comp.get_pathname(),
                                            'type': type(comp).__name__,
                                            'valid': comp.is_valid(),
-                                           'is_assembly': is_instance(comp, Assembly),
+                                           'interfaces': inames,
                                            'python_id': id(comp)
                                           })
 

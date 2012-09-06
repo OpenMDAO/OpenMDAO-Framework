@@ -180,27 +180,14 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
-    function successful_save(data, textStatus, jqXHR) {
-        if (typeof openmdao_test_mode !== 'undefined') {
-            openmdao.Util.notify('Save complete: ' + textStatus);
-        }
-        if (waitClose.length !== 0) {
-            fname_nodot = waitClose[0];
-            tab_id = waitClose[1];
-            if (file_tabs.tabs("length") === 1) {
-                editor.setSession(defaultSession);
-                editor.setReadOnly(true);
-            }
-            delete sessions[fname_nodot];
-            file_tabs.tabs("remove", tab_id);
-            waitClose = [];
-        }
-    }
     
-    function failed_save(jqXHR, textStatus, errorThrown) {
+    function failedSave(jqXHR, textStatus, errorThrown) {
         debug.info("file save failed: "+textStatus);
         debug.info(jqXHR);
         debug.info(errorThrown);
+        if (jqXHR.status != 409) {
+            openmdao.Util.notify(jqXHR.responseXML, 'File Error', 'file-error');
+        }
     }
 
     function handle409(jqXHR, textStatus, errorThrown) {
@@ -220,7 +207,8 @@ openmdao.CodeFrame = function(id,model) {
                                             model.saveProject(function(data, textStatus, jqXHR) {
                                                 model.reload()
                                             })
-                                         });
+                                         },
+                                         failedSave);
                          }
                 },
                 {
@@ -244,12 +232,27 @@ openmdao.CodeFrame = function(id,model) {
         current_code = sessions[fname_nodot][0].getValue();
         filepath = sessions[fname_nodot][2];
         if (code_last !== current_code) {
-            sessions[fname_nodot][1] = current_code; // store saved file for comparison
-            model.setFile(filepath,current_code, 0,
-                          successful_save, failed_save, handle409);
+            model.setFile(filepath, current_code, 0,
+                          function (data, textStatus, jqXHR) { // success callback
+                            sessions[fname_nodot][1] = current_code; // store saved file for comparison
+                            renameTab("#"+fname_nodot,filepath); // mark as not modified
+                            sessions[fname_nodot][3] = false;  
+                            if (typeof openmdao_test_mode !== 'undefined') {
+                                openmdao.Util.notify('Save complete: ' + textStatus);
+                            }
+                            if (waitClose.length !== 0) {
+                                fname_nodot = waitClose[0];
+                                tab_id = waitClose[1];
+                                if (file_tabs.tabs("length") === 1) {
+                                    editor.setSession(defaultSession);
+                                    editor.setReadOnly(true);
+                                }
+                                delete sessions[fname_nodot];
+                                file_tabs.tabs("remove", tab_id);
+                                waitClose = [];
+                            }
+                         }, failedSave, handle409);
         }
-        renameTab("#"+fname_nodot,filepath);
-        sessions[fname_nodot][3] = false;
     }
 
     function saveAllFiles() {
@@ -289,9 +292,13 @@ openmdao.CodeFrame = function(id,model) {
         newfile.setUndoManager(new UndoManager());
         newfile.setMode(mode);
         newfile.on('change', function(evt) {
-            if (! sessions[fname_nodot][3]) {
+            if (sessions[fname_nodot][0].getValue() != contents) {
                 renameTab("#"+fname_nodot, filepath+"*");
                 sessions[fname_nodot][3] = true;
+            }
+            else {
+                renameTab("#"+fname_nodot, filepath);
+                sessions[fname_nodot][3] = false;
             }
         });
         editor.setSession(newfile);
