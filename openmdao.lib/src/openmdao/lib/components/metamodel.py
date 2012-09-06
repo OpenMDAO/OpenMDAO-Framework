@@ -48,7 +48,7 @@ class MetaModel(Component):
                           desc='Dictionary that provides mapping between variables and '
                           'arguments that should be passed to the surrogate model. Keys should '
                           'match those in the surrogate dictionary. Values can be a list of ordered '
-                          'arguments, a dictionary of named arguments, or a two-tuple of a list and a dictionary.',iotype="in")
+                          'arguments, a dictionary of named arguments, or a two-tuple of a list and a dictionary.')
     
     report_errors = Bool(True,iotype="in",desc="If True, metamodel will report errors reported from the component. "
                          "If False, metamodel will swallow the errors but log that they happened and exclude the case"
