@@ -150,8 +150,7 @@ class ProjFinderTestCase(unittest.TestCase):
     def test_importing(self):
         projdirname = 'myproj.projdir'
         dirstruct = {
-            projdirname: {
-                'model': {
+            os.path.splitext(projdirname)[0]: {
                 'top.py': """
 from openmdao.main.api import Component
 class MyClass(Component):
@@ -171,16 +170,11 @@ class PkgClass2(Component):
                  },
                 'plaindir': {
                     'plainfile.py': """
-from openmdao.main.project import _match_insts
 from pkgdir.pkgdir2.pkgfile2 import PkgClass2
 p = PkgClass2()
-matches = _match_insts(['pkgdir.pkgdir2.pkgfile2.PkgClass2'])
-if not matches:
-    raise RuntimeError("PkgClass2 not found in set of instances!")
 """,
                  },
              },
-           },
         }
 
         build_directory(dirstruct, topdir=os.getcwd())

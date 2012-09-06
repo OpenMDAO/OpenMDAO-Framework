@@ -10,6 +10,7 @@ from watchdog.events import FileSystemEventHandler
 
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
+from openmdao.util.log import logger
 
 
 class FilesPublisher(FileSystemEventHandler):
@@ -124,12 +125,22 @@ class FileManager(object):
         ''' write contents to file in working directory
         '''
         try:
-            filepath = os.getcwd()+'/'+str(filename)
-            fout = open(filepath, 'wb')
-            fout.write(contents)
-            fout.close()
+            filename = str(filename)
+            fpath = os.path.join(os.getcwd(), filename.lstrip('/'))
+            if filename.endswith('.py'):
+                initpath = os.path.join(os.path.dirname(fpath), '__init__.py')
+                files = os.listdir(os.path.dirname(fpath))
+                # FIXME: This is a bit of a kludge, but for now we only create an __init__.py
+                # file if it's the very first file in the directory where a new
+                # file is being added.
+                if not files and not os.path.isfile(initpath):
+                    with open(initpath, 'w') as f:
+                        f.write(' ')
+            with open(fpath, 'wb') as fout:
+                fout.write(contents)
             return True
         except Exception, err:
+            logger.error(str(err))
             return err
 
     def add_file(self, filename, contents):

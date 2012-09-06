@@ -114,9 +114,9 @@ class ProjFinder(object):
         returns a ProjFinder instance that will be used to locate modules within the
         project.
         """
-        if path_entry.endswith(PROJ_DIR_EXT) and os.path.isdir(path_entry):
+        if path_entry.endswith(PROJ_DIR_EXT) and os.path.isdir(os.path.splitext(path_entry)[0]):
             self.path_entry = path_entry
-            self.projdir = os.path.join(self.path_entry, 'model')
+            self.projdir = os.path.splitext(path_entry)[0]#os.path.join(os.path.splitext(path_entry)[0], 'model')
             if os.path.isdir(self.projdir):
                 return
         raise ImportError("can't import from %s" % path_entry)
@@ -138,7 +138,7 @@ class ProjLoader(object):
     """
     def __init__(self, path_entry):
         self.path_entry = path_entry
-        self.projdir = os.path.join(self.path_entry, 'model')
+        self.projdir = os.path.splitext(path_entry)[0]#os.path.join(os.path.splitext(path_entry)[0], 'model')
         
     def _get_filename(self, modpath):
         parts = [self.projdir]+modpath.split('.')
@@ -243,6 +243,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
             tf = tarfile.open(fileobj=f, mode='r')
             tf.extractall(projpath)
         except Exception, err:
+            logger.error(str(err))
             print "Error expanding project archive:", err
         finally:
             tf.close()
@@ -356,6 +357,12 @@ class _ProjDict(dict):
                 return val
         return super(_ProjDict, self).__getitem__(name)
 
+def add_proj_to_path(path):
+    """Puts this project's directory on sys.path."""
+    modeldir = path+PROJ_DIR_EXT
+    if modeldir not in sys.path:
+        sys.path = [modeldir]+sys.path
+
 class Project(object):
     def __init__(self, projpath):
         """Initializes a Project containing the project found in the 
@@ -369,6 +376,7 @@ class Project(object):
         self.path = expand_path(projpath)
         self._model_globals = _ProjDict()
         self._init_globals()
+        macro_file = os.path.join(self.path, '_project_macro')
 
         if os.path.isdir(projpath):
             self.activate()
@@ -394,11 +402,13 @@ class Project(object):
                 #macro_exec = True
                 #logger.error("%s doesn't exist" % statefile)
             #if macro_exec:
-            self._initialize()
-            macro_file = os.path.join(self.path, '_project_macro')
             if os.path.isfile(macro_file):
                 logger.info('Reconstructing project using macro')
                 self.load_macro(macro_file, execute=True, strict=True)
+            else:
+                self._initialize()
+                self.write_macro()
+                        
         else:  # new project
             os.makedirs(projpath)
             self.activate()
@@ -406,6 +416,7 @@ class Project(object):
             self.save()
 
     def _initialize(self):
+        self.command("# Auto-generated file - DO NOT MODIFY")
         self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
         
     def _init_globals(self):
@@ -503,19 +514,26 @@ class Project(object):
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
-        modeldir = self.path+'.prj'
+        add_proj_to_path(self.path)
+        modeldir = self.path+PROJ_DIR_EXT
         if modeldir not in sys.path:
             sys.path = [modeldir]+sys.path
-            logger.error("added %s to sys.path" % modeldir)
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir+'.prj')
+            sys.path.remove(modeldir+PROJ_DIR_EXT)
         except:
             pass
 
+    def write_macro(self):
+        logger.info("Saving macro used to create project")
+        with open(os.path.join(self.path, '_project_macro'), 'w') as f:
+            for cmd in self._recorded_cmds:
+                f.write(cmd)
+                f.write('\n')
+        
     def save(self):
         """ Save the project model to its project directory.
         """
@@ -525,14 +543,7 @@ class Project(object):
                 #pickle.dump(self._model_globals, f)
         #except Exception as err:
             #logger.error("Failed to pickle the project: %s" % str(err))
-
-        if self._recorded_cmds:
-            logger.info("Saving macro used to create project")
-            with open(os.path.join(self.path, '_project_macro'), 'w') as f:
-                for cmd in self._recorded_cmds:
-                    f.write(cmd)
-                    f.write('\n')
-                    logger.info(cmd)
+        self.write_macro()
 
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.

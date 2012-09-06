@@ -155,7 +155,6 @@ class _FileInfo(object):
         self.fpath = fpath
         self.modpath = get_module_path(fpath)
         self.modtime = os.path.getmtime(fpath)
-        logger.error("importing %s" % self.modpath)
         __import__(self.modpath)
         module = sys.modules[self.modpath]
         self.version = getattr(module, '__version__', None)
