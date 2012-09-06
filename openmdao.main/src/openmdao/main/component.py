@@ -1534,7 +1534,7 @@ class Component(Container):
             Set to true if we only want to populate the input and output
             fields of the attributes dictionary.
         """
-        
+
         attrs = {}
         attrs['type'] = type(self).__name__
 
@@ -1553,45 +1553,41 @@ class Component(Container):
         # param, objective, or constraint.
         # Objectives and constraints are "implicit" connections. Parameters
         # are as well, though they lock down their variable targets.
-        if self.parent:
-            
+        if self.parent and has_interface(self.parent, IAssembly):
             dataflow = self.parent.get_dataflow()
             for parameter, target in dataflow['parameters']:
                 if not target in parameters:
                     parameters[target] = []
-
                 parameters[target].append(parameter)
-            
+
             for target, objective in dataflow['objectives']:
                 if target not in implicit:
                     implicit[target] = []
-
                 implicit[target].append(objective)
-                
+
             for target, constraint in dataflow['constraints']:
                 if target not in implicit:
                     implicit[target] = []
-    
                 implicit[target].append(constraint)
-       
+
         inputs = []
         outputs = []
         slots = []
-        
+
         # Add all inputs and outputs
-        for name in self.list_inputs() + self.list_outputs():
-            
+        io_list = self.list_inputs() + self.list_outputs()
+        for name in io_list:
             trait = self.get_trait(name)
             meta = self.get_metadata(name)
             value = getattr(self, name)
             ttype = trait.trait_type
-            
+
             # Each variable type provides its own basic attributes
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-            
+
             io_attr['valid'] = self.get_valid([name])[0]
-            
             io_attr['connected'] = ''
+
             if name in connected_inputs:
                 connections = self._depgraph.connections_to(name)
                 # there can be only one connection to an input
@@ -1605,27 +1601,24 @@ class Component(Container):
 
             io_attr['implicit'] = ''
             if "%s.%s" % (self.name, name) in parameters:
-
                 io_attr['implicit'] = str([driver_name.split('.')[0] for \
-                                           driver_name in parameters["%s.%s" % (self.name, name)]])
-                
+                    driver_name in parameters["%s.%s" % (self.name, name)]])
+
             if "%s.%s" % (self.name, name) in implicit:
-                io_attr['implicit'] = str([driver_name.split('.')[0] for 
-                                        driver_name in implicit["%s.%s" % (self.name, name)]])
-            
+                io_attr['implicit'] = str([driver_name.split('.')[0] for
+                    driver_name in implicit["%s.%s" % (self.name, name)]])
+
             if name in self.list_inputs():
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
-                
+
             # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
-
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] == False:
-                    
                     slots.append(slot_attr)
-            
+
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
         attrs['Slots'] = slots
@@ -1635,15 +1628,16 @@ class Component(Container):
         if not io_only:
             # Add Slots that are not inputs or outputs
             for name, value in self.traits().items():
-                if value.is_trait_type(Slot):
+                if name not in io_list and (value.is_trait_type(Slot) or value.is_trait_type(List)):
                     trait = self.get_trait(name)
                     meta = self.get_metadata(name)
                     value = getattr(self, name)
                     ttype = trait.trait_type
                     # We can hide slots (e.g., the Workflow slot in drivers)
-                    if 'hidden' not in meta or meta['hidden']==False:
+                    if 'hidden' not in meta or meta['hidden'] == False:
                         io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-                        attrs['Slots'].append(slot_attr)
+                        if slot_attr is not None:
+                            attrs['Slots'].append(slot_attr)
 
             if has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
@@ -1725,7 +1719,7 @@ class Component(Container):
                     attr['scaler']  = con.scaler
                     attr['adder']   = con.adder
                     constraints.append(attr)
-                    
+
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
@@ -1754,4 +1748,3 @@ def _show_validity(comp, recurse=True, exclude=set(), valid=None):  #pragma no c
     _show_validity_(comp, recurse, exclude, valid, result)
     for name, val in sorted([(n, v) for n, v in result.items()], key=lambda v: v[0]):
         print '%s: %s' % (name, val)
-
