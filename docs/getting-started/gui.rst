@@ -12,7 +12,8 @@ Disclaimer
 The OpenMDAO GUI is brand new and still under active development. We're working to add in functionality 
 and make sure the features that are there work as expected. Please bare with us if you experience any bugs or you 
 find that a certain things don't work quite the way you would like them to. The development team would 
-greatly appreciate any feedback you have (good or bad). Just post on our `forum <http://openmdao.org/forum>`_. 
+greatly appreciate any feedback you have (good or bad). Just post on our `forum <http://openmdao.org/forum>`_ or 
+:ref:`submit an issue <github_issues>`. 
 
 
 Using the GUI
@@ -20,7 +21,7 @@ Using the GUI
 
 OpenMDAO ships with a web browser based Graphical User Interface. Our GUI is written in Javascript and HTML. 
 Even though the GUI rendered in a web browser, you don't need to be connected to the internet to use it. OpenMDAO is delivered 
-with the GUI built in. So once you've installed OpenMDAO just open up a command window, activate your OpenMDAO environment, and then 
+with the GUI built in. So once you've installed OpenMDAO just open up a command window, :ref:`activate <activate_env>` your OpenMDAO environment, and then 
 type 
 
 :: 
@@ -68,14 +69,14 @@ If your curious whats going on with the GUI, and how it's serving a web page to 
 information is not required reading so feel free to move on ahead to other parts of the docs, or view our screen casts on 
 using the GUI. 
 
-Built into is a small web-server that is set up when you call ``openmdao gui``. We open up a browser window for you 
+Built into OpenMDAO is a small web-server that is set up when you call ``openmdao gui``. We open up a browser window for you 
 pointing to the address ``http://localhost:xxxx``. You could open up the same page yourself by typing in that address manually. 
 What this means is that the server and the browser are both on the same machine, but are still passing information between 
 each other over the the computer's internal network using the HTTP protocol. Since everything is happening over the computer's 
 internal network, you don't need to be connected to the Internet or even have your wireless card turned on! 
 
 The GUI and the computational server communicate with each other via a technology called 
-`web-sockets <http://en.wikipedia.org/wiki/WebSocket>`_ which enabled bi-directional communication. All of the things 
+`web-sockets <http://en.wikipedia.org/wiki/WebSocket>`_ which enables bi-directional communication. All of the things 
 you see in the browser window are rendered using HTML5 and javascript. We rely on a number of different javascript libraries 
 to make all these things work, but we rely most heavily on `jQuery <http://jqueryui.com/>`_. 
 
