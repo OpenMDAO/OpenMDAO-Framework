@@ -2,14 +2,13 @@
  * stuff to do after the page is loaded
  */
 
-
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
     openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
     openmdao.model = new openmdao.Model();
 
     openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager()
-
+    
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
         north__size: 40,
@@ -79,5 +78,12 @@ jQuery(function() {
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
+    
+    
+    jQuery(window).bind('beforeunload', function(e) {
+        if (openmdao.model.getModified()){
+            return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
+        }    
+    });
 });
 
