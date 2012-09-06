@@ -7,7 +7,7 @@ import shutil
 from openmdao.util.fileutil import find_files, build_directory
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
-                                  filter_macro, ProjFinder
+                                  filter_macro, ProjFinder, _match_insts
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -161,27 +161,46 @@ class MyClass(Component):
                     'pkgfile.py': 'from openmdao.main.api import Component, Assembly',
                     'pkgdir2': {
                           '__init__.py': '',
-                          'pkgfile2.py': 'from openmdao.main.api import Component, Assembly'
+                          'pkgfile2.py': """
+from openmdao.main.api import Component
+class PkgClass2(Component):
+    pass
+""",
                         }
                  },
                 'plaindir': {
-                    'plainfile.py': 'from openmdao.main.api import Component, Assembly'
+                    'plainfile.py': """
+from openmdao.main.project import _match_insts
+from pkgdir.pkgdir2.pkgfile2 import PkgClass2
+p = PkgClass2()
+matches = _match_insts(['pkgdir.pkgdir2.pkgfile2.PkgClass2'])
+if not matches:
+    raise RuntimeError("PkgClass2 not found in set of instances!")
+""",
                  },
              },
                 },
         }
 
-        build_directory(dirstruct, topdir='/tmp')
+        build_directory(dirstruct, topdir=os.getcwd())
         try:
             sys.path_hooks = [ProjFinder]+sys.path_hooks
-            #sys.path = [os.path.join(os.getcwd(), 'myproj.prj')]+sys.path
-            sys.path = [os.path.join('/tmp', 'myproj.prj')]+sys.path
+            sys.path = [os.path.join(os.getcwd(), 'myproj.prj')]+sys.path
             __import__('top')
             __import__('pkgdir.pkgfile')
             __import__('pkgdir.pkgdir2.pkgfile2')
+            
+            mod = sys.modules['pkgdir.pkgdir2.pkgfile2']
+            expected_classname = 'pkgdir.pkgdir2.pkgfile2.PkgClass2'
+            matches = _match_insts([expected_classname])
+            self.assertEqual(matches, set())
+            
+            inst = getattr(mod, 'PkgClass2')() # create an inst of PkgClass2
+            matches = _match_insts([expected_classname])
+            self.assertEqual(matches, set([expected_classname]))
+                                   
         finally:
             sys.path = sys.path[1:]
-            shutil.rmtree(os.path.join('/tmp','myproj.prj'))
 
 if __name__ == "__main__":
     unittest.main()

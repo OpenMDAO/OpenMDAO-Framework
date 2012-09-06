@@ -33,7 +33,10 @@ PROJ_FILE_EXT = '.proj'
 
 
 # use this to keep track of project classes that have been instantiated
-# so far, so we can determine if we need to force a Project save & reload
+# so we can determine if we need to force a Project save & reload.
+# FIXME: This doesn't keep track of when instances are deleted, so 
+# it's possible that the _instantiated_classes set will contain names
+# of classes that no longer have any active instances.
 _instantiated_classes = set()
 _instclass_lock = RLock()
 
@@ -49,10 +52,6 @@ def _register_inst(typname):
         
 def _match_insts(classes):
     global _instantiated_classes
-    logger.error("classes: ")
-    logger.error("%s" % classes)
-    logger.error("\n_instantiated_classes:")
-    logger.error("%s" % _instantiated_classes)
     return _instantiated_classes.intersection(classes)
 
 def text_to_node(text):
@@ -96,7 +95,8 @@ def __init__(self, *args, **kwargs):
 
 def add_init_monitors(node):
     """Take the specified AST and translate it into the instrumented version,
-    which will record all instances"""
+    which will record all instances.
+    """
     node = CtorInstrumenter().visit(node)
     node.body = [
         ast.copy_location(
