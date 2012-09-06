@@ -292,8 +292,7 @@ your plugin.
     already works with their code. 
 
 
-More descriptions of the various metadata values can be found 
-`here`__.
+More descriptions of the various metadata values can be found `here`__.
 
 .. __: http://distutils2.readthedocs.org/en/latest/setupcfg.html
 

@@ -284,6 +284,7 @@ def view_docs(browser=None):
         build_docs()
     
     import webbrowser
+    idxpath = "file://"+idxpath
     wb = webbrowser.get(browser)
     wb.open(idxpath)
 

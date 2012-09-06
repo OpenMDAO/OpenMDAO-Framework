@@ -272,6 +272,25 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         })
         .bind("loaded.jstree", function (e) {
             jQuery('#'+id+' .file').draggable({ helper: 'clone', appendTo: 'body' });
+
+            // id is  "file_pane"
+            jQuery('#'+id+' .jstree li').each(function () {
+                // children[1] is the a tag inside the li
+                // children[1].children[0] is the ins tag inside the a tag and that is the
+                //    icon that needs to be set, which we do by adding a class and
+                //    adding some CSS into mdao-styles.css
+                if ( this.children[1].getAttribute("class") === "folder" ) {
+                    this.children[1].children[0].addClass( "jstree-folder" ) ;
+                }
+                else {
+                    if ( this.children[1].text.match("\.py$")  ) {
+                        this.children[1].children[0].addClass( "jstree-python-file" ) ;
+                    } else {
+                        this.children[1].children[0].addClass( "jstree-file" ) ;
+                    }
+                }
+            });
+
         })
         .bind("dblclick.jstree", function (e,tree) {
             var node = jQuery(e.target),            
