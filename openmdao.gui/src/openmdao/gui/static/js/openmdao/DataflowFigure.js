@@ -1068,7 +1068,7 @@ openmdao.DataflowFigure.prototype.resize=function(){
         if (last.outputPort.getConnections().size > 0) {
             width += this.cornerWidth;
         }
-        if (unconnected.length === 0) {
+        if (unconnected === 0) {
             if (last.fbInputPort && last.fbInputPort.getConnections().size > 0) {
                 height += this.cornerHeight;
             }
