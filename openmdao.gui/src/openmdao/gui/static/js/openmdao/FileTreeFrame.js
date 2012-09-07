@@ -25,6 +25,11 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
 
+    this.codeEditor = code_fn;
+    debug.info('openmdao.FileTreeFrame', typeof code_fn);
+    debug.info('openmdao.FileTreeFrame', typeof this.codeEditor);
+    debug.info('openmdao.FileTreeFrame', typeof this, this);
+
     // Enable dropping of files onto file tree frame to add them to project
     self.elm.bind({
         dragenter: function () {
@@ -357,10 +362,28 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 openmdao.FileTreeFrame.prototype = new openmdao.BaseFrame();
 openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;
 
-/** create a new file in the current project */
+/** create a new file in the current project and edit it */
 openmdao.FileTreeFrame.prototype.newFile = function(path) {
+    var self = this;
     openmdao.Util.promptForValue('Specify a name for the new file',
-                     function(name) { openmdao.model.newFile(name,path); } );
+        function(name) {
+            openmdao.model.newFile(name, path,
+                function(data, textStatus, jqXHR) {
+                    debug.info('model.newFile callback', name, path, self);
+                    name = '/'+name;
+                    if (path)
+                        name = path+name;
+                    if (openmdao.model.editor) {
+                        debug.info('    openmdao.model.editor', openmdao.model.editor);
+                        debug.info('    editFile', name, typeof openmdao.model.editor.editFile);
+                        openmdao.model.editor.editFile(name);
+                    }
+                    else {
+                        debug.info('    popup', name, self.codeEditor);
+                        openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
+                    }
+                });
+        });
 };
 
 /** create a new folder in the current project */
