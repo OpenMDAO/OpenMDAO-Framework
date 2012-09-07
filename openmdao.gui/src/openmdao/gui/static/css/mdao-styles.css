@@ -205,16 +205,15 @@ nav ul ul a:hover {
 }
 
 .parameter {
-    color:rgba(200,0,0,255);
+    color:rgba(100,180,255,255);
 }
-
 .constraint {
-    color:rgba(0,200,0,255);
+    color:rgba(100,180,255,255);
+}
+.objective {
+    color:rgba(100,180,255,255);
 }
 
-.objective {
-    color:rgba(0,0,200,255);
-}
 /* specific icons for the items in the component tree */
 .jstree-openmdao a > ins.jstree-assembly {
     background-image:url("/static/images/icons.png"); 
