@@ -21,6 +21,7 @@ from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.mp_support import is_instance
+from openmdao.main.publisher import publish
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
@@ -413,7 +414,7 @@ class Project(object):
             #if macro_exec:
             if os.path.isfile(macro_file):
                 logger.info('Reconstructing project using macro')
-                self.load_macro(macro_file, execute=True, strict=True)
+                self.load_macro(macro_file, execute=True)
             else:
                 self._initialize()
                 self.write_macro()
@@ -475,16 +476,19 @@ class Project(object):
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
 
-    def load_macro(self, fpath, execute=True, strict=False):
+    def load_macro(self, fpath, execute=True):
         with open(fpath, 'r') as f:
+            errors = []
             for i, line in enumerate(filter_macro(f.readlines())):
                 if execute:
                     try:
                         self.command(line.rstrip('\n'))
                     except Exception as err:
                         logger.error('file %s line %d: %s' % (fpath, i + 1, str(err)))
-                        if strict:
-                            raise
+                        try:
+                            publish('console_errors', str(err))
+                        except:
+                            pass
                 else:
                     self._recorded_cmds.append(line.rstrip('\n'))
 
