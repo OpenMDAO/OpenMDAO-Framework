@@ -631,7 +631,7 @@ def execute(self)
         logging.exception('Waiting for file-error')
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
-    eq(message, 'invalid syntax (bug.py, line 7)')
+    eq(message, 'invalid syntax (bug.py, line 6)')
 
     browser.close()
     browser.switch_to_window(workspace_window)
