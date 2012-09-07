@@ -2,6 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
+    var xyzzy = this;
     var menu = [
         {   "text": "File",
             "items": [
@@ -364,24 +365,22 @@ openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;
 
 /** create a new file in the current project and edit it */
 openmdao.FileTreeFrame.prototype.newFile = function(path) {
-    var self = this;
     openmdao.Util.promptForValue('Specify a name for the new file',
         function(name) {
             openmdao.model.newFile(name, path,
                 function(data, textStatus, jqXHR) {
-                    debug.info('model.newFile callback', name, path, self);
+                    debug.info('model.newFile callback', name, path);
                     name = '/'+name;
                     if (path)
                         name = path+name;
-                    if (openmdao.model.editor) {
-                        debug.info('    openmdao.model.editor', openmdao.model.editor);
-                        debug.info('    editFile', name, typeof openmdao.model.editor.editFile);
-                        openmdao.model.editor.editFile(name);
-                    }
-                    else {
-                        debug.info('    popup', name, self.codeEditor);
-                        openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
-                    }
+                    openmdao.model.code_fn(name);
+//                    if (openmdao.model.editor) {
+//                        openmdao.model.editor.editFile(name);
+//                    }
+//                    else {
+//                        debug.info('    popup', name);
+//                        openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
+//                    }
                 });
         });
 };

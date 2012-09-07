@@ -75,6 +75,8 @@ jQuery(function() {
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
         new openmdao.ConsoleFrame("console",  model);
+
+        model.code_fn = code_fn;
     }());
 
     // do layout
