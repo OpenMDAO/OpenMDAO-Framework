@@ -18,6 +18,7 @@ jQuery(function() {
     openmdao.ValueEditor.registerEditor("float", TextCellEditor)
     openmdao.ValueEditor.registerEditor("int", IntegerCellEditor)
     openmdao.ValueEditor.registerEditor("enum", EnumEditor)
+    openmdao.ValueEditor.registerEditor("dict", DictEditor)
     openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor)
 
     // set the layout (note: global scope)

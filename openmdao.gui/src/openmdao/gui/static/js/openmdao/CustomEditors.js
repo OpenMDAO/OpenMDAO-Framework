@@ -3,6 +3,110 @@
 
     var customEditors = {
 
+        DictEditor : function(args) {
+	    var input = [];
+	    var keys = [];
+	    var val_types = [];
+	    var key_types = [];
+	    var var_name = args.item['name'];
+	    if (typeof args.item.value == "string") {
+		var values = JSON.parse(args.item.value);}
+	    else {var values = args.item.value;}
+	    console.log(values);
+	    var grid = args.grid;
+	    var $container = $("<div id = '"+var_name+"-editor'/>");
+            var $editor_dialog = $("<div />").dialog({
+				width: "auto",
+				title: "Editing dictionary: '"+var_name+"'",
+            			buttons: {
+					    "Submit changes": function() {
+						    grid.getEditorLock().commitCurrentEdit();
+						    $( this ).dialog( "close" );
+					    },
+					    "Cancel": function() {
+						    grid.getEditorLock().cancelCurrentEdit();
+						    $( this ).dialog( "close" );
+					    }
+					}
+						});
+		$editor_dialog.live('keyup', function(e){
+		  if (e.keyCode == 13) {
+		    $(':button:contains("Submit changes")').click();
+		  }
+		});
+
+	    $container.appendTo($editor_dialog);
+	    var length = 0;
+	    
+	    
+            this.init = function() {
+		$("Keys : Values<br>").appendTo($editor_dialog);
+                for (var key in values) {
+		    if (key != "py/object") {
+			keys.push($("<INPUT type=text disabled = 'disabled' class='editor-text' size = 10/>").appendTo($container));
+			input.push($("<INPUT type=text class='editor-text' size = 10/><br>").appendTo($container));
+			length++;
+                    }}
+            };
+
+            this.destroy = function() {
+                for (var i = 0; i< length; i++) {
+                    input[i].remove();
+		    keys[i].remove();
+                    }
+                    $editor_dialog.dialog('destroy');
+            };
+
+            this.focus = function() {
+                input.focus();
+            };
+	    
+	    
+            this.loadValue = function(item) {
+		var i = 0;
+                for (var key in values) {
+		    if (key != "py/object") {
+			keys[i].val(key);
+			val_types.push(typeof values[key]);
+			key_types.push(typeof key);
+			input[i].val(values[key]);
+			i++;
+			}
+                    }
+		    console.log(key_types);
+            };
+
+            this.serializeValue = function() {
+		new_d = {};
+		for (var i = 0; i < length; i++) {
+		    thisval = input[i].val();
+		    keyval = keys[i].val();
+		    if (key_types[i] == "number") {keyval = parseFloat(keyval);}
+		    if (val_types[i] == "number") {thisval = parseFloat(thisval);}
+		    new_d[keyval] = thisval;
+		}
+                return JSON.stringify(new_d);
+            };
+
+            this.applyValue = function(item,state) {
+                item[args.column.field] = state;
+            };
+           
+            this.isValueChanged = function() {
+                //return ($select.val() != defaultValue);
+		return true;
+            };
+
+            this.validate = function() {
+                return {
+                    valid: true,
+                    msg: null
+                };
+            };
+
+            this.init();
+        },
+
         EnumEditor : function(args) {
             var $select;
             var defaultValue;
@@ -105,7 +209,6 @@
 
 
         ArrayEditor : function(args) {
-	    debug.info(args)
 	    var var_name = args.item['name'];
 	    var grid = args.grid;
 	    var var_item = args.item;
