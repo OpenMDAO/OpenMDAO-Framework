@@ -40,11 +40,9 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
 
     // all this is just to prevent drops from falling thru to underlying panes
     var true_dropdiv = slotsDiv.parent();
-    true_dropdiv.data('corresponding_openmdao_object',this);
     true_dropdiv.droppable ({
         accept: '.objtype',
         out: function(ev,ui) {
-            var o = true_dropdiv.data('corresponding_openmdao_object');
             openmdao.drag_and_drop_manager.draggableOut(true_dropdiv);
         },
         over: function(ev,ui) {
@@ -54,7 +52,6 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             /* divs could be in front of divs and the div that gets the drop
                event might not be the one that is in front visibly and therefore
                is not the div the user wants the drop to occur on */
-            var o = elm.data('corresponding_openmdao_object');
             top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
             /* call the method on the correct div to handle the drop */
             if (top_div) {
@@ -64,11 +61,11 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
         }
     });
 
-    this.highlightAsDropTarget=function() {
+    true_dropdiv.highlightAsDropTarget=function() {
         // do nothing, but needed for DragAndDropManager
     };
 
-    this.unhighlightAsDropTarget=function() {
+    true_dropdiv.unhighlightAsDropTarget=function() {
         // do nothing, but needed for DragAndDropManager
     };
 

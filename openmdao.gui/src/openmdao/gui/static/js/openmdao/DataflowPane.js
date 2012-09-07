@@ -31,8 +31,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
        dataflowID of "-dataflow" (which adds it to the globals), we need to
        include it in the list of droppables so that handling of the layers works
     */
-    true_dropdiv = dataflowDiv.parent() ;
-    true_dropdiv.data('corresponding_openmdao_object',this);
+    true_dropdiv = dataflowDiv.parent();
     true_dropdiv.droppable ({
         accept: '.IComponent',
         out: function(ev,ui) {
@@ -51,8 +50,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         actualDropHandler: function(ev,ui) {
             var droppedObject = jQuery(ui.draggable).clone(),
                 droppedName = droppedObject.text(),
-                droppedPath = droppedObject.attr("modpath"),
-                model = true_dropdiv.data("corresponding_openmdao_object").openmdao_model;
+                droppedPath = droppedObject.attr("modpath");
 
             openmdao.drag_and_drop_manager.clearHighlightingDroppables() ;
 
@@ -63,12 +61,12 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
     });
 
     /** Highlight this pane when it the cursor is over it and it can accept a drop */
-    this.highlightAsDropTarget=function() {
+    true_dropdiv.highlightAsDropTarget=function() {
         dataflow.setBackgroundImage( "/static/images/grid_10_highlighted.png", true);
     };
 
     /** Turn off highlighting of this pane when it can no longer accept a drop */
-    this.unhighlightAsDropTarget=function() {
+    true_dropdiv.unhighlightAsDropTarget=function() {
         dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
     };
 

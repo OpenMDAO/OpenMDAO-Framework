@@ -17,7 +17,7 @@ openmdao.DragAndDropManager=function() {
      ***********************************************************************/
 
     var self = this,
-        droppables= new Hashtable();
+        droppables= {};
 
     self.drop_target = null;
 
@@ -26,46 +26,36 @@ openmdao.DragAndDropManager=function() {
         return self.drop_target;
     };
 
-    // gets called when the cursor goes outside the passed in droppable element
-    // the input should be a jQuery object
+    // remove the droppable with the given id from the valid drop targets
     this.draggableOut = function(droppable) {
-        droppables.remove(droppable[0].id);
+        delete droppables[droppable.attr('id')];
         openmdao.drag_and_drop_manager.updateHighlighting();
     };
 
-    // gets called when the cursor goes inside the passed in parameter element, droppable
-    // the input should be a jQuery object
+    // add a valid drop target with the given id
     this.draggableOver = function(droppable) {
-        var elm_calculated_zindex = this.computeCalculatedZindex(droppable);
-        droppables.put(droppable[0].id, elm_calculated_zindex);
+        droppables[droppable.attr('id')] = droppable;
         openmdao.drag_and_drop_manager.updateHighlighting();
     };
 
-    // clear all droppables
+    // clear all drop targets
     this.clearHighlightingDroppables = function() {
-        droppables.each(function(id, zindex) {
-            var div = $(id),
-                div_object = jQuery(div),
-                o = div_object.data('corresponding_openmdao_object');
-            o.unhighlightAsDropTarget();
+        jQuery.each(droppables, function(id, droppable) {
+            droppable.unhighlightAsDropTarget();
         });
-        droppables.clear();
+        droppables = {};
     };
 
-
-    // Given the list of droppables that could potentially be
-    //    dropped on given where the cursor is, figure out which is on top
-    //    and tell it to highlight itself. Unhighlight all the others
+    // find the valid drop target with the highest z-index, highlight it and
+    // set it to be the current drop target. Unhighlight all the others.
     this.updateHighlighting = function() {
         // Find the div with the max id
         var max_zindex = -10000,
             max_topmost_zindex = -10000,
             max_id = "";
 
-        //debug.info( "Starting calc of front div" ) ;
-        droppables.each(function(id, zindex) {
-            var div = $(id),
-                div_object = jQuery(div),
+        jQuery.each(droppables, function(id, droppable) {
+            var div_object = jQuery('#'+id),
                 tmp_elm = div_object,
                 calculated_zindex,
                 count = 0,
@@ -115,25 +105,22 @@ openmdao.DragAndDropManager=function() {
         });
 
         // Now only highlight the top one
-        droppables.each( function(id, zindex) {
-            var div = $(id),
-                div_object = jQuery(div),
-                o = div_object.data('corresponding_openmdao_object');
+        jQuery.each(droppables, function(id, droppable) {
             if (id === max_id) {
                 /* We only allow dropping onto Assemblies and a good way to check that
                   is the maxmin variable. We also allow dropping onto the top, which is the  */
                 if ((id === "dataflow_pane" ) ||
-                    (div_object.attr("class").substring(0,14) === "DataflowFigure") ||
-                    (div_object.attr("class").indexOf("SlotFigure") !== -1)) {
-                    o.highlightAsDropTarget();
-                    self.drop_target = div_object;
+                    (droppable.attr("class").substring(0,14) === "DataflowFigure") ||
+                    (droppable.attr("class").indexOf("SlotFigure") !== -1)) {
+                    droppable.highlightAsDropTarget();
+                    self.drop_target = droppable;
                 }
                 else {
                     self.drop_target = null;
                 }
             }
             else {
-                o.unhighlightAsDropTarget();
+                droppable.unhighlightAsDropTarget();
             }
         });
 
