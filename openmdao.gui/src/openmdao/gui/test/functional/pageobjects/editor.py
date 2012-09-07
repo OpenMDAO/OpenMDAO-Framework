@@ -167,8 +167,6 @@ class EditorPage(BasePageObject):
         page.set_value(filename)
         time.sleep(5)  # There seems to be some animation/flickering here.
 
-        self.edit_file(filename, dclick=False)
-
         # Switch to editor textarea
         code_input_element = self.get_text_area()
 

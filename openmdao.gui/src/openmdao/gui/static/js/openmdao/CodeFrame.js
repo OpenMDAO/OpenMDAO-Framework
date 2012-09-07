@@ -343,7 +343,6 @@ openmdao.CodeFrame = function(id,model) {
 
     /** get contents of specified file from model, load into editor */
     this.editFile = function(pathname) {
-        debug.info('CodeFrame.editFile', pathname);
         filepath = pathname;
         mode = findMode(filepath);
         fname_nodot= nameSplit(filepath);
@@ -352,7 +351,6 @@ openmdao.CodeFrame = function(id,model) {
             file_tabs.tabs("select","#"+fname_nodot);
         }
         else { // file not being edited; make new tab
-            debug.info('    new tab', pathname);
             model.getFile(pathname,
                 // success
                 function(contents) {

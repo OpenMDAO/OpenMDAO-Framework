@@ -26,11 +26,6 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         filter_ext = [ 'pyc', 'pyd' ],
         filter_active = true;
 
-    this.codeEditor = code_fn;
-    debug.info('openmdao.FileTreeFrame', typeof code_fn);
-    debug.info('openmdao.FileTreeFrame', typeof this.codeEditor);
-    debug.info('openmdao.FileTreeFrame', typeof this, this);
-
     // Enable dropping of files onto file tree frame to add them to project
     self.elm.bind({
         dragenter: function () {
@@ -369,16 +364,16 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
         function(name) {
             openmdao.model.newFile(name, path,
                 function(data, textStatus, jqXHR) {
-                    debug.info('model.newFile callback', name, path);
                     name = '/'+name;
                     if (path)
                         name = path+name;
-                    openmdao.model.code_fn(name);
-//                    if (openmdao.model.editor) {
-//                        openmdao.model.editor.editFile(name);
-//                    }
+                    if (openmdao.model.editor) {
+                        openmdao.model.editor.editFile(name);
+                    }
+// Depending on browser settings, this may get blocked.  Worse yet, it can
+// put things in a state that other means of opening the editor get blocked.
+// For now just don't even try.
 //                    else {
-//                        debug.info('    popup', name);
 //                        openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
 //                    }
                 });
