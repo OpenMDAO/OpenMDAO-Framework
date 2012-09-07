@@ -145,7 +145,7 @@ class ProjLoader(object):
     """
     def __init__(self, path_entry):
         self.path_entry = path_entry
-        self.projdir = os.path.splitext(path_entry)[0]#os.path.join(os.path.splitext(path_entry)[0], 'model')
+        self.projdir = os.path.splitext(path_entry)[0]
         
     def _get_filename(self, modpath):
         parts = [self.projdir]+modpath.split('.')
