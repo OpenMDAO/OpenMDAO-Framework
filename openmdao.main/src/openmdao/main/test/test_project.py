@@ -1,12 +1,13 @@
+import os
+import sys
 import unittest
 import tempfile
-import os
 import shutil
 
-from openmdao.util.fileutil import find_files
+from openmdao.util.fileutil import find_files, build_directory
 from openmdao.main.component import Component
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT, \
-                                  filter_macro
+                                  filter_macro, ProjFinder, _match_insts
 from openmdao.lib.datatypes.api import Float
 
 class Multiplier(Component):
@@ -132,6 +133,69 @@ class ProjectTestCase(unittest.TestCase):
         filtered = filter_macro(lines)
         self.assertEqual(filtered, expected)
         
+class ProjFinderTestCase(unittest.TestCase):
+    def setUp(self):
+        self.startdir = os.getcwd()
+        self.tdir = tempfile.mkdtemp()
+        os.chdir(self.tdir)
+        
+    def tearDown(self):
+        try:
+            shutil.rmtree(self.tdir)
+        except:
+            pass
+        finally:
+            os.chdir(self.startdir)
+            
+    def test_importing(self):
+        projdirname = 'myproj.projdir'
+        dirstruct = {
+            os.path.splitext(projdirname)[0]: {
+                'top.py': """
+from openmdao.main.api import Component
+class MyClass(Component):
+    pass
+""",
+                'pkgdir': {
+                    '__init__.py': '',
+                    'pkgfile.py': 'from openmdao.main.api import Component, Assembly',
+                    'pkgdir2': {
+                          '__init__.py': '',
+                          'pkgfile2.py': """
+from openmdao.main.api import Component
+class PkgClass2(Component):
+    pass
+""",
+                        }
+                 },
+                'plaindir': {
+                    'plainfile.py': """
+from pkgdir.pkgdir2.pkgfile2 import PkgClass2
+p = PkgClass2()
+""",
+                 },
+             },
+        }
+
+        build_directory(dirstruct, topdir=os.getcwd())
+        try:
+            sys.path_hooks = [ProjFinder]+sys.path_hooks
+            sys.path = [os.path.join(os.getcwd(), projdirname)]+sys.path
+            __import__('top')
+            __import__('pkgdir.pkgfile')
+            __import__('pkgdir.pkgdir2.pkgfile2')
+            
+            mod = sys.modules['pkgdir.pkgdir2.pkgfile2']
+            expected_classname = 'pkgdir.pkgdir2.pkgfile2.PkgClass2'
+            matches = _match_insts([expected_classname])
+            self.assertEqual(matches, set())
+            
+            inst = getattr(mod, 'PkgClass2')() # create an inst of PkgClass2
+            matches = _match_insts([expected_classname])
+            self.assertEqual(matches, set([expected_classname]))
+                                   
+        finally:
+            sys.path = sys.path[1:]
 
 if __name__ == "__main__":
     unittest.main()

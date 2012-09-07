@@ -10,6 +10,7 @@ from watchdog.events import FileSystemEventHandler
 
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
+from openmdao.util.log import logger
 
 
 class FilesPublisher(FileSystemEventHandler):
@@ -26,7 +27,6 @@ class FilesPublisher(FileSystemEventHandler):
             self.files.publish_files()
         except Exception:
             traceback.print_exc()
-
 
 class FileManager(object):
     ''' Object that keeps track of a collection of files (i.e. a directory)
@@ -97,11 +97,16 @@ class FileManager(object):
         cwd = os.getcwd()
         return filedict(cwd, root=cwd)
 
+    def _get_abs_path(self, name):
+        '''return the absolute pathname of the given file/dir
+        '''
+        return os.path.join(os.getcwd(), str(name).lstrip('/'))
+
     def get_file(self, filename):
         ''' get contents of file in working directory
             returns None if file was not found
         '''
-        filepath = os.getcwd()+'/'+str(filename)
+        filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
             contents=open(filepath, 'rb').read()
             return contents
@@ -113,7 +118,7 @@ class FileManager(object):
             (does nothing if directory already exists)
         '''
         try:
-            dirpath = os.getcwd()+'/'+str(dirname)
+            dirpath = self._get_abs_path(dirname)
             if not os.path.isdir(dirpath):
                 os.makedirs(dirpath)
             return str(True)
@@ -124,12 +129,22 @@ class FileManager(object):
         ''' write contents to file in working directory
         '''
         try:
-            filepath = os.getcwd()+'/'+str(filename)
-            fout = open(filepath, 'wb')
-            fout.write(contents)
-            fout.close()
+            filename = str(filename)
+            fpath = self._get_abs_path(filename)
+            if filename.endswith('.py'):
+                initpath = os.path.join(os.path.dirname(fpath), '__init__.py')
+                files = os.listdir(os.path.dirname(fpath))
+                # FIXME: This is a bit of a kludge, but for now we only create an __init__.py
+                # file if it's the very first file in the directory where a new
+                # file is being added.
+                if not files and not os.path.isfile(initpath):
+                    with open(initpath, 'w') as f:
+                        f.write(' ')
+            with open(fpath, 'wb') as fout:
+                fout.write(contents)
             return True
         except Exception, err:
+            logger.error(str(err))
             return err
 
     def add_file(self, filename, contents):
@@ -161,10 +176,10 @@ class FileManager(object):
         ''' delete file in working directory
             returns False if file was not found, otherwise returns True
         '''
-        filepath = os.getcwd()+'/'+str(filename)
+        filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
             if os.path.isdir(filepath):
-                os.rmdir(filepath)
+                shutil.rmtree(filepath)
             else:
                 os.remove(filepath)
             return True
