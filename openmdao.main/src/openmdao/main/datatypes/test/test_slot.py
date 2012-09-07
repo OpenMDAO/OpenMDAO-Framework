@@ -55,7 +55,8 @@ class SlotTestCase(unittest.TestCase):
         try:
             plugin = self.sc.no_socket
         except AttributeError, exc:
-            self.assertEqual("'SlotComp' object has no attribute 'no_socket'",                             str(exc))
+            self.assertEqual("'SlotComp' object has no attribute 'no_socket'",
+                             str(exc))
         else:
             self.fail('AttributeError expected')
 
@@ -136,21 +137,18 @@ class SlotTestCase(unittest.TestCase):
         attrs = top.get_attributes(io_only=False)
         slot_attrs = attrs['Slots']
         self.assertTrue({'name': 'list_sock',
-                         'interfaces': [],
                          'containertype': 'list',
-                         'filled': 0,
+                         'filled': [],
                          'klass': 'MyClass',
                          'desc': 'Stuff'} in slot_attrs)
         self.assertTrue({'name': 'dict_sock',
-                         'interfaces': [],
                          'containertype': 'dict',
                          'filled': [],
                          'klass': 'MyClass',
                          'desc': 'Stuff2'} in slot_attrs)
         self.assertTrue({'name': 'sock',
-                         'interfaces': [],
                          'containertype': 'singleton',
-                         'filled': False,
+                         'filled': None,
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
 
@@ -166,24 +164,19 @@ class SlotTestCase(unittest.TestCase):
         
         attrs = top.get_attributes(io_only=False)
         slot_attrs = attrs['Slots']
-        for item in slot_attrs:
-            item.pop('value')
         self.assertTrue({'name': 'list_sock',
-                         'interfaces': [],
                          'containertype': 'list',
-                         'filled': 2,
+                         'filled': ['MyClass', 'MyClass'],
                          'klass': 'MyClass',
                          'desc': 'Stuff'} in slot_attrs)
         self.assertTrue({'name': 'dict_sock',
-                         'interfaces': [],
                          'containertype': 'dict',
                          'filled': ['Testing'],
                          'klass': 'MyClass',
                          'desc': 'Stuff2'} in slot_attrs)
         self.assertTrue({'name': 'sock',
-                         'interfaces': [],
                          'containertype': 'singleton',
-                         'filled': True,
+                         'filled': 'MyClass',
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
 

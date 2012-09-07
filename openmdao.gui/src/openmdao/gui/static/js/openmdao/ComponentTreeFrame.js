@@ -11,24 +11,9 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
     // initialize private variables
     var self = this,
         filter_beg = '_',
-        tree = jQuery('<div>').appendTo('<div style="height:100%">').appendTo("#"+id);
-
-    /** make the parent pane droppable */
-    /** TODO: handle this with jstree (i.e. drop into appropriate place in tree)
-    tree.parent().droppable({
-        accept: '.objtype',
-        drop: function(ev,ui) {
-                // get the object that was dropped
-                var droppedObject = jQuery(ui.draggable).clone();
-                // get the type name and path
-                var typename = droppedObject.text();
-                var typepath = droppedObject.attr("path");
-                openmdao.Util.promptForValue('Specify a name for the new '+typename,function(name) {
-                    model.addComponent(typepath,name);
-                });
-            }
-    });
-    **/
+        tree = jQuery('<div>')
+            .appendTo('<div style="height:100%">')
+            .appendTo("#"+id);
 
     /** convert model.json to structure required for jstree */
     function convertJSON(json, path, openNodes) {
@@ -46,7 +31,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                 node.attr = {
                      'type'  : type,
                      'path'  : pathname,
-                    'interfaces' : interfaces
+                     'interfaces' : interfaces
                 };
                 if (item.children) {
                     node.children = convertJSON(item.children, pathname,
@@ -58,10 +43,11 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                 data.push(node);
             }
         });
+
         return data;
     }
 
-    /** update the tree with JSON model data  */
+    /** update the tree with JSON model data */
     function updateTree(json) {
         // Grab paths of currently open nodes.
         var openNodes = [];
@@ -71,7 +57,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 
         tree.empty();
         tree.jstree({
-            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm", /* "dnd" */],
+            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm" ],
             json_data   : { "data": convertJSON(json, '', openNodes) },
             themes      : { "theme":  "openmdao" },
             cookies     : { "prefix": "objtree", opts : { path : '/' } },
@@ -105,39 +91,30 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
                     return jQuery('<span style="white-space:nowrap;background-color:black;color:white;"/>')
                         .text(jQuery(this).text());
                 }
-            });
-            jQuery('#'+id+' a').addClass("component"); // so that the WorkflowFigure droppable knows what to accept
+            }).addClass("component"); // so that the WorkflowFigure droppable knows what to accept
 
             /* add classes so that the items in the component tree are specific
                to what they are: assembly, driver or component */
             jQuery('#'+id+' li').each(function () {
-                if ( this.getAttribute("interfaces").indexOf("IAssembly") >= 0 ) {
-                    this.children[1].children[0].addClass( "jstree-assembly" ) ;
-                } else if ( this.getAttribute("interfaces").indexOf("IDriver") >= 0 ) {
-                    this.children[1].children[0].addClass( "jstree-driver" ) ;
-                } else if ( this.getAttribute("interfaces").indexOf("IComponent") >= 0 ) {
-                    this.children[1].children[0].addClass( "jstree-component" ) ;
+                if (this.getAttribute("interfaces").indexOf("IAssembly") >= 0) {
+                    this.children[1].children[0].addClass("jstree-assembly");
+                }
+                else if (this.getAttribute("interfaces").indexOf("IDriver") >= 0) {
+                    this.children[1].children[0].addClass("jstree-driver");
+                }
+                else if (this.getAttribute("interfaces").indexOf("IComponent") >= 0) {
+                    this.children[1].children[0].addClass("jstree-component");
                 }
             });
-
-
         });
-        // .one("reselect.jstree", function (e, data) { });
-
-
-
-
     }
 
     /** get a context menu for the specified node */
     function contextMenu(node) {
-
         var path = node.attr('path'),
             type = node.attr('type'),
-            interfaces = jQuery.parseJSON(node.attr('interfaces'));
-
-        // now create the menu
-        var menu = {};
+            interfaces = jQuery.parseJSON(node.attr('interfaces')),
+            menu = {};
 
         menu.properties = {
             "label"  : 'Properties',
@@ -208,10 +185,6 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 
     // listen for 'components' messages and update object tree accordingly
     model.addListener('components', handleMessage);
-
-
-
-
 
     /***********************************************************************
      *  privileged

@@ -8,7 +8,7 @@
 import csv
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Bool, ListStr, Slot, Float, Str
+from openmdao.lib.datatypes.api import Bool, List, Slot, Float, Str
 
 from openmdao.main.case import Case
 from openmdao.main.interfaces import IDOEgenerator, ICaseFilter, implements, \
@@ -36,8 +36,8 @@ class DOEdriver(CaseIterDriverBase):
                        desc='Name of CSV file to record to'
                             ' (default is <driver-name>.csv)')
 
-    case_outputs = ListStr([], iotype='in', 
-                           desc='A list of outputs to be saved with each case.')
+    case_outputs = List(Str, iotype='in', 
+                        desc='A list of outputs to be saved with each case.')
 
     case_filter = Slot(ICaseFilter, iotype='in',
                        desc='Selects cases to be run.')
@@ -96,7 +96,7 @@ class NeighborhoodDOEdriver(CaseIterDriverBase):
     DOEgenerator = Slot(IDOEgenerator, iotype='in', required=True,
                           desc='Iterator supplying normalized DOE values.')
     
-    case_outputs = ListStr([], iotype='in',
+    case_outputs = List(Str, iotype='in',
                            desc='A list of outputs to be saved with each case.')
     
     alpha = Float(.3, low=.01, high =1.0, iotype='in',

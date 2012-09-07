@@ -140,7 +140,7 @@ class ComponentHandler(ReqHandler):
             result = sys.exc_info()
         self.content_type = 'text/html'
         self.write(result)
-        
+
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
@@ -153,7 +153,7 @@ class ComponentHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(attr)
 
-        
+
 class ObjectHandler(ReqHandler):
     ''' get the data for a slotable object (including components)
     '''
@@ -404,7 +404,7 @@ class PublishHandler(ReqHandler):
         publish = self.get_argument('publish', default=True)
         publish = publish in [True, 'true', 'True']
         cserver = self.get_server()
-        cserver.publish(topic, publish)
+        cserver.add_subscriber(topic, publish)
 
 
 class PubstreamHandler(ReqHandler):

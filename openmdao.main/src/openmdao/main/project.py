@@ -4,10 +4,8 @@ Routines for handling 'Projects' in Python.
 
 import os
 import sys
-import shutil
 from inspect import isclass
 import tarfile
-import cPickle as pickle
 from tokenize import generate_tokens
 import token
 from cStringIO import StringIO
@@ -16,10 +14,9 @@ import ast
 from threading import RLock
 import traceback
 
-from pkg_resources import get_distribution, DistributionNotFound
+#from pkg_resources import get_distribution, DistributionNotFound
 
-from openmdao.main.container import Container
-from openmdao.main.assembly import Assembly, set_as_top
+from openmdao.main.api import set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
@@ -40,19 +37,23 @@ PROJ_DIR_EXT = '.projdir'
 _instantiated_classes = set()
 _instclass_lock = RLock()
 
+
 def _clear_insts():
     global _instantiated_classes
     with _instclass_lock:
         _instantiated_classes.clear()
 
+
 def _register_inst(typname):
     global _instantiated_classes
     with _instclass_lock:
         _instantiated_classes.add(typname)
-        
+
+
 def _match_insts(classes):
     global _instantiated_classes
     return _instantiated_classes.intersection(classes)
+
 
 def text_to_node(text):
     """Given a python source string, return the corresponding AST node. The outer
@@ -64,6 +65,7 @@ def text_to_node(text):
         return modnode.body[0]
     return modnode.body
 
+
 class CtorInstrumenter(ast.NodeTransformer):
     """All __init__ calls will be replaced with a call to a wrapper function
     that records the call by calling _register_inst(typename) before creating
@@ -71,27 +73,28 @@ class CtorInstrumenter(ast.NodeTransformer):
     """
     def __init__(self):
         super(CtorInstrumenter, self).__init__()
-    
+
     def visit_ClassDef(self, node):
         text = None
         for stmt in node.body:
             if isinstance(stmt, ast.FunctionDef) and stmt.name == '__init__':
-                stmt.name = '__%s_orig_init__' % node.name # __init__ was found - rename it to __orig_init__
-                break 
-        else: # no __init__ found, make one
+                stmt.name = '__%s_orig_init__' % node.name  # __init__ was found - rename it to __orig_init__
+                break
+        else:  # no __init__ found, make one
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     super(%s, self).__init__(*args, **kwargs)
 """ % node.name
-        if text is None: # class has its own __init__ (name has been changed to __orig_init__)
+        if text is None:  # class has its own __init__ (name has been changed to __orig_init__)
             text = """
 def __init__(self, *args, **kwargs):
     _register_inst('.'.join([self.__class__.__module__,self.__class__.__name__]))
     self.__%s_orig_init__(*args, **kwargs)
 """ % node.name
-        node.body = [text_to_node(text)]+node.body
+        node.body = [text_to_node(text)] + node.body
         return node
+
 
 def add_init_monitors(node):
     """Take the specified AST and translate it into the instrumented version,
@@ -100,8 +103,8 @@ def add_init_monitors(node):
     node = CtorInstrumenter().visit(node)
     node.body = [
         ast.copy_location(
-            text_to_node('from openmdao.main.project import _register_inst'),node)
-        ]+node.body
+            text_to_node('from openmdao.main.project import _register_inst'), node)
+        ] + node.body
     return node
 
 class ProjFinder(object):
@@ -116,7 +119,7 @@ class ProjFinder(object):
         """
         if path_entry.endswith(PROJ_DIR_EXT) and os.path.isdir(os.path.splitext(path_entry)[0]):
             self.path_entry = path_entry
-            self.projdir = os.path.splitext(path_entry)[0]#os.path.join(os.path.splitext(path_entry)[0], 'model')
+            self.projdir = os.path.splitext(path_entry)[0]
             if os.path.isdir(self.projdir):
                 return
         raise ImportError("can't import from %s" % path_entry)
@@ -130,6 +133,7 @@ class ProjFinder(object):
         fpath = util_findmodule(modpath, path=[self.projdir])
         if fpath:
             return ProjLoader(path)
+
 
 class ProjLoader(object):
     """This is the import loader for files within an OpenMDAO project.  We use it to instrument
@@ -190,6 +194,7 @@ class ProjLoader(object):
         exec(code, mod.__dict__)
         
         return mod
+
 
 def parse_archive_name(pathname):
     """Return the name of the project given the pathname of a project
@@ -275,6 +280,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
 
 _excluded_calls = set(['run', 'execute'])
 
+
 def _check_hierarchy(pathname, objs):
     # any operation we apply to a given object will be cancelled
     # out if that object or any of its parents are overwritten
@@ -283,20 +289,21 @@ def _check_hierarchy(pathname, objs):
     if pathname in objs:
         return True
     for name in objs:
-        if pathname.startswith(name+'.'):
+        if pathname.startswith(name + '.'):
             return True
     return False
-    
+
+
 def filter_macro(lines):
     """Removes commands from a macro that are overridden by later commands."""
     # FIXME: this needs a lot of work. Things get a little messy when you have
     # rename and move calls mixed in and I didn't have time to sort out those issues yet,
-    # so right now I'm just filtering out multiple execfile() calls and all calls to 
+    # so right now I'm just filtering out multiple execfile() calls and all calls to
     # run() and execute().
     filt_lines = []
-    assigns = set()
+    #assigns = set()
     execs = set()
-    objs = set()
+    #objs = set()
     for line in lines[::-1]:
         stripped = line.strip()
         if stripped.startswith('execfile'):
@@ -312,7 +319,7 @@ def filter_macro(lines):
             match = namecheck_rgx.match(stripped)
             if match:
                 full = match.group()
-                rest = stripped[len(full):].strip()
+                #rest = stripped[len(full):].strip()
                 parts = full.rsplit('.', 1)
                 if len(parts) > 1:
                     # remove calls to run, execute, ...
@@ -328,7 +335,7 @@ def filter_macro(lines):
                             #objs.add(pathname)
                             #if parts[1] == 'remove': # don't include the remove command
                                 #continue             # since there won't be anything to remove
-                
+
                 ## only keep the most recent assignment to any variable, and throw away
                 ## assigns to variables in objects that have been overridden by newer ones with
                 ## the same name.
@@ -337,11 +344,12 @@ def filter_macro(lines):
                         #continue
                     #else:
                         #assigns.add(full)
-                        
+
         filt_lines.append(line)
-            
-    return filt_lines[::-1] # reverse the result
-    
+
+    return filt_lines[::-1]  # reverse the result
+
+
 class _ProjDict(dict):
     """Use this dict as globals when exec'ing files. It substitutes classes
     from the imported version of the file for the __main__ version.
@@ -349,7 +357,7 @@ class _ProjDict(dict):
     def __init__(self):
         super(_ProjDict, self).__init__()
         self._modname = None
-        
+
     def __getitem__(self, name):
         if self._modname:
             val = getattr(sys.modules[self._modname], name, None)
@@ -365,13 +373,12 @@ def add_proj_to_path(path):
 
 class Project(object):
     def __init__(self, projpath):
-        """Initializes a Project containing the project found in the 
+        """Initializes a Project containing the project found in the
         specified directory or creates a new project if one doesn't exist.
 
         projpath: str
             Path to the project's directory.
         """
-        macro_exec = False
         self._recorded_cmds = []
         self.path = expand_path(projpath)
         self._model_globals = _ProjDict()
@@ -380,7 +387,7 @@ class Project(object):
 
         if os.path.isdir(projpath):
             self.activate()
-        
+
             ## locate file containing state, create it if it doesn't exist
             #statefile = os.path.join(projpath, '_project_state')
             #if os.path.exists(statefile):
@@ -394,7 +401,6 @@ class Project(object):
                             #m.update(self._model_globals)
                             #self._model_globals = m
                             #self._init_globals()
-                            
                 #except Exception, e:
                     #logger.error('Unable to restore project state: %s' % e)
                     #macro_exec = True
@@ -418,9 +424,9 @@ class Project(object):
     def _initialize(self):
         self.command("# Auto-generated file - DO NOT MODIFY")
         self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
-        
+
     def _init_globals(self):
-        self._model_globals['create'] = self.create    # add create funct here so macros can call it
+        self._model_globals['create'] = self.create   # add create funct here so macros can call it
         self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
         self._model_globals['execfile'] = self.execfile
         self._model_globals['set_as_top'] = set_as_top
@@ -433,13 +439,13 @@ class Project(object):
     @property
     def name(self):
         return os.path.basename(self.path)
-    
+
     def __contains__(self, name):
         return name in self._model_globals
-    
+
     def items(self):
         return self._model_globals.items()
-    
+
     def execfile(self, fname, digest=None):
         # first, make sure file has been imported
         __import__(get_module_path(fname))
@@ -452,7 +458,7 @@ class Project(object):
             contents += '\n'
         node = add_init_monitors(ast.parse(contents, filename=fname, mode='exec'))
         exec compile(node, fname, 'exec') in self._model_globals
-        
+
         # make the recorded execfile command use the current md5 hash
         self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
 
@@ -465,10 +471,10 @@ class Project(object):
         except (KeyError, AttributeError) as err:
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
-    
+
     def load_macro(self, fpath, execute=True, strict=False):
         with open(fpath, 'r') as f:
-            for i,line in enumerate(filter_macro(f.readlines())):
+            for i, line in enumerate(filter_macro(f.readlines())):
                 if execute:
                     try:
                         self.command(line.rstrip('\n'))
@@ -483,7 +489,7 @@ class Project(object):
         err = None
         result = None
         size = len(self._recorded_cmds)
-        
+
         try:
             code = compile(cmd, '<string>', 'eval')
         except SyntaxError:
@@ -501,14 +507,14 @@ class Project(object):
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
             logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
             self._recorded_cmds.append('#ERR: <%s>' % cmd)
-            raise err
+            raise  # err  # We don't want to hide the original stack trace!!
         else:
             # certain commands (like execfile) can modify the recorded string,
             # so only record the given command if the executed command didn't
             # add its own entry to _recorded_cmds.
             if len(self._recorded_cmds) == size:
                 self._recorded_cmds.append(cmd)
-            
+
         return result
 
     def activate(self):
@@ -581,4 +587,3 @@ class Project(object):
                 tf.close()
         finally:
             os.chdir(startdir)
-    
