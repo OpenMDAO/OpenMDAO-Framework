@@ -282,10 +282,14 @@ class FileHandler(ReqHandler):
             contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
             if filename.endswith('.py'):
+                if not contents.endswith('\n'):
+                    text = contents + '\n' # to make ast.parse happy
+                else:
+                    text = contents
                 try:
-                    ast.parse(contents, filename=filename, mode='exec')
-                except SyntaxError as syn_err:
-                    cserver.send_pub_msg(str(syn_err), 'file_errors')
+                    ast.parse(text, filename=filename, mode='exec')
+                except Exception as err:
+                    cserver.send_pub_msg(str(err), 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
