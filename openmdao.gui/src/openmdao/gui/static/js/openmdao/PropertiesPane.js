@@ -78,21 +78,31 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
             jQuery.each(properties, function(index, value) {
                 if (value.hasOwnProperty("connected")) {
-                    cellCssStyles = "";
+                    var nameStyle = '',
+                        valueStyle = '';
                     if (options.editable && (value.connected.length === 0)) {
-                        cellCssStyles = "cell-editable";
+                        valueStyle += " cell-editable";
                     }
                     if (value.hasOwnProperty("implicit") && (value.implicit.length > 0)) {
                         //need a css class for highlighting implicitly connected inputs
-                        if(name === "Inputs"){
-                            cellCssStyles = cellCssStyles + " parameter";
+                        if (name === "Inputs") {
+                            nameStyle += " parameter";
+                            valueStyle += " parameter";
                         }
-                        else if(name === "Outputs"){
-                            cellCssStyles = cellCssStyles + " objective";
+                        else if (name === "Outputs") {
+                            nameStyle += " objective";
+                            valueStyle += " objective";
                         }
                     }
-                    if (cellCssStyles.length>0) {
-                        editableCells[index] = {"value" : cellCssStyles};
+                    var css = {};
+                    if (nameStyle !== '') {
+                        css['name'] = nameStyle;
+                    }
+                    if (valueStyle !== '') {
+                        css['value'] = valueStyle;
+                    }
+                    if (css !== {}) {
+                        editableCells[index] = css;
                     }
                 }
             });
