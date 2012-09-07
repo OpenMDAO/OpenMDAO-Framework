@@ -4,15 +4,21 @@
     var customEditors = {
 
         DictEditor : function(args) {
+	    var this_editor = this;
 	    var input = [];
 	    var keys = [];
-	    var val_types = [];
-	    var key_types = [];
+	    var length = 0;
+	    var buttons = [];
+	    var loaded = false;
+	    var val_types = args.item.value_type;
+	    var key_types = args.item.key_type;
+	    console.log(args.item);
+	    var $add_button = $("<button>+</button>").button();
 	    var var_name = args.item['name'];
 	    if (typeof args.item.value == "string") {
 		var values = JSON.parse(args.item.value);}
 	    else {var values = args.item.value;}
-	    console.log(values);
+	    var defaults = values;
 	    var grid = args.grid;
 	    var $container = $("<div id = '"+var_name+"-editor'/>");
             var $editor_dialog = $("<div />").dialog({
@@ -25,7 +31,7 @@
 					    },
 					    "Cancel": function() {
 						    grid.getEditorLock().cancelCurrentEdit();
-						    $( this ).dialog( "close" );
+						    $( this ).dialog( "destroy" );
 					    }
 					}
 						});
@@ -36,23 +42,71 @@
 		});
 
 	    $container.appendTo($editor_dialog);
-	    var length = 0;
+	    $("<br>").appendTo($editor_dialog);
+	    var $new_key = $("<INPUT type=text class='add-editor-text' size = 10/>");
+	    var $new_input = $("<INPUT type=text class='add-editor-editor-text' size = 10/>");
 	    
+	    
+	    $add_button.click( function (e,d) {
+		    this_editor.addKey($new_key.val());
+		    keys[length - 1].val($new_key.val());
+		    input[length - 1].val($new_input.val());
+				    });	
 	    
             this.init = function() {
-		$("Keys : Values<br>").appendTo($editor_dialog);
+		$("<text>Keys : Values<br></text>").prependTo($editor_dialog);
                 for (var key in values) {
+		    this.addKey(key);}
+		
+		$("<text>New element (Key, Value):</text><br>").appendTo($editor_dialog);
+		$new_key.appendTo($editor_dialog);
+		$new_input.appendTo($editor_dialog);
+		$add_button.appendTo($editor_dialog);
+            };
+	    
+	    
+	    this.addKey = function(key) {
+	    
 		    if (key != "py/object") {
 			keys.push($("<INPUT type=text disabled = 'disabled' class='editor-text' size = 10/>").appendTo($container));
-			input.push($("<INPUT type=text class='editor-text' size = 10/><br>").appendTo($container));
+			input.push($("<INPUT type=text class='editor-text' size = 10/>").appendTo($container));
+			$remove_button = $("<button class = 'remove-dict-edit' id = '"+key+"'>-</button><br>").button()
+			buttons.push($remove_button.appendTo($container));
+			
+			$remove_button.click( function (e) {
+			    del_key = e.currentTarget.id;
+			    for (var i = 0; i< length; i++) {
+				if (del_key == keys[i].val()) {
+				    input[i].remove();
+				    keys[i].remove();
+				    buttons[i].remove();
+				    
+				    input.splice(i,1);
+				    keys.splice(i,1);
+				    buttons.splice(i,1);
+				    //val_types.splice(i,1);
+				    //key_types.splice(i,1);
+				    
+				    //delete values[del_key];
+				    
+				    break;
+				    }
+				}
+				length = length -1;
+						    });			
+			
+			
+			
 			length++;
-                    }}
-            };
-
+                    }
+	    
+	    }
+	    
             this.destroy = function() {
                 for (var i = 0; i< length; i++) {
                     input[i].remove();
 		    keys[i].remove();
+		    buttons[i].remove();
                     }
                     $editor_dialog.dialog('destroy');
             };
@@ -63,17 +117,18 @@
 	    
 	    
             this.loadValue = function(item) {
+		if (!loaded) {
 		var i = 0;
-                for (var key in values) {
+                for (var key in item.value) {
 		    if (key != "py/object") {
 			keys[i].val(key);
-			val_types.push(typeof values[key]);
-			key_types.push(typeof key);
+			//val_types.push(typeof values[key]);
+			//key_types.push(typeof key);
 			input[i].val(values[key]);
 			i++;
 			}
-                    }
-		    console.log(key_types);
+                    } loaded = true;}
+		    
             };
 
             this.serializeValue = function() {
@@ -81,14 +136,15 @@
 		for (var i = 0; i < length; i++) {
 		    thisval = input[i].val();
 		    keyval = keys[i].val();
-		    if (key_types[i] == "number") {keyval = parseFloat(keyval);}
-		    if (val_types[i] == "number") {thisval = parseFloat(thisval);}
+		    if (key_types == "Float" || key_types == "Int") {keyval = parseFloat(keyval);}
+		    if (val_types == "Float" || val_types == "Int") {thisval = parseFloat(thisval);}
 		    new_d[keyval] = thisval;
 		}
                 return JSON.stringify(new_d);
             };
 
             this.applyValue = function(item,state) {
+		console.log(state);
                 item[args.column.field] = state;
             };
            

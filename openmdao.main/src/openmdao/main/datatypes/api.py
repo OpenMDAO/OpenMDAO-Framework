@@ -12,9 +12,6 @@ from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.str import Str
 
-# Enthought implements this shortcut, which we seem to use too.
-ListStr = List(str)
-
 # Traits from Enthought - don't import these directly because we may
 # change what they point to later
 from enthought.traits.api import Python, Event, on_trait_change

@@ -4,13 +4,12 @@ import sys
 import traceback
 import cmd
 import jsonpickle
-import time
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
 
 from openmdao.main.api import Assembly, Component, Driver, logger, \
-                              set_as_top, create, get_available_types
+                              set_as_top, get_available_types
 from openmdao.main.project import project_from_archive, Project, parse_archive_name, \
                                   ProjFinder, _clear_insts, _match_insts
 from openmdao.main.publisher import publish
@@ -21,11 +20,12 @@ from openmdao.main.factorymanager import register_class_factory, remove_class_fa
 from openmdao.lib.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
-from openmdao.util.fileutil import find_files, file_md5, get_module_path, find_module
+from openmdao.util.fileutil import file_md5
 
 from openmdao.gui.util import packagedict, ensure_dir
 from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
+
 
 def modifies_model(target):
     ''' decorator for methods that may have modified the model
@@ -61,11 +61,11 @@ class ConsoleServer(cmd.Cmd):
         self.exc_info = None
         self.publish_updates = publish_updates
         self._publish_comps = {}
-        
+
         self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
-        
+
         try:
             self.files = FileManager('files', publish_updates=publish_updates)
         except Exception as err:
@@ -164,10 +164,11 @@ class ConsoleServer(cmd.Cmd):
             else:
                 return None, None, line
         i, n = 0, len(line)
-        while i < n and line[i] in self.identchars: i = i+1
+        while i < n and line[i] in self.identchars:
+            i = i + 1
         cmd, arg = line[:i], line[i:].strip()
         return cmd, arg, line
-    
+
     def emptyline(self):
         # Default for empty line is to repeat last command - yuck
         if self._partial_cmd:
@@ -218,7 +219,7 @@ class ConsoleServer(cmd.Cmd):
         ''' execfile in server's globals.
         '''
         try:
-            self.proj.command("execfile('%s', '%s')" % 
+            self.proj.command("execfile('%s', '%s')" %
                                  (filename, file_md5(filename)))
         except Exception, err:
             self._error(err, sys.exc_info())
@@ -266,7 +267,7 @@ class ConsoleServer(cmd.Cmd):
                 else:
                     try:
                         cont = root_obj.get(parts[1])
-                    except AttributeError as error:
+                    except AttributeError as err:
                         # When publishing, don't report remove as an error.
                         if report:
                             self._error(err, sys.exc_info())
@@ -411,11 +412,13 @@ class ConsoleServer(cmd.Cmd):
             components = []
             for k, v in self.proj.items():
                 if is_instance(v, Component):
+                    inames = [cls.__name__
+                              for cls in list(implementedBy(v.__class__))]
                     components.append({'name': k,
                                        'pathname': k,
                                        'type': type(v).__name__,
                                        'valid': v.is_valid(),
-                                       'is_assembly': is_instance(v, Assembly),
+                                       'interfaces': inames,
                                        'python_id': id(v)
                                       })
             dataflow['components'] = components
@@ -494,7 +497,6 @@ class ConsoleServer(cmd.Cmd):
     @modifies_model
     def load_project(self, filename):
         _clear_insts()
-        
         self.projfile = filename
         try:
             if self.proj:
@@ -502,14 +504,14 @@ class ConsoleServer(cmd.Cmd):
             if self.projdirfactory:
                 self.projdirfactory.cleanup()
                 remove_class_factory(self.projdirfactory)
-                
+
             # make sure we have a ProjFinder in sys.path_hooks
             for hook in sys.path_hooks:
                 if hook is ProjFinder:
                     break
             else:
-                sys.path_hooks = [ProjFinder]+sys.path_hooks
-            
+                sys.path_hooks = [ProjFinder] + sys.path_hooks
+
             # have to do things in a specific order here. First, create the files,
             # then point the ProjDirFactory at the files, then finally create the
             # Project. Executing the project macro (which happens in the Project __init__)
@@ -620,7 +622,7 @@ class ConsoleServer(cmd.Cmd):
         print "Installing", distribution, "from", url
         easy_install.main(["-U", "-f", url, distribution])
 
-    def publish(self, pathname, publish):
+    def add_subscriber(self, pathname, publish):
         ''' publish the specified topic
         '''
         if pathname in ['', 'components', 'files', 'types',

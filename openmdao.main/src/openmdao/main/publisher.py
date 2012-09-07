@@ -2,7 +2,7 @@ import sys
 
 from threading import RLock
 
-import pickle
+import jsonpickle
 
 try:
     import zmq
@@ -33,7 +33,15 @@ class Publisher(object):
             if isinstance(topic, unicode):
                 # zmq doesn't like unicode
                 topic = topic.encode(self.enc, errors='backslashreplace')
-            value = pickle.dumps(value, -1)
+
+            # encode value as json
+            try:
+                number = float(value)
+            except (ValueError, TypeError):
+                value = jsonpickle.encode(value)
+            else:
+                value = jsonpickle.encode(number)
+
             with self._lock:
                 try:
                     self._sender.send_multipart([topic, value])
@@ -51,7 +59,15 @@ class Publisher(object):
                         if isinstance(topic, unicode):
                             # zmq doesn't like unicode
                             topic = topic.encode(self.enc, errors='backslashreplace')
-                        value = pickle.dumps(value, -1)
+
+                        # encode value as json
+                        try:
+                            number = float(value)
+                        except (ValueError, TypeError):
+                            value = jsonpickle.encode(value)
+                        else:
+                            value = jsonpickle.encode(number)
+
                         self._sender.send_multipart([topic, value])
                         if hasattr(self._sender, 'flush'):
                             self._sender.flush()
