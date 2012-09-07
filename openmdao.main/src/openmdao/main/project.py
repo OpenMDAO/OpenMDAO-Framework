@@ -30,7 +30,10 @@ PROJ_FILE_EXT = '.proj'
 PROJ_DIR_EXT = '.projdir'
 
 # use this to keep track of project classes that have been instantiated
-# so we can determine if we need to force a Project save & reload.
+# so we can determine if we need to force a Project save & reload. This
+# is the reason for the existence of the custom import hook classes ProjFinder
+# and ProjLoader, as well as the CtorInstrumenter ast node transformer.
+#
 # FIXME: This doesn't keep track of when instances are deleted, so 
 # it's possible that the _instantiated_classes set will contain names
 # of classes that no longer have any active instances.
