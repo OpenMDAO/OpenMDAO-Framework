@@ -53,6 +53,8 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
    before you can start using it.
    
 
+.. _`activate_env`:
+
 **Activate your virtual environment**
 
 Each time before you want to use openmdao, you need to activate its virtual
