@@ -508,7 +508,11 @@ class _LogHandler(SocketServer.StreamRequestHandler):
 
             if peer is None:
                 host, port = conn.getpeername()
-                host, aliases, addrs = socket.gethostbyaddr(host)
+                try:
+                    host, aliases, addrs = socket.gethostbyaddr(host)
+                except Exception as exc:
+                    logging.debug('gethostbyaddr(%s) failed: %s',
+                                  host, str(exc) or repr(exc))
                 peer = '%s:%s' % (host, port)
                 logging.info('New logging connection from %s', peer)
 

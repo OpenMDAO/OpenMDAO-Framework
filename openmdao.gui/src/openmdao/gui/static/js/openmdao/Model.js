@@ -450,7 +450,7 @@ openmdao.Model=function() {
     };
 
     /** create a new file in the model working directory with the specified path  */
-    this.newFile = function(name, folderpath) {
+    this.newFile = function(name, folderpath, callback) {
             if (folderpath) {
                 name = folderpath+'/'+name;
             }
@@ -461,7 +461,7 @@ openmdao.Model=function() {
             if (/.json$/.test(name)) {
                 contents = '[]';
             }
-            self.setFile(name,contents);
+            self.setFile(name, contents, undefined, callback);
     };
 
     /** prompt for name & create a new folder */
