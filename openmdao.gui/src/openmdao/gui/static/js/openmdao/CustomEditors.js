@@ -21,19 +21,23 @@
 	    var defaults = values;
 	    var grid = args.grid;
 	    var $container = $("<div id = '"+var_name+"-editor'/>");
-            var $editor_dialog = $("<div />").dialog({
+            var $editor_dialog = $("<div id = '"+var_name+"-dialog'/>").dialog({
 				width: "auto",
 				title: "Editing dictionary: '"+var_name+"'",
-            			buttons: {
-					    "Submit changes": function() {
+            			buttons: [{ 
+					    text:"Submit changes",
+					    id: "dict-edit-"+var_name+"-submit",
+					    click: function() {
 						    grid.getEditorLock().commitCurrentEdit();
 						    $( this ).dialog( "close" );
-					    },
-					    "Cancel": function() {
+					    }}, {
+					    text:"Cancel",
+					    id: "dict-edit-"+var_name+"-cancel",
+					    click: function() {
 						    grid.getEditorLock().cancelCurrentEdit();
 						    $( this ).dialog( "destroy" );
 					    }
-					}
+					}]
 						});
 		$editor_dialog.live('keyup', function(e){
 		  if (e.keyCode == 13) {
@@ -214,11 +218,12 @@
 
         BoolEditor : function(args) {
             var $select;
+	    var var_name = args.item['name'];
             var defaultValue;
             var scope = this;
 
             this.init = function() {
-                $select = $("<SELECT tabIndex='0' class='editor-yesno'><OPTION value='True'>True</OPTION><OPTION value='False'>False</OPTION></SELECT>");
+                $select = $("<SELECT tabIndex='0' class='editor-yesno' id = 'bool-editor-"+var_name+"'><OPTION value='True'>True</OPTION><OPTION value='False'>False</OPTION></SELECT>");
                 $select.appendTo(args.container);
                 $select.focus();
             };
@@ -271,19 +276,22 @@
 	    var var_editor = this;
 	    var input = [];	    
 	    var $container = $("<div />");
-            var $editor_dialog = $("<div />").dialog({
+            var $editor_dialog = $("<div id = 'array-editor-dialog-"+var_name+"'/>").dialog({
 				width: "auto",
 				title: "Editing array: '"+var_name+"'",
-            			buttons: {
-					    "Submit changes": function() {
+            			buttons: [{ text:"Submit changes",
+					    id: "array-edit-"+var_name+"-submit",
+					    click: function() {
 						    grid.getEditorLock().commitCurrentEdit();
 						    $( this ).dialog( "close" );
-					    },
-					    "Cancel": function() {
+					    }},{
+					    text:"Cancel",
+					    id: "array-edit-"+var_name+"-cancel",
+					    click: function() {
 						    grid.getEditorLock().cancelCurrentEdit();
 						    $( this ).dialog( "close" );
-					    }
-					}
+					    }}
+					]
 						});
 		$editor_dialog.live('keyup', function(e){
 		  if (e.keyCode == 13) {
@@ -296,8 +304,8 @@
             var length;
 	    var dim;
 	    var default_length;
-	    var $add_button = $("<button>+</button>").button();
-	    var $subtract_button = $("<button>-</button>").button();
+	    var $add_button = $("<button id = 'array-edit-add-"+var_name+"'>+</button>").button();
+	    var $subtract_button = $("<button id = 'array-edit-add-"+var_name+"'>-</button>").button();
 	    $add_button.click( function () {
 			input.push($("<INPUT type=text class='editor-text' value = '0.' size = 6/>"));
 			length = input.length;
@@ -367,6 +375,8 @@
                     input[i].remove();
                     }
                     $editor_dialog.dialog('destroy');
+		    $add_button.remove();
+		    $subtract_button.remove();
             };
 
             this.focus = function() {
