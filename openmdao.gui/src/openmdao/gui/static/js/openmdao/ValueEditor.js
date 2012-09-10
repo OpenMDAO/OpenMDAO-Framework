@@ -14,7 +14,6 @@ var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.ValueEditor = (function(){
 
     var editors = {}
-    var defaultEditor = TextCellEditor
 
     function constructorFn(args){
         this.init(args)
@@ -24,6 +23,7 @@ openmdao.ValueEditor = (function(){
     constructorFn.overridesEnabled = false
     constructorFn.defaultEditorEnabled = true;
     constructorFn.promptEnabled = false;
+    constructorFn.defaultEditor = TextCellEditor;
 
     /*
      * Make the constructor of ValueEditor inherit CellEditor
@@ -57,7 +57,7 @@ openmdao.ValueEditor = (function(){
                 return new editorConstructor(args)
             }
             else{
-                editorConstructor = defaultEditor
+                editorConstructor = constructorFn.defaultEditor
                 return new editorConstructor(args)
             }
         }
@@ -68,9 +68,13 @@ openmdao.ValueEditor = (function(){
             this.editor = getEditor(args)
         }
         else{
-            debug.error("No editor registered for the datatype " + args.item.type)
-            args.cancelChanges()
+            debug.error("Prematurely destroying editor")
+            keydownEvent = jQuery.Event('keydown');
+            keydownEvent.which=27;
+            jQuery(args.container).trigger(keydownEvent)
             this.mumps = true
+            //args.cancelChanges()
+            //this.mumps = true
         }
     }
 
@@ -101,13 +105,25 @@ openmdao.ValueEditor = (function(){
         }
     }
 
+    constructorFn.unregisterEditor = function(name){
+        delete editors[name]
+    }
+
+    constructorFn.isRegistered = function(name){
+        return (name in editors)
+    }
+
     return constructorFn
 
 })();
 
 openmdao.ValueEditor.prototype.destroy = function(){
     if(!this.mumps){
+        debug.error("Editor is being destroyed")
         this.editor.destroy()    
+    }
+    else{
+        debug.error("Editor no longer exists ")
     }
 }
 

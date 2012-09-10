@@ -38,13 +38,20 @@ if sys.platform.startswith("linux"):
 
     load:
       - %(gd)s/static/js/require-jquery*
+      - %(gd)s/static/js/jquery.event.drag-2.0.min.js
+      - %(gd)s/static/js/jquery-ui-1.8.7.custom.min.js
+      - %(gd)s/static/js/slickgrid/*.js
       - %(gd)s/static/js/ba-debug.min.js
       - %(gd)s/static/js/openmdao/Util.js
       - %(gd)s/static/js/openmdao/Model.js
+      - %(gd)s/static/js/openmdao/CellEditor.js
+      - %(gd)s/static/js/openmdao/ValueEditor.js
 
       - %(gd)s/static/js/sinon-1.2.0.js
+      - %(gd)s/test/js_unit_tests/src/*.js
 
-      - %(gd)s/test/js_unit_tests/test_model.js
+    test:
+      - %(gd)s/test/js_unit_tests/test/*.js
 
     ''' % {'port_num': str(port_num), 'gd': gui_directory}
         config_file_temp.close()

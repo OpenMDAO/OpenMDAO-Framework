@@ -13,7 +13,8 @@ jQuery(function() {
     /*
      * Register value editors for supported OpenMDAO data types.
      */
-    openmdao.ValueEditor.registerEditor("str", TextCellEditor)
+    //openmdao.ValueEditor.registerEditor("str", TextCellEditor)
+    openmdao.ValueEditor.defaultEditorEnabled = false
     openmdao.ValueEditor.registerEditor("bool", TextCellEditor)
     openmdao.ValueEditor.registerEditor("float", TextCellEditor)
     openmdao.ValueEditor.registerEditor("int", TextCellEditor)
