@@ -44,6 +44,9 @@ def main():
             cmd.extend(args)
             status = subprocess.call(cmd, stdout=logfile, stderr=subprocess.STDOUT)
             if status:
+                msg = '        exit status %s' % status
+                print msg
+                logfile.write(msg+'\n')
                 sys.exit(status)
 
     logfile.close()

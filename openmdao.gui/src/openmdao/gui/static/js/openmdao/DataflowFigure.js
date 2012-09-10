@@ -1,7 +1,6 @@
 var openmdao = ( openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces){
-    debug.info('DataflowFigure', pathname, type, interfaces);
     this.openmdao_model = model;
     this.pathname = pathname;
     this.name = openmdao.Util.getName(pathname);
@@ -791,7 +790,11 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             else {
                 dst_port = new draw2d.InputPort();
                 dst_port.setWorkflow(workflow);
-                dst_port.setName(con_name);
+                if (type === 'data' || type === 'parameter') {
+                    dst_port.setName(con_name);
+                } else {
+                    dst_port.setName('fb-'+con_name);
+                }
                 dst_port.setCanDrag(false);
                 dst_port.setId(con_name);
                 if (type === 'data') {
@@ -995,6 +998,12 @@ openmdao.DataflowFigure.prototype.layout=function() {
             // destination port is on the assembly
             var srcY = src_port.getAbsoluteY(),
                 Y0 = self.outputsFigure.getAbsoluteY();
+            dst_port.setPosition(0,srcY-Y0);
+        }
+        else if (dst_port.getName() === 'fb-'+name) {
+            // destination port is on the assembly
+            var srcY = src_port.getAbsoluteY(),
+                Y0 = self.fbOutputsFigure.getAbsoluteY();
             dst_port.setPosition(0,srcY-Y0);
         }
     });
