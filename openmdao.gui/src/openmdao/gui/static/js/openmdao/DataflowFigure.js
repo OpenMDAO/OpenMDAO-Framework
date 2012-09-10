@@ -1,6 +1,6 @@
 var openmdao = ( openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces){
+openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces) {
     this.openmdao_model = model;
     this.pathname = pathname;
     this.name = openmdao.Util.getName(pathname);
@@ -112,13 +112,9 @@ openmdao.DataflowFigure.prototype.removeComponent = function(name_or_fig) {
 openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     var item=draw2d.CompartmentFigure.prototype.createHTMLElement.call(this);
 
-    // assign class and data used by jstree as a drop target
-    var elm = jQuery(item);
-    elm.addClass("DataflowFigure");
-    elm.data('name',this.name);
-    elm.data('pathname',this.pathname);
-
     item.id=this.id;
+    item.className = "DataflowFigure";
+
     item.style.color="black";
     item.style.position="absolute";
     item.style.left=this.x+"px";
@@ -225,18 +221,25 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         item.appendChild(this.footer);
         item.appendChild(this.bottom_right);
 
-
         /* Handle drag and drop from the Library. Use the code that
            deals with the layering problem of drag and drop where
            you can drop something that appears to be on top
            but it ends up in a layer below it
         */
-        elm.data('corresponding_openmdao_object',this);
+        var self = this,
+            model = this.openmdao_model,
+            maxmin = this.maxmin,
+            elm = jQuery(item);
+
+        elm.data('name', this.name);
+        elm.data('pathname', this.pathname);
+        elm.highlightAsDropTarget = function(){ self.highlightAsDropTarget(); };
+        elm.unhighlightAsDropTarget = function(){ self.unhighlightAsDropTarget(); };
+
         elm.droppable ({
             accept: '.IComponent',
             out: function(ev,ui){
-                var o = elm.data('corresponding_openmdao_object');
-                o.unhighlightAsDropTarget() ;
+                elm.unhighlightAsDropTarget() ;
                 openmdao.drag_and_drop_manager.draggableOut(elm);
             },
             over: function(ev,ui){
@@ -256,20 +259,18 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
             actualDropHandler: function(ev,ui) {
                 var droppedObject = jQuery(ui.draggable).clone(),
                     droppedName = droppedObject.text(),
-                    droppedPath = droppedObject.attr("modpath"),
-                    model = elm.data("corresponding_openmdao_object").openmdao_model,
-                    o = elm.data('corresponding_openmdao_object');
+                    droppedPath = droppedObject.attr("modpath");
 
                 openmdao.drag_and_drop_manager.clearHighlightingDroppables();
 
-                if (o.maxmin !== '') {
+                if (maxmin !== '') {
                     openmdao.Util.promptForValue('Enter name for new '+droppedName,
                         function(name) {
-                         model.addComponent(droppedPath,name,elm.data("pathname"));
+                            model.addComponent(droppedPath,name,elm.data("pathname"));
                         });
                 }
                 else {
-                    openmdao.Util.confirm('Replace '+ elm.data("pathname") +' with ' + droppedName,
+                    openmdao.Util.confirm('Replace '+elm.data("pathname")+' with '+droppedName,
                         function() {
                             model.replaceComponent( elm.data("pathname"), droppedPath);
                         });
@@ -419,7 +420,6 @@ openmdao.DataflowFigure.prototype.onDragstart=function(x,y){
 
 /** TODO: enable moving a component into another dataflow */
 openmdao.DataflowFigure.prototype.onFigureDrop=function(figure){
-    debug.info("DataflowFigure.onFigureDrop",figure);
     draw2d.CompartmentFigure.prototype.onFigureDrop.call(this,figure);
     this.setBackgroundColor(this.defaultBackgroundColor);
 };

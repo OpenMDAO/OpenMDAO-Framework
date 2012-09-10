@@ -194,9 +194,15 @@ class ProjLoader(object):
         else:
             mod.__path__ = self.path_entry
             
-        code = self.get_code(modpath)
-        exec(code, mod.__dict__)
-        
+        try:
+            code = self.get_code(modpath)
+            exec(code, mod.__dict__)
+        except Exception as err:
+            del sys.modules[modpath] # remove bad module
+            if mod.__file__ not in str(err):
+                raise type(err)("Error while importing file "+mod.__file__+": "+str(err))
+            else:
+                raise
         return mod
 
 
