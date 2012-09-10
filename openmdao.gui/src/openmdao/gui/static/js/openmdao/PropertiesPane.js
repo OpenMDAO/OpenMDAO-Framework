@@ -26,7 +26,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     if (meta) {
         columns = [
+<<<<<<< HEAD
 
+=======
+>>>>>>> calvin/value_editor_stable
             {id:"name",      name:"Name",        field:"name",      width:100 },
             {id:"type",      name:"Type",        field:"type",      width:60 },
             {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
@@ -35,7 +38,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             {id:"desc",      name:"Description", field:"desc",      width:120 },
             {id:"connected", name:"Connected To",   field:"connected", width:100 },
             {id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
-
         ];
     }
 
