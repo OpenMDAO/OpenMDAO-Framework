@@ -376,6 +376,9 @@ openmdao.FileTreeFrame.prototype.newFile = function(path) {
 //                    else {
 //                        openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
 //                    }
+                    if (typeof openmdao_test_mode !== 'undefined') {
+                        openmdao.Util.notify('New file created');
+                    }
                 });
         });
 };

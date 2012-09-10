@@ -131,9 +131,7 @@ class EditorPage(BasePageObject):
         """ bring up the new file dialog """
         self('file_menu').click()
         self('newfile_button').click()
-
-        page = ValuePrompt(self.browser, self.port)
-        return page
+        return ValuePrompt(self.browser, self.port)
 
     def find_text(self, text):
         #click the 'find' button, and enter text. Not yet functional
@@ -160,12 +158,10 @@ class EditorPage(BasePageObject):
     
     def new_file(self, filename, code, check=True):
         """ Make a new file `filename` with contents `code`. """
-        self('file_menu').click()
-        self('newfile_button').click()
-
-        page = ValuePrompt(self.browser, self.port)
+        page = self.new_file_dialog()
         page.set_value(filename)
-        time.sleep(5)  # There seems to be some animation/flickering here.
+
+        NotifierPage.wait(self)  # Wait for creation to complete.
 
         # Switch to editor textarea
         code_input_element = self.get_text_area()
