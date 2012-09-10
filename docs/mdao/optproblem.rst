@@ -6,15 +6,16 @@ components to that assembly. You also added at least one driver (e.g., optimizer
 set up a specific version of the Sellar Problem that matched up with the structure for solving a problem using 
 IDF, MDF, or CO. Each example had a different set of optimizers, parameters, constraints, and objectives. 
 
-In OpenMDAO you can automatically configure the Sellar Problem to be solved with IDF, MDF, or CO. Using this
-automatic formulation will result in a lot less effort on your part. But, before you can use the  automatic
-architectures you need to make a small change to how you define the Sellar Problem. You need to create a more
-general description of the Sellar Problem that is independent of how you would solve it with any given 
-architecture. 
+In OpenMDAO you can automatically configure the Sellar Problem to be solved with IDF, MDF, or CO.
+Using this automatic formulation will result in a lot less effort on your part. But, before you can
+use the  automatic architectures, you need to make a small change to how you define the Sellar
+Problem. You need to create a more general description of the Sellar Problem that is independent of
+how you would solve it with any given  architecture. 
 
-In OpenMDAO you do this with a special kind of assembly called an *ArchitectureAssembly*. When you define your
-*ArchitectureAssembly*, in addition to adding the specific discipline analyses, you also specify the  parameters,
-objectives, constraints, and coupling variables of the fundamental problem formulation. For example:
+In OpenMDAO you do this with a special kind of assembly called an *ArchitectureAssembly*. When you
+define your ArchitectureAssembly, in addition to adding the specific discipline analyses, you also
+specify the  parameters, objectives, constraints, and coupling variables of the fundamental problem
+formulation. For example:
 
 .. testcode:: sellar_architecture_assembly
 
@@ -115,9 +116,9 @@ to solve it with a given architecture are a secondary concern and don't show up 
 problem definition. Any problem that you want to solve using one of the automatic 
 architectures has to be defined in the manner we showed you above. 
 
-In the OpenMDAO standard library we have a number of optimization test problems defined 
+In the OpenMDAO standard library, we have a number of optimization test problems defined 
 for you to try out. These are located in the :ref:`openmdao.lib.optproblems <openmdao.lib.optproblems.api.py>` 
-section of the standard library. 
+section of the library. 
 
 So once you have defined your problem, you can solve it using any of the architectures in the 
 OpenMDAO standard library (or you can define your own architecture to test out). 
@@ -130,7 +131,7 @@ We currently have five architectures implemented:
  #. BLISS-2000
  
  
-All instances of ArchitectureAssembly have a slot called ``architecture`` that lets you configure a specific 
+All instances of ArchitectureAssembly have a slot called `architecture` that lets you configure a specific 
 MDAO architecture. This is how you configure a specific architecture. To test this out yourself, add 
 the following code to the bottom of the file where you defined the SellarProblem class from above: 
 

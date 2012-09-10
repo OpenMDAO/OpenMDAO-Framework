@@ -29,7 +29,7 @@ server is found, the ExternalCode instance will send any input files to the
 server, invoke ``execute_command()`` on the server, and then retrieve any output
 files.
 
-During CaseIteratorDriver or DOEdriver execution a resource allocation is
+During CaseIteratorDriver or DOEdriver execution, a resource allocation is
 performed for each case to be evaluated (unless sequential execution is
 specified).  Once the server is allocated, the sub-model egg is loaded into the
 server, input variables are set, the model is run, and outputs are retrieved.
@@ -38,7 +38,7 @@ the sub-model's Python requirements, but you can add additional resource
 information via the ``extra_resources`` attribute. The RAM method
 :ref:`max_request() <resource.py>` can be useful for generating the
 ``extra_resources`` attribute value when the sub-model contains resource
-descriptions (for example when the sub-model contains a wrapper for a parallel
+descriptions (for example, when the sub-model contains a wrapper for a parallel
 CFD code).
 In some circumstances, particularly when submitting from a Windows client to a
 Linux server (or vice-versa), there will be spurious Python incompatibilities.

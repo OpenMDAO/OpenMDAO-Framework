@@ -276,7 +276,7 @@ case looks like this:
 
 
 You should set whatever of these values you feel are applicable to your plugin.
-The **name** and **version** values are the only ones that are mandatory, but
+The *name* and *version* values are the only ones that are mandatory, but
 you should fill in as many as possible to better inform potential users about
 your plugin. 
 
@@ -330,7 +330,7 @@ distribution using the standard Python packaging procedure, for example:
     python setup.py sdist
 
 
-That will create a source distribution of your plugin, but keep in mind that
+That will create a source distribution of your plugin; but keep in mind that
 in this case you will have to specify entry point metadata in the ``setup.py``
 file manually for each of your plugins. To specify entry points
 manually, you must add an ``entry_points`` keyword argument to the ``setup``
