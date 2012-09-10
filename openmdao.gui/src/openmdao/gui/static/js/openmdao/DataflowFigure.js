@@ -115,6 +115,8 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
     var item=draw2d.CompartmentFigure.prototype.createHTMLElement.call(this);
 
     item.id=this.id;
+    item.className = "DataflowFigure";
+
     item.style.color="black";
     item.style.position="absolute";
     item.style.left=this.x+"px";
@@ -231,7 +233,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
             maxmin = this.maxmin,
             elm = jQuery(item);
 
-        elm.addClass("DataflowFigure");
         elm.data('name', this.name);
         elm.data('pathname', this.pathname);
         elm.highlightAsDropTarget = function(){ self.highlightAsDropTarget(); };

@@ -37,6 +37,9 @@ openmdao.WorkflowFigure=function(model,flowpath,pathname,driver){
 openmdao.WorkflowFigure.prototype=new draw2d.CompartmentFigure();
 openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     var item=draw2d.CompartmentFigure.prototype.createHTMLElement.call(this);
+
+    item.className = "WorkflowFigure";
+
     item.style.margin="0px";
     item.style.padding="0px";
     item.style.border="1px solid black";
@@ -65,7 +68,6 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     var self = this,
         model = this.openmdao_model,
         elm = jQuery(item);
-    elm.addClass("WorkflowFigure");
     elm.data('name',this.name);
     elm.data('pathname',this.pathname);
 
