@@ -94,7 +94,7 @@ Y = Array([[0,1],[2,3]], iotype = 'in')
     browser.find_element_by_xpath(value_path).send_keys("1.61")
     browser.find_element_by_xpath(add_new_path).click()
     browser.find_element_by_xpath(submit_path).click()
-    time.sleep(1)
+    time.sleep(1)     
     
     #enum editor - set to 3
     browser.find_element_by_xpath(enum_path).click()
@@ -119,7 +119,7 @@ Y = Array([[0,1],[2,3]], iotype = 'in')
     new_cell_path = '//*[@id="array-editor-dialog-X"]/div/input[5]'
     new_cell = browser.find_element_by_xpath(new_cell_path)
     new_cell.clear()
-    new_cell.send_keys("4")
+    new_cell.send_keys("4.")
     
     submit_path = '//*[@id="array-edit-X-submit"]'
     browser.find_element_by_xpath(submit_path).click()
@@ -135,6 +135,7 @@ Y = Array([[0,1],[2,3]], iotype = 'in')
     cell_input.send_keys("2.71")
     browser.find_element_by_xpath('//*[@id="Inputs_props"]/div[4]/div/div[3]/div[4]').click()
     time.sleep(1)
+        
     
     # array 2d editor - set to [[1, 4],[9, 16]]
     browser.find_element_by_xpath(array2d_path).click()
@@ -150,18 +151,29 @@ Y = Array([[0,1],[2,3]], iotype = 'in')
     
     component_editor.close()    
     time.sleep(2)
-
-    workspace_page.expand_object('top')
-    workspace_page.select_object('top.p1')
-    time.sleep(0.5)
     
+    #check that all values were set correctly by the editors
+    commands = ["top.p1.d['pi']", "top.p1.d['phi']", "top.p1.force_execute", 
+                "top.p1.e", "top.p1.x", "top.p1.X"]
+    values = ["3.0", "1.61", "True", "3", "2.71", "[ 0.  1.  2.  3.  4.]"]
+    
+    for cmd_str, check_val in zip(commands, values):
+        workspace_page.do_command(cmd_str)
+        output = workspace_page.history.split("\n")[-1]
+        eq(output, check_val)    
+    
+    #separate check for 2d arrays
+    workspace_page.do_command("top.p1.Y")
+    output = workspace_page.history.split("\n")
+    eq(output[-2], "[[ 1  4]")   
+    eq(output[-1], " [ 9 16]]")   
     
     # Clean up.
     projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_value_editors complete."
-
+    
 
 if __name__ == '__main__':
     main()
