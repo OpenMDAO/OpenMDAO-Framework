@@ -2,6 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
+    var xyzzy = this;
     var menu = [
         {   "text": "File",
             "items": [
@@ -357,10 +358,29 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 openmdao.FileTreeFrame.prototype = new openmdao.BaseFrame();
 openmdao.FileTreeFrame.prototype.constructor = openmdao.FileTreeFrame;
 
-/** create a new file in the current project */
+/** create a new file in the current project and edit it */
 openmdao.FileTreeFrame.prototype.newFile = function(path) {
     openmdao.Util.promptForValue('Specify a name for the new file',
-                     function(name) { openmdao.model.newFile(name,path); } );
+        function(name) {
+            openmdao.model.newFile(name, path,
+                function(data, textStatus, jqXHR) {
+                    name = '/'+name;
+                    if (path)
+                        name = path+name;
+                    if (openmdao.model.editor) {
+                        openmdao.model.editor.editFile(name);
+                    }
+// Depending on browser settings, this may get blocked.  Worse yet, it can
+// put things in a state that other means of opening the editor get blocked.
+// For now just don't even try.
+//                    else {
+//                        openmdao.Util.popupWindow('editor?filename='+name, 'Code Editor');
+//                    }
+                    if (typeof openmdao_test_mode !== 'undefined') {
+                        openmdao.Util.notify('New file created');
+                    }
+                });
+        });
 };
 
 /** create a new folder in the current project */

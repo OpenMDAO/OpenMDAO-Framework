@@ -53,15 +53,9 @@ def _test_editfile(browser):
 
     # create a couple of files
     file1 = 'test1.py'
-    dlg = workspace_page.new_file_dialog()
-    dlg.set_text(file1)
-    dlg.click_ok()
-    time.sleep(2)  # Wait for background animation to complete.
+    workspace_page.new_file(file1)
     file2 = 'test2.py'
-    dlg = workspace_page.new_file_dialog()
-    dlg.set_text(file2)
-    dlg.click_ok()
-    time.sleep(2)  # Wait for background animation to complete.
+    workspace_page.new_file(file2)
 
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
@@ -236,17 +230,16 @@ def _test_newfile(browser):
     dlg = editor_page.new_file_dialog()
     dlg.set_text('ok_file1')
     dlg.click_ok()
-    time.sleep(1.0)
+    NotifierPage.wait(editor_page)
 
     dlg = editor_page.new_file_dialog()
     dlg.set_text('cancel_file')
     dlg.click_cancel()
-    time.sleep(1.0)
 
     dlg = editor_page.new_file_dialog()
     dlg.set_text('ok_file2')
     dlg.click_ok()
-    time.sleep(1.0)
+    NotifierPage.wait(editor_page)
 
     file_names = editor_page.get_files()
     expected_file_names = ['ok_file1', 'ok_file2']

@@ -295,7 +295,11 @@ class ProjDirFactory(Factory):
                 try:
                     fileinfo = _FileInfo(fpath)
                 except Exception as err:
-                    self._file_error(str(err))
+                    if isinstance(err, SyntaxError):
+                        msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
+                        self._file_error(msg)
+                    else:
+                        self._file_error(str(err))
                     return
                 self._files[fpath] = fileinfo
                 added_set.update(fileinfo.classes.keys())
@@ -305,7 +309,11 @@ class ProjDirFactory(Factory):
                 try:
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:
-                    self._file_error(str(err))
+                    if isinstance(err, SyntaxError):
+                        msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
+                        self._file_error(msg)
+                    else:
+                        self._file_error(str(err))
                     self._remove_fileinfo(fpath)
                     return
                 for cname in added_set:

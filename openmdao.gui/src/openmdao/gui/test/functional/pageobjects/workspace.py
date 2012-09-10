@@ -219,8 +219,13 @@ class WorkspacePage(BasePageObject):
         self('files_tab').click()
         self('file_menu').click()
         self('newfile_button').click()
-        page = ValuePrompt(self.browser, self.port)
-        return page
+        return ValuePrompt(self.browser, self.port)
+
+    def new_file(self, filename):
+        """ Make a new empty file `filename`. """
+        page = self.new_file_dialog()
+        page.set_value(filename)
+        NotifierPage.wait(self)  # Wait for creation to complete.
 
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
