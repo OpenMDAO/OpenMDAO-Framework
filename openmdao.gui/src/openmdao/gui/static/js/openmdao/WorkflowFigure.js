@@ -62,22 +62,24 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     item.appendChild(this.titlebar);
 
     // set up for dropping components to add to workflow
-    var elm = jQuery(item);
+    var self = this,
+        model = this.openmdao_model,
+        elm = jQuery(item);
     elm.addClass("WorkflowFigure");
     elm.data('name',this.name);
     elm.data('pathname',this.pathname);
-    elm.data('model',this.openmdao_model);
-    elm.data('corresponding_openmdao_object',this);
+
+    elm.highlightAsDropTarget = function(){ self.highlightAsDropTarget(); };
+    elm.unhighlightAsDropTarget = function(){ self.unhighlightAsDropTarget(); };
 
     elm.droppable ({
         accept: '.component,.IComponent',
-            out: function(ev,ui){
-                var dropped_pathname = jQuery(ui.draggable ).parent().attr("path"),
-                    o = elm.data('corresponding_openmdao_object');
-                o.unhighlightAsDropTarget() ;
-                openmdao.drag_and_drop_manager.draggableWorkflowOut(elm, dropped_pathname);
+            out: function(ev,ui) {
+                var dropped_pathname = jQuery(ui.draggable ).parent().attr("path");
+                elm.unhighlightAsDropTarget() ;
+                openmdao.drag_and_drop_manager.draggableOut(elm, dropped_pathname);
             },
-            over: function(ev,ui){
+            over: function(ev,ui) {
                 var target_pathname = elm.data('pathname'),
                     target_parent = openmdao.Util.getPath(target_pathname),
                     dragged_object = jQuery(ui.draggable).clone(),
@@ -87,25 +89,23 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
                     dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
                     dragged_parent = openmdao.Util.getPath(dragged_pathname);
                     if (dragged_parent === target_parent) {
-                        openmdao.drag_and_drop_manager.draggableWorkflowOver(elm, dragged_pathname);
+                        openmdao.drag_and_drop_manager.draggableOver(elm);
                     }
                 }
                 else if (dragged_object.hasClass('IComponent')) {
-                    dragged_pathname = dragged_object.attr("modpath");
-                    openmdao.drag_and_drop_manager.draggableWorkflowOver(elm, dragged_pathname);
+                    openmdao.drag_and_drop_manager.draggableOver(elm);
                 }
             },
             drop: function(ev,ui) {
-                top_div = openmdao.drag_and_drop_manager.getTopWorkflowDroppableForDropEvent(ev,ui);
+                top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
                 if (top_div) {
                     var drop_function = top_div.droppable('option', 'actualDropHandler');
                     drop_function(ev, ui);
                 }
             },
             actualDropHandler: function(ev,ui) {
-                openmdao.drag_and_drop_manager.clearHighlightingWorkflowDroppables();
-                var model = elm.data('model'),
-                    target_pathname = elm.data('pathname'),
+                openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+                var target_pathname = elm.data('pathname'),
                     target_parent = openmdao.Util.getPath(target_pathname),
                     dropped_object = jQuery(ui.draggable).clone(),
                     dropped_pathname,

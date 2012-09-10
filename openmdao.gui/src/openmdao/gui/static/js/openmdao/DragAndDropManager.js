@@ -111,6 +111,7 @@ openmdao.DragAndDropManager=function() {
                   is the maxmin variable. We also allow dropping onto the top, which is the  */
                 if ((id === "dataflow_pane" ) ||
                     (droppable.attr("class").substring(0,14) === "DataflowFigure") ||
+                    (droppable.attr("class").substring(0,14) === "WorkflowFigure") ||
                     (droppable.attr("class").indexOf("SlotFigure") !== -1)) {
                     droppable.highlightAsDropTarget();
                     self.drop_target = droppable;
@@ -126,8 +127,7 @@ openmdao.DragAndDropManager=function() {
 
     };
 
-    // Find the zindex for the jQuery object by finding the first parent that
-    //    has a non-auto zindex
+    // Find zindex of element by finding first parent that has a non-auto zindex
     this.computeCalculatedZindex = function(elm) {
         var tmp_elm = elm;
         while (tmp_elm.css("z-index") === "auto"  && ! tmp_elm.is("body")) {
@@ -151,116 +151,4 @@ openmdao.DragAndDropManager=function() {
         return topmost_zindex;
     };
 
-    /**********************************************************************
-       For handling drag and drop on workflows
-    **********************************************************************/
-    var workflow_droppables= new Hashtable(),
-        drop_workflow_target = null ;
-
-    // get workflow figure top div that contains the draggable, is visible and
-    // accepts the type of the draggable
-    this.getTopWorkflowDroppableForDropEvent = function(ev, ui) {
-        return openmdao.drag_and_drop_manager.drop_workflow_target;
-    };
-
-    // the input should be a jQuery object
-    this.draggableWorkflowOut = function(droppable, dropped_pathname) {
-        workflow_droppables.remove(droppable[0].id);
-        openmdao.drag_and_drop_manager.updateWorkflowHighlighting(dropped_pathname);
-    };
-
-    // gets called when the cursor goes inside the passed in droppable element
-    // the input should be a jQuery object
-    this.draggableWorkflowOver = function(droppable, dropped_pathname) {
-        var elm_calculated_zindex = this.computeCalculatedZindex(droppable);
-        workflow_droppables.put(droppable[0].id, elm_calculated_zindex);
-        openmdao.drag_and_drop_manager.updateWorkflowHighlighting(dropped_pathname);
-    };
-
-    // Given the list of droppables that could potentially be
-    //    dropped on given where the cursor is, figure out which is on top
-    //    and tell it to highlight itself. Unhighlight all the others
-    this.updateWorkflowHighlighting = function(dropped_pathname) {
-        // Find the div with the max id
-        var max_zindex = -10000,
-            max_topmost_zindex = -10000,
-            max_id = "";
-
-        workflow_droppables.each(function(id, zindex) {
-            var div = $(id),
-                div_object = jQuery(div),
-                tmp_elm = div_object,
-                calculated_zindex,
-                count = 0,
-                max_count = 0,
-                topmost_zindex;
-
-            while (tmp_elm.css("z-index") === "auto") {
-                tmp_elm = tmp_elm.parent();
-            }
-            calculated_zindex = tmp_elm.css("z-index");
-
-            // Find the zindex for the topmost element
-            tmp_elm = div_object;
-            while (! tmp_elm.is("body")) {
-                if (tmp_elm.css( "z-index" ) !== "auto") {
-                    topmost_zindex = tmp_elm.css("z-index");
-                }
-                if (! tmp_elm.parent() || tmp_elm.parent().is("body")) {
-                    break;
-                }
-                tmp_elm = tmp_elm.parent();
-                count += 1;
-            }
-            topmost_zindex = tmp_elm.css("z-index");
-
-            if (topmost_zindex > max_topmost_zindex) {
-                max_id = id;
-                max_zindex = calculated_zindex;
-                max_topmost_zindex = topmost_zindex;
-                max_count = count;
-            }
-            else if (topmost_zindex === max_topmost_zindex) {
-                /* Use the count to break the tie */
-                if (count > max_count) {
-                    max_zindex = calculated_zindex;
-                    max_id = id;
-                    max_count = count;
-                }
-                else if (count === max_count) {
-                    /* If still tied, use the zindex to break the tie */
-                    if (calculated_zindex > max_zindex) {
-                        max_id = id;
-                        max_zindex = calculated_zindex;
-                    }
-                }
-            }
-        });
-
-       // Now only highlight the top one
-        workflow_droppables.each(function(id, zindex) {
-            var div = $(id),
-                div_object = jQuery(div),
-                o = div_object.data('corresponding_openmdao_object');
-
-            if (id === max_id) {
-                o.highlightAsDropTarget();
-                openmdao.drag_and_drop_manager.drop_workflow_target = div_object;
-            }
-            else {
-                o.unhighlightAsDropTarget();
-            }
-        });
-    };
-
-    // clear all droppables
-    this.clearHighlightingWorkflowDroppables = function() {
-        workflow_droppables.each(function(id, zindex) {
-            var div = $(id),
-                div_object = jQuery(div),
-                o = div_object.data('corresponding_openmdao_object');
-            o.unhighlightAsDropTarget();
-        });
-        workflow_droppables.clear();
-    };
 };
