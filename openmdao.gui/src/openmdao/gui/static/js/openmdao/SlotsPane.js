@@ -38,15 +38,14 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
         });
     }
 
-    // all this is just to prevent drops from falling thru to underlying panes
-    var true_dropdiv = slotsDiv.parent();
-    true_dropdiv.droppable ({
+    // this is just to prevent drops from falling thru to underlying panes
+    elm.droppable ({
         accept: '.objtype',
         out: function(ev,ui) {
-            openmdao.drag_and_drop_manager.draggableOut(true_dropdiv);
+            openmdao.drag_and_drop_manager.draggableOut(elm);
         },
         over: function(ev,ui) {
-            openmdao.drag_and_drop_manager.draggableOver(true_dropdiv);
+            openmdao.drag_and_drop_manager.draggableOver(elm);
         },
         drop: function(ev,ui) {
             /* divs could be in front of divs and the div that gets the drop
@@ -60,14 +59,6 @@ openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
             }
         }
     });
-
-    true_dropdiv.highlightAsDropTarget=function() {
-        // do nothing, but needed for DragAndDropManager
-    };
-
-    true_dropdiv.unhighlightAsDropTarget=function() {
-        // do nothing, but needed for DragAndDropManager
-    };
 
     /***********************************************************************
      *  protected

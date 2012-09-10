@@ -12,8 +12,10 @@ openmdao.DragAndDropManager=function() {
      *
      * The 'draggableOver' method will also call the 'updateHighlighting'
      * function, which will highlight the drop target with the highest
-     * z-index and set it to be the current drop target. (It will also
-     * remove the highlighting from all other drop targets)
+     * z-index and set it to be the current drop target. It will also
+     * remove the highlighting from all other drop targets. Note that a
+     * droppable must implement both the "highlightAsDropTarget()" and
+     * "unhighlightAsDropTarget()" functions to be a valid drop target.
      ***********************************************************************/
 
     var self = this,
@@ -41,7 +43,9 @@ openmdao.DragAndDropManager=function() {
     // clear all drop targets
     this.clearHighlightingDroppables = function() {
         jQuery.each(droppables, function(id, droppable) {
-            droppable.unhighlightAsDropTarget();
+            if (droppable.hasOwnProperty("unhighlightAsDropTarget")) {
+                droppable.unhighlightAsDropTarget();
+            }
         });
         droppables = {};
     };
@@ -109,10 +113,7 @@ openmdao.DragAndDropManager=function() {
             if (id === max_id) {
                 /* We only allow dropping onto Assemblies and a good way to check that
                   is the maxmin variable. We also allow dropping onto the top, which is the  */
-                if ((id === "dataflow_pane" ) ||
-                    (droppable.attr("class").substring(0,14) === "DataflowFigure") ||
-                    (droppable.attr("class").substring(0,14) === "WorkflowFigure") ||
-                    (droppable.attr("class").indexOf("SlotFigure") !== -1)) {
+                if (droppable.hasOwnProperty("highlightAsDropTarget")) {
                     droppable.highlightAsDropTarget();
                     self.drop_target = droppable;
                 }
@@ -120,7 +121,7 @@ openmdao.DragAndDropManager=function() {
                     self.drop_target = null;
                 }
             }
-            else {
+            else if (droppable.hasOwnProperty("unhighlightAsDropTarget")) {
                 droppable.unhighlightAsDropTarget();
             }
         });

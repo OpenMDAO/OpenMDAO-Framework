@@ -16,29 +16,36 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
             .appendTo(elm),
         dataflow = new draw2d.Workflow(dataflowID),
-        dataflowFig = null,
-        true_dropdiv = null;
+        dataflowFig = null;
 
-    /* used by the drag and drop code */
-    this.openmdao_model = model;
-    this.dataflowDiv = dataflowDiv;
-
-    dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
     elm.css({ 'overflow':'auto' });
     dataflow.setViewPort(elm.attr('id'));
+    dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
 
-    /* Even though we only allow dropping on the topmost dataflow, which has a
-       dataflowID of "-dataflow" (which adds it to the globals), we need to
-       include it in the list of droppables so that handling of the layers works
+    // dataflow pane is droppable only for the global dataflow (pathname === '')
+    if (pathname === '') {
+        /** Highlight this pane when it the cursor is over it and it can accept a drop */
+        elm.highlightAsDropTarget=function() {
+            dataflow.setBackgroundImage( "/static/images/grid_10_highlighted.png", true);
+        };
+
+        /** Turn off highlighting of this pane when it can no longer accept a drop */
+        elm.unhighlightAsDropTarget=function() {
+            dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
+        };
+    }
+
+    /* Even though we only allow dropping on the global dataflow pane, we need
+       to include all dataflow panes in the list of droppables so that handling
+       of the layers works
     */
-    true_dropdiv = dataflowDiv.parent();
-    true_dropdiv.droppable ({
+    elm.droppable ({
         accept: '.IComponent',
         out: function(ev,ui) {
-            openmdao.drag_and_drop_manager.draggableOut(true_dropdiv);
+            openmdao.drag_and_drop_manager.draggableOut(elm);
         },
         over: function(ev,ui) {
-            openmdao.drag_and_drop_manager.draggableOver(true_dropdiv);
+            openmdao.drag_and_drop_manager.draggableOver(elm);
         },
         drop: function(ev,ui) {
             top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
@@ -59,16 +66,6 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
             });
         }
     });
-
-    /** Highlight this pane when it the cursor is over it and it can accept a drop */
-    true_dropdiv.highlightAsDropTarget=function() {
-        dataflow.setBackgroundImage( "/static/images/grid_10_highlighted.png", true);
-    };
-
-    /** Turn off highlighting of this pane when it can no longer accept a drop */
-    true_dropdiv.unhighlightAsDropTarget=function() {
-        dataflow.setBackgroundImage( "/static/images/grid_10.png", true);
-    };
 
     /***********************************************************************
      *  privileged
