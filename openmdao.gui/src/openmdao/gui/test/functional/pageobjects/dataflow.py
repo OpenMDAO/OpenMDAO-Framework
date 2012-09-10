@@ -73,6 +73,15 @@ class DataflowFigure(BasePageObject):
         """ Figure background-color property. """
         return self.root.value_of_css_property('background-color')
 
+    @property
+    def coords(self):
+        """ Figure (left, top). """
+        left = self.root.value_of_css_property('left')
+        left = int(left[0:-2])  # Drop 'px'.
+        top = self.root.value_of_css_property('top')
+        top = int(top[0:-2])  # Drop 'px'.
+        return (left, top)
+
     def editor_page(self, double_click=True, base_type='Component'):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)

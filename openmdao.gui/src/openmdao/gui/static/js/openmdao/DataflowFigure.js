@@ -55,7 +55,6 @@ openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces){
 
     this.inputsFigure = null;
     this.outputsFigure = null;
-    this.fbOutputsFigure = null;
 
     this.figures = {};
     this.connections = {};
@@ -608,12 +607,6 @@ openmdao.DataflowFigure.prototype.minimize=function(){
             self.outputsFigure = null;
         }
 
-        if (self.fbOutputsFigure) {
-            workflow.removeFigure(self.fbOutputsFigure);
-            self.removeChild(self.fbOutputsFigure);
-            self.fbOutputsFigure = null;
-        }
-
         self.setContent(self.contentHTML);
         self.setDimension(self.getMinWidth(),self.getMinHeight());
 
@@ -677,8 +670,12 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             fig = self.figures[name];
 
         if (fig) {
-            // Check for replacement.
-            if (fig.pythonID !== comp.python_id) {
+            if (fig.pythonID === comp.python_id) {
+                // Update precedence.
+                fig.precedence = precedence;
+            }
+            else {
+                // Set up for replacement.
                 prededence = fig.precedence;
                 self.removeComponent(name);
                 fig = null;
@@ -711,7 +708,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             workflow.addFigure(fig,0,0);
         }
 
-        if (fig.maxmin === '-' || self.pathname ==='') {
+        if (fig.maxmin === '-' || self.pathname === '') {
             fig.maximize();
         }
     });
@@ -728,13 +725,6 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         self.outputsFigure.html.style.border = 'none';
         self.addChild(this.outputsFigure);
         workflow.addFigure(self.outputsFigure,0,0);
-    }
-
-    if (!self.fbOutputsFigure) {
-        self.fbOutputsFigure = new draw2d.Node();
-        self.fbOutputsFigure.html.style.border = 'none';
-        self.addChild(this.fbOutputsFigure);
-        workflow.addFigure(self.fbOutputsFigure,0,0);
     }
 
     var flow_colors = {
@@ -790,18 +780,10 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             else {
                 dst_port = new draw2d.InputPort();
                 dst_port.setWorkflow(workflow);
-                if (type === 'data' || type === 'parameter') {
-                    dst_port.setName(con_name);
-                } else {
-                    dst_port.setName('fb-'+con_name);
-                }
+                dst_port.setName(con_name);
                 dst_port.setCanDrag(false);
                 dst_port.setId(con_name);
-                if (type === 'data') {
-                    self.outputsFigure.addPort(dst_port,0,0);
-                } else {
-                    self.fbOutputsFigure.addPort(dst_port,0,0);
-                }
+                self.outputsFigure.addPort(dst_port,0,0);
                 con.setTarget(dst_port);
                 con.setTargetDecorator(new draw2d.ArrowConnectionDecorator());
                 con.setRouter(null);
@@ -1000,12 +982,6 @@ openmdao.DataflowFigure.prototype.layout=function() {
                 Y0 = self.outputsFigure.getAbsoluteY();
             dst_port.setPosition(0,srcY-Y0);
         }
-        else if (dst_port.getName() === 'fb-'+name) {
-            // destination port is on the assembly
-            var srcY = src_port.getAbsoluteY(),
-                Y0 = self.fbOutputsFigure.getAbsoluteY();
-            dst_port.setPosition(0,srcY-Y0);
-        }
     });
 
     // layout parent to accomodate new size
@@ -1096,12 +1072,6 @@ openmdao.DataflowFigure.prototype.resize=function(){
         this.outputsFigure.setDimension(1, height - this.cornerHeight - this.margin);
         this.outputsFigure.setPosition(x0 + width - 2,
                                        y0 + this.cornerHeight);
-    }
-
-    if (this.fbOutputsFigure) {
-        this.fbOutputsFigure.setDimension(1, height - this.cornerHeight - this.margin);
-        this.fbOutputsFigure.setPosition(x0 + 2,
-                                         y0 + this.cornerHeight);
     }
 };
 

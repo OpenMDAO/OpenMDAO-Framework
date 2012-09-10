@@ -541,5 +541,47 @@ def _test_replace(browser):
     print "_test_replace complete."
 
 
+def _test_ordering(browser):
+    print "running _test_ordering"
+    # Verify that adding parameter to driver moves it ahead of target.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode and SLSQP.
+    workspace_page.show_dataflow('top')
+    workspace_page.show_library()
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'opt')
+
+    # Check that ExternalCode is before SLSQP.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    opt = workspace_page.get_dataflow_figure('opt', 'top')
+    assert ext.coords[0] < opt.coords[0]
+
+    # Add parameter to SLSQP.
+    editor = opt.editor_page(base_type='Driver')
+    editor('parameters_tab').click()
+    dialog = editor.new_parameter()
+    dialog.target = 'ext.timeout'
+    dialog.low = '0'
+    dialog.high = '1'
+    dialog.name = 'tmo'
+    dialog('ok').click()
+
+    # Check that SLSQP is now ahead of ExternalCode.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    opt = workspace_page.get_dataflow_figure('opt', 'top')
+    assert ext.coords[0] > opt.coords[0]
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_ordering complete."
+
+
 if __name__ == '__main__':
     main()
