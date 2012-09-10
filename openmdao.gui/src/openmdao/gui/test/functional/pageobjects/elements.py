@@ -52,6 +52,7 @@ class _BaseElement(object):
     @property
     def is_present(self):
         """ True if the element can be found. """
+        self._browser.implicitly_wait(1)
         try:
             if self._root is None:
                 self._browser.find_element(*self._locator)
@@ -60,6 +61,8 @@ class _BaseElement(object):
         except (NoSuchElementException,
                 StaleElementReferenceException):
             return False
+        finally:
+            self._browser.implicitly_wait(TMO)
         return True
 
     @property
