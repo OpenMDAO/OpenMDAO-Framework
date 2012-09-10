@@ -548,7 +548,7 @@ def _test_library_to_workflow(browser):
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
-    print "_test_simple_component_to_workflow complete."
+    print "_test_library_to_workflow complete."
 
 
 def _test_component_to_complex_workflow(browser):
