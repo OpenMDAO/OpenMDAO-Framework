@@ -1,7 +1,6 @@
 var openmdao = ( openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.DataflowFigure=function(model, pathname, type, valid, interfaces) {
-    debug.info('DataflowFigure', pathname, type, interfaces);
     this.openmdao_model = model;
     this.pathname = pathname;
     this.name = openmdao.Util.getName(pathname);
@@ -422,7 +421,6 @@ openmdao.DataflowFigure.prototype.onDragstart=function(x,y){
 
 /** TODO: enable moving a component into another dataflow */
 openmdao.DataflowFigure.prototype.onFigureDrop=function(figure){
-    debug.info("DataflowFigure.onFigureDrop",figure);
     draw2d.CompartmentFigure.prototype.onFigureDrop.call(this,figure);
     this.setBackgroundColor(this.defaultBackgroundColor);
 };
