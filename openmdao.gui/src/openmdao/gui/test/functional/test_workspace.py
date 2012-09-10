@@ -53,15 +53,9 @@ def _test_editfile(browser):
 
     # create a couple of files
     file1 = 'test1.py'
-    dlg = workspace_page.new_file_dialog()
-    dlg.set_text(file1)
-    dlg.click_ok()
-    time.sleep(0.5)
+    workspace_page.new_file(file1)
     file2 = 'test2.py'
-    dlg = workspace_page.new_file_dialog()
-    dlg.set_text(file2)
-    dlg.click_ok()
-    time.sleep(1.0)
+    workspace_page.new_file(file2)
 
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
@@ -112,9 +106,7 @@ def _test_palette_update(browser):
                                                 'paraboloid.py')
     file2_path = pkg_resources.resource_filename('openmdao.examples.simple',
                                                 'optimization_unconstrained.py')
-
     # add first file from workspace
-    workspace_page('files_tab').click()
     workspace_page.add_file(file1_path)
 
     # Open code editor.and add second file from there
@@ -238,17 +230,16 @@ def _test_newfile(browser):
     dlg = editor_page.new_file_dialog()
     dlg.set_text('ok_file1')
     dlg.click_ok()
-    time.sleep(1.0)
+    NotifierPage.wait(editor_page)
 
     dlg = editor_page.new_file_dialog()
     dlg.set_text('cancel_file')
     dlg.click_cancel()
-    time.sleep(1.0)
 
     dlg = editor_page.new_file_dialog()
     dlg.set_text('ok_file2')
     dlg.click_ok()
-    time.sleep(1.0)
+    NotifierPage.wait(editor_page)
 
     file_names = editor_page.get_files()
     expected_file_names = ['ok_file1', 'ok_file2']
@@ -503,15 +494,19 @@ def _test_editable_inputs(browser):
         for i, row in enumerate(inputs):
             connected_to_cell = row.cells[len(row.cells)-2]
             implicit_cell = row.cells[len(row.cells)-1]
+            name_cell = row.cells[0]
             value_cell = row.cells[2]
 
             if connected_to_cell.value:
+                test_color(name_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.background_color, [0, 0, 0, 1])
             elif implicit_cell.value:
-                test_color(value_cell.color, [200, 0, 0, 1])
+                test_color(name_cell.color, [100, 180, 255, 1])
+                test_color(value_cell.color, [100, 180, 255, 1])
                 test_color(value_cell.background_color, [255, 255, 255, 1])
             else:
+                test_color(name_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.color, [0, 0, 0, 1])
                 test_color(value_cell.background_color, [255, 255, 255, 1])
 
@@ -519,15 +514,17 @@ def _test_editable_inputs(browser):
         for i, row in enumerate(outputs):
             connected_to_cell = row.cells[len(row.cells)-2]
             implicit_cell = row.cells[len(row.cells)-1]
+            name_cell = row.cells[0]
             value_cell = row.cells[2]
 
             if implicit_cell.value:
-                test_color(value_cell.color, [0, 0, 200, 1])
+                test_color(name_cell.color, [100, 180, 255, 1])
+                test_color(value_cell.color, [100, 180, 255, 1])
             else:
+                test_color(name_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.color, [255, 255, 255, 1])
             
             test_color(value_cell.background_color, [0, 0, 0, 1])
-
 
     print "running _test_editable_inputs..."
     projects_page = begin(browser)
@@ -537,9 +534,10 @@ def _test_editable_inputs(browser):
     # Import vehicle_singlesim
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional', 'basic_model.py')
+    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                    'basic_model.py')
     file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-                                                            'vehicle_singlesim.py')
+                                                    'vehicle_singlesim.py')
     editor_page.add_file(file_path_one)
     editor_page.add_file(file_path_two)
     browser.close()
@@ -593,6 +591,7 @@ def _test_editable_inputs(browser):
     project_info_page.delete_project()
     print "_test_editable_inputs complete."
 
+
 def _test_console_errors(browser):
     print "running _test_console_errors..."
     projects_page = begin(browser)
@@ -610,7 +609,7 @@ def _test_console_errors(browser):
                 " specified.")
     editor.close()
 
-    # Save file with syntax error.
+    # Attempt to save file with syntax error.
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
     editor_window = browser.current_window_handle
@@ -631,7 +630,6 @@ def execute(self)
     except Exception as exc:
         print 'Exception waiting for file-error:', str(exc) or repr(exc)
         logging.exception('Waiting for file-error')
-    NotifierPage.wait(editor_page)  # Save complete.
     if message is None:
         message = NotifierPage.wait(editor_page, base_id='file-error')
     eq(message, 'invalid syntax (bug.py, line 6)')
@@ -741,6 +739,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
+    time.sleep(0.5)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
     eq(properties.is_visible, False)

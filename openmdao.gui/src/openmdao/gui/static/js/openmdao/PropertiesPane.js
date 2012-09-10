@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
@@ -15,9 +15,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             asyncEditorLoading: false,
             multiSelect: false,
             autoHeight: true,
-            enableTextSelectionOnCells: true,
+            enableTextSelectionOnCells: true
         };
-    
+
     self.pathname = pathname;
     if (editable) {
         options.editable = true;
@@ -38,35 +38,39 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     elm.append(propsDiv);
-    props = new Slick.Grid(propsDiv, [], columns, options)
+    props = new Slick.Grid(propsDiv, [], columns, options);
 
-    props.onBeforeEditCell.subscribe(function(row,cell){
+    props.onBeforeEditCell.subscribe(function(row,cell) {
         if (props.getDataItem(cell.row).connected.length > 0) {
             return false;
         }
-
         return true;
     })
 
     if (editable) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            cmd = self.pathname+'.'+args.item.name+'='+args.item.value
+            cmd = self.pathname+'.'+args.item.name+'='+args.item.value;
             model.issueCommand(cmd);
         });
    }
-    
+
     /** load the table with the given properties */
     this.loadData = function(properties) {
+        //variable to track cells that need to be highlighted
+        var editableCells = {};
+
         if (properties) {
             // Sort by name
-            properties.sort(function(a, b){
+            properties.sort(function(a, b) {
                 var nameA=a.name.toLowerCase(),
                     nameB=b.name.toLowerCase();
-                if (nameA < nameB) //sort string ascending
+                if (nameA < nameB) { //sort string ascending
                     return -1;
-                if (nameA > nameB)
+                }
+                if (nameA > nameB) {
                     return 1;
+                }
                 return 0; //default return value (no sorting)
             });
 
@@ -88,8 +92,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
                             cellCssStyles = cellCssStyles + " parameter"
                         }
-                        else if(name === "Outputs"){
-                            cellCssStyles = cellCssStyles + " objective"
+                        else if (name === "Outputs") {
+                            nameStyle += " objective";
+                            valueStyle += " objective";
                         }
                     }
                     if(cellCssStyles.length>0){
@@ -97,7 +102,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     }
                 }
             });
-            debug.info('PropertiesPane', properties)
+
             props.setData(properties);
         }
         else {
@@ -108,5 +113,5 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         props.setCellCssStyles("highlight", editableCells);
         props.updateRowCount();
         props.render();
-    }
-}
+    };
+};

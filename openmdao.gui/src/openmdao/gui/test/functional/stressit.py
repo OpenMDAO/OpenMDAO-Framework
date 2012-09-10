@@ -7,9 +7,13 @@ MAX_TRIALS = 100
 
 def main():
     """ Run GUI functional tests up to `MAX_TRIALS` times. """
+    args = ['-v']
     max_trials = MAX_TRIALS
     if len(sys.argv) > 1:
         max_trials = int(sys.argv[1])
+        if max_trials < 0:
+            args.append('--nonose')
+            max_trials = -max_trials
 
     stop = 'STOP'
     if os.path.exists(stop):
@@ -36,9 +40,13 @@ def main():
             print msg
             logfile.write(msg+'\n')
             logfile.flush()
-            status = subprocess.call(('python', test_script, '-v'), stdout=logfile,
-                                     stderr=subprocess.STDOUT)
+            cmd = ['python', test_script]
+            cmd.extend(args)
+            status = subprocess.call(cmd, stdout=logfile, stderr=subprocess.STDOUT)
             if status:
+                msg = '        exit status %s' % status
+                print msg
+                logfile.write(msg+'\n')
                 sys.exit(status)
 
     logfile.close()

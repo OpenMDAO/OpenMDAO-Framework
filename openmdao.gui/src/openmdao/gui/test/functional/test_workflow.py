@@ -28,28 +28,19 @@ def _test_global(browser):
     workspace_page = project_info_page.load_project()
 
     workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'rosen_suzuki.py')
-    editor_page.add_file(filename)
-    browser.close()
-    browser.switch_to_window(workspace_window)
+    workspace_page.add_file(filename)
 
-    # Replace 'top' with NestedSimulation.
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
+    # Add a NestedSimulation.
     workspace_page.show_library()
     workspace_page.find_library_button('NestedSimulation', 0.5).click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.NestedSimulation',
-                                                'top')
-    # Save & reload.
-    workspace_page.save_project()
-    workspace_page.reload_project()
-
+                                                'nested', offset=(300, 300))
     # Verify full workflow shown.
     workspace_page('workflow_tab').click()
-    eq(len(workspace_page.get_workflow_figures()), 2)
-    eq(len(workspace_page.get_workflow_component_figures()), 5)
+    eq(len(workspace_page.get_workflow_figures()), 3)
+    eq(len(workspace_page.get_workflow_component_figures()), 6)
 
     # Clean up.
     projects_page = workspace_page.close_workspace()

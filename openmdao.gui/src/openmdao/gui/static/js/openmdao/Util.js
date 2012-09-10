@@ -332,7 +332,13 @@ openmdao.Util = {
             win = jQuery('#'+msgId);
         }
 
-        win.text(msg);
+        if (msg.indexOf('\n') >= 0) {
+            // Try to retain any message formatting.
+            win.html(openmdao.Util.escapeHTML(msg).replace(/\n/g, '<br>'));
+        }
+        else {
+            win.text(msg);
+        }
         win.dialog('open');
     },
 
@@ -512,7 +518,15 @@ openmdao.Util = {
         }
 
         connect();
-
+        /*debug.info('websocket connected');
+        debug.info('addr='+addr);
+        debug.info('retry='+retry);
+        debug.info('delay='+delay);
+        debug.info('handler:');
+        debug.info(handler);
+        debug.info('errhandler:');
+        debug.info(errHandler);
+        */
         return socket;
     },
 

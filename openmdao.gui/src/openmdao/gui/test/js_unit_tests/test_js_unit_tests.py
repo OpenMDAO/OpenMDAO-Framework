@@ -2,6 +2,7 @@ import sys
 
 # to run interactively, use the following command in directory with jsTestDriver.conf:
 # java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser /usr/bin/chromium-browser --tests all
+# if /usr/bin/chromium-browser doesn't work, try google-chrome
 
 # Because Xvfb does not exist on Windows, it is difficult
 #   to do headless testing on Windows. So for now
