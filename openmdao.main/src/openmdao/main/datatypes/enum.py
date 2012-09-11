@@ -8,7 +8,7 @@ __all__ = ["Enum"]
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Enum as TraitEnum
 
-from openmdao.main.variable import Variable
+from openmdao.main.variable import Variable, gui_excludes
 
 class Enum(Variable):
     """A variable wrapper for an enumeration, which is a variable that
@@ -73,6 +73,36 @@ class Enum(Variable):
 
         super(Enum, self).__init__(default_value=default_value,
                                          **metadata)
+
+    def get_attribute(self, name, value, trait, meta):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. 
+        
+        name: str
+          Name of variable
+          
+        value: object
+          The value of the variable
+          
+        trait: CTrait
+          The variable's trait
+          
+        meta: dict
+          Dictionary of metadata for this variable
+        """
+        
+        attr = {}
+        
+        attr['name'] = name
+        attr['type'] = "enum"
+        attr['value'] = value
+        
+        for field in meta:
+            if field not in gui_excludes:
+                attr[field] = meta[field]
+        
+        return attr, None
+
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait."""

@@ -602,10 +602,10 @@ def _test_console_errors(browser):
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False, base_type='Assembly')
     inputs = editor.get_inputs()
-    inputs[1][2] = '42'  # force_execute
+    inputs[0][2] = '42'  # directory
     message = NotifierPage.wait(editor)
-    eq(message, "TraitError: The 'force_execute' trait of an Assembly instance"
-                " must be a boolean, but a value of 42 <type 'int'> was"
+    eq(message, "TraitError: The 'directory' trait of an Assembly instance"
+                " must be a string, but a value of 42 <type 'int'> was"
                 " specified.")
     editor.close()
 
