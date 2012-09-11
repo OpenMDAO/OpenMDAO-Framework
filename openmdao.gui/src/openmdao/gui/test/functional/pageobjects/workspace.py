@@ -200,6 +200,8 @@ class WorkspacePage(BasePageObject):
                     return ProjectsListPage.verify(self.browser, self.port)                     
                 else:  #return to the project, intact.
                     dialog.click_cancel()
+                    return None
+                    #need to return something?
             else:      #no unsaved changes 
                 from project import ProjectsListPage
                 return ProjectsListPage.verify(self.browser, self.port)    
