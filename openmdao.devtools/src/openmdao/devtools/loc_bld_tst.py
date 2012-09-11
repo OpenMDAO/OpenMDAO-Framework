@@ -187,11 +187,11 @@ def install_dev_env(url, branch=None):
     tree.
     
     url: str
-        URL of tarfile or git repo containing an OpenMDAO source tree.  May be
+        URL of tarfile or Git repo containing an OpenMDAO source tree.  May be
         a local file path or an actual URL.
 
     branch: str
-        For git repos, branch name must be supplied.
+        For Git repos, branch name must be supplied.
     """
     startdir = os.getcwd()
     

@@ -14,7 +14,7 @@ EngineOptimization class, setting it as the top assembly.
     >>> prob
     <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
-The problem is set up like above. We could run it now, but first let's find out how
+The problem is set up as above. We could run it now, but first let's find out how
 the current design performs. We can do this by running the acceleration simulation driver once
 and printing the value of the acceleration time.
 
@@ -117,7 +117,7 @@ Try solving the same optimization problem using this objective.
         >>> prob.sim_EPA_highway.fuel_economy
         38.696...
 
-If we only care about optimizing the 0-60 acceleration time, we can be a little smarter with our
+If we care only about optimizing the 0-60 acceleration time, we can be a little smarter with our
 iteration hierarchy. In such a case, we don't need to run the EPA fuel economy simulations while
 we are optimizing, since their outputs won't be used until the conclusion of the optimization, when
 we would like to inspect them. We need a new iteration hierarchy in which we optimize the 

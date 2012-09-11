@@ -100,7 +100,7 @@ two sentences should be fine. While nothing in the framework requires this
 description, it would be wise to include one for every input and output of your
 components.
 
-It is possible to create new types of variables to use in your models. 
+It is also possible to create new types of variables to use in your models. 
 For an example of a user-created variable, see :ref:`Building-a-Variable-Plugin`.
 
 .. index:: Array
@@ -108,10 +108,9 @@ For an example of a user-created variable, see :ref:`Building-a-Variable-Plugin`
 *Arrays*
 ++++++++
 
-It is possible to use an array as a variable through use of the *Array*
-trait. The value for an Array can be expressed as either a Python array or a NumPy
-array. NumPy arrays are very useful because of NumPy's built-in mathematical
-capabilities. Either array can be n-dimensional and of potentially any type.
+You can use an array as a variable by using the *Array* trait. The value for an Array can be
+expressed as either a Python array or a NumPy array. NumPy arrays are very useful because of NumPy's
+built-in mathematical capabilities. Either array can be n-dimensional and potentially of any type.
 
 Constructing an Array variable requires a couple of additional parameters that
 are illustrated in the following example:
@@ -319,7 +318,7 @@ The *File* variable contains a reference to an input or output file on disk. It
 is more than just a text string that contains a path and filename; it is
 a *FileReference* that can be passed into other functions expecting
 such an object. FileReferences have methods for copying the reference and
-opening the referenced file for reading. The available "flags" are defined
+opening the referenced file for reading. The available `flags` are defined
 by `FileMetadata`, which supports arbitrary user metadata.
 
 
@@ -343,7 +342,7 @@ mark a file as binary.
 *Slot Variables*
 ++++++++++++++++++
 
-An *Slot* is a variable that requires any value assigned to it to be either an instance of a
+A *Slot* is a variable that requires any value assigned to it to be either an instance of a
 specific class or an implementation of a specific Interface. The class or Interface to be matched is
 the first argument to the constructor. Failure to match the specified class or Interface will result
 in an exception being raised. Slot traits are typically used to implement 
