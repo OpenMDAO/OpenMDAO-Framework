@@ -146,12 +146,6 @@ def _test_connect(browser):
     props = comp1.properties_page()
     eq(props.header, 'Connectable: top.comp1')
     inputs = props.inputs
-    eq(inputs[0].value, ['b_in', 'False'])
-    inputs[0][1] = 'True'
-    inputs = props.inputs
-    eq(inputs[2].value, ['e_in', '1'])
-    inputs[2][1] = '3'
-    inputs = props.inputs
     eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
@@ -160,6 +154,22 @@ def _test_connect(browser):
     inputs = props.inputs
     eq(inputs[6].value, ['s_in', ''])
     inputs[6][1] = "'xyzzy'"
+    
+    
+    inputs = props.inputs
+    eq(inputs[0].value, ['b_in', 'False'])
+    inputs._rows[0]._cells[1].click()
+    browser.find_element_by_xpath('//*[@id="bool-editor-b_in"]/option[1]').click()
+    inputs._rows[0]._cells[0].click()
+    #inputs[0][1] = 'True'
+    
+    inputs = props.inputs
+    eq(inputs[2].value, ['e_in', '1'])
+    inputs._rows[2]._cells[1].click()
+    browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
+    inputs._rows[2]._cells[0].click()
+    #inputs[2][1] = '3'    
+    
     props.close()
 
     # Run the simulation.
@@ -173,7 +183,7 @@ def _test_connect(browser):
     outputs = editor.get_outputs()
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
-        ['e_out', 'int',   '3',        '', 'true', '', '', ''],
+        ['e_out', 'enum',   '3',        '', 'true', '', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
