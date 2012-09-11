@@ -174,6 +174,25 @@ class WorkspacePage(BasePageObject):
 
         from project import ProjectsListPage
         return ProjectsListPage.verify(self.browser, self.port)
+    
+    def close_workspace_without_saving(self, timeout=TMO):
+            """ Close the workspace page. Returns :class:`ProjectsListPage`. """
+            self.browser.execute_script('openmdao.Util.closeWebSockets();')
+            NotifierPage.wait(self, timeout)
+            self('project_menu').click()
+    
+            # Sometimes chromedriver hangs here, so we click in separate thread.
+            # It's a known issue on the chromedriver site.
+            closer = threading.Thread(target=self._closer)
+            closer.daemon = True
+            closer.start()
+            closer.join(60)
+            if closer.is_alive():
+                abort(True)
+                raise SkipTest("Can't close workspace, driver hung :-(")
+    
+            from project import ProjectsListPage
+            return ProjectsListPage.verify(self.browser, self.port)    
 
     def _closer(self):
         """ Clicks the close button. """

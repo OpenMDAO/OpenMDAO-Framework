@@ -551,6 +551,7 @@ openmdao.Model=function() {
 
     /** reload the model */
     this.reload = function() {
+        modified = false;
         openmdao.Util.closeWebSockets('reload');
         self.closeWindows();
         window.location.replace('/workspace/project');

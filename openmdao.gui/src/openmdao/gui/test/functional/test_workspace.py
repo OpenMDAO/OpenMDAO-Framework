@@ -791,14 +791,17 @@ def _test_savechanges(browser):
     time.sleep(0.5)
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.external_code.ExternalCode', 'ext')
-
-    workspace_page.close_workspace()
-    //find dialog box
     
-    //click on correct button.
+    #exit with unsaved changes on purpose.
+    print "attempting to trigger the box"
+    workspace_page.close_workspace_without_saving()
+    #find dialog box that should come up.
+    alert = self.browser.switch_to_alert()
+    #click on dismiss button to stick around and save.
+    alert.dismiss()
     
     # Clean up.
-    projects_page = workspace_page.close_workspace()
+    #projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_savechanges complete."
