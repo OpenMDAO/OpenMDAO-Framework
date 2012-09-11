@@ -46,9 +46,11 @@ existing models.
 
 .. figure:: project_page.png
 
-When working with the GUI, anything you do will be contained in a project. You can think of a project as the collection of 
-''stuff'' that comprises your model. We'll teach you about what that ''stuff'' is comprised of as you work through our docs. 
-For now, let's just dive in. Start a new project by clicking on the ``Start new project`` link at the bottom of the page. 
+When working with the GUI, anything you do will be contained in a project. You can think of a project as a collection of 
+information describing your model. That includes all of the python files you use to define your components and the details of 
+the structure of the model itself. 
+
+You can start a new project by clicking on the ``Start new project`` link at the bottom of the page. 
 You'll go to a screen where you can input some details about your project, including a name, description, and version number. 
 You don't have to put anything in for description and version number, but they are there if you want to keep track of them. 
 
@@ -58,7 +60,8 @@ screen:
 .. figure:: workspace_start.png
 
 From this point, you're ready to start working with OpenMDAO using our GUI. We have a number of screen casts that walk you
-through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. 
+through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. That covers 
+the basics you need to know to start working with the OpenMDAO GUI, and you'll leran the rest as you work through the documentation. 
 
 
 How does the GUI Work?
@@ -75,7 +78,7 @@ between each other over the the computer's internal network using the HTTP proto
 computer's  internal network, you don't need to be connected to the Internet or even have your wireless card turned on! 
 
 The GUI and the computational server communicate with each other via a technology called 
-`web-socket <http://en.wikipedia.org/wiki/WebSocket>`_, which enables bi-directional communication. All of the things 
+`web-sockets <http://en.wikipedia.org/wiki/WebSocket>`_, which enables bi-directional communication. All of the things 
 you see in the browser window are rendered using HTML5 and javascript. We rely on a number of different javascript libraries 
 to make all these things work, but we rely most heavily on `jQuery <http://jqueryui.com/>`_.
 
