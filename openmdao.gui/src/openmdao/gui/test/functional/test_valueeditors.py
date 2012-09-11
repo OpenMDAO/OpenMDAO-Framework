@@ -40,6 +40,7 @@ def _test_value_editors(browser):
 
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
+
     workspace_page.show_library()
     time.sleep(1)
     workspace_page.find_library_button('Topp', 0.5).click()
