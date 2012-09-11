@@ -218,7 +218,7 @@ Debugging Via Log Messages
 
 You may have noticed that a file with a name of the form
 ``openmdao_log_.txt`` was created during the above Python run.
-This file is written using the standard Python ``logging`` package.
+This file is written using the standard Python logging package.
 Many of the OpenMDAO modules will write to the log file to record errors,
 warnings, debugging information, etc.  The format of the message is:
 
@@ -227,7 +227,7 @@ warnings, debugging information, etc.  The format of the message is:
     timestamp loglevel source: message
 
 By default, only warnings (``W``) and errors (``E``) are written to the log
-file.  If you want more information printed you can use the standard logging
+file.  If you want more information printed, you can use the standard logging
 level control on the root logger:
 
 ::
@@ -253,8 +253,8 @@ include this in your main routine:
 
 Console log messages do not have timestamps.
 
-Now the existing ``Paraboloid`` component does not do any logging beyond that
-of ``Component``.  You can either modify ``Paraboloid`` to add log messages,
+Now the existing Paraboloid component does not do any logging beyond that
+of Component.  You can either modify Paraboloid to add log messages
 or make a derived class:
 
 ::
@@ -266,7 +266,7 @@ or make a derived class:
             super(TracingParaboloid, self).execute()
             self._logger.debug('    result=%g', self.f_xy)
 
-Of course if you make a derived class, you need to change your model to use
+Of course, if you make a derived class, you need to change your model to use
 that class rather than the original.
 
 One final note about logging: if you have a distributed simulation, log messages

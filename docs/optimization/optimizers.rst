@@ -6,7 +6,7 @@
 Choosing an Optimizer
 ======================
 
-When the initial versions of OpenMDAO were released, the standard library only contained
+When the initial versions of OpenMDAO were released, the standard library contained only
 two optimizers: the gradient optimizer CONMIN, and the genetic optimizer Genetic.
 OpenMDAO now includes several optimizers, provides access to a few more optimizers as plugins,
 and will continue to benefit from community contributions. Let's walk through how you can 
