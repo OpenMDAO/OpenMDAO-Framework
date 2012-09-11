@@ -9,8 +9,8 @@ GUI
 Disclaimer
 ----------
 
-The OpenMDAO GUI is brand new and still under active development. We're working to add in functionality 
-and make sure the features that are there work as expected. Please bare with us if you experience any bugs or you 
+The OpenMDAO GUI is brand new and still under active development. We're working to add functionality 
+and make sure the features that are there work as expected. Please bear with us if you experience any bugs or you 
 find that a certain things don't work quite the way you would like them to. The development team would 
 greatly appreciate any feedback you have (good or bad). Just post on our `forum <http://openmdao.org/forum>`_ or 
 :ref:`submit an issue <github_issues>`. 
@@ -19,16 +19,16 @@ greatly appreciate any feedback you have (good or bad). Just post on our `forum 
 Using the GUI
 -------------
 
-OpenMDAO ships with a web browser based Graphical User Interface. Our GUI is written in Javascript and HTML. 
-Even though the GUI rendered in a web browser, you don't need to be connected to the internet to use it. OpenMDAO is delivered 
-with the GUI built in. So once you've installed OpenMDAO just open up a command window, :ref:`activate <activate_env>` your OpenMDAO environment, and then 
-type 
+OpenMDAO ships with a web-browser-based Graphical User Interface. Our GUI is written in Javascript and HTML. 
+Even though the GUI is rendered in a web browser, you don't need to be connected to the Internet to use it. OpenMDAO is delivered 
+with the GUI built in. So once you've installed OpenMDAO, just open up a command window, :ref:`activate <activate_env>` your OpenMDAO environment, and then 
+type: 
 
 :: 
 
   openmdao gui
 
-Two things should happen next. First you should see a couple of lines output into the console that looks similar to the following: 
+Two things should happen next. First, you should see a couple of lines output into the console that looks similar to the following: 
 
 :: 
     
@@ -46,37 +46,40 @@ existing models.
 
 .. figure:: project_page.png
 
-When working with the GUI, any thing you do will be contained in a project. You can think of a project as the collection of 
+When working with the GUI, anything you do will be contained in a project. You can think of a project as the collection of 
 ''stuff'' that comprises your model. We'll teach you about what that ''stuff'' is comprised of as you work through our docs. 
-For now, lets just dive in. Start a new project by clicking on the ``Start new project`` link at the bottom of the page. 
+For now, let's just dive in. Start a new project by clicking on the ``Start new project`` link at the bottom of the page. 
 You'll go to a screen where you can input some details about your project, including a name, description, and version number. 
-You don't have have to put anything in for description and version number, but they are there if you want to keep track of it. 
+You don't have to put anything in for description and version number, but they are there if you want to keep track of them. 
 
 Once you create the model, you just have to load it into the workspace. When it opens up, you'll be greeted by the following 
 screen: 
 
 .. figure:: workspace_start.png
 
-From this point, you're ready to start working with OpenMDAO using our GUI. We have a number
-of screen casts that walk you through how to use the GUI, and they follow along with the tutorials that you can go through in the rest 
-of our docs. 
+From this point, you're ready to start working with OpenMDAO using our GUI. We have a number of screen casts that walk you
+through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. 
 
 
 How does the GUI Work?
 ----------------------
 
-If your curious whats going on with the GUI, and how it's serving a web page to a browser, read on below. But the following
-information is not required reading so feel free to move on ahead to other parts of the docs, or view our screen casts on 
-using the GUI. 
+If you're curious about what's going on with the GUI, and how it's serving a web page to a browser, you can continue
+reading. But the following information is not required reading, so feel free to move  ahead to other parts of the docs or
+view our screen casts on  using the GUI. 
 
 Built into OpenMDAO is a small web-server that is set up when you call ``openmdao gui``. We open up a browser window for you 
-pointing to the address ``http://localhost:xxxx``. You could open up the same page yourself by typing in that address manually. 
-What this means is that the server and the browser are both on the same machine, but are still passing information between 
-each other over the the computer's internal network using the HTTP protocol. Since everything is happening over the computer's 
-internal network, you don't need to be connected to the Internet or even have your wireless card turned on! 
+that points to the address ``http://localhost:xxxx``. You could open up the same page yourself by typing in that address
+manually.  What this means is that the server and the browser are both on the same machine but are still passing information
+between each other over the the computer's internal network using the HTTP protocol. Since everything is happening over the
+computer's  internal network, you don't need to be connected to the Internet or even have your wireless card turned on! 
 
 The GUI and the computational server communicate with each other via a technology called 
-`web-sockets <http://en.wikipedia.org/wiki/WebSocket>`_ which enables bi-directional communication. All of the things 
+`web-socket <http://en.wikipedia.org/wiki/WebSocket>`_, which enables bi-directional communication. All of the things 
 you see in the browser window are rendered using HTML5 and javascript. We rely on a number of different javascript libraries 
-to make all these things work, but we rely most heavily on `jQuery <http://jqueryui.com/>`_. 
+to make all these things work, but we rely most heavily on `jQuery <http://jqueryui.com/>`_.
+
+That's a quick overview of how the GUI works. Again, if you have any questions or comments, please post them to the `forum
+<http://openmdao.org/forum>`_.
+
 
