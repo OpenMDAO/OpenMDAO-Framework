@@ -558,19 +558,41 @@ openmdao.Model=function() {
     };
         
     
-    /** exit the model */
-    this.close = function() {
-        openmdao.Util.closeWebSockets('close');
-        self.closeWindows();
-        window.location.replace('/workspace/close');
-    };
+    /** close the model */
+   this.close = function() {
+       if (modified) {
+           openmdao.Util.confirm("Model has changed, close without saving?",
+               function() {
+                   modified = false;
+                   openmdao.Util.closeWebSockets('close');
+                   self.closeWindows();
+                   window.location.replace('/workspace/close');
+               });
+       }
+       else {
+           openmdao.Util.closeWebSockets('close');
+           self.closeWindows();
+           window.location.replace('/workspace/close');
+       }
+   };
 
-    /** exit the model */
-    this.exit = function() {
-        openmdao.Util.closeWebSockets('exit');
-        self.closeWindows();
-        window.location.replace('/exit');
-    };
+   /** exit the gui */
+   this.exit = function() {
+       if (modified) {
+           openmdao.Util.confirm("Model has changed, exit without saving?",
+               function() {
+                   modified = false;
+                   openmdao.Util.closeWebSockets('exit');
+                   self.closeWindows();
+                   window.location.replace('/exit');
+               });
+       }
+       else {
+           openmdao.Util.closeWebSockets('exit');
+           self.closeWindows();
+           window.location.replace('/workspace/exit');
+       }
+   };
 
     /** add window to window list. */
     this.addWindow = function(win) {

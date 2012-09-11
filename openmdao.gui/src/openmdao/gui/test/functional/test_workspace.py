@@ -792,21 +792,40 @@ def _test_savechanges(browser):
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.components.external_code.ExternalCode', 'ext')
     
-    #exit with unsaved changes on purpose.
-    print "attempting to trigger the box"
-    workspace_page.close_workspace_without_saving()
-    #find dialog box that should come up.
-    alert = self.browser.switch_to_alert()
-    #click on dismiss button to stick around and save.
-    alert.dismiss()
-    
+    #first try to close without saving changes, but click CANCEL and stay 
+    workspace_page.attempt_to_close_workspace(True, False)
+
+    # Check number of figures to be sure the model didn't close.
+    eq(len(workspace_page.get_dataflow_figures()), 3)    
+
     # Clean up.
-    #projects_page = workspace_page.close_workspace()
+    projects_page = workspace_page.close_workspace()
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_savechanges complete."
 
+def _test_dontsavechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
 
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    
+    #Try to close without saving changes, but click OK and leave. 
+    workspace_page.attempt_to_close_workspace(True, True)
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_dontsavechanges complete."
 
 if __name__ == '__main__':
     main()
