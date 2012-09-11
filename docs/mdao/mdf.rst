@@ -28,7 +28,7 @@ and BroydenSolver. The FixedPointIterator is a solver that performs fixed point 
 which means that it keeps driving ``x_new = f(x_old)`` until convergence is achieved. In
 other words, *y2* is passed from the output of ``SellarDiscipline2`` to the input of ``SellarDiscipline1``,
 and the loop keeps executing until the change in the value of *y2* between iterations is
-smaller than a tolerance. The BroydenSolver is a solver based on a quasi-Newton-Raphson
+smaller than a tolerance. The BroydenSolver is based on a quasi-Newton-Raphson
 algorithm that uses a Broyden update to approximate the Jacobian. This solver reads
 the output and calculates a new input each iteration. Convergence is achieved when the
 residual between the output and input is driven to zero.
@@ -118,33 +118,30 @@ variable names, as the first argument to the ``add_parameter`` method.
         self.driver.add_parameter(('dis1.z1','dis2.z1'), low = -10.0, high = 10.0)
         self.driver.add_parameter(('dis1.z2','dis2.z2'), low = 0.0,   high = 10.0)
 
-There is only one local design variable for this problem, ``x1``, which is found in ``dis1.x1``.
-Since local design variables only point to one place in the model, we just add them using
-``add_parameter`` with a single name as the first argument (just like we've shown you in previous
-tutorials). 
+There is only one local design variable for this problem, ``x1``, which is found in ``dis1.x1``. Since local
+design variables point to only one place in the model, we just add them using  ``add_parameter`` with a
+single name as the first argument (just like we've shown you in previous tutorials). 
 
 .. testcode:: MDF_parts
 
         self.driver.add_parameter('dis1.x1', low = 0.0,   high = 10.0)   
         
         
-Since we're using a fixed point iteration to converge the disciplines, only one of the coupling 
-variables (``y2``) is directly varied by the solver. The other one  (``y1``) is just passed from 
-the discipline 1 to discipline 2 directly each iteration. The choice of which variable to 
-let the solver vary and which to pass directly is arbitrary. You could have swapped the two 
-and the problem would still converge.  
-               
-To tell a ``FixedPointIterator`` which variable to vary, we just use add_parameter again. 
-During iteration, this is the variable that is going to be sent to the input
-of ``SellarDiscipline1``, which is ``'dis1y2'``. We specify very small and large values for the 
-low and high arguments because solvers shouldn't really be constrained like that. 
-Similarly, we setup the convergence constraint, as an equality constraint. A solver 
-essentially tries to drive something to zero. In this case, we want to
-drive the residual error in the coupled variable *y2* to zero. An equality constraint
-is defined with an expression string which is parsed for the equals sign, in the above example
-you see that 'dis2.y2 = dis1.y2' is equivalent to 'dis2.y2 - dis1.y2 = 0'. We also set the
-maximum number of iterations and a convergence tolerance.
-        
+Since we're using a fixed point iteration to converge the disciplines, only one of the coupling  variables
+(``y2``) is directly varied by the solver. The other one  (``y1``) is just passed from  discipline 1 to
+discipline 2 directly each iteration. The choice of which variable to let the solver vary and which to pass
+directly is arbitrary. You could have swapped the two, and the problem would still converge.  
+
+To tell a FixedPointIterator which variable to vary, we just use ``add_parameter`` again.  During
+iteration, this is the variable that is going to be sent to the input  of ``SellarDiscipline1``, which is
+``'dis1y2'``. We specify very small and large values for the  low and high arguments because solvers
+shouldn't really be constrained like that.  Similarly, we setup the convergence constraint as an equality
+constraint. A solver  essentially tries to drive something to zero. In this case, we want to drive the
+residual error in the coupled variable ``y2`` to zero. An equality constraint is defined with an expression
+string which is parsed for the equals sign. In the above example, you see that ``'dis2.y2 = dis1.y2'`` is
+equivalent to ``'dis2.y2 - dis1.y2 = 0'``. We also set the maximum number of iterations and a convergence
+tolerance.
+
 .. testcode:: MDF_parts
 
         # Make all connections
@@ -159,7 +156,7 @@ maximum number of iterations and a convergence tolerance.
 Finally, the optimization is set up. We add the objective function as well as the 
 constraints, from the problem formulation, to the driver. The objective function includes 
 references to the global design variables. When this happens, you can pick any of the locations
-where that global design variable points to. In this case, we used ``dis1.z2``, but we could have
+that the global design variable points to. In this case, we used ``dis1.z2``, but we could have
 just as easily picked ``dis2.z2``. 
 
 .. testcode:: MDF_parts
@@ -175,10 +172,9 @@ just as easily picked ``dis2.z2``.
         
         self.driver.add_constraint('dis2.y2 < 24.0')
         
-As before, the ``add_constraint`` method is used to add our constraints. This
-time however, we used a more general expression for the first constraint. Commented 
-out below that are alternate examples of the same exact constraint composed slightly 
-differently. 
+As before, the ``add_constraint`` method is used to add our constraints. This time however, we used a more
+general expression for the first constraint. Alternate examples of the same constraint, composed
+slightly  differently, are commented out in the example below. 
 
 Finally, putting it all together gives:
 
@@ -264,7 +260,7 @@ Finally, putting it all together gives:
 
 This problem is contained in 
 :download:`sellar_MDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF.py>`. 
-We added just a few lines at the end to instantiate the assembly class we defined, and then run it and 
+We added just a few lines at the end to instantiate the assembly class we defined and then run it and 
 print out some useful information. Executing it at the command line should produce
 output that resembles this:
 
@@ -277,13 +273,12 @@ output that resembles this:
         Elapsed time:  0.121051073074 seconds
 
         
-We initially chose to use *FixedPointIterator* for our solver, but you could replace that with a different one. Fixed point
-iteration works for some problems, including this one, but sometimes another type of solver might be preferred. 
-OpenMDAO also contains a Broyden solver called
-*BroydenSolver*. This solver is based on a quasi-Newton-Raphson algorithm found in 
-``scipy.nonlinear``. It uses a Broyden update to approximate the Jacobian. If we
-replace ``FixedPointIterator`` with ``BroydenSolver``, the optimizer's workflow
-looks like this:
+We initially chose to use FixedPointIterator for our solver, but you could replace that with a different
+one. Fixed point iteration works for some problems, including this one, but sometimes another type of solver
+might be preferred. OpenMDAO also contains a Broyden solver called *BroydenSolver*. This solver is based on
+a quasi-Newton-Raphson algorithm found in ``scipy.nonlinear``. It uses a Broyden update to approximate the
+Jacobian. If we replace ``FixedPointIterator`` with ``BroydenSolver``, the optimizer's workflow looks like
+this:
 
 .. testcode:: MDF_parts
 
@@ -295,7 +290,7 @@ looks like this:
         self.driver.workflow.add('solver')
 
 Next, we set up our parameters for the inner loop. The Broyden solver is connected
-using the exact same interface as the fixed point iterator, so that code does not change at all.
+using the same interface as the fixed point iterator, so that code does not change at all.
 We just change some of solver specific settings. 
         
 .. testcode:: MDF_parts

@@ -104,6 +104,10 @@ class GridCell(object):
     @property
     def value(self):
         return self._root.text
+    
+    def click(self):
+        chain = ActionChains(self._browser)
+        chain.click(self._root).perform()        
 
     @value.setter
     def value(self, value):

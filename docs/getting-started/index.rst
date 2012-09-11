@@ -10,6 +10,8 @@ Getting Started
    install.rst
    troubleshooting.rst
    using_plugins.rst
+   gui.rst
+   
 
    
    

@@ -8,7 +8,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80 },
-            {id:"value", name:"Value", field:"value", width:80, editor:TextCellEditor}
+            {id:"value", name:"Value", field:"value", width:80, editor:openmdao.ValueEditor},
             //{id:"valid", name:"Valid", field:"valid", width:60},
         ],
         options = {
@@ -26,14 +26,14 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     if (meta) {
         columns = [
-            { id:"name",      name:"Name",         field:"name",      width:100 },
-            { id:"type",      name:"Type",         field:"type",      width:60 },
-            { id:"value",     name:"Value",        field:"value",     width:100 , editor:TextCellEditor },
-            { id:"units",     name:"Units",        field:"units",     width:60  },
-            { id:"valid",     name:"Valid",        field:"valid",     width:60 },
-            { id:"desc",      name:"Description",  field:"desc",      width:120 },
-            { id:"connected", name:"Connected To", field:"connected", width:100 },
-            { id:"implicit",  name:"Implicitly Connected To",   field:"implicit", width:100 }
+            {id:"name",      name:"Name",        field:"name",      width:100 },
+            {id:"type",      name:"Type",        field:"type",      width:60 },
+            {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
+            {id:"units",     name:"Units",       field:"units",     width:60  },
+            {id:"valid",     name:"Valid",       field:"valid",     width:60 },
+            {id:"desc",      name:"Description", field:"desc",      width:120 },
+            {id:"connected", name:"Connected To",   field:"connected", width:100 },
+            {id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
         ];
     }
 
@@ -44,6 +44,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         if (props.getDataItem(cell.row).connected.length > 0) {
             return false;
         }
+
         else {
             return true;
         }
@@ -75,6 +76,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
                 return 0; //default return value (no sorting)
             });
+
 
             jQuery.each(properties, function(index, value) {
                 if (value.hasOwnProperty("connected")) {
