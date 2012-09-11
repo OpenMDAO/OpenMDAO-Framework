@@ -1,5 +1,7 @@
 .. index:: Issues
 
+.. _`github_issues`:
+
 Using GitHub Issues
 ===================
 

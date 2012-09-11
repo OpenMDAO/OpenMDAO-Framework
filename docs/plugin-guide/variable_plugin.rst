@@ -47,8 +47,8 @@ the ``src/coord/coord.py`` file.  After editing that file, it looks like this:
 
 
 OpenMDAO provides a base class for framework visible inputs and outputs called
-``Variable``, so that's the base class for our coordinates variable. If a
-Component object contains a ``Variable`` instance that has a metadata
+`Variable`, so that's the base class for our coordinates variable. If a
+Component object contains a Variable instance that has a metadata
 attribute named *iotype* then that instance object is exposed to the framework
 as a variable whose value can be passed between components. Valid values for
 *iotype* are ``'in'`` and ``'out'``.
