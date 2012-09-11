@@ -170,11 +170,16 @@
         EnumEditor : function(args) {
             var $select;
             var defaultValue;
-	    var values = args.item.values;
+	    vals = args.item.values['py/tuple'];
+	    var var_name = args.item['name'];
+	    if (vals) {
+		var values = vals;
+	    }
+	    else {var values = args.item.values;}
             var scope = this;
 
             this.init = function() {
-                $select = $("<SELECT tabIndex='0' class='editor-yesno'/>");
+                $select = $("<SELECT tabIndex='0' id='editor-enum-"+var_name+"'/>");
 		for (var i = 0; i < values.length; i++) {$("<OPTION value='"+values[i]+"'>"+values[i]+"</OPTION>").appendTo($select);} 
                 $select.appendTo(args.container);
                 $select.focus();

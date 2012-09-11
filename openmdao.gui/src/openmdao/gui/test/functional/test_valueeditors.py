@@ -2,6 +2,7 @@
 Tests of code editor functions.
 """
 
+import pkg_resources
 import sys
 import time
 
@@ -26,39 +27,23 @@ def _test_value_editors(browser):
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
 
-    # Open code editor.
+    # Import variable_editor.py
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-
-    # Create the file (code editor automatically indents).
-    test_code = """
-from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float, Enum, Array, Dict, Str
-
-class Paraboloid(Component):
-
-x = Float(0.0, iotype='in')
-e = Enum(0, [0,1,2,3], iotype = 'in')
-d = Dict(value = {'e':2.71, "pi": 3.14159}, value_trait = Float, key_trait = Str, iotype = 'in')
-X = Array([0,1,2,3], iotype = 'in')
-Y = Array([[0,1],[2,3]], iotype = 'in')
-"""
-    
-    
-    editor_page.new_file('test.py', test_code)
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'variable_editors.py')
+    editor_page.add_file(file_path)
     
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
 
-    #top = workspace_page.get_dataflow_figure('top')
-    #top.remove()
-    workspace_page.show_dataflow('top')
-    time.sleep(1)
+    top = workspace_page.get_dataflow_figure('top')
+    top.remove()
     workspace_page.show_library()
     time.sleep(1)
-    workspace_page.find_library_button('Paraboloid', 0.5).click()
-    workspace_page.add_library_item_to_dataflow('test.Paraboloid',"p1")
+    workspace_page.find_library_button('Topp', 0.5).click()
+    workspace_page.add_library_item_to_dataflow('variable_editors.Topp',"top")
     
     #workspace_page.select_object('top.p1')
 
