@@ -29,7 +29,7 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - Matplotlib
 
-- Chrome Web Browser (for the GUI only)
+- For the GUI: Chrome Web Browser (verson 20 or higher) 
 
 
 **Platform-Specific Requirements**
