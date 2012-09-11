@@ -64,8 +64,8 @@ optimizations. We're still using  the same Paraboloid component as before. Also,
 we use the ``add_parameter`` method to specify what inputs should be varied by the DOE. Since we
 specified the low and high to be -50 and 50 respectively,  with 10 levels, the FullFactorial DOE
 generator will divide each parameter into 10 evenly spaced bins and then generate the full set of
-combinations possible (100 cases in total). Note that a full factorial DOE can get very expensive, very quickly. 
-The total number of cases you run will be :math:`l^n` where :math:`l` is the number of levels and :math:`n` is the number of
+combinations possible (100 cases in total). Note that a full factorial DOE can get very expensive very quickly. 
+The total number of cases you run will be :math:`l^n`, where :math:`l` is the number of levels and :math:`n` is the number of
 parameters. 
 
 One new thing in this example is the use of a case recorder. Each case in a given DOE results in a set of
@@ -77,7 +77,7 @@ case in some fashion. In this example  we used a :ref:`ListCaseRecorder
 that are more permanent, for example, the :ref:`DBcaseRecorder <openmdao.lib.casehandlers.dbcase.py>`, which 
 saves all your cases to a SQLite database to be reviewed later. 
 
-All CaseRecorders have the same interface and can be all be used interchangeably. In fact, 
+All CaseRecorders have the same interface and can be used interchangeably. In fact, 
 if you notice, we specified a ListCaseRecorder as part of a list. 
 
 .. testsetup:: simple_model_doe_pieces
@@ -242,7 +242,7 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
 
 
 At times it's necessary to rerun an analysis. This can be a problem if the
-DOE generator used has a random component. To handle this DOEdriver records
+DOE generator used has a random component. To handle this, DOEdriver records
 the normalized DOE values to a CSV file. This file can be read in later by
 a :ref:`CSVFile <openmdao.lib.doegenerators.csvfile.py>` DOE generator.
 The DOEdriver can then be configured to use this CSVFile generator to rerun

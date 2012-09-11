@@ -12,18 +12,18 @@ The EPA fuel economy tests are a bit more tricky, though they also require an in
 time. For these tests, the vehicle assembly must be executed while varying the throttle and
 gear position inputs to match a desired acceleration for the integration
 segment. Both of these solution procedures were implemented in Python as *drivers.* The
-SimAcceleration driver simulates the acceleration test, and the ``SimEconomy`` driver
+SimAcceleration driver simulates the acceleration test, and the SimEconomy driver
 simulates the EPA fuel economy test.
 
 Recall that in the :ref:`Optimization Tutorial <optimization_tutorial>`, a
-Driver called CONMINdriver was used to optimize the Paraboloid problem.
+Driver called `CONMINdriver` was used to optimize the Paraboloid problem.
 Similarly, the algorithms that perform these tests have been implemented as
 OpenMDAO drivers that can be found in ``driving_sim.py``. These drivers use
 the parameter interface to specify the variables that will be driven by the
 simulation drivers. Specifically, to drive the Vehicle assembly, the
 simulation driver needs to be able to set the velocity, throttle, and gear
 positions. Likewise, it also needs to be able to read variables from the
-vehicle component, and does so with the objectives interface. For the
+vehicle component and does so with the objectives interface. For the
 acceleration test, the vehicle's instantaneous acceleration is needed, and
 for the economy test, both the acceleration and fuel burn are needed.
 
@@ -53,7 +53,7 @@ Variable           Description                                  Units
                    driving profile
 =================  ===========================================  ========
 
-These variables can be accessed like any other component output, and can be connected to the 
+These variables can be accessed like any other component output and can be connected to the 
 input of another OpenMDAO component if needed.
 
 Let's set up a model that runs all three of these simulations to calculate
@@ -108,8 +108,8 @@ top level assembly would look like this:
 Here, we add a SimAcceleration instance as our top level driver, and then we add our Vehicle
 instance to the driver's workflow. We also specify the locations of the vehicle variables we need
 to manipulate and read using the ``add_parameter`` and ``add_objective`` methods. Here, we
-introduce the optional argument ``name``, which allows you to specify a unique name for the
-parameter. The SimAcceleration driver looks for a parameter with the name "gear" whenever it
+introduce the optional argument `name`, which allows you to specify a unique name for the
+parameter. The SimAcceleration driver looks for a parameter with the name *gear* whenever it
 needs to set the gear. This is required so that the driver knows which of the parameters is
 the gear position. The objectives are also given a name so that SimAcceleration knows which
 variable is the acceleration and which is the overspeed indicator. This driver supports

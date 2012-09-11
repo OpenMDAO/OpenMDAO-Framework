@@ -113,25 +113,25 @@ occasionally force *y1* to go slightly negative while trying to converge the two
 of the absolute value solves the problem without impacting the final converged solution.
 
 These two components are contained in the file :download:`sellar.py 
-</../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` in the 
-openmdao.lib.optproblems sub-package. This part of the standard library contains a number of common optimization
-problems which you can use to test your own optimization algorithms. 
+</../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` in the  ``openmdao.lib.optproblems`` sub-package.
+This part of the standard library contains a number of common optimization problems which you can use to test
+your own optimization algorithms. 
 
-Now that you have defined the components for the Sellar Problem for yourself, lets take a momement to
+Now that you have defined the components for the Sellar Problem for yourself, let's take a momement to
 consider what we have really accomplished. Firstly, we have written two (very simple) analysis components. 
 If you were working on a real problem, these would likely come in the form of some much more complex tools
-that you wrapped in the framework. But keep in mind that from an optimization point of view, weather they 
+that you wrapped in the framework. But keep in mind that from an optimization point of view, whether they 
 are simple tools or wrappers for real analyses, OpenMDAO still views them as components with inputs, outputs, 
 and an execute function. 
 
-We have talked about the problem formulation, and specified that certain variables will be 
+We have talked about the problem formulation and specified that certain variables will be 
 design variables, while others are coupling variables. But none of the code we have written has told 
-OpenMDAO about those details. Thats what we'll get to next! 
+OpenMDAO about those details. That's what we'll get to next! 
 
 **Reference:**
 
 Sellar, R. S., Batill, S. M., and Renaud, J. E., "Response Surface Based,
 Concurrent Subspace Optimization for Multidisciplinary System Design,"
-Proceedings References 79 of the 34th AIAA Aerospace Sciences Meeting and
-Exhibit, Reno, NV, January 1996.
+*Proceedings References 79 of the 34th AIAA Aerospace Sciences Meeting and
+Exhibit,* Reno, NV, January 1996.
 
