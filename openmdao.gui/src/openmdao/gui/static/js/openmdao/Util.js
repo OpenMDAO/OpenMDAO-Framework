@@ -1,5 +1,6 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
+openmdao.sockets = [];
 
 /**
  * utility functions used in the openmdao gui
@@ -456,10 +457,6 @@ openmdao.Util = {
         delay = typeof delay !== 'undefined' ? delay : 2000;
 
         var socket = null;
-
-        if (!openmdao.sockets) {
-            openmdao.sockets = [];
-        }
 
         function connect_after_delay() {
             tid = setTimeout(connect, delay);
