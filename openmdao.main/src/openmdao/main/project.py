@@ -20,15 +20,24 @@ from openmdao.main.api import set_as_top
 from openmdao.main.component import SimulationRoot
 from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
-from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_module
+from openmdao.main.mp_support import is_instance
+from openmdao.main.publisher import publish
+from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files
+from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
 
-# extension for project files
+# extension for project files and directories
 PROJ_FILE_EXT = '.proj'
-
+PROJ_DIR_EXT = '.projdir'
 
 # use this to keep track of project classes that have been instantiated
-# so far, so we can determine if we need to force a Project save & reload
+# so we can determine if we need to force a Project save & reload. This
+# is the reason for the existence of the custom import hook classes ProjFinder
+# and ProjLoader, as well as the CtorInstrumenter ast node transformer.
+#
+# FIXME: This doesn't keep track of when instances are deleted, so 
+# it's possible that the _instantiated_classes set will contain names
+# of classes that no longer have any active instances.
 _instantiated_classes = set()
 _instclass_lock = RLock()
 
@@ -47,10 +56,6 @@ def _register_inst(typname):
 
 def _match_insts(classes):
     global _instantiated_classes
-    logger.error("classes: ")
-    logger.error("%s" % classes)
-    logger.error("\n_instantiated_classes:")
-    logger.error("%s" % _instantiated_classes)
     return _instantiated_classes.intersection(classes)
 
 
@@ -97,7 +102,8 @@ def __init__(self, *args, **kwargs):
 
 def add_init_monitors(node):
     """Take the specified AST and translate it into the instrumented version,
-    which will record all instances"""
+    which will record all instances.
+    """
     node = CtorInstrumenter().visit(node)
     node.body = [
         ast.copy_location(
@@ -105,30 +111,32 @@ def add_init_monitors(node):
         ] + node.body
     return node
 
-
 class ProjFinder(object):
     """A finder class for custom imports from an OpenMDAO project. In order for this
-    to work, an entry must be added to sys.path of the form top_dir+'.prj', where top_dir
+    to work, an entry must be added to sys.path of the form top_dir+PROJ_DIR_EXT, where top_dir
     is the top directory of the project where python files are kept.
     """
-    def __init__(self, path):
-        """When path has the form mentioned above (top_dir+'.prj'), this
+    def __init__(self, path_entry):
+        """When path_entry has the form mentioned above (top_dir+PROJ_DIR_EXT), this
         returns a ProjFinder instance that will be used to locate modules within the
         project.
         """
-        if path.endswith('.prj'):
-            self.projdir = path.rsplit('.', 1)[0]
+        if path_entry.endswith(PROJ_DIR_EXT) and os.path.isdir(os.path.splitext(path_entry)[0]):
+            self.path_entry = path_entry
+            self.projdir = os.path.splitext(path_entry)[0]
             if os.path.isdir(self.projdir):
                 return
-        raise ImportError("can't import %s" % path)
+        raise ImportError("can't import from %s" % path_entry)
 
     def find_module(self, modpath, path=None):
         """This looks within the project for the specified module, returning a loader
         if the module is found, and None if it isn't.
         """
-        path = find_module(modpath, path=[self.projdir])
-        if path is not None:
-            return ProjLoader(modpath, self.projdir)
+        if path is None:
+            path = self.path_entry
+        fpath = util_findmodule(modpath, path=[self.projdir])
+        if fpath:
+            return ProjLoader(path)
 
 
 class ProjLoader(object):
@@ -136,35 +144,65 @@ class ProjLoader(object):
     the imported files so we can keep track of what classes have been instantiated so we know
     when a project must be saved and reloaded.
     """
-    def __init__(self, modpath, projpath):
-        self.path = find_module(modpath, path=[projpath])
-        self.ispkg = isinstance(self.path, basestring) and os.path.basename(self.path) == '__init__.py'
-
+    def __init__(self, path_entry):
+        self.path_entry = path_entry
+        self.projdir = os.path.splitext(path_entry)[0]
+        
+    def _get_filename(self, modpath):
+        parts = [self.projdir]+modpath.split('.')
+        path = os.path.join(*parts)
+        if os.path.isdir(path):
+            return os.path.join(path, '__init__.py')
+        else:
+            return path + '.py'
+                
+    def is_package(self, modpath):
+        fpath = self._get_filename(modpath)
+        return os.path.basename(fpath) == '__init__.py' and os.path.isfile(fpath)
+        
+    def get_source(self, modpath):
+        with open(self._get_filename(modpath), 'r') as f:
+            return f.read()
+        
     def get_code(self, modpath):
         """Opens the file, compiles it into an AST and then translates it into the instrumented
         version before compiling that into bytecode.
         """
-        with open(self.path, 'r') as f:
-            contents = f.read()
-            if not contents.endswith('\n'):
-                contents += '\n'
-            root = ast.parse(contents, filename=self.path, mode='exec')
-            return compile(add_init_monitors(root), self.path, 'exec')
+        contents = self.get_source(modpath)
+        if not contents.endswith('\n'):
+            contents += '\n' # to make ast.parse happy :(
+        fname = self._get_filename(modpath)
+        root = ast.parse(contents, filename=fname, mode='exec')
+        return compile(add_init_monitors(root), fname, 'exec')
 
     def load_module(self, modpath):
         """Creates a new module if one doesn't exist already, and then updates the
         dict of that module based on the contents of the instrumented module file.
         """
-        code = self.get_code(modpath)
-        mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
-        mod.__file__ = self.path
-        mod.__loader__ = self
-        if self.ispkg:
-            mod.__path__ = []
-            mod.__package__ = modpath
+        if modpath in sys.modules:
+            mod = sys.modules[modpath]
         else:
-            mod.__package__ = modpath.rpartition('.')[0]
-        exec(code, mod.__dict__)
+            mod = sys.modules.setdefault(modpath, imp.new_module(modpath))
+        
+        mod.__file__ = self._get_filename(modpath)
+        mod.__name__ = modpath
+        mod.__loader__ = self
+        mod.__package__ = '.'.join(modpath.split('.')[:-1])
+        
+        if self.is_package(modpath):
+            mod.__path__ = [ self.path_entry ]
+        else:
+            mod.__path__ = self.path_entry
+            
+        try:
+            code = self.get_code(modpath)
+            exec(code, mod.__dict__)
+        except Exception as err:
+            del sys.modules[modpath] # remove bad module
+            if mod.__file__ not in str(err):
+                raise type(err)("Error while importing file "+mod.__file__+": "+str(err))
+            else:
+                raise
         return mod
 
 
@@ -220,6 +258,7 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
             tf = tarfile.open(fileobj=f, mode='r')
             tf.extractall(projpath)
         except Exception, err:
+            logger.error(str(err))
             print "Error expanding project archive:", err
         finally:
             tf.close()
@@ -336,6 +375,11 @@ class _ProjDict(dict):
                 return val
         return super(_ProjDict, self).__getitem__(name)
 
+def add_proj_to_path(path):
+    """Puts this project's directory on sys.path."""
+    modeldir = path+PROJ_DIR_EXT
+    if modeldir not in sys.path:
+        sys.path = [modeldir]+sys.path
 
 class Project(object):
     def __init__(self, projpath):
@@ -349,6 +393,7 @@ class Project(object):
         self.path = expand_path(projpath)
         self._model_globals = _ProjDict()
         self._init_globals()
+        macro_file = os.path.join(self.path, '_project_macro')
 
         if os.path.isdir(projpath):
             self.activate()
@@ -373,11 +418,13 @@ class Project(object):
                 #macro_exec = True
                 #logger.error("%s doesn't exist" % statefile)
             #if macro_exec:
-            self._initialize()
-            macro_file = os.path.join(self.path, '_project_macro')
             if os.path.isfile(macro_file):
                 logger.info('Reconstructing project using macro')
-                self.load_macro(macro_file, execute=True, strict=True)
+                self.load_macro(macro_file, execute=True)
+            else:
+                self._initialize()
+                self.write_macro()
+                        
         else:  # new project
             os.makedirs(projpath)
             self.activate()
@@ -385,6 +432,7 @@ class Project(object):
             self.save()
 
     def _initialize(self):
+        self.command("# Auto-generated file - DO NOT MODIFY")
         self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
 
     def _init_globals(self):
@@ -434,16 +482,19 @@ class Project(object):
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
 
-    def load_macro(self, fpath, execute=True, strict=False):
+    def load_macro(self, fpath, execute=True):
         with open(fpath, 'r') as f:
+            errors = []
             for i, line in enumerate(filter_macro(f.readlines())):
                 if execute:
                     try:
                         self.command(line.rstrip('\n'))
                     except Exception as err:
                         logger.error('file %s line %d: %s' % (fpath, i + 1, str(err)))
-                        if strict:
-                            raise
+                        try:
+                            publish('console_errors', str(err))
+                        except:
+                            pass
                 else:
                     self._recorded_cmds.append(line.rstrip('\n'))
 
@@ -482,19 +533,26 @@ class Project(object):
     def activate(self):
         """Puts this project's directory on sys.path."""
         SimulationRoot.chroot(self.path)
-        modeldir = self.path + '.prj'
+        add_proj_to_path(self.path)
+        modeldir = self.path+PROJ_DIR_EXT
         if modeldir not in sys.path:
-            sys.path = [modeldir] + sys.path
-            logger.error("added %s to sys.path" % modeldir)
-
+            sys.path = [modeldir]+sys.path
+        
     def deactivate(self):
         """Removes this project's directory from sys.path."""
         modeldir = self.path
         try:
-            sys.path.remove(modeldir + '.prj')
+            sys.path.remove(modeldir+PROJ_DIR_EXT)
         except:
             pass
 
+    def write_macro(self):
+        logger.info("Saving macro used to create project")
+        with open(os.path.join(self.path, '_project_macro'), 'w') as f:
+            for cmd in self._recorded_cmds:
+                f.write(cmd)
+                f.write('\n')
+        
     def save(self):
         """ Save the project model to its project directory.
         """
@@ -504,14 +562,7 @@ class Project(object):
                 #pickle.dump(self._model_globals, f)
         #except Exception as err:
             #logger.error("Failed to pickle the project: %s" % str(err))
-
-        if self._recorded_cmds:
-            logger.info("Saving macro used to create project")
-            with open(os.path.join(self.path, '_project_macro'), 'w') as f:
-                for cmd in self._recorded_cmds:
-                    f.write(cmd)
-                    f.write('\n')
-                    logger.info(cmd)
+        self.write_macro()
 
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.

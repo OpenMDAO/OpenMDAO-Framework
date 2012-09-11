@@ -11,7 +11,7 @@ from zope.interface import implementedBy
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
 from openmdao.main.project import project_from_archive, Project, parse_archive_name, \
-                                  ProjFinder, _clear_insts, _match_insts
+                                  ProjFinder, _clear_insts, _match_insts, add_proj_to_path
 from openmdao.main.publisher import publish
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
@@ -518,6 +518,9 @@ class ConsoleServer(cmd.Cmd):
             # requires that the ProjDirFactory is already in place.
             project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
             projdir = os.path.join(self.files.getcwd(), parse_archive_name(filename))
+            
+            add_proj_to_path(projdir)
+            
             self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
