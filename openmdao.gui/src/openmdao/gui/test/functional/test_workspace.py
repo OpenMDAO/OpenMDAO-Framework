@@ -779,6 +779,57 @@ def _test_noslots(browser):
     project_info_page.delete_project()
     print "_test_noslots complete."
 
+def _test_savechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    workspace_page.set_library_filter('ExternalCode')
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    
+    #first try to close without saving changes, but click CANCEL and stay 
+    workspace_page.attempt_to_close_workspace(True, False)
+
+    # add another object to the model to be sure it didn't close
+    eq(len(workspace_page.get_dataflow_figures()), 3)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext2')
+    eq(len(workspace_page.get_dataflow_figures()), 4)
+    
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_savechanges complete."
+
+def _test_dontsavechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    
+    #Try to close without saving changes, but click OK and leave. 
+    workspace_page.attempt_to_close_workspace(True, True)
+
+    # Clean up.
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_dontsavechanges complete."
 
 if __name__ == '__main__':
     main()

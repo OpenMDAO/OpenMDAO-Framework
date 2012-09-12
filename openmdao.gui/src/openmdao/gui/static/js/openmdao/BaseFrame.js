@@ -177,4 +177,3 @@ openmdao.BaseFrame.prototype.update = function() {
     // place holder to update contents of the frame (optional)
     //debug.warn('BaseFrame.update - no update function defined for',this)
 };
-
