@@ -357,7 +357,7 @@ effectively passed as arguments. The corresponding interface file would look lik
                         double RPM, double Throttle, double thetastep, double Fuel_Density,
                         double *OUTPUT, double *OUTPUT, double *OUTPUT, double *OUTPUT);
 
-Notice that the variables ``Power, Torque, FuelBurn,`` and ``EngineWeight`` are 
+Notice that the variables `Power, Torque, FuelBurn,` and `EngineWeight` are 
 declared as outputs. Inputs don't have to be explicitly declared, although the keyword ``INPUT``
 should be used whenever a pointer is actually a single input value. If a variable
 functions as both an input and an output, use the keyword ``BOTH`` in the interface file.

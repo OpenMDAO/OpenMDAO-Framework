@@ -138,7 +138,7 @@ using Git and GitHub.
 
    Version Control Process
 
-From the OpenMDAO repository on GitHub, you create a personal "fork" of the 
+From the OpenMDAO repository on GitHub, you create a personal `fork` of the 
 project, so there is now a repository that you can write to.  In addition to
 creating a fork, you must also create a clone of the OpenMDAO repository on 
 your machine.  This is the repository that you will be working directly off 

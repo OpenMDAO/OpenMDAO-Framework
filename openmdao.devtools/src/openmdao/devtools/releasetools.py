@@ -113,7 +113,7 @@ def _has_checkouts():
     if ret != 0:
         logging.error(out)
         raise RuntimeError(
-             'error while getting status of git repository from directory %s (return code=%d): %s'
+             'error while getting status of Git repository from directory %s (return code=%d): %s'
               % (os.getcwd(), ret, out))
     for line in out.split('\n'):
         line = line.strip()
@@ -306,10 +306,10 @@ def build_release(parser, options):
           dependencies needed to use openmdao
         - Sphinx documentation in html
           
-    In order to run this, you must be in a git repository with no uncommitted
-    changes. If not running with the --test option, a release branch will be
+    To run this, you must be in a Git repository with no uncommitted
+    changes. If not running with the ``--test`` option, a release branch will be
     created from the specified base branch, and in the process of running, a
-    number of releaseinfo.py files will be updated with new version
+    number of ``releaseinfo.py`` files will be updated with new version
     information and committed.
     """
 

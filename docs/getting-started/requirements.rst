@@ -15,15 +15,22 @@ OpenMDAO requires that the following software be installed at the system level o
 
 - Python (2.6.x or 2.7.x)
 
-  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python builds, such as Enthought,Active State python or python(x,y) are not officially supported at this time, though some may work with OpenMDAO.  
- 
-  - OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only lead to problems.
+  - In general, OpenMDAO supports the specified versions of Python found at python.org.  Alternate Python
+    builds, such as Enthought, ActiveState Python or Python(x,y) are not officially supported at this time,
+    though some may work with OpenMDAO.  
+
+  - OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the
+    incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH
+    will only lead to problems.
 
 - NumPy (version 1.3 or higher) 
 
 - SciPy  
 
 - Matplotlib
+
+- For the GUI: Chrome Web Browser (verson 20 or higher). Note: Things should work in recent versions of Firefox, but 
+  we're not currently testing with that browser. Things **will not** work properly in Internet Explorer. 
 
 
 **Platform-Specific Requirements**

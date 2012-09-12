@@ -151,7 +151,7 @@ class ConsoleServer(cmd.Cmd):
 
     def parseline(self, line):
         """Have to override this because base class version strips the lines,
-        making multi-line python commands impossible.
+        making multi-line Python commands impossible.
         """
         #line = line.strip()
         if not line:

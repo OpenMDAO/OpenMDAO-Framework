@@ -238,7 +238,7 @@ definition from one of them in your Paraboloid definition.
 
     
 The OpenMDAO package hierarchy includes several subpackages, all of which are prefixed by 
-``openmdao.``:
+"openmdao.":
 
 - ``openmdao.main`` -- core infrastructure for the framework
 - ``openmdao.lib`` -- OpenMDAO's standard library, containing some important plugins (drivers, traits, etc.) that are available to users of the framework
