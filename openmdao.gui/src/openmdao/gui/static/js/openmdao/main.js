@@ -2,24 +2,20 @@
  * stuff to do after the page is loaded
  */
 
-
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
     openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
     openmdao.model = new openmdao.Model();
+    openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager();
 
-    openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager()
-
-    /*
-     * Register value editors for supported OpenMDAO data types.
-     */
-    openmdao.ValueEditor.registerEditor("str", TextCellEditor)
-    openmdao.ValueEditor.registerEditor("bool", BoolEditor)
-    openmdao.ValueEditor.registerEditor("float", TextCellEditor)
-    openmdao.ValueEditor.registerEditor("int", IntegerCellEditor)
-    openmdao.ValueEditor.registerEditor("enum", EnumEditor)
-    openmdao.ValueEditor.registerEditor("dict", DictEditor)
-    openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor)
+    // register value editors for supported OpenMDAO data types
+    openmdao.ValueEditor.registerEditor("str", TextCellEditor);
+    openmdao.ValueEditor.registerEditor("bool", BoolEditor);
+    openmdao.ValueEditor.registerEditor("float", TextCellEditor);
+    openmdao.ValueEditor.registerEditor("int", IntegerCellEditor);
+    openmdao.ValueEditor.registerEditor("enum", EnumEditor);
+    openmdao.ValueEditor.registerEditor("dict", DictEditor);
+    openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
@@ -90,5 +86,12 @@ jQuery(function() {
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
+
+
+    jQuery(window).bind('beforeunload', function(e) {
+        if (openmdao.model.getModified()){
+            return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
+        }
+    });
 });
 

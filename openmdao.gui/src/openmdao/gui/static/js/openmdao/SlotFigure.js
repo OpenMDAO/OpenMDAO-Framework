@@ -95,7 +95,6 @@ openmdao.SlotFigure=function(model,pathname,slot) {
     fig.droppable ({
         accept: '.'+slot.klass,
         out: function(ev,ui) {
-            fig.unhighlightAsDropTarget() ;
             openmdao.drag_and_drop_manager.draggableOut(fig);
         },
         over: function(ev,ui) {

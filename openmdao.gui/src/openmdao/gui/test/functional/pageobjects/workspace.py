@@ -157,6 +157,7 @@ class WorkspacePage(BasePageObject):
 
     def close_workspace(self, timeout=TMO):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
+        self.save_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
         NotifierPage.wait(self, timeout)
         self('project_menu').click()
@@ -173,6 +174,27 @@ class WorkspacePage(BasePageObject):
 
         from project import ProjectsListPage
         return ProjectsListPage.verify(self.browser, self.port)
+    
+    def attempt_to_close_workspace(self, expectDialog, confirm, timeout=TMO):
+        """ Close the workspace page. Returns :class:`ProjectsListPage`. """
+        self('project_menu').click()
+        self('close_button').click()
+    
+        #if you expect the "close without saving?" dialog
+        if expectDialog:
+            dialog = ConfirmationPage(self)
+            if confirm:  #close without saving
+                self.browser.execute_script('openmdao.Util.closeWebSockets();')
+                NotifierPage.wait(self, timeout)
+                dialog.click_ok()
+                from project import ProjectsListPage
+                return ProjectsListPage.verify(self.browser, self.port)
+            else:  #return to the project, intact.
+                dialog.click_cancel()
+        else:      #no unsaved changes 
+            from project import ProjectsListPage
+            return ProjectsListPage.verify(self.browser, self.port)
+      
 
     def _closer(self):
         """ Clicks the close button. """

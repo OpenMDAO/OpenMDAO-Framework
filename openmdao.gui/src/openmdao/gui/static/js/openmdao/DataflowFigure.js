@@ -239,7 +239,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         elm.droppable ({
             accept: '.IComponent',
             out: function(ev,ui){
-                elm.unhighlightAsDropTarget() ;
                 openmdao.drag_and_drop_manager.draggableOut(elm);
             },
             over: function(ev,ui){

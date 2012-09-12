@@ -34,6 +34,8 @@ def _test_global(browser):
 
     # Add a NestedSimulation.
     workspace_page.show_library()
+    workspace_page.set_library_filter('In Project')
+    time.sleep(0.5)
     workspace_page.find_library_button('NestedSimulation', 0.5).click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.NestedSimulation',
                                                 'nested', offset=(300, 300))
