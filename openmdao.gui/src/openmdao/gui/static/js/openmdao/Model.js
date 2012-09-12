@@ -8,6 +8,7 @@ openmdao.Model=function() {
      ***********************************************************************/
 
     var self = this,
+        modified = false,
         outstream_opened = false,
         pubstream_opened = false,
         sockets = {},
@@ -93,7 +94,7 @@ openmdao.Model=function() {
             debug.warn('Model.handlePubMessage() no subscribers for', topic);
         }
     }
-
+ 
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -186,6 +187,7 @@ openmdao.Model=function() {
                           }
                       }
         });
+        modified = false;
     };
 
     /** get list of components in the top driver workflow */
@@ -327,6 +329,7 @@ openmdao.Model=function() {
             success: callback,
             error: errorHandler
         });
+        modified = true;
     };
 
     /** add an object of the specified type & name to the specified parent */
@@ -347,6 +350,7 @@ openmdao.Model=function() {
             success: callback,
             error: errorHandler
         });
+        modified = true;
     };
 
     /** replace pathname with an object of the specified type */
@@ -358,6 +362,7 @@ openmdao.Model=function() {
             success: callback,
             error: errorHandler
         });
+        modified = true;
     };
 
     /** remove the component with the given pathname */
@@ -370,6 +375,7 @@ openmdao.Model=function() {
             cmd = 'del('+openmdao.Util.getName(pathname)+')';
         }
         self.issueCommand(cmd);
+        modified = true;
     };
 
     /** issue the specified command against the model */
@@ -382,6 +388,7 @@ openmdao.Model=function() {
             error: errorHandler,
             complete: completeHandler
         });
+        modified = true;
     };
 
     /** get any queued output from the model */
@@ -436,6 +443,7 @@ openmdao.Model=function() {
                 409: handler409
              }
         });
+        modified = true;
     };
 
     /** create new folder with  specified path in the model working directory */
@@ -447,6 +455,7 @@ openmdao.Model=function() {
             success: callback,
             error: errorHandler
         });
+        modified = true;
     };
 
     /** create a new file in the model working directory with the specified path  */
@@ -462,6 +471,7 @@ openmdao.Model=function() {
                 contents = '[]';
             }
             self.setFile(name, contents, undefined, callback);
+            modified = true;
     };
 
     /** prompt for name & create a new folder */
@@ -470,6 +480,7 @@ openmdao.Model=function() {
                 name = folderpath+'/'+name;
             }
             self.createFolder(name);
+            modified = true;
     };
 
     /** delete file with specified path from the model working directory */
@@ -485,6 +496,7 @@ openmdao.Model=function() {
                                   jqXHR,textStatus,errorThrown);
                    }
             });
+            modified = true;
     };
 
     /** import the contents of the specified file into the model */
@@ -496,6 +508,7 @@ openmdao.Model=function() {
                             replace(/\//g,'.');
         cmd = 'from '+path+' import *';
         self.issueCommand(cmd, callback, errorHandler, null);
+        modified = true;
     };
     */
 
@@ -516,6 +529,7 @@ openmdao.Model=function() {
                        debug.error(jqXHR,textStatus,errorThrown);
                    }
         });
+        modified = true;
     };
 
     /** execute the specified file */
@@ -532,28 +546,53 @@ openmdao.Model=function() {
             data: { 'filename': path },
             success: callback
         });
+        modified = true;
     };
 
     /** reload the model */
     this.reload = function() {
+        modified = false;
         openmdao.Util.closeWebSockets('reload');
         self.closeWindows();
         window.location.replace('/workspace/project');
     };
+        
+    
+    /** close the model */
+   this.close = function() {
+       if (modified) {
+           openmdao.Util.confirm("Model has changed, close without saving?",
+               function() {
+                   modified = false;
+                   openmdao.Util.closeWebSockets('close');
+                   self.closeWindows();
+                   window.location.replace('/workspace/close');
+               });
+       }
+       else {
+           openmdao.Util.closeWebSockets('close');
+           self.closeWindows();
+           window.location.replace('/workspace/close');
+       }
+   };
 
-    /** exit the model */
-    this.close = function() {
-        openmdao.Util.closeWebSockets('close');
-        self.closeWindows();
-        window.location.replace('/workspace/close');
-    };
-
-    /** exit the model */
-    this.exit = function() {
-        openmdao.Util.closeWebSockets('exit');
-        self.closeWindows();
-        window.location.replace('/exit');
-    };
+   /** exit the gui */
+   this.exit = function() {
+       if (modified) {
+           openmdao.Util.confirm("Model has changed, exit without saving?",
+               function() {
+                   modified = false;
+                   openmdao.Util.closeWebSockets('exit');
+                   self.closeWindows();
+                   window.location.replace('/exit');
+               });
+       }
+       else {
+           openmdao.Util.closeWebSockets('exit');
+           self.closeWindows();
+           window.location.replace('/workspace/exit');
+       }
+   };
 
     /** add window to window list. */
     this.addWindow = function(win) {
@@ -571,6 +610,11 @@ openmdao.Model=function() {
             }
         }
     };
+
+    /** return if the model has changed since last save */
+    this.getModified = function(){
+        return modified;
+    }
 
 };
 

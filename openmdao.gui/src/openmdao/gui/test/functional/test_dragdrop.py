@@ -442,6 +442,8 @@ def _test_list_slot(browser):
     rects = recorders_slot.find_elements_by_css_selector('rect')
     eq(len(rects), 3)
 
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
     print "_test_list_slot complete."
 
 
@@ -767,6 +769,7 @@ def closeout(projects_page, project_info_page, project_dict, workspace_page):
 def slot_drop(browser, element, slot, should_drop, message='Slot'):
     '''Drop an element on a slot'''
     chain = drag_element_to(browser, element, slot, True)
+    chain.move_by_offset(25,0).perform()
     time.sleep(1.0)  # give it a second to update the figure
     check_highlighting(slot, browser, should_highlight=should_drop,
                        message=message)
@@ -946,12 +949,13 @@ def ensure_names_in_workspace(workspace_page, names, message=None):
 def drag_element_to(browser, element, drag_to, centerx):
     '''Drag one element over to another element'''
     chain = ActionChains(browser)
+    chain.move_to_element(element).perform()
     chain.click_and_hold(element)
     chain.move_to_element(drag_to).perform()
     if centerx:
         chain.move_by_offset(int(drag_to.value_of_css_property('width')[:-2])/2, 1).perform()
     else:
-        chain.move_by_offset(2, 1).perform()
+        chain.move_by_offset(2,1).perform()
     return chain
 
 

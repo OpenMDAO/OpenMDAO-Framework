@@ -30,6 +30,9 @@ openmdao.DragAndDropManager=function() {
 
     // remove the droppable with the given id from the valid drop targets
     this.draggableOut = function(droppable) {
+        if (droppable.hasOwnProperty("unhighlightAsDropTarget")) {
+            droppable.unhighlightAsDropTarget();
+        }
         delete droppables[droppable.attr('id')];
         openmdao.drag_and_drop_manager.updateHighlighting();
     };
@@ -108,24 +111,20 @@ openmdao.DragAndDropManager=function() {
             }
         });
 
-        // Now only highlight the top one
+        self.drop_target = null;
+
+        // Now only highlight the top one & set it as the drop target
         jQuery.each(droppables, function(id, droppable) {
             if (id === max_id) {
-                /* We only allow dropping onto Assemblies and a good way to check that
-                  is the maxmin variable. We also allow dropping onto the top, which is the  */
                 if (droppable.hasOwnProperty("highlightAsDropTarget")) {
                     droppable.highlightAsDropTarget();
                     self.drop_target = droppable;
-                }
-                else {
-                    self.drop_target = null;
                 }
             }
             else if (droppable.hasOwnProperty("unhighlightAsDropTarget")) {
                 droppable.unhighlightAsDropTarget();
             }
         });
-
     };
 
     // Find zindex of element by finding first parent that has a non-auto zindex
