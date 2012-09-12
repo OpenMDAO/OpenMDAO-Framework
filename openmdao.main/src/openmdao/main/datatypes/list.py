@@ -16,51 +16,55 @@ from openmdao.main.variable import gui_excludes
 
 class List(Enthought_List):
     ''' Variable wrapper for list variables.'''
-    
+
     implements(IVariable)
-    
+
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. Lists are containers and
         can have slots.
-        
+
         name: str
           Name of variable
-          
+
         value: object
           The value of the variable
-          
+
         trait: CTrait
           The variable's trait
-          
+
         meta: dict
           Dictionary of metadata for this variable
         """
-        
+
         attr = {}
         slot_attr = None
-        
+
         attr['name'] = name
         attr['type'] = 'list'
         attr['value'] = list(value)
-        
+
         for field in meta:
             if field not in gui_excludes:
                 attr[field] = meta[field]
-                
+
         # Handling for a List of Slots
         inner = trait.inner_traits[0]
         if inner.is_trait_type(Slot):
-            
+
             if len(value) < 1:
                 inner_value = None
             else:
                 inner_value = value[0]
-                
-            _, slot_attr = inner.trait_type.get_attribute(name, inner_value, 
+
+            _, slot_attr = inner.trait_type.get_attribute(name, inner_value,
                                                           inner, meta)
             slot_attr['containertype'] = 'list'
-            slot_attr['filled'] = len(value)
+
+            # for the value, just report the types of the list entries
+            valtypes = []
+            for val in value:
+                valtypes.append(type(val).__name__)
+            slot_attr['filled'] = valtypes
 
         return attr, slot_attr
-    

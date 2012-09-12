@@ -36,20 +36,8 @@ def _test_drop_on_driver(browser):
     print "running _test_drop_on_driver..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    #find and get the 'comnindriver', 'top', and 'driver' objects
-    conmindriver = workspace_page.find_library_button('CONMINdriver')
-    top = workspace_page.get_dataflow_figure('top')
-    driver_element = workspace_page.get_dataflow_figure('driver')
-
-    div = getDropableElements(driver_element)[0]
-    chain = drag_element_to(browser, conmindriver, div, True)
-    check_highlighting(driver_element('content_area').element, browser, True,
-                       "Driver's content_area")
-    release(chain)
-
-    # brings up a confirm dialog for replacing the existing driver.
-    dialog = ConfirmationPage(top)
-    dialog.click_ok()
+    # replace the 'top' assembly driver with a CONMINdriver
+    replace_driver(browser, workspace_page, 'top', 'CONMINdriver')
 
     # Check to see that the content area for the driver is now CONMINdriver
     driver_element = workspace_page.get_dataflow_figure('driver')
@@ -169,6 +157,7 @@ def _test_drop_on_component_editor(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     #find and get the 'assembly', and 'top' objects
+    workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
@@ -219,6 +208,7 @@ def _test_drop_on_component_editor_grid(browser):
     print "running _test_drop_on_component_editor_grid..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
     #find and get the 'assembly', and 'top' objects
+    workspace_page.set_library_filter('Assembly')   # put Assembly at top of lib
     assembly = workspace_page.find_library_button('Assembly')
     top = workspace_page.get_dataflow_figure('top')
     top.pathname = get_pathname(browser, top('header').element.find_element_by_xpath(".."))
@@ -251,50 +241,43 @@ def _test_slots(browser):
 
     editor, metamodel, caseiter, caserec, comp, meta_name = slot_reset(browser, workspace_page)
 
+    workspace_page.set_library_filter('ExecComp')
     execcomp = workspace_page.find_library_button('ExecComp')
 
     ##################################################
-    # First part of test: Drag and drop ExecComp from the Library to
-    #  onto the recorder slot of a MetaModel. This should fail.
+    # First part of test: Drag and drop ExecComp from the Library
+    # onto the recorder slot of a MetaModel. This should fail.
     ##################################################
     #drag one success and one failure onto slots
     #failure:
     slot_drop(browser, execcomp, caserec, False, 'Component')
 
-    #refresh
-    labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-    caserec = get_slot_target(labels, 'CaseRecorder')
+    slot_id = 'SlotFigure-%s-%s'
 
-    #check for font change
-    eq(False, not ("color: rgb(204, 0, 0)" in caserec.get_attribute('style')),
+    #refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    caserec = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
+
+    #check for class change
+    eq(False, ("filled" in caserec.get_attribute('class')),
         "Component dropped into CaseRecorder (should not have)")
 
     ##################################################
-    # Second part of test: Drag and drop ExecComp from the Library to
-    #  onto the model ( IComponent)  slot of a MetaModel. This should be successful
-    #  even though a dialog will popup with this notification message:
-    #     RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
+    # Second part of test: Drag and drop ExecComp from the Library onto the
+    # model (IComponent) slot of a MetaModel. This should be successful even
+    # though a dialog will popup with this notification message:
+    #   RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
     ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
 
     NotifyDialog(browser, top.port).close()
 
     #refresh
-    for retry in range(3):
-        labels = metamodel('header').element.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
-        try:
-            comp = get_slot_target(labels, 'Component')
-        except StaleElementReferenceException:
-            if retry < 2:
-                logging.warning('get_slot_target(Component):'
-                                ' StaleElementReferenceException')
-            else:
-                raise
-        else:
-            break
+    time.sleep(1.0)  # give it a second to update the figure
+    comp = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
 
-    #check for font change
-    eq(True, not ("color: rgb(204, 0, 0)" in comp.get_attribute('style')),
+    #check for class change
+    eq(True, ("filled" in comp.get_attribute('class')),
         "Component did not drop into Component slot")
 
     #for the future:
@@ -326,6 +309,142 @@ def _test_slots(browser):
 
     closeout(projects_page, project_info_page, project_dict, workspace_page)
     print "_test_slots complete."
+
+
+def _test_list_slot(browser):
+    print "running _test_list_slot..."
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # replace the 'top' assembly driver with a DOEdriver
+    # (this additionally verifies that an issue with DOEdriver slots is fixed)
+    replace_driver(browser, workspace_page, 'top', 'DOEdriver')
+
+    # open the object editor dialog for the driver
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(False)
+    editor.move(-100, 0)
+    editor.show_slots()
+
+    # get the generator slot figure
+    slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'DOEgenerator')
+    generator_slot = browser.find_element(By.ID, slot_id)
+
+    # check that slot is not filled
+    eq(False, ("filled" in generator_slot.get_attribute('class')),
+        "generator slot is showing as filled when it should not be")
+
+    # drop a FullFactorial onto the generator slot
+    workspace_page.set_library_filter('DOEgenerator')
+    generator = workspace_page.find_library_button('FullFactorial')
+    slot_drop(browser, generator, generator_slot, True, 'generator')
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    generator_slot = browser.find_element(By.ID, slot_id)
+
+    # check for class change (should now be filled)
+    eq(True, ("filled" in generator_slot.get_attribute('class')),
+        "FullFactorial did not drop into generator slot")
+
+    # get the recorders slot figure
+    slot_id = 'SlotFigure-%s-%s' % ('top-driver', 'recorders')
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check that slot is not filled
+    eq(False, ("filled" in recorders_slot.get_attribute('class')),
+        "recorders slot is showing as filled when it should not be")
+
+    # set center pane to workflow to make sure workflow doesn't steal drops
+    workspace_page('workflow_tab').click()
+
+    # drop a DumpCaseRecorder onto the recorders slot
+    workspace_page.set_library_filter('ICaseRecorder')
+    case_recorder = workspace_page.find_library_button('DumpCaseRecorder')
+    slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check for class change (should now be filled)
+    eq(True, ("filled" in recorders_slot.get_attribute('class')),
+        "DumpCaseRecorder did not drop into recorders slot")
+
+    # check that recorders fig now has one filled and one empty rect
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects), 2)
+    eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
+        "Filled slot element should be outlined in blue")
+    eq(True, ('stroke: #808080' in rects[1].get_attribute('style')),
+        "Unfilled slot element should be outlined in gray")
+
+    klass = recorders_slot.find_elements_by_css_selector('text#klass')
+    eq(klass[0].text, 'DumpCaseRecorder',
+        "Filled slot element should show the correct type (DumpCaseRecorder)")
+    eq(klass[1].text, 'ICaseRecorder',
+        "Unfilled slot element should show the correct klass (ICaseRecorder)")
+
+    # drop another CaseRecorder onto the recorders slot
+    case_recorder = workspace_page.find_library_button('CSVCaseRecorder')
+    slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check for class change (it should not change... still filled)
+    eq(True, ("filled" in recorders_slot.get_attribute('class')),
+        "CSVCaseRecorder did not drop into recorders slot")
+
+    # check that recorders fig now has two filled and one empty rect
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects), 3)
+    eq(True, ('stroke: #0b93d5' in rects[0].get_attribute('style')),
+        "Filled slot element should be outlined in blue")
+    eq(True, ('stroke: #0b93d5' in rects[1].get_attribute('style')),
+        "Filled slot element should be outlined in blue")
+    eq(True, ('stroke: #808080' in rects[2].get_attribute('style')),
+        "Unfilled slot element should be outlined in gray")
+
+    klass = recorders_slot.find_elements_by_css_selector('text#klass')
+    eq(klass[0].text, 'DumpCaseRecorder',
+        "Filled slot element should show the correct type (DumpCaseRecorder)")
+    eq(klass[1].text, 'CSVCaseRecorder',
+        "Filled slot element should show the correct type (CSVCaseRecorder)")
+    eq(klass[2].text, 'ICaseRecorder',
+        "Unfilled slot element should show the correct klass (ICaseRecorder)")
+
+    # drop another CaseRecorder onto the recorders slot
+    case_recorder = workspace_page.find_library_button('DBCaseRecorder')
+    slot_drop(browser, case_recorder, recorders_slot, True, 'recorders')
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check that recorders fig now has four total rects
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects), 4)
+
+    # remove an item from the list (the only context menu option)
+    menu_item_remove = recorders_slot.find_element_by_css_selector('ul li')
+    chain = ActionChains(browser)
+    chain.move_to_element_with_offset(recorders_slot, 25, 25)
+    chain.context_click(recorders_slot).perform()
+    menu_item_remove.click()
+
+    # refresh
+    time.sleep(1.0)  # give it a second to update the figure
+    recorders_slot = browser.find_element(By.ID, slot_id)
+
+    # check that recorders fig now has only three rect
+    # TODO: check that the correct one was removed
+    rects = recorders_slot.find_elements_by_css_selector('rect')
+    eq(len(rects), 3)
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_list_slot complete."
 
 
 def _test_simple_component_to_workflow(browser):
@@ -368,8 +487,7 @@ def _test_simple_component_to_workflow(browser):
     top = workspace_page.get_workflow_figure('top')
 
     chain = drag_element_to(browser, paraboloid_component, top('figure_itself').element, False)
-    check_highlighting(top('figure_itself').element, browser, True,
-                       "Top's workflow")
+    check_highlighting(top('figure_itself').element, browser, True, "Top's workflow")
     release(chain)
 
     time.sleep(1.5)  # Just so we can see it.
@@ -387,6 +505,54 @@ def _test_simple_component_to_workflow(browser):
     print "_test_simple_component_to_workflow complete."
 
 
+def _test_library_to_workflow(browser):
+    print "running _test_library_to_workflow..."
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Get file paths
+    file1_path = pkg_resources.resource_filename('openmdao.examples.simple',
+                                                'paraboloid.py')
+
+    # add first file from workspace
+    workspace_page.add_file(file1_path)
+
+    # view library
+    workspace_page.show_library()
+
+    # View the Workflow Pane.
+    workspace_page('workflow_tab').click()
+
+    # Show the top level workflow
+    workspace_page.show_workflow('top')
+    time.sleep(0.5)  # Just so we can see it.
+
+    eq(len(workspace_page.get_workflow_component_figures()), 1)
+
+    # Drop the paraboloid component from the library onto the workflow for top
+    top = workspace_page.get_workflow_figure('top')
+    paraboloid = workspace_page.find_library_button('Paraboloid')
+    chain = drag_element_to(browser, paraboloid, top('figure_itself').element, True)
+    chain.move_by_offset(int(paraboloid.value_of_css_property('width')[:-2])/3, 1).perform()
+    check_highlighting(top('figure_itself').element, browser, True, "Top's workflow")
+    release(chain)
+    #deal with the modal dialog
+    name = (NameInstanceDialog(browser, top.port).create_and_dismiss())
+
+    time.sleep(1.5)  # Just so we can see it.
+
+    eq(len(workspace_page.get_workflow_component_figures()), 2)
+
+    # Check to see that the new div inside the workflow is there
+    figs = workspace_page.get_workflow_component_figures()
+    pathnames = [get_pathname(browser, fig) for fig in figs]
+
+    assert  ("top." + name) in pathnames
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    print "_test_library_to_workflow complete."
+
+
 def _test_component_to_complex_workflow(browser):
     print "running _test_component_to_complex_workflow..."
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
@@ -401,6 +567,7 @@ def _test_component_to_complex_workflow(browser):
 
     # add VehicleSim2 to the globals
     workspace_page.show_library()
+    workspace_page.set_library_filter('In Project')
     vehicle_name = put_element_on_grid(browser, workspace_page, "VehicleSim2")
 
     # Drag paraboloid element into vehicle dataflow figure
@@ -508,6 +675,7 @@ def _test_drop_onto_layered_div(browser):
 
     # add VehicleSim2 to the globals
     workspace_page.show_library()
+    workspace_page.set_library_filter('In Project')
     vehicle_name = put_element_on_grid(browser, workspace_page, "VehicleSim2")
 
     # add Paraboloid to VehicleSim dataflow assembly
@@ -521,6 +689,7 @@ def _test_drop_onto_layered_div(browser):
     # Open up the component editor for the sim_EPA_city inside the vehicle sim
     sim_EPA_city_driver = workspace_page.get_dataflow_figure('sim_EPA_city', vehicle_name)
     driver_editor = sim_EPA_city_driver.editor_page(base_type='Driver')
+    driver_editor.move(-100, 0)
     driver_editor.show_workflow()
 
     # Check to make sure we have the expected number of
@@ -599,7 +768,9 @@ def closeout(projects_page, project_info_page, project_dict, workspace_page):
 
 def slot_drop(browser, element, slot, should_drop, message='Slot'):
     '''Drop an element on a slot'''
-    chain = drag_element_to(browser, element, slot, should_drop)
+    chain = drag_element_to(browser, element, slot, True)
+    chain.move_by_offset(25,0).perform()
+    time.sleep(1.0)  # give it a second to update the figure
     check_highlighting(slot, browser, should_highlight=should_drop,
                        message=message)
     release(chain)
@@ -623,22 +794,18 @@ def slot_reset(browser, workspace_page, editor=None, metamodel=None, remove_old=
 
     #open the 'edit' dialog on metamodel
     editor = metamodel.editor_page(False)
+    editor.move(-100, 0)
     editor.show_slots()
 
-    resize_editor(browser, workspace_page, editor)
-
-    #get an arbitrary element so we can do a 'find_elements_by_xpath' search
-    ele = metamodel('header').element
-
-    #search for the drop target labels
-    labels = ele.find_elements_by_xpath('//div[@id="#' + meta_name + '-slots"]/div/div/center')
+    #resize_editor(browser, workspace_page, editor)
 
     #find the slots (this is both the drop target and highlight area)
-    caseiter = get_slot_target(labels, 'CaseIterator')
-    caserec = get_slot_target(labels, 'CaseRecorder')
-    comp = get_slot_target(labels, 'Component')
+    slot_id = 'SlotFigure-%s-%s'
+    caseiter = browser.find_element(By.ID, slot_id % (meta_name, 'warm_start_data'))
+    caserec  = browser.find_element(By.ID, slot_id % (meta_name, 'recorder'))
+    model    = browser.find_element(By.ID, slot_id % (meta_name, 'model'))
 
-    return editor, metamodel, caseiter, caserec, comp, meta_name
+    return editor, metamodel, caseiter, caserec, model, meta_name
 
 
 def resize_editor(browser, workspace_page, editor):
@@ -782,13 +949,13 @@ def ensure_names_in_workspace(workspace_page, names, message=None):
 def drag_element_to(browser, element, drag_to, centerx):
     '''Drag one element over to another element'''
     chain = ActionChains(browser)
+    chain.move_to_element(element).perform()
     chain.click_and_hold(element)
     chain.move_to_element(drag_to).perform()
     if centerx:
         chain.move_by_offset(int(drag_to.value_of_css_property('width')[:-2])/2, 1).perform()
     else:
-        chain.move_by_offset(2, 1).perform()
-
+        chain.move_by_offset(2,1).perform()
     return chain
 
 
@@ -799,9 +966,17 @@ def release(chain):
 
 def check_highlighting(element, browser, should_highlight=True, message='Element'):
     '''check to see that the background-color of the element is rgb(207, 214, 254)'''
-    style = element.get_attribute('style')
+    if 'SlotFigure' in element.get_attribute('class'):
+        # a slot figure is a div containing a ul element (the context menu) and
+        # one or more svg elements, each of which contains a rect and two texts
+        # the last rect fill style is what we need to check for highlighting
+        rect = element.find_elements_by_css_selector('svg rect')[-1]
+        style = rect.get_attribute('style')
+    else:
+        style = element.get_attribute('style')
     highlighted = ('background-color: rgb(207, 214, 254)' in style) \
-                or('highlighted.png' in style)
+                or ('highlighted.png' in style) \
+                or ('fill: #cfd6fe' in style)
     eq(highlighted, should_highlight, message +
         (' did not highlight (and should have) ' if should_highlight else
          ' highlighed (and should not have) ')
@@ -820,6 +995,22 @@ def getDropableElements(dataflow_figure):
     # add back 'top_left' 'bottom_left' at some point. right now that test fails
     arr = ['content_area', 'header', 'footer', 'bottom_right', 'top_right']
     return [dataflow_figure(area).element for area in arr]
+
+
+def replace_driver(browser, workspace_page, assembly_name, driver_type):
+    #find and get the 'comnindriver', 'top', and 'driver' objects
+    newdriver = workspace_page.find_library_button(driver_type)
+    assembly = workspace_page.get_dataflow_figure(assembly_name)
+    driver_element = workspace_page.get_dataflow_figure('driver')
+
+    div = getDropableElements(driver_element)[0]
+    chain = drag_element_to(browser, newdriver, div, True)
+    check_highlighting(driver_element('content_area').element, browser, True, "Driver's content_area")
+    release(chain)
+
+    # brings up a confirm dialog for replacing the existing driver.
+    dialog = ConfirmationPage(assembly)
+    dialog.click_ok()
 
 
 if __name__ == '__main__':

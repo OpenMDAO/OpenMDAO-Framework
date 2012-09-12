@@ -1,5 +1,5 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
@@ -15,9 +15,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             asyncEditorLoading: false,
             multiSelect: false,
             autoHeight: true,
-            enableTextSelectionOnCells: true,
+            enableTextSelectionOnCells: true
         };
-    
+
     self.pathname = pathname;
     if (editable) {
         options.editable = true;
@@ -38,62 +38,73 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     }
 
     elm.append(propsDiv);
-    props = new Slick.Grid(propsDiv, [], columns, options)
+    props = new Slick.Grid(propsDiv, [], columns, options);
 
-    props.onBeforeEditCell.subscribe(function(row,cell){
+    props.onBeforeEditCell.subscribe(function(row,cell) {
         if (props.getDataItem(cell.row).connected.length > 0) {
             return false;
         }
 
-        return true;
-    })
+        else {
+            return true;
+        }
+    });
 
     if (editable) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
-            cmd = self.pathname+'.'+args.item.name+'='+args.item.value
+            cmd = self.pathname+'.'+args.item.name+'='+args.item.value;
             model.issueCommand(cmd);
         });
    }
-    
+
     /** load the table with the given properties */
     this.loadData = function(properties) {
+        //variable to track cells that need to be highlighted
+        var editableCells = {};
+
         if (properties) {
             // Sort by name
-            properties.sort(function(a, b){
+            properties.sort(function(a, b) {
                 var nameA=a.name.toLowerCase(),
                     nameB=b.name.toLowerCase();
-                if (nameA < nameB) //sort string ascending
+                if (nameA < nameB) { //sort string ascending
                     return -1;
-                if (nameA > nameB)
+                }
+                if (nameA > nameB) {
                     return 1;
+                }
                 return 0; //default return value (no sorting)
             });
 
-            //variable to track cells that
-            //need to be highlighted
-            var editableCells = {};
-            jQuery.each(properties, function(index, value){
-                if("connected" in value){
-                    cellCssStyles = ""
-                    
-                    //TODO: this should be an error. needs to be logged
-                    if(options.editable && (value.connected.length === 0))
-                    {
-                        cellCssStyles = "cell-editable"
+
+            jQuery.each(properties, function(index, value) {
+                if (value.hasOwnProperty("connected")) {
+                    var nameStyle = '',
+                        valueStyle = '';
+                    if (options.editable && (value.connected.length === 0)) {
+                        valueStyle += " cell-editable";
                     }
-
-                    if("implicit" in value && value.implicit.length >0){
-                        if(name === "Inputs"){
-
-                            cellCssStyles = cellCssStyles + " parameter"
+                    if (value.hasOwnProperty("implicit") && (value.implicit.length > 0)) {
+                        //need a css class for highlighting implicitly connected inputs
+                        if (name === "Inputs") {
+                            nameStyle += " parameter";
+                            valueStyle += " parameter";
                         }
-                        else if(name === "Outputs"){
-                            cellCssStyles = cellCssStyles + " objective"
+                        else if (name === "Outputs") {
+                            nameStyle += " objective";
+                            valueStyle += " objective";
                         }
                     }
-                    if(cellCssStyles.length>0){
-                        editableCells[index] = {"value" : cellCssStyles}
+                    var css = {};
+                    if (nameStyle !== '') {
+                        css['name'] = nameStyle;
+                    }
+                    if (valueStyle !== '') {
+                        css['value'] = valueStyle;
+                    }
+                    if (css !== {}) {
+                        editableCells[index] = css;
                     }
                 }
             });
@@ -108,5 +119,5 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         props.setCellCssStyles("highlight", editableCells);
         props.updateRowCount();
         props.render();
-    }
-}
+    };
+};

@@ -146,12 +146,6 @@ def _test_connect(browser):
     props = comp1.properties_page()
     eq(props.header, 'Connectable: top.comp1')
     inputs = props.inputs
-    eq(inputs[0].value, ['b_in', 'False'])
-    inputs[0][1] = 'True'
-    inputs = props.inputs
-    eq(inputs[2].value, ['e_in', '1'])
-    inputs[2][1] = '3'
-    inputs = props.inputs
     eq(inputs[3].value, ['f_in', '0'])
     inputs[3][1] = '2.781828'
     inputs = props.inputs
@@ -160,6 +154,22 @@ def _test_connect(browser):
     inputs = props.inputs
     eq(inputs[6].value, ['s_in', ''])
     inputs[6][1] = "'xyzzy'"
+    
+    
+    inputs = props.inputs
+    eq(inputs[0].value, ['b_in', 'False'])
+    inputs._rows[0]._cells[1].click()
+    browser.find_element_by_xpath('//*[@id="bool-editor-b_in"]/option[1]').click()
+    inputs._rows[0]._cells[0].click()
+    #inputs[0][1] = 'True'
+    
+    inputs = props.inputs
+    eq(inputs[2].value, ['e_in', '1'])
+    inputs._rows[2]._cells[1].click()
+    browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
+    inputs._rows[2]._cells[0].click()
+    #inputs[2][1] = '3'    
+    
     props.close()
 
     # Run the simulation.
@@ -168,11 +178,12 @@ def _test_connect(browser):
     # Verify outputs.
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     editor = comp2.editor_page()
+    editor.move(-100, 0)
     eq(editor.dialog_title, 'Connectable: top.comp2')
     outputs = editor.get_outputs()
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
-        ['e_out', 'int',   '3',        '', 'true', '', '', ''],
+        ['e_out', 'enum',   '3',        '', 'true', '', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
@@ -349,6 +360,7 @@ def _test_driverflows(browser):
     # While only driver flows are displayed, check on context menu.
     preproc = workspace_page.get_dataflow_figure('preproc', 'top')
     editor = preproc.input_edit_driver('top.driver')
+    editor.move(-100, 0)
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
@@ -537,6 +549,48 @@ def _test_replace(browser):
     project_info_page = projects_page.edit_project(project_dict['name'])
     project_info_page.delete_project()
     print "_test_replace complete."
+
+
+def _test_ordering(browser):
+    print "running _test_ordering"
+    # Verify that adding parameter to driver moves it ahead of target.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode and SLSQP.
+    workspace_page.show_dataflow('top')
+    workspace_page.show_library()
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'opt')
+
+    # Check that ExternalCode is before SLSQP.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    opt = workspace_page.get_dataflow_figure('opt', 'top')
+    assert ext.coords[0] < opt.coords[0]
+
+    # Add parameter to SLSQP.
+    editor = opt.editor_page(base_type='Driver')
+    editor('parameters_tab').click()
+    dialog = editor.new_parameter()
+    dialog.target = 'ext.timeout'
+    dialog.low = '0'
+    dialog.high = '1'
+    dialog.name = 'tmo'
+    dialog('ok').click()
+
+    # Check that SLSQP is now ahead of ExternalCode.
+    ext = workspace_page.get_dataflow_figure('ext', 'top')
+    opt = workspace_page.get_dataflow_figure('opt', 'top')
+    assert ext.coords[0] > opt.coords[0]
+
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_ordering complete."
 
 
 if __name__ == '__main__':

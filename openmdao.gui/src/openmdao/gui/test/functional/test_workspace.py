@@ -53,15 +53,9 @@ def _test_editfile(browser):
 
     # create a couple of files
     file1 = 'test1.py'
-    dlg = workspace_page.new_file_dialog()
-    dlg.set_text(file1)
-    dlg.click_ok()
-    time.sleep(2)  # Wait for background animation to complete.
+    workspace_page.new_file(file1)
     file2 = 'test2.py'
-    dlg = workspace_page.new_file_dialog()
-    dlg.set_text(file2)
-    dlg.click_ok()
-    time.sleep(2)  # Wait for background animation to complete.
+    workspace_page.new_file(file2)
 
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
@@ -236,17 +230,16 @@ def _test_newfile(browser):
     dlg = editor_page.new_file_dialog()
     dlg.set_text('ok_file1')
     dlg.click_ok()
-    time.sleep(1.0)
+    NotifierPage.wait(editor_page)
 
     dlg = editor_page.new_file_dialog()
     dlg.set_text('cancel_file')
     dlg.click_cancel()
-    time.sleep(1.0)
 
     dlg = editor_page.new_file_dialog()
     dlg.set_text('ok_file2')
     dlg.click_ok()
-    time.sleep(1.0)
+    NotifierPage.wait(editor_page)
 
     file_names = editor_page.get_files()
     expected_file_names = ['ok_file1', 'ok_file2']
@@ -501,15 +494,19 @@ def _test_editable_inputs(browser):
         for i, row in enumerate(inputs):
             connected_to_cell = row.cells[len(row.cells)-2]
             implicit_cell = row.cells[len(row.cells)-1]
+            name_cell = row.cells[0]
             value_cell = row.cells[2]
 
             if connected_to_cell.value:
+                test_color(name_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.background_color, [0, 0, 0, 1])
             elif implicit_cell.value:
-                test_color(value_cell.color, [200, 0, 0, 1])
+                test_color(name_cell.color, [100, 180, 255, 1])
+                test_color(value_cell.color, [100, 180, 255, 1])
                 test_color(value_cell.background_color, [255, 255, 255, 1])
             else:
+                test_color(name_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.color, [0, 0, 0, 1])
                 test_color(value_cell.background_color, [255, 255, 255, 1])
 
@@ -517,15 +514,17 @@ def _test_editable_inputs(browser):
         for i, row in enumerate(outputs):
             connected_to_cell = row.cells[len(row.cells)-2]
             implicit_cell = row.cells[len(row.cells)-1]
+            name_cell = row.cells[0]
             value_cell = row.cells[2]
 
             if implicit_cell.value:
-                test_color(value_cell.color, [0, 0, 200, 1])
+                test_color(name_cell.color, [100, 180, 255, 1])
+                test_color(value_cell.color, [100, 180, 255, 1])
             else:
+                test_color(name_cell.color, [255, 255, 255, 1])
                 test_color(value_cell.color, [255, 255, 255, 1])
             
             test_color(value_cell.background_color, [0, 0, 0, 1])
-
 
     print "running _test_editable_inputs..."
     projects_page = begin(browser)
@@ -535,9 +534,10 @@ def _test_editable_inputs(browser):
     # Import vehicle_singlesim
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.open_editor()
-    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional', 'basic_model.py')
+    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                    'basic_model.py')
     file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-                                                            'vehicle_singlesim.py')
+                                                    'vehicle_singlesim.py')
     editor_page.add_file(file_path_one)
     editor_page.add_file(file_path_two)
     browser.close()
@@ -591,6 +591,7 @@ def _test_editable_inputs(browser):
     project_info_page.delete_project()
     print "_test_editable_inputs complete."
 
+
 def _test_console_errors(browser):
     print "running _test_console_errors..."
     projects_page = begin(browser)
@@ -601,10 +602,10 @@ def _test_console_errors(browser):
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False, base_type='Assembly')
     inputs = editor.get_inputs()
-    inputs[1][2] = '42'  # force_execute
+    inputs[0][2] = '42'  # directory
     message = NotifierPage.wait(editor)
-    eq(message, "TraitError: The 'force_execute' trait of an Assembly instance"
-                " must be a boolean, but a value of 42 <type 'int'> was"
+    eq(message, "TraitError: The 'directory' trait of an Assembly instance"
+                " must be a string, but a value of 42 <type 'int'> was"
                 " specified.")
     editor.close()
 
@@ -778,6 +779,57 @@ def _test_noslots(browser):
     project_info_page.delete_project()
     print "_test_noslots complete."
 
+def _test_savechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    workspace_page.set_library_filter('ExternalCode')
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    
+    #first try to close without saving changes, but click CANCEL and stay 
+    workspace_page.attempt_to_close_workspace(True, False)
+
+    # add another object to the model to be sure it didn't close
+    eq(len(workspace_page.get_dataflow_figures()), 3)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext2')
+    eq(len(workspace_page.get_dataflow_figures()), 4)
+    
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_savechanges complete."
+
+def _test_dontsavechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    
+    #Try to close without saving changes, but click OK and leave. 
+    workspace_page.attempt_to_close_workspace(True, True)
+
+    # Clean up.
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_dontsavechanges complete."
 
 if __name__ == '__main__':
     main()

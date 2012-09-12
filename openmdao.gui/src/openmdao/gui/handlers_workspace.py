@@ -140,7 +140,7 @@ class ComponentHandler(ReqHandler):
             result = sys.exc_info()
         self.content_type = 'text/html'
         self.write(result)
-        
+
     @web.authenticated
     def get(self, name):
         cserver = self.get_server()
@@ -153,7 +153,7 @@ class ComponentHandler(ReqHandler):
         self.content_type = 'application/javascript'
         self.write(attr)
 
-        
+
 class ObjectHandler(ReqHandler):
     ''' get the data for a slotable object (including components)
     '''
@@ -282,10 +282,14 @@ class FileHandler(ReqHandler):
             contents = self.get_argument('contents', default='')
             force = int(self.get_argument('force', default=0))
             if filename.endswith('.py'):
+                if not contents.endswith('\n'):
+                    text = contents + '\n' # to make ast.parse happy
+                else:
+                    text = contents
                 try:
-                    ast.parse(contents, filename=filename, mode='exec')
-                except SyntaxError as syn_err:
-                    cserver.send_pub_msg(str(syn_err), 'file_errors')
+                    ast.parse(text, filename=filename, mode='exec')
+                except Exception as err:
+                    cserver.send_pub_msg(str(err), 'file_errors')
                     self.send_error(400)
                     return
                 if not force:
@@ -402,7 +406,7 @@ class PublishHandler(ReqHandler):
         publish = self.get_argument('publish', default=True)
         publish = publish in [True, 'true', 'True']
         cserver = self.get_server()
-        cserver.publish(topic, publish)
+        cserver.add_subscriber(topic, publish)
 
 
 class PubstreamHandler(ReqHandler):

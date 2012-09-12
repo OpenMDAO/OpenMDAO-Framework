@@ -57,11 +57,7 @@ class FileManagerTestCase(unittest.TestCase):
         self.assertEqual(files[s_dname][s_sname], len(hello))
 
         # delete_file
-        try:
-            filemanager.delete_file(dname)
-        except OSError as (errno, errmsg):
-            self.assertTrue(errmsg.lower().find('not empty') > 0)
-        self.assertTrue(os.path.exists(os.path.join(tempdir, dname)))
+        filemanager.delete_file(dname)
 
         filemanager.delete_file(sname)
         self.assertTrue(not os.path.exists(os.path.join(tempdir, sname)))

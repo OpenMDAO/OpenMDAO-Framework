@@ -8,6 +8,8 @@ import cStringIO
 import threading
 import re
 
+from zope.interface import implementedBy
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.api import Missing
 import networkx as nx
@@ -863,15 +865,41 @@ class Assembly (Component):
         if is_instance(self, Assembly):
             # list of components (name & type) in the assembly
             g = self._depgraph._graph
-            for name in nx.algorithms.dag.topological_sort(g):
-                if not name.startswith('@'):
+            names = [name for name in nx.algorithms.dag.topological_sort(g)
+                                   if not name.startswith('@')]
+
+            # Bubble-up drivers ahead of their parameter targets.
+            sorted_names = []
+            for name in names:
+                comp = self.get(name)
+                if is_instance(comp, Driver) and hasattr(comp, '_delegates_'):
+                    driver_index = len(sorted_names)
+                    for dname, dclass in comp._delegates_.items():
+                        inst = getattr(comp, dname)
+                        if isinstance(inst, HasParameters):
+                            refs = inst.get_referenced_compnames()
+                            for ref in refs:
+                                try:
+                                    target_index = sorted_names.index(ref)
+                                except ValueError:
+                                    pass
+                                else:
+                                    driver_index = min(driver_index, target_index)
+                    sorted_names.insert(driver_index, name)
+                else:
+                    sorted_names.append(name)
+
+            # Process names in new order.
+            for name in sorted_names:
                     comp = self.get(name)
                     if is_instance(comp, Component):
+                        inames = [cls.__name__ 
+                                  for cls in list(implementedBy(comp.__class__))]
                         components.append({'name': comp.name,
                                            'pathname': comp.get_pathname(),
                                            'type': type(comp).__name__,
                                            'valid': comp.is_valid(),
-                                           'is_assembly': is_instance(comp, Assembly),
+                                           'interfaces': inames,
                                            'python_id': id(comp)
                                           })
 
