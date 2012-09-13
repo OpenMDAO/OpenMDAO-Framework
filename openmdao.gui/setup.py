@@ -23,6 +23,11 @@ setup(name='openmdao.gui',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
       package_dir={'': 'src'},
+      # NOTE: make sure that none of the glob patterns below match
+      # directories.  Otherwise you'll get errors like the following:
+      # Setup script exited with error: can't copy
+      # 'src/openmdao/gui/test/js_unit_tests/src': doesn't exist or
+      # not a regular file     
       package_data={'openmdao.gui': ['static/ace-min/*',
                                      'static/css/*.css',
                                      'static/css/jstree/classic/*',
@@ -50,7 +55,7 @@ setup(name='openmdao.gui',
                                      'templates/workspace/*',
                                      'test/*.proj',
                                      'test/functional/manaual/*',
-                                     'test/js_unit_tests/*']},
+                                     'test/js_unit_tests/*.js']},
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
