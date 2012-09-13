@@ -94,7 +94,7 @@ openmdao.Model=function() {
             debug.warn('Model.handlePubMessage() no subscribers for', topic);
         }
     }
- 
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -556,8 +556,7 @@ openmdao.Model=function() {
         self.closeWindows();
         window.location.replace('/workspace/project');
     };
-        
-    
+
     /** close the model */
    this.close = function() {
        if (modified) {
@@ -590,7 +589,7 @@ openmdao.Model=function() {
        else {
            openmdao.Util.closeWebSockets('exit');
            self.closeWindows();
-           window.location.replace('/workspace/exit');
+           window.location.replace('/exit');
        }
    };
 
@@ -614,7 +613,7 @@ openmdao.Model=function() {
     /** return if the model has changed since last save */
     this.getModified = function(){
         return modified;
-    }
+    };
 
 };
 
