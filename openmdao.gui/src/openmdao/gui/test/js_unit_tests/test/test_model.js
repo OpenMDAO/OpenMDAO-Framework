@@ -607,25 +607,6 @@ TestCase("ModelTest", {
 
   },
 
-/** no need to import files manually any more...
-  "test importFile": function () {
-
-      var success_handler = sinon.spy() ;
-      var error_handler = sinon.spy() ;
-
-      // Normal execution
-      openmdao.model.importFile("filepath.py", success_handler, error_handler) ;
-      assertEquals("command", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals(this.requests[0].requestBody, "command=from+filepath+import+*");
-      this.requests[0].respond(200, {"Content-Type": "application/json"}, '{"status" : "OK"}');
-
-      sinon.assert.calledOnce(success_handler);
-      sinon.assert.notCalled(error_handler);
-
-  },
-*/
-
 
   "test runModel": function () {
 
