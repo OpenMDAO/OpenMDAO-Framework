@@ -58,6 +58,7 @@ setup(name='openmdao.main',
       },
       entry_points = """
       [console_scripts]
+      idle=idlelib.PyShell:main
       openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
       update_libpath=openmdao.main.plugin:update_libpath
@@ -70,7 +71,7 @@ setup(name='openmdao.main',
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       
       [openmdao.driver]
-      openmdao.main.assembly.Run_Once = openmdao.main.assembly:Run_Once
+      openmdao.main.driver.Run_Once = openmdao.main.driver:Run_Once
       
       [openmdao.variable]
       openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
@@ -78,6 +79,12 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
       openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
       openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
+      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
+      openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List
+      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
+      openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
+      openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
+      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
       
       """,
     )

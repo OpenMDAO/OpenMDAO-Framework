@@ -235,11 +235,11 @@ Variable           Description                                  Units
 
 **References:**
 
-_`1`. Sitthiracha, Sitthichok, "An Analytical Model of Spark Ignition Engine for Performance Prediction,"
-Master's Thesis, King Mongkut's Institute of Technology North Bangkok, 2006.
+_`1`. Sitthiracha, S., "An Analytical Model of Spark Ignition Engine for Performance Prediction,"
+Master's Thesis, King Mongkut's Institute of Technology, North Bangkok, 2006.
 
-_`2`. Shikida, Takasuke, Yoshikatsu Nakamura, Tamio Nakakubo, and Hiroyuki Kawase, "Development of the High
-Speed 2ZZ-GE Engine," SAE World Congress, March 6-9 2000, SAE 2000-01-0671.
+_`2`. Shikida, T., Nakamura, Y., Nakakubo, T., and Kawase, H., "Development of the High
+Speed 2ZZ-GE Engine," SAE 2000-01-0671, *SAE World Congress,* 6-9 Mar. 2000.
 
   
 The Chassis Model

@@ -34,10 +34,10 @@ outputs, both of which will be mimicked by the MetaModel.
             self.f_x_sin = .5*sin(self.x)
             self.f_x_cos = .5*cos(self.x)
 
-This next section differs from the the previous example in that there are two surrogate models, 
-one specified for each of the outputs. Note that each of the outputs had been assigned 
-a specific surrogate model, a logistic regression for sin, and a Kriging Surrogate for cos. In this case, 
-no default was set at all. 
+This next section differs from the the previous example in that there are two surrogate models,  one
+specified for each of the outputs. Note that each of the outputs had been assigned  a specific
+surrogate model, a logistic regression for sin, and a Kriging Surrogate for cos. In this case,  no
+default was set at all. 
 
 The parameter `x` still needs to be added only once in this case, since the same input 
 is being evaluated for both outputs.
@@ -83,9 +83,9 @@ is being evaluated for both outputs.
 
         
 The iteration hierarchy is structurally the same as it would be with one output.  Even 
-though there's multiple surrogate models for multiple outputs, they are still contained 
+though there're multiple surrogate models for multiple outputs, they are still contained 
 within only one MetaModel component.  So once again there is the MetaModel component separately 
-added to each workflow, and the ``trig_calc`` component being added to the validation 
+added to each workflow and the ``trig_calc`` component being added to the validation 
 stage so that comparative values may be generated.
 
 

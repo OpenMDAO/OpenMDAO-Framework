@@ -14,7 +14,7 @@ EngineOptimization class, setting it as the top assembly.
     >>> prob
     <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
-The problem is set up like above. We could run it now, but first let's find out how
+The problem is set up as above. We could run it now, but first let's find out how
 the current design performs. We can do this by running the acceleration simulation driver once
 and printing the value of the acceleration time.
 
@@ -117,7 +117,7 @@ Try solving the same optimization problem using this objective.
         >>> prob.sim_EPA_highway.fuel_economy
         38.696...
 
-If we only care about optimizing the 0-60 acceleration time, we can be a little smarter with our
+If we care only about optimizing the 0-60 acceleration time, we can be a little smarter with our
 iteration hierarchy. In such a case, we don't need to run the EPA fuel economy simulations while
 we are optimizing, since their outputs won't be used until the conclusion of the optimization, when
 we would like to inspect them. We need a new iteration hierarchy in which we optimize the 
@@ -185,32 +185,40 @@ The code for this looks like this:
                 self.optimizer.add_parameter('vehicle.bore', 65., 100.)
                 
                 # Acceleration Sim setup
-                self.sim_acc.velocity_str = 'vehicle.velocity'
-                self.sim_acc.throttle_str = 'vehicle.throttle'
-                self.sim_acc.gear_str = 'vehicle.current_gear'
-                self.sim_acc.acceleration_str = 'vehicle.acceleration'
-                self.sim_acc.overspeed_str = 'vehicle.overspeed'
-                
+                self.sim_acc.add_parameter('vehicle.velocity', name='velocity',
+                                           low=0.0, high=150.0)
+                self.sim_acc.add_parameter('vehicle.throttle', name='throttle',
+                                           low=0.01, high=1.0)
+                self.sim_acc.add_parameter('vehicle.current_gear', name='gear',
+                                           low=0, high=5)
+                self.sim_acc.add_objective('vehicle.acceleration', name='acceleration')
+                self.sim_acc.add_objective('vehicle.overspeed', name='overspeed')
+        
                 # EPA City MPG Sim Setup
-                self.sim_EPA_city.velocity_str = 'vehicle.velocity'
-                self.sim_EPA_city.throttle_str = 'vehicle.throttle'
-                self.sim_EPA_city.gear_str = 'vehicle.current_gear'
-                self.sim_EPA_city.acceleration_str = 'vehicle.acceleration'
-                self.sim_EPA_city.fuel_burn_str = 'vehicle.fuel_burn'
-                self.sim_EPA_city.overspeed_str = 'vehicle.overspeed'
-                self.sim_EPA_city.underspeed_str = 'vehicle.underspeed'
+                self.sim_EPA_city.add_parameter('vehicle.velocity', name='velocity',
+                                                low=0.0, high=150.0)
+                self.sim_EPA_city.add_parameter('vehicle.throttle', name='throttle',
+                                                low=0.01, high=1.0)
+                self.sim_EPA_city.add_parameter('vehicle.current_gear', name='gear',
+                                                low=0, high=5)
+                self.sim_EPA_city.add_objective('vehicle.acceleration', name='acceleration')
+                self.sim_EPA_city.add_objective('vehicle.fuel_burn', name='fuel_burn')
+                self.sim_EPA_city.add_objective('vehicle.overspeed', name='overspeed')
+                self.sim_EPA_city.add_objective('vehicle.underspeed', name='underspeed')
                 self.sim_EPA_city.profilename = 'EPA-city.csv'
-                
+        
                 # EPA Highway MPG Sim Setup
-                self.sim_EPA_highway.velocity_str = 'vehicle.velocity'
-                self.sim_EPA_highway.throttle_str = 'vehicle.throttle'
-                self.sim_EPA_highway.gear_str = 'vehicle.current_gear'
-                self.sim_EPA_highway.acceleration_str = 'vehicle.acceleration'
-                self.sim_EPA_highway.fuel_burn_str = 'vehicle.fuel_burn'
-                self.sim_EPA_highway.overspeed_str = 'vehicle.overspeed'
-                self.sim_EPA_highway.underspeed_str = 'vehicle.underspeed'
-                self.sim_EPA_highway.profilename = 'EPA-highway.csv'        
-                
+                self.sim_EPA_highway.add_parameter('vehicle.velocity', name='velocity',
+                                                   low=0.0, high=150)
+                self.sim_EPA_highway.add_parameter('vehicle.throttle', name='throttle',
+                                                   low=0.01, high=1.0)
+                self.sim_EPA_highway.add_parameter('vehicle.current_gear', name='gear',
+                                                   low=0, high=5)
+                self.sim_EPA_highway.add_objective('vehicle.acceleration', name='acceleration')
+                self.sim_EPA_highway.add_objective('vehicle.fuel_burn', name='fuel_burn')
+                self.sim_EPA_highway.add_objective('vehicle.overspeed', name='overspeed')
+                self.sim_EPA_highway.add_objective('vehicle.underspeed', name='underspeed')
+                self.sim_EPA_highway.profilename = 'EPA-highway.csv'                
         if __name__ == "__main__":
         
             def prz(title):

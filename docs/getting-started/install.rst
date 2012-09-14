@@ -6,6 +6,11 @@
 Installation
 ============
 
+.. note:: On some Windows machines, during the installation process, you might get the error: "The requested
+	  operation requires elevation." This means that you need to run as an administrator during
+	  installation. Please follow this link for detailed instructions on solving this error: 
+	  http://techrena.net/fix-requested-operation-requires-elevation-error/.  
+
 To avoid version conflicts with system level Python packages, OpenMDAO is best installed using a
 bootstrap script that installs OpenMDAO in a *virtual* Python environment. This script is called
 ``go-openmdao.py``. 
@@ -14,7 +19,7 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 1. Download the installation script.
 
-   Go to the OpenMDAO `downloads <http://openmdao.org/downloads>`_ page and then click on the latest 
+   Go to the OpenMDAO `downloads <http://openmdao.org/downloads-2/recent/>`_ page and then click on the latest 
    ``go-openmdao.py`` script (listed first). You will see that earlier versions may also
    be downloaded.
 
@@ -43,10 +48,12 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 
    This script will check the version of Python you are running. Currently you
-   must be running version 2.6. After the script completes successfully, you
+   must be running at least version 2.6. After the script completes successfully, you
    will have installed OpenMDAO. There are just a couple more steps to follow
    before you can start using it.
    
+
+.. _`activate_env`:
 
 **Activate your virtual environment**
 
@@ -58,9 +65,8 @@ environment, giving you access to everything in OpenMDAO.
 
 Navigate into the folder that was just created by your install script.
 
-If you are on **Linux or Mac OS X,** you must be running bash to
-activate the virtual environment. If you are not running bash, start it up
-by typing:
+If you are on **Linux,** you must be running bash to
+activate the virtual environment. If you are not running bash, start it up by typing:
 
  :: 
 
@@ -84,8 +90,7 @@ If you are on **Windows,** type:
 **Run tests to verify valid install**
 
 OpenMDAO has a large test suite which allows you to check and make sure all of the functionality of OpenMDAO will work 
-on your system. You can run these tests yourself to double check your installation. It takes only a few 
-minutes to run them all. 
+on your system. You can run these tests yourself to double check your installation. 
 
 To run all tests, type the following:
 

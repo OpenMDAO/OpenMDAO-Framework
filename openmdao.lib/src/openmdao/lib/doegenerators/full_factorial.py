@@ -12,11 +12,11 @@ from itertools import product
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.numpy_fallback import linspace
 
-from enthought.traits.api import HasTraits
 from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.lib.datatypes.api import Int
+from openmdao.main.api import Container
 
-class FullFactorial(HasTraits):
+class FullFactorial(Container):
     """ DOEgenerator that performs a full-factorial Design of Experiments. Plugs
     into the DOEgenerator socket on a DOEdriver."""
     

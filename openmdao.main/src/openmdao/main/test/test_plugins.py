@@ -10,7 +10,8 @@ from subprocess import check_call, STDOUT
 
 from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, \
                                  plugin_build_docs, plugin_makedist, \
-                                 plugin_list, _plugin_docs, plugin_install
+                                 plugin_list, plugin_install, \
+                                 find_all_plugins, find_docs_url
 from openmdao.util.fileutil import find_files
 from openmdao.util.testutil import assert_raises
 
@@ -165,7 +166,7 @@ class PluginsTestCase(unittest.TestCase):
             argv = ['docs', 'foobar']
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
-            url = _plugin_docs(options.plugin_dist_name)
+            url = find_docs_url(options.plugin_dist_name)
             expected = os.path.join(self.tdir, 'foobar', 'src', 'foobar',
                                     'sphinx_build', 'html', 'index.html')
             self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
@@ -177,7 +178,7 @@ class PluginsTestCase(unittest.TestCase):
                 out.write('y\n')
             stdin = open('pip.in', 'r')
             stdout = open('pip.out', 'w')
-            # On EC2 Windows, 'pip' genreates an absurdly long temp directory
+            # On EC2 Windows, 'pip' generates an absurdly long temp directory
             # name, apparently to allow backing-out of the uninstall.
             # The name is so long Windows can't handle it. So we try to
             # avoid that by indirectly influencing mkdtemp().
@@ -384,14 +385,14 @@ class PluginsTestCase(unittest.TestCase):
         argv = ['docs', 'no-such-plugin']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
-        code = '_plugin_docs(options.plugin_dist_name)'
+        code = 'find_docs_url(options.plugin_dist_name)'
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       "Can't locate package/module 'no-such-plugin'")
 
         argv = ['docs', 'subprocess']
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
-        url = _plugin_docs(options.plugin_dist_name)
+        url = find_docs_url(options.plugin_dist_name)
         expected = os.path.join(os.path.dirname(sys.modules['subprocess'].__file__),
                                 'sphinx_build', 'html', 'index.html')
         self.assertEqual(url, expected)
@@ -404,6 +405,29 @@ class PluginsTestCase(unittest.TestCase):
         retval = plugin_install(parser, options, args)
         self.assertEqual(retval, -1)
 
+    def test_find_plugins(self):
+        self.maxDiff = None
+        with open(os.path.join(self.tdir, 'foo.py'), 'w') as f:
+            f.write("""
+from openmdao.main.api import Component, Container
+
+class MyComp(Component):
+    pass
+    
+class MyCont(Container):
+    pass
+            """)
+        expected = {
+            'openmdao.component': set(['foo.MyComp',
+                                       'openmdao.main.component.Component']),
+            'openmdao.container': set(['foo.MyCont',
+                                       'foo.MyComp',
+                                       'openmdao.main.component.Component',
+                                       'openmdao.main.container.Container']),
+        }
+        plugins = find_all_plugins(self.tdir)
+        self.assertEqual(expected.keys(), plugins.keys())
+        self.assertEqual(expected.values(), plugins.values())
 
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')

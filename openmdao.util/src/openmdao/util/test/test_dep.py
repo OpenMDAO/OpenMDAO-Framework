@@ -10,7 +10,7 @@ from openmdao.util.dep import PythonSourceFileAnalyser, PythonSourceTreeAnalyser
 
 class DepTestCase(unittest.TestCase):
 
-    def test_PythonSourceTreeAnalyser(self):
+    def setUp(self):
         try:
             import openmdao.main
             import openmdao.lib
@@ -18,14 +18,16 @@ class DepTestCase(unittest.TestCase):
             # don't perform this test if openmdao.main 
             # and openmdao.lib aren't present
             raise SkipTest("this test requires openmdao.main and openmdao.lib")
+        self.startdirs = [os.path.dirname(openmdao.main.__file__), 
+                          os.path.dirname(openmdao.lib.__file__)]
+        
+    def test_PythonSourceTreeAnalyser(self):
         
         def exclude_tests(pname):
             parts = pname.split(os.sep)
             return 'test' in parts
         
-        startdirs = [os.path.dirname(openmdao.main.__file__), 
-                     os.path.dirname(openmdao.lib.__file__)]
-        psta = PythonSourceTreeAnalyser(startdirs, exclude_tests)
+        psta = PythonSourceTreeAnalyser(self.startdirs, exclude_tests)
         
         self.assertTrue('openmdao.main.component.Component' in 
                         psta.graph['openmdao.main.container.Container'])

@@ -7,30 +7,35 @@ __all__ = ["Array"]
 
 import logging
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
 from openmdao.main.index import get_indexed_value
+from openmdao.main.variable import gui_excludes
 
-# pylint: disable-msg=E0611,F0401
 try:
-    from numpy import array, ndarray, zeros
+    from numpy import array, ndarray
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
-    from openmdao.main.numpy_fallback import array, ndarray, zeros
+    from openmdao.main.numpy_fallback import array, ndarray
     from openmdao.main.variable import Variable
     
     class TraitArray(Variable):
+        '''Simple fallback array class for when numpy is not available'''
+        
         def __init__(self, **metadata):
             self._shape = metadata.get('shape')
             self._dtype = metadata.get('dtype')
             super(TraitArray, self).__init__(**metadata)
         
         def validate(self, obj, name, value):
+            ''' Simple validation'''
             try:
                 it = iter(value)
             except:
-                raise ValueError("attempted to assign non-iterable value to an array")
+                msg = "attempted to assign non-iterable value to an array"
+                raise ValueError(msg)
             
             # FIXME: improve type checking
             if self._dtype:
@@ -93,8 +98,8 @@ class Array(TraitArray):
                                  "the shape attribute.")
             for i, sh in enumerate(shape):
                 if sh is not None and sh != default_value.shape[i]:
-                    raise ValueError("Shape of the default value does not match "
-                                     "the shape attribute.")
+                    raise ValueError("Shape of the default value does not "
+                                     "match the shape attribute.")
             
         super(Array, self).__init__(dtype=dtype, value=default_value,
                                     **metadata)
@@ -110,7 +115,8 @@ class Array(TraitArray):
         if isinstance(value, AttrWrapper):
             if self.units:
                 valunits = value.metadata.get('units')
-                if valunits and isinstance(valunits, basestring) and self.units != valunits:
+                if valunits and isinstance(valunits, basestring) and \
+                   self.units != valunits:
                     return self._validate_with_metadata(obj, name, 
                                                         value.value, 
                                                         valunits)
@@ -186,6 +192,35 @@ class Array(TraitArray):
         except Exception:
             self.error(obj, name, value)
 
+    def get_attribute(self, name, value, trait, meta):
+        """Return the attribute dictionary for this variable. This dict is
+        used by the GUI to populate the edit UI. 
+        
+        name: str
+          Name of variable
+          
+        value: object
+          The value of the variable
+          
+        value: object
+          Value of variable
+          
+        meta: dict
+          Dictionary of metadata for this variable
+        """
+        
+        attr = {}
+        
+        attr['name'] = name
+        attr['type'] = "ndarray"
+        attr['value'] = str(value)
+        
+        for field in meta:
+            if field not in gui_excludes:
+                attr[field] = meta[field]
+        
+        return attr, None
+
             
 # register a flattener for Cases
 from openmdao.main.case import flatteners
@@ -194,7 +229,7 @@ def _flatten_array(name, arr):
     ret = []
     
     def _recurse_flatten(ret, name, idx, arr):
-        for i,entry in enumerate(arr):
+        for i, entry in enumerate(arr):
             new_idx = idx+[i]
             if isinstance(entry, (ndarray, list)):
                 _recurse_flatten(ret, name, new_idx, entry)

@@ -11,9 +11,8 @@ try:
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
-from enthought.traits.api import HasTraits
-
 from openmdao.lib.datatypes.api import Float, Bool
+from openmdao.main.api import Container
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.util.decorators import stub_if_missing_deps
 
@@ -21,7 +20,7 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 @stub_if_missing_deps('numpy', 'scipy')
-class LogisticRegression(HasTraits): 
+class LogisticRegression(Container): 
     implements(ISurrogate)
     
     alpha = Float(.1,low=0,iotype='in',desc='L2 regularization strength')

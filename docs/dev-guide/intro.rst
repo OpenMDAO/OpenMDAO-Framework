@@ -15,18 +15,18 @@ level of your OpenMDAO source repository.
 System Requirements
 ===================
 
-Working with OpenMDAO as a developer has some system requirements in addition to those mentioned in
-the :ref:`System-Requirements` section under *Getting Started.*  These requirements are described
-below.
+Working with OpenMDAO as a developer means there are some additional system requirements besides
+those mentioned in the :ref:`User Guide <System-Requirements>`. These requirements are
+described below.
 
 
 **Git**
   We use Git for version control.  You'll need it to access the OpenMDAO
   source repository.  GitHub, where our source repository is stored, has
-  excellent documentation describing how to install Git and how to get
+  excellent documentation describing how to install Git and how to become
   familiar with Git and GitHub.  You can find it `here`__.
     
-.. __: http://help.github.com
+.. __: https://help.github.com
 
 **C/C++ and Fortran Compilers**
   Certain packages used in OpenMDAO contain Python extensions, meaning that they
@@ -110,10 +110,10 @@ for information on configuring proxy settings.
 The source repository for the OpenMDAO project is available on
 :term:`GitHub`.  There is a wealth of good documentation available online 
 about :term:`Git` and Github itself. The 
-`GitHub help page <http://help.github.com/>`_ is a good place to start. If you're a 
+`GitHub help page <https://help.github.com/>`_ is a good place to start. If you're a 
 Windows user, make sure to read the details about using Git Bash on the `Windows 
-specific installation instructions <http://help.github.com/win-set-up-git/>`_. 
-The `Pro Git book <http://progit.org/book/>`_ is also excellent.  It's very
+specific installation instructions <https://help.github.com/articles/set-up-git>`_. 
+The `Pro Git book <http://git-scm.com/book>`_ is also excellent.  It's very
 important to take a look at these, because Git differs from other version
 control systems in some significant ways. 
 
@@ -138,7 +138,7 @@ using Git and GitHub.
 
    Version Control Process
 
-From the OpenMDAO repository on GitHub, you create a personal "fork" of the 
+From the OpenMDAO repository on GitHub, you create a personal `fork` of the 
 project, so there is now a repository that you can write to.  In addition to
 creating a fork, you must also create a clone of the OpenMDAO repository on 
 your machine.  This is the repository that you will be working directly off 
@@ -156,7 +156,7 @@ Git repositories, you should follow the instructions `here`__ to set your userna
 and API token. This way, your contact information will be included whenever you
 :term:`commit` to a :term:`repository` on that machine.
 
-.. __: http://help.github.com/set-your-user-name-email-and-github-token
+.. __: https://help.github.com/articles/setting-your-email-in-git
 
 
 .. index:: repository

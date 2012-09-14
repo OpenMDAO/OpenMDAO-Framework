@@ -272,7 +272,7 @@ class TestCase(unittest.TestCase):
         try:
             model.driver.distribution_generator.form = "INVALID_FORM"
         except ValueError, err:
-            msg = "Variable 'form' must be in ['CENTRAL', 'FORWARD', 'BACKWARD'], " \
+            msg = ": Variable 'form' must be in ['CENTRAL', 'FORWARD', 'BACKWARD'], " \
                   "but a value of INVALID_FORM <type 'str'> was specified."
             self.assertEqual(str(err), msg)
         else:

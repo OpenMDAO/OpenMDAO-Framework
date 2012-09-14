@@ -18,7 +18,7 @@ import pkg_resources
 import sys
 import zipfile
 
-from openmdao.util.log import NullLogger
+from openmdao.util.log import NullLogger, LOG_DEBUG2
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE #, SAVE_YAML, SAVE_LIBYAML
 
@@ -107,12 +107,12 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
 def _load_from_distribution(dist, entry_group, entry_name, instance_name,
                             logger, observer):
     """ Invoke entry point in distribution and return result. """
-    logger.debug('    entry points:')
+    logger.log(LOG_DEBUG2, '    entry points:')
     maps = dist.get_entry_map()
     for group in sorted(maps.keys()):
-        logger.debug('        group %s:' % group)
+        logger.log(LOG_DEBUG2, '        group %s:' % group)
         for entry_pt in maps[group].values():
-            logger.debug('            %s', entry_pt)
+            logger.log(LOG_DEBUG2, '            %s', entry_pt)
 
     info = dist.get_entry_info(entry_group, entry_name)
     if info is None:
@@ -121,7 +121,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         raise RuntimeError(msg)
 
     if info.module_name in sys.modules:
-        logger.debug("    removing existing '%s' in sys.modules",
+        logger.log(LOG_DEBUG2, "    removing existing '%s' in sys.modules",
                      info.module_name)
         del sys.modules[info.module_name]
 
@@ -161,7 +161,7 @@ def _dist_from_eggfile(filename, logger, observer):
     archive = zipfile.ZipFile(filename, 'r', allowZip64=True)
     try:
         name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
-        logger.debug("    name '%s'", name)
+        logger.log(LOG_DEBUG2, "    name '%s'", name)
 
         if observer.observer is not None:
             # Collect totals.
@@ -209,13 +209,13 @@ def _dist_from_eggfile(filename, logger, observer):
                                                     os.path.basename(filename),
                                                     provider)
 
-    logger.debug('    project_name: %s', dist.project_name)
-    logger.debug('    version: %s', dist.version)
-    logger.debug('    py_version: %s', dist.py_version)
-    logger.debug('    platform: %s', dist.platform)
-    logger.debug('    requires:')
+    logger.log(LOG_DEBUG2, '    project_name: %s', dist.project_name)
+    logger.log(LOG_DEBUG2, '    version: %s', dist.version)
+    logger.log(LOG_DEBUG2, '    py_version: %s', dist.py_version)
+    logger.log(LOG_DEBUG2, '    platform: %s', dist.platform)
+    logger.log(LOG_DEBUG2, '    requires:')
     for req in dist.requires():
-        logger.debug('        %s', req)
+        logger.log(LOG_DEBUG2, '        %s', req)
 
     # If any module didn't have a distribution, check that we can import it.
     if provider.has_metadata('openmdao_orphans.txt'):
@@ -223,7 +223,7 @@ def _dist_from_eggfile(filename, logger, observer):
         orphan_names = []
         for mod in provider.get_metadata_lines('openmdao_orphans.txt'):
             mod = mod.strip()
-            logger.debug("    checking for 'orphan' module: %s", mod)
+            logger.log(LOG_DEBUG2, "    checking for 'orphan' module: %s", mod)
             try:
                 __import__(mod)
             # Difficult to generate a distribution that can't be reloaded.
@@ -262,7 +262,7 @@ def check_requirements(required, logger=None, indent_level=0):
         indent  = '    ' * level
         indent2 = '    ' * (level + 1)
         for req in required:
-            logger.debug('%schecking %s', indent, req)
+            logger.log(LOG_DEBUG2, '%schecking %s', indent, req)
             dist = None
             try:
                 dist = working_set.find(req)
@@ -278,8 +278,8 @@ def check_requirements(required, logger=None, indent_level=0):
                     logger.debug('%sno distribution found', indent2)
                     not_avail.append(req)
                 else: 
-                    logger.debug('%s%s %s', indent2,
-                                 dist.project_name, dist.version)
+                    logger.log(LOG_DEBUG2, '%s%s %s', indent2,
+                               dist.project_name, dist.version)
                     if not dist in visited:
                         visited.add(dist)
                         _recursive_check(dist.requires(), logger, level+1,

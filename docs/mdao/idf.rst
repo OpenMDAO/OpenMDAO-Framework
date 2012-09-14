@@ -57,7 +57,7 @@ are instantiated and the workflow is defined.
                 # Driver process definition
                 self.driver.workflow.add(['dis1', 'dis2'])
 
-That's all it takes to setup the workflow for IDF. All that is left to do is set up the
+That's all it takes to set up the workflow for IDF. All that is left to do is set up the
 optimizer.  In the code below, pay attention to how we handle the global design variables ``z1`` and
 ``z2``. We set them up the same way we did for the MDF architecture. However, unlike the MDF, the
 coupling variables are also included as optimizer  parameters.
@@ -89,24 +89,23 @@ coupling variables are also included as optimizer  parameters.
         self.driver.iprint = 0
         
 
-Technically, IDF requires the use of equality constraints to enforce coupling between the disciplines. 
-Not all optimizers support explicit equality constraints, so we have to fall back on a
-trick where we replace it with an equivalent pair of inequality constraints.
-For example, if we want to constrain ``x=2``, we could constraint ``x<=2`` and ``x>=2`` and
-let the optimizer converge to a solution where both constraints are active. Or you could condence 
-that down to a single constraint of ``(x-2)**2<=0``. 
-SLSQP is a sequential quadratic programming algorithm that actually does support equality constraints, 
-but we've left the inequality forms in there to make it easier to try other optimziers if you want to. 
+Technically, IDF requires the use of equality constraints to enforce coupling between the
+disciplines.  Not all optimizers support explicit equality constraints, so we have to fall back on a
+trick where we replace it with an equivalent pair of inequality constraints. For example, if we want
+to constrain ``x=2``, we could constraint ``x<=2`` and ``x>=2`` and let the optimizer converge to a
+solution where both constraints are active. Or we could condense  that to a single constraint of
+``(x-2)**2<=0``.  SLSQP is a sequential quadratic programming algorithm that actually does support
+equality constraints,  but we've left the inequality forms in there to make it easier to try other
+optimziers if you want to. 
 
 By the way, you might consider trying a fancier solution such as constraining ``abs(dis2.y1-dis1.y1)<=0``. 
 Be careful though, because this nonlinear constraint has a discontinuous slope which can make it 
 very hard for some optimizers to converge. Use the squared form of the constraint, as we did in our 
 sample code, instead. 
 
-When you put it all together, you get 
-:download:`sellar_IDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_IDF.py>`. 
-Once again, we added a small amount of code at the end to execute and then print the results of the IDF
-optimization. 
+When we put it all together, we get :download:`sellar_IDF.py
+</../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_IDF.py>`.  Once again, we added a
+small amount of code at the end to execute and then print the results of the IDF optimization. 
 
 .. testcode:: IDF_full
 

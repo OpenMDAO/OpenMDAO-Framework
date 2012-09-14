@@ -21,7 +21,8 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.util.decorators import add_delegate
-from openmdao.main.interfaces import IHasParameters, IHasObjectives, IHasConstraints, implements
+from openmdao.main.interfaces import IHasParameters, IHasObjectives, \
+                                     IHasConstraints, implements
 
 @add_delegate(HasParameters, HasObjectives, HasConstraints)
 class SensitivityDriver(DriverUsesDerivatives):
@@ -66,9 +67,7 @@ class SensitivityDriver(DriverUsesDerivatives):
         
         self._check()
         
-        
         # Calculate gradient of the workflow
-        self.calc_derivatives(first=True)
         self.ffd_order = 1
         self.differentiator.calc_gradient()
         self.ffd_order = 0

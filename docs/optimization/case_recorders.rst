@@ -22,31 +22,31 @@ Name                  Output Type
 
 The recorders are interchangeable, so you can use any of them in a slot that can accept them. All
 drivers contain a slot that can accept a list of case recorders. Why a list? It's so you can have the same
-case data recorded in multiple ways if you want to. For example, you could use the ``DumpCaseRecorder`` to 
-output data to the screen and use the ``DBCaseRecorder`` to save the same data to a database. 
+case data recorded in multiple ways if you want to. For example, you could use the DumpCaseRecorder to 
+output data to the screen and use the DBCaseRecorder to save the same data to a database. 
 
 Each driver determines what it needs to write to the recorders in its list. 
-In the previous example, the ``DOEdriver`` saves each point in the DOE as a
-case. However, a single-objective optimizer, such as the ``SLSQPdriver``, saves the state of the model
+In the previous example, the DOEdriver saves each point in the DOE as a
+case. However, a single-objective optimizer, such as the SLSQPdriver, saves the state of the model
 at each iteration in the optimization so that the convergence history can be observed. The
 state of the model includes the parameters, objective, constraints, and any other data that
 you choose to include by listing them in the ``printvars`` variable.
 
-The ``CSVCaseRecorder`` outputs the selected variables into a file in the csv
-(Comma Separated Value) format. The ``DBCaseRecorder`` stores the selected
+The CSVCaseRecorder outputs the selected variables into a file in the csv
+(Comma Separated Value) format. The DBCaseRecorder stores the selected
 variables in an SQLite database, which can be stored in memory or on disc as
-a binary file. The ``DumpCaseRecorder`` is used to output the selected
+a binary file. The DumpCaseRecorder is used to output the selected
 variables into a file-like object in a human-readable format. The default
 object is ``sys.stdout``, which redirects the output to STDOUT. It can also take
-a filename as an argument. Finally, the ``ListCaseRecorder`` stores the cases
-in a Python list. Of these recorders, the ``CSVCaseRecorder`` is the most useful
+a filename as an argument. Finally, the ListCaseRecorder stores the cases
+in a Python list. Of these recorders, the CSVCaseRecorder is the most useful
 for passing data to other applications, such as an external post-processing
-tool. The ``DBCaseRecorder`` is the most useful for saving data for later use.
+tool. The DBCaseRecorder is the most useful for saving data for later use.
 
-At the end of the top-level assembly's ``run()`` all case recorders are closed.
+At the end of the top-level assembly's ``run()``, all case recorders are closed.
 Each type of recorder defines its own implementation of ``close()``,
 but the general idea is to specify that the recording process is complete.
-For example, the ``CSVCaseRecorder`` will close the file being written so that
+For example, the CSVCaseRecorder will close the file being written so that
 other applications can use it. Note that in some cases you cannot record to
 a closed recorder.
 
@@ -57,13 +57,13 @@ SQLite database for future use. The code for this should look like:
 
 .. literalinclude:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
-Here, we set ``opt_problem.driver.recorders`` to be a list that contains the csv and db case recorders. The
-``CSVCaseRecorder`` takes a filename as an argument, as does the ``DBCaseRecorder``. These files will be
-written in the directory where you execute this Python file.
+Here, we set ``opt_problem.driver.recorders`` to be a list that contains the csv and db case
+recorders. The CSVCaseRecorder takes a filename as an argument, as does the DBCaseRecorder.
+These files will be written in the directory where you execute this Python file.
 
-OpenMDAO has a data structure for storing case information. This structure includes the variable names, their status
-as an input or output, and a number of other metadata fields. Run the above code, and inspect the resulting file
-``converge.csv``.
+OpenMDAO has a data structure for storing case information. This structure includes the variable
+names, their status as an input or output, and a number of other metadata fields. Run the above
+code, and inspect the resulting file ``converge.csv``.
 
 ::
 
@@ -74,21 +74,23 @@ as an input or output, and a number of other metadata fields. Run the above code
 "4","",-7.83333333577,7.16666667003,"",-27.0833333304,5.79672487788e-09,"","","","",""
 
 
-This file should be readable into an application that accepts a csv input file. The first line is a header that contains
-the variable names for the values that are printed. Notice that the objective and constraints are printed for an optimizer
-driver. The first column is a case label, which contains the iteration count. Columns with a
-section header (``"/INPUTS", "/OUTPUTS", "/METADATA"``) do not contain any data. The final columns in the file contain 
-some metadata associated with the case. None of these are set by ``SLSQPdriver.`` Note that in OpenMDAO's flavor of
-csv, string data will always be enclosed in double quotes.
+This file should be readable into an application that accepts a csv input file. The first line is a
+header that contains the variable names for the values that are printed. Notice that the objective
+and constraints are printed for an optimizer driver. The first column is a case label, which
+contains the iteration count. Columns with a section header (``"/INPUTS", "/OUTPUTS", "/METADATA"``)
+do not contain any data. The final columns in the file contain  some metadata associated with the
+case. None of these are set by SLSQPdriver. Note that in OpenMDAO's flavor of csv, string data
+will always be enclosed in double quotes.
 
-The ``CSVCaseRecorder`` supports simple data types -- integers, floats, and strings. It also supports single elements of an array.
-The chosen element becomes a column in the csv file. Some of the more complicated data types -- dictionaries, lists, multi-dimensional
-arrays, custom data objects -- are not yet supported by the ``CSVCaseRecorder``, and it is not clear how some of these could best be
-represented in a comma-separated format. However, the other case recorders should support every type of variable, provided that
-it can be serialized.
+The CSVCaseRecorder supports simple data types -- integers, floats, and strings. It also supports
+single elements of an array. The chosen element becomes a column in the csv file. Some of the more
+complicated data types -- dictionaries, lists, multi-dimensional arrays, custom data objects -- are
+not yet supported by the CSVCaseRecorder, and it is not clear how some of these could best be
+represented in a comma-separated format. However, the other case recorders should support every type
+of variable, provided that it can be serialized.
 
-The ``DumpCaseRecorder`` is generally used to write readable text to a
-file or to STDOUT. Let's try using a ``DumpCaseRecorder`` to output a history
+The DumpCaseRecorder is generally used to write readable text to a
+file or to STDOUT. Let's try using a DumpCaseRecorder to output a history
 of our parameters, constraints, and objectives to a file named ``'data.txt'``.
 
 ::
@@ -160,7 +162,7 @@ You can also use partial wildcard matches and include multiple wildcards in the
       opt_problem.driver.printvars = ['comp1.*', 'comp2.*', *error*]
 
 are possible. This will return a set of cases with all variables from ``comp1,
-comp2`` as well as any variable with ```"error"`` in its name.
+comp2`` as well as any variable with "error" in its name.
 
 The wildcard "?" is also supported for matching single characters, so you could
 rewrite the previous line like this:

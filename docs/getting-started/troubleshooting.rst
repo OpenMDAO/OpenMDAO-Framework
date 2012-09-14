@@ -10,10 +10,10 @@ Some users have had issues installing OpenMDAO under certain circumstances. In t
 the most common installation pitfalls.  We'll also discuss what you can do to receive
 assistance when faced with an installation problem or error message that you don't understand.
 
-Forums
+Forum
 ------
 
-The OpenMDAO Open Source Questions and Answers (OSQA) Forum (http://openmdao.org/forum) is the first
+The OpenMDAO Open Source Question and Answer (OSQA) Forum (http://openmdao.org/forum) is the first
 place that you should go to find an answer to your question. Search this forum before asking a
 question or commenting on existing questions (e.g., "I have this problem, too!"). If a question is
 asked just once, it's probably unique. Remember to follow forum etiquette -- upvote and downvote
@@ -52,7 +52,7 @@ of the environment will expose obvious path problems that can expedite the troub
 
 At times, a problem will not have an obvious fix, and you might want to get help from the OpenMDAO
 developers. The first step, as discussed above, should be to post your question in the OpenMDAO
-forums. Posting in the forums makes sure that the answers are archived for others who have the same
+forum. Posting in the forum makes sure that the answers are archived for others who have the same
 problem. If the problem can't be solved easily though, the OpenMDAO developers might request more
 detailed information from you. In these cases you will need to capture the output of an attempted
 installation, a test run, or an envdump (or more than one of these events) and send the full
@@ -64,7 +64,7 @@ When directing standard output (I/O stream 1) and standard error (I/O stream 2) 
 
       command 1> filename 2>&1
 
-(Where `command` is something like ``python envirodump.py`` or ``openmdao test``, and where `filename` is something
+(Where ``command`` is something like ``python envirodump.py`` or ``openmdao test``, and where ``filename`` is something
 like ``my_envdump.txt`` or ``my_testoutput.out``.)
 
 Once the outputs have been captured into properly named files, please email the files to the OpenMDAO development 
@@ -75,7 +75,7 @@ Common Install Problems
 -----------------------
 
 * In general, OpenMDAO supports the specified versions of Python found at ``python.org``. At this time we do not officially
-  support alternate Python builds, such as Enthought, Active State Python or Python(x,y), although some may
+  support alternate Python builds, such as Enthought, ActiveState Python or Python(x,y), although some may
   work with OpenMDAO.  
 
 * OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the incorrect
@@ -97,7 +97,7 @@ Common Install Problems
 
 * If you have multiple versions of Python installed on your machine, then make sure that the version 
   that's being run when you type ``python`` is an OpenMDAO-compatible version.  Otherwise, you need 
-  to specify the Python version in the command line, e.g., ``python2.6 go-openmdao.py``.
+  to specify the Python version in the command line, e.g., ``python2.7 go-openmdao.py``.
 
 * If you forget to deactivate the virtual environment when finished, and the virtualenv gets changed, you'll
   encounter problems. You'll have to deactivate the virtualenv, change it, rebuild, and then reactivate it.
@@ -113,7 +113,7 @@ Common Install Problems
 **Mac OS X Specific**
 
 * Installing the proper version of XCode and the proper combination of C and Fortran compilers is the most
-  challenging thing to get OpenMDAO running with Leopard, Snow Leopard and Lion.  See the :ref:`System-Requirements` for
+  challenging thing to get OpenMDAO running with Leopard, Snow Leopard, and Lion.  See the :ref:`System-Requirements` for
   more details on getting this correct.
 
 * When the system is trying to use g77 instead of gfortran: If you have g77 installed and you're seeing errors like ``ld: library not found

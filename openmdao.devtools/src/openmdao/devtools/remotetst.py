@@ -130,8 +130,12 @@ def test_branch(parser, options, args=None):
         print "\nfilename '%s' must specify a tar file or git repository" % fname
         sys.exit(-1)
         
+    testargs  = '-v ' if options.verbose else ''
+    testargs += '--skip-gui ' if options.skip_gui else ''
+    testargs += options.testargs
+
     funct_kwargs = { 'keep': options.keep,
-                     'testargs': options.testargs,
+                     'testargs': testargs,
                      'fname': fname,
                      'remotedir': get_tmp_user_dir(),
                      'branch': options.branch,

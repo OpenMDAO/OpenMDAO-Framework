@@ -46,7 +46,7 @@ import types
 
 from zope.interface.interface import InterfaceClass
 
-from openmdao.util.log import NullLogger
+from openmdao.util.log import NullLogger, LOG_DEBUG2
 from openmdao.util import eggobserver, eggwriter
 
 # Save formats.
@@ -212,14 +212,14 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             main_mod = sys.modules['__main__'].__file__
             local_modules.add(os.path.abspath(main_mod))
 
-        logger.debug('    py_dir: %s', py_dir)
-        logger.debug('    src_dir: %s', src_dir)
-        logger.debug('    local_modules:')
+        logger.log(LOG_DEBUG2, '    py_dir: %s', py_dir)
+        logger.log(LOG_DEBUG2, '    src_dir: %s', src_dir)
+        logger.log(LOG_DEBUG2, '    local_modules:')
         for module in sorted(local_modules):
             mod = module
             if mod.startswith(py_dir):
                 mod = mod[len(py_dir)+1:]
-            logger.debug('        %s', mod)
+            logger.log(LOG_DEBUG2, '        %s', mod)
 
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
@@ -540,7 +540,7 @@ def _get_distributions(objs, py_dir, logger, observer):
         try:
             path = os.path.realpath(sys.modules[name].__file__)
         except AttributeError:
-            logger.debug('    module %s has no __file__', name)
+            logger.log(LOG_DEBUG2, '    module %s has no __file__', name)
             continue
 
         if sys.platform == 'win32':  # pragma no cover
@@ -602,7 +602,7 @@ def _get_distributions(objs, py_dir, logger, observer):
                         finder_info.append((name, filename))
                     _DistCache.record(path, finder_info)
             else:
-                logger.debug("    reusing analysis of '%s'", path)
+                logger.log(LOG_DEBUG2, "    reusing analysis of '%s'", path)
 
             if finder_info:
                 _process_found_modules(py_dir, finder_info, modules,
@@ -610,9 +610,9 @@ def _get_distributions(objs, py_dir, logger, observer):
                                        orphans, not_found, logger)
     _DistCache.save()
     distributions = sorted(distributions, key=lambda dist: dist.project_name)
-    logger.debug('    required distributions:')
+    logger.log(LOG_DEBUG2, '    required distributions:')
     for dist in distributions:
-        logger.debug('        %s %s', dist.project_name, dist.version)
+        logger.log(LOG_DEBUG2, '        %s %s', dist.project_name, dist.version)
     return (distributions, local_modules, orphans)
 
 _get_distributions.excludes = None  # Modules to exclude from analysis.
@@ -670,13 +670,13 @@ def _get_standard_modules():
 
 def _process_egg(path, distributions, prefixes, logger):
     """ Update distributions and prefixes based on egg data. """
-    logger.debug("    processing '%s'", path)
+    logger.log(LOG_DEBUG2, "    processing '%s'", path)
     dist = pkg_resources.Distribution.from_filename(path)
     distributions.add(dist)
     prefixes.add(path)
 
     for req in dist.requires():
-        logger.debug("    requires '%s'", req)
+        logger.log(LOG_DEBUG2, "    requires '%s'", req)
         dep = pkg_resources.get_distribution(req, logger)
         distributions.add(dep)
         loc = dep.location
