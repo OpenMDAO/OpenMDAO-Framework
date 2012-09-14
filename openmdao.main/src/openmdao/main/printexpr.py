@@ -88,7 +88,7 @@ def _pred_cmp(op1, op2):
     return _op_preds[op1.__class__] - _op_preds[op2.__class__]
 
 class ExprPrinter(ast.NodeVisitor):
-    """A NodeVisitor that gets the python text of an expression or assignment
+    """A NodeVisitor that gets the Python text of an expression or assignment
     statement defined by an AST.
     """
     def __init__(self):

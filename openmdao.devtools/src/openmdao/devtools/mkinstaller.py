@@ -139,8 +139,8 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs', 
                       help="don't check for any prerequisites, e.g., numpy or scipy")
-    parser.add_option("--gui", action="store_true", dest='gui', 
-                      help="install the openmdao graphical user interface and its dependencies")
+    parser.add_option("--nogui", action="store_false", dest='gui', default=True,
+                      help="do not install the openmdao graphical user interface and its dependencies")
     parser.add_option("-f", "--findlinks", action="store", type="string", 
                       dest="findlinks",
                       help="default URL where openmdao packages and dependencies are searched for first (before PyPI)")
@@ -255,8 +255,8 @@ def after_install(options, home_dir):
         failures = []
         if options.gui:
             allreqs = allreqs + guireqs
-            # Only linux needs the modules for doing the GUI unit testing at this time
-            if sys.platform.startswith( "linux" ):
+            # No GUI unit or functional testing on Windows at this time.
+            if sys.platform != 'win32':
                 allreqs = allreqs + guitestreqs 
             
         for req in allreqs:
@@ -314,7 +314,8 @@ def after_install(options, home_dir):
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
     guitest_dists = working_set.resolve([Requirement.parse('openmdao.gui[jsTest]')])
-    guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes
+    guitest_dists.extend(working_set.resolve([Requirement.parse('openmdao.gui[functionalTest]')]))
+    guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes-guinames
     
     try:
         setupdoc_dist = working_set.resolve([Requirement.parse('setupdocs')])[0]

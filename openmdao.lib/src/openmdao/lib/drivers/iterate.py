@@ -19,7 +19,8 @@ from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
-from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, implements
+from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
+                                     ISolver, implements
 
 @stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasEqConstraints)
@@ -29,7 +30,7 @@ class FixedPointIterator(Driver):
     change and number of iterations are used as termination criterea. This type
     of iteration is also known as Gauss-Seidel."""
     
-    implements(IHasParameters, IHasEqConstraints)
+    implements(IHasParameters, IHasEqConstraints, ISolver)
 
     # pylint: disable-msg=E1101
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
@@ -147,7 +148,7 @@ class IterateUntil(Driver):
     
     def start_iteration(self):
         """ Code executed before the iteration """
-        self.iterations = 0
+        self.iteration = 0
     
     def continue_iteration(self): 
         
@@ -159,6 +160,7 @@ class IterateUntil(Driver):
 
         if self.should_stop():
             return False
+        
         if self.iteration < self.max_iterations: 
             self.iteration += 1
             return True

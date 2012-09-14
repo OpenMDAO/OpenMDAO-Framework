@@ -1,84 +1,75 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.SlotsPane = function(elm,model,pathname,name,editable) {
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     // initialize private variables
     var self = this,
         figures = {},
-        slotsID = "#"+pathname.replace(/\./g,'-')+"-slots",
-        slotsCSS = 'overflow:auto;',
-        slotsDiv = jQuery('<div id='+slotsID+' style="'+slotsCSS+'">').appendTo(elm),
-        slots = new draw2d.Workflow(slotsID);
-        
+        slotsID = pathname.replace(/\./g,'-')+"-slots",
+        slotsDiv = jQuery('<div style="position:relative; background-color:black;">')
+            .appendTo(elm);
+
     self.pathname = pathname;
-    
-    slotsDiv.css({'background':'gray'});
-    //slots.setBackgroundImage( "/static/images/grid_10.png", true);
-        
-    // make the slots pane droppable
-    slotsDiv.droppable ({
-        accept: '.objtype',
-        drop: function(ev,ui) { 
-            // get the object that was dropped and where it was dropped
-            var droppedObject = jQuery(ui.draggable).clone(),
-                droppedName = droppedObject.text(),
-                droppedPath = droppedObject.attr("path"),
-                off = slotsDiv.parent().offset(),
-                x = Math.round(ui.offset.left - off.left),
-                y = Math.round(ui.offset.top - off.top);
-            var elem = slotsDiv[0];
-            var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
-            debug.info(droppedName,'dropped on slots:',self.pathname,'z-index',slotsDiv.css('z-index'),'zIndex',slotsDiv.css('zIndex'));
-            if (droppedObject.hasClass('objtype')) {
-                openmdao.Util.promptForValue('Specify a name for the new '+droppedName,function(name) {
-                    model.addComponent(droppedPath,name,self.pathname)
-                })
-			}
-            else if (droppedObject.hasClass('obj')) {
-				var cmd = self.pathname+'='+droppedPath;
-				debug.info('SlotsPane:',cmd);
-				model.issueCommand(cmd);
-            };
-        }
-    });
-    
+
+    elm.css({'overflow':'auto'});
+
     /** update slots by recreating figures from JSON slots data
      *  TODO: prob just want to iterate through & update existing figures
      */
     function updateFigures(json) {
         jQuery.each(json, function(idx,slot) {
-            var name = slot['name'],
-                type = slot['klass'],
-                filled = slot['filled'],
-                fig;
-                
-            if (self.pathname) {
-                fig = new openmdao.SlotFigure(model,self.pathname+'.'+name,type,filled);
+            if (figures[slot.name]) {
+                // update existing slot figure
+                figures[slot.name].setState(slot.filled);
             }
             else {
-                fig = new openmdao.SlotFigure(model,name,type,filled);
+                // create a new slot figure
+                var fig = openmdao.SlotFigure(model, pathname+'.'+slot.name, slot),
+                    figMenu = fig.getContextMenu();
+                figures[slot.name] = fig;
+                slotsDiv.append(fig);
+                ContextMenu.set(figMenu.attr('id'), fig.attr('id'));
             }
-                    
-            fig.setTitle(name)
-            figures[name] = fig
-            fig.setContent('<center>(('+type+'))'+'</center>')
-            // TODO: flexible grid layout (adjusting for size)
-            var count = Object.keys(figures).length,
-                x = (count-1)*(fig.getWidth()+20)  + 20,
-                y = 20;
-            //debug.info('count=',count,'x=',x,'y=',y)
-            slots.addFigure(fig,x,y)            
-        })
-
+        });
     }
-            
+
+    // this is just to prevent drops from falling thru to underlying panes
+    elm.droppable ({
+        accept: '.objtype',
+        out: function(ev,ui) {
+            openmdao.drag_and_drop_manager.draggableOut(elm);
+        },
+        over: function(ev,ui) {
+            openmdao.drag_and_drop_manager.draggableOver(elm);
+        },
+        drop: function(ev,ui) {
+            /* divs could be in front of divs and the div that gets the drop
+               event might not be the one that is in front visibly and therefore
+               is not the div the user wants the drop to occur on */
+            top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
+            /* call the method on the correct div to handle the drop */
+            if (top_div) {
+                var drop_function = top_div.droppable('option','actualDropHandler');
+                drop_function(ev,ui);
+            }
+        }
+    });
+
+    /***********************************************************************
+     *  protected
+     ***********************************************************************/
+
     /** update slots diagram */
     this.loadData = function(json) {
-        slots.clear()
-        figures = {}
+        slotsDiv.html('');
+        figures = {};
         if (Object.keys(json).length > 0) {
-            updateFigures(json,false)
+            updateFigures(json);
         }
-    }
-  
-}
+    };
+};

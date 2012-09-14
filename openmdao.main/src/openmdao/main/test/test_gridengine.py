@@ -142,7 +142,14 @@ class TestCase(unittest.TestCase):
                                     native_specification=('-ac', 'name=value')))
 
         with open('echo.out', 'r') as inp:
-            lines = inp.readlines()
+            lines = []
+            linez = inp.readlines()
+            for line in linez:
+                qsl = line.replace('a', 'zzz')
+                print qsl
+                lines.append(qsl)
+            print "LINES:", lines
+            #lines = inp.readlines()
         self.assertEqual(lines, ['hello world\n'])
 
         with open('qsub.out', 'r') as inp:
@@ -194,7 +201,13 @@ echo hello world
                                     working_directory=work_dir,
                                     output_path='echo.out'))
         with open('echo.out', 'r') as inp:
-            lines = inp.readlines()
+            lines=[]
+            linez = inp.readlines()
+            for line in linez:
+                #Some Windows echo commands quote args with spaces
+                quote_stripped_line=line.replace('"', '')
+                lines.append(quote_stripped_line)
+        
         self.assertEqual(lines,
                          ['%s %s\n' % (os.path.join(home_dir, 'hello'),
                                        os.path.join(work_dir, 'world'))])

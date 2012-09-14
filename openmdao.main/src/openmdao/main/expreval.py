@@ -258,7 +258,8 @@ class ExprExaminer(ast.NodeVisitor):
     def visit_Index(self, node):
         self.simplevar = self.const = False
         if not isinstance(node.value, ast.Num):
-            self.const_indices = False
+            if not (isinstance(node.value, ast.Tuple) and len(node.value.elts)==0):
+                self.const_indices = False
         self.visit(node.value)
 
     def visit_Assign(self, node):
@@ -677,9 +678,8 @@ class ExprEvaluator(object):
                   for name in self.get_referenced_varpaths(copy=False)]
 
     def get_referenced_varpaths(self, copy=True):
-        """Return a set of source or dest Variable pathnames relative to
-        *scope.parent* and based on the names of Variables referenced in our 
-        expression string. 
+        """Return a set of pathnames relative to *scope.parent* and based on
+        the names of Variables referenced in our expression string.
         """
         if self._code is None:
             self._parse()
@@ -689,9 +689,9 @@ class ExprEvaluator(object):
             return self.var_names
         
     def get_referenced_compnames(self):
-        """Return a set of source or dest Component names based on the 
-        pathnames of Variables referenced in our expression string. No checking
-        is performed to verify that a given name refers to an actual Component.
+        """Return a set of Component names based on the pathnames of
+        Variables referenced in our expression string. No checking is
+        performed to verify that a given name refers to an actual Component.
         """
         if self._code is None:
             self._parse()
@@ -769,7 +769,7 @@ class ExprEvaluator(object):
             self._parse()
         
         oldname = scope.name + '.' if scope.name else ''
-        newname = new_scope.name + '.'
+        newname = new_scope.name + '.' if new_scope.name else ''
         if scope is new_scope.parent or scope is parent:
             oldname = 'parent.'
         elif new_scope is scope.parent or new_scope is parent:

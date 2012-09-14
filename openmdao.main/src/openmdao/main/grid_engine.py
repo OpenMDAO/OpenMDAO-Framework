@@ -242,7 +242,8 @@ class GridEngineAllocator(FactoryAllocator):
         """
         server = super(GridEngineAllocator, self).deploy(name, resource_desc,
                                                          criteria)
-        server.configure(self.category_map)
+        if server is not None:
+            server.configure(self.category_map)
         return server
 
 

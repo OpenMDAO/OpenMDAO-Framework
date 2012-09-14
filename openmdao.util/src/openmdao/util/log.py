@@ -37,11 +37,18 @@ __all__ = ['logger', 'getLogger', 'enable_console', 'disable_console',
            'Logger', 'NullLogger',
            'LOG_DEBUG', 'LOG_INFO', 'LOG_WARNING', 'LOG_ERROR', 'LOG_CRITICAL']
 
-
+import atexit
+import cPickle
 import logging
 import logging.config
 import os.path
+import select
+import socket
+import SocketServer
+import struct
 import sys
+import threading
+import datetime
 
 from multiprocessing.process import current_process
 
@@ -51,10 +58,10 @@ LOG_WARNING  = logging.WARNING
 LOG_ERROR    = logging.ERROR
 LOG_CRITICAL = logging.CRITICAL
 
-if sys.platform == 'win32' and current_process().name != 'MainProcess':
-    _mode = 'a'  # Avoid mangling by subprocesses.
-else:
-    _mode = 'w'
+LOG_DEBUG2 = logging.DEBUG - 2  # Protocol debug, etc.
+LOG_DEBUG3 = logging.DEBUG - 3  # Even lower-level stuff.
+
+_mode = 'a'  # Avoid mangling by subprocesses.
 _filename = 'openmdao_log.txt'
 
 # Ensure we can write to the log file.
@@ -63,8 +70,10 @@ try:
 except IOError:
     _filename = 'openmdao_log_%d.txt' % os.getpid()
 else:
+    _tmplog.write("\n\n*********** BEGIN NEW LOG ************** (%s) PID=%s\n\n" % 
+                  (datetime.datetime.now(), os.getpid()))
     _tmplog.close()
-
+    
 # Allow everything through, typical UNIX-ish timestamp, typical log format.
 logging.basicConfig(level=logging.WARNING,
                     datefmt='%b %d %H:%M:%S',
@@ -79,6 +88,10 @@ logging.addLevelName(logging.INFO,     'I')
 logging.addLevelName(logging.WARNING,  'W')
 logging.addLevelName(logging.ERROR,    'E')
 logging.addLevelName(logging.CRITICAL, 'C')
+
+logging.addLevelName(LOG_DEBUG2, 'D2')
+logging.addLevelName(LOG_DEBUG3, 'D3')
+
 
 logger = logging.getLogger('')
 
@@ -95,13 +108,13 @@ def getLogger(name):
 # Optional handler which writes messages to sys.stderr
 CONSOLE = None
 
-def enable_console():
+def enable_console(level=logging.DEBUG):
     """ Configure logging to receive log messages at the console. """
     global CONSOLE
     if CONSOLE is None:
         # define a Handler which writes messages to sys.stderr
         CONSOLE = logging.StreamHandler()
-        CONSOLE.setLevel(logging.DEBUG)
+        CONSOLE.setLevel(level)
         # set a format which is simpler for console use
         formatter = logging.Formatter('%(levelname)s %(name)s: %(message)s')
         # tell the handler to use this format
@@ -264,4 +277,266 @@ class NullLogger(object):
     def log(self, level, msg, *args, **kwargs):
         """ Log a message at a specified level. """
         pass
+
+
+# Remote logging support.
+# Note that a process fork will 'inherit' existing global data.
+# To avoid child processes from using parent process data,
+# the process' PID is used in dictionary keys.
+
+_REMOTE_HANDLERS = {}  # Logging handler(s) installed by the process.
+
+
+# Called by the remote process.
+def install_remote_handler(host, port, prefix=None):  # pragma no cover
+    """
+    Installs a handler for logging to `host` on `port` with `prefix`.
+    Returns True if connecting to the remote host was successful.
+
+    host: string
+        Host to send log requests to.
+
+    port: int
+        Port on `host` to send log requests to.
+
+    prefix: string
+        Added to the log record for use on `host`.
+        The default prefix is ``pid@hostname``.
+    """
+    if prefix is None:
+        prefix = '%s@%s' % (os.getpid(), socket.gethostname())
+
+    try:
+        sock = socket.create_connection((host, port))
+    except Exception as exc:
+        logging.error("Can't connect to logging server at %s:%s: %s",
+                      host, port, exc)
+        return False
+    sock.close()
+
+    handler = _RemoteHandler(host, port, prefix)
+    root = logging.getLogger()
+    root.addHandler(handler)
+
+    my_pid = os.getpid()
+    if my_pid not in _REMOTE_HANDLERS:
+        # Remove any handlers from our parent process due to a fork.
+        for pid, handlers in _REMOTE_HANDLERS.items():
+            for handler in handlers:
+                try:
+                    root.removeHandler(handler)
+                    handler.close()
+                except KeyError:  # Apparently it's not there anymore.
+                    pass
+                except Exception as exc:
+                    logging.warning("Can't remove inherited remote log handler: %s",
+                                    str(exc) or repr(exc))
+            del _REMOTE_HANDLERS[pid]
+        _REMOTE_HANDLERS[my_pid] = []
+    _REMOTE_HANDLERS[my_pid].append(handler)
+
+    return True
+
+
+# Called by the remote process.
+def remove_remote_handlers():  # pragma no cover
+    """ Removes all installed remote handlers. """
+    root = logging.getLogger()
+    for pid, handlers in _REMOTE_HANDLERS.items():
+        if pid == os.getpid():
+            for handler in handlers:
+                root.removeHandler(handler)
+                handler.close()
+        del _REMOTE_HANDLERS[pid]
+
+
+# Used by the remote process.
+class _RemoteHandler(logging.handlers.SocketHandler):  # pragma no cover
+    """ Handler which adds a ``prefix`` attribute to the log record. """
+
+    def __init__(self, host, port, prefix):
+        self.prefix = prefix
+        logging.handlers.SocketHandler.__init__(self, host, port)
+
+    def handle(self, record):
+        """
+        Add ``prefix`` attribute to `record` and format locally
+        to avoid problems with object types which may not be handled
+        well at the remote end.
+        """
+        record.prefix = self.prefix
+        record.msg = record.getMessage()
+        record.args = None
+        logging.handlers.SocketHandler.handle(self, record)
+
+
+def logging_port(server_host, client_host):
+    """
+    Return port to use to send log messages to `server_host`.
+    Registers `client_host` as a legal host to receive from.
+    """
+    return _LogListener.server_port(server_host, client_host)
+
+
+class _LogListener(object):
+    """ Maintains :class:`_LogServer` threads. """
+
+    _lock = threading.Lock()  # server_port() may be called by multiple threads.
+    _listeners = {}           # _LogListeners keyed by hostname.
+
+    def __init__(self, hostname):
+        self._server = None
+        self._port = None
+        self._started = threading.Event()  # Signals listener has started.
+        self._thread = threading.Thread(name=hostname+'-log-listener',
+                                        target=self._listen, args=(hostname,))
+        self._thread.daemon = True
+        self._thread.start()
+        self._started.wait(10)
+        if self._port is None:
+            raise RuntimeError('Timeout starting thread for %s' % hostname)
+
+    @property
+    def port(self):
+        """ Port server is listening on. """
+        return self._port
+
+    def _listen(self, hostname):
+        """ Listen for log messages. """
+        self._server = _LogServer((hostname, 0), _LogHandler)
+        self._port = self._server.server_address[1]
+        self._started.set()
+        logging.info('Listening for log messages at %s:%s',
+                     hostname, self._port)
+        atexit.register(self._stop, os.getpid())
+        self._server.service_loop()
+
+    def _stop(self, pid):
+        """ Stop listening. """
+        if os.getpid() == pid and self._thread.is_alive():
+            self._server.stop()
+            self._thread.join(2)
+
+    @staticmethod
+    def server_port(server_host, client_host):
+        """
+        Return port to use to send log messages to `server_host`.
+        Registers `client_host` as a legal host to receive from.
+        """
+        with _LogListener._lock:
+            # Ensure server thread running.
+            listener = _LogListener._listeners.get(server_host, None)
+            if listener is None:
+                listener = _LogListener(server_host)
+                _LogListener._listeners[server_host] = listener
+            port = listener.port
+
+            # Ensure client in allowed hosts.
+            _LogServer.add_client(client_host)
+
+        return port
+
+
+class _LogServer(SocketServer.ThreadingTCPServer):
+    """ Server for remote logging requests. """
+
+    # Default is False, which would keep this process running until
+    # all remote connections are closed. That could be problematic.
+    daemon_threads = True
+
+    _hosts = set()  # Hosts we allow connections from.
+
+    @staticmethod
+    def add_client(hostname):
+        """ Add `hostname` as a legal client host. """
+        client_addr = socket.gethostbyname(hostname)
+        _LogServer._hosts.add(client_addr)
+
+    def verify_request(self, request, client_address):
+        """
+        Returns True if the client at `client_address` is on a legal host.
+
+        request: string
+            Request message.
+
+        client_address: ``(host, port)``
+            Source of client request.
+        """
+        host, port = client_address
+        if host in self._hosts:
+            return True
+        logging.warning('Rejecting connection from %s: allowed hosts %s',
+                        host, self._hosts)
+        return False
+
+    def service_loop(self):
+        """ Loop waiting for connections. """
+        self._is_shut_down = threading.Event()
+        self._shutdown_request = False
+        fd = self.socket.fileno()
+        try:
+            while not self._shutdown_request:
+                rd, wr, ex = select.select([fd], [], [], 0.5)
+                if fd in rd:
+                    self._handle_request_noblock()
+        finally:
+            self._is_shut_down.set()
+
+    def stop(self):
+        """ Stop server loop. """
+        self._shutdown_request = True
+        self._is_shut_down.wait(2)
+
+    
+class _LogHandler(SocketServer.StreamRequestHandler):
+    """ Handler for a stream of logging requests. """
+
+    def handle(self):
+        """ Handle log requests until connection closed. """
+        # An initial 'unused' connection will be made by the client to see
+        # if it can connect. We reduce logging noise by ignoring these.
+        conn = self.connection
+        peer = None
+
+        while True:
+            try:
+                data = conn.recv(4)
+            except Exception:
+                return  # Typically [Errno 10054] on Windows.
+            if len(data) < 4:
+                break
+
+            if peer is None:
+                host, port = conn.getpeername()
+                try:
+                    host, aliases, addrs = socket.gethostbyaddr(host)
+                except Exception as exc:
+                    logging.debug('gethostbyaddr(%s) failed: %s',
+                                  host, str(exc) or repr(exc))
+                peer = '%s:%s' % (host, port)
+                logging.info('New logging connection from %s', peer)
+
+            slen = struct.unpack('>L', data)[0]
+            data = conn.recv(slen)
+            slen -= len(data)
+            msg = data
+            while slen:
+                data = conn.recv(slen)
+                slen -= len(data)
+                msg = ''.join((msg, data))
+
+            try:
+                obj = cPickle.loads(msg)
+                record = logging.makeLogRecord(obj)
+            except Exception as exc:
+                logging.exception("Can't process log request from %s: %s",
+                                  peer, exc)
+            else:
+                prefix = record.prefix
+                record.name = '[%s] %s' % (prefix, record.name)
+                logging.getLogger(prefix).handle(record)
+
+        conn.close()
+        if peer is not None:
+            logging.info('Logging connection from %s closed', peer)
 

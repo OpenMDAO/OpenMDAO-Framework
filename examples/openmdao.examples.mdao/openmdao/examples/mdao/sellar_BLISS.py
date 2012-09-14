@@ -8,10 +8,10 @@
     match the original Sobiesky-Agte implementation.
 """
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, SequentialWorkflow
 from openmdao.lib.datatypes.api import Float, Array
 from openmdao.lib.differentiators.finite_difference import FiniteDifference
-from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
+from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
 
 from openmdao.lib.optproblems import sellar
@@ -60,6 +60,7 @@ class SellarBLISS(Assembly):
         
         # Discipline 1 Sensitivity Analysis
         self.add('sa_dis1', SensitivityDriver())
+        self.sa_dis1.workflow.add(['dis1'])
         self.sa_dis1.add_parameter('dis1.x1', low=  0.0, high=10.0, fd_step=.001)
         self.sa_dis1.add_constraint(constraint1) 
         self.sa_dis1.add_constraint(constraint2) 
@@ -86,7 +87,7 @@ class SellarBLISS(Assembly):
         
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
-        self.add('bbopt1', SLSQPdriver())
+        self.add('bbopt1', CONMINdriver())
         self.bbopt1.add_parameter('x1_store', low=0.0, high=10.0, start=1.0)
         self.bbopt1.add_objective('sa_dis1.F[0] + sa_dis1.dF[0][0]*(x1_store-dis1.x1)')
         self.bbopt1.add_constraint('sa_dis1.G[0] + sa_dis1.dG[0][0]*(x1_store-dis1.x1) < 0')
@@ -96,9 +97,10 @@ class SellarBLISS(Assembly):
         self.bbopt1.add_constraint('(x1_store-dis1.x1)<.5')
         self.bbopt1.add_constraint('(x1_store-dis1.x1)>-.5')
         self.bbopt1.iprint = 0
+        self.bbopt1.linobj = True
         
         # Global Optimization
-        self.add('sysopt', SLSQPdriver())
+        self.add('sysopt', CONMINdriver())
         self.sysopt.add_parameter('z_store[0]', low=-10.0, high=10.0, start=5.0)
         self.sysopt.add_parameter('z_store[1]', low=0.0, high=10.0, start=2.0)
         self.sysopt.add_objective('ssa.F[0]+ ssa.dF[0][0]*(z_store[0]-dis1.z1) + ssa.dF[0][1]*(z_store[1]-dis1.z2)')
@@ -106,16 +108,18 @@ class SellarBLISS(Assembly):
         self.sysopt.add_constraint('ssa.G[0] + ssa.dG[0][0]*(z_store[0]-dis1.z1) + ssa.dG[0][1]*(z_store[1]-dis1.z2) < 0')
         self.sysopt.add_constraint('ssa.G[1] + ssa.dG[1][0]*(z_store[0]-dis1.z1) + ssa.dG[1][1]*(z_store[1]-dis1.z2) < 0')
         
-        self.bbopt1.add_constraint('z_store[0]-dis1.z1<.5')
-        self.bbopt1.add_constraint('z_store[0]-dis1.z1>-.5')
-        self.bbopt1.add_constraint('z_store[1]-dis1.z2<.5')
-        self.bbopt1.add_constraint('z_store[1]-dis1.z2>-.5')
+        self.sysopt.add_constraint('z_store[0]-dis1.z1<.5')
+        self.sysopt.add_constraint('z_store[0]-dis1.z1>-.5')
+        self.sysopt.add_constraint('z_store[1]-dis1.z2<.5')
+        self.sysopt.add_constraint('z_store[1]-dis1.z2>-.5')
         self.sysopt.iprint = 0
+        self.sysopt.linobj = True
             
-        self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt']) 
+        self.driver.workflow = SequentialWorkflow()
+        self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])
 
         
-if __name__ == "__main__": # pragma: no cover         
+if __name__ == "__main__": # pragma: no cover
 
     import time
     import math

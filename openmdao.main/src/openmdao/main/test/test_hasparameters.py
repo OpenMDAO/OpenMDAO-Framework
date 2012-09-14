@@ -38,21 +38,31 @@ class HasParametersTestCase(unittest.TestCase):
     
     def test_param_output(self):
         try:
-            p = Parameter('comp.c', self.top, low=0, high=1e99, scope=self.top)
+            p = Parameter('comp.c', low=0, high=1e99, scope=self.top)
         except Exception as err:
             self.assertEqual(str(err), 
-                             ": Can't add parameter 'comp.c' because 'comp.c' is an output.")
+                             "Can't add parameter 'comp.c' because 'comp.c' is an output.")
         else:
             self.fail("Exception expected")
         
     def test_add_parameter_param_target(self): 
-        p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
-        p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)
+        p = Parameter('comp.x', low=0, high=1e99, scope=self.top)
+        p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
         
+        self.top.run()
+        self.assertEqual(self.top.driver.is_valid(), True)
+        self.assertEqual(self.top.driver._exec_state, 'VALID')
         self.top.driver.add_parameter(p)
+        self.assertEqual(self.top.driver.is_valid(), False)
+        self.assertEqual(self.top.driver._exec_state, 'INVALID')
         self.assertEqual({'comp.x':p},self.top.driver.get_parameters())
         
+        self.top.run()
+        self.assertEqual(self.top.driver.is_valid(), True)
+        self.assertEqual(self.top.driver._exec_state, 'VALID')
         self.top.driver.remove_parameter('comp.x')
+        self.assertEqual(self.top.driver.is_valid(), False)
+        self.assertEqual(self.top.driver._exec_state, 'INVALID')
         
         self.top.driver.add_parameter(p,low=10.0)
         self.assertEqual({'comp.x':p},self.top.driver.get_parameters())
@@ -122,6 +132,14 @@ class HasParametersTestCase(unittest.TestCase):
         #except ValueError as err:
             #self.assertEqual(str(err), "parameter value (-1.0) is outside of allowed range [0.0 to 1e+99]")
             
+    def test_set_param_by_name(self):
+        self.top.driver.add_parameter('comp.x', 0., 1.e99, name='abc') 
+        self.top.driver.add_parameter('comp.y', 0., 1.e99, name='def')
+        self.top.driver.set_parameter_by_name('abc', 22.0)
+        self.top.driver.set_parameter_by_name('def', 33.0)
+        self.assertEqual(self.top.comp.x, 22.)
+        self.assertEqual(self.top.comp.y, 33.)
+        
     def test_set_broadcast_params(self): 
         self.top.driver.add_parameter(('comp.x','comp.y'), low=0.,high=1e99)
         self.top.driver.set_parameters([22.,])
@@ -280,13 +298,13 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(param[1].fd_step, None)
     
     def test_get_metadata(self): 
-        p = Parameter('comp.x', self.top, low=0, high=1e99, scope=self.top)
+        p = Parameter('comp.x', low=0, high=1e99, scope=self.top)
         
         p.get_metadata()
         self.assertEqual(p.get_metadata(),('comp.x',{'high': None, 'iotype': 'in', 'type': 'trait', 'low': None, 'vartypename': 'Float'}))
         
-        p2 = Parameter('comp.y', self.top, low=0, high=1e99, scope=self.top)
-        pg = ParameterGroup([p,p2])        
+        p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
+        pg = ParameterGroup([p,p2])
         self.assertEqual(pg.get_metadata(),(['comp.x','comp.y'],{'fd_step': None, 'name': 'comp.x', 'scaler': None, 'high': 9.9999999999999997e+98, 'start': None, 'low': 0, 'adder': None}))    
 
 class ParametersTestCase(unittest.TestCase):

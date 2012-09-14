@@ -39,8 +39,9 @@ except ImportError as err:
 
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int, Str
-from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, IHasObjective, implements
+from openmdao.main.datatypes.api import Array, Bool, Enum, Float, Int
+from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
+                                     IHasObjective, implements, IOptimizer
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
@@ -196,7 +197,7 @@ class CONMINdriver(DriverUsesDerivatives):
             
     """
     # I don't see an IUsesGradients
-    implements(IHasParameters, IHasIneqConstraints, IHasObjective)
+    implements(IHasParameters, IHasIneqConstraints, IHasObjective, IOptimizer)
     
     # pylint: disable-msg=E1101
     # Control parameters for CONMIN.
@@ -405,7 +406,6 @@ class CONMINdriver(DriverUsesDerivatives):
         # only return gradients of active/violated constraints.
         elif self.cnmn1.info == 2 and self.cnmn1.nfdg == 1:
             
-            self.calc_derivatives(first=True)
             self.ffd_order = 1
             self.differentiator.calc_gradient()
             self.ffd_order = 0

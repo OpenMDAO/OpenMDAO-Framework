@@ -25,7 +25,6 @@ from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
 from openmdao.util.view_docs import view_docs
-from openmdao.main.pkg_res_factory import plugin_groups
 from openmdao.main import __version__
 
 #from sphinx.setup_command import BuildDoc
@@ -437,43 +436,23 @@ def _exclude_funct(path):
 #
 # FIXME: this still needs some work, but for testing purposes it's ok for now
 #
-def _find_all_plugins(searchdir):
+def find_all_plugins(searchdir):
     """Return a dict containing lists of each plugin type found, keyed by
     plugin group name, e.g., openmdao.component, openmdao.variable, etc.
     """
     dct = {}
-    modnames = ['openmdao.main', 
-                'openmdao.lib.datatypes', 
-                'openmdao.lib.components',
-                'openmdao.lib.drivers',
-                'openmdao.lib.surrogatemodels',
-                'openmdao.lib.doegenerators',
-                'openmdao.lib.differentiators',
-                'openmdao.lib.optproblems',
-                'openmdao.lib.casehandlers',
-                'openmdao.lib.architectures']
+    psta = PythonSourceTreeAnalyser(searchdir, exclude=_exclude_funct)
     
-    modules = []
-    for mod in modnames:
-        try:
-            __import__(mod)
-        except ImportError:
-            print 'skipping import of %s' % mod
-        else:
-            modules.append(sys.modules[mod])
-            
-    dirs = [os.path.dirname(m.__file__) for m in modules]+[searchdir]
-    psta = PythonSourceTreeAnalyser(dirs, exclude=_exclude_funct)
-    
-    for key, val in plugin_groups.items():
-        dct[key] = set(psta.find_inheritors(val))
-
+    for key, lst in plugin_groups.items():
+        epset = set(psta.find_inheritors(lst[0]))
+        if epset:
+            dct[key] = epset 
     return dct
 
 
 def _get_entry_points(startdir):
     """ Return formatted list of entry points. """
-    plugins = _find_all_plugins(startdir)
+    plugins = find_all_plugins(startdir)
     entrypoints = StringIO.StringIO()
     for key,val in plugins.items():
         epts = []
@@ -586,12 +565,12 @@ def plugin_docs(parser, options, args=None):  # pragma no cover
     if options.plugin_dist_name is None:
         view_docs(options.browser)
     else:
-        url = _plugin_docs(options.plugin_dist_name)
+        url = find_docs_url(options.plugin_dist_name)
         wb = webbrowser.get(options.browser)
         wb.open(url)
 
 
-def _plugin_docs(plugin_name):
+def find_docs_url(plugin_name=None, build_if_needed=True):
     """Returns a url for the Sphinx docs for the named plugin.
     The plugin must be importable in the current environment.
     
@@ -646,7 +625,7 @@ def _plugin_docs(plugin_name):
         else:  # it's a developer version, so use locally built docs
             htmldir = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
-            if not os.path.isfile(os.path.join(htmldir, 'index.html')):
+            if not os.path.isfile(os.path.join(htmldir, 'index.html')) and build_if_needed:
                 #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao', 'build_docs'])
@@ -840,7 +819,7 @@ def update_libpath(options=None):
             print "\nThe 'activate' file has been updated with new values" \
                   " added to %s" % libpathvname
             print "You must deactivate and reactivate your virtual environment"
-            print "for thechanges to take effect\n"
+            print "for the changes to take effect\n"
 
     
 # This requires Internet connectivity to github.
@@ -1012,15 +991,15 @@ def plugin_list(parser, options, args=None):
     plugins = set()
     for type in all_types:
         if show_all:
-            plugins.add((type[0], type[1]))
+            plugins.add((type[0], type[1]['version']))
         else:
             name = type[0].split('.')[0]
             if name == 'openmdao':
                 if options.builtin:
-                    plugins.add((type[0], type[1]))
+                    plugins.add((type[0], type[1]['version']))
             else:
                 if options.external:
-                    plugins.add((type[0], type[1]))
+                    plugins.add((type[0], type[1]['version']))
             
     title = "Installed %s %s plugins" % (title_type, title_groups)
     title = title.replace('  ', ' ')

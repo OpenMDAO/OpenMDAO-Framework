@@ -37,61 +37,72 @@ framework effort.
 You can now follow this checklist for changing code that will get merged into the official OpenMDAO
 repository (assuming the maintainers approve the change).  
   
-1.  Create an issue on GitHub. 
-
-    Log into GitHub.
-    
-    Go to the issues page: https://github.com/OpenMDAO/OpenMDAO-Framework/issues 
-    
-    Select the **New Issue** button and fill out the form. (Some issues are labeled. Only users with admin rights can label an issue.) 
-    
-    Click on the **Submit new issue** button when finished. Remember the issue number that is assigned. For
-    this example, assume it is 529. 
-
-2.  Go to the directory containing the local repository. 
+#.  Go to the directory containing the local repository. 
 
     :: 
     
       cd OpenMDAO-Framework 
       
-3.  The next step is to bring your local dev branch up to date with the *official* one. 
+#.  The next step is to bring your local dev branch up to date with the *official* one. 
 
     ::
     
       git checkout dev 
       git pull origin dev
 
-4.  Now that your local dev is up to date, you can make a new branch.
+#.  Now that your local dev is up to date, you can make a new branch.
 
     ::  
     
-      git branch 529-fix_bug
-      git checkout 529-fix_bug
+      git branch <your_branch>
+      git checkout <your_branch>
 
-5.  If you're using the same repo you've used before, to be safe you should delete the ``devenv`` directory
+#.  If you're using the same repo you've used before, to be safe you should delete the ``devenv`` directory
     that got built the last time. 
 
     ::
     
       rm -rf devenv
 
-6.  Rebuild the ``devenv`` directory with the following script.
+#.  Rebuild the ``devenv`` directory with the following script.
 
     ::
     
       python go-openmdao-dev.py
 
-7.  Activate the environment.
+#.  Activate the environment. 
+
+    First, change to the ``devenv`` directory.
 
     ::
     
       cd devenv
-      ./bin/activate
+    
+    
+    If you're on Linux, you must be running bash to activate the virtual environment. If you're not
+    running it, to start it, type:
+
+    ::
+    
+      bash
+      
+    Next, if you're on Linux or OS X, type the following:
+
+    ::
+
+      . bin/activate
 
 
-8.  Make changes to code and update the tests. (For more information, see :ref:`Adding-New-Tests`.)  
+    If you're on Windows, type:
 
-9.  It's a good idea to run pylint to check for any bugs in your code. If you do not
+    ::
+
+      Scripts\activate
+     
+    
+#.  Make changes to the code and update the tests. (For more information, see :ref:`Adding-New-Tests`.)  
+
+#.  It's a good idea to run pylint to check for any bugs in your code. If you do not
     have pylint on your system, you can install and run it by typing:
 
     ::
@@ -102,7 +113,7 @@ repository (assuming the maintainers approve the change).
     Fix any errors that pylint found.
 
 
-10. Run all the tests to make sure everything still works. (Remember that you must be in an active
+#.  Run all the tests to make sure everything still works. (Remember that you must be in an active
     environment to run the test and docs scripts. So, if you interrupted work and logged out, be
     sure to reactivate your environment.)
 
@@ -112,70 +123,83 @@ repository (assuming the maintainers approve the change).
 
     Fix any errors found during testing.
 
-11. Change the docs if needed. (For more information on creating or updating docs, see
-    :ref:`resources`.)  
+#. Change the docs if needed. (For more information on creating or updating docs, see :ref:`resources`.)  
 
-    To build and then display the docs, use the following scripts:
+   To build and then display the docs, use the following scripts:
     
-    ::
+   ::
     
-      openmdao build_docs
-      openmdao docs
+     openmdao build_docs
+     openmdao docs
 
 
-12. Test the docs. 
+#. Test the docs. 
                 
-    ::
+   ::
     
-      openmdao test_docs
+     openmdao test_docs
  
-    Note: The doctests are automatically run whenever you run ``openmdao test``. Step 11 builds and tests
-    `only` the docs.
+   Note: The doctests are automatically run whenever you run ``openmdao test``. Step 11 builds and tests
+   `only` the docs.
 
-    Fix errors if any.
+   Fix errors if any.
 
-13. If you have not done so, visually inspect the docs using the default browser. 
+#. If you have not done so, visually inspect the docs using the default browser. 
                  
             
-    ::
+   ::
      
-      openmdao docs
+     openmdao docs
 
-14.  Stage the updated content for the next commit.
-                 
-     ::
-     
-       git add .
+#. Now merge out from the latest dev to your branch.
 
-15. Commit the staged content. (The ``-a`` will include any changes that you forgot to explicitly add to the
-    staging area with ``git add``.) Use the issue number from Step 1 in your comment. 
-    
-    ::
-    
-      git commit -am "closes GH-529: Changes to support non-rst files in plugin docs" 
-
- 
-16. Push your changes up to your personal OpenMDAO fork:
-
-    ::
-    
-      git push myfork 529-fix_bug
-
-17. Issue a pull request, i.e., ask the OpenMDAO maintainers to merge your changes:
- 
-*  Go to your personal OpenMDAO-Framework fork on GitHub, for example:
-
-   https://github.com/hschilling/OpenMDAO-Framework 
+   ::
    
-*  On the right side of the page, you'll see the **Current branch**. Click on the down arrow next to the
-   branch name to display the list of branches, and then switch to the ``529-fix_bug`` branch. 
+     git pull origin dev
+ 
+#. After a successful merge out, run the full test suite again on your branch.
 
-*  Fill out the form that appears and click the **Send pull request** button. 
 
-   .. note:: Whenever you close an issue in your commit message, that information -- specifically the issue
-	     number to be closed -- should appear in your pull request title. This is necessary for the
-	     issue to get closed automatically after the branch is merged. 
+#. Stage the updated content for the next commit. 
+                 
+   ::
+     
+     git add .
+     
+   (If you've been working on your branch for any length of time, you've probably already been staging
+   and committing files.)    
 
-*  When one of the OpenMDAO maintainers merges branch ``529-fix_bug`` into the main repository, then issue
-   #529 will get closed.
+#. Commit the staged content. (The ``-a`` will include any changes that you forgot to explicitly add to the
+   staging area with ``git add``.)   
+    
+   ::
+    
+     git commit -am "Type a short commit message identifying story or code you changed." 
+
+ 
+#. Push your changes up to your personal OpenMDAO fork:
+
+   ::
+    
+     git push myfork <your_branch>
+
+#. Issue a pull request, i.e., ask the OpenMDAO maintainers to merge your changes:
+ 
+ *  Go to your personal OpenMDAO-Framework fork on GitHub, for example:
+
+    https://github.com/hschilling/OpenMDAO-Framework 
+
+ *  On the left side of the page, you'll see an icon and the text `branch:` followed by a branch name. If you are
+    not on the desired branch, click on the down arrow next to display a list of your branches; then select the one
+    you want merged. 
+
+ *  Click on the **Pull Request** button towards the top middle of the page.   
+
+ *  Fill out the form that appears and then click the **Send pull request** button. 
+    
+    The openMDAO maintainers will be notified, and one of them will review your pull request. In the
+    upper middle of the screen is a field that automatically shows your pull requests.  You should
+    now show at least 1. 
+
+    
 

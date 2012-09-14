@@ -1,0 +1,4 @@
+To verify that tabs in a pane do not scroll with the window:
+    1. Adjust the scrollbar, and visually inspect that the tabs do not move.
+    2. If content is visible in a pane, visually inspect that as you scroll down,
+       the content scrolls under the tabs. 

@@ -111,7 +111,8 @@ class Float(Variable):
         if isinstance(value, AttrWrapper):
             if self.units:
                 valunits = value.metadata.get('units')
-                if valunits and isinstance(valunits, basestring) and self.units != valunits:
+                if valunits and isinstance(valunits, basestring) and \
+                   self.units != valunits:
                     return self._validate_with_metadata(obj, name, 
                                                         value.value, 
                                                         valunits)
@@ -210,4 +211,3 @@ class Float(Variable):
             return self._validator.validate(obj, name, pq.value)
         except Exception:
             self.error(obj, name, pq.value)
-

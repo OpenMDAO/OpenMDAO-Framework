@@ -22,6 +22,8 @@ from openmdao.main.api import Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasevents import HasEvents
+from openmdao.main.interfaces import IHasParameters, IHasObjective, \
+                                     implements, IOptimizer
 from openmdao.util.decorators import add_delegate
 from openmdao.util.typegroups import real_types, int_types, iterable_types
 
@@ -32,6 +34,8 @@ class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve
     Genetic algorithm module. 
     """
+    
+    implements(IHasParameters, IHasObjective, IOptimizer)    
     
     # pylint: disable-msg=E1101    
     opt_type = Enum("minimize", values=["minimize", "maximize"],

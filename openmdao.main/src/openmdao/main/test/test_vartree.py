@@ -4,10 +4,11 @@ import unittest
 
 from enthought.traits.trait_base import not_none
 
-from openmdao.main.api import Container, Component, Assembly, VariableTree, \
+from openmdao.main.api import Component, Assembly, VariableTree, \
                               set_as_top, FileRef, SimulationRoot
-from openmdao.main.datatypes.api import Float, Slot, File
+from openmdao.main.datatypes.api import Float, Slot, File, List
 from openmdao.main.case import flatten_obj
+
 
 class DumbVT3(VariableTree):
     def __init__(self):
@@ -15,7 +16,8 @@ class DumbVT3(VariableTree):
         self.add('a', Float(1., units='ft'))
         self.add('b', Float(12., units='inch'))
         self.add('data', File())
-        
+
+
 class DumbVT2(VariableTree):
     def __init__(self):
         super(DumbVT2, self).__init__()
@@ -23,24 +25,26 @@ class DumbVT2(VariableTree):
         self.add('y', Float(-2.))
         self.add('data', File())
         self.add('vt3', DumbVT3())
-    
+
+
 class DumbVT(VariableTree):
     def __init__(self):
         super(DumbVT, self).__init__()
         self.add('vt2', DumbVT2())
-        self.add('v1', Float(1.))
-        self.add('v2', Float(2.))
+        self.add('v1', Float(1., desc='vv1'))
+        self.add('v2', Float(2., desc='vv2'))
         self.add('data', File())
+
 
 class SimpleComp(Component):
     cont_in = Slot(DumbVT, iotype='in')
     cont_out = Slot(DumbVT, iotype='out')
-    
+
     def __init__(self, *args, **kwargs):
         super(SimpleComp, self).__init__(*args, **kwargs)
         self.add('cont_in', DumbVT())
         self.add('cont_out', DumbVT())
-    
+
     def execute(self):
         self.cont_out.v1 = self.cont_in.v1 + 1.0
         self.cont_out.v2 = self.cont_in.v2 + 1.0
@@ -100,13 +104,13 @@ class NamespaceTestCase(unittest.TestCase):
 
     def setUp(self):
         # SimulationRoot is static and so some junk can be left
-        # over from other tests when running under nose, so 
+        # over from other tests when running under nose, so
         # set it to cwd here just to be safe
         SimulationRoot.chroot(os.getcwd())
         self.asm = set_as_top(Assembly())
         obj = self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())
-        self.asm.driver.workflow.add(['scomp1','scomp2'])
+        self.asm.driver.workflow.add(['scomp1', 'scomp2'])
 
         with self.asm.dir_context:
             filename = 'top.data.vt'
@@ -130,7 +134,7 @@ class NamespaceTestCase(unittest.TestCase):
 
     def _check_values(self, expected, actual):
         for e, a in zip(expected, actual):
-            self.assertEqual(e,a)
+            self.assertEqual(e, a)
 
     def _check_files(self, expected, actual):
         for e, a in zip(expected, actual):
@@ -138,7 +142,7 @@ class NamespaceTestCase(unittest.TestCase):
                 edata = inp.read()
             with a.open() as inp:
                 adata = inp.read()
-            self.assertEqual(edata,adata)
+            self.assertEqual(edata, adata)
 
     def test_pass_container(self):
         #scomp1                   scomp2
@@ -174,20 +178,50 @@ class NamespaceTestCase(unittest.TestCase):
         # 'in/out' set for end-to-end check.
         self._check_files(self.asm.scomp1.get_files('in'),
                           self.asm.scomp2.get_files('out'))
+
+        # Check set_attributes on the vartrees
+        attrs = self.asm.scomp1.cont_in.get_attributes()
+        self.assertTrue("Inputs" in attrs.keys())
+        self.assertTrue({'name': 'v1',
+                         'value': 1.0,
+                         'high': None,
+                         'connected': '',
+                         'low': None,
+                         'type': 'float',
+                         'desc': 'vv1'} in attrs['Inputs'])
+        self.assertTrue({'name': 'v2', 'value': 2.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv2'} in attrs['Inputs'])
+        # The number shall be 4 (because there is a File.)
+        self.assertEqual(len(attrs['Inputs']), 4)
+        attrs = self.asm.scomp1.cont_out.get_attributes()
+        self.assertTrue("Outputs" in attrs.keys())
+        self.assertTrue({'name': 'v1', 'value': 2.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv1'} in attrs['Outputs'])
+        self.assertTrue({'name': 'v2', 'value': 3.0, 'high': None, 'connected': '', 'low': None, 'type': 'float', 'desc': 'vv2'} in attrs['Outputs'])
+        self.assertEqual(len(attrs['Outputs']), 4)
+
+        # Slots panel too
+        attrs = self.asm.scomp1.cont_in.get_attributes(io_only=False)
+        self.assertTrue("Slots" in attrs.keys())
+        self.assertEqual(len(attrs['Slots']), 1)
+        self.assertTrue(attrs['Slots'][0]['name'] == 'vt2')
+        self.assertTrue(attrs['Slots'][0]['klass'] == 'VariableTree')
+        self.assertTrue(attrs['Slots'][0]['containertype'] == 'singleton')
+        self.assertTrue(attrs['Slots'][0]['filled'] == 'DumbVT2')
+
+        # Now connect
         try:
             self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         except Exception as err:
             self.assertEqual(str(err), ": Can't connect 'scomp1.cont_out.v1' to 'scomp2.cont_in.v2': 'scomp2.cont_in' is already connected to source 'scomp1.cont_out'")
         else:
             self.fail("exception expected")
-        
+
     def test_connect_subvartree(self):
         self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         self.asm.run()
-        self.assertEqual(self.asm.scomp1.cont_out.v1, 
-                         self.asm.scomp2.cont_in.v1+1.0)
-        self.assertEqual(self.asm.scomp1.cont_out.v2, 
-                         self.asm.scomp2.cont_in.v2+1.0)
+        self.assertEqual(self.asm.scomp1.cont_out.v1,
+                         self.asm.scomp2.cont_in.v1 + 1.0)
+        self.assertEqual(self.asm.scomp1.cont_out.v2,
+                         self.asm.scomp2.cont_in.v2 + 1.0)
         # [2:] indicates that all values from vt2 on down should agree
         self._check_values(self.asm.scomp1.get_vals('out')[2:],
                            self.asm.scomp2.get_vals('in')[2:])
@@ -200,15 +234,15 @@ class NamespaceTestCase(unittest.TestCase):
         self.asm.connect('scomp1.cont_out.v1', 'scomp2.cont_in.v2')
         self.asm.connect('scomp1.cont_out.v2', 'scomp2.cont_in.v1')
         self.asm.run()
-        self.assertEqual(self.asm.scomp1.cont_out.v1, 
+        self.assertEqual(self.asm.scomp1.cont_out.v1,
                          self.asm.scomp2.cont_in.v2)
-        self.assertEqual(self.asm.scomp1.cont_out.v2, 
-                         self.asm.scomp2.cont_in.v2+1.0)
+        self.assertEqual(self.asm.scomp1.cont_out.v2,
+                         self.asm.scomp2.cont_in.v2 + 1.0)
 
     def test_connect_subsubvar(self):
         self.asm.connect('scomp1.cont_out.vt2.vt3.a', 'scomp2.cont_in.vt2.vt3.b')
         self.asm.run()
-        self.assertAlmostEqual(12.0*self.asm.scomp1.cont_out.vt2.vt3.a, 
+        self.assertAlmostEqual(12.0 * self.asm.scomp1.cont_out.vt2.vt3.a,
                                self.asm.scomp2.cont_in.vt2.vt3.b)
         try:
             self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
@@ -217,22 +251,22 @@ class NamespaceTestCase(unittest.TestCase):
                 ": Can't connect 'scomp1.cont_out.vt2' to 'scomp2.cont_in.vt2': 'scomp2.cont_in.vt2.vt3.b' is already connected to source 'scomp1.cont_out.vt2.vt3.a'")
         else:
             self.fail("exception expected")
-        
+
         try:
             self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
         except Exception as err:
-            self.assertEqual(str(err), 
+            self.assertEqual(str(err),
                 ": Can't connect 'scomp1.cont_out' to 'scomp2.cont_in': 'scomp2.cont_in.vt2.vt3.b' is already connected to source 'scomp1.cont_out.vt2.vt3.a'")
         else:
             self.fail("exception expected")
-            
+
         self.asm.disconnect('scomp1.cont_out.vt2.vt3.a', 'scomp2.cont_in.vt2.vt3.b')
         # now this should be allowed
         self.asm.connect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         self.asm.disconnect('scomp1.cont_out.vt2', 'scomp2.cont_in.vt2')
         # and now this
         self.asm.connect('scomp1.cont_out', 'scomp2.cont_in')
-        
+
     def test_callbacks(self):
         # verify that setting a var nested down in a VariableTree hierarchy will
         # notify the parent Component that an input has changed
@@ -245,62 +279,103 @@ class NamespaceTestCase(unittest.TestCase):
         self.asm.scomp1.cont_in.vt2.x = -5.0
         self.assertEqual(self.asm.scomp1._call_execute, True)
         self.asm.run()
-        
+
         # setting something in an output VariableTree should NOT set _call_execute
         self.asm.scomp1.cont_out.vt2.vt3.a = 55.0
         self.assertEqual(self.asm.scomp1._call_execute, False)
-        
+
     def test_pathname(self):
         vt = self.asm.scomp2.cont_out.vt2.vt3
         self.assertEqual('scomp2.cont_out.vt2.vt3', vt.get_pathname())
         self.asm.scomp1.cont_in.vt2.vt3 = vt
-        self.assertEqual('scomp1.cont_in.vt2.vt3', 
+        self.assertEqual('scomp1.cont_in.vt2.vt3',
                          self.asm.scomp1.cont_in.vt2.vt3.get_pathname())
-        
+
     def test_iotype(self):
         vt = self.asm.scomp2.cont_out.vt2.vt3
         self.assertEqual(vt._iotype, 'out')
         self.asm.scomp1.cont_in.vt2.vt3 = vt
         self.assertEqual(vt._iotype, 'in')
-        
+
         dvt = DumbVT()
         self.assertEqual(dvt._iotype, '')
         self.asm.scomp2.cont_out = dvt
         self.assertEqual(self.asm.scomp2.cont_out._iotype, 'out')
         self.assertEqual(self.asm.scomp2.cont_out.vt2._iotype, 'out')
         self.assertEqual(self.asm.scomp2.cont_out.vt2.vt3._iotype, 'out')
-        
+
     def test_items(self):
-        vtvars = ['v1','v2','vt2','data']
-        vt2vars = ['vt2.x','vt2.y','vt2.vt3','vt2.data']
-        vt3vars = ['vt2.vt3.a','vt2.vt3.b','vt2.vt3.data']
-        
+        vtvars = ['v1', 'v2', 'vt2', 'data']
+        vt2vars = ['vt2.x', 'vt2.y', 'vt2.vt3', 'vt2.data']
+        vt3vars = ['vt2.vt3.a', 'vt2.vt3.b', 'vt2.vt3.data']
+
         result = dict(self.asm.scomp1.cont_out.items(iotype='out'))
         self.assertEqual(set(result.keys()), set(vtvars))
         result = dict(self.asm.scomp1.cont_out.items(recurse=True, iotype='out'))
-        self.assertEqual(set(result.keys()), set(vtvars+vt2vars+vt3vars))
+        self.assertEqual(set(result.keys()), set(vtvars + vt2vars + vt3vars))
         result = dict(self.asm.scomp1.cont_out.items(iotype='in'))
         self.assertEqual(set(result.keys()), set([]))
         result = dict(self.asm.scomp1.cont_out.items(iotype=None))
         self.assertEqual(set(result.keys()), set([]))
         result = dict(self.asm.scomp1.cont_out.items(iotype=not_none))
         self.assertEqual(set(result.keys()), set(vtvars))
-        
+
         result = dict(self.asm.scomp1.cont_in.items(iotype='in'))
         self.assertEqual(set(result.keys()), set(vtvars))
         result = dict(self.asm.scomp1.cont_in.items(recurse=True, iotype='in'))
-        self.assertEqual(set(result.keys()), set(vtvars+vt2vars+vt3vars))
+        self.assertEqual(set(result.keys()), set(vtvars + vt2vars + vt3vars))
         result = dict(self.asm.scomp1.cont_in.items(iotype='out'))
         self.assertEqual(set(result.keys()), set([]))
-        
+
     def test_flatten(self):
         dvt = DumbVT()
-        self.assertEqual(set(flatten_obj('foo', dvt)), 
-                         set([('foo.vt2.vt3.a',1.),('foo.vt2.vt3.b',12.),
-                              ('foo.vt2.x',-1.),('foo.vt2.y',-2.),
-                              ('foo.v1',1.),('foo.v2',2.)]))
-    
-    
+        self.assertEqual(set(flatten_obj('foo', dvt)),
+                         set([('foo.vt2.vt3.a', 1.), ('foo.vt2.vt3.b', 12.),
+                              ('foo.vt2.x', -1.), ('foo.vt2.y', -2.),
+                              ('foo.v1', 1.), ('foo.v2', 2.)]))
+
+
+class ListConnectTestCase(unittest.TestCase):
+
+    def test_connect(self):
+        class Vars(VariableTree):
+                f1 = Float()
+                f2 = Float()
+
+        class TestAsm(Assembly):
+
+            f_in = Float(iotype='in')
+
+            def configure(self):
+                self.add('c2', TestComponent2())
+                self.driver.workflow.add('c2')
+
+                # Construct list with only one element for demo purposes
+                self.c2.vtlist = [Vars()]
+                self.connect('f_in', 'c2.vtlist[0].f1')
+                self.c2.vtlist[0].f2 = 90
+
+                self.create_passthrough('c2.f_out')
+
+        class TestComponent2(Component):
+
+            vtlist = List(trait=Vars, value=[], iotype='in')
+            f_out = Float(iotype='out')
+
+            def execute(self):
+                self.f_out = self.vtlist[0].f1 + self.vtlist[0].f2
+
+        top = set_as_top(Assembly())
+        # Init of model
+        test_asm = TestAsm()
+        top.add('asm', test_asm)
+        top.driver.workflow.add('asm')
+        test_asm.f_in = 10
+
+        test_asm.run()
+
+        self.assertEqual(100, test_asm.f_out)
+
+
 if __name__ == "__main__":
     unittest.main()
-

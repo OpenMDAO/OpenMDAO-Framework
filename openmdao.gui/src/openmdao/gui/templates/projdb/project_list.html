@@ -4,32 +4,52 @@
     Projects
 {% end %}
 
+{% block head %}
+    <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
+    <style type="text/css">
+        .dataTables_length { float: left }
+        .dataTables_filter { float: right; padding-right: 6px; }
+        .DataTables_sort_icon { float: right; }
+    </style>
+    <script src="/static/js/jquery-1.7.1.min.js"></script>
+    <script src="/static/js/jquery-ui-1.8.7.custom.min.js"></script>
+    <script src="/static/js/jquery.dataTables.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#project_table').dataTable({
+                "bJQueryUI": true,
+                "bStateSave": true
+            });
+        });
+    </script>
+{% end %}
+
 {% block content %}
     <h1>Welcome to OpenMDAO ver. {{version}}</h1>
     <h2>Your OpenMDAO Projects:</h2>
 
     {% if project_list %}
-        <table  border="5">
-        <tr>
-            <td style="padding-right: 6px; font-weight: bold;">Name</td>
-            <td style="padding-right: 6px; font-weight: bold;">Description</td>
-            <td style="padding-right: 6px; font-weight: bold;">Version</td>
-            <td style="padding-right: 6px; font-weight: bold;">Created</td>
-            <td style="padding-right: 6px; font-weight: bold;">Last Saved</td>
-            <td width="20" style="padding-right: 6px;"></td>
-		</tr>
+        <table id='project_table' border="1" width="100%">
+        <thead>
+            <th>Name</td>
+            <th>Description</td>
+            <th width="65">Version</td>
+            <th>Created</td>
+            <th>Last Saved</td>
+            <th width="20"></td>
+        </thead>
         {% for project in project_list %}
         <tr>
-            <td style="padding-right: 6px; white-space: nowrap;">
+            <td>
                 <a href="/workspace/project?filename={{ project['filename'] }}">{{ project['projectname'] }}</a>
             </td>
-            <td style="padding-right: 6px;">{{ project['description'] }}</td>
-            <td style="padding-right: 6px;">{{ project['version'] }}</td>
-            <td style="padding-right: 6px;">{{ project['created'][:-7] }}</td>
-            <td style="padding-right: 6px;">{{ project['file_modified'] }}</td>
+            <td>{{ project['description'] }}</td>
+            <td>{{ project['version'] }}</td>
+            <td>{{ project['created'][:-7] }}</td>
+            <td>{{ project['file_modified'] }}</td>
             <td width="20" style="padding-right: 6px;">
                 <form action="/projects/{{ project['id'] }}" method="GET">
-                    <input type="submit" value="Edit" style="font-size: 10px"/>
+                    <input type="submit" value="Details" class="button"/>
                 </form>
             </td>
         </tr>

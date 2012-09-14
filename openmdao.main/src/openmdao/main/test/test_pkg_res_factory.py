@@ -34,7 +34,8 @@ class PkgResFactoryTestCase(unittest.TestCase):
         self.assertEqual(comp.z, 10)
                 
     def test_get_available_types(self):
-        types = set([x[0] for x in get_available_types()])
+        tups = get_available_types()
+        types = set([x[0] for x in tups])
         expected = set(['openmdao.lib.components.external_code.ExternalCode',
                         'openmdao.lib.components.mux.DeMux',
                         'openmdao.lib.drivers.doedriver.DOEdriver',
@@ -54,6 +55,14 @@ class PkgResFactoryTestCase(unittest.TestCase):
         missing = expected - types
         if missing:
             self.fail("the following expected types were missing: %s" % missing)
+            
+        for typ,meta in tups:
+            if not isinstance(meta, dict):
+                self.fail("%s did not return a metadata dict from get_available_types" % typ)
+            if 'version' not in meta:
+                self.fail("the metadata for %s did not contain 'version'" % typ)
+            if 'ifaces' not in meta:
+                self.fail("the metadata for %s did not contain 'ifaces'" % typ)
         
 if __name__ == "__main__":
     unittest.main()

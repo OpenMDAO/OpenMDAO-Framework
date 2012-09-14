@@ -2,7 +2,6 @@ import sys
 import os
 import shutil
 import subprocess
-import atexit
 import time
 from socket import gethostname
 from optparse import OptionParser
@@ -279,17 +278,13 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
         outf.write("\ncouldn't retrieve console output\n")
 
     keep = kwargs.get('keep', False)
-    if retval == 0 or not keep:
-        if terminate is True:
-            if not terminate_instance(inst, host, orig_stdout, debug):
-                retval = -1
-        else:
-            if not stop_instance(inst, host, orig_stdout, debug):
-                retval = -1
-    else:
-        outf.write("run failed, so stopping %s instead of terminating it.\n" % host)
+    if keep or not terminate:
+        outf.write("stopping %s instead of terminating it.\n" % host)
         outf.write("%s will have to be terminated manually.\n" % host)
         if not stop_instance(inst, host, orig_stdout, debug):
+            retval = -1
+    else:
+        if not terminate_instance(inst, host, orig_stdout, debug):
             retval = -1
         
     if retval != 0:

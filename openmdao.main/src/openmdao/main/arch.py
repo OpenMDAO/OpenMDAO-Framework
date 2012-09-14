@@ -1,13 +1,13 @@
 
 from zope.interface import implements
-from enthought.traits.api import HasTraits, List
 
+from openmdao.main.api import Container
 from openmdao.main.interfaces import IArchitecture, ICaseRecorder
 from openmdao.main.hasparameters import ParameterGroup
-from openmdao.main.datatypes.slot import Slot
+from openmdao.main.datatypes.api import List, Slot
 
 
-class Architecture(HasTraits):
+class Architecture(Container):
     """Base class for classes that auto-configure an ArchitectureAssembly
     given a problem formulation based on parameters, constraints, objectives,
     and a model.

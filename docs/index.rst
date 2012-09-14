@@ -12,24 +12,10 @@ Current version: |version|
    optimization/index
    surrogate/index
    mdao/index
-
-.. toctree:: 
-   :maxdepth: 1
-   
    complex/index
    concurrent
    srcdocs/index
    licenses/index
-   
-.. toctree::
-   :hidden:
-   
-   units
-   geometry/index
-   glossary
-   dev-guide/todo
-   arch-doc/index
-  
 
 =========================
 OpenMDAO Developer Guide
@@ -44,10 +30,20 @@ OpenMDAO Developer Guide
    code-contribution-example
    
 ==============================
-Appendix, Glossary. and Index
+Appendix and Glossary
 ==============================
-* :ref:`units`
-* :ref:`glossary`
+
+.. toctree::
+   :maxdepth: 1
+   
+   units
+   glossary
+
+
+==============================
+Index
+==============================
+
 * :ref:`genindex`
 
 

@@ -26,7 +26,7 @@ def test_openmdao(parser, options, args):
     # arg, regardless of what args we pass to it, so if we see -h in sys.args,
     # change the first entry in sys.argv to 'openmdao test'.  Otherwise, usage message
     # will be 'openmdao [options]' instead of 'openmdao test [options]'
-    if '-h' in sys.argv:
+    if '-h' in sys.argv or '--help' in sys.argv:
         sys.argv[0] = 'openmdao test'
     run_openmdao_suite(sys.argv[1:])
     
@@ -69,6 +69,8 @@ def _get_openmdao_parser():
                                    description="run the OpenMDAO test suite")
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='display test progress')
+    parser.add_argument('--skip-gui', action='store_true',
+                        help='skip GUI functional tests')
     parser.add_argument('packages', metavar='package', type=str, nargs='*',
                         help='package to be tested')
     parser.set_defaults(func=test_openmdao)
@@ -96,6 +98,10 @@ def _get_openmdao_parser():
         parser.add_argument("--testargs", action="store", type=str, dest='testargs',
                             default='',
                             help="args to be passed to openmdao test")
+        parser.add_argument('-v', '--verbose', action='store_true',
+                            help='display test progress')
+        parser.add_argument('--skip-gui', action='store_true',
+                            help='skip GUI functional tests')
         parser = add_config_options(parser)
         parser.set_defaults(func=test_branch)
         
