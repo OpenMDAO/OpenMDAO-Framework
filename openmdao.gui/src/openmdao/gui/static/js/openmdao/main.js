@@ -84,8 +84,12 @@ jQuery(function() {
         new openmdao.ConsoleFrame("console",  model);
     }());
 
-    // do layout
-    jQuery('body').trigger('layoutresizeall');
+    openmdao.model.ws_ready.done(function() {
+        jQuery.ajax({ type: 'GET', url: 'project_load'}).done(function() {
+           // do layout
+           jQuery('body').trigger('layoutresizeall');
+        });
+    });
 
 
     jQuery(window).bind('beforeunload', function(e) {
@@ -94,4 +98,5 @@ jQuery(function() {
         }
     });
 });
+
 

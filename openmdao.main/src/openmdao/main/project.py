@@ -199,10 +199,7 @@ class ProjLoader(object):
             exec(code, mod.__dict__)
         except Exception as err:
             del sys.modules[modpath] # remove bad module
-            if mod.__file__ not in str(err):
-                raise type(err)("Error while importing file "+mod.__file__+": "+str(err))
-            else:
-                raise
+            raise type(err)("Error in file "+os.path.basename(mod.__file__)+": "+str(err))
         return mod
 
 

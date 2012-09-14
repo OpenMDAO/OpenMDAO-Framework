@@ -455,7 +455,8 @@ openmdao.Util = {
         retry = typeof retry !== 'undefined' ? retry : true;
         delay = typeof delay !== 'undefined' ? delay : 2000;
 
-        var socket = null;
+        var socket = null,
+            defrd = jQuery.Deferred();
 
         if (!openmdao.sockets) {
             openmdao.sockets = [];
@@ -478,6 +479,7 @@ openmdao.Util = {
                 socket = new WebSocket(addr);
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
+                    defrd.resolve(socket);
                     //debug.info('websocket opened '+socket.readyState,socket,e);
                     //displaySockets();
                 };
@@ -527,7 +529,7 @@ openmdao.Util = {
         debug.info('errhandler:');
         debug.info(errHandler);
         */
-        return socket;
+        return defrd.promise();
     },
 
     /** Close all WebSockets. */

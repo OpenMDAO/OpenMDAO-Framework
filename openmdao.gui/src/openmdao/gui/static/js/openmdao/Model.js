@@ -21,16 +21,16 @@ openmdao.Model=function() {
     */
     function open_websocket(url,handler) {
         // make ajax call (to url) to get the address of the websocket
-        jQuery.ajax({
-            type: 'GET',
-            url:  url,
-            success: function(addr, textStatus, jqXHR) {
-                sockets[url] = openmdao.Util.openWebSocket(addr,handler);
-            },
-            error: function(jqXHR, textStatus, err) {
-                debug.error('Error getting websocket url',jqXHR,textStatus,err);
-            }
-        });
+       return jQuery.ajax({ type: 'GET', url:  url })
+               .fail(function(jqXHR, textStatus, err) {
+                   debug.error('Error getting websocket url',jqXHR,textStatus,err);
+               })
+               .pipe(function(addr) {
+                   return openmdao.Util.openWebSocket(addr,handler);
+               })
+               .done(function(sock) {
+                   sockets[url] = sock;
+               });
     }
 
     /** close all websockets */
@@ -95,6 +95,9 @@ openmdao.Model=function() {
         }
     }
 
+    this.ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
+                                open_websocket('pubstream', handlePubMessage));
+                                
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -109,17 +112,6 @@ openmdao.Model=function() {
         else {
             subscribers[topic] = [ callback ];
         }
-        if (topic === 'outstream' && !outstream_opened) {
-            // if outstream socket is not opened yet, open it
-            outstream_opened = true;
-            open_websocket('outstream', handleOutMessage);
-        }
-        else {
-            // if pubstream socket is not opened yet, open it
-            if (!pubstream_opened) {
-                pubstream_opened = true;
-                open_websocket('pubstream', handlePubMessage);
-            }
             // tell server there's a new subscriber to the topic
             if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
                 jQuery.ajax({
@@ -128,7 +120,6 @@ openmdao.Model=function() {
                     data: {'topic': topic, 'publish': true}
                 });
             }
-        }
     };
 
     /** remove a subscriber (i.e. a function to be called)
