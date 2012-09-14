@@ -47,28 +47,15 @@ TestCase("ModelTest", {
       callback1 = sinon.spy() ;
       callback2 = sinon.spy() ;
 
-      // 1st listener to outstream will initialize the outstream websocket
-      openmdao.model.addListener('outstream', callback1);
-      assertEquals("outstream", this.requests[0].url);
+      // addListener will make an ajax call telling the server to publish 
+      // that topic
+      openmdao.model.addListener('somepathname', callback1);
+      assertEquals("publish?topic=somepathname&publish=true", this.requests[0].url);
       assertEquals("GET", this.requests[0].method);
       assertEquals(true, this.requests[0].async);
+      assertEquals(null, this.requests[0].requestBody);
+
       assertEquals(1, this.requests.length);
-
-
-      // 1st listener to any other topic will initialize the pubstream
-      // and then make an ajax call telling the server to publish that topic
-      openmdao.model.addListener('somepathname', callback1);
-      assertEquals("pubstream", this.requests[1].url);
-      assertEquals("GET", this.requests[1].method);
-      assertEquals(true, this.requests[1].async);
-      assertEquals(null, this.requests[1].requestBody);
-
-
-      assertEquals("publish?topic=somepathname&publish=true", this.requests[2].url);
-      assertEquals("GET", this.requests[1].method);
-      assertEquals(true, this.requests[1].async);
-
-      assertEquals(3, this.requests.length);
   },
 
   "test getTypes": function () {
@@ -134,16 +121,16 @@ TestCase("ModelTest", {
       openmdao.model.saveProject( );
 
       // Check the requests
-      assertEquals("project", this.requests[1].url);
-      assertEquals("POST", this.requests[1].method);
-      assertEquals(true, this.requests[1].async);
-      assertEquals(2, this.requests.length);
-      assertEquals(null, this.requests[1].requestBody);
+      assertEquals("project", this.requests[0].url);
+      assertEquals("POST", this.requests[0].method);
+      assertEquals(true, this.requests[0].async);
+      assertEquals(1, this.requests.length);
+      assertEquals(null, this.requests[0].requestBody);
 
       sinon.assert.notCalled( callback1 );
 
       // Set the response
-      this.requests[1].respond(200, {}, '');
+      this.requests[0].respond(200, {}, '');
 
       // saving project has no side effects, so no callbacks at this time
       sinon.assert.notCalled( callback1 );

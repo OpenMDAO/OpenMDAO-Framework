@@ -516,7 +516,7 @@ class Project(object):
         if err:
             logger.error("command '%s' caused error: %s" % (cmd, str(err)))
             logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
-            self._recorded_cmds.append('#ERR: <%s>' % cmd)
+            self._recorded_cmds.append('%s #ERR' % cmd)
             raise  # err  # We don't want to hide the original stack trace!!
         else:
             # certain commands (like execfile) can modify the recorded string,

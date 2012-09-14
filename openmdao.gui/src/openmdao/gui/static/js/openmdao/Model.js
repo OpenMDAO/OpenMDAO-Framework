@@ -112,14 +112,14 @@ openmdao.Model=function() {
         else {
             subscribers[topic] = [ callback ];
         }
-            // tell server there's a new subscriber to the topic
-            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                jQuery.ajax({
-                    type: 'GET',
-                    url:  'publish',
-                    data: {'topic': topic, 'publish': true}
-                });
-            }
+        // tell server there's a new subscriber to the topic
+        if (topic !== 'outstream' && topic.length > 0 && ! /.exec_state$/.test(topic)) {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'publish',
+                data: {'topic': topic, 'publish': true}
+            });
+        }
     };
 
     /** remove a subscriber (i.e. a function to be called)
