@@ -47,7 +47,7 @@ existing models.
 .. figure:: project_page.png
 
 When working with the GUI, anything you do will be contained in a project. You can think of a project as a collection of 
-information describing your model. That includes all of the python files you use to define your components and the details of 
+information describing your model. That includes all of the Python files you use to define your components and the details of 
 the structure of the model itself. 
 
 You can start a new project by clicking on the ``Start new project`` link at the bottom of the page. 
@@ -61,7 +61,7 @@ screen:
 
 From this point, you're ready to start working with OpenMDAO using our GUI. We have a number of screen casts that walk you
 through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. That covers 
-the basics you need to know to start working with the OpenMDAO GUI, and you'll leran the rest as you work through the documentation. 
+the basics you need to know to start working with the OpenMDAO GUI, and you'll learn the rest as you work through the documentation. 
 
 
 How does the GUI Work?
