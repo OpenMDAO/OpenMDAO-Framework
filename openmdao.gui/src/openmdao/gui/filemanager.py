@@ -94,10 +94,15 @@ class FileManager(object):
             except Exception, err:
                 print 'Filemanager: Error cleaning up file directory', err
 
-    def get_files(self):
+    def get_files(self, root=None):
         ''' get a nested dictionary of files in the working directory
         '''
-        cwd = os.getcwd()
+        if root is None:
+            cwd = os.getcwd()
+        else:
+            cwd = root
+        logger.error("root = %s" % root)
+        logger.error("cwd = %s" % cwd)
         return filedict(cwd, root=cwd)
 
     def _get_abs_path(self, name):

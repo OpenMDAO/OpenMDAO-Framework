@@ -14,6 +14,8 @@ openmdao.Model=function() {
         sockets = {},
         subscribers = {},
         windows = [];
+        
+    this.model_ready = jQuery.Deferred();
 
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
@@ -98,6 +100,18 @@ openmdao.Model=function() {
     this.ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
                                 open_websocket('pubstream', handlePubMessage));
                                 
+    this.ws_ready.done(function() {
+        jQuery.ajax({ type: 'GET', url: 'project_load' })
+        .done(function() {
+             debug.info("resolving model_ready");
+             self.model_ready.resolve();
+        })
+        .fail(function() {
+             debug.info("rejecting model_ready");
+             self.model_ready.reject();
+        });
+    });
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -162,7 +176,7 @@ openmdao.Model=function() {
         jQuery.ajax({
             type: 'POST',
             url:  'model'
-        });
+        })
     };
 
     /** save the current project */

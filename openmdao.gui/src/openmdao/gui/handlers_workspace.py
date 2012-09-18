@@ -9,7 +9,7 @@ from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
 from openmdao.main.publisher import publish
-
+from openmdao.util.log import logger
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -320,6 +320,7 @@ class FilesHandler(ReqHandler):
     def get(self):
         cserver = self.get_server()
         filedict = cserver.get_files()
+        logger.error("FilesHandler.get: filedict = %s" % filedict)
         json = jsonpickle.encode(filedict)
         self.content_type = 'application/javascript'
         self.write(json)

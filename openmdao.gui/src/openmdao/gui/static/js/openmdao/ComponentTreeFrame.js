@@ -49,64 +49,64 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 
     /** update the tree with JSON model data */
     function updateTree(json) {
-        // Grab paths of currently open nodes.
-        var openNodes = [];
-        self.elm.find("li.jstree-open").each(function () {
-            openNodes.push(this.getAttribute("path"));
-        });
-
-        tree.empty();
-        tree.jstree({
-            plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm" ],
-            json_data   : { "data": convertJSON(json, '', openNodes) },
-            themes      : { "theme":  "openmdao" },
-            cookies     : { "prefix": "objtree", opts : { path : '/' } },
-            contextmenu : { "items":  contextMenu },
-            crrm        : { "move" : {
-                                // don't allow moving within the tree (for now anyway)
-                                "check_move" : function (m) {
-                                    return false;
-                                }
-                            }
-                          }
-        })
-        .bind("select_node.jstree", function(e,data) {
-            if (typeof select_fn === 'function') {
-                var path = data.rslt.obj.attr("path");
-                select_fn(path);
-            }
-        })
-        .bind("dblclick.jstree", function (e,data) {
-            if (typeof dblclick_fn === 'function') {
-                var node = jQuery(e.target).closest("li"),
-                    path = node.attr("path");
-                dblclick_fn(path);
-            }
-        })
-        .bind("loaded.jstree", function (e, data) {
-            jQuery('#'+id+' a').draggable({ 
-                //helper: 'clone', 
-                appendTo: 'body',
-                helper: function(event) {
-                    return jQuery('<span style="white-space:nowrap;background-color:black;color:white;"/>')
-                        .text(jQuery(this).text());
-                }
-            }).addClass("component"); // so that the WorkflowFigure droppable knows what to accept
-
-            /* add classes so that the items in the component tree are specific
-               to what they are: assembly, driver or component */
-            jQuery('#'+id+' li').each(function () {
-                if (this.getAttribute("interfaces").indexOf("IAssembly") >= 0) {
-                    this.children[1].children[0].addClass("jstree-assembly");
-                }
-                else if (this.getAttribute("interfaces").indexOf("IDriver") >= 0) {
-                    this.children[1].children[0].addClass("jstree-driver");
-                }
-                else if (this.getAttribute("interfaces").indexOf("IComponent") >= 0) {
-                    this.children[1].children[0].addClass("jstree-component");
-                }
+            // Grab paths of currently open nodes.
+            var openNodes = [];
+            self.elm.find("li.jstree-open").each(function () {
+                openNodes.push(this.getAttribute("path"));
             });
-        });
+    
+            tree.empty();
+            tree.jstree({
+                plugins     : [ "json_data", "sort", "themes", "types", "cookies", "contextmenu", "ui", "crrm" ],
+                json_data   : { "data": convertJSON(json, '', openNodes) },
+                themes      : { "theme":  "openmdao" },
+                cookies     : { "prefix": "objtree", opts : { path : '/' } },
+                contextmenu : { "items":  contextMenu },
+                crrm        : { "move" : {
+                                    // don't allow moving within the tree (for now anyway)
+                                    "check_move" : function (m) {
+                                        return false;
+                                    }
+                                }
+                              }
+            })
+            .bind("select_node.jstree", function(e,data) {
+                if (typeof select_fn === 'function') {
+                    var path = data.rslt.obj.attr("path");
+                    select_fn(path);
+                }
+            })
+            .bind("dblclick.jstree", function (e,data) {
+                if (typeof dblclick_fn === 'function') {
+                    var node = jQuery(e.target).closest("li"),
+                        path = node.attr("path");
+                    dblclick_fn(path);
+                }
+            })
+            .bind("loaded.jstree", function (e, data) {
+                jQuery('#'+id+' a').draggable({ 
+                    //helper: 'clone', 
+                    appendTo: 'body',
+                    helper: function(event) {
+                        return jQuery('<span style="white-space:nowrap;background-color:black;color:white;"/>')
+                            .text(jQuery(this).text());
+                    }
+                }).addClass("component"); // so that the WorkflowFigure droppable knows what to accept
+    
+                /* add classes so that the items in the component tree are specific
+                   to what they are: assembly, driver or component */
+                jQuery('#'+id+' li').each(function () {
+                    if (this.getAttribute("interfaces").indexOf("IAssembly") >= 0) {
+                        this.children[1].children[0].addClass("jstree-assembly");
+                    }
+                    else if (this.getAttribute("interfaces").indexOf("IDriver") >= 0) {
+                        this.children[1].children[0].addClass("jstree-driver");
+                    }
+                    else if (this.getAttribute("interfaces").indexOf("IComponent") >= 0) {
+                        this.children[1].children[0].addClass("jstree-component");
+                    }
+                });
+            });
     }
 
     /** get a context menu for the specified node */

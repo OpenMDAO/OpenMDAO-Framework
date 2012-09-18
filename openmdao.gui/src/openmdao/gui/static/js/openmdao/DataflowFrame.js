@@ -41,16 +41,16 @@ openmdao.DataflowFrame = function(id,model,pathname) {
 
     /** set the pathname of the object for which to display the dataflow */
     this.showDataflow = function(path) {
-        // if not already showing dataflow for this pathname
-        if (path !== self.pathname) {
-            if (self.pathname !== false) {
-                model.removeListener(self.pathname, handleMessage);
+            // if not already showing dataflow for this pathname
+            if (path !== self.pathname) {
+                if (self.pathname !== false) {
+                    model.removeListener(self.pathname, handleMessage);
+                }
+                self.pathname = path;
+                self.setTitle('Dataflow: '+path);
+                pane.showDataflow(path);
+                model.addListener(path,handleMessage);
             }
-            self.pathname = path;
-            self.setTitle('Dataflow: '+path);
-            pane.showDataflow(path);
-            model.addListener(path,handleMessage);
-        }
     };
 
     /** get the pathname for the current dataflow */

@@ -47,6 +47,7 @@ jQuery(function() {
     jQuery("#central_tabs").tabs();
     jQuery("#rightcol_tabs").tabs();
 
+    openmdao.model.model_ready.always(function() {
     // add gui functionality to designated DOM nodes
     (function() {
         var model = openmdao.model;
@@ -84,13 +85,9 @@ jQuery(function() {
         new openmdao.ConsoleFrame("console",  model);
     }());
 
-    openmdao.model.ws_ready.done(function() {
-        jQuery.ajax({ type: 'GET', url: 'project_load' }).done(function() {
-           // do layout
-           jQuery('body').trigger('layoutresizeall');
-        });
-    });
-
+    // do layout
+    jQuery('body').trigger('layoutresizeall');
+     });
 
     jQuery(window).bind('beforeunload', function(e) {
         if (openmdao.model.getModified()){
