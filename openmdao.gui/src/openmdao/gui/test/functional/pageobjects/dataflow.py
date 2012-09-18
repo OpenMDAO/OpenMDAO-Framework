@@ -3,7 +3,6 @@ import time
 
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import StaleElementReferenceException
 
@@ -44,9 +43,19 @@ class DataflowFigure(BasePageObject):
     edit_connections   = ButtonElement((By.XPATH, "../div/a[text()='Edit Connections']"))
     edit_driver        = ButtonElement((By.XPATH, "../div/a[text()='Edit Driver']"))
 
+    def __init__(self, browser, port, root):
+        super(DataflowFigure, self).__init__(browser, port, root)
+        self._pathname = None
+
     @property
     def pathname(self):
         """ Pathname of this component. """
+        if self._pathname is None:
+            # Much slower than if explicitly set.
+            parent = self('header').find_element_by_xpath('..')
+            fig_id = parent.get_attribute('id')
+            script = "return jQuery('#" + fig_id + "').data('pathname')"
+            self._pathname = self.browser.execute_script(script)
         return self._pathname
 
     @pathname.setter

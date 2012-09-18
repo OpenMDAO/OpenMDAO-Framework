@@ -24,7 +24,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver,
 
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
-from openmdao.util.dep import find_files, plugin_groups, PythonSourceTreeAnalyser
+from openmdao.util.dep import find_files, plugin_groups
 from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.util.log import logger
 from openmdao.main.publisher import publish

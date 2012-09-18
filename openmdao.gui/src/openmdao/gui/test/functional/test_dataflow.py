@@ -12,7 +12,7 @@ from nose.tools import with_setup
 
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
-                     begin, new_project
+                     startup, closeout
     from pageobjects.util import NotifierPage
 
     @with_setup(setup_server, teardown_server)
@@ -22,11 +22,8 @@ if sys.platform != 'win32':  # No testing on Windows yet.
 
 
 def _test_maxmin(browser):
-    print "running _test_maxmin..."
     # Toggles maxmimize/minimize button on assemblies.
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # verify that the globals figure is invisible
     globals_figure = workspace_page.get_dataflow_figure('')
@@ -34,36 +31,27 @@ def _test_maxmin(browser):
     eq(globals_figure.background_color, 'rgba(0, 0, 0, 0)')
 
     # Add maxmin.py to project
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'maxmin.py')
-    editor_page.add_file(file_path)
-    browser.close()
-    browser.switch_to_window(workspace_window)
+    workspace_page.add_file(file_path)
 
     # Add MaxMin to 'top'.
     workspace_page.show_dataflow('top')
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'top'])
-    workspace_page.show_library()
-    time.sleep(1)
-    workspace_page.find_library_button('MaxMin', 0.5).click()
-    workspace_page.add_library_item_to_dataflow('maxmin.MaxMin', 'maxmin')
+    maxmin = workspace_page.add_library_item_to_dataflow('maxmin.MaxMin',
+                                                         'maxmin', prefix='top')
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'maxmin', 'top'])
 
     workspace_page.hide_left()
-    workspace_page.hide_right()
-    workspace_page.hide_console()
 
     # Maximize maxmin.
-    maxmin = workspace_page.get_dataflow_figure('maxmin')
     background = maxmin('top_right').value_of_css_property('background')
     assert background.find('circle-plus.png') >= 0
 
     maxmin('top_right').click()
-    time.sleep(1)
+    time.sleep(0.5)
     background = maxmin('top_right').value_of_css_property('background')
     assert background.find('circle-minus.png') >= 0
     eq(sorted(workspace_page.get_dataflow_component_names()),
@@ -71,15 +59,13 @@ def _test_maxmin(browser):
 
     sub = workspace_page.get_dataflow_figure('sub')
     sub('top_right').click()
-    time.sleep(1)
+    time.sleep(0.5)
     background = sub('top_right').value_of_css_property('background')
     assert background.find('circle-minus.png') >= 0
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['driver', 'driver', 'driver', 'extcode', 'maxmin', 'sub', 'top'])
 
     # issue a command and make sure maxmin is still maximized
-    workspace_page.show_console()
-    time.sleep(0.5)
     workspace_page.do_command('dir()')
     background = maxmin('top_right').value_of_css_property('background')
     assert background.find('circle-minus.png') >= 0
@@ -99,32 +85,20 @@ def _test_maxmin(browser):
        ['driver', 'top'])
 
     # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_maxmin complete."
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 def _test_connect(browser):
-    print "running _test_connect..."
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Import connect.py
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'connect.py')
-    editor_page.add_file(file_path)
-    browser.close()
-    browser.switch_to_window(workspace_window)
+    workspace_page.add_file(file_path)
 
     # Replace 'top' with connect.py's top.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page.show_library()
-    workspace_page.find_library_button('Topp', 0.5).click()
     workspace_page.add_library_item_to_dataflow('connect.Topp', 'top')
 
     # Connect components.
@@ -155,19 +129,18 @@ def _test_connect(browser):
     eq(inputs[6].value, ['s_in', ''])
     inputs[6][1] = "'xyzzy'"
     
-    
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
-    inputs._rows[0]._cells[1].click()
+    inputs.rows[0].cells[1].click()
     browser.find_element_by_xpath('//*[@id="bool-editor-b_in"]/option[1]').click()
-    inputs._rows[0]._cells[0].click()
+    inputs.rows[0].cells[0].click()
     #inputs[0][1] = 'True'
     
     inputs = props.inputs
     eq(inputs[2].value, ['e_in', '1'])
-    inputs._rows[2]._cells[1].click()
+    inputs.rows[2].cells[1].click()
     browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
-    inputs._rows[2]._cells[0].click()
+    inputs.rows[2].cells[0].click()
     #inputs[2][1] = '3'    
     
     props.close()
@@ -183,7 +156,7 @@ def _test_connect(browser):
     outputs = editor.get_outputs()
     expected = [
         ['b_out', 'bool',  'True',     '', 'true', '', '', ''],
-        ['e_out', 'enum',   '3',        '', 'true', '', '', ''],
+        ['e_out', 'enum',  '3',        '', 'true', '', '', ''],
         ['f_out', 'float', '2.781828', '', 'true', '', '', ''],
         ['i_out', 'int',   '42',       '', 'true', '', '', ''],
         ['s_out', 'str',   'xyzzy',    '', 'true', '', '', '']
@@ -193,36 +166,23 @@ def _test_connect(browser):
     editor.close()
 
     # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_connect complete."
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 def _test_connections(browser):
-    print "running _test_connections..."
     # Check connection frame functionality.
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
     filename = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                'vehicle_singlesim.py')
-    editor_page.add_file(filename)
-    browser.close()
-    browser.switch_to_window(workspace_window)
+    workspace_page.add_file(filename)
 
     # Replace 'top' with VehicleSim.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page.show_library()
-    workspace_page.find_library_button('VehicleSim', 0.5).click()
     asm_name = 'sim'
     workspace_page.add_library_item_to_dataflow('vehicle_singlesim.VehicleSim',
                                                 asm_name)
-
     # show dataflow for vehicle
     workspace_page.expand_object('sim')
     workspace_page.show_dataflow('sim.vehicle')
@@ -319,38 +279,25 @@ def _test_connections(browser):
     conn_page.close()
 
     # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_connections complete."
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 def _test_driverflows(browser):
-    print "running _test_driverflows"
     # Excercises display of driver flows (parameters, constraints, objectives).
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'rosen_suzuki.py')
-    editor_page.add_file(filename)
-    browser.close()
-    browser.switch_to_window(workspace_window)
+    workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page.show_library()
-    workspace_page.find_library_button('Simulation', 0.5).click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
     workspace_page.show_dataflow('top')
     workspace_page.hide_left()
-    workspace_page.hide_right()
 
     # Select different displays.
     top = workspace_page.get_dataflow_figure('top')
@@ -383,32 +330,20 @@ def _test_driverflows(browser):
     time.sleep(0.5)
 
     # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_driverflows complete."
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 def _test_replace(browser):
-    print "running _test_replace"
     # Replaces various connected components.
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    workspace_window = browser.current_window_handle
-    editor_page = workspace_page.open_editor()
     filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                'rosen_suzuki.py')
-    editor_page.add_file(filename)
-    browser.close()
-    browser.switch_to_window(workspace_window)
+    workspace_page.add_file(filename)
 
     # Replace 'top' with Simulation.
     top = workspace_page.get_dataflow_figure('top')
     top.remove()
-    workspace_page.show_library()
-    workspace_page.find_library_button('Simulation', 0.5).click()
     workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
 
     # Show dataflow for Simulation.
@@ -545,30 +480,23 @@ def _test_replace(browser):
     assert background.find('circle-plus.png') >= 0
 
     # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_replace complete."
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 def _test_ordering(browser):
-    print "running _test_ordering"
     # Verify that adding parameter to driver moves it ahead of target.
-    projects_page = begin(browser)
-    project_info_page, project_dict = new_project(projects_page.new_project())
-    workspace_page = project_info_page.load_project()
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Add ExternalCode and SLSQP.
     workspace_page.show_dataflow('top')
-    workspace_page.show_library()
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.external_code.ExternalCode', 'ext')
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'opt')
+    ext = workspace_page.add_library_item_to_dataflow(
+              'openmdao.lib.components.external_code.ExternalCode', 'ext',
+              prefix='top')
+    opt = workspace_page.add_library_item_to_dataflow(
+              'openmdao.lib.drivers.slsqpdriver.SLSQPdriver', 'opt',
+              prefix='top')
 
     # Check that ExternalCode is before SLSQP.
-    ext = workspace_page.get_dataflow_figure('ext', 'top')
-    opt = workspace_page.get_dataflow_figure('opt', 'top')
     assert ext.coords[0] < opt.coords[0]
 
     # Add parameter to SLSQP.
@@ -587,10 +515,7 @@ def _test_ordering(browser):
     assert ext.coords[0] > opt.coords[0]
 
     # Clean up.
-    projects_page = workspace_page.close_workspace()
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_ordering complete."
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 if __name__ == '__main__':
