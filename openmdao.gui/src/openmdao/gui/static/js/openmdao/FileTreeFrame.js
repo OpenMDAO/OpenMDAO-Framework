@@ -76,6 +76,9 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             ext = ext[ext.length-1],
             url = "application/octet-stream:"+name+":file"+path+"'";
 
+        debug.info("path = "+path)
+        debug.info("val = ")
+        debug.info(val)
         var html = '';
         if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
             html = "<li><a";
@@ -96,6 +99,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         else {
             html = '';
         }
+        debug.info(html)
         return html;
     }
 

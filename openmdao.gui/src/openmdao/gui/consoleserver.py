@@ -67,7 +67,7 @@ class ConsoleServer(cmd.Cmd):
         self.projdirfactory = None
 
         try:
-            self.files = FileManager('files', publish_updates=publish_updates)
+            self.files = FileManager('files', publish_updates=self.publish_updates)
         except Exception as err:
             self._error(err, sys.exc_info())
 

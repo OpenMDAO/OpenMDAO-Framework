@@ -39,8 +39,11 @@ class FileManager(object):
         self.orig_dir = os.getcwd()
         if path:
             self.root_dir = path
+            logger.error("FileManager: path = %s" % path)
         else:
             self.root_dir = tempfile.mkdtemp(self.name)
+            logger.error("FileManager: self.name = %s" % self.name)
+            logger.error("FileManager: root_dir = %s" % self.root_dir)
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)

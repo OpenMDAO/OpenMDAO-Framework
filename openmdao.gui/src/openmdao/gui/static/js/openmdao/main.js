@@ -85,7 +85,7 @@ jQuery(function() {
     }());
 
     openmdao.model.ws_ready.done(function() {
-        jQuery.ajax({ type: 'GET', url: 'project_load'}).done(function() {
+        jQuery.ajax({ type: 'GET', url: 'project_load' }).done(function() {
            // do layout
            jQuery('body').trigger('layoutresizeall');
         });
