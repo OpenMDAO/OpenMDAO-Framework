@@ -520,7 +520,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // if maximized, add menu items for editing/toggling connections
         if (this.maxmin === '-') {
-            menu.appendMenuItem(new draw2d.MenuItem("Data Connection Editor", null, function() {
+            menu.appendMenuItem(new draw2d.MenuItem("Edit Data Connections", null, function() {
                 var f = new openmdao.ConnectionsFrame(model, pathname);
             }));
 
