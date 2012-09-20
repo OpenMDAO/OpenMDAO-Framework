@@ -36,6 +36,7 @@ openmdao.DataflowFrame = function(id,model,pathname) {
 
     /** update the schematic with data from the model */
     this.update = function() {
+        debug.info("DataflowFrame.update");
         pane.update();
     };
 

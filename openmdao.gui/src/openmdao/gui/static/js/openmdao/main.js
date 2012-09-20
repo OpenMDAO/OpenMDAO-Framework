@@ -88,9 +88,9 @@ jQuery(function() {
     }());
 
     // do layout
-    openmdao.model.model_ready.always(function() {
+    //openmdao.model.model_ready.always(function() {
        jQuery('body').trigger('layoutresizeall');
-    });
+    //});
     jQuery(window).bind('beforeunload', function(e) {
         if (openmdao.model.getModified()){
             return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";

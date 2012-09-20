@@ -193,9 +193,11 @@ openmdao.LibraryFrame = function(id,model) {
 
     /** update the display, with data from the model */
     this.update = function() {
+        debug.info("LibraryFrame.update");
         self.elm.html("<div>Updating...</div>")
             .effect('highlight',{color:'#ffd'},1000);
         model.getTypes(updateLibrary);
+        debug.info("LibraryFrame.update done");
     };
 
     // ask model for an update whenever something changes
