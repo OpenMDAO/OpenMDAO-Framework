@@ -487,11 +487,12 @@ class Project(object):
                     try:
                         self.command(line.rstrip('\n'))
                     except Exception as err:
-                        logger.error('file %s line %d: %s' % (fpath, i + 1, str(err)))
+                        msg = str(err)
+                        logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
                         try:
-                            publish('console_errors', str(err))
+                            publish('console_errors', msg)
                         except:
-                            pass
+                            logger.error("publishing of error failed")
                 else:
                     self._recorded_cmds.append(line.rstrip('\n'))
 
@@ -514,8 +515,8 @@ class Project(object):
                 exc_info = sys.exc_info()
 
         if err:
-            logger.error("command '%s' caused error: %s" % (cmd, str(err)))
-            logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
+            #logger.error("command '%s' caused error: %s" % (cmd, str(err)))
+            #logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
             self._recorded_cmds.append('%s #ERR' % cmd)
             raise  # err  # We don't want to hide the original stack trace!!
         else:
