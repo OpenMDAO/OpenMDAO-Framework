@@ -583,6 +583,7 @@ class Project(object):
 
         self.save()
         startdir = os.getcwd()
+        logger.debug("Project: changing dir to %s" % self.path)
         os.chdir(self.path)
         try:
             try:
@@ -596,4 +597,5 @@ class Project(object):
             finally:
                 tf.close()
         finally:
+            logger.debug("Project: changing dir to %s" % startdir)
             os.chdir(startdir)

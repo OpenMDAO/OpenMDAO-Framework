@@ -380,7 +380,9 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
     };
 
     // load initial file data
-    this.update();
+    model.model_ready.always(function() {
+       self.update();
+    });
 };
 
 /** set prototype */

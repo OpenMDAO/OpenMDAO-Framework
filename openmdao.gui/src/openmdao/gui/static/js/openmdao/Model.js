@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.Model=function() {
+openmdao.Model=function(listeners_ready) {
 
     /***********************************************************************
      *  private
@@ -31,6 +31,7 @@ openmdao.Model=function() {
                    return openmdao.Util.openWebSocket(addr,handler);
                })
                .done(function(sock) {
+                   debug.info("sock is open for "+url);
                    sockets[url] = sock;
                });
     }
@@ -100,7 +101,8 @@ openmdao.Model=function() {
     this.ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
                                 open_websocket('pubstream', handlePubMessage));
                                 
-    this.ws_ready.done(function() {
+    listeners_ready.done(function() {
+        debug.info("ws_ready.done");
         jQuery.ajax({ type: 'GET', url: 'project_load' })
         .done(function() {
              debug.info("resolving model_ready");
@@ -120,6 +122,7 @@ openmdao.Model=function() {
         for messages with the given topic
     */
     this.addListener = function(topic, callback) {
+        debug.info("addListener("+topic+")");
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }

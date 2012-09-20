@@ -58,8 +58,9 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
         return self.pathname;
     };
 
-    this.showWorkflow(pathname);
-
+    model.model_ready.always(function() {
+        self.showWorkflow(pathname);
+    });
 };
 
 /** set prototype */

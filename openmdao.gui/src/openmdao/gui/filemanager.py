@@ -47,6 +47,7 @@ class FileManager(object):
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
+        logger.debug("FileManager: changing dir to %s" % self.root_dir)
         os.chdir(self.root_dir)
 
         self.publish_updates = publish_updates
@@ -87,6 +88,7 @@ class FileManager(object):
             self.observer.unschedule_all()
             self.observer.stop()
             self.observer.join()
+        logger.debug("FileManager.cleanup: changing dir to %s" % self.orig_dir)
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:

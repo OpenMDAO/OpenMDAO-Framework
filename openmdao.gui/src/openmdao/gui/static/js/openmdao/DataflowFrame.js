@@ -58,8 +58,9 @@ openmdao.DataflowFrame = function(id,model,pathname) {
         return self.pathname;
     };
 
-    this.showDataflow(pathname);
-
+    model.model_ready.always(function() {
+        self.showDataflow(pathname);
+    });
 };
 
 /** set prototype */
