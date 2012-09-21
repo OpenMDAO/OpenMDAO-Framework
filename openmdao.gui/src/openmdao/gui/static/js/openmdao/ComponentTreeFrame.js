@@ -200,7 +200,9 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
     };
 
     // load initial component data
-    this.update();
+    model.model_ready.always(function() {
+       self.update();
+    });
 };
 
 /** set prototype */
