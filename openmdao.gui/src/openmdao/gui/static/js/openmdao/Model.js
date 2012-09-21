@@ -176,7 +176,7 @@ openmdao.Model=function(listeners_ready) {
         jQuery.ajax({
             type: 'POST',
             url:  'model'
-        })
+        });
     };
 
     /** save the current project */
@@ -503,19 +503,6 @@ openmdao.Model=function(listeners_ready) {
             });
             modified = true;
     };
-
-    /** import the contents of the specified file into the model */
-    /*
-    this.importFile = function(filepath, callback, errorHandler) {
-        // change path to package notation and import
-        var path = filepath.replace(/\.py$/g,'').
-                            replace(/\\/g,'.').
-                            replace(/\//g,'.');
-        cmd = 'from '+path+' import *';
-        self.issueCommand(cmd, callback, errorHandler, null);
-        modified = true;
-    };
-    */
 
     /** execute the model */
     this.runModel = function() {

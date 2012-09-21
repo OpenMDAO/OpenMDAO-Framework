@@ -41,16 +41,16 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
 
     /** set the pathname of the object for which to display the workflow */
     this.showWorkflow = function(path) {
-            // if not already showing workflow for this pathname
-            if (path !== self.pathname) {
-                if (self.pathname !== false) {
-                    model.removeListener(self.pathname, handleMessage);
-                }
-                self.pathname = path;
-                self.setTitle('Workflow: '+path);
-                pane.showWorkflow(path);
-                model.addListener(path,handleMessage);
+        // if not already showing workflow for this pathname
+        if (path !== self.pathname) {
+            if (self.pathname !== false) {
+                model.removeListener(self.pathname, handleMessage);
             }
+            self.pathname = path;
+            self.setTitle('Workflow: '+path);
+            pane.showWorkflow(path);
+            model.addListener(path,handleMessage);
+        }
     };
 
     /** get the pathname for the current workflow */
