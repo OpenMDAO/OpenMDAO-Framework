@@ -389,33 +389,9 @@ class Project(object):
         self._recorded_cmds = []
         self.path = expand_path(projpath)
         self._model_globals = _ProjDict()
-        self._init_globals()
-        macro_file = os.path.join(self.path, '_project_macro')
 
-        if os.path.isdir(projpath):
-            self.activate()
-            if os.path.isfile(macro_file):
-                logger.info('Reconstructing project using macro')
-                self.load_macro(macro_file, execute=True)
-            else:
-                self._initialize()
-                self.write_macro()
-                        
-        else:  # new project
+        if not os.path.isdir(projpath):
             os.makedirs(projpath)
-            self.activate()
-            self._initialize()
-            self.save()
-
-    def _initialize(self):
-        self.command("# Auto-generated file - DO NOT MODIFY")
-        self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
-
-    def _init_globals(self):
-        self._model_globals['create'] = self.create   # add create funct here so macros can call it
-        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
-        self._model_globals['execfile'] = self.execfile
-        self._model_globals['set_as_top'] = set_as_top
 
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
         if server is None and res_desc is None and typname in self._model_globals:
@@ -505,13 +481,36 @@ class Project(object):
 
         return result
 
+    def _initialize(self):
+        macro_file = os.path.join(self.path, '_project_macro')
+        if os.path.isfile(macro_file):
+            logger.info('Reconstructing project using macro')
+            self.load_macro(macro_file, execute=True)
+        else:
+            self.command("# Auto-generated file - DO NOT MODIFY")
+            self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
+            self.write_macro()
+
+    def _init_globals(self):
+        self._model_globals['create'] = self.create   # add create funct here so macros can call it
+        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
+        self._model_globals['execfile'] = self.execfile
+        self._model_globals['set_as_top'] = set_as_top
+
     def activate(self):
-        """Puts this project's directory on sys.path."""
+        """Make this project active by putting its directory on sys.path and
+        executing its macro.
+        """
+        # set SimulationRoot and put our path on sys.path
         SimulationRoot.chroot(self.path)
         add_proj_to_path(self.path)
         modeldir = self.path+PROJ_DIR_EXT
         if modeldir not in sys.path:
             sys.path = [modeldir]+sys.path
+            
+        # set up the model
+        self._init_globals()
+        self._initialize()
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
@@ -565,7 +564,9 @@ class Project(object):
                     tf.add(entry)
             except Exception, err:
                 print "Error creating project archive:", err
+                fname = None
             finally:
                 tf.close()
         finally:
             os.chdir(startdir)
+        return fname

@@ -517,6 +517,7 @@ class ConsoleServer(cmd.Cmd):
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
             self.proj = Project(projdir)
+            self.proj.activate()
         except Exception, err:
             self._error(err, sys.exc_info())
 

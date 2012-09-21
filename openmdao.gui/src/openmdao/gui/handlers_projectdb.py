@@ -147,7 +147,8 @@ class DownloadHandler(ReqHandler):
             dirname = os.path.join(self.get_project_dir(), project['filename'])
 
             if os.path.isdir(dirname):
-                proj_file = file(filename, 'rb')
+                proj = Project(dirname)
+                proj_file = open(proj.export(), 'rb')
                 self.set_header('content_type', 'application/octet-stream')
                 self.set_header('Content-Length', str(os.path.getsize(filename)))
                 form_proj = clean_filename(project['projectname'])
