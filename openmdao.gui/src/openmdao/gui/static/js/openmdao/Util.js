@@ -1,5 +1,6 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
+openmdao.sockets = [];
 
 /**
  * utility functions used in the openmdao gui
@@ -457,10 +458,6 @@ openmdao.Util = {
 
         var socket = null,
             defrd = jQuery.Deferred();
-
-        if (!openmdao.sockets) {
-            openmdao.sockets = [];
-        }
 
         function connect_after_delay() {
             tid = setTimeout(connect, delay);

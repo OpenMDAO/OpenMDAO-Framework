@@ -411,6 +411,7 @@ def _test_properties(browser):
     workspace_page = project_info_page.load_project()
 
     # Check default 'top'.
+    workspace_page.show_properties()
     workspace_page.select_object('top')
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Assembly: top')

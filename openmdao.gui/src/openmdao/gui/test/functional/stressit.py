@@ -1,3 +1,4 @@
+import glob
 import os.path
 import subprocess
 import sys
@@ -30,12 +31,7 @@ def main():
         print msg
         logfile.write('\n'+msg+'\n')
 
-        for test_script in ('test_codeeditor.py',
-                            'test_dataflow.py',
-                            'test_dragdrop.py',
-                            'test_project.py',
-                            'test_workflow.py',
-                            'test_workspace.py'):
+        for test_script in sorted(glob.glob('test_*.py')):
             msg = '    Running %s' % test_script
             print msg
             logfile.write(msg+'\n')
