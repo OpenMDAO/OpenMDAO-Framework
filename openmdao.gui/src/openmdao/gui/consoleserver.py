@@ -506,10 +506,7 @@ class ConsoleServer(cmd.Cmd):
                 remove_class_factory(self.projdirfactory)
 
             # make sure we have a ProjFinder in sys.path_hooks
-            for hook in sys.path_hooks:
-                if hook is ProjFinder:
-                    break
-            else:
+            if not ProjFinder in sys.path_hooks:
                 sys.path_hooks = [ProjFinder] + sys.path_hooks
 
             # have to do things in a specific order here. First, create the files,
