@@ -103,7 +103,7 @@ openmdao.PropertiesFrame = function(id,model) {
 
     /** if there is an object loaded, update it from the model */
     this.update = function() {
-        debug.info("PropertiesFrame.update");
+        //debug.info("PropertiesFrame.update");
         if (self.pathname && self.pathname.length>0) {
             self.editObject(self.pathname);
         }

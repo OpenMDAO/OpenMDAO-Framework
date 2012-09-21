@@ -36,7 +36,7 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
 
     /** update the schematic with data from the model */
     this.update = function() {
-        debug.info("WorkflowFrame.update");
+        //debug.info("WorkflowFrame.update");
         pane.showWorkflow(self.pathname);
     };
 

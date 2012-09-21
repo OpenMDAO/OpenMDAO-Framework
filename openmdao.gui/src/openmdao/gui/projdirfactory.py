@@ -155,7 +155,7 @@ class _FileInfo(object):
         self.fpath = fpath
         self.modpath = get_module_path(fpath)
         self.modtime = os.path.getmtime(fpath)
-        logger.error("importing %s" % self.modpath)
+        #logger.error("importing %s" % self.modpath)
         __import__(self.modpath)
         module = sys.modules[self.modpath]
         self.version = getattr(module, '__version__', None)
@@ -224,7 +224,7 @@ class ProjDirFactory(Factory):
                 sys.path = [modeldir]+sys.path
                 logger.info("added %s to sys.path" % modeldir)
                 
-            logger.error("watchdir = %s" % self.watchdir)
+            #logger.error("watchdir = %s" % self.watchdir)
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
             
@@ -289,14 +289,14 @@ class ProjDirFactory(Factory):
             return types
 
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
-        logger.error("on_modified(%s)" % fpath)
+        #logger.error("on_modified(%s)" % fpath)
         if os.path.isdir(fpath):
             return None
         with self._lock:
             finfo = self._files.get(fpath)
             if finfo is None:
                 try:
-                    logger.error("new _FileInfo for %s" % fpath)
+                    #logger.error("new _FileInfo for %s" % fpath)
                     fileinfo = _FileInfo(fpath)
                 except Exception as err:
                     if isinstance(err, SyntaxError):
@@ -312,7 +312,7 @@ class ProjDirFactory(Factory):
                 for cname in fileinfo.classes.keys():
                     self._classes[cname] = fileinfo
             else: # updating a file that's already been imported
-                logger.error("file %s already imported" % fpath)
+                #logger.error("file %s already imported" % fpath)
                 try:
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:

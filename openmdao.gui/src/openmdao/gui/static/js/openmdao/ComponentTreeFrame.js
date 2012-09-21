@@ -196,7 +196,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
 
     /** update the tree, with data from the model  */
     this.update = function() {
-        debug.info("ComponentTreeFrame.update");
+        //debug.info("ComponentTreeFrame.update");
         model.getComponents(updateTree);
     };
 

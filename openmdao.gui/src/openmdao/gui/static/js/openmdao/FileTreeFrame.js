@@ -76,9 +76,6 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
             ext = ext[ext.length-1],
             url = "application/octet-stream:"+name+":file"+path+"'";
 
-        debug.info("path = "+path)
-        debug.info("val = ")
-        debug.info(val)
         var html = '';
         if (!filter_active || ((filter_beg.indexOf(name[0])<0 && filter_ext.indexOf(ext)<0))) {
             html = "<li><a";
@@ -268,7 +265,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         // generate HTML for the file tree
         var html = "<ul>";
         jQuery.each(files,function(path,val) {
-            debug.info('updateFiles: path=',path);
+            //debug.info('updateFiles: path=',path);
             html += getFileHTML(path,val);
         });
         html += "</ul>";
@@ -357,7 +354,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
         }
         else {
             files = message[1];
-            debug.info('files =',files);
+            //debug.info('files =',files);
             updateFiles(files);
         }
     }
@@ -375,7 +372,7 @@ openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
 
     /** update the display, with data from the model */
     this.update = function() {
-        debug.info("FileTreeFrame: update");
+        //debug.info("FileTreeFrame: update");
         model.getFiles(updateFiles);
     };
 

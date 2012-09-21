@@ -75,7 +75,7 @@ openmdao.ConsoleFrame = function(id,model) {
 
     /** update the history */
     function updateHistory(text) {
-        debug.info("ConsoleFrame.updateHistory",text);
+        //debug.info("ConsoleFrame.updateHistory",text);
         if (text.length > 0) {
             history.append(openmdao.Util.escapeHTML(text).
                             replace(/\n\r?/g, '<br />'));
@@ -85,7 +85,7 @@ openmdao.ConsoleFrame = function(id,model) {
 
     /** display console error */
     function consoleError(msg) {
-        debug.info("ConsoleFrame.consoleError",msg);
+        //debug.info("ConsoleFrame.consoleError",msg);
         // topic = msg[0];
         text = msg[1];
         updateHistory(text+'\n');

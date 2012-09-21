@@ -525,7 +525,7 @@ class ConsoleServer(cmd.Cmd):
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
             self.proj = Project(projdir)
-            logger.error("project loaded")
+            #logger.error("project loaded")
             #self.files.publish_files()
         except Exception, err:
             self._error(err, sys.exc_info())
@@ -594,8 +594,8 @@ class ConsoleServer(cmd.Cmd):
         ''' get a nested dictionary of files
         '''
         try:
-            logger.error("get_files(root = %s)" % self.proj.path)
-            logger.error("files = %s" % self.files.get_files(root=self.proj.path))
+            #logger.error("get_files(root = %s)" % self.proj.path)
+            #logger.error("files = %s" % self.files.get_files(root=self.proj.path))
             return self.files.get_files(root=self.proj.path)
         except AttributeError:
             return {}

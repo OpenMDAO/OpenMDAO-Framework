@@ -638,7 +638,7 @@ openmdao.DataflowFigure.prototype.maximize=function(){
 
 /** update dataflow by recreating figures from JSON dataflow data */
 openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
-        debug.info("DataflowFigure.prototype.updateDataflow");
+        //debug.info("DataflowFigure.prototype.updateDataflow");
     if (!json.hasOwnProperty('components')) {
         return;
     }
