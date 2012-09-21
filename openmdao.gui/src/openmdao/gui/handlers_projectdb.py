@@ -1,4 +1,5 @@
 import os
+import shutil
 from time import strftime
 from urllib2 import HTTPError
 
@@ -34,10 +35,10 @@ class DeleteHandler(ReqHandler):
         project = pdb.get(project_id)
 
         if project['filename']:
-            filename = os.path.join(self.get_project_dir(),
+            dirname = os.path.join(self.get_project_dir(),
                                     str(project['filename']))
-            if os.path.exists(filename):
-                os.remove(filename)
+            if os.path.isdir(dirname):
+                shutil.rmtree(dirname)
 
         pdb.remove(project_id)
         self.redirect('/')
@@ -87,7 +88,7 @@ class DetailHandler(ReqHandler):
         else:
             project['version'] =''
 
-        # if there's no proj file yet, create en empty one
+        # if there's no proj dir yet, create an empty one
         if not project['filename']:
 
             version = project['version']
@@ -99,21 +100,23 @@ class DetailHandler(ReqHandler):
                 filename = '%s' % pname
             filename = clean_filename(filename)
 
-            unique = '%s.proj' % filename
+            unique = filename
             i = 1
-            while os.path.exists(os.path.join(self.get_project_dir(), \
+            while os.path.exists(os.path.join(self.get_project_dir(),
                                               unique)):
-                unique = '%s_%s.proj' % (filename, str(i))
+                unique = '%s_%s' % (filename, str(i))
                 i = i+1
 
-            with open(os.path.join(self.get_project_dir(), unique), 'w') as out:
-                out.write('')
-                out.close()
+            #with open(os.path.join(self.get_project_dir(), unique), 'w') as out:
+                #out.write('')
+                #out.close()
 
             project['filename'] = unique
 
         if project_is_new:
             pdb.new(project)
+            os.mkdir(os.path.join(self.get_project_dir(), 
+                                  project['filename']))
         else:
             for key, value in project.iteritems():
                 pdb.set(project_id, key, value)
@@ -141,9 +144,9 @@ class DownloadHandler(ReqHandler):
         pdb = Projects()
         project = pdb.get(project_id)
         if project['filename']:
-            filename = os.path.join(self.get_project_dir(), project['filename'])
+            dirname = os.path.join(self.get_project_dir(), project['filename'])
 
-            if os.path.exists(filename):
+            if os.path.isdir(dirname):
                 proj_file = file(filename, 'rb')
                 self.set_header('content_type', 'application/octet-stream')
                 self.set_header('Content-Length', str(os.path.getsize(filename)))
@@ -159,7 +162,7 @@ class DownloadHandler(ReqHandler):
                 finally:
                     proj_file.close()
             else:
-                raise HTTPError(filename, 403, "%s is not a file" % filename,
+                raise HTTPError(dirname, 403, "%s is not a directory" % dirname,
                                 None, None)
         else:
             raise HTTPError(filename, 403, "no file found for %s" % \
@@ -208,15 +211,13 @@ class AddHandler(ReqHandler):
                 project['description'] = ''
                 project['active'] = 1
 
-                if filename[-5:] == '.proj':
-                    filename = filename[:-5]
                 project['projectname'] = 'Added_%s' % (filename)
 
-                unique = '%s.proj' % filename
+                unique = filename
                 i = 1
                 while os.path.exists(os.path.join(self.get_project_dir(), \
                                                   unique)):
-                    unique = '%s_%s.proj' % (filename, str(i))
+                    unique = '%s_%s' % (filename, str(i))
                     i = i+1
 
                 with open(os.path.join(self.get_project_dir(),

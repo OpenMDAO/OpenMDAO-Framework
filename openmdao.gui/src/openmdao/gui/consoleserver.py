@@ -495,9 +495,8 @@ class ConsoleServer(cmd.Cmd):
         return packagedict(get_available_types())
 
     @modifies_model
-    def load_project(self, filename):
+    def load_project(self, projdir):
         _clear_insts()
-        self.projfile = filename
         try:
             if self.proj:
                 self.proj.deactivate()
@@ -509,12 +508,8 @@ class ConsoleServer(cmd.Cmd):
             if not ProjFinder in sys.path_hooks:
                 sys.path_hooks = [ProjFinder] + sys.path_hooks
 
-            # have to do things in a specific order here. First, create the files,
-            # then point the ProjDirFactory at the files, then finally create the
-            # Project. Executing the project macro (which happens in the Project __init__)
-            # requires that the ProjDirFactory is already in place.
-            project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
-            projdir = os.path.join(self.files.getcwd(), parse_archive_name(filename))
+            #project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
+            #projdir = os.path.join(self.files.getcwd(), parse_archive_name(filename))
             
             add_proj_to_path(projdir)
             
@@ -526,19 +521,13 @@ class ConsoleServer(cmd.Cmd):
             self._error(err, sys.exc_info())
 
     def save_project(self):
-        ''' save the current project state & export it whence it came
+        ''' save the current project macro and commit to the project repo
         '''
         if self.proj:
             try:
-                self.proj.save()
-                print 'Project state saved.'
-                if len(self.projfile) > 0:
-                    dir = os.path.dirname(self.projfile)
-                    ensure_dir(dir)
-                    self.proj.export(destdir=dir)
-                    print 'Exported to ', dir + '/' + self.proj.name
-                else:
-                    self._print_error('Export failed, directory not known')
+                print "Updating project macro"
+                self.proj.save() # write the macro file
+                print 'Committed project in directory ', self.proj.path
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:

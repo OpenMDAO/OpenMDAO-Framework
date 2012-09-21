@@ -397,27 +397,6 @@ class Project(object):
 
         if os.path.isdir(projpath):
             self.activate()
-
-            ## locate file containing state, create it if it doesn't exist
-            #statefile = os.path.join(projpath, '_project_state')
-            #if os.path.exists(statefile):
-                #try:
-                    #with open(statefile, 'r') as f:
-                        #self._model_globals = pickle.load(f)
-                        ## this part is just to handle cases where a project was saved
-                        ## before _model_globals was changed to a _ProjDict
-                        #if not isinstance(self._model_globals, _ProjDict):
-                            #m = _ProjDict()
-                            #m.update(self._model_globals)
-                            #self._model_globals = m
-                            #self._init_globals()
-                #except Exception, e:
-                    #logger.error('Unable to restore project state: %s' % e)
-                    #macro_exec = True
-            #else:
-                #macro_exec = True
-                #logger.error("%s doesn't exist" % statefile)
-            #if macro_exec:
             if os.path.isfile(macro_file):
                 logger.info('Reconstructing project using macro')
                 self.load_macro(macro_file, execute=True)
@@ -556,12 +535,6 @@ class Project(object):
     def save(self):
         """ Save the project model to its project directory.
         """
-        #fname = os.path.join(self.path, '_project_state')
-        #try:
-            #with open(fname, 'wb') as f:
-                #pickle.dump(self._model_globals, f)
-        #except Exception as err:
-            #logger.error("Failed to pickle the project: %s" % str(err))
         self.write_macro()
 
     def export(self, projname=None, destdir='.'):
