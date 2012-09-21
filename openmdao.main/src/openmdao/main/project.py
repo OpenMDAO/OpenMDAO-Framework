@@ -199,10 +199,7 @@ class ProjLoader(object):
             exec(code, mod.__dict__)
         except Exception as err:
             del sys.modules[modpath] # remove bad module
-            if mod.__file__ not in str(err):
-                raise type(err)("Error while importing file "+mod.__file__+": "+str(err))
-            else:
-                raise
+            raise type(err)("Error in file "+os.path.basename(mod.__file__)+": "+str(err))
         return mod
 
 
@@ -469,11 +466,12 @@ class Project(object):
                     try:
                         self.command(line.rstrip('\n'))
                     except Exception as err:
-                        logger.error('file %s line %d: %s' % (fpath, i + 1, str(err)))
+                        msg = str(err)
+                        logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
                         try:
-                            publish('console_errors', str(err))
+                            publish('console_errors', msg)
                         except:
-                            pass
+                            logger.error("publishing of error failed")
                 else:
                     self._recorded_cmds.append(line.rstrip('\n'))
 
@@ -496,9 +494,7 @@ class Project(object):
                 exc_info = sys.exc_info()
 
         if err:
-            logger.error("command '%s' caused error: %s" % (cmd, str(err)))
-            logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
-            self._recorded_cmds.append('#ERR: <%s>' % cmd)
+            self._recorded_cmds.append('%s #ERR' % cmd)
             raise  # err  # We don't want to hide the original stack trace!!
         else:
             # certain commands (like execfile) can modify the recorded string,

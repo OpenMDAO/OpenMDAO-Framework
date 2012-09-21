@@ -84,8 +84,8 @@ openmdao.ConsoleFrame = function(id,model) {
 
     /** display console error */
     function consoleError(msg) {
-        // topic = msg[0];
         text = msg[1];
+        updateHistory(text+'\n');
         openmdao.Util.notify(text, 'Console Error');
     }
 
