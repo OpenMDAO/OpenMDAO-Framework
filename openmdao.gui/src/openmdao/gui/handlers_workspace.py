@@ -320,7 +320,6 @@ class FilesHandler(ReqHandler):
     def get(self):
         cserver = self.get_server()
         filedict = cserver.get_files()
-        #logger.error("FilesHandler.get: filedict = %s" % filedict)
         json = jsonpickle.encode(filedict)
         self.content_type = 'application/javascript'
         self.write(json)

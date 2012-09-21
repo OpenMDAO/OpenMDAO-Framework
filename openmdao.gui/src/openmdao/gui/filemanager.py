@@ -39,15 +39,11 @@ class FileManager(object):
         self.orig_dir = os.getcwd()
         if path:
             self.root_dir = path
-            #logger.error("FileManager: path = %s" % path)
         else:
             self.root_dir = tempfile.mkdtemp(self.name)
-            #logger.error("FileManager: self.name = %s" % self.name)
-            #logger.error("FileManager: root_dir = %s" % self.root_dir)
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
         os.mkdir(self.root_dir)
-        logger.debug("FileManager: changing dir to %s" % self.root_dir)
         os.chdir(self.root_dir)
 
         self.publish_updates = publish_updates
@@ -88,7 +84,6 @@ class FileManager(object):
             self.observer.unschedule_all()
             self.observer.stop()
             self.observer.join()
-        logger.debug("FileManager.cleanup: changing dir to %s" % self.orig_dir)
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             try:
@@ -103,8 +98,6 @@ class FileManager(object):
             cwd = os.getcwd()
         else:
             cwd = root
-        #logger.error("root = %s" % root)
-        #logger.error("cwd = %s" % cwd)
         return filedict(cwd, root=cwd)
 
     def _get_abs_path(self, name):

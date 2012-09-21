@@ -155,7 +155,6 @@ class _FileInfo(object):
         self.fpath = fpath
         self.modpath = get_module_path(fpath)
         self.modtime = os.path.getmtime(fpath)
-        #logger.error("importing %s" % self.modpath)
         __import__(self.modpath)
         module = sys.modules[self.modpath]
         self.version = getattr(module, '__version__', None)
@@ -224,7 +223,6 @@ class ProjDirFactory(Factory):
                 sys.path = [modeldir]+sys.path
                 logger.info("added %s to sys.path" % modeldir)
                 
-            #logger.error("watchdir = %s" % self.watchdir)
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
             
@@ -289,22 +287,18 @@ class ProjDirFactory(Factory):
             return types
 
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
-        #logger.error("on_modified(%s)" % fpath)
         if os.path.isdir(fpath):
             return None
         with self._lock:
             finfo = self._files.get(fpath)
             if finfo is None:
                 try:
-                    #logger.error("new _FileInfo for %s" % fpath)
                     fileinfo = _FileInfo(fpath)
                 except Exception as err:
                     if isinstance(err, SyntaxError):
                         msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
-                        #elf._file_error(msg)
                         self._error(msg)
                     else:
-                        #self._file_error(str(err))
                         self._error(str(err))
                     return
                 self._files[fpath] = fileinfo
@@ -312,16 +306,13 @@ class ProjDirFactory(Factory):
                 for cname in fileinfo.classes.keys():
                     self._classes[cname] = fileinfo
             else: # updating a file that's already been imported
-                #logger.error("file %s already imported" % fpath)
                 try:
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:
                     if isinstance(err, SyntaxError):
                         msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
-                        #self._file_error(msg)
                         self._error(msg)
                     else:
-                        #self._file_error(str(err))
                         self._error(str(err))
                     self._remove_fileinfo(fpath)
                     return
@@ -357,12 +348,7 @@ class ProjDirFactory(Factory):
         logger.error(msg)
         print msg
         publish('console_errors', msg)
-        
-    #def _file_error(self, msg):
-        #logger.error(msg)
-        #publish('file_errors', msg)
-        #print msg
-        
+
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs
         when there is some error during the import of the file.

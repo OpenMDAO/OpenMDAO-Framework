@@ -394,27 +394,6 @@ class Project(object):
 
         if os.path.isdir(projpath):
             self.activate()
-
-            ## locate file containing state, create it if it doesn't exist
-            #statefile = os.path.join(projpath, '_project_state')
-            #if os.path.exists(statefile):
-                #try:
-                    #with open(statefile, 'r') as f:
-                        #self._model_globals = pickle.load(f)
-                        ## this part is just to handle cases where a project was saved
-                        ## before _model_globals was changed to a _ProjDict
-                        #if not isinstance(self._model_globals, _ProjDict):
-                            #m = _ProjDict()
-                            #m.update(self._model_globals)
-                            #self._model_globals = m
-                            #self._init_globals()
-                #except Exception, e:
-                    #logger.error('Unable to restore project state: %s' % e)
-                    #macro_exec = True
-            #else:
-                #macro_exec = True
-                #logger.error("%s doesn't exist" % statefile)
-            #if macro_exec:
             if os.path.isfile(macro_file):
                 logger.info('Reconstructing project using macro')
                 self.load_macro(macro_file, execute=True)
@@ -515,8 +494,6 @@ class Project(object):
                 exc_info = sys.exc_info()
 
         if err:
-            #logger.error("command '%s' caused error: %s" % (cmd, str(err)))
-            #logger.error("%s" % ''.join(traceback.format_tb(exc_info[2])))
             self._recorded_cmds.append('%s #ERR' % cmd)
             raise  # err  # We don't want to hide the original stack trace!!
         else:
