@@ -95,5 +95,7 @@ openmdao.DataflowPane = function(elm,model,pathname,name) {
         dataflowFig.maximize();
     };
 
-    this.showDataflow(pathname);
+    model.model_ready.always(function() {
+        self.showDataflow(pathname);
+    });
 };

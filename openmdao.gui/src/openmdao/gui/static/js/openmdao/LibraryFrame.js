@@ -202,7 +202,9 @@ openmdao.LibraryFrame = function(id,model) {
     model.addListener('types', handleMessage);
 
     // initial update
-    this.update();
+    model.model_ready.always(function() {
+        self.update();
+    });
 };
 
 /** set prototype */
