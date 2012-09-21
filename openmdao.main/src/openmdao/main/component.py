@@ -38,7 +38,7 @@ from openmdao.main.publisher import Publisher
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.log import TRACER, logger
+import openmdao.util.log as tracing
 
 
 class SimulationRoot(object):
@@ -55,7 +55,6 @@ class SimulationRoot(object):
         path: string
             Path to move to.
         """
-        logger.debug("setting SimulationRoot (path) to %s" % path)
         os.chdir(path)
         SimulationRoot.__root = None
         SimulationRoot.get_root()
@@ -501,11 +500,11 @@ class Component(Container):
                 else:
                     # Component executes as normal
                     self.exec_count += 1
-                    if TRACER is not None and \
+                    if tracing.TRACER is not None and \
                         not obj_has_interface(self, IAssembly) and \
                         not obj_has_interface(self, IDriver):
 
-                        TRACER.debug(self.get_itername())
+                        tracing.TRACER.debug(self.get_itername())
 
                     self.execute()
 
@@ -912,7 +911,6 @@ class Component(Container):
             directory = join(self.get_abs_directory(), directory)
         self.check_path(directory, True)
         try:
-            logger.debug("changing dir to %s" % directory)
             os.chdir(directory)
         except OSError, err:
             self.raise_exception("Can't push_dir '%s': %s" % (directory, err),
@@ -927,7 +925,6 @@ class Component(Container):
         except IndexError:
             self.raise_exception('Called pop_dir() with nothing on the dir stack',
                                  IndexError)
-        logger.debug("pop_dir: changing dir to %s" % newdir)
         os.chdir(newdir)
 
     def checkpoint(self, outstream, fmt=SAVE_CPICKLE):
