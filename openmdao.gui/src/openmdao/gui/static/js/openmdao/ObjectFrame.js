@@ -161,7 +161,6 @@ openmdao.ObjectFrame = function(model,pathname,tabName) {
 
     /** if there is an object loaded, update it from the model */
     this.update = function() {
-        //debug.info("ObjectFrame.update");
         // TODO: should just update existing panes rather than recreate them
         if (self.pathname && self.pathname.length>0) {
             self.editObject(self.pathname);

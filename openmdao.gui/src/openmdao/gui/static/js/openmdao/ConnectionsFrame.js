@@ -343,7 +343,6 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
 
     /** if there is an object loaded, update it from the model */
     this.update = function() {
-        //debug.info("ConnectionsFrame.update");
         if (self.pathname && self.pathname.length>0) {
             self.editAssembly(self.pathname,self.src_comp,self.dst_comp);
         }

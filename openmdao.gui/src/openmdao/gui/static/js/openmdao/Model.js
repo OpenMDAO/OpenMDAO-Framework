@@ -31,7 +31,6 @@ openmdao.Model=function(listeners_ready) {
                    return openmdao.Util.openWebSocket(addr,handler);
                })
                .done(function(sock) {
-                   //debug.info("sock is open for "+url);
                    sockets[url] = sock;
                });
     }
@@ -45,7 +44,6 @@ openmdao.Model=function(listeners_ready) {
 
     /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
-        //debug.info("out message:", message);
         var callbacks = subscribers.outstream;
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
@@ -67,7 +65,6 @@ openmdao.Model=function(listeners_ready) {
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
-        //debug.info("pub message:", message);
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
@@ -103,15 +100,14 @@ openmdao.Model=function(listeners_ready) {
         listeners_ready.resolve();
     }
     
+    // this makes project loading wait until after the listeners have
+    // been registered.
     listeners_ready.done(function() {
-        //debug.info("ws_ready.done");
         jQuery.ajax({ type: 'GET', url: 'project_load' })
         .done(function() {
-             //debug.info("resolving model_ready");
              self.model_ready.resolve();
         })
         .fail(function() {
-             //debug.info("rejecting model_ready");
              self.model_ready.reject();
         });
     });
@@ -124,7 +120,6 @@ openmdao.Model=function(listeners_ready) {
         for messages with the given topic
     */
     this.addListener = function(topic, callback) {
-        //debug.info("addListener("+topic+")");
         if (subscribers.hasOwnProperty(topic)) {
             subscribers[topic].push(callback);
         }
