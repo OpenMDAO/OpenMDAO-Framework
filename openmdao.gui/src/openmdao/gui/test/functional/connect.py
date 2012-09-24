@@ -37,7 +37,7 @@ class Topp(Assembly):
 
 
 if __name__ == '__main__':
-    top = Top()
+    top = Topp()
 
     top.comp1.b_in = True
     top.comp1.e_in = 3

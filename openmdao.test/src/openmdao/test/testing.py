@@ -174,11 +174,12 @@ def run_openmdao_suite(argv=None):
     args.append('--exe') # by default, nose will skip any .py files that are
                          # executable. --exe prevents this behavior
     
-    # Clobber cached eggsaver data in case Python environment has changed.
+    # Clobber cached data in case Python environment has changed.
     base = os.path.expanduser(os.path.join('~', '.openmdao'))
-    path = os.path.join(base, 'eggsaver.dat')
-    if os.path.exists(path):
-        os.remove(path)
+    for name in ('eggsaver.dat', 'fileanalyzer.dat'):
+        path = os.path.join(base, name)
+        if os.path.exists(path):
+            os.remove(path)
 
     # Avoid having any user-defined resources causing problems during testing.
     ResourceAllocationManager.configure('')
