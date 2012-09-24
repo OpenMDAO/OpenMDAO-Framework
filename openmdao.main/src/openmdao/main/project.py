@@ -47,12 +47,10 @@ def _clear_insts():
     with _instclass_lock:
         _instantiated_classes.clear()
 
-
 def _register_inst(typname):
     global _instantiated_classes
     with _instclass_lock:
         _instantiated_classes.add(typname)
-
 
 def _match_insts(classes):
     global _instantiated_classes
@@ -356,22 +354,6 @@ def filter_macro(lines):
 
     return filt_lines[::-1]  # reverse the result
 
-
-class _ProjDict(dict):
-    """Use this dict as globals when exec'ing files. It substitutes classes
-    from the imported version of the file for the __main__ version.
-    """
-    def __init__(self):
-        super(_ProjDict, self).__init__()
-        self._modname = None
-
-    def __getitem__(self, name):
-        if self._modname:
-            val = getattr(sys.modules[self._modname], name, None)
-            if isclass(val):
-                return val
-        return super(_ProjDict, self).__getitem__(name)
-
 def add_proj_to_path(path):
     """Puts this project's directory on sys.path."""
     modeldir = path+PROJ_DIR_EXT
@@ -388,7 +370,7 @@ class Project(object):
         """
         self._recorded_cmds = []
         self.path = expand_path(projpath)
-        self._model_globals = _ProjDict()
+        self._model_globals = {}
 
         if not os.path.isdir(projpath):
             os.makedirs(projpath)
@@ -504,9 +486,6 @@ class Project(object):
         # set SimulationRoot and put our path on sys.path
         SimulationRoot.chroot(self.path)
         add_proj_to_path(self.path)
-        modeldir = self.path+PROJ_DIR_EXT
-        if modeldir not in sys.path:
-            sys.path = [modeldir]+sys.path
             
         # set up the model
         self._init_globals()

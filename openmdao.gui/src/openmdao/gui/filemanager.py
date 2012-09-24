@@ -33,18 +33,11 @@ class FileManager(object):
         and optionally publishes an update when the collection is modified
     '''
 
-    def __init__(self, name, path=None, publish_updates=False):
+    def __init__(self, name, path, publish_updates=False):
         self.name = name
 
         self.orig_dir = os.getcwd()
-        if path:
-            self.root_dir = path
-        else:
-            self.root_dir = tempfile.mkdtemp(self.name)
-        if os.path.exists(self.root_dir):
-            shutil.rmtree(self.root_dir)
-        os.mkdir(self.root_dir)
-        os.chdir(self.root_dir)
+        self.root_dir = path
 
         self.publish_updates = publish_updates
         self.publisher = None
@@ -85,11 +78,6 @@ class FileManager(object):
             self.observer.stop()
             self.observer.join()
         os.chdir(self.orig_dir)
-        if os.path.exists(self.root_dir):
-            try:
-                shutil.rmtree(self.root_dir)
-            except Exception, err:
-                print 'Filemanager: Error cleaning up file directory', err
 
     def get_files(self, root=None):
         ''' get a nested dictionary of files in the working directory

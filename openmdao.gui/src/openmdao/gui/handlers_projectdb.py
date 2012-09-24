@@ -11,6 +11,16 @@ from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
 from openmdao.util.fileutil import clean_filename
 
+def _get_unique_name(dirname, basename):
+    """Returns a unique pathname for a file with the given basename
+    in the specified directory.
+    """
+    i = 1
+    name = basename
+    while os.path.exists(os.path.join(dirname, name)):
+        name = '%s_%d' % (basename, i)
+        i += 1
+    return os.path.join(dirname, name)
 
 class IndexHandler(ReqHandler):
     ''' get project list
@@ -34,9 +44,8 @@ class DeleteHandler(ReqHandler):
         pdb = Projects()
         project = pdb.get(project_id)
 
-        if project['filename']:
-            dirname = os.path.join(self.get_project_dir(),
-                                    str(project['filename']))
+        if project['projpath']:
+            dirname = str(project['projpath'])
             if os.path.isdir(dirname):
                 shutil.rmtree(dirname)
 
@@ -69,7 +78,7 @@ class DetailHandler(ReqHandler):
         else:
             project = {}
             project['active'] = 0
-            project['filename'] = None
+            project['projpath'] = None
             project_is_new = True
 
         if 'projectname' not in forms or \
@@ -87,36 +96,31 @@ class DetailHandler(ReqHandler):
             project['version'] = forms['version'].strip()
         else:
             project['version'] =''
+            
+        directory = forms.get('directory', self.get_project_dir())
 
         # if there's no proj dir yet, create an empty one
-        if not project['filename']:
+        if not project['projpath']:
 
             version = project['version']
             pname = project['projectname']
 
             if len(version):
-                filename = '%s-%s' % (pname, version)
+                filename = clean_filename('%s-%s' % (pname, version))
             else:
-                filename = '%s' % pname
-            filename = clean_filename(filename)
+                filename = clean_filename(pname)
 
             unique = filename
             i = 1
-            while os.path.exists(os.path.join(self.get_project_dir(),
-                                              unique)):
+            while os.path.exists(os.path.join(directory, unique)):
                 unique = '%s_%s' % (filename, str(i))
                 i = i+1
 
-            #with open(os.path.join(self.get_project_dir(), unique), 'w') as out:
-                #out.write('')
-                #out.close()
-
-            project['filename'] = unique
+            project['projpath'] = os.path.join(directory, unique)
 
         if project_is_new:
             pdb.new(project)
-            os.mkdir(os.path.join(self.get_project_dir(), 
-                                  project['filename']))
+            os.mkdir(project['projpath'])
         else:
             for key, value in project.iteritems():
                 pdb.set(project_id, key, value)
@@ -143,8 +147,8 @@ class DownloadHandler(ReqHandler):
         '''
         pdb = Projects()
         project = pdb.get(project_id)
-        if project['filename']:
-            dirname = os.path.join(self.get_project_dir(), project['filename'])
+        if project['projpath']:
+            dirname = project['projpath']
 
             if os.path.isdir(dirname):
                 proj = Project(dirname)
@@ -185,7 +189,7 @@ class NewHandler(ReqHandler):
         project['description'] = ''
         project['created'] = 'New Project'
         project['modified'] = 'New Project'
-        project['filename'] = ''
+        project['projpath'] = ''
         project['active'] = ''
 
         self.render('projdb/project_detail.html', project=project,
@@ -193,7 +197,7 @@ class NewHandler(ReqHandler):
 
 
 class AddHandler(ReqHandler):
-    ''' upload a file and add it to the project database
+    ''' add a project to the project database
     '''
 
     @web.authenticated
@@ -201,7 +205,7 @@ class AddHandler(ReqHandler):
 
         sourcefile = self.request.files['myfile'][0]
         if sourcefile:
-            filename = sourcefile['filename']
+            filename = sourcefile['projpath']
             if len(filename) > 0:
 
                 pdb = Projects()
@@ -212,21 +216,20 @@ class AddHandler(ReqHandler):
                 project['description'] = ''
                 project['active'] = 1
 
-                project['projectname'] = 'Added_%s' % (filename)
+                if os.path.isdir(filename):
+                    unique = filename
+                    # FIXME: check for pre-existing project with this name
+                    project['projectname'] = os.path.basename(filename)
+                else:
+                    project['projectname'] = 'Added_%s' % (filename)
+    
+                    unique = _get_unique_name(self.get_project_dir(),
+                                              filename)
+                    with open(unique, 'wb') as out:
+                        out.write(sourcefile['body'])
+                        out.close()
 
-                unique = filename
-                i = 1
-                while os.path.exists(os.path.join(self.get_project_dir(), \
-                                                  unique)):
-                    unique = '%s_%s' % (filename, str(i))
-                    i = i+1
-
-                with open(os.path.join(self.get_project_dir(),
-                                       unique), 'wb') as out:
-                    out.write(sourcefile['body'])
-                    out.close()
-
-                project['filename'] = unique
+                project['projpath'] = unique
                 pdb.new(project)
 
                 self.redirect('/projects/'+str(project['id']))

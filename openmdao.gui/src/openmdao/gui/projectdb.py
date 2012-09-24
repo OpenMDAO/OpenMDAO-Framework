@@ -50,7 +50,7 @@ class Projects(object):
                     "description" varchar(200) NOT NULL,
                     "created" datetime NOT NULL,
                     "modified" datetime NOT NULL,
-                    "filename" varchar(200) NOT NULL,
+                    "projpath" varchar(200) NOT NULL,
                     "active" bool NOT NULL
                 );
                 """)
@@ -76,14 +76,14 @@ class Projects(object):
         con = self._get_connection()
         cur = con.cursor()
         sql = '''INSERT INTO projects
-                 (projectname,version,description,created,modified,filename,active)
+                 (projectname,version,description,created,modified,projpath,active)
                  VALUES ("%s","%s","%s","%s","%s","%s",%d)
               ''' % (data['projectname'],
                      data['version'],
                      data['description'],
                      data['created'],
                      data['modified'],
-                     data['filename'],
+                     data['projpath'],
                      data['active'])
 
         cur.execute(sql)
@@ -114,7 +114,7 @@ class Projects(object):
                 'description': row['description'],
                 'modified':    row['modified'],
                 'created':     row['created'],
-                'filename':    row['filename'],
+                'projpath':    row['projpath'],
                 'active':      row['active']
             })
 
@@ -130,19 +130,19 @@ class Projects(object):
         else:
             return matched_projects[0]
 
-    def get_by_filename(self, filename):
+    def get_by_path(self, path):
         ''' Get a dictionary containing the fields that belong to
-            a project with a specific filename.
+            a project with a specific path.
 
-            filename: str (valid path)
-                filename for requested project
+            path: str (valid path)
+                path for requested project
         '''
         con = self._get_connection()
         con.row_factory = sqlite3.Row
         cur = con.cursor()
-        sql = 'SELECT * from projects WHERE filename=?'
+        sql = 'SELECT * from projects WHERE projpath=?'
 
-        cur.execute(sql, (filename,))
+        cur.execute(sql, (path,))
         matched_projects = []
         for row in cur:
             matched_projects.append({
@@ -151,7 +151,7 @@ class Projects(object):
                 'version':     row['version'],
                 'description': row['description'],
                 'modified':    row['modified'],
-                'filename':    row['filename'],
+                'projpath':    row['projpath'],
                 'active':      row['active']
             })
 
@@ -205,7 +205,7 @@ class Projects(object):
                 'description': row['description'],
                 'created':     row['created'],
                 'modified':    row['modified'],
-                'filename':    row['filename'],
+                'projpath':    row['projpath'],
                 'active':      row['active']
             })
 
@@ -213,7 +213,8 @@ class Projects(object):
 
         # Return last file modification dates too.
         for project in matched_projects:
-            fullpath = os.path.join(get_user_dir(), 'projects', project['filename'])
+            fullpath = os.path.join(get_user_dir(), 'projects', 
+                                    project['projpath'])
             try:
                 stamp = os.path.getmtime(fullpath)
                 project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
@@ -269,6 +270,3 @@ class Projects(object):
         con.commit()
         cur.close()
 
-
-if __name__ == "__main__":
-    pass
