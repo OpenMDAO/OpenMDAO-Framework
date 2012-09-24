@@ -20,7 +20,6 @@ class DataflowFigure(BasePageObject):
     top_left = GenericElement((By.CLASS_NAME, 'DataflowFigureTopLeft'))
     header = GenericElement((By.CLASS_NAME, 'DataflowFigureHeader'))
     top_right = ButtonElement((By.CLASS_NAME, 'DataflowFigureTopRight'))
-    
     content_area = GenericElement((By.CLASS_NAME, 'DataflowFigureContentArea'))
 
     bottom_left = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomLeft'))
@@ -30,13 +29,13 @@ class DataflowFigure(BasePageObject):
     # Context menu.
     edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
     properties_button  = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
-    connections_button = ButtonElement((By.XPATH, "../div/a[text()='Connections']"))
-    disconnect_button  = ButtonElement((By.XPATH, "../div/a[text()='Disconnect']"))
-    show_dataflows     = ButtonElement((By.XPATH, "../div/a[text()='Show Data Flows']"))
-    hide_dataflows     = ButtonElement((By.XPATH, "../div/a[text()='Hide Data Flows']"))
-    show_driverflows   = ButtonElement((By.XPATH, "../div/a[text()='Show Driver Flows']"))
-    hide_driverflows   = ButtonElement((By.XPATH, "../div/a[text()='Hide Driver Flows']"))
     run_button         = ButtonElement((By.XPATH, "../div/a[text()='Run']"))
+    connections_button = ButtonElement((By.XPATH, "../div/a[text()='Edit Data Connections']"))
+    show_dataflows     = ButtonElement((By.XPATH, "../div/a[text()='Show Data Connections']"))
+    hide_dataflows     = ButtonElement((By.XPATH, "../div/a[text()='Hide Data Connections']"))
+    show_driverflows   = ButtonElement((By.XPATH, "../div/a[text()='Show Driver Connections']"))
+    hide_driverflows   = ButtonElement((By.XPATH, "../div/a[text()='Hide Driver Connections']"))
+    disconnect_button  = ButtonElement((By.XPATH, "../div/a[text()='Disconnect']"))
     remove_button      = ButtonElement((By.XPATH, "../div/a[text()='Remove']"))
 
     # Port context menus.

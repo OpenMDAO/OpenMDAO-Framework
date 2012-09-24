@@ -176,9 +176,10 @@ class WorkspacePage(BasePageObject):
         self('submit').click()
         NotifierPage.wait(self, timeout)
 
-    def close_workspace(self, timeout=TMO):
+    def close_workspace(self, timeout=TMO, save=True):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
-        self.save_project()
+        if save:
+            self.save_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
         NotifierPage.wait(self, timeout)
         self('project_menu').click()

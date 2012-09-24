@@ -151,7 +151,6 @@ def _test_menu(browser):
 
 
 def _test_macro(browser):
-    # Creates a file in the GUI.
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Open code editor.
@@ -241,6 +240,7 @@ def _test_properties(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Check default 'top'.
+    workspace_page.show_properties()
     workspace_page.select_object('top')
     workspace_page.show_properties()
     time.sleep(0.5)
