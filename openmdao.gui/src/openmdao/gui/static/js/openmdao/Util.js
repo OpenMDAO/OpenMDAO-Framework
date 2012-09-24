@@ -1,5 +1,6 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
+openmdao.sockets = [];
 
 /**
  * utility functions used in the openmdao gui
@@ -455,11 +456,8 @@ openmdao.Util = {
         retry = typeof retry !== 'undefined' ? retry : true;
         delay = typeof delay !== 'undefined' ? delay : 2000;
 
-        var socket = null;
-
-        if (!openmdao.sockets) {
-            openmdao.sockets = [];
-        }
+        var socket = null,
+            defrd = jQuery.Deferred();
 
         function connect_after_delay() {
             tid = setTimeout(connect, delay);
@@ -478,6 +476,7 @@ openmdao.Util = {
                 socket = new WebSocket(addr);
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
+                    defrd.resolve(socket);
                     //debug.info('websocket opened '+socket.readyState,socket,e);
                     //displaySockets();
                 };
@@ -527,7 +526,7 @@ openmdao.Util = {
         debug.info('errhandler:');
         debug.info(errHandler);
         */
-        return socket;
+        return defrd.promise();
     },
 
     /** Close all WebSockets. */
@@ -562,8 +561,19 @@ openmdao.Util = {
             }
         }
         poll();
-    }
+    },
 
+    /*
+     * Allow a child object to inherit from a parent object.
+     * Make sure to call this method immeidately after defining
+     * the child's constructor and before extending it's
+     * prototype.
+     */
+    inherit : function(childObject, parentObject){
+        childObject.prototype = new parentObject
+        childObject.prototype.constructor = childObject
+        childObject.prototype.superClass = parentObject.prototype
+    }
 };
 
 

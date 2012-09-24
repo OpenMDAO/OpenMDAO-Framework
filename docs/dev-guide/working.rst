@@ -127,14 +127,14 @@ on Windows. On Windows, the directory structure is slightly different, as noted 
 
 ``bin`` 
     Contains Python and a number of other scripts that are associated with the Python
-    packages that are installed in the virtual environment. On **Windows,** this
+    packages that are installed in the virtual environment. On Windows, this
     directory is called ``Scripts``.
 
 ``etc``
     Contains miscellaneous files that don't fit in ``bin, lib,`` or ``include``.
     
 ``include``
-    Contains Python C header files. If you are on **Windows,** you will not have this directory.
+    Contains Python C header files. If you are on Windows, you will not have this directory.
 
 
 ``lib``

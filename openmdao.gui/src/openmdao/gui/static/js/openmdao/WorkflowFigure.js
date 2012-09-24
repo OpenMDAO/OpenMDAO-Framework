@@ -77,11 +77,10 @@ openmdao.WorkflowFigure.prototype.createHTMLElement=function(){
     elm.droppable ({
         accept: '.component,.IComponent',
             out: function(ev,ui) {
-                var dropped_pathname = jQuery(ui.draggable ).parent().attr("path");
-                elm.unhighlightAsDropTarget() ;
-                openmdao.drag_and_drop_manager.draggableOut(elm, dropped_pathname);
+                openmdao.drag_and_drop_manager.draggableOut(elm);
             },
             over: function(ev,ui) {
+                // only allow drops of components in same assembly as driver
                 var target_pathname = elm.data('pathname'),
                     target_parent = openmdao.Util.getPath(target_pathname),
                     dragged_object = jQuery(ui.draggable).clone(),

@@ -932,7 +932,7 @@ Consider an output table that looks like this:
         
 We would like to extract the relevant numerical data from this table, which
 amounts to all values contained in columns labeled "A" through "J" and rows
-labeled "50 Hz." through "100 Hz." We would like to save these values in a
+labeled "50 Hz" through "100 Hz." We would like to save these values in a
 two-dimensional numpy array. This can be accomplished using the ``transfer_2Darray``
 method.
 
@@ -967,8 +967,8 @@ entered instead of the field number. Delimiters are discussed in the next sectio
 When the parser counts fields in a line of output, it determines the field
 boundaries by comparing against a set of delimiters. These delimiters can be
 changed using the ``set_delimiters`` method. By default, the delimiters are the
-general white space characters space (" ") and tab ("\\t"). The newline characters
-("\\n" and "\\r") are always removed regardless of the delimiter status.
+general white space characters space (``" "``) and tab (``"\\t"``). The newline characters
+(``"\\n"`` and ``"\\r"``) are always removed regardless of the delimiter status.
 
 One common case that will require a change in the default delimiter is the comma
 separated file (i.e, csv). Here's an example of such an output file:
@@ -1108,7 +1108,7 @@ differently than ``transfer_var``. Consider this output file:
 In this example, we want to extract the six numerical values and place them in
 an array. When the delimiter is set to columns, we can define a rectangular
 box from which all elements are parsed into an array. Note that the numbers
-inside of the box are parsed assuming standard separator characters (" \t").
+inside of the box are parsed assuming standard separator characters (``" \t"``).
       
 .. testcode:: Parse_Output
 
@@ -1119,8 +1119,8 @@ inside of the box are parsed assuming standard separator characters (" \t").
     
     print var
     
-So here we've called ``transfer_array`` with four arguments: starting row,
-starting column, ending row, ending column. This results in the following
+So here we've called ``transfer_array`` with four arguments: `starting row,
+starting column, ending row, ending column`. This results in the following
 value for var:
 
 .. testoutput:: Parse_Output

@@ -67,7 +67,7 @@ class ConsoleServer(cmd.Cmd):
         self.projdirfactory = None
 
         try:
-            self.files = FileManager('files', publish_updates=publish_updates)
+            self.files = FileManager('files', publish_updates=self.publish_updates)
         except Exception as err:
             self._error(err, sys.exc_info())
 
@@ -151,7 +151,7 @@ class ConsoleServer(cmd.Cmd):
 
     def parseline(self, line):
         """Have to override this because base class version strips the lines,
-        making multi-line python commands impossible.
+        making multi-line Python commands impossible.
         """
         #line = line.strip()
         if not line:
@@ -591,7 +591,10 @@ class ConsoleServer(cmd.Cmd):
     def get_files(self):
         ''' get a nested dictionary of files
         '''
-        return self.files.get_files()
+        try:
+            return self.files.get_files(root=self.proj.path)
+        except AttributeError:
+            return {}
 
     def get_file(self, filename):
         ''' get contents of a file

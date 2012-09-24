@@ -2,13 +2,21 @@
  * stuff to do after the page is loaded
  */
 
-
 jQuery(function() {
     // define openmdao namespace & create interface to openmdao in global scope
     openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
-    openmdao.model = new openmdao.Model();
+    var listeners_ready = jQuery.Deferred();
+    openmdao.model = new openmdao.Model(listeners_ready);
+    openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager();
 
-    openmdao.drag_and_drop_manager = new openmdao.DragAndDropManager()
+    // register value editors for supported OpenMDAO data types
+    openmdao.ValueEditor.registerEditor("str", TextCellEditor);
+    openmdao.ValueEditor.registerEditor("bool", BoolEditor);
+    openmdao.ValueEditor.registerEditor("float", TextCellEditor);
+    openmdao.ValueEditor.registerEditor("int", IntegerCellEditor);
+    openmdao.ValueEditor.registerEditor("enum", EnumEditor);
+    openmdao.ValueEditor.registerEditor("dict", DictEditor);
+    openmdao.ValueEditor.registerEditor("ndarray", ArrayEditor);
 
     // set the layout (note: global scope)
     layout = jQuery('body').layout({
@@ -43,6 +51,7 @@ jQuery(function() {
     // add gui functionality to designated DOM nodes
     (function() {
         var model = openmdao.model;
+        new openmdao.ConsoleFrame("console",  model);
 
         var data = new openmdao.DataflowFrame("dataflow_pane",model,''),
             work = new openmdao.WorkflowFrame("workflow_pane",model,''),
@@ -74,10 +83,18 @@ jQuery(function() {
         new openmdao.ComponentTreeFrame("otree_pane", model, prop_fn, comp_fn, work_fn, data_fn);
         new openmdao.FileTreeFrame("ftree_pane", model, code_fn, geom_fn);
         new openmdao.LibraryFrame("library_pane",  model);
-        new openmdao.ConsoleFrame("console",  model);
+        
+        listeners_ready.resolve();
     }());
 
     // do layout
     jQuery('body').trigger('layoutresizeall');
+    
+    jQuery(window).bind('beforeunload', function(e) {
+        if (openmdao.model.getModified()){
+            return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
+        }
+    });
 });
+
 

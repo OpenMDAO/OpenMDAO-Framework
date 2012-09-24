@@ -283,67 +283,67 @@ f_x = Float(0.0, iotype='out')
     print "_test_newfile complete."
 
 
-## for now I'm giving up on this test.  If the save & reload option is chosen,
+## for now I'm giving up on making this a full test.  If the save & reload option is chosen,
 ## the browser attribute becomes stale when the project gets reloaded and I'm not 
 ## sure how to get back to a 'good' browser handle after that.  begin() fails when using the
 ## stale handle.  Also, cleaning up at the end of the test is a problem when you can't
 ## get access to the WebElements in the current page.
 ## -- this has been turned into a manual test (see gui/test/functional/manual/save_and_reload
-#def _test_macro(browser):
-    #print "running _test_macro..."
-    ## Creates a file in the GUI.
-    #projects_page = begin(browser)
-    #project_info_page, project_dict = new_project(projects_page.new_project())
-    #workspace_page = project_info_page.load_project()
+def _test_modify_instance(browser):
+    print "running _test_modify_instance..."
+    # Creates a file in the GUI.
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
 
-    ## Open code editor.
-    #workspace_window = browser.current_window_handle
-    #editor_page = workspace_page.open_editor()
+    # Open code editor.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
 
-    ## Create a file (code editor automatically indents).
-    #editor_page.new_file('foo.py', """
-#from openmdao.main.api import Component
-#from openmdao.lib.datatypes.api import Float
+    # Create a file (code editor automatically indents).
+    editor_page.new_file('foo.py', """
+from openmdao.main.api import Component
+from openmdao.lib.datatypes.api import Float
 
-## lines will be auto-indented by ace editor
-#class Foo(Component):
+# lines will be auto-indented by ace editor
+class Foo(Component):
 
-#a = Float(0.0, iotype='in')
-#b = Float(0.0, iotype='in')
-#c = Float(0.0, iotype='out')
-#d = Float(0.0, iotype='out')
+a = Float(0.0, iotype='in')
+b = Float(0.0, iotype='in')
+c = Float(0.0, iotype='out')
+d = Float(0.0, iotype='out')
 
-#""")
-    #time.sleep(1)
-    ## Back to workspace.
-    #browser.close()
-    #browser.switch_to_window(workspace_window)
+""")
+    time.sleep(1)
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
 
-    #port = workspace_page.port
+    port = workspace_page.port
     
-    ## Drag over Plane.
-    #workspace_page.show_dataflow('top')
-    #workspace_page.show_library()
-    #workspace_page.set_library_filter('In Project')
+    # Drag over Plane.
+    workspace_page.show_dataflow('top')
+    workspace_page.show_library()
+    workspace_page.set_library_filter('In Project')
 
-    #workspace_page.find_library_button('Foo', 0.5).click()
-    #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
-    #workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
+    workspace_page.find_library_button('Foo', 0.5).click()
+    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp1')
+    workspace_page.add_library_item_to_dataflow('foo.Foo', 'comp2')
 
-    #comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
-    #comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
-    #conn_page = workspace_page.connect(comp1, comp2)
-    #conn_page.connect_vars('comp1.c', 'comp2.a')
-    #time.sleep(1)  # Wait for display update.
-    #conn_page.close()
+    comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
+    comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
+    conn_page = workspace_page.connect(comp1, comp2)
+    conn_page.connect_vars('comp1.c', 'comp2.a')
+    time.sleep(1)  # Wait for display update.
+    conn_page.close()
 
-    #workspace_page.save_project()
+    workspace_page.save_project()
 
-    #editor_page = workspace_page.open_editor()
-    #editor_page.edit_file('foo.py', dclick=False)
-    #editor_page.add_text_to_file('#just a comment\n')
+    editor_page = workspace_page.open_editor()
+    editor_page.edit_file('foo.py', dclick=False)
+    editor_page.add_text_to_file('#just a comment\n')
     
-    #editor_page.save_document(overwrite=True, check=False) # forces a save and reload of project
+    editor_page.save_document(overwrite=False, check=False, cancel=True)
     #time.sleep(3)
 
     #workspace_page =  WorkspacePage.verify(browser, port)
@@ -353,11 +353,12 @@ f_x = Float(0.0, iotype='out')
     #eq(sorted(workspace_page.get_dataflow_component_names()),
        #['comp1', 'comp2', 'driver', 'top'])
 
-    ## Clean up.
-    #projects_page = workspace_page.close_workspace()
-    #project_info_page = projects_page.edit_project(project_dict['name'])
-    #project_info_page.delete_project()
-    #print "_test_macro complete."
+    # Clean up.
+    browser.switch_to_window(workspace_window)
+    projects_page = workspace_page.attempt_to_close_workspace(expectDialog=True, confirm=True)
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_macro complete."
 
 
 def _test_addfiles(browser):
@@ -410,6 +411,7 @@ def _test_properties(browser):
     workspace_page = project_info_page.load_project()
 
     # Check default 'top'.
+    workspace_page.show_properties()
     workspace_page.select_object('top')
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Assembly: top')
@@ -602,10 +604,10 @@ def _test_console_errors(browser):
     top = workspace_page.get_dataflow_figure('top', '')
     editor = top.editor_page(double_click=False, base_type='Assembly')
     inputs = editor.get_inputs()
-    inputs[1][2] = '42'  # force_execute
+    inputs[0][2] = '42'  # directory
     message = NotifierPage.wait(editor)
-    eq(message, "TraitError: The 'force_execute' trait of an Assembly instance"
-                " must be a boolean, but a value of 42 <type 'int'> was"
+    eq(message, "TraitError: The 'directory' trait of an Assembly instance"
+                " must be a string, but a value of 42 <type 'int'> was"
                 " specified.")
     editor.close()
 
@@ -779,6 +781,57 @@ def _test_noslots(browser):
     project_info_page.delete_project()
     print "_test_noslots complete."
 
+def _test_savechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    workspace_page.set_library_filter('ExternalCode')
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    
+    #first try to close without saving changes, but click CANCEL and stay 
+    workspace_page.attempt_to_close_workspace(True, False)
+
+    # add another object to the model to be sure it didn't close
+    eq(len(workspace_page.get_dataflow_figures()), 3)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext2')
+    eq(len(workspace_page.get_dataflow_figures()), 4)
+    
+    # Clean up.
+    projects_page = workspace_page.close_workspace()
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_savechanges complete."
+
+def _test_dontsavechanges(browser):
+    print "running _test_savechanges..."
+    projects_page = begin(browser)
+    project_info_page, project_dict = new_project(projects_page.new_project())
+    workspace_page = project_info_page.load_project()
+
+    # Add ExternalCode to assembly.
+    workspace_page.show_dataflow('top')
+    time.sleep(0.5)
+    workspace_page.show_library()
+    time.sleep(0.5)
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    
+    #Try to close without saving changes, but click OK and leave. 
+    workspace_page.attempt_to_close_workspace(True, True)
+
+    # Clean up.
+    project_info_page = projects_page.edit_project(project_dict['name'])
+    project_info_page.delete_project()
+    print "_test_dontsavechanges complete."
 
 if __name__ == '__main__':
     main()

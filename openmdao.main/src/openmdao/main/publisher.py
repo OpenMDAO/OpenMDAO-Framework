@@ -32,7 +32,7 @@ class Publisher(object):
         if Publisher.__enabled:
             if isinstance(topic, unicode):
                 # zmq doesn't like unicode
-                topic = topic.encode(self.enc, errors='backslashreplace')
+                topic = topic.encode(self.enc)
 
             # encode value as json
             try:
@@ -58,7 +58,7 @@ class Publisher(object):
                     for topic, value in items:
                         if isinstance(topic, unicode):
                             # zmq doesn't like unicode
-                            topic = topic.encode(self.enc, errors='backslashreplace')
+                            topic = topic.encode(self.enc)
 
                         # encode value as json
                         try:

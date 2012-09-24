@@ -239,7 +239,6 @@ openmdao.DataflowFigure.prototype.createHTMLElement=function(){
         elm.droppable ({
             accept: '.IComponent',
             out: function(ev,ui){
-                elm.unhighlightAsDropTarget() ;
                 openmdao.drag_and_drop_manager.draggableOut(elm);
             },
             over: function(ev,ui){
@@ -489,70 +488,77 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         model = this.openmdao_model,
         pathname = this.pathname,
         name = this.name,
-        connections = this.connections;
+        connections = this.connections,
+        asm, txt;
 
     if (name.length > 0) {
         // menu header
-        menu.appendMenuItem(new draw2d.MenuItem("<b>"+name+"</b>",null,function(){
+        menu.appendMenuItem(new draw2d.MenuItem("<b>"+name+"</b>", null, function() {
         }));
 
         // edit
-        menu.appendMenuItem(new draw2d.MenuItem("Edit",null,function(){
-            cf = new openmdao.ObjectFrame(model,pathname);
+        menu.appendMenuItem(new draw2d.MenuItem("Edit", null, function(){
+            cf = new openmdao.ObjectFrame(model, pathname);
         }));
 
         // properties
-        menu.appendMenuItem(new draw2d.MenuItem("Properties",null,function(){
+        menu.appendMenuItem(new draw2d.MenuItem("Properties", null, function() {
             var id = (pathname+'-properties').replace(/\./g,'-');
-            f = new openmdao.PropertiesFrame(id,model).editObject(pathname);
+            f = new openmdao.PropertiesFrame(id, model).editObject(pathname);
         }));
-
-        // connections (internal) or disconnect (external)
-        if ((this.maxmin === '-') || (Object.keys(connections).length > 0)) {
-            menu.appendMenuItem(new draw2d.MenuItem("Connections",null,function(){
-                var f = new openmdao.ConnectionsFrame(model, pathname);
-            }));
-        }
-        else {
-            var asm = openmdao.Util.getPath(pathname);
-            if (asm.length > 0) {
-                menu.appendMenuItem(new draw2d.MenuItem("Disconnect",null,function(){
-                    var cmd = asm + '.disconnect("'+name+'");';
-                    model.issueCommand(cmd);
-                }));
-            }
-        }
-
-        // Show/hide flows.
-        if (this.maxmin === '-') {
-            var txt;
-            if (this.drawDataFlows) {
-                txt = 'Hide Data Flows';
-            }
-            else {
-                txt = 'Show Data Flows';
-            }
-            menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
-                self.drawDataFlows = !self.drawDataFlows;
-                self.maximize();
-            }));
-            if (this.drawDriverFlows) {
-                txt = 'Hide Driver Flows';
-            }
-            else {
-                txt = 'Show Driver Flows';
-            }
-            menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
-                self.drawDriverFlows = !self.drawDriverFlows;
-                self.maximize();
-            }));
-        }
 
         // run
         menu.appendMenuItem(new draw2d.MenuItem("Run", null, function() {
             var cmd = pathname + '.run();';
             model.issueCommand(cmd);
         }));
+
+
+        // menu spacer
+        menu.appendMenuItem(new draw2d.MenuItem("-", null, function() {
+        }));
+
+        // if maximized, add menu items for editing/toggling connections
+        if (this.maxmin === '-') {
+            menu.appendMenuItem(new draw2d.MenuItem("Edit Data Connections", null, function() {
+                var f = new openmdao.ConnectionsFrame(model, pathname);
+            }));
+
+            if (this.drawDataFlows) {
+                txt = 'Hide Data Connections';
+            }
+            else {
+                txt = 'Show Data Connections';
+            }
+            menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
+                self.drawDataFlows = !self.drawDataFlows;
+                self.maximize();
+            }));
+
+            if (this.drawDriverFlows) {
+                txt = 'Hide Driver Connections';
+            }
+            else {
+                txt = 'Show Driver Connections';
+            }
+            menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
+                self.drawDriverFlows = !self.drawDriverFlows;
+                self.maximize();
+            }));
+
+            // menu spacer
+            menu.appendMenuItem(new draw2d.MenuItem("-", null, function() {
+            }));
+        }
+
+        // if not maximized and in an assembly, add menu item to disconnect
+        asm = openmdao.Util.getPath(pathname);
+        if ((this.maxmin !== '-') && (asm.length > 0)) {
+            menu.appendMenuItem(new draw2d.MenuItem("Disconnect", null, function() {
+                var cmd = asm + '.disconnect("'+name+'");';
+                model.issueCommand(cmd);
+            }));
+        }
 
         // remove
         menu.appendMenuItem(new draw2d.MenuItem("Remove", null, function() {
