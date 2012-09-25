@@ -182,9 +182,7 @@ openmdao.CodeFrame = function(id,model) {
 
     
     function failedSave(jqXHR, textStatus, errorThrown) {
-        debug.info("file save failed: "+textStatus);
-        debug.info(jqXHR);
-        debug.info(errorThrown);
+        debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
         if (jqXHR.status != 409) {
             openmdao.Util.notify(jqXHR.responseXML, 'File Error', 'file-error');
         }
@@ -370,8 +368,6 @@ openmdao.CodeFrame = function(id,model) {
                 },
                 // failure
                 function(jqXHR, textStatus, errorThrown) {
-                    debug.info(textStatus);
-                    debug.info(errorThrown);
                     alert("Error editing file: "+jqXHR.statusText);
                 }
             );

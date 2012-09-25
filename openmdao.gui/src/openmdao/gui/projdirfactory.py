@@ -24,7 +24,7 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IDriver,
 
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import get_available_types
-from openmdao.util.dep import find_files, plugin_groups, PythonSourceTreeAnalyser
+from openmdao.util.dep import find_files, plugin_groups
 from openmdao.util.fileutil import get_module_path, get_ancestor_dir
 from openmdao.util.log import logger
 from openmdao.main.publisher import publish
@@ -297,9 +297,9 @@ class ProjDirFactory(Factory):
                 except Exception as err:
                     if isinstance(err, SyntaxError):
                         msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
-                        self._file_error(msg)
+                        self._error(msg)
                     else:
-                        self._file_error(str(err))
+                        self._error(str(err))
                     return
                 self._files[fpath] = fileinfo
                 added_set.update(fileinfo.classes.keys())
@@ -311,9 +311,9 @@ class ProjDirFactory(Factory):
                 except Exception as err:
                     if isinstance(err, SyntaxError):
                         msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
-                        self._file_error(msg)
+                        self._error(msg)
                     else:
-                        self._file_error(str(err))
+                        self._error(str(err))
                     self._remove_fileinfo(fpath)
                     return
                 for cname in added_set:
@@ -346,14 +346,9 @@ class ProjDirFactory(Factory):
 
     def _error(self, msg):
         logger.error(msg)
+        print msg
         publish('console_errors', msg)
-        print msg
-        
-    def _file_error(self, msg):
-        logger.error(msg)
-        publish('file_errors', msg)
-        print msg
-        
+
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs
         when there is some error during the import of the file.

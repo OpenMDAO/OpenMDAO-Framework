@@ -295,7 +295,6 @@ openmdao.WorkflowComponentFigure.prototype.onMouseLeave=function(){
 
 openmdao.WorkflowComponentFigure.prototype.setExecState=function(message){
     var state = message[1];
-    //debug.info('WorkflowComponentFigure',this.pathname,state);
     if (state === "VALID") {
         this.setColor(new draw2d.Color(0,255,0));
     }

@@ -67,7 +67,7 @@ class ConsoleServer(cmd.Cmd):
         self.projdirfactory = None
 
         try:
-            self.files = FileManager('files', publish_updates=publish_updates)
+            self.files = FileManager('files', publish_updates=self.publish_updates)
         except Exception as err:
             self._error(err, sys.exc_info())
 
@@ -591,7 +591,10 @@ class ConsoleServer(cmd.Cmd):
     def get_files(self):
         ''' get a nested dictionary of files
         '''
-        return self.files.get_files()
+        try:
+            return self.files.get_files(root=self.proj.path)
+        except AttributeError:
+            return {}
 
     def get_file(self, filename):
         ''' get contents of a file
