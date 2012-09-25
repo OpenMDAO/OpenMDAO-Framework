@@ -48,7 +48,20 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
 
     /** add a new parameter */
     function addParameter(target,low,high,scaler,adder,name) {
-        cmd = pathname+".add_parameter('"+target+"'";
+    
+        // Supports parameter groups
+        var targets = target.split(",");
+        if (targets.length>1) {
+            cmd = pathname+".add_parameter((";
+            for(var i = 0; i < targets.length; i++) {
+                cmd = cmd + "'" + jQuery.trim(targets[i]) + "',";
+            }
+            cmd = cmd + ")";
+        }
+        else {
+            cmd = pathname+".add_parameter('"+target+"'";
+        }
+        
         if (low) {
             cmd = cmd + ",low="+low;
         }
@@ -65,6 +78,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             cmd = cmd + ",name='"+name+"'";
         }
         cmd = cmd + ");";
+        console.log(cmd)
         model.issueCommand(cmd);
     }
 
