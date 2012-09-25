@@ -513,7 +513,7 @@ class ConsoleServer(cmd.Cmd):
         except Exception, err:
             self._error(err, sys.exc_info())
 
-    def save_project(self):
+    def commit_project(self):
         ''' save the current project macro and commit to the project repo
         '''
         if self.proj:

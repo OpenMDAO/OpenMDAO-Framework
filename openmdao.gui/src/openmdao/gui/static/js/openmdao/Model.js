@@ -180,7 +180,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** save the current project */
-    this.saveProject = function(callback, errorHandler) {
+    this.commitProject = function(callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'project',
@@ -188,7 +188,7 @@ openmdao.Model=function(listeners_ready) {
             error: errorHandler,
             complete: function(jqXHR, textStatus) {
                           if (typeof openmdao_test_mode !== 'undefined') {
-                              openmdao.Util.notify('Save complete: ' +textStatus);
+                              openmdao.Util.notify('Commit complete: ' +textStatus);
                           }
                       }
         });

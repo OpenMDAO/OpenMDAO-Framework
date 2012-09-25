@@ -377,13 +377,13 @@ class ProjectLoadHandler(ReqHandler):
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
 
-        POST: save project archive of the current project
+        POST: commit the current project
     '''
 
     @web.authenticated
     def post(self):
         cserver = self.get_server()
-        cserver.save_project()
+        cserver.commit_project()
         self.write('Saved.')
 
     @web.authenticated

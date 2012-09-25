@@ -62,7 +62,7 @@ class ProjectInfoPage(ProjectPage):
                                    '/html/body/div/div[2]/form[2]/input[2]'))
     load_button = ButtonElement((By.XPATH,
                                  '/html/body/div/div[2]/form[3]/input[2]'))
-    save_button = ButtonElement((By.XPATH,
+    commit_button = ButtonElement((By.XPATH,
                                  '/html/body/div/div[2]/form[4]/input[2]'))
     back_button = ButtonElement((By.LINK_TEXT, 'Back to Projects'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
