@@ -205,10 +205,7 @@ def parse_archive_name(pathname):
     """Return the name of the project given the pathname of a project
     archive file.
     """
-    if '.' in pathname:
-        return '.'.join(os.path.basename(pathname).split('.')[:-1])
-    else:
-        return os.path.basename(pathname)
+    return os.path.splitext(os.path.basename(pathname))[0]
 
 
 def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True):
@@ -531,7 +528,6 @@ class Project(object):
             raise RuntimeError("Destination directory for export (%s) is within project directory (%s)" %
                                (ddir, self.path))
 
-        self.save()
         startdir = os.getcwd()
         os.chdir(self.path)
         try:

@@ -114,7 +114,7 @@ class ProjectsListPage(BasePageObject):
 
     search_input = InputElement((By.XPATH, "//div[@id='project_table_filter']/label/input"))
     new_button = ButtonElement((By.LINK_TEXT, 'Start new project'))
-    add_button = ButtonElement((By.LINK_TEXT, 'Add existing project'))
+    add_button = ButtonElement((By.LINK_TEXT, 'Import a project'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
 
     def new_project(self):
