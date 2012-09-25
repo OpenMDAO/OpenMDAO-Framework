@@ -8,7 +8,7 @@ class Basic_Model(Assembly):
     def configure(self):
         """ Creates a new Assembly containing a chain of Paraboloid components"""
 
-        self.add("paraboloid",Paraboloid())
+        self.add("paraboloid", Paraboloid())
         self.add("optimizer", SLSQPdriver())
         
         self.optimizer.add_parameter("paraboloid.x", low='-50', high='50')
@@ -19,4 +19,4 @@ class Basic_Model(Assembly):
         self.optimizer.workflow.add('paraboloid')
 
         #shortcut syntax
-        #self.connect("par1.f_xy",["par2.x","par3.y"])
+        #self.connect("par1.f_xy", ["par2.x", "par3.y"])

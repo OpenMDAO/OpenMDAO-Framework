@@ -14,13 +14,12 @@ from selenium.common.exceptions import TimeoutException
 
 from basepageobject import BasePageObject, TMO
 from connections import ConnectionsPage
-from dataflow import DataflowFigure, find_dataflow_figures, \
-                     find_dataflow_figure, find_dataflow_component_names
+from dataflow import find_dataflow_figure, find_dataflow_figures, \
+                     find_dataflow_component_names
 from editor import EditorPage
-from elements import ButtonElement, GenericElement, GridElement, InputElement, \
-                     TextElement
-from workflow import WorkflowFigure, find_workflow_figure, \
-                     find_workflow_figures, find_workflow_component_figures
+from elements import ButtonElement, GridElement, InputElement, TextElement
+from workflow import find_workflow_figure, find_workflow_figures, \
+                     find_workflow_component_figures
 from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
 
 
@@ -119,16 +118,38 @@ class WorkspacePage(BasePageObject):
         self.locators["files"] = (By.XPATH, "//div[@id='ftree_pane']//a[@class='file ui-draggable']")
 
         # Wait for bulk of page to load.
-        WebDriverWait(self.browser, 2*TMO).until(
+        WebDriverWait(self.browser, TMO).until(
             lambda browser: len(self.get_dataflow_figures()) > 0)
-        # Now wait for WebSockets.
-# FIXME: absolute delay before polling sockets.
-        time.sleep(2)
+
+        # Now wait for all WebSockets open.
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
-        NotifierPage.wait(self)
+        expected = 'WebSockets open'
+        msg = NotifierPage.wait(self)
+        while msg != expected:
+            # During 'automatic' reloads we can see 'WebSockets closed'
+            logging.warning('Acknowledged %r while waiting for %r',
+                            msg, expected)
+            time.sleep(1)
+            msg = NotifierPage.wait(self)
 
     def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
+        for retry in range(5):
+            try:
+                element = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: browser.find_element(By.XPATH, path))
+            except TimeoutException as err:
+                logging.warning(str(err))
+            else:
+                break
+        else:
+            raise err
+        if delay:
+            time.sleep(delay)
+        return element
+
+    def find_object_button(self, name, delay=0):
+        path = "//div[@id='otree_pane']//li[(@path='%s')]//a" % name
         for retry in range(5):
             try:
                 element = WebDriverWait(self.browser, TMO).until(
@@ -195,7 +216,6 @@ class WorkspacePage(BasePageObject):
         else:      #no unsaved changes 
             from project import ProjectsListPage
             return ProjectsListPage.verify(self.browser, self.port)
-      
 
     def _closer(self):
         """ Clicks the close button. """
@@ -236,6 +256,7 @@ class WorkspacePage(BasePageObject):
         self('add_button').click()
 
         self.file_chooser = file_path
+        time.sleep(0.5)
 
     def new_file_dialog(self):
         """ bring up the new file dialog """
@@ -395,7 +416,7 @@ class WorkspacePage(BasePageObject):
         return library_item
 
     def add_library_item_to_dataflow(self, item_name, instance_name,
-                                     check=True, offset=None):
+                                     check=True, offset=None, prefix=None):
         """ Add component `item_name`, with name `instance_name`. """
         library_item = self.get_library_item(item_name)
 
@@ -423,10 +444,12 @@ class WorkspacePage(BasePageObject):
         finally:
             self.browser.implicitly_wait(TMO)
 
+        retval = None
         if check:  # Check that it's been added.
-            WebDriverWait(self.browser, TMO).until(
-                lambda browser: self.get_dataflow_figure(instance_name) is not None)
-                #lambda browser: instance_name in self.get_dataflow_component_names())
+            retval = WebDriverWait(self.browser, TMO).until(
+                        lambda browser: self.get_dataflow_figure(instance_name,
+                                                                 prefix))
+        return retval
 
     def get_dataflow_figures(self):
         """ Return dataflow figure elements. """
