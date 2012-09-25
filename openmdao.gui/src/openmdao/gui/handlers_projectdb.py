@@ -4,6 +4,7 @@ from time import strftime
 from urllib2 import HTTPError
 import cStringIO as StringIO
 import tarfile
+from tempfile import mkdtemp
 
 from tornado import web
 
@@ -155,21 +156,28 @@ class DownloadHandler(ReqHandler):
 
             if os.path.isdir(dirname):
                 proj = Project(dirname)
-                filename = proj.export()
-                proj_file = open(filename, 'rb')
-                self.set_header('content_type', 'application/octet-stream')
-                self.set_header('Content-Length', str(os.path.getsize(filename)))
-                form_proj = clean_filename(project['projectname'])
-                form_ver = clean_filename(project['version'])
-                form_date = strftime('%Y-%m-%d_%H%M%S')
-                self.set_header('Content-Disposition',
-                                'attachment; filename=%s-%s-%s.proj' %
-                                (form_proj, form_ver, form_date))
-
+                tdir = mkdtemp()
                 try:
-                    self.write(proj_file.read())
+                    filename = proj.export(destdir=tdir)
+                    proj_file = open(filename, 'rb')
+                    self.set_header('content_type', 'application/octet-stream')
+                    self.set_header('Content-Length', str(os.path.getsize(filename)))
+                    form_proj = clean_filename(project['projectname'])
+                    form_ver = clean_filename(project['version'])
+                    form_date = strftime('%Y-%m-%d_%H%M%S')
+                    self.set_header('Content-Disposition',
+                                    'attachment; filename=%s-%s-%s.proj' %
+                                    (form_proj, form_ver, form_date))
+    
+                    try:
+                        self.write(proj_file.read())
+                    finally:
+                        proj_file.close()
                 finally:
-                    proj_file.close()
+                    try:
+                        shutil.rmtree(tdir)
+                    except:
+                        pass
             else:
                 raise HTTPError(dirname, 403, "%s is not a directory" % dirname,
                                 None, None)

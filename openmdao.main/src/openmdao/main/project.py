@@ -41,6 +41,7 @@ PROJ_DIR_EXT = '.projdir'
 _instantiated_classes = set()
 _instclass_lock = RLock()
 
+_macro_lock = RLock()
 
 def _clear_insts():
     global _instantiated_classes
@@ -369,8 +370,10 @@ class Project(object):
         self.path = expand_path(projpath)
         self._model_globals = {}
 
-        if not os.path.isdir(projpath):
-            os.makedirs(projpath)
+        self.macrodir = os.path.join(self.path, '_macros')
+        
+        if not os.path.isdir(self.macrodir):
+            os.makedirs(self.macrodir)
 
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
         if server is None and res_desc is None and typname in self._model_globals:
@@ -413,22 +416,23 @@ class Project(object):
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
 
-    def load_macro(self, fpath, execute=True):
+    def load_macro(self, macro_name):
+        fpath = os.path.join(self.macrodir, macro_name)
+        self._recorded_cmds = []
         with open(fpath, 'r') as f:
-            errors = []
-            for i, line in enumerate(filter_macro(f.readlines())):
-                if execute:
-                    try:
-                        self.command(line.rstrip('\n'))
-                    except Exception as err:
-                        msg = str(err)
-                        logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
-                        try:
-                            publish('console_errors', msg)
-                        except:
-                            logger.error("publishing of error failed")
-                else:
-                    self._recorded_cmds.append(line.rstrip('\n'))
+            lines = f.readlines()
+            
+        errors = []
+        for i, line in enumerate(lines):
+            try:
+                self.command(line.rstrip('\n'))
+            except Exception as err:
+                msg = str(err)
+                logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
+                try:
+                    publish('console_errors', msg)
+                except:
+                    logger.error("publishing of error failed")
 
     def command(self, cmd):
         err = None
@@ -461,14 +465,13 @@ class Project(object):
         return result
 
     def _initialize(self):
-        macro_file = os.path.join(self.path, '_project_macro')
-        if os.path.isfile(macro_file):
-            logger.info('Reconstructing project using macro')
-            self.load_macro(macro_file, execute=True)
+        if os.path.isfile(os.path.join(self.macrodir, 'default')):
+            logger.info('Reconstructing project using default macro')
+            self.load_macro('default')
         else:
             self.command("# Auto-generated file - DO NOT MODIFY")
             self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
-            self.write_macro()
+            self.write_macro('default')
 
     def _init_globals(self):
         self._model_globals['create'] = self.create   # add create funct here so macros can call it
@@ -496,9 +499,9 @@ class Project(object):
         except:
             pass
 
-    def write_macro(self):
-        logger.info("Saving macro used to create project")
-        with open(os.path.join(self.path, '_project_macro'), 'w') as f:
+    def write_macro(self, macro_name):
+        logger.info("Saving macro '%s'" % macro_name)
+        with open(os.path.join(self.macrodir, macro_name), 'w') as f:
             for cmd in self._recorded_cmds:
                 f.write(cmd)
                 f.write('\n')
@@ -506,7 +509,7 @@ class Project(object):
     def save(self):
         """ Save the project model to its project directory.
         """
-        self.write_macro()
+        self.write_macro('default')
 
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.
