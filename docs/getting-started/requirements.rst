@@ -23,7 +23,7 @@ OpenMDAO requires that the following software be installed at the system level o
     incorrect Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH
     will only lead to problems.
 
-- NumPy (version 1.3 or higher) 
+- NumPy (version 1.6 or higher) 
 
 - SciPy  
 
