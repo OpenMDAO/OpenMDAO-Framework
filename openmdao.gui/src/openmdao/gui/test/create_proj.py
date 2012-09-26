@@ -41,7 +41,8 @@ def fill_project(top):
 
 if __name__ == "__main__":
     save_dir = os.getcwd();
-    proj = Project('foo') # creating the project will chdir into the proj dir
+    proj = Project('foo')
+    proj.activate()
     fill_project(proj.top) 
     os.chdir(save_dir)  
     proj.export(projname='Project_Foo')

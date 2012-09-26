@@ -29,7 +29,7 @@ class WorkspacePage(BasePageObject):
 
     # Top.
     project_menu      = ButtonElement((By.ID, 'project-menu'))
-    save_button       = ButtonElement((By.ID, 'project-save'))
+    commit_button       = ButtonElement((By.ID, 'project-commit'))
     run_button        = ButtonElement((By.ID, 'project-run'))
     reload_button     = ButtonElement((By.ID, 'project-reload'))
     close_button      = ButtonElement((By.ID, 'project-close'))
@@ -176,10 +176,10 @@ class WorkspacePage(BasePageObject):
         self('submit').click()
         NotifierPage.wait(self, timeout)
 
-    def close_workspace(self, timeout=TMO, save=True):
+    def close_workspace(self, timeout=TMO, commit=True):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
-        if save:
-            self.save_project()
+        if commit:
+            self.commit_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
         NotifierPage.wait(self, timeout)
         self('project_menu').click()
@@ -295,10 +295,10 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 
-    def save_project(self):
-        """ Save current project. """
+    def commit_project(self):
+        """ Commit current project. """
         self('project_menu').click()
-        self('save_button').click()
+        self('commit_button').click()
         NotifierPage.wait(self)
 
     def reload_project(self):

@@ -41,18 +41,17 @@ PROJ_DIR_EXT = '.projdir'
 _instantiated_classes = set()
 _instclass_lock = RLock()
 
+_macro_lock = RLock()
 
 def _clear_insts():
     global _instantiated_classes
     with _instclass_lock:
         _instantiated_classes.clear()
 
-
 def _register_inst(typname):
     global _instantiated_classes
     with _instclass_lock:
         _instantiated_classes.add(typname)
-
 
 def _match_insts(classes):
     global _instantiated_classes
@@ -207,10 +206,7 @@ def parse_archive_name(pathname):
     """Return the name of the project given the pathname of a project
     archive file.
     """
-    if '.' in pathname:
-        return '.'.join(os.path.basename(pathname).split('.')[:-1])
-    else:
-        return os.path.basename(pathname)
+    return os.path.splitext(os.path.basename(pathname))[0]
 
 
 def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True):
@@ -356,22 +352,6 @@ def filter_macro(lines):
 
     return filt_lines[::-1]  # reverse the result
 
-
-class _ProjDict(dict):
-    """Use this dict as globals when exec'ing files. It substitutes classes
-    from the imported version of the file for the __main__ version.
-    """
-    def __init__(self):
-        super(_ProjDict, self).__init__()
-        self._modname = None
-
-    def __getitem__(self, name):
-        if self._modname:
-            val = getattr(sys.modules[self._modname], name, None)
-            if isclass(val):
-                return val
-        return super(_ProjDict, self).__getitem__(name)
-
 def add_proj_to_path(path):
     """Puts this project's directory on sys.path."""
     modeldir = path+PROJ_DIR_EXT
@@ -388,34 +368,12 @@ class Project(object):
         """
         self._recorded_cmds = []
         self.path = expand_path(projpath)
-        self._model_globals = _ProjDict()
-        self._init_globals()
-        macro_file = os.path.join(self.path, '_project_macro')
+        self._model_globals = {}
 
-        if os.path.isdir(projpath):
-            self.activate()
-            if os.path.isfile(macro_file):
-                logger.info('Reconstructing project using macro')
-                self.load_macro(macro_file, execute=True)
-            else:
-                self._initialize()
-                self.write_macro()
-                        
-        else:  # new project
-            os.makedirs(projpath)
-            self.activate()
-            self._initialize()
-            self.save()
-
-    def _initialize(self):
-        self.command("# Auto-generated file - DO NOT MODIFY")
-        self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
-
-    def _init_globals(self):
-        self._model_globals['create'] = self.create   # add create funct here so macros can call it
-        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
-        self._model_globals['execfile'] = self.execfile
-        self._model_globals['set_as_top'] = set_as_top
+        self.macrodir = os.path.join(self.path, '_macros')
+        
+        if not os.path.isdir(self.macrodir):
+            os.makedirs(self.macrodir)
 
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
         if server is None and res_desc is None and typname in self._model_globals:
@@ -458,22 +416,23 @@ class Project(object):
             raise AttributeError("'%s' not found: %s" % (pathname, str(err)))
         return obj
 
-    def load_macro(self, fpath, execute=True):
+    def load_macro(self, macro_name):
+        fpath = os.path.join(self.macrodir, macro_name)
+        self._recorded_cmds = []
         with open(fpath, 'r') as f:
-            errors = []
-            for i, line in enumerate(filter_macro(f.readlines())):
-                if execute:
-                    try:
-                        self.command(line.rstrip('\n'))
-                    except Exception as err:
-                        msg = str(err)
-                        logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
-                        try:
-                            publish('console_errors', msg)
-                        except:
-                            logger.error("publishing of error failed")
-                else:
-                    self._recorded_cmds.append(line.rstrip('\n'))
+            lines = f.readlines()
+            
+        errors = []
+        for i, line in enumerate(lines):
+            try:
+                self.command(line.rstrip('\n'))
+            except Exception as err:
+                msg = str(err)
+                logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
+                try:
+                    publish('console_errors', msg)
+                except:
+                    logger.error("publishing of error failed")
 
     def command(self, cmd):
         err = None
@@ -505,13 +464,32 @@ class Project(object):
 
         return result
 
+    def _initialize(self):
+        if os.path.isfile(os.path.join(self.macrodir, 'default')):
+            logger.info('Reconstructing project using default macro')
+            self.load_macro('default')
+        else:
+            self.command("# Auto-generated file - DO NOT MODIFY")
+            self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
+            self.write_macro('default')
+
+    def _init_globals(self):
+        self._model_globals['create'] = self.create   # add create funct here so macros can call it
+        self._model_globals['__name__'] = '__main__'  # set name to __main__ to allow execfile to work the way we want
+        self._model_globals['execfile'] = self.execfile
+        self._model_globals['set_as_top'] = set_as_top
+
     def activate(self):
-        """Puts this project's directory on sys.path."""
+        """Make this project active by putting its directory on sys.path and
+        executing its macro.
+        """
+        # set SimulationRoot and put our path on sys.path
         SimulationRoot.chroot(self.path)
         add_proj_to_path(self.path)
-        modeldir = self.path+PROJ_DIR_EXT
-        if modeldir not in sys.path:
-            sys.path = [modeldir]+sys.path
+            
+        # set up the model
+        self._init_globals()
+        self._initialize()
         
     def deactivate(self):
         """Removes this project's directory from sys.path."""
@@ -521,9 +499,9 @@ class Project(object):
         except:
             pass
 
-    def write_macro(self):
-        logger.info("Saving macro used to create project")
-        with open(os.path.join(self.path, '_project_macro'), 'w') as f:
+    def write_macro(self, macro_name):
+        logger.info("Saving macro '%s'" % macro_name)
+        with open(os.path.join(self.macrodir, macro_name), 'w') as f:
             for cmd in self._recorded_cmds:
                 f.write(cmd)
                 f.write('\n')
@@ -531,13 +509,7 @@ class Project(object):
     def save(self):
         """ Save the project model to its project directory.
         """
-        #fname = os.path.join(self.path, '_project_state')
-        #try:
-            #with open(fname, 'wb') as f:
-                #pickle.dump(self._model_globals, f)
-        #except Exception as err:
-            #logger.error("Failed to pickle the project: %s" % str(err))
-        self.write_macro()
+        self.write_macro('default')
 
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.
@@ -559,7 +531,6 @@ class Project(object):
             raise RuntimeError("Destination directory for export (%s) is within project directory (%s)" %
                                (ddir, self.path))
 
-        self.save()
         startdir = os.getcwd()
         os.chdir(self.path)
         try:
@@ -571,7 +542,9 @@ class Project(object):
                     tf.add(entry)
             except Exception, err:
                 print "Error creating project archive:", err
+                fname = None
             finally:
                 tf.close()
         finally:
             os.chdir(startdir)
+        return fname

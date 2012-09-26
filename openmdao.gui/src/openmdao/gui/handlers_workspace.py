@@ -360,15 +360,15 @@ class ProjectLoadHandler(ReqHandler):
     '''
     @web.authenticated
     def get(self):
-        filename = self.get_argument('filename', default=None)
-        if filename:
-            self.set_secure_cookie('filename', filename)
+        path = self.get_argument('projpath', default=None)
+        if path:
+            self.set_secure_cookie('projpath', path)
         else:
-            filename = self.get_secure_cookie('filename')
-        if filename:
+            path = self.get_secure_cookie('projpath')
+        if path:
             cserver = self.get_server()
-            filename = os.path.join(self.get_project_dir(), filename)
-            cserver.load_project(filename)
+            #path = os.path.join(self.get_project_dir(), path)
+            cserver.load_project(path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -377,26 +377,26 @@ class ProjectLoadHandler(ReqHandler):
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
 
-        POST: save project archive of the current project
+        POST: commit the current project
     '''
 
     @web.authenticated
     def post(self):
         cserver = self.get_server()
-        cserver.save_project()
+        cserver.commit_project()
         self.write('Saved.')
 
     @web.authenticated
     def get(self):
-        filename = self.get_argument('filename', default=None)
-        if filename:
-            self.set_secure_cookie('filename', filename)
+        path = self.get_argument('projpath', default=None)
+        if path:
+            self.set_secure_cookie('projpath', path)
         else:
-            filename = self.get_secure_cookie('filename')
-        if filename:
+            path = self.get_secure_cookie('projpath')
+        if path:
             self.delete_server()
             cserver = self.get_server()
-            filename = os.path.join(self.get_project_dir(), filename)
+            path = os.path.join(self.get_project_dir(), path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')

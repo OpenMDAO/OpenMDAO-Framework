@@ -102,7 +102,7 @@ def _test_palette_update(browser):
             "Expected component name, '%s', to be in list of existing"
             " component names, '%s'" % (paraboloid_name, component_names))
 
-    workspace_page.save_project()
+    workspace_page.commit_project()
     projects_page = workspace_page.close_workspace()
 
     # Now try to re-open that project to see if items are still there.
@@ -183,7 +183,7 @@ b = Float(0.0, iotype='out')
     conn_page.connect_vars('comp1.b', 'comp2.a')
     conn_page.close()
 
-    workspace_page.save_project()
+    workspace_page.commit_project()
 
     editor_page = workspace_page.open_editor()
     editor_page.edit_file('foo.py', dclick=False)
