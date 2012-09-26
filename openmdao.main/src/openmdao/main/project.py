@@ -141,7 +141,7 @@ class ProjFinder(object):
 class ProjLoader(object):
     """This is the import loader for files within an OpenMDAO project.  We use it to instrument
     the imported files so we can keep track of what classes have been instantiated so we know
-    when a project must be saved and reloaded.
+    when a project must be reloaded.
     """
     def __init__(self, path_entry):
         self.path_entry = path_entry
@@ -353,7 +353,9 @@ def filter_macro(lines):
     return filt_lines[::-1]  # reverse the result
 
 def add_proj_to_path(path):
-    """Puts this project's directory on sys.path."""
+    """Puts this project's directory on sys.path so that imports from it
+    will be processed by our special loader.
+    """
     modeldir = path+PROJ_DIR_EXT
     if modeldir not in sys.path:
         sys.path = [modeldir]+sys.path
@@ -371,6 +373,7 @@ class Project(object):
         self._model_globals = {}
 
         self.macrodir = os.path.join(self.path, '_macros')
+        self.macro = 'default'
         
         if not os.path.isdir(self.macrodir):
             os.makedirs(self.macrodir)
@@ -404,7 +407,7 @@ class Project(object):
         exec compile(node, fname, 'exec') in self._model_globals
 
         # make the recorded execfile command use the current md5 hash
-        self._recorded_cmds.append("execfile('%s', '%s')" % (fname, newdigest))
+        self._cmds_to_save.append("execfile('%s', '%s')" % (fname, newdigest))
 
     def get(self, pathname):
         parts = pathname.split('.')
@@ -434,10 +437,17 @@ class Project(object):
                 except:
                     logger.error("publishing of error failed")
 
+    def _save_command(self):
+        """Save the current command(s) to the macro file."""
+        self._recorded_cmds.extend(self._cmds_to_save)
+        with open(os.path.join(self.macrodir, self.macro), 'a') as f:
+            for cmd in self._cmds_to_save:
+                f.write(cmd+'\n')
+        self._cmds_to_save = []
+        
     def command(self, cmd):
         err = None
         result = None
-        size = len(self._recorded_cmds)
 
         try:
             code = compile(cmd, '<string>', 'eval')
@@ -453,21 +463,19 @@ class Project(object):
                 exc_info = sys.exc_info()
 
         if err:
-            self._recorded_cmds.append('%s #ERR' % cmd)
-            raise  # err  # We don't want to hide the original stack trace!!
+            self._cmds_to_save.append('%s #ERR' % cmd)
+            self._save_command()
+            raise
         else:
-            # certain commands (like execfile) can modify the recorded string,
-            # so only record the given command if the executed command didn't
-            # add its own entry to _recorded_cmds.
-            if len(self._recorded_cmds) == size:
-                self._recorded_cmds.append(cmd)
+            self._cmds_to_save.append(cmd)
+            self._save_command()
 
         return result
 
     def _initialize(self):
-        if os.path.isfile(os.path.join(self.macrodir, 'default')):
-            logger.info('Reconstructing project using default macro')
-            self.load_macro('default')
+        if os.path.isfile(os.path.join(self.macrodir, self.macro)):
+            logger.info('Reconstructing project using %s macro' % self.macro)
+            self.load_macro(self.macro)
         else:
             self.command("# Auto-generated file - DO NOT MODIFY")
             self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
@@ -506,11 +514,6 @@ class Project(object):
                 f.write(cmd)
                 f.write('\n')
         
-    def save(self):
-        """ Save the project model to its project directory.
-        """
-        self.write_macro('default')
-
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.
 

@@ -16,8 +16,9 @@ from openmdao.main.publisher import publish
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.main.repo import get_repo
 
-from openmdao.lib.releaseinfo import __version__, __date__
+from openmdao.main.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
 from openmdao.util.fileutil import file_md5
@@ -518,8 +519,8 @@ class ConsoleServer(cmd.Cmd):
         '''
         if self.proj:
             try:
-                print "Updating project macro"
-                self.proj.save() # write the macro file
+                repo = get_repo(self.proj.path)
+                repo.commit()
                 print 'Committed project in directory ', self.proj.path
             except Exception, err:
                 self._error(err, sys.exc_info())

@@ -14,6 +14,7 @@ from openmdao.gui.projectdb import Projects
 from openmdao.util.fileutil import clean_filename
 from openmdao.util.log import logger
 from openmdao.main.project import parse_archive_name, Project
+from openmdao.main.repo import find_vcs
 
 def _get_unique_name(dirname, basename):
     """Returns a unique pathname for a file with the given basename
@@ -240,6 +241,13 @@ class AddHandler(ReqHandler):
                 
                 archive = tarfile.open(fileobj=buff, mode='r:gz')
                 archive.extractall(path=unique)
+                
+                vcslist = find_vcs()
+                if vcslist:
+                    vcs = vcslist[0](unique)
+                else:
+                    vcs = DumbVCS(unique)
+                vcs.init_repo()
                 
                 # TODO: look for project config and retrieve project db info from it
                 
