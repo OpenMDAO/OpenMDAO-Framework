@@ -67,9 +67,13 @@ openmdao.CouplingVarsPane = function(elm,model,pathname,name,editable) {
                 'Ok': function() {
                     jQuery(this).dialog('close');
                     callback(indep.val(),dep.val());
+                    // remove from DOM
+                    win.remove();
                 },
                 'Cancel': function() {
                     jQuery(this).dialog('close');
+                    // remove from DOM
+                    win.remove();
                 }
             }
         });

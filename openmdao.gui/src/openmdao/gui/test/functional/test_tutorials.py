@@ -5,7 +5,9 @@ Functional testing of the tutorial problems in the GUI.
 import pkg_resources
 import sys
 import time
+from unittest import TestCase
 
+from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
 if sys.platform != 'win32':  # No testing on Windows yet.
@@ -85,15 +87,6 @@ def _test_MDAO_MDF(browser):
     driver = workspace_page.get_dataflow_figure('solver', 'top')
     editor = driver.editor_page(base_type='Driver')
     
-    # Del
-    editor('parameters_tab').click()
-    dialog = editor.new_parameter()
-    dialog.target = 'dis1.z1'
-    dialog.low = '-9.e99'
-    dialog.high = '9.e99'
-    dialog('ok').click()
-    # Del
-    
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
     dialog.target = 'dis1.y2'
@@ -149,8 +142,28 @@ def _test_MDAO_MDF(browser):
     dialog('ok').click()    
     editor.close()
     
+    # Run the model
+    workspace_page.run()
+    
+    # Check the objective
+    workspace_page.do_command("top.dis1.z1")
+    output1 = workspace_page.history.split("\n")[-1]
+    workspace_page.do_command("top.dis1.z2")
+    output2 = workspace_page.history.split("\n")[-1]
+
+    if abs(float(output1) - 1.977657) > 0.01:
+        raise TestCase.failureException(
+            "Parameter z1 did not reach correct value, but instead is %s"
+            % output1)
+
+    if abs(float(output2) - 0.0) > 0.0001:
+        raise TestCase.failureException(
+            "Parameter z2 did not reach correct value, but instead is %s"
+            % output2)
+
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
+
     
 if __name__ == '__main__':
     main()    

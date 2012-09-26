@@ -119,6 +119,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                         jQuery(this).dialog('close');
                         callback(target.val(),low.val(),high.val(),
                                  scaler.val(),adder.val(),name.val());
+                        // remove from DOM
+                        win.remove();
                     }
                 },
                 {
@@ -126,6 +128,8 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
                     id: 'parameter-cancel',
                     click: function() {
                         jQuery(this).dialog('close');
+                        // remove from DOM
+                        win.remove();
                     }
                 }
             ]
