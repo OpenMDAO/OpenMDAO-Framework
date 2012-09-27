@@ -22,12 +22,13 @@ class DepTestCase(unittest.TestCase):
                           os.path.dirname(openmdao.lib.__file__)]
         
     def test_PythonSourceTreeAnalyser(self):
+       
+        def exclude(pname):
+            keywords = set(['test', 'docs'])
+            parts = set(pname.split(os.sep))
+            return keywords.intersection(parts)
         
-        def exclude_tests(pname):
-            parts = pname.split(os.sep)
-            return 'test' in parts
-        
-        psta = PythonSourceTreeAnalyser(self.startdirs, exclude_tests)
+        psta = PythonSourceTreeAnalyser(self.startdirs, exclude)
         
         self.assertTrue('openmdao.main.component.Component' in 
                         psta.graph['openmdao.main.container.Container'])
