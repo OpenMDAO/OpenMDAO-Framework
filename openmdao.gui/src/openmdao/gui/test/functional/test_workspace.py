@@ -584,6 +584,71 @@ def _test_dontsavechanges(browser):
     print "_test_dontsavechanges complete."
 
 
+def _test_logviewer(browser):
+    # Verify log viewer functionality.
+    # Note that by default the logging level is set to WARNING.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    viewer = workspace_page.show_log()
+
+    # Incremental display.
+    workspace_page.do_command("import logging")
+    workspace_page.do_command("logging.error('1 Hello World')")
+    msgs = viewer.get_messages()
+    eq(msgs[-1][-13:], '1 Hello World')
+
+    # Exercise pausing the display. Since there's room on-screen,
+    # the lack of scrollbar update isn't noticable.
+    text = viewer.pause()
+    eq(text, 'Pause')
+    for i in range(2, 4):
+        workspace_page.do_command("logging.error('%d Hello World')" % i)
+    text = viewer.pause()  # Toggle-back.
+    eq(text, 'Resume')
+
+    # Clear display.
+    viewer.clear()
+    msgs = viewer.get_messages()
+    eq(msgs, [''])
+
+    # Exercise filtering.
+    logger = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                             'logger.py')
+    workspace_page.add_file(logger)
+    msgs = viewer.get_messages()
+    # Remove any spurious errors and drop timestamp.
+    initial = [msg[16:] for msg in msgs
+                        if "Shouldn't have handled a send event" not in msg]
+    eq(initial,
+       ['W root: warning 1',
+        'E root: error 1',
+        'C root: critical 1',
+        'W root: warning 2',
+        'E root: error 2',
+        'C root: critical 2',
+        'W root: warning 3',
+        'E root: error 3',
+        'C root: critical 3'])
+
+    # Turn off errors.
+    dialog = viewer.filter()
+    dialog('error_button').click()
+    dialog('ok_button').click()
+
+    msgs = viewer.get_messages()
+    filtered = [msg[16:] for msg in msgs]  # Drop timestamp.
+    eq(filtered,
+       ['W root: warning 1',
+        'C root: critical 1',
+        'W root: warning 2',
+        'C root: critical 2',
+        'W root: warning 3',
+        'C root: critical 3'])
+
+    # Clean up.
+    viewer.close()
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
 

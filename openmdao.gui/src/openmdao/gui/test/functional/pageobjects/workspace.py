@@ -18,6 +18,7 @@ from dataflow import find_dataflow_figure, find_dataflow_figures, \
                      find_dataflow_component_names
 from editor import EditorPage
 from elements import ButtonElement, GridElement, InputElement, TextElement
+from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures
 from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
@@ -36,20 +37,20 @@ class WorkspacePage(BasePageObject):
     exit_button       = ButtonElement((By.ID, 'project-exit'))
 
     view_menu         = ButtonElement((By.ID, 'view-menu'))
-    cmdline_button    = ButtonElement((By.ID, 'view-cmdline'))
+    objects_button    = ButtonElement((By.ID, 'view-components'))
     console_button    = ButtonElement((By.ID, 'view-console'))
+    dataflow_button   = ButtonElement((By.ID, 'view-dataflow'))
     files_button      = ButtonElement((By.ID, 'view-files'))
     library_button    = ButtonElement((By.ID, 'view-library'))
-    objects_button    = ButtonElement((By.ID, 'view-components'))
     properties_button = ButtonElement((By.ID, 'view-properties'))
     workflow_button   = ButtonElement((By.ID, 'view-workflow'))
-    dataflow_button   = ButtonElement((By.ID, 'view-dataflow'))
     refresh_button    = ButtonElement((By.ID, 'view-refresh'))
 
     tools_menu        = ButtonElement((By.ID, 'tools-menu'))
     editor_button     = ButtonElement((By.ID, 'tools-editor'))
     plotter_button    = ButtonElement((By.ID, 'tools-plotter'))
-    addons_button     = ButtonElement((By.ID, 'tools-addons'))
+    drawing_button    = ButtonElement((By.ID, 'tools-drawing'))
+    log_button        = ButtonElement((By.ID, 'tools-log'))
 
     help_menu         = ButtonElement((By.ID, 'help-menu'))
     doc_button        = ButtonElement((By.ID, 'help-doc'))
@@ -506,6 +507,12 @@ class WorkspacePage(BasePageObject):
     def get_workflow_figure(self, name, prefix=None, retries=5):
         """ Return :class:`WorkflowFigure` for `name`. """
         return find_workflow_figure(self, name, prefix, retries)
+
+    def show_log(self):
+        """ Open log viewer.  Returns :class:`LogViewer`. """
+        self('tools_menu').click()
+        self('log_button').click()
+        return LogViewer.verify(self.browser, self.port)
 
     def hide_left(self):
         toggler = self.browser.find_element_by_css_selector('.ui-layout-toggler-west-open')

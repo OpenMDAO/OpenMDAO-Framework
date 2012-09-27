@@ -190,7 +190,7 @@ openmdao.Util = {
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
             element = document.getElementById(baseId),
-            win = null;
+            win = null,
             userInput = null;
 
         function handleResponse(ok) {
@@ -257,7 +257,7 @@ openmdao.Util = {
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
             element = document.getElementById(baseId),
-            win = null;
+            win = null,
             userInput = null;
 
         function handleResponse(ok) {
