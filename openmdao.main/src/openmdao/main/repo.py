@@ -1,5 +1,8 @@
 import os
+import shutil
 import subprocess
+
+from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
 
 def in_dir(f):
     """Go to a specified directory before executing the function, then return 
@@ -86,6 +89,53 @@ class HgRepo(RepositoryBase):
     def revert(self, commit_id=None):
         pass
 
+    
+class DumbRepo(RepositoryBase):
+    """A really simple repository that's used as a fallback if git, hg, bzr
+    are not present.  It simply keeps an exported copy of the project in 
+    a .projrepo directory and therefore only allows one level of 'revert'. A 
+    commit just replaces the project copy.
+    """
+    repodir = '.projrepo'
+    
+    @staticmethod
+    def is_present():
+        return True
+    
+    @in_dir
+    def init_repo(self):
+        os.mkdir(self.repodir)
+        self.commit()
+    
+    @in_dir
+    def commit(self, comment=''):
+        p = Project(self.dirpath)
+        p.export(destdir=self.repodir)
+    
+    @in_dir
+    def revert(self, commit_id=None):
+        for projfile in os.listdir(self.repodir):
+            if projfile.endswith(PROJ_FILE_EXT):
+                # first, clean up existing project dir
+                for f in os.listdir('.'):
+                    if f == self.repodir:
+                        continue
+                    try:
+                        if os.path.isdir(f):
+                            shutil.rmtree(f)
+                        else:
+                            os.remove(f)
+                    except Exception as err:
+                        print str(err)
+                # now untar the project archive over the current project directory
+                project_from_archive(os.path.join(os.getcwd(), self.repodir, projfile),
+                                     dest_dir=os.path.dirname(os.getcwd()), 
+                                     create=False, overwrite=True)
+                break
+        else:
+            raise RuntimeError("No project file to revert to!")
+
+
 
 def get_repo(path):
     """Return the appropriate type of Repository object given the specified directory."""
@@ -95,11 +145,14 @@ def get_repo(path):
         return HgRepo(path)
     elif os.path.exists(os.path.join(path, '.bzr')):
         return BzrRepo(path)
+    elif os.path.exists(os.path.join(path, DumbRepo.repodir)):
+        return DumbRepo(path)
 
 
 def find_vcs():
     """Return Repository objects based on what VCSs is found on the system."""
-    return [vcs for vcs in [GitRepo, HgRepo, BzrRepo] if vcs.is_present()]
+    #return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
+    return [DumbRepo]
 
 
 if __name__ == '__main__':

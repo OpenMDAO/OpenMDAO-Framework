@@ -23,7 +23,6 @@ from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.mp_support import is_instance
 from openmdao.main.publisher import publish
-from openmdao.main.repo import RepositoryBase, in_dir
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
@@ -372,6 +371,7 @@ class Project(object):
             Path to the project's directory.
         """
         self._recorded_cmds = []
+        self._cmds_to_save = []
         self.path = expand_path(projpath)
         self._model_globals = {}
 
@@ -431,7 +431,7 @@ class Project(object):
         errors = []
         for i, line in enumerate(lines):
             try:
-                self.command(line.rstrip('\n'))
+                self.command(line.rstrip('\n'), save=False)
             except Exception as err:
                 msg = str(err)
                 logger.error("%s" % ''.join(traceback.format_tb(sys.exc_info()[2])))
@@ -440,17 +440,19 @@ class Project(object):
                 except:
                     logger.error("publishing of error failed")
 
-    def _save_command(self):
+    def _save_command(self, save):
         """Save the current command(s) to the macro file."""
         self._recorded_cmds.extend(self._cmds_to_save)
-        with open(os.path.join(self.macrodir, self.macro), 'a') as f:
-            for cmd in self._cmds_to_save:
-                f.write(cmd+'\n')
+        if save:
+            with open(os.path.join(self.macrodir, self.macro), 'a') as f:
+                for cmd in self._cmds_to_save:
+                    f.write(cmd+'\n')
         self._cmds_to_save = []
         
-    def command(self, cmd):
+    def command(self, cmd, save=True):
         err = None
         result = None
+        self._cmds_to_save = []
 
         try:
             code = compile(cmd, '<string>', 'eval')
@@ -467,11 +469,12 @@ class Project(object):
 
         if err:
             self._cmds_to_save.append('%s #ERR' % cmd)
-            self._save_command()
+            self._save_command(save)
             raise
         else:
-            self._cmds_to_save.append(cmd)
-            self._save_command()
+            if not self._cmds_to_save:
+                self._cmds_to_save.append(cmd)
+            self._save_command(save)
 
         return result
 
@@ -482,7 +485,7 @@ class Project(object):
         else:
             self.command("# Auto-generated file - DO NOT MODIFY")
             self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
-            self.write_macro('default')
+            #self.write_macro('default')
 
     def _init_globals(self):
         self._model_globals['create'] = self.create   # add create funct here so macros can call it
@@ -510,12 +513,12 @@ class Project(object):
         except:
             pass
 
-    def write_macro(self, macro_name):
-        logger.info("Saving macro '%s'" % macro_name)
-        with open(os.path.join(self.macrodir, macro_name), 'w') as f:
-            for cmd in self._recorded_cmds:
-                f.write(cmd)
-                f.write('\n')
+    #def write_macro(self, macro_name):
+        #logger.info("Saving macro '%s'" % macro_name)
+        #with open(os.path.join(self.macrodir, macro_name), 'w') as f:
+            #for cmd in self._recorded_cmds:
+                #f.write(cmd)
+                #f.write('\n')
         
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.
@@ -556,50 +559,3 @@ class Project(object):
         finally:
             os.chdir(startdir)
         return fname
-
-    
-class DumbRepo(RepositoryBase):
-    """A really simple repository that's used as a fallback if git, hg, bzr
-    are not present.  It simply keeps an exported copy of the project in 
-    a .projrepo directory and therefore only allows one level of 'revert'. A 
-    commit just replaces the project copy.
-    """
-    repodir = '.projrepo'
-    
-    @staticmethod
-    def is_present():
-        return True
-    
-    @in_dir
-    def init_repo(self):
-        os.mkdir(self.repodir)
-        self.commit()
-    
-    @in_dir
-    def commit(self, comment=''):
-        p = Project(self.dirpath)
-        p.export(destdir=self.repodir)
-    
-    @in_dir
-    def revert(self, commit_id=None):
-        for projfile in os.listdir(self.repodir):
-            if projfile.endswith(PROJ_FILE_EXT):
-                # first, clean up existing project dir
-                for f in os.listdir('.'):
-                    if f == self.repodir:
-                        continue
-                    try:
-                        if os.path.isdir(f):
-                            shutil.rmtree(f)
-                        else:
-                            os.remove(f)
-                    except Exception as err:
-                        print str(err)
-                project_from_archive(os.path.join(os.getcwd(), self.repodir, projfile),
-                                     dest_dir=os.path.dirname(os.getcwd()), 
-                                     create=False, overwrite=True)
-                break
-        else:
-            raise RuntimeError("No project file to revert to!")
-
-

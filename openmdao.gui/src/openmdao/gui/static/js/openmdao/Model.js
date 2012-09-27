@@ -179,7 +179,7 @@ openmdao.Model=function(listeners_ready) {
         });
     };
 
-    /** save the current project */
+    /** commit the current project to the repository */
     this.commitProject = function(callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
@@ -190,6 +190,23 @@ openmdao.Model=function(listeners_ready) {
                           if (typeof openmdao_test_mode !== 'undefined') {
                               openmdao.Util.notify('Commit complete: ' +textStatus);
                           }
+                      }
+        });
+        modified = false;
+    };
+
+    /** revert back to the most recent commit of the project */
+    this.revertProject = function(callback, errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'project_revert',
+            success: callback,
+            error: errorHandler,
+            complete: function(jqXHR, textStatus) {
+                          if (typeof openmdao_test_mode !== 'undefined') {
+                              openmdao.Util.notify('Revert complete: ' +textStatus);
+                          }
+                          self.reload()
                       }
         });
         modified = false;

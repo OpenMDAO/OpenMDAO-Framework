@@ -4,7 +4,8 @@ import unittest
 import tempfile
 import shutil
 
-from openmdao.main.project import DumbRepo, PROJ_FILE_EXT
+from openmdao.main.repo import DumbRepo, GitRepo, BzrRepo, HgRepo
+from openmdao.main.project import PROJ_FILE_EXT
 from openmdao.util.fileutil import build_directory
 
 def _build_project(topdir):

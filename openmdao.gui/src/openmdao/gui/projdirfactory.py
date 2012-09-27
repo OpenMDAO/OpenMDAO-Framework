@@ -327,9 +327,10 @@ class ProjDirFactory(Factory):
                 for pyfile in find_files(self.watchdir, "*.py"):
                     self.on_deleted(pyfile, deleted_set)
             else:
-                finfo = self._files[fpath]
-                deleted_set.update(finfo.classes.keys())
-                self._remove_fileinfo(fpath)
+                finfo = self._files.get(fpath)
+                if finfo:
+                    deleted_set.update(finfo.classes.keys())
+                    self._remove_fileinfo(fpath)
             
     def publish_updates(self, added_set, changed_set, deleted_set):
         types = get_available_types()

@@ -373,6 +373,16 @@ class ProjectLoadHandler(ReqHandler):
         else:
             self.redirect('/')
             
+class ProjectRevertHandler(ReqHandler):
+    ''' POST:  revert back to the most recent commit of the project
+    '''
+    @web.authenticated
+    def post(self):
+        commit_id = self.get_argument('commit_id', default=None)
+        cserver = self.get_server()
+        cserver.revert_project(commit_id)
+        self.write('Reverted.')
+            
             
 class ProjectHandler(ReqHandler):
     ''' GET:  start up an empty workspace and prepare to load a project.
@@ -382,9 +392,10 @@ class ProjectHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
+        comment = self.get_argument('comment', default='')
         cserver = self.get_server()
-        cserver.commit_project()
-        self.write('Saved.')
+        cserver.commit_project(comment)
+        self.write('Committed.')
 
     @web.authenticated
     def get(self):
@@ -536,6 +547,7 @@ handlers = [
     web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
+    web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
     web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),

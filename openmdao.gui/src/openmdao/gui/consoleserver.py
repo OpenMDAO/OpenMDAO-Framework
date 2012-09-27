@@ -512,27 +512,39 @@ class ConsoleServer(cmd.Cmd):
             self.proj = Project(projdir)
             repo = get_repo(projdir)
             if repo is None:
-                vcslist = find_vcs()
-                if vcslist:
-                    vcslist[0](projdir).init_repo()
-                else:
-                    DumbRepo(projdir).init_repo()
+                find_vcs()[0](projdir).init_repo()
             self.proj.activate()
         except Exception, err:
             self._error(err, sys.exc_info())
 
-    def commit_project(self):
+    def commit_project(self, comment=''):
         ''' save the current project macro and commit to the project repo
         '''
         if self.proj:
             try:
                 repo = get_repo(self.proj.path)
-                repo.commit()
+                repo.commit(comment)
                 print 'Committed project in directory ', self.proj.path
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error('No Project to save')
+            self._print_error('No Project to commit')
+
+    @modifies_model
+    def revert_project(self, commit_id=None):
+        ''' revert back to the most recent commit of the project
+        '''
+        if self.proj:
+            try:
+                repo = get_repo(self.proj.path)
+                repo.revert(commit_id)
+                if commit_id is None:
+                    commit_id = 'latest'
+                print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
+            except Exception, err:
+                self._error(err, sys.exc_info())
+        else:
+            self._print_error('No Project to revert')
 
     @modifies_model
     def add_component(self, name, classname, parentname):
