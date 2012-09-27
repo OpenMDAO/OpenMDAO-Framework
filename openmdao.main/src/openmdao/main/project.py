@@ -4,6 +4,7 @@ Routines for handling 'Projects' in Python.
 
 import os
 import sys
+import shutil
 from inspect import isclass
 import tarfile
 from tokenize import generate_tokens
@@ -22,6 +23,7 @@ from openmdao.main.variable import namecheck_rgx
 from openmdao.main.factorymanager import create as factory_create
 from openmdao.main.mp_support import is_instance
 from openmdao.main.publisher import publish
+from openmdao.main.repo import RepositoryBase, in_dir
 from openmdao.util.fileutil import get_module_path, expand_path, file_md5, find_files
 from openmdao.util.fileutil import find_module as util_findmodule
 from openmdao.util.log import logger
@@ -209,7 +211,7 @@ def parse_archive_name(pathname):
     return os.path.splitext(os.path.basename(pathname))[0]
 
 
-def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True):
+def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True, overwrite=False):
     """Expand the given project archive file in the specified destination
     directory and return a Project object that points to the newly
     expanded project.
@@ -241,10 +243,11 @@ def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=Tru
 
     projpath = os.path.join(dest_dir, proj_name)
 
-    if os.path.exists(projpath):
+    if not overwrite and os.path.exists(projpath):
         raise RuntimeError("Directory '%s' already exists" % projpath)
 
-    os.mkdir(projpath)
+    if not os.path.exists(projpath):
+        os.mkdir(projpath)
     if os.path.getsize(archive_name) > 0:
         try:
             f = open(archive_name, 'rb')
@@ -526,11 +529,12 @@ class Project(object):
             the current directory.
         """
 
+        excludes = ['.git', '.bzr', '.hg', '.projrepo']
         ddir = expand_path(destdir)
         if projname is None:
             projname = self.name
 
-        if ddir.startswith(self.path):  # the project contains the dest directory... bad
+        if os.path.basename(ddir) not in excludes and ddir.startswith(self.path):  # the project contains the dest directory... bad
             raise RuntimeError("Destination directory for export (%s) is within project directory (%s)" %
                                (ddir, self.path))
 
@@ -542,7 +546,8 @@ class Project(object):
                 f = open(fname, 'wb')
                 tf = tarfile.open(fileobj=f, mode='w:gz')
                 for entry in os.listdir(self.path):
-                    tf.add(entry)
+                    if entry not in excludes:
+                        tf.add(entry)
             except Exception, err:
                 print "Error creating project archive:", err
                 fname = None
@@ -551,3 +556,50 @@ class Project(object):
         finally:
             os.chdir(startdir)
         return fname
+
+    
+class DumbRepo(RepositoryBase):
+    """A really simple repository that's used as a fallback if git, hg, bzr
+    are not present.  It simply keeps an exported copy of the project in 
+    a .projrepo directory and therefore only allows one level of 'revert'. A 
+    commit just replaces the project copy.
+    """
+    repodir = '.projrepo'
+    
+    @staticmethod
+    def is_present():
+        return True
+    
+    @in_dir
+    def init_repo(self):
+        os.mkdir(self.repodir)
+        self.commit()
+    
+    @in_dir
+    def commit(self, comment=''):
+        p = Project(self.dirpath)
+        p.export(destdir=self.repodir)
+    
+    @in_dir
+    def revert(self, commit_id=None):
+        for projfile in os.listdir(self.repodir):
+            if projfile.endswith(PROJ_FILE_EXT):
+                # first, clean up existing project dir
+                for f in os.listdir('.'):
+                    if f == self.repodir:
+                        continue
+                    try:
+                        if os.path.isdir(f):
+                            shutil.rmtree(f)
+                        else:
+                            os.remove(f)
+                    except Exception as err:
+                        print str(err)
+                project_from_archive(os.path.join(os.getcwd(), self.repodir, projfile),
+                                     dest_dir=os.path.dirname(os.getcwd()), 
+                                     create=False, overwrite=True)
+                break
+        else:
+            raise RuntimeError("No project file to revert to!")
+
+

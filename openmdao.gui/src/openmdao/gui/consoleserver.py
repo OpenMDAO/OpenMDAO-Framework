@@ -16,7 +16,7 @@ from openmdao.main.publisher import publish
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
-from openmdao.main.repo import get_repo
+from openmdao.main.repo import get_repo, find_vcs
 
 from openmdao.main.releaseinfo import __version__, __date__
 
@@ -510,6 +510,13 @@ class ConsoleServer(cmd.Cmd):
             register_class_factory(self.projdirfactory)
             
             self.proj = Project(projdir)
+            repo = get_repo(projdir)
+            if repo is None:
+                vcslist = find_vcs()
+                if vcslist:
+                    vcslist[0](projdir).init_repo()
+                else:
+                    DumbRepo(projdir).init_repo()
             self.proj.activate()
         except Exception, err:
             self._error(err, sys.exc_info())

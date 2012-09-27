@@ -9,14 +9,14 @@ def in_dir(f):
         start = os.getcwd()
         os.chdir(self.dirpath)
         try:
-            return f(*args, **kwargs)
+            return f(self, *args, **kwargs)
         finally:
             os.chdir(start)
     return wrapper
 
 class RepositoryBase(object):
-    def __init__(self, dirpath):
-        self.dirpath = dirpath
+    def __init__(self, dirpath='.'):
+        self.dirpath = os.path.abspath(os.path.expanduser(dirpath))
         
     @classmethod
     def name(cls):
@@ -36,13 +36,13 @@ class GitRepo(RepositoryBase):
     
     @in_dir
     def commit(self, comment):
-        subprocess.check_call('git commit -a "%s"' % comment, stdout=None, shell=True)
+        subprocess.check_call('git commit -a "%s"' % comment, shell=True)
     
     @in_dir
     def revert(self, commit_id=None):
         if commit_id is None:
             commit_id = 'HEAD'
-        subprocess.check_call('git reset --hard %s' % commit_id, stdout=None, shell=True)
+        subprocess.check_call('git reset --hard %s' % commit_id, shell=True)
         
     
 class BzrRepo(RepositoryBase):
@@ -65,6 +65,7 @@ class BzrRepo(RepositoryBase):
     def revert(self, commit_id=None):
         pass
     
+
 class HgRepo(RepositoryBase):
 
     @staticmethod
@@ -74,16 +75,17 @@ class HgRepo(RepositoryBase):
         return proc.returncode == 0
     
     @in_dir
-    def init_repo():
+    def init_repo(self):
         pass
     
     @in_dir
-    def commit():
+    def commit(self, comment=''):
         pass
     
     @in_dir
-    def revert():
+    def revert(self, commit_id=None):
         pass
+
 
 def get_repo(path):
     """Return the appropriate type of Repository object given the specified directory."""
