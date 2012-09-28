@@ -8,6 +8,7 @@ for WebSockets is required.
 """
 
 import os
+import signal
 import sys
 import time
 
@@ -100,8 +101,16 @@ class App(web.Application):
         self.session_manager = TornadoSessionManager(secret, session_dir)
         self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer')
 
+        global _MGR
+        _MGR = self.server_manager
+        signal.signal(signal.SIGTERM, self._sigterm_handler)
         super(App, self).__init__(handlers, **app_settings)
 
+    def _sigterm_handler(self, signum, frame):
+        DEBUG('Received SIGTERM, shutting down....\n')
+        _MGR.cleanup()
+        ioloop.IOLoop.instance().add_timeout(time.time()+5, sys.exit)
+        
     def exit(self):
         self.server_manager.cleanup()
         DEBUG('Exit requested, shutting down....\n')

@@ -1,16 +1,10 @@
 import sys
 import os
-import shutil
-import subprocess
 import time
-from socket import gethostname
-from optparse import OptionParser
+
 from boto.ec2.connection import EC2Connection
 
-from openmdao.devtools.utils import get_git_branch, repo_top, remote_tmpdir, \
-                                    rm_remote_tree, make_git_archive, \
-                                    fabric_cleanup, ssh_test, fab_connect, run
-
+from openmdao.devtools.utils import ssh_test, fab_connect, run
 from openmdao.util.debug import print_funct_call
 
 
@@ -27,7 +21,8 @@ def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
             inst.update()
         except Exception as err:
             if debug:
-                stream.write("ERROR while attempting to get instance state: %s" % str(err))
+                stream.write("ERROR while attempting to get instance state: %s"
+                             % str(err))
         else:
             if debug:
                 stream.write("%s state = %s\n" % (imgname, inst.state))
@@ -92,14 +87,15 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
         if ssh_test(inst.public_dns_name):
             break
     else:
-        stream.write("\nssh connection to %s failed after %d attempts.  terminating...\n" % (name, max_tries))
+        stream.write("\nssh connection to %s failed after %d attempts."
+                     "  terminating...\n" % (name, max_tries))
         terminate_instance(inst, name, stream, debug)
         raise RuntimeError("couldn't connect to %s via ssh" % name)
 
     time.sleep(20)
     
     try:
-        conn.create_tags([inst.id], {'Name': "%s_%s" % (get_username(),name)} )
+        conn.create_tags([inst.id], {'Name': "%s_%s" % (get_username(), name)} )
     except Exception as err:
         stream.write(str(err))
     return inst
@@ -128,7 +124,8 @@ def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
         if ssh_test(inst.public_dns_name):
             break
     else:
-        raise RuntimeError("instance of '%s' ran but ssh connection attempts failed (%d attempts)" % (name,max_tries))
+        raise RuntimeError("instance '%s' ran but ssh connection attempts"
+                           " failed (%d attempts)" % (inst_id, max_tries))
 
     return inst
 
@@ -257,9 +254,10 @@ def run_on_ec2(host, config, conn, funct, outdir, **kwargs):
                     else:
                         break
             else:
-                stream.write("\nrunning python via fabric on %s failed after %d attempts.  terminating...\n" % (name, max_tries))
-                terminate_instance(inst, name, stream, debug)
-                raise RuntimeError("couldn't run python on %s via fabric" % name)
+                outf.write("\nrunning python via fabric on %s failed after %d"
+                           " attempts.  terminating...\n" % (host, max_tries))
+                terminate_instance(inst, host, outf, debug)
+                raise RuntimeError("couldn't run python on %s via fabric" % host)
 
             retval = funct(**kwargs)
     except (SystemExit, Exception) as err:
