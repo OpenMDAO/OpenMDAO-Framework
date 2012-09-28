@@ -118,7 +118,7 @@ TestCase("ModelTest", {
       callback1 = sinon.spy() ;
       openmdao.model.addListener( '', callback1 ) ;
 
-      openmdao.model.commitProject( );
+      openmdao.model.commit( );
 
       // Check the requests
       assertEquals("project", this.requests[0].url);

@@ -180,7 +180,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** commit the current project to the repository */
-    this.commitProject = function(callback, errorHandler) {
+    this.commit = function(callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'project',
@@ -196,7 +196,7 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** revert back to the most recent commit of the project */
-    this.revertProject = function(callback, errorHandler) {
+    this.revert = function(callback, errorHandler) {
         jQuery.ajax({
             type: 'POST',
             url:  'project_revert',
@@ -211,6 +211,7 @@ openmdao.Model=function(listeners_ready) {
         });
         modified = false;
     };
+
 
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {

@@ -14,6 +14,7 @@ import imp
 import ast
 from threading import RLock
 import traceback
+from ConfigParser import SafeConfigParser
 
 #from pkg_resources import get_distribution, DistributionNotFound
 
@@ -378,9 +379,34 @@ class Project(object):
         self.macrodir = os.path.join(self.path, '_macros')
         self.macro = 'default'
         
+        settings = os.path.join(self.path, '_settings.cfg')
+        if not os.path.isfile(settings):
+            self._create_config()
+            
         if not os.path.isdir(self.macrodir):
             os.makedirs(self.macrodir)
 
+        self.config = SafeConfigParser()
+        self.config.optionxform = str  # Preserve case.
+        files = self.config.read(settings)
+        if not files:
+            logger.error("Failed to read project config file")
+
+    def _create_config(self):
+        """Create the initial _settings.cfg file for the project."""
+        settings = """
+[preferences]
+vcs = git
+export_repo = false
+
+[info]
+version = 0
+description =
+       """
+        
+        with open(os.path.join(self.path, '_settings.cfg'), 'wb') as f:
+            f.write(settings)
+        
     def create(self, typname, version=None, server=None, res_desc=None, **ctor_args):
         if server is None and res_desc is None and typname in self._model_globals:
             return getattr(self._model_globals, typname)(**ctor_args)
@@ -532,6 +558,7 @@ class Project(object):
             the current directory.
         """
 
+        export_repo = self.config.getboolean("preferences", "export_repo")
         excludes = ['.git', '.bzr', '.hg', '.projrepo']
         ddir = expand_path(destdir)
         if projname is None:
@@ -549,7 +576,7 @@ class Project(object):
                 f = open(fname, 'wb')
                 tf = tarfile.open(fileobj=f, mode='w:gz')
                 for entry in os.listdir(self.path):
-                    if entry not in excludes:
+                    if export_repo or entry not in excludes:
                         tf.add(entry)
             except Exception, err:
                 print "Error creating project archive:", err
