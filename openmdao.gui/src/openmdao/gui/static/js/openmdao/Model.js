@@ -391,6 +391,22 @@ openmdao.Model=function() {
         modified = true;
     };
 
+    /** issue the specified command against the model */
+    this.setVariableValue = function(lhs, rhs, type, callback, errorHandler, completeHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'variable',
+            data: { 'lhs': lhs,
+                    'rhs': rhs,
+                    'type': type
+                  },
+            success: callback,
+            error: errorHandler,
+            complete: completeHandler
+        });
+        modified = true;
+    };
+
     /** get any queued output from the model */
     this.getOutput = function(callback, errorHandler) {
         jQuery.ajax({
