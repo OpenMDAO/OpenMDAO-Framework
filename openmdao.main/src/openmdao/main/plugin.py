@@ -614,14 +614,14 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
             raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
     
     if modname.startswith('openmdao.'): # lookup in builtin docs
+        import openmdao.main
         fparts = mod.__file__.split(os.sep)
         pkg = '.'.join(modname.split('.')[:2])
         anchorpath = '/'.join(['srcdocs', 'packages',
                                '%s.html#module-%s' % (pkg, modname)])
         if any([p.endswith('.egg') and p.startswith('openmdao.') for p in fparts]): 
-            # this is a release version, so use online docs
-            url = '/'.join(['http://openmdao.org/releases/%s/docs'
-                            % __version__, anchorpath])
+            # this is a release version, so use docs packaged with openmdao.main
+            htmldir = os.path.join(os.path.dirname(openmdao.main.__file__), "docs")
         else:  # it's a developer version, so use locally built docs
             htmldir = os.path.join(get_ancestor_dir(sys.executable, 3), 'docs', 
                                    '_build', 'html')
@@ -629,8 +629,8 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
                 #make sure the local docs are built
                 print "local docs not found.\nbuilding them now...\n"
                 check_call(['openmdao', 'build_docs'])
-            url = 'file://'+os.path.join(htmldir, anchorpath)
-            url = url.replace('\\', '/')
+        url = 'file://'+os.path.join(htmldir, anchorpath)
+        url = url.replace('\\', '/')
     else:
         url = os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
                            'sphinx_build', 'html', 'index.html')

@@ -1,4 +1,8 @@
 import sys
+import os
+
+import openmdao.main
+import webbrowser
 
 
 def view_docs(browser=None):
@@ -17,8 +21,6 @@ def view_docs(browser=None):
     try:
         import openmdao.devtools.build_docs
     except ImportError:
-        import openmdao.main
-        import webbrowser
         idxpath = "file://"+os.path.join(os.path.dirname(openmdao.main.__file__),
                                          "docs", "index.html")
         wb = webbrowser.get(browser)
