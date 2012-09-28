@@ -511,7 +511,6 @@ description =
         else:
             self.command("# Auto-generated file - DO NOT MODIFY")
             self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
-            #self.write_macro('default')
 
     def _init_globals(self):
         self._model_globals['create'] = self.create   # add create funct here so macros can call it
@@ -538,13 +537,6 @@ description =
             sys.path.remove(modeldir+PROJ_DIR_EXT)
         except:
             pass
-
-    #def write_macro(self, macro_name):
-        #logger.info("Saving macro '%s'" % macro_name)
-        #with open(os.path.join(self.macrodir, macro_name), 'w') as f:
-            #for cmd in self._recorded_cmds:
-                #f.write(cmd)
-                #f.write('\n')
         
     def export(self, projname=None, destdir='.'):
         """Creates an archive of the current project for export.

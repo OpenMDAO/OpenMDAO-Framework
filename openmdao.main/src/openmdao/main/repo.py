@@ -1,8 +1,10 @@
 import os
 import shutil
 import subprocess
+import tempfile
 
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
+from openmdao.util.log import logger
 
 class SimpleObj(object):
     def __init__(self, **kwargs):
@@ -10,12 +12,19 @@ class SimpleObj(object):
             setattr(self, arg, val)
 
 def _run_command(cmd):
-    proc = subprocess.Popen(cmd, shell=True)
-    out = proc.communicate()
-    if proc.returncode != 0:
-        raise subprocess.CalledProcessError(proc.returncode, cmd, out[1])
-    return SimpleObj(returncode=proc.returncode,
-                     stdout=out[0], stderr=out[1])
+    fd, fname = tempfile.mkstemp()
+    proc = subprocess.Popen(cmd, stdout=fd, stderr=subprocess.STDOUT, shell=True)
+    proc.wait()
+    os.close(fd)
+    try:
+        if proc.returncode != 0:
+            with open(fname, 'rb') as f:
+                out = f.read()
+            logger.error("out: %s" % out)
+            raise RuntimeError(out)
+    finally:
+        os.remove(fname)
+    return proc.returncode
             
 
 def in_dir(f):
@@ -43,7 +52,7 @@ class GitRepo(RepositoryBase):
 
     @staticmethod
     def is_present():
-        return _run_command('git --version').returncode == 0
+        return _run_command('git --version') == 0
     
     @in_dir
     def create_ignore_file(self):
@@ -56,8 +65,7 @@ openmdao_log.txt
 *.egg-info
 *.egg
 
-# Compiled source #
-###################
+# Compiled source
 *.com
 *.class
 *.dll
@@ -67,30 +75,20 @@ openmdao_log.txt
 *.pyc
 *.pyo
 
-# Packages #
-############
-# it's better to unpack these files and commit the raw source
-# git has its own built in compression methods
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
-
-# Logs and databases #
-######################
+# Logs and databases
 *.log
 *.sql
 *.sqlite
 
-# OS generated files #
-######################
+# OS generated files
 .DS_Store?
 ehthumbs.db
 Thumbs.db
+
+# other vcs
+.bzr
+.hg
+.svn
         """
         with open('.gitignore', 'w') as f:
             f.write(ignore)
@@ -114,42 +112,42 @@ Thumbs.db
         _run_command('git reset --hard %s' % commit_id)
         
     
-class BzrRepo(RepositoryBase):
+#class BzrRepo(RepositoryBase):
 
-    @staticmethod
-    def is_present():
-        return _run_command('bzr --help').returncode == 0
+    #@staticmethod
+    #def is_present():
+        #return _run_command('bzr --version') == 0
     
-    @in_dir
-    def init_repo(self):
-        subprocess.check_call('???', shell=True)
+    #@in_dir
+    #def init_repo(self):
+        #subprocess.check_call('???', shell=True)
     
-    @in_dir
-    def commit(self, comment=''):
-        pass
+    #@in_dir
+    #def commit(self, comment=''):
+        #pass
     
-    @in_dir
-    def revert(self, commit_id=None):
-        pass
+    #@in_dir
+    #def revert(self, commit_id=None):
+        #pass
     
 
-class HgRepo(RepositoryBase):
+#class HgRepo(RepositoryBase):
 
-    @staticmethod
-    def is_present():
-        return _run_command('hg --help').returncode == 0
+    #@staticmethod
+    #def is_present():
+        #return _run_command('hg --version') == 0
     
-    @in_dir
-    def init_repo(self):
-        pass
+    #@in_dir
+    #def init_repo(self):
+        #pass
     
-    @in_dir
-    def commit(self, comment=''):
-        pass
+    #@in_dir
+    #def commit(self, comment=''):
+        #pass
     
-    @in_dir
-    def revert(self, commit_id=None):
-        pass
+    #@in_dir
+    #def revert(self, commit_id=None):
+        #pass
 
     
 class DumbRepo(RepositoryBase):
@@ -201,19 +199,20 @@ class DumbRepo(RepositoryBase):
 
 def get_repo(path):
     """Return the appropriate type of Repository object given the specified directory."""
-    if os.path.exists(os.path.join(path, '.git')):
+    if os.path.exists(os.path.join(path, '.git')) and GitRepo.is_present():
         return GitRepo(path)
-    elif os.path.exists(os.path.join(path, '.hg')):
-        return HgRepo(path)
-    elif os.path.exists(os.path.join(path, '.bzr')):
-        return BzrRepo(path)
+    #elif os.path.exists(os.path.join(path, '.hg')) and HgRepo.is_present():
+        #return HgRepo(path)
+    #elif os.path.exists(os.path.join(path, '.bzr')) and BzrRepo.is_present():
+        #return BzrRepo(path)
     elif os.path.exists(os.path.join(path, DumbRepo.repodir)):
         return DumbRepo(path)
 
 
 def find_vcs():
     """Return Repository objects based on what VCSs is found on the system."""
-    return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
+    #return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
+    return [vcs for vcs in [GitRepo, DumbRepo] if vcs.is_present()]
 
 
 if __name__ == '__main__':
