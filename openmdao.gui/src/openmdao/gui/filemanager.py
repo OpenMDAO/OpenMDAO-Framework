@@ -86,7 +86,7 @@ class FileManager(object):
             cwd = os.getcwd()
         else:
             cwd = root
-        return filedict(cwd, root=cwd)
+        return filedict(cwd)
 
     def _get_abs_path(self, name):
         '''return the absolute pathname of the given file/dir

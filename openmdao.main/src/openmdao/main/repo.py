@@ -4,6 +4,20 @@ import subprocess
 
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
 
+class SimpleObj(object):
+    def __init__(self, **kwargs):
+        for arg,val in kwargs.items():
+            setattr(self, arg, val)
+
+def _run_command(cmd):
+    proc = subprocess.Popen(cmd, shell=True)
+    out = proc.communicate()
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, cmd, out[1])
+    return SimpleObj(returncode=proc.returncode,
+                     stdout=out[0], stderr=out[1])
+            
+
 def in_dir(f):
     """Go to a specified directory before executing the function, then return 
     to the original directory.
@@ -29,32 +43,82 @@ class GitRepo(RepositoryBase):
 
     @staticmethod
     def is_present():
-        proc = subprocess.Popen('git --help', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        proc.communicate()
-        return proc.returncode == 0
+        return _run_command('git --version').returncode == 0
     
     @in_dir
+    def create_ignore_file(self):
+        ignore = """
+.coverage
+openmdao_log.txt
+
+~*
+*~
+*.egg-info
+*.egg
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+*.pyo
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store?
+ehthumbs.db
+Thumbs.db
+        """
+        with open('.gitignore', 'w') as f:
+            f.write(ignore)
+            
+    @in_dir
     def init_repo(self):
-        subprocess.check_call('git init', shell=True)
+        self.create_ignore_file()
+        _run_command('git init')
     
     @in_dir
     def commit(self, comment):
-        subprocess.check_call('git commit -a "%s"' % comment, shell=True)
+        _run_command('git add .') # add any new files to the repo
+        if not comment:
+            comment = 'no comment'
+        _run_command('git commit -a -m "%s"' % comment)
     
     @in_dir
     def revert(self, commit_id=None):
         if commit_id is None:
             commit_id = 'HEAD'
-        subprocess.check_call('git reset --hard %s' % commit_id, shell=True)
+        _run_command('git reset --hard %s' % commit_id)
         
     
 class BzrRepo(RepositoryBase):
 
     @staticmethod
     def is_present():
-        proc = subprocess.Popen('bzr --help', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        proc.communicate()
-        return proc.returncode == 0
+        return _run_command('bzr --help').returncode == 0
     
     @in_dir
     def init_repo(self):
@@ -73,9 +137,7 @@ class HgRepo(RepositoryBase):
 
     @staticmethod
     def is_present():
-        proc = subprocess.Popen('hg --help', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        proc.communicate()
-        return proc.returncode == 0
+        return _run_command('hg --help').returncode == 0
     
     @in_dir
     def init_repo(self):
@@ -151,8 +213,7 @@ def get_repo(path):
 
 def find_vcs():
     """Return Repository objects based on what VCSs is found on the system."""
-    #return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
-    return [DumbRepo]
+    return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
 
 
 if __name__ == '__main__':
