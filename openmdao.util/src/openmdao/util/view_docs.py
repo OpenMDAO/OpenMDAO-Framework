@@ -17,14 +17,10 @@ def view_docs(browser=None):
     try:
         import openmdao.devtools.build_docs
     except ImportError:
-        # look for docs online
         import openmdao.main
-        main_path = openmdao.main.__file__ 
-        ending = main_path.rfind("__init__")
-        main_path = main_path[:ending]
-        idxpath = main_path + "/docs/index.html"
-
         import webbrowser
+        idxpath = "file://"+os.path.join(os.path.dirname(openmdao.main.__file__),
+                                         "docs", "index.html")
         wb = webbrowser.get(browser)
         wb.open(idxpath)
     else:
