@@ -278,23 +278,20 @@ class _Runner(object):
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
             filename = os.path.join(os.getcwd(), '%s.png' % testname)
+            print 'Attempting to take screenshot...'
+            browser.save_screenshot(filename)
             msg = 'Screenshot in %s' % filename
             print msg
-            browser.save_screenshot(filename)
             logging.info(msg)
             raise
 
 
 def startup(browser):
-    """ Create a project and enter workspace."""
+    """ Create a project and enter workspace. """
     print 'running %s...' % inspect.stack()[1][3]
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
-
-    # Open library.
-    workspace_page.show_library()
-
     return projects_page, project_info_page, project_dict, workspace_page
 
 

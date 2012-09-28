@@ -32,30 +32,44 @@ openmdao.LogFrame = function(id, model) {
     }
 
     // Scroll to new bottom.
+    // Doesn't work with popout windows for some reason.
     function scrollToBottom() {
         var h = logData.height(),
             hb = self.elm.height(),
             hidden = h - hb;
-        self.elm.scrollTop(hidden);
+        if (hidden > 0) {
+            self.elm.scrollTop(hidden);
+        }
     }
 
-    // Filter log by completely reloading.
-    function filterLog(ev) {
-        model.removeListener('log_msgs', updateLog);
-        logData.html('');
-        current = false;
-        model.addListener('log_msgs', updateLog);
+    // Pause/resume scrolling.
+    function doPause(ev) {
+        if (paused) {
+            paused = false;
+            pauseButton.text('Pause');
+            scrollToBottom();
+        }
+        else {
+            paused = true;
+            pauseButton.text('Resume');
+        }
+    }
+
+    // Open log in separate window.
+    function doPopout(ev) {
+        var init_fn = "jQuery(function(){openmdao.PopoutLogFrame()})";
+        openmdao.Util.popupScript('LogViewer', init_fn);
     }
 
     // Display filtering options and possibly execute.
-    function filterDialog(ev) {
+    function doFilter(ev) {
         var baseId = 'logfilter',
             levels = ['critical', 'error', 'warning', 'info', 'debug'],
             win = null;
 
         function handleResponse(ok) {
             if (ok) {
-                // Update filter criteria and then filter the log.
+                // Update filter criteria.
                 self.filterCriteria = [];
                 var allChecked = true;
                 jQuery.each(levels, function(idx, level) {
@@ -71,7 +85,12 @@ openmdao.LogFrame = function(id, model) {
                 if (allChecked) {
                     self.filterCriteria = null;  // Avoid some overhead.
                 }
-                filterLog();
+
+                // Filter log by completely reloading.
+                model.removeListener('log_msgs', updateLog);
+                logData.html('');
+                current = false;
+                model.addListener('log_msgs', updateLog);
             }
             win.dialog('close');
             win.remove();
@@ -113,27 +132,30 @@ openmdao.LogFrame = function(id, model) {
         win.dialog('open');
     }
 
-    // Create context menu.
-    contextMenu.append(pauseButton.click(function(ev) {
-        if (paused) {
-            paused = false;
-            pauseButton.text('Pause');
-            scrollToBottom();
-        }
-        else {
-            paused = true;
-            pauseButton.text('Resume');
-        }
-    }));
-    contextMenu.append(jQuery('<li>Pop Out</li>').click(function(ev) {
-        var init_fn = "jQuery(function(){openmdao.PopoutLogFrame()})";
-        openmdao.Util.popupScript('LogViewer', init_fn);
-    }));
-    contextMenu.append(jQuery('<li>Filter</li>').click(filterDialog));
-    contextMenu.append(jQuery('<li><hr /></li>'));
-    contextMenu.append(jQuery('<li>Clear</li>').click(function(ev) {
+    // Copy selection to a plain window.
+    // We've take over the browser context menu, and manipulating the
+    // clipboard directly is a security no-no.
+    function doCopy(ev) {
+        // Tried to copy just the selected text, but the selection gets
+        // cleared when the context menu is displayed :-(
+        debug.info('doCopy', logData.html());
+        openmdao.Util.htmlWindow(logData.html(), 'Copy of OpenMDAO log');
+    }
+
+    // Clear display.
+    function doClear(ev) {
         logData.html('');
-    }));
+    }
+
+    // Create context menu.
+    contextMenu.append(pauseButton.click(doPause));
+    if (!this.par) {  // Include if not a pop-out.
+        contextMenu.append(jQuery('<li>Pop Out</li>').click(doPopout));
+    }
+    contextMenu.append(jQuery('<li>Filter</li>').click(doFilter));
+    contextMenu.append(jQuery('<li>Copy</li>').click(doCopy));
+    contextMenu.append(jQuery('<li><hr /></li>'));
+    contextMenu.append(jQuery('<li>Clear</li>').click(doClear));
     ContextMenu.set(contextMenu.attr('id'), this.elm.attr('id'));
 
     // Update the log.
@@ -214,11 +236,11 @@ openmdao.DisplayLogFrame = function() {
 };
 
 /** initialize a log viewer in a separate window */
-openmdao.PopoutLogFrame = function(html) {
+openmdao.PopoutLogFrame = function() {
     openmdao.model = opener.openmdao.model;
     openmdao.model.addWindow(window);
     jQuery('body').append('<div id="logframe"></div>');
-    frame = new openmdao.LogFrame('logframe', openmdao.model, html);
+    frame = new openmdao.LogFrame('logframe', openmdao.model);
     window.document.title = 'OpenMDAO Log';
 };
 

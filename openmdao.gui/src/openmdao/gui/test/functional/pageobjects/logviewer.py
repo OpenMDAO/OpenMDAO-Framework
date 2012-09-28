@@ -16,7 +16,8 @@ class LogViewer(DialogPage):
     pause_button  = ButtonElement((By.XPATH, 'ul/li[1]'))
     popout_button = ButtonElement((By.XPATH, 'ul/li[2]'))
     filter_button = ButtonElement((By.XPATH, 'ul/li[3]'))
-    clear_button  = ButtonElement((By.XPATH, 'ul/li[5]'))
+    copy_button   = ButtonElement((By.XPATH, 'ul/li[4]'))
+    clear_button  = ButtonElement((By.XPATH, 'ul/li[6]'))
 
     def __init__(self, browser, port):
         super(LogViewer, self).__init__(browser, port, (By.ID, 'logframe'))

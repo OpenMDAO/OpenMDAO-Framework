@@ -86,6 +86,7 @@ openmdao.Util = {
 
         win = window.open(url, title, spec_string);
         win.document.title = title;
+        return win;
     },
 
     /**

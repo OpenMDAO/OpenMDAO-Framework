@@ -1,11 +1,10 @@
+import cmd
+import jsonpickle
 import logging
 import os.path
 import sys
 import traceback
-import cmd
-import jsonpickle
 
-from zmq.log.handlers import PUBHandler
 from setuptools.command import easy_install
 from zope.interface import implementedBy
 
@@ -684,7 +683,7 @@ class ConsoleServer(cmd.Cmd):
                 line = True  # Just to get things started.
                 while line:
                     lines = []
-                    for i in range(100):
+                    for i in range(100):  # Process in chunks.
                         line = inp.readline()
                         if line:
                             lines.append(line)
@@ -700,8 +699,9 @@ class ConsoleServer(cmd.Cmd):
             if self._log_handler is None:
                 self._log_handler = _LogHandler()
                 logging.getLogger().addHandler(self._log_handler)
-        except Exception as exc:
-            print "Can't initiate logging:", exc
+        except Exception:
+            print "Can't initiate logging:"
+            traceback.print_exc()
         finally:
             logging._releaseLock()
         self._log_subscribers += 1
