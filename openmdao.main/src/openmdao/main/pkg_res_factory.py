@@ -100,12 +100,13 @@ class PkgResourcesFactory(Factory):
             for modname in modules:
                 fpath = find_module(modname)
                 if fpath is not None:
-                    fanalyzer = self.tree_analyser.analyze_file(fpath)
+                    fanalyzer = self.tree_analyser.analyze_file(fpath, use_cache=True)
                     meta['ifaces'].update(self.tree_analyser.get_interfaces(name))
                     
             meta['ifaces'] = list(meta['ifaces'])
             if groups.intersection(lst[1]):
                 typ_list.append((name, meta))
+        self.tree_analyser.flush_cache()
         return distset
         
     def get_available_types(self, groups=None):

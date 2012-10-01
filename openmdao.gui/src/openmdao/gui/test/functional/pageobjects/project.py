@@ -42,11 +42,13 @@ class NewProjectPage(ProjectPage):
         return "testing project " + \
                ''.join(random.choice(chars) for x in range(size))
 
-    def create_project(self, project_name, description, version):
+    def create_project(self, project_name, description=None, version=None):
         """ Create a project, returns :class:`ProjectInfoPage`. """
         self.project_name = project_name
-        self.description = description
-        self.version = version
+        if description is not None:
+            self.description = description
+        if version is not None:
+            self.version = version
         self.submit()
         title = ProjectInfoPage.project_title(project_name)
         return ProjectInfoPage.verify(self.browser, self.port, title)

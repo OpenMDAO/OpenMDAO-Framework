@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.Model=function() {
+openmdao.Model=function(listeners_ready) {
 
     /***********************************************************************
      *  private
@@ -14,6 +14,8 @@ openmdao.Model=function() {
         sockets = {},
         subscribers = {},
         windows = [];
+        
+    this.model_ready = jQuery.Deferred();
 
     /** initialize a websocket
            url:        the URL of the address on which to open the websocket
@@ -21,16 +23,16 @@ openmdao.Model=function() {
     */
     function open_websocket(url,handler) {
         // make ajax call (to url) to get the address of the websocket
-        jQuery.ajax({
-            type: 'GET',
-            url:  url,
-            success: function(addr, textStatus, jqXHR) {
-                sockets[url] = openmdao.Util.openWebSocket(addr,handler);
-            },
-            error: function(jqXHR, textStatus, err) {
-                debug.error('Error getting websocket url',jqXHR,textStatus,err);
-            }
-        });
+       return jQuery.ajax({ type: 'GET', url:  url })
+               .fail(function(jqXHR, textStatus, err) {
+                   debug.error('Error getting websocket url',jqXHR,textStatus,err);
+               })
+               .pipe(function(addr) {
+                   return openmdao.Util.openWebSocket(addr,handler);
+               })
+               .done(function(sock) {
+                   sockets[url] = sock;
+               });
     }
 
     /** close all websockets */
@@ -42,8 +44,6 @@ openmdao.Model=function() {
 
     /** handle an output message, which is just passed on to all subscribers */
     function handleOutMessage(message) {
-        //debug.info("handling out message:");
-        //debug.info(message);
         var callbacks = subscribers.outstream;
         if (callbacks) {
             for (i = 0; i < callbacks.length; i++) {
@@ -56,17 +56,15 @@ openmdao.Model=function() {
                 }
             }
         }
-        //else {
-        //    debug.info("no callbacks for out message!");
-        //}
+        else {
+            debug.info("no callbacks for out message!");
+        }
     }
 
     /** handle a published message, which has a topic
         the message is passed only to subscribers of that topic
     */
     function handlePubMessage(message) {
-        //debug.info("pub message:");
-        //debug.info(message)
         if (typeof message === 'string' || message instanceof String) {
             try {
                 message = jQuery.parseJSON(message);
@@ -76,8 +74,7 @@ openmdao.Model=function() {
             }
         }
         var topic = message[0],
-            callbacks = [];
-        //debug.info('Model.handlePubMessage()',topic,message);
+            callbacks;
         if (subscribers.hasOwnProperty(message[0]) && subscribers[message[0]].length > 0) {
             callbacks = subscribers[message[0]].slice();  // Need a copy.
             for (i = 0; i < callbacks.length; i++) {
@@ -95,6 +92,26 @@ openmdao.Model=function() {
         }
     }
 
+    this.ws_ready = jQuery.when(open_websocket('outstream', handleOutMessage),
+                                open_websocket('pubstream', handlePubMessage));
+                                
+    if (! listeners_ready) { // to keep js_unit_test from failing
+        listeners_ready = jQuery.Deferred();
+        listeners_ready.resolve();
+    }
+    
+    // this makes project loading wait until after the listeners have
+    // been registered.
+    listeners_ready.done(function() {
+        jQuery.ajax({ type: 'GET', url: 'project_load' })
+        .done(function() {
+             self.model_ready.resolve();
+        })
+        .fail(function() {
+             self.model_ready.reject();
+        });
+    });
+
     /***********************************************************************
      *  privileged
      ***********************************************************************/
@@ -109,25 +126,13 @@ openmdao.Model=function() {
         else {
             subscribers[topic] = [ callback ];
         }
-        if (topic === 'outstream' && !outstream_opened) {
-            // if outstream socket is not opened yet, open it
-            outstream_opened = true;
-            open_websocket('outstream', handleOutMessage);
-        }
-        else {
-            // if pubstream socket is not opened yet, open it
-            if (!pubstream_opened) {
-                pubstream_opened = true;
-                open_websocket('pubstream', handlePubMessage);
-            }
-            // tell server there's a new subscriber to the topic
-            if (topic.length > 0 && ! /.exec_state$/.test(topic)) {
-                jQuery.ajax({
-                    type: 'GET',
-                    url:  'publish',
-                    data: {'topic': topic, 'publish': true}
-                });
-            }
+        // tell server there's a new subscriber to the topic
+        if (topic !== 'outstream' && topic.length > 0 && ! /.exec_state$/.test(topic)) {
+            jQuery.ajax({
+                type: 'GET',
+                url:  'publish',
+                data: {'topic': topic, 'publish': true}
+            });
         }
     };
 
@@ -514,19 +519,6 @@ openmdao.Model=function() {
             });
             modified = true;
     };
-
-    /** import the contents of the specified file into the model */
-    /*
-    this.importFile = function(filepath, callback, errorHandler) {
-        // change path to package notation and import
-        var path = filepath.replace(/\.py$/g,'').
-                            replace(/\\/g,'.').
-                            replace(/\//g,'.');
-        cmd = 'from '+path+' import *';
-        self.issueCommand(cmd, callback, errorHandler, null);
-        modified = true;
-    };
-    */
 
     /** execute the model */
     this.runModel = function() {

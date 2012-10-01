@@ -9,7 +9,7 @@ from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
 from openmdao.main.publisher import publish
-
+from openmdao.util.log import logger
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -393,9 +393,28 @@ class OutstreamHandler(ReqHandler):
         self.write(url)
 
 
-class ProjectHandler(ReqHandler):
+class ProjectLoadHandler(ReqHandler):
     ''' GET:  load model fom the given project archive,
               or reload remembered project for session if no file given
+    '''
+    @web.authenticated
+    def get(self):
+        filename = self.get_argument('filename', default=None)
+        if filename:
+            self.set_secure_cookie('filename', filename)
+        else:
+            filename = self.get_secure_cookie('filename')
+        if filename:
+            cserver = self.get_server()
+            filename = os.path.join(self.get_project_dir(), filename)
+            cserver.load_project(filename)
+            self.redirect(self.application.reverse_url('workspace'))
+        else:
+            self.redirect('/')
+            
+            
+class ProjectHandler(ReqHandler):
+    ''' GET:  start up an empty workspace and prepare to load a project.
 
         POST: save project archive of the current project
     '''
@@ -417,7 +436,6 @@ class ProjectHandler(ReqHandler):
             self.delete_server()
             cserver = self.get_server()
             filename = os.path.join(self.get_project_dir(), filename)
-            cserver.load_project(filename)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -558,6 +576,7 @@ handlers = [
     web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
+    web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
@@ -568,3 +587,4 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
+

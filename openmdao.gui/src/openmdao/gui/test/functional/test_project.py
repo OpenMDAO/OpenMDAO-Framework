@@ -18,7 +18,8 @@ def _test_new_project(browser):
     projects_page = begin(browser)
 
     # Create a project.
-    project_info_page, project_dict = new_project(projects_page.new_project())
+    project_info_page, project_dict = new_project(projects_page.new_project(),
+                                                  verify=True)
 
     # Go back to projects page to see if it is on the list.
     projects_page = project_info_page.go_to_projects_page()
