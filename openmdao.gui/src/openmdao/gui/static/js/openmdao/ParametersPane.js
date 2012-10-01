@@ -8,6 +8,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
         clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
         columns = [
+            {id:"del",     name:"",        field:"del",     width:80, formatter:buttonFormatter},
             {id:"target",  name:"Target",  field:"target",  width:140},
             {id:"low",     name:"Low",     field:"low",     width:70},
             {id:"high",    name:"High",    field:"high",    width:70},
@@ -23,6 +24,12 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             autoEdit: false
         };
 
+    function buttonFormatter(row,cell,value,columnDef,dataContext) {  
+        var button = "<input class='del' value='X' type='button' id='"+ dataContext.id +"' />";
+        //the id is so that you can identify the row when the particular button is clicked
+        return button;
+        //Now the row will display your button
+    }
     elm.append(parmsDiv);
 
     var table = jQuery('<table width="100%">'),
@@ -144,6 +151,14 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
 
     addButton.click(function() { promptForParameter(addParameter); });
     clrButton.click(function() { clearParameters(); });
+    
+    $('.del').live('click', function(){
+        var me = $(this), id = me.attr('id');
+        // let's test this
+        cmd = pathname+".clear_parameters();";
+        model.issueCommand(cmd);
+    });
+
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
