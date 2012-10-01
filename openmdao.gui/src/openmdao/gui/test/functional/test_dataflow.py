@@ -127,7 +127,7 @@ def _test_connect(browser):
     inputs[5][1] = '42'
     inputs = props.inputs
     eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = "'xyzzy'"
+    inputs[6][1] = "xyzzy"
     
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
