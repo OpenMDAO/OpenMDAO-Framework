@@ -735,7 +735,8 @@ class _LogHandler(logging.StreamHandler):
     """ Logging handler that publishes messages. """
 
     def __init__(self):
-        super(_LogHandler, self).__init__(_LogStream())
+        # Python < 2.7 doesn't like super() here.
+        logging.StreamHandler.__init__(self, _LogStream())
         # Formatting set to match format of file.
         msg_fmt = '%(asctime)s %(levelname)s %(name)s: %(message)s'
         date_fmt = '%b %d %H:%M:%S'

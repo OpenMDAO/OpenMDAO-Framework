@@ -138,7 +138,7 @@ def launch_browser(port, preferred_browser=None):
             if USERPROFILE:
                 CHROMEPATH = USERPROFILE + '\AppData\Local\Google\Chrome\Application\chrome.exe'
                 if os.path.isfile(CHROMEPATH):
-                    preferred_browser = CHROMEPATH.replace('\\', '\\\\') + ' --app=%s'
+                    preferred_browser = CHROMEPATH.replace('\\', '\\\\') + ' --app=%s &'
         elif sys.platform == 'darwin':
             # Mac OSX
             CHROMEPATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
