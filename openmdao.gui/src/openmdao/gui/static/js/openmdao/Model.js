@@ -193,7 +193,7 @@ openmdao.Model=function(listeners_ready) {
                                   openmdao.Util.notify('Commit complete: ' +textStatus);
                               }
                           }
-            }, 'commit-dialog');
+            });
             modified = false;
         });
     };
@@ -572,6 +572,9 @@ openmdao.Model=function(listeners_ready) {
 
     /** close the model */
    this.close = function() {
+   /** since we've switched over to using a vcs to manage the project files, we don't
+    ** really need to save when the user leaves because they won't lose anything.
+    
        if (modified) {
            openmdao.Util.confirm("Model has changed, close without saving?",
                function() {
@@ -582,14 +585,17 @@ openmdao.Model=function(listeners_ready) {
                });
        }
        else {
+    */
            openmdao.Util.closeWebSockets('close');
            self.closeWindows();
            window.location.replace('/workspace/close');
-       }
+    //   }
    };
 
    /** exit the gui */
    this.exit = function() {
+      /** see comment in close() function
+      
        if (modified) {
            openmdao.Util.confirm("Model has changed, exit without saving?",
                function() {
@@ -599,11 +605,11 @@ openmdao.Model=function(listeners_ready) {
                    window.location.replace('/exit');
                });
        }
-       else {
+       else { */
            openmdao.Util.closeWebSockets('exit');
            self.closeWindows();
            window.location.replace('/exit');
-       }
+      // }
    };
 
     /** add window to window list. */

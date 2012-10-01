@@ -211,7 +211,8 @@ def parse_archive_name(pathname):
     return os.path.splitext(os.path.basename(pathname))[0]
 
 
-def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True, overwrite=False):
+def project_from_archive(archive_name, proj_name=None, dest_dir=None, create=True, 
+                         overwrite=False):
     """Expand the given project archive file in the specified destination
     directory and return a Project object that points to the newly
     expanded project.
@@ -379,13 +380,13 @@ class Project(object):
         self.macrodir = os.path.join(self.path, '_macros')
         self.macro = 'default'
         
+        if not os.path.isdir(self.macrodir):
+            os.makedirs(self.macrodir)
+
         settings = os.path.join(self.path, '_settings.cfg')
         if not os.path.isfile(settings):
             self._create_config()
             
-        if not os.path.isdir(self.macrodir):
-            os.makedirs(self.macrodir)
-
         self.config = SafeConfigParser()
         self.config.optionxform = str  # Preserve case.
         files = self.config.read(settings)

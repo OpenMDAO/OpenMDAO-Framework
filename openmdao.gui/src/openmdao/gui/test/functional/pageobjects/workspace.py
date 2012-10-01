@@ -176,7 +176,7 @@ class WorkspacePage(BasePageObject):
         self('submit').click()
         NotifierPage.wait(self, timeout)
 
-    def close_workspace(self, timeout=TMO, commit=True):
+    def close_workspace(self, timeout=TMO, commit=False):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         if commit:
             self.commit_project()
@@ -295,10 +295,13 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 
-    def commit_project(self):
+    def commit_project(self, comment='no comment'):
         """ Commit current project. """
         self('project_menu').click()
         self('commit_button').click()
+        page = ValuePrompt(self.browser, self.port)
+        page.set_value(comment)
+        page.click_ok()
         NotifierPage.wait(self)
 
     def reload_project(self):

@@ -84,6 +84,7 @@ class RepositoryBase(object):
         return cls.__name__
 
 class GitRepo(RepositoryBase):
+    """An object to interface with Git repositories."""
 
     @staticmethod
     def is_present():
@@ -115,27 +116,43 @@ class GitRepo(RepositoryBase):
         return _run_command('git reset --hard %s' % commit_id)
         
     
-#class BzrRepo(RepositoryBase):
+class BzrRepo(RepositoryBase):
+    """An object to interface with Bazaar repositories."""
 
-    #@staticmethod
-    #def is_present():
-        #return _run_command('bzr --version') == 0
+    @staticmethod
+    def is_present():
+        return _run_command('bzr --version') == 0
     
-    #@in_dir
-    #def init_repo(self):
-        #subprocess.check_call('???', shell=True)
+    @in_dir
+    def create_ignore_file(self):
+        global _ignore
+        with open('.bzrignore', 'w') as f:
+            f.write(_ignore)
+            
+    @in_dir
+    def init_repo(self):
+        if not os.path.isfile('.bzrignore'):
+            self.create_ignore_file()
+        return _run_command('bzr init')
     
-    #@in_dir
-    #def commit(self, comment=''):
-        #pass
+    @in_dir
+    def commit(self, comment):
+        _run_command('bzr add .') # add any new files to the repo
+        if not comment:
+            comment = 'no comment'
+        return _run_command('bzr commit -m "%s"' % comment)
     
-    #@in_dir
-    #def revert(self, commit_id=None):
-        #pass
+    @in_dir
+    def revert(self, commit_id=None):
+        if commit_id is None:
+            return _run_command('bzr revert --no-backup')
+        else:
+            return _run_command('bzr revert --no-backup -r %s' % commit_id)
     
 
 class HgRepo(RepositoryBase):
-
+    """An object to interface with Mercurial repositories."""
+    
     @staticmethod
     def is_present():
         return _run_command('hg --version') == 0
@@ -214,25 +231,23 @@ class DumbRepo(RepositoryBase):
             raise RuntimeError("No project file to revert to!")
 
 
-
 def get_repo(path):
     """Return the appropriate type of Repository object given the specified directory."""
-    if os.path.exists(os.path.join(path, '.git')) and GitRepo.is_present():
-        return GitRepo(path)
-    elif os.path.exists(os.path.join(path, '.hg')) and HgRepo.is_present():
-        return HgRepo(path)
-    #elif os.path.exists(os.path.join(path, '.bzr')) and BzrRepo.is_present():
-        #return BzrRepo(path)
-    elif os.path.exists(os.path.join(path, DumbRepo.repodir)):
-        return DumbRepo(path)
-
+    repo_map = {
+        '.git': GitRepo,
+        '.hg': HgRepo,
+        '.bzr': BzrRepo,
+        DumbRepo.repodir: DumbRepo,
+        }
+    for repo, klass in repo_map.items():
+        if os.path.exists(os.path.join(path, repo)) and klass.is_present():
+            return klass(path)
 
 def find_vcs():
     """Return Repository objects based on what version control systems
     are installed.
     """
-    #return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
-    return [vcs for vcs in [HgRepo, DumbRepo] if vcs.is_present()]
+    return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
 
 
 if __name__ == '__main__':
