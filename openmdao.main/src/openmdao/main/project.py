@@ -396,7 +396,6 @@ class Project(object):
         """Create the initial _settings.cfg file for the project."""
         settings = """
 [preferences]
-vcs = git
 export_repo = false
 
 [info]

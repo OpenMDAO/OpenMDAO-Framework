@@ -181,18 +181,21 @@ openmdao.Model=function(listeners_ready) {
 
     /** commit the current project to the repository */
     this.commit = function(callback, errorHandler) {
-        jQuery.ajax({
-            type: 'POST',
-            url:  'project',
-            success: callback,
-            error: errorHandler,
-            complete: function(jqXHR, textStatus) {
-                          if (typeof openmdao_test_mode !== 'undefined') {
-                              openmdao.Util.notify('Commit complete: ' +textStatus);
+        openmdao.Util.promptForValue("Enter a commit comment", function(value) {
+            jQuery.ajax({
+                type: 'POST',
+                url:  'project',
+                success: callback,
+                error: errorHandler,
+                data: { 'comment': value },
+                complete: function(jqXHR, textStatus) {
+                              if (typeof openmdao_test_mode !== 'undefined') {
+                                  openmdao.Util.notify('Commit complete: ' +textStatus);
+                              }
                           }
-                      }
+            }, 'commit-dialog');
+            modified = false;
         });
-        modified = false;
     };
 
     /** revert back to the most recent commit of the project */

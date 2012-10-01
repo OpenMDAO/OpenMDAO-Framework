@@ -6,6 +6,41 @@ import tempfile
 from openmdao.main.project import Project, project_from_archive, PROJ_FILE_EXT
 from openmdao.util.log import logger
 
+_ignore = """
+.coverage
+openmdao_log.txt
+
+~*
+*~
+*.egg-info
+*.egg
+
+# Compiled source
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+*.pyo
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# OS generated files
+.DS_Store?
+ehthumbs.db
+Thumbs.db
+
+# other vcs
+.bzr
+.hg
+.svn
+"""
+
 class SimpleObj(object):
     def __init__(self, **kwargs):
         for arg,val in kwargs.items():
@@ -56,60 +91,28 @@ class GitRepo(RepositoryBase):
     
     @in_dir
     def create_ignore_file(self):
-        ignore = """
-.coverage
-openmdao_log.txt
-
-~*
-*~
-*.egg-info
-*.egg
-
-# Compiled source
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
-*.pyc
-*.pyo
-
-# Logs and databases
-*.log
-*.sql
-*.sqlite
-
-# OS generated files
-.DS_Store?
-ehthumbs.db
-Thumbs.db
-
-# other vcs
-.bzr
-.hg
-.svn
-        """
+        global _ignore
         with open('.gitignore', 'w') as f:
-            f.write(ignore)
+            f.write(_ignore)
             
     @in_dir
     def init_repo(self):
-        self.create_ignore_file()
-        _run_command('git init')
+        if not os.path.isfile('.gitignore'):
+            self.create_ignore_file()
+        return _run_command('git init')
     
     @in_dir
     def commit(self, comment):
         _run_command('git add .') # add any new files to the repo
         if not comment:
             comment = 'no comment'
-        _run_command('git commit -a -m "%s"' % comment)
+        return _run_command('git commit -a -m "%s"' % comment)
     
     @in_dir
     def revert(self, commit_id=None):
         if commit_id is None:
             commit_id = 'HEAD'
-        _run_command('git reset --hard %s' % commit_id)
+        return _run_command('git reset --hard %s' % commit_id)
         
     
 #class BzrRepo(RepositoryBase):
@@ -131,23 +134,38 @@ Thumbs.db
         #pass
     
 
-#class HgRepo(RepositoryBase):
+class HgRepo(RepositoryBase):
 
-    #@staticmethod
-    #def is_present():
-        #return _run_command('hg --version') == 0
+    @staticmethod
+    def is_present():
+        return _run_command('hg --version') == 0
     
-    #@in_dir
-    #def init_repo(self):
-        #pass
+    @in_dir
+    def create_ignore_file(self):
+        global _ignore
+        with open('.hgignore', 'w') as f:
+            f.write("syntax: glob\n"+_ignore)
+            
+    @in_dir
+    def init_repo(self):
+        if not os.path.isfile('.hgignore'):
+            self.create_ignore_file()
+        return _run_command('hg init')
     
-    #@in_dir
-    #def commit(self, comment=''):
-        #pass
+    @in_dir
+    def commit(self, comment=''):
+        _run_command('hg add')
+        if not comment:
+            comment = 'no comment'
+        return _run_command('hg commit -m "%s"' % comment)
     
-    #@in_dir
-    #def revert(self, commit_id=None):
-        #pass
+    @in_dir
+    def revert(self, commit_id=None):
+        if commit_id is None:
+            return _run_command('hg revert --all --no-backup')
+        else:
+            return _run_command('hg revert --all --no-backup --rev %s' % 
+                                commit_id)
 
     
 class DumbRepo(RepositoryBase):
@@ -201,8 +219,8 @@ def get_repo(path):
     """Return the appropriate type of Repository object given the specified directory."""
     if os.path.exists(os.path.join(path, '.git')) and GitRepo.is_present():
         return GitRepo(path)
-    #elif os.path.exists(os.path.join(path, '.hg')) and HgRepo.is_present():
-        #return HgRepo(path)
+    elif os.path.exists(os.path.join(path, '.hg')) and HgRepo.is_present():
+        return HgRepo(path)
     #elif os.path.exists(os.path.join(path, '.bzr')) and BzrRepo.is_present():
         #return BzrRepo(path)
     elif os.path.exists(os.path.join(path, DumbRepo.repodir)):
@@ -210,9 +228,11 @@ def get_repo(path):
 
 
 def find_vcs():
-    """Return Repository objects based on what VCSs is found on the system."""
+    """Return Repository objects based on what version control systems
+    are installed.
+    """
     #return [vcs for vcs in [GitRepo, HgRepo, BzrRepo, DumbRepo] if vcs.is_present()]
-    return [vcs for vcs in [GitRepo, DumbRepo] if vcs.is_present()]
+    return [vcs for vcs in [HgRepo, DumbRepo] if vcs.is_present()]
 
 
 if __name__ == '__main__':

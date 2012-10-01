@@ -4,7 +4,7 @@
 import sys
 import os
 import os.path
-from os.path import isfile, isdir, join, getsize, split
+from os.path import isfile, isdir, exists, join, getsize, split
 import webbrowser
 import json
 
@@ -69,7 +69,15 @@ def filedict(path):
             dirs[filename] = {}
             dirs[dirname][filename[rootlen:]] = dirs[filename]
         else:
-            dirs[dirname][filename[rootlen:]] = getsize(filename)
+            try:
+                dirs[dirname][filename[rootlen:]] = getsize(filename)
+            except OSError as err:
+                # during a mercurial commit we got an error during
+                # getsize() of a lock file that was no longer there,
+                # so check file existence here and only raise an exception
+                # if the file still exists.
+                if exists(filename):
+                    raise
     return dirs[path]
 
 
