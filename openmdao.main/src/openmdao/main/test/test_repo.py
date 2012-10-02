@@ -50,7 +50,11 @@ class RepoTestCase(unittest.TestCase):
     def _init_repo(self, repo):
         _build_project(self.projdir)
         repo.init_repo()
-        repo.commit("initial commit")
+        try:
+            repo.commit("initial commit")
+        except RuntimeError as err:
+            if 'no username supplied' in str(err):
+                raise SkipTest("skipping test for %s. username not configured" % repo.__class__.__name__)
         
     def _commit_repo(self, repo, comment=''):
         repo.commit(comment=comment)

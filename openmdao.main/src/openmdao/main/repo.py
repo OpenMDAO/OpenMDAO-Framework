@@ -168,7 +168,7 @@ class HgRepo(RepositoryBase):
         if not os.path.isfile('.hgignore'):
             self.create_ignore_file()
         return _run_command('hg init')
-    
+
     @in_dir
     def commit(self, comment=''):
         _run_command('hg add')
