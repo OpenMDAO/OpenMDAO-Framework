@@ -121,8 +121,10 @@ nav ul ul a:hover {
   font-family: monospace;
   white-space: nowrap;
 }
-#logframe {
-  height: 100%;
+#logbody {
+  width: 100% !important;  /* Don't get clobbered by (autogen) element.style */
+  height: 100% !important;
+  overflow: auto;
 }
 
 /* button styles */

@@ -59,7 +59,7 @@ def setup_chrome():
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
-            version = '20.0.1133.0'
+            version = '22_0_1203_0b'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
@@ -74,6 +74,8 @@ def setup_chrome():
                 dst.write(src.read())
             src.close()
             zip = zipfile.ZipFile(filename)
+            if sys.platform == 'win32':
+                exe += '.exe'
             zip.extract(exe)
             zip.close()
             if sys.platform != 'win32':
@@ -148,7 +150,7 @@ def setup_server(virtual_display=True):
         try:
             sock = socket.create_connection(('localhost', port))
         except socket.error as exc:
-            if 'Connection refused' not in str(exc):
+            if 'refused' not in str(exc):
                 raise RuntimeError('connect failed: %r' % exc)
         else:
             sock.close()

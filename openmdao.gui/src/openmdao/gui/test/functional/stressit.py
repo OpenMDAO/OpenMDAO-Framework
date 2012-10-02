@@ -25,9 +25,12 @@ def main():
         if os.path.exists(stop):
             break
     
-        avgs = os.getloadavg()
-        msg = 'Trial %s: %.2f, %.2f, %.2f' \
-              % (trial+1, avgs[0], avgs[1], avgs[2])
+        if sys.platform == 'win32':
+            msg = 'Trial %s:' % (trial+1)
+        else:
+            avgs = os.getloadavg()
+            msg = 'Trial %s: %.2f, %.2f, %.2f' \
+                  % (trial+1, avgs[0], avgs[1], avgs[2])
         print msg
         logfile.write('\n'+msg+'\n')
 

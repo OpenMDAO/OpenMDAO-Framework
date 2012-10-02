@@ -57,8 +57,8 @@ openmdao.LogFrame = function(id, model) {
 
     // Open log in separate window.
     function doPopout(ev) {
-        var init_fn = "jQuery(function(){openmdao.PopoutLogFrame()})";
-        openmdao.Util.popupScript('LogViewer', init_fn);
+        var init_fn = 'jQuery(function() { openmdao.PopoutLogFrame() })';
+        openmdao.Util.popupScript('', init_fn);
     }
 
     // Display filtering options and possibly execute.
@@ -239,8 +239,8 @@ openmdao.DisplayLogFrame = function() {
 openmdao.PopoutLogFrame = function() {
     openmdao.model = opener.openmdao.model;
     openmdao.model.addWindow(window);
-    jQuery('body').append('<div id="logframe"></div>');
-    frame = new openmdao.LogFrame('logframe', openmdao.model);
+    jQuery('body').attr('id', 'logbody');
+    frame = new openmdao.LogFrame('logbody', openmdao.model);
     window.document.title = 'OpenMDAO Log';
 };
 
