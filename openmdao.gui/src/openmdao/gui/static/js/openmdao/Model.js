@@ -179,6 +179,8 @@ openmdao.Model=function(listeners_ready) {
         });
     };
 
+    /** I split this function out from commit so I could call it directly
+       from js_unit_test */
     this.commit_with_comment = function(comment) {
         defrd = jQuery.ajax({
             type: 'POST',
@@ -194,7 +196,7 @@ openmdao.Model=function(listeners_ready) {
         return defrd.promise()
     };
     
-    /** commit the current project to the repository */
+    /** commit the current project to the repository (after supplying a comment)*/
     this.commit = function(callback, errorHandler) {
         openmdao.Util.promptForValue("Enter a commit comment", self.commit_with_comment);
     };

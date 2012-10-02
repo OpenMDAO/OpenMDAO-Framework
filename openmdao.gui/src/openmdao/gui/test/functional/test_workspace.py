@@ -120,9 +120,6 @@ def _test_palette_update(browser):
     browser.close()
     browser.switch_to_window(workspace_window)
 
-    # Now modify the parabola.py file and save the project again.  Pickling will fail
-    # and we'll fall back to using the saved macro
-
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
