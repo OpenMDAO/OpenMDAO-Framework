@@ -22,6 +22,7 @@ from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures
 from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
 
+from openmdao.util.log import logger
 
 class WorkspacePage(BasePageObject):
 
@@ -29,7 +30,7 @@ class WorkspacePage(BasePageObject):
 
     # Top.
     project_menu      = ButtonElement((By.ID, 'project-menu'))
-    commit_button       = ButtonElement((By.ID, 'project-commit'))
+    commit_button     = ButtonElement((By.ID, 'project-commit'))
     run_button        = ButtonElement((By.ID, 'project-run'))
     reload_button     = ButtonElement((By.ID, 'project-reload'))
     close_button      = ButtonElement((By.ID, 'project-close'))
@@ -300,8 +301,11 @@ class WorkspacePage(BasePageObject):
         self('project_menu').click()
         self('commit_button').click()
         page = ValuePrompt(self.browser, self.port)
+        logger.error("comment page = %s" % page)
+        logger.error("setting value")
         page.set_value(comment)
-        page.click_ok()
+        logger.error("clicking ok")
+        logger.error("clicked\calling NotifierPage.wait()")
         NotifierPage.wait(self)
 
     def reload_project(self):

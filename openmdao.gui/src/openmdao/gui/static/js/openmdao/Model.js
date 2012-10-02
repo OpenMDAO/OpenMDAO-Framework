@@ -179,23 +179,24 @@ openmdao.Model=function(listeners_ready) {
         });
     };
 
+    this.commit_with_comment = function(comment) {
+        defrd = jQuery.ajax({
+            type: 'POST',
+            url:  'project',
+            data: { 'comment': comment },
+            complete: function(jqXHR, textStatus) {
+                          if (typeof openmdao_test_mode !== 'undefined') {
+                              openmdao.Util.notify('Commit complete: ' +textStatus);
+                          }
+                      }
+        });
+        modified = false;
+        return defrd.promise()
+    };
+    
     /** commit the current project to the repository */
     this.commit = function(callback, errorHandler) {
-        openmdao.Util.promptForValue("Enter a commit comment", function(value) {
-            jQuery.ajax({
-                type: 'POST',
-                url:  'project',
-                success: callback,
-                error: errorHandler,
-                data: { 'comment': value },
-                complete: function(jqXHR, textStatus) {
-                              if (typeof openmdao_test_mode !== 'undefined') {
-                                  openmdao.Util.notify('Commit complete: ' +textStatus);
-                              }
-                          }
-            });
-            modified = false;
-        });
+        openmdao.Util.promptForValue("Enter a commit comment", self.commit_with_comment);
     };
 
     /** revert back to the most recent commit of the project */

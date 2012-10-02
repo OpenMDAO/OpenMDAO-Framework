@@ -118,14 +118,14 @@ TestCase("ModelTest", {
       callback1 = sinon.spy() ;
       openmdao.model.addListener( '', callback1 ) ;
 
-      openmdao.model.commit( );
+      openmdao.model.commit_with_comment( 'a comment' );
 
       // Check the requests
       assertEquals("project", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
       assertEquals(true, this.requests[0].async);
       assertEquals(1, this.requests.length);
-      assertEquals(null, this.requests[0].requestBody);
+      assertEquals("comment=a+comment", this.requests[0].requestBody);
 
       sinon.assert.notCalled( callback1 );
 
