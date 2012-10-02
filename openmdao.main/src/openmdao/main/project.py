@@ -509,7 +509,7 @@ description =
             logger.info('Reconstructing project using %s macro' % self.macro)
             self.load_macro(self.macro)
         else:
-            self.command("# Auto-generated file - DO NOT MODIFY")
+            self.command("# Auto-generated file - MODIFY AT YOUR OWN RISK")
             self.command("top = set_as_top(create('openmdao.main.assembly.Assembly'))")
 
     def _init_globals(self):
