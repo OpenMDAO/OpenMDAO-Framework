@@ -127,7 +127,7 @@ def _test_connect(browser):
     inputs[5][1] = '42'
     inputs = props.inputs
     eq(inputs[6].value, ['s_in', ''])
-    inputs[6][1] = "'xyzzy'"
+    inputs[6][1] = "xyzzy"
     
     inputs = props.inputs
     eq(inputs[0].value, ['b_in', 'False'])
@@ -311,10 +311,9 @@ def _test_driverflows(browser):
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
-        ['preproc.x_in[0]', '-10', '99', '', '', '', 'preproc.x_in[0]'],
-        ['preproc.x_in[1]', '-10', '99', '', '', '', 'preproc.x_in[1]'],
-        ['preproc.x_in[2]', '-10', '99', '', '', '', 'preproc.x_in[2]'],
-        ['preproc.x_in[3]', '-10', '99', '', '', '', 'preproc.x_in[3]'],
+        ["('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
+         '-10', '99', '', '', '', 
+         "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')"],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])

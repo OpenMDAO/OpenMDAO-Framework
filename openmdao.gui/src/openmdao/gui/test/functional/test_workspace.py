@@ -394,14 +394,15 @@ def _test_console_errors(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Set input to illegal value.
-    top = workspace_page.get_dataflow_figure('top', '')
-    editor = top.editor_page(double_click=False, base_type='Assembly')
+    top = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = top.editor_page(double_click=False, base_type='Driver')
     inputs = editor.get_inputs()
-    inputs[0][2] = '42'  # directory
+    inputs[2][2] = '42'  # printvars
     message = NotifierPage.wait(editor)
-    eq(message, "TraitError: The 'directory' trait of an Assembly instance"
-                " must be a string, but a value of 42 <type 'int'> was"
-                " specified.")
+    eq(message, "TraitError: The 'printvars' trait of a "
+                "Run_Once instance must be a list of items "
+                "which are a legal value, but a value of 42 "
+                "<type 'int'> was specified.")
     editor.close()
 
     # Attempt to save file with syntax error.
