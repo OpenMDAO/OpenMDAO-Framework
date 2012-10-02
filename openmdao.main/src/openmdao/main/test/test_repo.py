@@ -4,6 +4,8 @@ import unittest
 import tempfile
 import shutil
 
+from nose import SkipTest
+
 from openmdao.main.repo import DumbRepo, GitRepo, BzrRepo, HgRepo
 from openmdao.main.project import PROJ_FILE_EXT
 from openmdao.util.fileutil import build_directory
@@ -45,21 +47,18 @@ class RepoTestCase(unittest.TestCase):
         finally:
             os.chdir(self.startdir)
 
-    def _init_repo(self, vcs):
+    def _init_repo(self, repo):
         _build_project(self.projdir)
-        vcs.init_repo()
+        repo.init_repo()
+        repo.commit("initial commit")
         
-    def _commit_repo(self, vcs, comment=''):
-        vcs.commit(comment=comment)
+    def _commit_repo(self, repo, comment=''):
+        repo.commit(comment=comment)
         
-    def _revert_repo(self, vcs, commit_id=None):
-        vcs.revert(commit_id)
+    def _revert_repo(self, repo, commit_id=None):
+        repo.revert(commit_id)
         
-    def test_dumb_repo(self):
-        repo = DumbRepo(self.projdir)
-        self._init_repo(repo)
-        self.assertTrue(os.path.isfile(os.path.join(self.projdir, '.projrepo', 'myproject'+PROJ_FILE_EXT)))
-        
+    def _do_commit_revert(self, repo):
         fpath = os.path.join(self.projdir, 'myclass.py')
         with open(fpath, 'r') as f:
             myclass_contents = f.read()
@@ -87,6 +86,39 @@ class RepoTestCase(unittest.TestCase):
             contents = f.read()
             
         self.assertEqual(contents, new_contents)
+        
+    def test_dumb_repo(self):
+        repo = DumbRepo(self.projdir)
+        self._init_repo(repo)
+        self.assertTrue(os.path.isfile(os.path.join(self.projdir, '.projrepo', 'myproject'+PROJ_FILE_EXT)))
+        self._do_commit_revert(repo)
+        
+    def test_git_repo(self):
+        if not GitRepo.is_present():
+            raise SkipTest("git wasn't found")
+        
+        repo = GitRepo(self.projdir)
+        self._init_repo(repo)
+        self.assertTrue(os.path.isdir(os.path.join(self.projdir, '.git')))
+        self._do_commit_revert(repo)
+    
+    def test_hg_repo(self):
+        if not HgRepo.is_present():
+            raise SkipTest("mercurial wasn't found")
+        
+        repo = HgRepo(self.projdir)
+        self._init_repo(repo)
+        self.assertTrue(os.path.isdir(os.path.join(self.projdir, '.hg')))
+        self._do_commit_revert(repo)
+    
+    def test_bzr_repo(self):
+        if not BzrRepo.is_present():
+            raise SkipTest("bazaar wasn't found")
+        
+        repo = BzrRepo(self.projdir)
+        self._init_repo(repo)
+        self.assertTrue(os.path.isdir(os.path.join(self.projdir, '.bzr')))
+        self._do_commit_revert(repo)
     
 if __name__ == "__main__":
     unittest.main()
