@@ -20,7 +20,7 @@ class AddOnsHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
-        ''' easy_install the POST'd addon
+        ''' easy_install the POSTed addon
         '''
         pass
 
@@ -87,7 +87,8 @@ class CommandHandler(ReqHandler):
     @web.authenticated
     def post(self):
         history = ''
-        command = self.get_argument('command')
+        command = self.get_argument('command', default=None)
+
         # if there is a command, execute it & get the result
         if command:
             result = ''
@@ -99,6 +100,44 @@ class CommandHandler(ReqHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
+                
+        self.content_type = 'text/html'
+        self.write(history)
+
+    @web.authenticated
+    def get(self):
+        self.content_type = 'text/html'
+        self.write('')  # not used for now, could render a form
+
+
+class VariableHandler(ReqHandler):
+    ''' get a command to set a variable, send it to the cserver, return response
+    '''
+
+    @web.authenticated
+    def post(self):
+        history = ''
+        lhs = self.get_argument('lhs', default=None)
+        rhs = self.get_argument('rhs', default=None)
+        vtype = self.get_argument('type', default=None)
+        if ( lhs and rhs and vtype ):
+            if vtype == 'str' :
+                command = '%s = "%s"' % ( lhs, rhs )
+            else :
+                command = '%s = %s' % ( lhs, rhs )
+
+        # if there is a command, execute it & get the result
+        if command:
+            result = ''
+            try:
+                cserver = self.get_server()
+                result = cserver.onecmd(command)
+            except Exception, e:
+                print e
+                result = sys.exc_info()
+            if result:
+                history = history + str(result) + '\n'
+                
         self.content_type = 'text/html'
         self.write(history)
 
@@ -242,7 +281,7 @@ class EditorHandler(ReqHandler):
 
 
 class ExecHandler(ReqHandler):
-    ''' if a filename is POST'd, have the cserver execute the file
+    ''' if a filename is POSTed, have the cserver execute the file
         otherwise just run() the project
     '''
 
@@ -523,6 +562,7 @@ handlers = [
     web.url(r'/workspace/base/?',           ReqHandler),
     web.url(r'/workspace/close/?',          CloseHandler),
     web.url(r'/workspace/command',          CommandHandler),
+    web.url(r'/workspace/variable',         VariableHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
