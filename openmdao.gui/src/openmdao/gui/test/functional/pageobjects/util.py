@@ -74,18 +74,11 @@ class NotifierPage(object):
         base_id = base_id or 'notify'
         msg_id = base_id+'-msg'
         ok_id  = base_id+'-ok'
-        logger.error("base_id = %s" % base_id)
-        logger.error("waiting for msg")
         msg = WebDriverWait(parent.browser, timeout).until(
                   lambda browser: browser.find_element(By.ID, msg_id))
-        logger.error("msg obj = %s" % msg)
         ok = WebDriverWait(parent.browser, timeout).until(
                   lambda browser: browser.find_element(By.ID, ok_id))
-        logger.error("ok = %s" % ok)
         message = msg.text
-        logger.error("msg = %s" % message)
-        logger.error("clicking")
         ok.click()
-        logger.error("clicked")
         return message
 

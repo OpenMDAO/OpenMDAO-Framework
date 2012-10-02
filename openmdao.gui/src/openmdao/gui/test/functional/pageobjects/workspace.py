@@ -301,11 +301,7 @@ class WorkspacePage(BasePageObject):
         self('project_menu').click()
         self('commit_button').click()
         page = ValuePrompt(self.browser, self.port)
-        logger.error("comment page = %s" % page)
-        logger.error("setting value")
         page.set_value(comment)
-        logger.error("clicking ok")
-        logger.error("clicked\calling NotifierPage.wait()")
         NotifierPage.wait(self)
 
     def reload_project(self):
