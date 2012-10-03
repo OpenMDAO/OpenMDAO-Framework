@@ -179,21 +179,45 @@ openmdao.Model=function(listeners_ready) {
         });
     };
 
-    /** save the current project */
-    this.saveProject = function(callback, errorHandler) {
-        jQuery.ajax({
+    /** I split this function out from commit so I could call it directly
+       from js_unit_test */
+    this.commit_with_comment = function(comment) {
+        defrd = jQuery.ajax({
             type: 'POST',
             url:  'project',
-            success: callback,
-            error: errorHandler,
+            data: { 'comment': comment },
             complete: function(jqXHR, textStatus) {
                           if (typeof openmdao_test_mode !== 'undefined') {
-                              openmdao.Util.notify('Save complete: ' +textStatus);
+                              openmdao.Util.notify('Commit complete: ' +textStatus);
                           }
                       }
         });
         modified = false;
+        return defrd.promise()
     };
+    
+    /** commit the current project to the repository (after supplying a comment)*/
+    this.commit = function(callback, errorHandler) {
+        openmdao.Util.promptForValue("Enter a commit comment", self.commit_with_comment);
+    };
+
+    /** revert back to the most recent commit of the project */
+    this.revert = function(callback, errorHandler) {
+        jQuery.ajax({
+            type: 'POST',
+            url:  'project_revert',
+            success: callback,
+            error: errorHandler,
+            complete: function(jqXHR, textStatus) {
+                          if (typeof openmdao_test_mode !== 'undefined') {
+                              openmdao.Util.notify('Revert complete: ' +textStatus);
+                          }
+                          self.reload()
+                      }
+        });
+        modified = false;
+    };
+
 
     /** get list of components in the top driver workflow */
     this.getWorkflow = function(pathname,callback,errorHandler) {
@@ -567,6 +591,9 @@ openmdao.Model=function(listeners_ready) {
 
     /** close the model */
    this.close = function() {
+   /** since we've switched over to using a vcs to manage the project files, we don't
+    ** really need to save when the user leaves because they won't lose anything.
+    
        if (modified) {
            openmdao.Util.confirm("Model has changed, close without saving?",
                function() {
@@ -577,14 +604,17 @@ openmdao.Model=function(listeners_ready) {
                });
        }
        else {
+    */
            openmdao.Util.closeWebSockets('close');
            self.closeWindows();
            window.location.replace('/workspace/close');
-       }
+    //   }
    };
 
    /** exit the gui */
    this.exit = function() {
+      /** see comment in close() function
+      
        if (modified) {
            openmdao.Util.confirm("Model has changed, exit without saving?",
                function() {
@@ -594,11 +624,11 @@ openmdao.Model=function(listeners_ready) {
                    window.location.replace('/exit');
                });
        }
-       else {
+       else { */
            openmdao.Util.closeWebSockets('exit');
            self.closeWindows();
            window.location.replace('/exit');
-       }
+      // }
    };
 
     /** add window to window list. */

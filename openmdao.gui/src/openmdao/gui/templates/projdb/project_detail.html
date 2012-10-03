@@ -15,7 +15,7 @@
             <tr><th><label for="id_version">Version:</label></th><td><input id="id_version" type="text" name="version" value="{{ project['version'] }}" maxlength="5" /></td></tr>
         </table>
     <br>
-    {% if project['filename'] %}
+    {% if project['projpath'] %}
     <input type="submit" value="Update Project Details" />
     {% else %}
     <input type="submit" value="Create Project" />
@@ -24,7 +24,7 @@
 
     {% if delete %}
     <form action="/projects/delete/{{ project['id'] }}/" method="POST">
-        <input type="hidden" name="filename" value="{{ project['filename'] }}" />
+        <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
         <input type="submit" value="Delete this project" />
     </form>
     {% end %}
@@ -35,14 +35,14 @@
     <b>Metadata Last Modified: </b> {{ project['modified'] }}
     <p>
 
-    {% if project['filename'] %}
+    {% if project['projpath'] %}
     <form action="/workspace/project/" method="GET">
-        <input type="hidden" name="filename" value="{{ project['filename'] }}" />
+        <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
         <input type="submit" value="Load this project into Workspace" />
     </form>
 
     <form action="/projects/download/{{ project['id'] }}/" method="GET">
-        <input type="submit" value="Save a copy of this project" />
+        <input type="submit" value="Export this project" />
     </form>
     {% end %}
     <br>
