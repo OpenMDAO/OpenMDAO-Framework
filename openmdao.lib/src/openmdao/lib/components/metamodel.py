@@ -32,21 +32,23 @@ class MetaModel(Component):
                               "previous training data is cleared and replaced "
                               "with data from this CaseIterator")
 
-    surrogate = Dict(key_trait=Str,
-                     value_trait=Slot(ISurrogate),
-                     allow_none=True,
-                     desc='Dictionary that provides a mapping between variables and '
-                          'surrogate models for each output. The "default" '
-                          'key must be given. It is the default surrogate model for all '
-                          'outputs. Any specific surrogate models can be '
-                          'specifed by a key with the desired variable name.'
-                    )
-    surrogate_args = Dict(key_trait=Str,
-                          allow_none=True,
-                          desc='Dictionary that provides mapping between variables and '
-                          'arguments that should be passed to the surrogate model. Keys should '
-                          'match those in the surrogate dictionary. Values can be a list of ordered '
-                          'arguments, a dictionary of named arguments, or a two-tuple of a list and a dictionary.')
+    default_surrogate = Slot(ISurrogate)
+    
+    #surrogate = Dict(key_trait=Str,
+                     #value_trait=Slot(ISurrogate),
+                     #allow_none=True,
+                     #desc='Dictionary that provides a mapping between variables and '
+                          #'surrogate models for each output. The "default" '
+                          #'key must be given. It is the default surrogate model for all '
+                          #'outputs. Any specific surrogate models can be '
+                          #'specifed by a key with the desired variable name.'
+                    #)
+    #surrogate_args = Dict(key_trait=Str,
+                          #allow_none=True,
+                          #desc='Dictionary that provides mapping between variables and '
+                          #'arguments that should be passed to the surrogate model. Keys should '
+                          #'match those in the surrogate dictionary. Values can be a list of ordered '
+                          #'arguments, a dictionary of named arguments, or a two-tuple of a list and a dictionary.')
 
     report_errors = Bool(True, iotype="in",
                          desc="If True, metamodel will report errors reported from the component. "
@@ -274,12 +276,12 @@ class MetaModel(Component):
             for name, trait in traitdict.items():
                 if self._eligible(name):
                     try:
-                        surrogate = self.surrogate[name]
-                        args = self.surrogate_args.get(name, [])
+                        surrogate = getattr(self, name+'_surrogate')
+                        #args = self.surrogate_args.get(name, [])
                     except KeyError:
                         try:
-                            surrogate = self.surrogate['default']
-                            args = self.surrogate_args.get('default', [])
+                            surrogate = getattr(self, 'default_surrogate')
+                            #args = self.surrogate_args.get('default', [])
                         except KeyError:
                             self.raise_exception("No default surrogate model was"
                             " specified. Either specify a default, or specify a "
