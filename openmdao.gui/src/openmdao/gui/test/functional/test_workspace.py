@@ -102,7 +102,7 @@ def _test_palette_update(browser):
             "Expected component name, '%s', to be in list of existing"
             " component names, '%s'" % (paraboloid_name, component_names))
 
-    workspace_page.save_project()
+    workspace_page.commit_project('added paraboloid')
     projects_page = workspace_page.close_workspace()
 
     # Now try to re-open that project to see if items are still there.
@@ -119,9 +119,6 @@ def _test_palette_update(browser):
             % (expected_file_names, file_names))
     browser.close()
     browser.switch_to_window(workspace_window)
-
-    # Now modify the parabola.py file and save the project again.  Pickling will fail
-    # and we'll fall back to using the saved macro
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -183,7 +180,7 @@ b = Float(0.0, iotype='out')
     conn_page.connect_vars('comp1.b', 'comp2.a')
     conn_page.close()
 
-    workspace_page.save_project()
+    workspace_page.commit_project('added some Foos')
 
     editor_page = workspace_page.open_editor()
     editor_page.edit_file('foo.py', dclick=False)
@@ -546,43 +543,44 @@ def _test_noslots(browser):
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
+# without the dialog to prompt for saving, the following 2 tests aren't really
+# useful any more
+#def _test_savechanges(browser):
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-def _test_savechanges(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
-
-    # Add ExternalCode to assembly.
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    ## Add ExternalCode to assembly.
+    #workspace_page.show_dataflow('top')
+    #workspace_page.add_library_item_to_dataflow(
+        #'openmdao.lib.components.external_code.ExternalCode', 'ext')
     
-    #first try to close without saving changes, but click CANCEL and stay 
-    workspace_page.attempt_to_close_workspace(True, False)
+    ##first try to close without saving changes, but click CANCEL and stay 
+    #workspace_page.attempt_to_close_workspace(True, False)
 
-    # add another object to the model to be sure it didn't close
-    eq(len(workspace_page.get_dataflow_figures()), 3)
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.external_code.ExternalCode', 'ext2')
-    eq(len(workspace_page.get_dataflow_figures()), 4)
+    ## add another object to the model to be sure it didn't close
+    #eq(len(workspace_page.get_dataflow_figures()), 3)
+    #workspace_page.add_library_item_to_dataflow(
+        #'openmdao.lib.components.external_code.ExternalCode', 'ext2')
+    #eq(len(workspace_page.get_dataflow_figures()), 4)
     
-    # Clean up.
-    closeout(projects_page, project_info_page, project_dict, workspace_page)
+    ## Clean up.
+    #closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
-def _test_dontsavechanges(browser):
-    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+#def _test_dontsavechanges(browser):
+    #projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
-    # Add ExternalCode to assembly.
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.external_code.ExternalCode', 'ext')
+    ## Add ExternalCode to assembly.
+    #workspace_page.show_dataflow('top')
+    #workspace_page.add_library_item_to_dataflow(
+        #'openmdao.lib.components.external_code.ExternalCode', 'ext')
     
-    #Try to close without saving changes, but click OK and leave. 
-    workspace_page.attempt_to_close_workspace(True, True)
+    ##Try to close without saving changes, but click OK and leave. 
+    #workspace_page.attempt_to_close_workspace(True, True)
 
-    # Clean up.
-    project_info_page = projects_page.edit_project(project_dict['name'])
-    project_info_page.delete_project()
-    print "_test_dontsavechanges complete."
+    ## Clean up.
+    #project_info_page = projects_page.edit_project(project_dict['name'])
+    #project_info_page.delete_project()
+    #print "_test_dontsavechanges complete."
 
 
 if __name__ == '__main__':

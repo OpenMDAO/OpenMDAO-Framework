@@ -6,7 +6,7 @@ from boto.ec2.connection import EC2Connection
 
 from openmdao.devtools.utils import ssh_test, fab_connect, run
 from openmdao.util.debug import print_funct_call
-
+from openmdao.util.user import get_username
 
 def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
                       debug=False, stream=sys.stdout):
@@ -32,14 +32,6 @@ def check_inst_state(inst, state, imgname='', sleeptime=10, maxtries=50,
             break
         tries += 1
    
-def get_username():
-    """ Return username for current user. """
-    if sys.platform == 'win32':
-        return os.environ['USERNAME']
-    else:
-        import pwd
-        return pwd.getpwuid(os.getuid()).pw_name
-
 
 def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
                               stream=sys.stdout):
