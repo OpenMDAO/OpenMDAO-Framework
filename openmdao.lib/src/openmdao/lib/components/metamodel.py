@@ -9,6 +9,7 @@ from openmdao.lib.datatypes.api import Slot, List, Str, Event, Dict, Bool
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator
 from openmdao.main.mp_support import has_interface
+from openmdao.util.log import logger
 
 _missing = object()
 
@@ -275,26 +276,10 @@ class MetaModel(Component):
             traitdict = newmodel._alltraits(iotype='out')
             for name, trait in traitdict.items():
                 if self._eligible(name):
-                    try:
-                        surrogate = getattr(self, name+'_surrogate')
-                        #args = self.surrogate_args.get(name, [])
-                    except KeyError:
-                        try:
-                            surrogate = getattr(self, 'default_surrogate')
-                            #args = self.surrogate_args.get('default', [])
-                        except KeyError:
-                            self.raise_exception("No default surrogate model was"
-                            " specified. Either specify a default, or specify a "
-                            "surrogate model for all outputs", ValueError)
-
-                    if isinstance(args, dict):
-                        kwargs = args
-                        args = []
-                    elif isinstance(args, tuple):
-                        args = args[0]
-                        kwargs = args[1]
-                    else:
-                        kwargs = {}
+                    if hasattr(self, 'sur_'+name):
+                        logger.warning("name collision of surrogate with exising variable 'sur_%s'. Surrogate was not added" % name)
+                        continue
+                    self.add_trait('sur_'+name, Slot(ISurrogate))
 
                     trait_type = surrogate.get_uncertain_value(1.0).__class__
                     self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
