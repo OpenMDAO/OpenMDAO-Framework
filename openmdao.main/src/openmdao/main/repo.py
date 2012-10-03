@@ -88,7 +88,10 @@ class GitRepo(RepositoryBase):
 
     @staticmethod
     def is_present():
-        return _run_command('git --version') == 0
+        try:
+            return _run_command('git --version') == 0
+        except:
+            return False
     
     @in_dir
     def create_ignore_file(self):
@@ -121,7 +124,10 @@ class BzrRepo(RepositoryBase):
 
     @staticmethod
     def is_present():
-        return _run_command('bzr --version') == 0
+        try:
+            return _run_command('bzr --version') == 0
+        except:
+            return False
     
     @in_dir
     def create_ignore_file(self):
@@ -155,8 +161,11 @@ class HgRepo(RepositoryBase):
     
     @staticmethod
     def is_present():
-        return _run_command('hg --version') == 0
-    
+        try:
+            return _run_command('hg --version') == 0
+        except:
+            return False
+        
     @in_dir
     def create_ignore_file(self):
         global _ignore
