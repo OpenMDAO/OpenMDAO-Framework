@@ -462,6 +462,10 @@ class _LogServer(SocketServer.ThreadingTCPServer):
         """ Add `hostname` as a legal client host. """
         client_addr = socket.gethostbyname(hostname)
         _LogServer._hosts.add(client_addr)
+        # Some machines register 127.0.1.1 and then use 127.0.0.1 for localhost.
+        if client_addr.startswith('127.') and \
+           '127.0.0.1' not in _LogServer._hosts:
+            _LogServer._hosts.add('127.0.0.1')
 
     def verify_request(self, request, client_address):
         """
