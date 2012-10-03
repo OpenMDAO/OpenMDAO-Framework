@@ -90,11 +90,12 @@ jQuery(function() {
     // do layout
     jQuery('body').trigger('layoutresizeall');
     
-    jQuery(window).bind('beforeunload', function(e) {
-        if (openmdao.model.getModified()){
-            return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
-        }
-    });
+    
+    //jQuery(window).bind('beforeunload', function(e) {
+    //    if (openmdao.model.getModified()){
+    //        return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
+    //    }
+    //});
 });
 
 

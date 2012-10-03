@@ -22,6 +22,7 @@ from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures
 from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
 
+from openmdao.util.log import logger
 
 class WorkspacePage(BasePageObject):
 
@@ -29,7 +30,7 @@ class WorkspacePage(BasePageObject):
 
     # Top.
     project_menu      = ButtonElement((By.ID, 'project-menu'))
-    save_button       = ButtonElement((By.ID, 'project-save'))
+    commit_button     = ButtonElement((By.ID, 'project-commit'))
     run_button        = ButtonElement((By.ID, 'project-run'))
     reload_button     = ButtonElement((By.ID, 'project-reload'))
     close_button      = ButtonElement((By.ID, 'project-close'))
@@ -176,10 +177,10 @@ class WorkspacePage(BasePageObject):
         self('submit').click()
         NotifierPage.wait(self, timeout)
 
-    def close_workspace(self, timeout=TMO, save=True):
+    def close_workspace(self, timeout=TMO, commit=False):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
-        if save:
-            self.save_project()
+        if commit:
+            self.commit_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
         NotifierPage.wait(self, timeout)
         self('project_menu').click()
@@ -295,10 +296,12 @@ class WorkspacePage(BasePageObject):
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
 
-    def save_project(self):
-        """ Save current project. """
+    def commit_project(self, comment='no comment'):
+        """ Commit current project. """
         self('project_menu').click()
-        self('save_button').click()
+        self('commit_button').click()
+        page = ValuePrompt(self.browser, self.port)
+        page.set_value(comment)
         NotifierPage.wait(self)
 
     def reload_project(self):

@@ -64,7 +64,7 @@ class ProjectInfoPage(ProjectPage):
                                    '/html/body/div/div[2]/form[2]/input[2]'))
     load_button = ButtonElement((By.XPATH,
                                  '/html/body/div/div[2]/form[3]/input[2]'))
-    save_button = ButtonElement((By.XPATH,
+    commit_button = ButtonElement((By.XPATH,
                                  '/html/body/div/div[2]/form[4]/input[2]'))
     back_button = ButtonElement((By.LINK_TEXT, 'Back to Projects'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
@@ -116,7 +116,7 @@ class ProjectsListPage(BasePageObject):
 
     search_input = InputElement((By.XPATH, "//div[@id='project_table_filter']/label/input"))
     new_button = ButtonElement((By.LINK_TEXT, 'Start new project'))
-    add_button = ButtonElement((By.LINK_TEXT, 'Add existing project'))
+    add_button = ButtonElement((By.LINK_TEXT, 'Import a project'))
     logout_button = ButtonElement((By.LINK_TEXT, 'Exit'))
 
     def new_project(self):

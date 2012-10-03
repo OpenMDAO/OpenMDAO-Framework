@@ -52,6 +52,7 @@ class ProjectTestCase(unittest.TestCase):
         
     def test_project_export_import(self):
         proj = Project(os.path.join(self.tdir, 'proj1'))
+        proj.activate()
         self._fill_project(proj)
         
         proj.export(destdir=self.tdir)
@@ -75,8 +76,9 @@ class ProjectTestCase(unittest.TestCase):
             
     def test_using(self):
         proj = Project('a_proj')
-        top = proj.get('top')
+        proj.activate()
         self._fill_project(proj)
+        top = proj.get('top')
         top.run()
         self.assertEqual(top.comp1.rval_out, 10.)
         self.assertEqual(top.comp2.rval_out, 40.)
@@ -85,6 +87,7 @@ class ProjectTestCase(unittest.TestCase):
         proj.export(projname='fooproj')
         
         fooproj = project_from_archive('fooproj.proj')
+        fooproj.activate()
         footop = fooproj.get('top')
         self.assertEqual(footop.comp1.rval_in, top.comp1.rval_in)
         footop.run()
@@ -93,6 +96,7 @@ class ProjectTestCase(unittest.TestCase):
             
     def test_localfile_factory(self):
         proj = Project(os.path.join(self.tdir, 'proj2'))
+        proj.activate()
         self._fill_project(proj)
         
     def test_filter_macro(self):

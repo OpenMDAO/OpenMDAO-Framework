@@ -113,26 +113,26 @@ TestCase("ModelTest", {
   },
 
 
-  "test saveProject": function () {
+  "test commitProject": function () {
 
       callback1 = sinon.spy() ;
       openmdao.model.addListener( '', callback1 ) ;
 
-      openmdao.model.saveProject( );
+      openmdao.model.commit_with_comment( 'a comment' );
 
       // Check the requests
       assertEquals("project", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
       assertEquals(true, this.requests[0].async);
       assertEquals(1, this.requests.length);
-      assertEquals(null, this.requests[0].requestBody);
+      assertEquals("comment=a+comment", this.requests[0].requestBody);
 
       sinon.assert.notCalled( callback1 );
 
       // Set the response
       this.requests[0].respond(200, {}, '');
 
-      // saving project has no side effects, so no callbacks at this time
+      // committing project has no side effects, so no callbacks at this time
       sinon.assert.notCalled( callback1 );
 
   },

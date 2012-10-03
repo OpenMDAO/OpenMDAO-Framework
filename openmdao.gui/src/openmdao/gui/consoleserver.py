@@ -11,13 +11,14 @@ from zope.interface import implementedBy
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
 from openmdao.main.project import project_from_archive, Project, parse_archive_name, \
-                                  ProjFinder, _clear_insts, _match_insts, add_proj_to_path
+                                  ProjFinder, _clear_insts, _match_insts
 from openmdao.main.publisher import publish
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.main.repo import get_repo, find_vcs
 
-from openmdao.lib.releaseinfo import __version__, __date__
+from openmdao.main.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
 from openmdao.util.fileutil import file_md5
@@ -65,11 +66,12 @@ class ConsoleServer(cmd.Cmd):
         self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
+        self.files = None
 
-        try:
-            self.files = FileManager('files', publish_updates=self.publish_updates)
-        except Exception as err:
-            self._error(err, sys.exc_info())
+        # make sure we have a ProjFinder in sys.path_hooks
+        if not ProjFinder in sys.path_hooks:
+            sys.path_hooks = [ProjFinder] + sys.path_hooks
+
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -495,57 +497,54 @@ class ConsoleServer(cmd.Cmd):
         return packagedict(get_available_types())
 
     @modifies_model
-    def load_project(self, filename):
+    def load_project(self, projdir):
         _clear_insts()
-        self.projfile = filename
+        self.cleanup()
+        
         try:
-            if self.proj:
-                self.proj.deactivate()
-            if self.projdirfactory:
-                self.projdirfactory.cleanup()
-                remove_class_factory(self.projdirfactory)
-
-            # make sure we have a ProjFinder in sys.path_hooks
-            for hook in sys.path_hooks:
-                if hook is ProjFinder:
-                    break
-            else:
-                sys.path_hooks = [ProjFinder] + sys.path_hooks
-
-            # have to do things in a specific order here. First, create the files,
-            # then point the ProjDirFactory at the files, then finally create the
-            # Project. Executing the project macro (which happens in the Project __init__)
-            # requires that the ProjDirFactory is already in place.
-            project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
-            projdir = os.path.join(self.files.getcwd(), parse_archive_name(filename))
-            
-            add_proj_to_path(projdir)
+            self.files = FileManager('files', path=projdir,
+                                     publish_updates=self.publish_updates)
             
             self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
+            
             self.proj = Project(projdir)
+            repo = get_repo(projdir)
+            if repo is None:
+                find_vcs()[0](projdir).init_repo()
+            self.proj.activate()
         except Exception, err:
             self._error(err, sys.exc_info())
 
-    def save_project(self):
-        ''' save the current project state & export it whence it came
+    def commit_project(self, comment=''):
+        ''' save the current project macro and commit to the project repo
         '''
         if self.proj:
             try:
-                self.proj.save()
-                print 'Project state saved.'
-                if len(self.projfile) > 0:
-                    dir = os.path.dirname(self.projfile)
-                    ensure_dir(dir)
-                    self.proj.export(destdir=dir)
-                    print 'Exported to ', dir + '/' + self.proj.name
-                else:
-                    self._print_error('Export failed, directory not known')
+                repo = get_repo(self.proj.path)
+                repo.commit(comment)
+                print 'Committed project in directory ', self.proj.path
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error('No Project to save')
+            self._print_error('No Project to commit')
+
+    @modifies_model
+    def revert_project(self, commit_id=None):
+        ''' revert back to the most recent commit of the project
+        '''
+        if self.proj:
+            try:
+                repo = get_repo(self.proj.path)
+                repo.revert(commit_id)
+                if commit_id is None:
+                    commit_id = 'latest'
+                print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
+            except Exception, err:
+                self._error(err, sys.exc_info())
+        else:
+            self._print_error('No Project to revert')
 
     @modifies_model
     def add_component(self, name, classname, parentname):
@@ -583,10 +582,13 @@ class ConsoleServer(cmd.Cmd):
     def cleanup(self):
         ''' Cleanup various resources.
         '''
+        if self.proj:
+            self.proj.deactivate()
         if self.projdirfactory:
             self.projdirfactory.cleanup()
             remove_class_factory(self.projdirfactory)
-        self.files.cleanup()
+        if self.files:
+            self.files.cleanup()
 
     def get_files(self):
         ''' get a nested dictionary of files
