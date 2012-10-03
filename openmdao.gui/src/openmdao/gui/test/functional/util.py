@@ -384,7 +384,7 @@ def main(args=None):
             func = module.__dict__.get('_test_' + options.test)
             if func is None:
                 print 'No test named _test_%s' % options.test
-                print 'Known tests are:', [name for name, func in functions
+                print 'Known tests are:', [name[6:] for name, func in functions
                                                 if name.startswith('_test_')]
                 sys.exit(1)
             tests = [func]

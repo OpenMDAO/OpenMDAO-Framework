@@ -194,7 +194,7 @@ class Plane(Component):
     
 
     # Just to see what gets saved
-    workspace_page.save_project()
+    workspace_page.commit_project()
     
     projects_page_again = workspace_page.close_workspace()
 
