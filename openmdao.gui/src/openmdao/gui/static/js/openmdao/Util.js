@@ -310,29 +310,24 @@ openmdao.Util = {
         baseId = baseId || 'notify';
 
         var msgId = baseId+'-msg',
-            element = document.getElementById(msgId),
             win = null;
 
-        if (element === null) {
-            win = jQuery('<div id="'+msgId+'"></div>');
-            win.dialog({
-                autoOpen: false,
-                modal: true,
-                title: title,
-                buttons: [
-                    {
-                        text: 'Ok',
-                        id: baseId+'-ok',
-                        click: function() {
-                            win.dialog('close');
-                        }
+        win = jQuery('<div id="'+msgId+'"></div>');
+        win.dialog({
+            autoOpen: false,
+            modal: true,
+            title: title,
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: baseId+'-ok',
+                    click: function() {
+                        win.dialog('close');
+                        win.remove();
                     }
-                ]
-            });
-        }
-        else {
-            win = jQuery('#'+msgId);
-        }
+                }
+            ]
+        });
 
         if (msg.indexOf('\n') >= 0) {
             // Try to retain any message formatting.

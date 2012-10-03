@@ -180,11 +180,13 @@ openmdao.CodeFrame = function(id,model) {
         }
     });
 
-    
     function failedSave(jqXHR, textStatus, errorThrown) {
         debug.error("file save failed: "+textStatus, jqXHR, errorThrown);
-        if (jqXHR.status != 409) {
-            openmdao.Util.notify(jqXHR.responseXML, 'File Error', 'file-error');
+        // 409 gets special handling.
+        // 400 is (normally) related to msg reported via publisher.
+        if (jqXHR.status != 409 && jqXHR.status != 400) {
+            var msg = jqXHR.responseXML || textStatus;
+            openmdao.Util.notify(msg, 'Save Failed');
         }
     }
 

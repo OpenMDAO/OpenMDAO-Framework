@@ -18,8 +18,9 @@ import zipfile
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
-from pyvirtualdisplay import Display
 from selenium import webdriver
+if sys.platform != 'win32':
+    from pyvirtualdisplay import Display
 
 from optparse import OptionParser
 
@@ -187,7 +188,10 @@ def teardown_server():
     # Clean up.
     server_dir = TEST_CONFIG['server_dir']
     if os.path.exists(server_dir):
-        shutil.rmtree(server_dir)
+        try:
+            shutil.rmtree(server_dir)
+        except Exception as exc:
+            print '%s cleanup failed: %s' % (server_dir, exc)
 
 
 def generate(modname):

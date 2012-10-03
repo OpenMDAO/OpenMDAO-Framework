@@ -61,9 +61,8 @@ class ConfirmationPage(BasePageObject):
 
 class NotifierPage(object):
     """
-    Overlay displayed by ``openmdao.Util.notify()``.
-    There can potentially be more than one of these displayed at the same
-    time in test mode (such as when saving a file with a syntax error).
+    Overlay displayed by ``openmdao.Util.notify()``. There can potentially be
+    more than one of these displayed at the same time.
     """
 
     @staticmethod

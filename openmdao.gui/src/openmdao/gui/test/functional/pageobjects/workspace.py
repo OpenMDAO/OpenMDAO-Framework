@@ -125,13 +125,19 @@ class WorkspacePage(BasePageObject):
         # Now wait for all WebSockets open.
         browser.execute_script('openmdao.Util.webSocketsReady(2);')
         expected = 'WebSockets open'
-        msg = NotifierPage.wait(self)
+        try:
+            msg = NotifierPage.wait(self)
+        except TimeoutError:  # Typically no exception text is provided.
+            raise TimeoutError('Timed-out waiting for web sockets')
         while msg != expected:
             # During 'automatic' reloads we can see 'WebSockets closed'
             logging.warning('Acknowledged %r while waiting for %r',
                             msg, expected)
             time.sleep(1)
-            msg = NotifierPage.wait(self)
+            try:
+                msg = NotifierPage.wait(self)
+            except TimeoutError:
+                raise TimeoutError('Timed-out waiting for web sockets')
 
     def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
@@ -376,9 +382,23 @@ class WorkspacePage(BasePageObject):
 
     def show_properties(self):
         """ Display properties. """
-        self('properties_tab').click()
+        # This has had some odd failures where the tab is highlighted as if
+        # hovering over it, yet the Library tab is still the selected one.
+        for retry in range(5):
+            try:
+                self('properties_tab').click()
+                WebDriverWait(self.browser, 1).until(
+                    lambda browser: self('props_header').is_visible)
+            except TimeoutException:
+                if retry:
+                    logging.warning('TimeoutException in show_properties')
+            else:
+                break
+        else:
+            raise RuntimeError('Too many TimeoutExceptions')
 
     def show_library(self):
+        """ Display library. """
         # For some reason the first try never works, so the wait is set
         # low and we expect to retry at least once.
         for retry in range(5):
@@ -412,8 +432,6 @@ class WorkspacePage(BasePageObject):
             lambda browser: browser.find_element_by_xpath(xpath))
         WebDriverWait(self.browser, TMO).until(
             lambda browser: library_item.is_displayed())
-# FIXME: absolute delay to wait for 'slide' to complete.
-        time.sleep(1)
         return library_item
 
     def add_library_item_to_dataflow(self, item_name, instance_name,
@@ -495,6 +513,28 @@ class WorkspacePage(BasePageObject):
             dialog.click_ok()
         else:
             dialog.click_cancel()
+
+    def add_object_to_workflow(self, obj_path, target_name):
+        """ Add `obj_path` object to `target_name` in workflow. """
+        for retry in range(3):
+            try:
+                obj = self.find_object_button(obj_path)
+                target = self.get_workflow_figure(target_name)
+                chain = ActionChains(self.browser)
+                chain.move_to_element(obj)
+                chain.click_and_hold(obj)
+                chain.move_to_element(target.root)
+                chain.move_by_offset(2, 1)
+                chain.release(None)
+                chain.perform()
+            except StaleElementReferenceException:
+                if retry < 2:
+                    logging.warning('add_object_to_workflow:'
+                                    ' StaleElementReferenceException')
+                else:
+                    raise
+            else:
+                break
 
     def get_workflow_figures(self):
         """ Return workflow figure elements. """

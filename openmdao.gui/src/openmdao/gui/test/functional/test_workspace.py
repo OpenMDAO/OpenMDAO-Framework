@@ -240,10 +240,8 @@ def _test_properties(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Check default 'top'.
-    workspace_page.show_properties()
     workspace_page.select_object('top')
     workspace_page.show_properties()
-    time.sleep(0.5)
     eq(workspace_page.props_header, 'Assembly: top')
     inputs = workspace_page.props_inputs
     eq(inputs.value, [['directory',     ''],
@@ -414,18 +412,7 @@ def execute(self)
     pass
 """, check=False)
 
-    # The error notifier can potentially arrive *before* the save notifier,
-    # resulting in the error notifier being underneath and causing a
-    # WebDriverException.  If that happens, try to handle the save and
-    # then retry the error notifier.
-    message = None
-    try:
-        message = NotifierPage.wait(editor_page, base_id='file-error')
-    except Exception as exc:
-        print 'Exception waiting for file-error:', str(exc) or repr(exc)
-        logging.exception('Waiting for file-error')
-    if message is None:
-        message = NotifierPage.wait(editor_page, base_id='file-error')
+    message = NotifierPage.wait(editor_page, base_id='file-error')
     eq(message, 'invalid syntax (bug.py, line 6)')
 
     browser.close()
@@ -438,7 +425,7 @@ def execute(self)
 from openmdao.main.api import Component
 class Bug2(Component):
 def __init__(self):
-    raise RuntimeError("__init__ failed")
+raise RuntimeError("__init__ failed")
 """)
     browser.close()
     browser.switch_to_window(workspace_window)
