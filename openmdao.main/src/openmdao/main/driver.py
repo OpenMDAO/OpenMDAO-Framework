@@ -101,19 +101,21 @@ class Driver(Component):
             iterset = set(c.name for c in self.iteration_set())
             alldrivers = all([isinstance(c, Driver)
                                 for c in self.workflow.get_components()])
-            reqcomps = self._get_required_compnames()
+            #reqcomps = self._get_required_compnames()
             if len(self.workflow) == 0:
-                self.workflow.add(reqcomps)
+                #self.workflow.add(reqcomps)
+                pass
             elif alldrivers is True:
+                reqcomps = self._get_required_compnames()
                 self.workflow.add([name for name in reqcomps
                                         if name not in iterset])
-            else:
-                diff = reqcomps - iterset
-                if len(diff) > 0:
-                    #raise RuntimeError("Expressions in this Driver require the following "
-                    #                   "Components that are not part of the "
-                    #                   "workflow: %s" % list(diff))
-                    pass
+            #else:
+                #diff = reqcomps - iterset
+                #if len(diff) > 0:
+                    ##raise RuntimeError("Expressions in this Driver require the following "
+                    ##                   "Components that are not part of the "
+                    ##                   "workflow: %s" % list(diff))
+                    #pass
             # calling get_components() here just makes sure that all of the
             # components can be resolved
             comps = self.workflow.get_components()
@@ -168,9 +170,8 @@ class Driver(Component):
                                        HasIneqConstraints, HasObjective, HasObjectives)):
                     getcomps.update(inst.get_referenced_compnames())
 
-        full = set(getcomps)
-        full.update(setcomps)
-
+        full = set(setcomps)
+        
         if self.parent:
             graph = self.parent._depgraph
             for end in getcomps:
