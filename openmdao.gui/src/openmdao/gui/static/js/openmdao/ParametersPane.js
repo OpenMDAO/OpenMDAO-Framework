@@ -8,7 +8,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
         clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
         columns = [
-            {id:"del",     name:"",        field:"del",     width:50, formatter:buttonFormatter},
+            {id:"del",     name:"",        field:"del",     width:25, formatter:buttonFormatter},
             {id:"target",  name:"Target",  field:"target",  width:140},
             {id:"low",     name:"Low",     field:"low",     width:70},
             {id:"high",    name:"High",    field:"high",    width:70},
@@ -25,10 +25,9 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         };
 
     function buttonFormatter(row,cell,value,columnDef,dataContext) {  
-        var button = "<input class='del' value='X' type='button' id='"+ dataContext.id +"' />";
-        //the id is so that you can identify the row when the particular button is clicked
+        var buttonloc = "/static/images/deletebutton.png";
+        button = '<img src="'+buttonloc+'" alt="delete" />';
         return button;
-        //Now the row will display your button
     }
     elm.append(parmsDiv);
 
@@ -54,8 +53,13 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
    }
     parms.onClick.subscribe(function (e) {
         var cell = parms.getCellFromEvent(e);
-        var delname = parms.getData()[cell.cell].name
-        cmd = pathname+".remove_parameter('"+delname+"');";
+        var delname = parms.getData()[cell.row].name
+        if (delname.split(",").length>1) {
+            cmd = pathname+'.remove_parameter('+delname+');';
+        }
+        else {
+            cmd = pathname+'.remove_parameter("'+delname+'");';
+        }
         model.issueCommand(cmd);
     });   
     
