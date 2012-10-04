@@ -116,6 +116,17 @@ nav ul ul a:hover {
   border-style:groove;
 }
 
+/* log viewer */
+#logdata {
+  font-family: monospace;
+  white-space: nowrap;
+}
+#logbody {
+  width: 100% !important;  /* Don't get clobbered by (autogen) element.style */
+  height: 100% !important;
+  overflow: auto;
+}
+
 /* button styles */
 .button {
   border:1px solid #222; 

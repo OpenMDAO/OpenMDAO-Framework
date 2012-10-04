@@ -18,8 +18,9 @@ import zipfile
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
-from pyvirtualdisplay import Display
 from selenium import webdriver
+if sys.platform != 'win32':
+    from pyvirtualdisplay import Display
 
 from optparse import OptionParser
 
@@ -59,7 +60,7 @@ def setup_chrome():
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
-            version = '20.0.1133.0'
+            version = '22_0_1203_0b'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
@@ -74,6 +75,8 @@ def setup_chrome():
                 dst.write(src.read())
             src.close()
             zip = zipfile.ZipFile(filename)
+            if sys.platform == 'win32':
+                exe += '.exe'
             zip.extract(exe)
             zip.close()
             if sys.platform != 'win32':
@@ -148,7 +151,7 @@ def setup_server(virtual_display=True):
         try:
             sock = socket.create_connection(('localhost', port))
         except socket.error as exc:
-            if 'Connection refused' not in str(exc):
+            if 'refused' not in str(exc):
                 raise RuntimeError('connect failed: %r' % exc)
         else:
             sock.close()
@@ -185,7 +188,10 @@ def teardown_server():
     # Clean up.
     server_dir = TEST_CONFIG['server_dir']
     if os.path.exists(server_dir):
-        shutil.rmtree(server_dir)
+        try:
+            shutil.rmtree(server_dir)
+        except Exception as exc:
+            print '%s cleanup failed: %s' % (server_dir, exc)
 
 
 def generate(modname):
@@ -278,23 +284,20 @@ class _Runner(object):
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
             filename = os.path.join(os.getcwd(), '%s.png' % testname)
+            print 'Attempting to take screenshot...'
+            browser.save_screenshot(filename)
             msg = 'Screenshot in %s' % filename
             print msg
-            browser.save_screenshot(filename)
             logging.info(msg)
             raise
 
 
 def startup(browser):
-    """ Create a project and enter workspace."""
+    """ Create a project and enter workspace. """
     print 'running %s...' % inspect.stack()[1][3]
     projects_page = begin(browser)
     project_info_page, project_dict = new_project(projects_page.new_project())
     workspace_page = project_info_page.load_project()
-
-    # Open library.
-    workspace_page.show_library()
-
     return projects_page, project_info_page, project_dict, workspace_page
 
 
