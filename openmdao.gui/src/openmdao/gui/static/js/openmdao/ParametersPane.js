@@ -8,7 +8,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
         clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
         columns = [
-            {id:"del",     name:"",        field:"del",     width:80, formatter:buttonFormatter},
+            {id:"del",     name:"",        field:"del",     width:50, formatter:buttonFormatter},
             {id:"target",  name:"Target",  field:"target",  width:140},
             {id:"low",     name:"Low",     field:"low",     width:70},
             {id:"high",    name:"High",    field:"high",    width:70},
@@ -52,6 +52,13 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd);
         });
    }
+    parms.onClick.subscribe(function (e) {
+        var cell = parms.getCellFromEvent(e);
+        var delname = parms.getData()[cell.cell].name
+        cmd = pathname+".remove_parameter('"+delname+"');";
+        model.issueCommand(cmd);
+    });   
+    
 
     /** add a new parameter */
     function addParameter(target,low,high,scaler,adder,name) {
@@ -152,13 +159,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
     addButton.click(function() { promptForParameter(addParameter); });
     clrButton.click(function() { clearParameters(); });
     
-    $('.del').live('click', function(){
-        var me = $(this), id = me.attr('id');
-        // let's test this
-        cmd = pathname+".clear_parameters();";
-        model.issueCommand(cmd);
-    });
-
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
@@ -172,5 +172,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         }
         parms.updateRowCount();
         parms.render();
+        
     };
 };
