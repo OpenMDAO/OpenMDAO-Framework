@@ -28,6 +28,7 @@ class LogViewer(DialogPage):
         chain = ActionChains(self.browser)
         chain.context_click(self.root).perform()
         self('clear_button').click()
+        time.sleep(0.5)  # Wait to pop-down.
 
     def filter(self):
         """ Return filtering dialog. """
@@ -42,6 +43,7 @@ class LogViewer(DialogPage):
         chain.context_click(self.root).perform()
         text = self('pause_button').text
         self('pause_button').click()
+        time.sleep(0.5)  # Wait to pop-down.
         return text
 
     def get_messages(self):

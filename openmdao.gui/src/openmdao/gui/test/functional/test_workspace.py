@@ -580,6 +580,8 @@ def _test_logviewer(browser):
     workspace_page.do_command("import logging")
     workspace_page.do_command("logging.error('1 Hello World')")
     msgs = viewer.get_messages()
+    while "Shouldn't have handled a send event" in msgs[-1]:
+        msgs = msgs[:-1]
     eq(msgs[-1][-13:], '1 Hello World')
 
     # Exercise pausing the display. Since there's room on-screen,
