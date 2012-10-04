@@ -4,6 +4,7 @@ Pages related to project management.
 
 import random
 import string
+import sys
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -163,18 +164,20 @@ class ProjectsListPage(BasePageObject):
         return ProjectInfoPage.verify(self.browser, self.port, title)
 
     # TODO: Leaving this in for now for future testing of deleting projects via the GUI
-    def delete_all_test_projects(self):
+    def delete_all_test_projects(self, verbose=False):
         """ Removes all projects with 'test project' in the name.
             Not perfect, will timeout when it runs out of projects"""
 
-        element = WebDriverWait(self.browser, TMO).until(
-                      lambda browser: browser.find_element_by_partial_link_text('testing project'))
+        elements = self.browser.find_elements_by_partial_link_text('testing project')
+        for i in range(len(elements)):
+            element = WebDriverWait(self.browser, TMO).until(
+                lambda browser: browser.find_element_by_partial_link_text('testing project'))
 
-        while (element):
             project_name = element.text
             element = element.find_element_by_xpath('../../td[6]/form/input')
             element.click()
             title = ProjectInfoPage.project_title(project_name)
             ProjectInfoPage.verify(self.browser, self.port, title).delete_project()
-            element = WebDriverWait(self.browser, TMO).until(
-                      lambda browser: browser.find_element_by_partial_link_text('testing project'))
+            if verbose:
+                print >>sys.stderr, 'Deleted', project_name
+
