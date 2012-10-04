@@ -246,7 +246,7 @@ class MetaModel(Component):
         if newmodel is not None and not has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
-        if not self.surrogate:
+        if not self.default_surrogate:
             self.raise_exception("surrogate must be set before the model or any includes/excludes of variables", RuntimeError)
 
         new_model_traitnames = set()
@@ -280,6 +280,7 @@ class MetaModel(Component):
                         logger.warning("name collision of surrogate with exising variable 'sur_%s'. Surrogate was not added" % name)
                         continue
                     self.add_trait('sur_'+name, Slot(ISurrogate))
+                    self.on_trait_change(self._updated_surrogate, 'sur_'+name)
 
                     trait_type = surrogate.get_uncertain_value(1.0).__class__
                     self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
@@ -293,6 +294,9 @@ class MetaModel(Component):
 
         self._current_model_traitnames = new_model_traitnames
 
+    #def _updated_surrogate(self, obj, name, old, new):
+        #pass
+    
     def update_inputs(self, compname, varnames):
         if compname != 'model':
             self.raise_exception("cannot update inputs for child named '%s'" % compname)
