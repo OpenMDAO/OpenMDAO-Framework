@@ -50,7 +50,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         var delname = objectives.getData()[cell.row].name
         cmd = pathname+'.remove_objective("'+delname+'");';
         model.issueCommand(cmd);
-    });   
+    });
 
     /** add a new objective */
     function addObjective(expr,name) {
