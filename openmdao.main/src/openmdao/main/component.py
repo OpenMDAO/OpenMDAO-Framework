@@ -865,7 +865,7 @@ class Component(Container):
         referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
-            self._expr_sources = [(v, 0) \
+            self._expr_sources = [(u, 0) \
                 for u, v in self.get_expr_depends() if v == self.name]
         return self._expr_sources
 
