@@ -700,6 +700,18 @@ class IVariable(Interface):
         to the data value corresponding to this Variable.
         """
 
+class IRepository(Interface):
+    """An Interface to a version control system repository."""
+    
+    def commit():
+        """Commit any uncommitted changes to the repo."""
+        
+    def revert():
+        """Revert to a previous commit.  Default is to revert to 
+        the most recent commit, discarding any uncommitted changes.
+        """
+        
+        
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""

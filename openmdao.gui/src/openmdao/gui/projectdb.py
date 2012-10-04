@@ -7,7 +7,7 @@ import os.path
 from datetime import datetime
 
 from openmdao.gui.util import ensure_dir, print_dict
-
+from openmdao.util.log import logger
 
 def get_user_dir():
     user_dir = os.path.expanduser("~/.openmdao/gui/")
@@ -50,7 +50,7 @@ class Projects(object):
                     "description" varchar(200) NOT NULL,
                     "created" datetime NOT NULL,
                     "modified" datetime NOT NULL,
-                    "filename" varchar(200) NOT NULL,
+                    "projpath" varchar(200) NOT NULL,
                     "active" bool NOT NULL
                 );
                 """)
@@ -76,14 +76,14 @@ class Projects(object):
         con = self._get_connection()
         cur = con.cursor()
         sql = '''INSERT INTO projects
-                 (projectname,version,description,created,modified,filename,active)
+                 (projectname,version,description,created,modified,projpath,active)
                  VALUES ("%s","%s","%s","%s","%s","%s",%d)
               ''' % (data['projectname'],
                      data['version'],
                      data['description'],
                      data['created'],
                      data['modified'],
-                     data['filename'],
+                     data['projpath'],
                      data['active'])
 
         cur.execute(sql)
@@ -114,7 +114,7 @@ class Projects(object):
                 'description': row['description'],
                 'modified':    row['modified'],
                 'created':     row['created'],
-                'filename':    row['filename'],
+                'projpath':    row['projpath'],
                 'active':      row['active']
             })
 
@@ -130,19 +130,19 @@ class Projects(object):
         else:
             return matched_projects[0]
 
-    def get_by_filename(self, filename):
+    def get_by_path(self, path):
         ''' Get a dictionary containing the fields that belong to
-            a project with a specific filename.
+            a project with a specific path.
 
-            filename: str (valid path)
-                filename for requested project
+            path: str (valid path)
+                path for requested project
         '''
         con = self._get_connection()
         con.row_factory = sqlite3.Row
         cur = con.cursor()
-        sql = 'SELECT * from projects WHERE filename=?'
+        sql = 'SELECT * from projects WHERE projpath=?'
 
-        cur.execute(sql, (filename,))
+        cur.execute(sql, (path,))
         matched_projects = []
         for row in cur:
             matched_projects.append({
@@ -151,7 +151,7 @@ class Projects(object):
                 'version':     row['version'],
                 'description': row['description'],
                 'modified':    row['modified'],
-                'filename':    row['filename'],
+                'projpath':    row['projpath'],
                 'active':      row['active']
             })
 
@@ -185,6 +185,34 @@ class Projects(object):
         cur.close()
         return next_id
 
+    #def remove_deleted_projects(self):
+        #''' Remove any projects from the db that point to non-existent project
+        #directories.
+        #'''
+        #con = self._get_connection()
+        #con.row_factory = sqlite3.Row
+        #cur = con.cursor()
+
+        #cur.execute('SELECT id,projpath from projects')
+
+        #to_remove = []
+        
+        #for row in cur:
+            #if not os.path.exists(row['projpath']):
+                #to_remove.append(row['id'])
+        #cur.close()
+
+        #if to_remove:
+            #cur = con.cursor()
+            #remove_str = "%s" % to_remove
+            #sql = 'DELETE from projects WHERE id IN (%s)' % remove_str[1:len(remove_str)-1]
+    
+            #logger.error("sql = %s" % sql)
+            
+            #cur.execute(sql)
+            #con.commit()
+            #cur.close()
+        
     def list_projects(self):
         ''' Return a list of dictionaries for all projects owned by the
         user. Each dictionary contains all fields for that project id.'''
@@ -197,28 +225,28 @@ class Projects(object):
         cur.execute(sql)
 
         matched_projects = []
+        
         for row in cur:
-            matched_projects.append({
+            project = {
                 'id': row['id'],
                 'projectname': row['projectname'],
                 'version':     row['version'],
                 'description': row['description'],
                 'created':     row['created'],
                 'modified':    row['modified'],
-                'filename':    row['filename'],
+                'projpath':    row['projpath'],
                 'active':      row['active']
-            })
-
-        cur.close()
-
-        # Return last file modification dates too.
-        for project in matched_projects:
-            fullpath = os.path.join(get_user_dir(), 'projects', project['filename'])
+            }
+            # Return last file modification dates too.
             try:
-                stamp = os.path.getmtime(fullpath)
+                stamp = os.path.getmtime(project['projpath'])
                 project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
             except Exception, err:
                 project['file_modified'] = err
+                
+            matched_projects.append(project)
+            
+        cur.close()
 
         return matched_projects
 
@@ -269,6 +297,3 @@ class Projects(object):
         con.commit()
         cur.close()
 
-
-if __name__ == "__main__":
-    pass

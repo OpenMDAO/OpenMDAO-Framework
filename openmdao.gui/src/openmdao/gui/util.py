@@ -4,16 +4,17 @@
 import sys
 import os
 import os.path
+from os.path import isfile, isdir, exists, join, getsize, split
 import webbrowser
 import json
 
 from distutils.spawn import find_executable
-
+from openmdao.util.fileutil import find_files
 
 def ensure_dir(d):
     ''' create directory if it doesn't exist
     '''
-    if not os.path.isdir(d):
+    if not isdir(d):
         os.makedirs(d)
 
 
@@ -46,8 +47,8 @@ def makenode(doc, path):
     node = doc.createElement('dir')
     node.setAttribute('name', path)
     for f in os.listdir(path):
-        fullname = os.path.join(path, f)
-        if os.path.isdir(fullname):
+        fullname = join(path, f)
+        if isdir(fullname):
             elem = makenode(doc, fullname)
         else:
             elem = doc.createElement('file')
@@ -56,24 +57,28 @@ def makenode(doc, path):
     return node
 
 
-def filedict(path, key='pathname', root=''):
-    ''' create a nested dictionary for a file structure
-        the key may be one of:
-            'filename'    the name of the file
-            'pathname'    the full pathname of the file (default)
+def filedict(path):
+    ''' create a nested dictionary for a file structure with 
+    names relative to the starting directory.
     '''
-    dct = {}
-    for filename in os.listdir(path):
-        pathname = os.path.join(path, filename)
-        k = locals()[key]
-        l = len(root)
-        if key == 'pathname' and l > 0:
-            k = k[l:]
-        if os.path.isdir(pathname):
-            dct[k] = filedict(pathname, key, root)
+    rootlen = len(path)
+    dirs = { path: {} }
+    for filename in find_files(path, showdirs=True):
+        dirname, basename = split(filename)
+        if isdir(filename):
+            dirs[filename] = {}
+            dirs[dirname][filename[rootlen:]] = dirs[filename]
         else:
-            dct[k] = os.path.getsize(pathname)
-    return dct
+            try:
+                dirs[dirname][filename[rootlen:]] = getsize(filename)
+            except OSError as err:
+                # during a mercurial commit we got an error during
+                # getsize() of a lock file that was no longer there,
+                # so check file existence here and only raise an exception
+                # if the file still exists.
+                if exists(filename):
+                    raise
+    return dirs[path]
 
 
 def unique_shortnames(names):
@@ -138,7 +143,7 @@ def launch_browser(port, preferred_browser=None):
             if USERPROFILE:
                 CHROMEPATH = USERPROFILE + '\AppData\Local\Google\Chrome\Application\chrome.exe'
                 if os.path.isfile(CHROMEPATH):
-                    preferred_browser = CHROMEPATH.replace('\\', '\\\\') + ' --app=%s'
+                    preferred_browser = CHROMEPATH.replace('\\', '\\\\') + ' --app=%s &'
         elif sys.platform == 'darwin':
             # Mac OSX
             CHROMEPATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
