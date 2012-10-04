@@ -1,9 +1,9 @@
-import os
+import cmd
+import jsonpickle
+import logging
 import os.path
 import sys
 import traceback
-import cmd
-import jsonpickle
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -11,13 +11,14 @@ from zope.interface import implementedBy
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
 from openmdao.main.project import project_from_archive, Project, parse_archive_name, \
-                                  ProjFinder, _clear_insts, _match_insts, add_proj_to_path
+                                  ProjFinder, _clear_insts, _match_insts
 from openmdao.main.publisher import publish
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, remove_class_factory
+from openmdao.main.repo import get_repo, find_vcs
 
-from openmdao.lib.releaseinfo import __version__, __date__
+from openmdao.main.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
 from openmdao.util.fileutil import file_md5
@@ -62,14 +63,19 @@ class ConsoleServer(cmd.Cmd):
         self.publish_updates = publish_updates
         self._publish_comps = {}
 
+        self._log_directory = os.getcwd()
+        self._log_handler = None
+        self._log_subscribers = 0
+
         self._partial_cmd = None  # for multi-line commands
 
         self.projdirfactory = None
+        self.files = None
 
-        try:
-            self.files = FileManager('files', publish_updates=publish_updates)
-        except Exception as err:
-            self._error(err, sys.exc_info())
+        # make sure we have a ProjFinder in sys.path_hooks
+        if not ProjFinder in sys.path_hooks:
+            sys.path_hooks = [ProjFinder] + sys.path_hooks
+
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -495,57 +501,57 @@ class ConsoleServer(cmd.Cmd):
         return packagedict(get_available_types())
 
     @modifies_model
-    def load_project(self, filename):
+    def load_project(self, projdir):
         _clear_insts()
-        self.projfile = filename
+        self.cleanup()
+        
         try:
-            if self.proj:
-                self.proj.deactivate()
-            if self.projdirfactory:
-                self.projdirfactory.cleanup()
-                remove_class_factory(self.projdirfactory)
+            # Start a new log file.
+            logging.getLogger().handlers[0].doRollover()
 
-            # make sure we have a ProjFinder in sys.path_hooks
-            for hook in sys.path_hooks:
-                if hook is ProjFinder:
-                    break
-            else:
-                sys.path_hooks = [ProjFinder] + sys.path_hooks
-
-            # have to do things in a specific order here. First, create the files,
-            # then point the ProjDirFactory at the files, then finally create the
-            # Project. Executing the project macro (which happens in the Project __init__)
-            # requires that the ProjDirFactory is already in place.
-            project_from_archive(filename, dest_dir=self.files.getcwd(), create=False)
-            projdir = os.path.join(self.files.getcwd(), parse_archive_name(filename))
-            
-            add_proj_to_path(projdir)
+            self.files = FileManager('files', path=projdir,
+                                     publish_updates=self.publish_updates)
             
             self.projdirfactory = ProjDirFactory(projdir,
                                                  observer=self.files.observer)
             register_class_factory(self.projdirfactory)
+            
             self.proj = Project(projdir)
+            repo = get_repo(projdir)
+            if repo is None:
+                find_vcs()[0](projdir).init_repo()
+            self.proj.activate()
         except Exception, err:
             self._error(err, sys.exc_info())
 
-    def save_project(self):
-        ''' save the current project state & export it whence it came
+    def commit_project(self, comment=''):
+        ''' save the current project macro and commit to the project repo
         '''
         if self.proj:
             try:
-                self.proj.save()
-                print 'Project state saved.'
-                if len(self.projfile) > 0:
-                    dir = os.path.dirname(self.projfile)
-                    ensure_dir(dir)
-                    self.proj.export(destdir=dir)
-                    print 'Exported to ', dir + '/' + self.proj.name
-                else:
-                    self._print_error('Export failed, directory not known')
+                repo = get_repo(self.proj.path)
+                repo.commit(comment)
+                print 'Committed project in directory ', self.proj.path
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error('No Project to save')
+            self._print_error('No Project to commit')
+
+    @modifies_model
+    def revert_project(self, commit_id=None):
+        ''' revert back to the most recent commit of the project
+        '''
+        if self.proj:
+            try:
+                repo = get_repo(self.proj.path)
+                repo.revert(commit_id)
+                if commit_id is None:
+                    commit_id = 'latest'
+                print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
+            except Exception, err:
+                self._error(err, sys.exc_info())
+        else:
+            self._print_error('No Project to revert')
 
     @modifies_model
     def add_component(self, name, classname, parentname):
@@ -583,15 +589,21 @@ class ConsoleServer(cmd.Cmd):
     def cleanup(self):
         ''' Cleanup various resources.
         '''
+        if self.proj:
+            self.proj.deactivate()
         if self.projdirfactory:
             self.projdirfactory.cleanup()
             remove_class_factory(self.projdirfactory)
-        self.files.cleanup()
+        if self.files:
+            self.files.cleanup()
 
     def get_files(self):
         ''' get a nested dictionary of files
         '''
-        return self.files.get_files()
+        try:
+            return self.files.get_files(root=self.proj.path)
+        except AttributeError:
+            return {}
 
     def get_file(self, filename):
         ''' get contents of a file
@@ -632,26 +644,78 @@ class ConsoleServer(cmd.Cmd):
                         'console_errors', 'file_errors']:
             # these topics are published automatically
             return
-
-        parts = pathname.split('.')
-        if len(parts) > 1:
-            root = self.proj.get(parts[0])
-            if root:
-                rest = '.'.join(parts[1:])
-                root.register_published_vars(rest, publish)
-
-        cont, root = self.get_container(pathname)
-        if has_interface(cont, IComponent):
+        elif pathname == 'log_msgs':
             if publish:
-                if pathname in self._publish_comps:
-                    self._publish_comps[pathname] += 1
-                else:
-                    self._publish_comps[pathname] = 1
+                self._start_log_msgs(pathname)
             else:
-                if pathname in self._publish_comps:
-                    self._publish_comps[pathname] -= 1
-                    if self._publish_comps[pathname] < 1:
-                        del self._publish_comps[pathname]
+                self._stop_log_msgs(pathname)
+        else:
+            parts = pathname.split('.')
+            if len(parts) > 1:
+                root = self.proj.get(parts[0])
+                if root:
+                    rest = '.'.join(parts[1:])
+                    root.register_published_vars(rest, publish)
+    
+            cont, root = self.get_container(pathname)
+            if has_interface(cont, IComponent):
+                if publish:
+                    if pathname in self._publish_comps:
+                        self._publish_comps[pathname] += 1
+                    else:
+                        self._publish_comps[pathname] = 1
+                else:
+                    if pathname in self._publish_comps:
+                        self._publish_comps[pathname] -= 1
+                        if self._publish_comps[pathname] < 1:
+                            del self._publish_comps[pathname]
+
+    def _start_log_msgs(self, topic):
+        """ Start sending log messages. """
+        # Need to lock access while we capture state.
+        logging._acquireLock()
+        try:
+            # Flush output.
+            for handler in logging.getLogger().handlers:
+                handler.flush()
+
+            # Grab previously logged messages.
+            log_path = os.path.join(self._log_directory, 'openmdao_log.txt')
+            with open(log_path, 'r') as inp:
+                line = True  # Just to get things started.
+                while line:
+                    lines = []
+                    for i in range(100):  # Process in chunks.
+                        line = inp.readline()
+                        if line:
+                            lines.append(line)
+                        else:
+                            break
+                    if lines:
+                        publish('log_msgs',
+                                dict(active=False, text=''.join(lines)))
+            # End of historical messages.
+            publish('log_msgs', dict(active=False, text=''))
+
+            # Add handler to get any new messages.
+            if self._log_handler is None:
+                self._log_handler = _LogHandler()
+                logging.getLogger().addHandler(self._log_handler)
+        except Exception:
+            print "Can't initiate logging:"
+            traceback.print_exc()
+        finally:
+            logging._releaseLock()
+        self._log_subscribers += 1
+
+    def _stop_log_msgs(self):
+        """ Stop sending log messages. """
+        self._log_subscribers -= 1
+        if self._log_subscribers <= 0:
+            if self._log_handler is not None:
+                logging.getLogger().removeHandler(self._log_handler)
+                self._log_handler = None
+            self._log_subscribers = 0
 
     def file_has_instances(self, filename):
         """Returns True if the given file (assumed to be a file in the project)
@@ -667,3 +731,26 @@ class ConsoleServer(cmd.Cmd):
             if info and _match_insts(info.classes.keys()):
                 return True
         return False
+
+
+class _LogHandler(logging.StreamHandler):
+    """ Logging handler that publishes messages. """
+
+    def __init__(self):
+        # Python < 2.7 doesn't like super() here.
+        logging.StreamHandler.__init__(self, _LogStream())
+        # Formatting set to match format of file.
+        msg_fmt = '%(asctime)s %(levelname)s %(name)s: %(message)s'
+        date_fmt = '%b %d %H:%M:%S'
+        self.setFormatter(logging.Formatter(msg_fmt, date_fmt))
+
+
+class _LogStream(object):
+    """ Provides stream interface to publisher. """
+
+    def write(self, msg):
+        publish('log_msgs', dict(active=True, text=msg))
+
+    def flush(self):
+        pass
+

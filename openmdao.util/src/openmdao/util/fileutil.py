@@ -107,7 +107,7 @@ def _file_dir_gen(dname):
         for name in dirlist:
             yield join(path, name)
 
-def find_files(start, match=None, exclude=None, nodirs=True):
+def find_files(start, match=None, exclude=None, showdirs=False):
     """Return filenames (using a generator).
     
     start: str or list of str
@@ -121,8 +121,8 @@ def find_files(start, match=None, exclude=None, nodirs=True):
         Either a string containing a glob pattern to exclude
         or a predicate function that returns True to exclude.
         
-    nodirs: bool
-        If False, return names of files and directories.
+    showdirs: bool
+        If True, return names of files AND directories.
         
     Walks all subdirectories below each specified starting directory.
     """
@@ -130,7 +130,7 @@ def find_files(start, match=None, exclude=None, nodirs=True):
     if len(startdirs) == 0:
         return iter([])
     
-    gen = _file_gen if nodirs else _file_dir_gen
+    gen = _file_dir_gen if showdirs else _file_gen
     if match is None:
         matcher = bool
     elif isinstance(match, basestring):

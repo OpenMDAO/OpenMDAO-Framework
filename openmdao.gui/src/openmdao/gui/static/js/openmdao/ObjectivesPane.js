@@ -76,6 +76,8 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
                     click: function() {
                         jQuery(this).dialog('close');
                         callback(expr.val(),name.val());
+                        // remove from DOM
+                        win.remove();
                     }
                 },
                 {
@@ -83,6 +85,8 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
                     id: 'objective-cancel',
                     click: function() {
                         jQuery(this).dialog('close');
+                        // remove from DOM
+                        win.remove();
                     }
                 }
             ]

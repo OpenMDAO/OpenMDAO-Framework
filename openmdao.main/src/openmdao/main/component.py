@@ -865,7 +865,7 @@ class Component(Container):
         referenced in any of our ExprEvaluators, along with an initial exec_count of 0.
         """
         if self._expr_sources is None:
-            self._expr_sources = [(v, 0) \
+            self._expr_sources = [(u, 0) \
                 for u, v in self.get_expr_depends() if v == self.name]
         return self._expr_sources
 
@@ -1669,29 +1669,22 @@ class Component(Container):
             if has_interface(self, IHasParameters):
                 parameters = []
                 for key, parm in self.get_parameters().items():
+                    attr = {}
+                    
                     if isinstance(parm, ParameterGroup):
-                        for name, target in zip(key, tuple(parm.targets)):
-                            attr = {}
-                            attr['name']    = str(name)
-                            attr['target']  = target
-                            attr['low']     = parm.low
-                            attr['high']    = parm.high
-                            attr['scaler']  = parm.scaler
-                            attr['adder']   = parm.adder
-                            attr['fd_step'] = parm.fd_step
-                            #attr['scope']   = parm.scope.name
-                            parameters.append(attr)
+                        attr['target'] = str(tuple(parm.targets))
                     else:
-                        attr = {}
-                        attr['name']    = str(key)
-                        attr['target']  = parm.target
-                        attr['low']     = parm.low
-                        attr['high']    = parm.high
-                        attr['scaler']  = parm.scaler
-                        attr['adder']   = parm.adder
-                        attr['fd_step'] = parm.fd_step
-                        #attr['scope']   = parm.scope.name
-                        parameters.append(attr)
+                        attr['target'] = parm.target
+                        
+                    attr['name']    = str(key)
+                    attr['low']     = parm.low
+                    attr['high']    = parm.high
+                    attr['scaler']  = parm.scaler
+                    attr['adder']   = parm.adder
+                    attr['fd_step'] = parm.fd_step
+                    #attr['scope']   = parm.scope.name
+                    parameters.append(attr)
+                    
                 attrs['Parameters'] = parameters
 
             constraints = []

@@ -86,6 +86,7 @@ openmdao.Util = {
 
         win = window.open(url, title, spec_string);
         win.document.title = title;
+        return win;
     },
 
     /**
@@ -190,7 +191,7 @@ openmdao.Util = {
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
             element = document.getElementById(baseId),
-            win = null;
+            win = null,
             userInput = null;
 
         function handleResponse(ok) {
@@ -257,7 +258,7 @@ openmdao.Util = {
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
             element = document.getElementById(baseId),
-            win = null;
+            win = null,
             userInput = null;
 
         function handleResponse(ok) {
@@ -309,29 +310,24 @@ openmdao.Util = {
         baseId = baseId || 'notify';
 
         var msgId = baseId+'-msg',
-            element = document.getElementById(msgId),
             win = null;
 
-        if (element === null) {
-            win = jQuery('<div id="'+msgId+'"></div>');
-            win.dialog({
-                autoOpen: false,
-                modal: true,
-                title: title,
-                buttons: [
-                    {
-                        text: 'Ok',
-                        id: baseId+'-ok',
-                        click: function() {
-                            win.dialog('close');
-                        }
+        win = jQuery('<div id="'+msgId+'"></div>');
+        win.dialog({
+            autoOpen: false,
+            modal: true,
+            title: title,
+            buttons: [
+                {
+                    text: 'Ok',
+                    id: baseId+'-ok',
+                    click: function() {
+                        win.dialog('close');
+                        win.remove();
                     }
-                ]
-            });
-        }
-        else {
-            win = jQuery('#'+msgId);
-        }
+                }
+            ]
+        });
 
         if (msg.indexOf('\n') >= 0) {
             // Try to retain any message formatting.
@@ -456,7 +452,8 @@ openmdao.Util = {
         retry = typeof retry !== 'undefined' ? retry : true;
         delay = typeof delay !== 'undefined' ? delay : 2000;
 
-        var socket = null;
+        var socket = null,
+            defrd = jQuery.Deferred();
 
         function connect_after_delay() {
             tid = setTimeout(connect, delay);
@@ -475,6 +472,7 @@ openmdao.Util = {
                 socket = new WebSocket(addr);
                 openmdao.sockets.push(socket);
                 socket.onopen = function (e) {
+                    defrd.resolve(socket);
                     //debug.info('websocket opened '+socket.readyState,socket,e);
                     //displaySockets();
                 };
@@ -524,14 +522,13 @@ openmdao.Util = {
         debug.info('errhandler:');
         debug.info(errHandler);
         */
-        return socket;
+        return defrd.promise();
     },
 
     /** Close all WebSockets. */
     closeWebSockets: function(reason) {
-        var i = 0;
        if (openmdao.sockets) {
-          for (i = 0 ; i < openmdao.sockets.length ; ++i) {
+          for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
              openmdao.sockets[i].close(1000, reason);
           }
        }
@@ -540,22 +537,21 @@ openmdao.Util = {
     /** Notify when `nSockets` are open (used for testing). */
     webSocketsReady: function(nSockets) {
         function doPoll() {
-            setTimeout(poll, 1000);
+            setTimeout(poll, 500);
         }
 
         function poll() {
-            var i = 0;
-            debug.info('polling for '+nSockets+' open WebSockets');
             if (openmdao.sockets.length >= nSockets) {
-                for (i = 0 ; i < openmdao.sockets.length ; ++i) {
+                for (var i = 0 ; i < openmdao.sockets.length ; ++i) {
                     if (openmdao.sockets[i].readyState !== 1) {
-                        debug.info('socket '+i+' not open: '
-                                   +openmdao.sockets[i].readyState);
                         doPoll();
                         return;
                     }
                 }
                 openmdao.Util.notify('WebSockets open');
+            }
+            else {
+                doPoll();
             }
         }
         poll();
@@ -563,7 +559,7 @@ openmdao.Util = {
 
     /*
      * Allow a child object to inherit from a parent object.
-     * Make sure to call this method immeidately after defining
+     * Make sure to call this method immediately after defining
      * the child's constructor and before extending it's
      * prototype.
      */

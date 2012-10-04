@@ -14,13 +14,25 @@ from openmdao.util.decorators import add_delegate
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 
+import random
+
 exec_order = []
 
 @add_delegate(HasObjectives, HasParameters, HasConstraints)
 class DumbDriver(Driver):
+    def __init__(self, *args, **kwargs):
+        self.oldval = None
+        super(DumbDriver, self).__init__(*args, **kwargs)
+        
     def execute(self):
         global exec_order
         exec_order.append(self.name)
+        newval = self.oldval
+        while newval == self.oldval:
+            newval = random.randint(0,999)
+        self.oldval = newval
+        
+        self.set_parameters([newval]*len(self.get_parameters()))
         super(DumbDriver, self).execute()
 
 
@@ -360,14 +372,43 @@ class DependsTestCase(unittest.TestCase):
         sub.driver.add_objective('comp6.c')
         sub.driver.add_objective('comp5.d')
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set(['comp6','comp5']))
-        sub.driver.add_parameter('comp1.a', low=0.0, high=10.0)
+                         set([]))
+        sub.driver.add_parameter('comp2.a', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set(['comp6','comp5','comp1','comp4']))
-        sub.driver.add_parameter('comp3.a', low=0.0, high=10.0)
+                         set(['comp2', 'comp5', 'comp1', 'comp4', 'comp6']))
+        sub.driver.add_parameter('comp3.b', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set(['comp6','comp5','comp1','comp4','comp3']))
+                         set(['comp6','comp5','comp1','comp4','comp3', 'comp2']))
         
+    def test_auto_workflow(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', Simple())
+        top.add('comp2', Simple())
+        top.add('comp3', Simple())
+        top.add('driver', DumbDriver())
+        top.driver.add_parameter('comp2.a',low=-99,high=99)
+        top.driver.add_objective('comp3.c')
+        top.connect('comp1.c', 'comp2.b')
+        top.connect('comp2.c', 'comp3.a')
+        vars = ['a','b','c','d']
+        self.assertEqual(top.comp1.exec_count, 0)
+        self.assertEqual(top.comp2.exec_count, 0)
+        self.assertEqual(top.comp3.exec_count, 0)
+        top.run()
+        self.assertEqual(top.comp1.exec_count, 1)
+        self.assertEqual(top.comp2.exec_count, 1)
+        self.assertEqual(top.comp3.exec_count, 1)
+        top.driver.run()
+        self.assertEqual(top.comp1.exec_count, 1)
+        self.assertEqual(top.comp2.exec_count, 2)
+        self.assertEqual(top.comp3.exec_count, 2)
+        top.comp1.a = 9999
+        top.driver.run()
+        self.assertEqual(top.comp1.exec_count, 2)
+        self.assertEqual(top.comp2.exec_count, 3)
+        self.assertEqual(top.comp3.exec_count, 3)
+        
+
         
 class SimplePTAsm(Assembly):
     def configure(self):

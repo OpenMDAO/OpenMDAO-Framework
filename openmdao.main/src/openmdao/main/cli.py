@@ -3,7 +3,6 @@
 import os
 import sys
 import webbrowser
-from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser
 from subprocess import call, check_call
 

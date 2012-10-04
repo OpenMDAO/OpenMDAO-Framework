@@ -47,28 +47,15 @@ TestCase("ModelTest", {
       callback1 = sinon.spy() ;
       callback2 = sinon.spy() ;
 
-      // 1st listener to outstream will initialize the outstream websocket
-      openmdao.model.addListener('outstream', callback1);
-      assertEquals("outstream", this.requests[0].url);
+      // addListener will make an ajax call telling the server to publish 
+      // that topic
+      openmdao.model.addListener('somepathname', callback1);
+      assertEquals("publish?topic=somepathname&publish=true", this.requests[0].url);
       assertEquals("GET", this.requests[0].method);
       assertEquals(true, this.requests[0].async);
+      assertEquals(null, this.requests[0].requestBody);
+
       assertEquals(1, this.requests.length);
-
-
-      // 1st listener to any other topic will initialize the pubstream
-      // and then make an ajax call telling the server to publish that topic
-      openmdao.model.addListener('somepathname', callback1);
-      assertEquals("pubstream", this.requests[1].url);
-      assertEquals("GET", this.requests[1].method);
-      assertEquals(true, this.requests[1].async);
-      assertEquals(null, this.requests[1].requestBody);
-
-
-      assertEquals("publish?topic=somepathname&publish=true", this.requests[2].url);
-      assertEquals("GET", this.requests[1].method);
-      assertEquals(true, this.requests[1].async);
-
-      assertEquals(3, this.requests.length);
   },
 
   "test getTypes": function () {
@@ -126,26 +113,26 @@ TestCase("ModelTest", {
   },
 
 
-  "test saveProject": function () {
+  "test commitProject": function () {
 
       callback1 = sinon.spy() ;
       openmdao.model.addListener( '', callback1 ) ;
 
-      openmdao.model.saveProject( );
+      openmdao.model.commit_with_comment( 'a comment' );
 
       // Check the requests
-      assertEquals("project", this.requests[1].url);
-      assertEquals("POST", this.requests[1].method);
-      assertEquals(true, this.requests[1].async);
-      assertEquals(2, this.requests.length);
-      assertEquals(null, this.requests[1].requestBody);
+      assertEquals("project", this.requests[0].url);
+      assertEquals("POST", this.requests[0].method);
+      assertEquals(true, this.requests[0].async);
+      assertEquals(1, this.requests.length);
+      assertEquals("comment=a+comment", this.requests[0].requestBody);
 
       sinon.assert.notCalled( callback1 );
 
       // Set the response
-      this.requests[1].respond(200, {}, '');
+      this.requests[0].respond(200, {}, '');
 
-      // saving project has no side effects, so no callbacks at this time
+      // committing project has no side effects, so no callbacks at this time
       sinon.assert.notCalled( callback1 );
 
   },
@@ -414,6 +401,34 @@ TestCase("ModelTest", {
 
   },
 
+  "test setVariableValue": function () {
+
+      var success_handler = sinon.spy() ;
+      var error_handler = sinon.spy() ;
+
+      // Normal execution
+      openmdao.model.setVariableValue("varname","value","vtype", success_handler,error_handler) ;
+      assertEquals("variable", this.requests[0].url);
+      assertEquals("POST", this.requests[0].method);
+      assertEquals("lhs=varname&rhs=value&type=vtype", this.requests[0].requestBody);
+      this.requests[0].respond(200, { "Content-Type": "application/json" }, '{ "status" : "OK"}' ) ;
+      sinon.assert.calledOnce( success_handler );
+      assertEquals({ "status" : "OK"}, success_handler.args[0][0]) ;
+
+      // Are listeners updated?
+      openmdao.model.setVariableValue("varname","value","vtype", success_handler,error_handler) ;
+      this.requests[1].respond(200, 'response', '' ) ; // the ajax call just queues up the request
+      sinon.assert.calledTwice( success_handler );
+
+      // Does error handler get called?
+      openmdao.model.setVariableValue("varname","value","vtype", success_handler,error_handler) ;
+      this.requests[2].respond(500, { "Content-Type": "application/json" }, '{ }');
+
+      sinon.assert.calledTwice( success_handler );
+      sinon.assert.calledOnce( error_handler );
+
+  },
+
   "test getOutput": function () {
 
       var success_handler = sinon.spy() ;
@@ -619,25 +634,6 @@ TestCase("ModelTest", {
       // Unless I do some mocking of the debug.warn
 
   },
-
-/** no need to import files manually any more...
-  "test importFile": function () {
-
-      var success_handler = sinon.spy() ;
-      var error_handler = sinon.spy() ;
-
-      // Normal execution
-      openmdao.model.importFile("filepath.py", success_handler, error_handler) ;
-      assertEquals("command", this.requests[0].url);
-      assertEquals("POST", this.requests[0].method);
-      assertEquals(this.requests[0].requestBody, "command=from+filepath+import+*");
-      this.requests[0].respond(200, {"Content-Type": "application/json"}, '{"status" : "OK"}');
-
-      sinon.assert.calledOnce(success_handler);
-      sinon.assert.notCalled(error_handler);
-
-  },
-*/
 
 
   "test runModel": function () {

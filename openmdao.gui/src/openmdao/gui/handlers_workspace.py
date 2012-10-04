@@ -9,7 +9,7 @@ from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
 from openmdao.main.publisher import publish
-
+from openmdao.util.log import logger
 
 class AddOnsHandler(ReqHandler):
     ''' addon installation utility
@@ -20,7 +20,7 @@ class AddOnsHandler(ReqHandler):
 
     @web.authenticated
     def post(self):
-        ''' easy_install the POST'd addon
+        ''' easy_install the POSTed addon
         '''
         pass
 
@@ -87,7 +87,8 @@ class CommandHandler(ReqHandler):
     @web.authenticated
     def post(self):
         history = ''
-        command = self.get_argument('command')
+        command = self.get_argument('command', default=None)
+
         # if there is a command, execute it & get the result
         if command:
             result = ''
@@ -99,6 +100,44 @@ class CommandHandler(ReqHandler):
                 result = sys.exc_info()
             if result:
                 history = history + str(result) + '\n'
+                
+        self.content_type = 'text/html'
+        self.write(history)
+
+    @web.authenticated
+    def get(self):
+        self.content_type = 'text/html'
+        self.write('')  # not used for now, could render a form
+
+
+class VariableHandler(ReqHandler):
+    ''' get a command to set a variable, send it to the cserver, return response
+    '''
+
+    @web.authenticated
+    def post(self):
+        history = ''
+        lhs = self.get_argument('lhs', default=None)
+        rhs = self.get_argument('rhs', default=None)
+        vtype = self.get_argument('type', default=None)
+        if ( lhs and rhs and vtype ):
+            if vtype == 'str' :
+                command = '%s = "%s"' % ( lhs, rhs )
+            else :
+                command = '%s = %s' % ( lhs, rhs )
+
+        # if there is a command, execute it & get the result
+        if command:
+            result = ''
+            try:
+                cserver = self.get_server()
+                result = cserver.onecmd(command)
+            except Exception, e:
+                print e
+                result = sys.exc_info()
+            if result:
+                history = history + str(result) + '\n'
+                
         self.content_type = 'text/html'
         self.write(history)
 
@@ -242,7 +281,7 @@ class EditorHandler(ReqHandler):
 
 
 class ExecHandler(ReqHandler):
-    ''' if a filename is POST'd, have the cserver execute the file
+    ''' if a filename is POSTed, have the cserver execute the file
         otherwise just run() the project
     '''
 
@@ -354,31 +393,60 @@ class OutstreamHandler(ReqHandler):
         self.write(url)
 
 
-class ProjectHandler(ReqHandler):
+class ProjectLoadHandler(ReqHandler):
     ''' GET:  load model fom the given project archive,
               or reload remembered project for session if no file given
+    '''
+    @web.authenticated
+    def get(self):
+        path = self.get_argument('projpath', default=None)
+        if path:
+            self.set_secure_cookie('projpath', path)
+        else:
+            path = self.get_secure_cookie('projpath')
+        if path:
+            cserver = self.get_server()
+            #path = os.path.join(self.get_project_dir(), path)
+            cserver.load_project(path)
+            self.redirect(self.application.reverse_url('workspace'))
+        else:
+            self.redirect('/')
+            
+class ProjectRevertHandler(ReqHandler):
+    ''' POST:  revert back to the most recent commit of the project
+    '''
+    @web.authenticated
+    def post(self):
+        commit_id = self.get_argument('commit_id', default=None)
+        cserver = self.get_server()
+        cserver.revert_project(commit_id)
+        self.write('Reverted.')
+            
+            
+class ProjectHandler(ReqHandler):
+    ''' GET:  start up an empty workspace and prepare to load a project.
 
-        POST: save project archive of the current project
+        POST: commit the current project
     '''
 
     @web.authenticated
     def post(self):
+        comment = self.get_argument('comment', default='')
         cserver = self.get_server()
-        cserver.save_project()
-        self.write('Saved.')
+        cserver.commit_project(comment)
+        self.write('Committed.')
 
     @web.authenticated
     def get(self):
-        filename = self.get_argument('filename', default=None)
-        if filename:
-            self.set_secure_cookie('filename', filename)
+        path = self.get_argument('projpath', default=None)
+        if path:
+            self.set_secure_cookie('projpath', path)
         else:
-            filename = self.get_secure_cookie('filename')
-        if filename:
+            path = self.get_secure_cookie('projpath')
+        if path:
             self.delete_server()
             cserver = self.get_server()
-            filename = os.path.join(self.get_project_dir(), filename)
-            cserver.load_project(filename)
+            path = os.path.join(self.get_project_dir(), path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
             self.redirect('/')
@@ -505,6 +573,7 @@ handlers = [
     web.url(r'/workspace/base/?',           ReqHandler),
     web.url(r'/workspace/close/?',          CloseHandler),
     web.url(r'/workspace/command',          CommandHandler),
+    web.url(r'/workspace/variable',         VariableHandler),
     web.url(r'/workspace/components/?',     ComponentsHandler),
     web.url(r'/workspace/component/(.*)',   ComponentHandler),
     web.url(r'/workspace/connections/(.*)', ConnectionsHandler),
@@ -518,6 +587,8 @@ handlers = [
     web.url(r'/workspace/object/(.*)',      ObjectHandler),
     web.url(r'/workspace/outstream/?',      OutstreamHandler),
     web.url(r'/workspace/plot/?',           PlotHandler),
+    web.url(r'/workspace/project_revert/?', ProjectRevertHandler),
+    web.url(r'/workspace/project_load/?',   ProjectLoadHandler),
     web.url(r'/workspace/project/?',        ProjectHandler),
     web.url(r'/workspace/publish/?',        PublishHandler),
     web.url(r'/workspace/pubstream/?',      PubstreamHandler),
@@ -528,3 +599,4 @@ handlers = [
     web.url(r'/workspace/workflow/(.*)',    WorkflowHandler),
     web.url(r'/workspace/test/?',           TestHandler),
 ]
+
