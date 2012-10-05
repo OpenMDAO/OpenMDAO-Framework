@@ -502,7 +502,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
-    time.sleep(0.5)
+    time.sleep(1)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
     eq(properties.is_visible, False)
@@ -643,11 +643,12 @@ def _test_libsearch(browser):
 
     # Get default objects.
     def_objects = workspace_page.get_object_types()
+    def_searches = workspace_page.get_library_searches()
 
     # Get 'doe' search results.
     workspace_page.set_library_filter('doe')
-    doe_objects = workspace_page.get_object_types()
-    eq(doe_objects,
+    objects = workspace_page.get_object_types()
+    eq(objects,
        ['CentralComposite',
         'CSVFile',
         'DOEdriver',
@@ -655,11 +656,20 @@ def _test_libsearch(browser):
         'NeighborhoodDOEdriver',
         'OptLatinHypercube',
         'Uniform'])
+    doe_searches = workspace_page.get_library_searches()
+    eq(doe_searches, def_searches+['doe'])
 
     # Clear search, now back to default objects.
     workspace_page.clear_library_filter()
-    clr_objects = workspace_page.get_object_types()
-    eq(clr_objects, def_objects)
+    objects = workspace_page.get_object_types()
+    eq(objects, def_objects)
+
+    # Get 'xyzzy' search results.
+    workspace_page.set_library_filter('xyzzy')
+    objects = workspace_page.get_object_types()
+    eq(objects, ['No matching records found'])
+    searches = workspace_page.get_library_searches()
+    eq(searches, doe_searches)
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
