@@ -110,6 +110,16 @@ nav ul ul a:hover {
   color:white;
 }
 
+#objtt-group {
+  border-spacing: 0;
+}
+#objtt-select {
+  margin: 0;
+}
+#objtt-clear {
+  margin: 0;
+}
+
 /* console history box */
 #historybox {
   background-color:grey;

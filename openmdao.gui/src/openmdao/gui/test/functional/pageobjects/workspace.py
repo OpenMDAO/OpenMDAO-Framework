@@ -32,6 +32,7 @@ class WorkspacePage(BasePageObject):
     # Top.
     project_menu      = ButtonElement((By.ID, 'project-menu'))
     commit_button     = ButtonElement((By.ID, 'project-commit'))
+    revert_button     = ButtonElement((By.ID, 'project-revert'))
     run_button        = ButtonElement((By.ID, 'project-run'))
     reload_button     = ButtonElement((By.ID, 'project-reload'))
     close_button      = ButtonElement((By.ID, 'project-close'))
@@ -106,6 +107,7 @@ class WorkspacePage(BasePageObject):
 
     library_tab    = ButtonElement((By.ID, 'library_tab'))
     library_search = InputElement((By.ID, 'objtt-select'))
+    library_clear  = ButtonElement((By.ID, 'objtt-clear'))
 
     # Bottom.
     history = TextElement((By.ID, 'history'))
@@ -418,6 +420,7 @@ class WorkspacePage(BasePageObject):
             raise RuntimeError('Too many TimeoutExceptions')
 
     def set_library_filter(self, filter):
+        """ Set the search filter text. """
         for retry in range(10):  # This has had issues...
             try:
                 self.library_search = filter + '\n'
@@ -426,7 +429,18 @@ class WorkspacePage(BasePageObject):
                                 ' StaleElementReferenceException')
             else:
                 break
-        time.sleep(0.5)  # Wait for dropdown to go away.
+        time.sleep(0.5)  # Wait for display update.
+
+    def clear_library_filter(self):
+        """ Clear the search filter via the 'X' button. """
+        self('library_clear').click()
+        time.sleep(0.5)  # Wait for display update.
+
+    def get_object_types(self):
+        """ Return displayed object types. """
+        xpath = "//table[(@id='objtypetable')]//td"
+        return [element.text for element
+                              in self.browser.find_elements(By.XPATH, xpath)]
 
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
