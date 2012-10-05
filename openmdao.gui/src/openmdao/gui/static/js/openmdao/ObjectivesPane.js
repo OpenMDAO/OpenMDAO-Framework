@@ -8,6 +8,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div "+buttonSpec +">Add Objective</div>"),
         clrButton = jQuery("<div "+buttonSpec +">Clear Objectives</div>"),
         columns = [
+            {id:"del",   name:"",            field:"del",   width:25, formatter:buttonFormatter},
             {id:"expr",  name:"Expression",  field:"expr",  width:180},
             {id:"name",  name:"Name",        field:"name",  width:50}
         ],
@@ -18,6 +19,11 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
             autoEdit: false
         };
 
+    function buttonFormatter(row,cell,value,columnDef,dataContext) {  
+        var buttonloc = "/static/images/deletebutton.png";
+        button = '<img src="'+buttonloc+'" alt="delete" />';
+        return button;
+    }
     elm.append(objectivesDiv).width('100%');
 
     var table = jQuery('<table width="100%">'),
@@ -39,6 +45,12 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd);
         });
    }
+    objectives.onClick.subscribe(function (e) {
+        var cell = objectives.getCellFromEvent(e);
+        var delname = objectives.getData()[cell.row].name
+        cmd = pathname+'.remove_objective("'+delname+'");';
+        model.issueCommand(cmd);
+    });
 
     /** add a new objective */
     function addObjective(expr,name) {

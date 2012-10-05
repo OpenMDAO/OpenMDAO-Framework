@@ -453,7 +453,7 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     parameters = editor.get_parameters()
-    expected = [['driver.force_execute', '0', '1', '', '', '', 'nonsense']]
+    expected = [['', 'driver.force_execute', '0', '1', '', '', '', 'nonsense']]
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
 
@@ -464,7 +464,7 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     objectives = editor.get_objectives()
-    expected = [['driver.force_execute', 'nonsense']]
+    expected = [['', 'driver.force_execute', 'nonsense']]
     for i, row in enumerate(objectives.value):
         eq(row, expected[i])
 
@@ -475,7 +475,7 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     constraints = editor.get_constraints()
-    expected = [['driver.force_execute > 0', '1', '0', 'nonsense']]
+    expected = [['', 'driver.force_execute > 0', '1', '0', 'nonsense']]
     for i, row in enumerate(constraints.value):
         eq(row, expected[i])
 
