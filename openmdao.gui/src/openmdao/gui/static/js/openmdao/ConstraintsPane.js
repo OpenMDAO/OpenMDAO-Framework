@@ -22,8 +22,7 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
         };
 
     function buttonFormatter(row,cell,value,columnDef,dataContext) {  
-        var buttonloc = "/static/images/deletebutton.png";
-        button = '<img src="'+buttonloc+'" alt="delete" />';
+        button = '<div class="ui-icon-trash"></div>';
         return button;
     }
     elm.append(constraintsDiv);
@@ -49,9 +48,11 @@ openmdao.ConstraintsPane = function(elm,model,pathname,name,editable) {
    }
     constraints.onClick.subscribe(function (e) {
         var cell = constraints.getCellFromEvent(e);
-        var delname = constraints.getData()[cell.row].name
-        cmd = pathname+'.remove_constraint("'+delname+'");';
-        model.issueCommand(cmd);
+        if (cell.cell==0) {
+            var delname = constraints.getData()[cell.row].name
+            cmd = pathname+'.remove_constraint("'+delname+'");';
+            model.issueCommand(cmd);
+        }
     });   
 
     /** add a new constraint */

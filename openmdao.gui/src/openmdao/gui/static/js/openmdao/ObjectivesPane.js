@@ -20,8 +20,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         };
 
     function buttonFormatter(row,cell,value,columnDef,dataContext) {  
-        var buttonloc = "/static/images/deletebutton.png";
-        button = '<img src="'+buttonloc+'" alt="delete" />';
+        button = '<div class="ui-icon-trash"></div>';
         return button;
     }
     elm.append(objectivesDiv).width('100%');
@@ -47,9 +46,11 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
    }
     objectives.onClick.subscribe(function (e) {
         var cell = objectives.getCellFromEvent(e);
-        var delname = objectives.getData()[cell.row].name
-        cmd = pathname+'.remove_objective("'+delname+'");';
-        model.issueCommand(cmd);
+        if (cell.cell==0) {
+            var delname = objectives.getData()[cell.row].name
+            cmd = pathname+'.remove_objective("'+delname+'");';
+            model.issueCommand(cmd);
+        }
     });
 
     /** add a new objective */

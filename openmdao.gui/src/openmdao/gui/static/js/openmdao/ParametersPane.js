@@ -25,8 +25,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         };
 
     function buttonFormatter(row,cell,value,columnDef,dataContext) {  
-        var buttonloc = "/static/images/deletebutton.png";
-        button = '<img src="'+buttonloc+'" alt="delete" />';
+        button = '<div class="ui-icon-trash"></div>';
         return button;
     }
     elm.append(parmsDiv);
@@ -53,14 +52,16 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
    }
     parms.onClick.subscribe(function (e) {
         var cell = parms.getCellFromEvent(e);
-        var delname = parms.getData()[cell.row].name
-        if (delname.split(",").length>1) {
-            cmd = pathname+'.remove_parameter('+delname+');';
+        if (cell.cell==0) {
+            var delname = parms.getData()[cell.row].name
+            if (delname.split(",").length>1) {
+                cmd = pathname+'.remove_parameter('+delname+');';
+            }
+            else {
+                cmd = pathname+'.remove_parameter("'+delname+'");';
+            }
+            model.issueCommand(cmd);
         }
-        else {
-            cmd = pathname+'.remove_parameter("'+delname+'");';
-        }
-        model.issueCommand(cmd);
     });   
     
 
