@@ -442,6 +442,15 @@ class WorkspacePage(BasePageObject):
         return [element.text for element
                               in self.browser.find_elements(By.XPATH, xpath)]
 
+    def get_library_searches(self):
+        """ Return stored library search terms. """
+        self.library_search = 'searches'
+        menu = self.browser.find_element(By.CLASS_NAME, 'ui-autocomplete')
+        items = menu.find_elements(By.CLASS_NAME, 'ui-menu-item')
+        searches = [item.text for item in items]
+        self.clear_library_filter()
+        return searches
+
     def get_library_item(self, item_name):
         """ Return element for library item `item_name`. """
         xpath = "//table[(@id='objtypetable')]//td[(@modpath='%s')]" % item_name
