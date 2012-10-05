@@ -637,6 +637,34 @@ def _test_logviewer(browser):
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
+def _test_libsearch(browser):
+    # Verify library search functionality.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Get default objects.
+    def_objects = workspace_page.get_object_types()
+
+    # Get 'doe' search results.
+    workspace_page.set_library_filter('doe')
+    doe_objects = workspace_page.get_object_types()
+    eq(doe_objects,
+       ['CentralComposite',
+        'CSVFile',
+        'DOEdriver',
+        'FullFactorial',
+        'NeighborhoodDOEdriver',
+        'OptLatinHypercube',
+        'Uniform'])
+
+    # Clear search, now back to default objects.
+    workspace_page.clear_library_filter()
+    clr_objects = workspace_page.get_object_types()
+    eq(clr_objects, def_objects)
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
 
