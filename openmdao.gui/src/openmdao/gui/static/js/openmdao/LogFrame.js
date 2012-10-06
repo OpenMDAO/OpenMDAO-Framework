@@ -32,7 +32,6 @@ openmdao.LogFrame = function(id, model) {
     }
 
     // Scroll to new bottom.
-    // Doesn't work with popout windows for some reason.
     function scrollToBottom() {
         var h = logData.height(),
             hb = self.elm.height(),

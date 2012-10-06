@@ -276,19 +276,21 @@ class _Runner(object):
 
     def __call__(self, browser):
         if isinstance(browser, Exception):
-            raise browser
+            raise browser  # Likely a hung webdriver.
         try:
             self.test(browser)
-        except Exception:
+        except Exception as exc:
             package, dot, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
-            filename = os.path.join(os.getcwd(), '%s.png' % testname)
-            print 'Attempting to take screenshot...'
-            browser.save_screenshot(filename)
-            msg = 'Screenshot in %s' % filename
-            print msg
-            logging.info(msg)
+            # Don't try screenshot if webdriver is hung.
+            if not isinstance(exc, SkipTest):
+                filename = os.path.join(os.getcwd(), '%s.png' % testname)
+                print 'Attempting to take screenshot...'
+                browser.save_screenshot(filename)
+                msg = 'Screenshot in %s' % filename
+                print msg
+                logging.info(msg)
             raise
 
 
