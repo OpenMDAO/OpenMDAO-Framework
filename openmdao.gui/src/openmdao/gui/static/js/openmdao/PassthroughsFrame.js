@@ -80,7 +80,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
 
     /** handle message about the assembly */
     function handleMessage(message) {
-        console.log(message);
+        //console.log(message);
     }
     
     
