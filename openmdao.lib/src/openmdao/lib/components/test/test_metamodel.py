@@ -347,26 +347,26 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.includes = ['a','d']
         metamodel.model = Simple()
-        self.assertEqual(metamodel.list_inputs_to_model(), ['a'])
-        self.assertEqual(metamodel.list_outputs_from_model(), ['d'])
+        self.assertEqual(metamodel.surrogate_input_names(), ['a'])
+        self.assertEqual(metamodel.surrogate_output_names(), ['d'])
         
         # now try changing the includes
         metamodel.includes = ['b', 'c']
-        self.assertEqual(metamodel.list_inputs_to_model(), ['b'])
-        self.assertEqual(metamodel.list_outputs_from_model(), ['c'])
+        self.assertEqual(metamodel.surrogate_input_names(), ['b'])
+        self.assertEqual(metamodel.surrogate_output_names(), ['c'])
 
     def test_excludes(self):
         metamodel = MyMetaModel()
         metamodel.surrogate = {'default':KrigingSurrogate()}
         metamodel.excludes = ['a','d']
         metamodel.model = Simple()
-        self.assertEqual(metamodel.list_inputs_to_model(), ['b'])
-        self.assertEqual(metamodel.list_outputs_from_model(), ['c'])
+        self.assertEqual(metamodel.surrogate_input_names(), ['b'])
+        self.assertEqual(metamodel.surrogate_output_names(), ['c'])
         
         # now try changing the excludes
         metamodel.excludes = ['b', 'c']
-        self.assertEqual(metamodel.list_inputs_to_model(), ['a'])
-        self.assertEqual(metamodel.list_outputs_from_model(), ['d'])
+        self.assertEqual(metamodel.surrogate_input_names(), ['a'])
+        self.assertEqual(metamodel.surrogate_output_names(), ['d'])
         
     def test_include_exclude(self):
         metamodel = MyMetaModel()
