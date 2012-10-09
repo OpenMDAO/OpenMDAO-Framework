@@ -83,6 +83,10 @@ class _BaseElement(object):
         """ Convenience routine. """
         return self.element.find_elements_by_xpath(xpath)
 
+    def find_elements_by_css_selector(self, xpath):
+        """ Convenience routine. """
+        return self.element.find_elements_by_css_selector(xpath)
+
     def value_of_css_property(self, name):
         """ Return value for the the CSS property `name`. """
         return self.element.value_of_css_property(name)
