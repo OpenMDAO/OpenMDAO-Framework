@@ -1,9 +1,9 @@
-import os
+import cmd
+import jsonpickle
+import logging
 import os.path
 import sys
 import traceback
-import cmd
-import jsonpickle
 
 from setuptools.command import easy_install
 from zope.interface import implementedBy
@@ -62,6 +62,10 @@ class ConsoleServer(cmd.Cmd):
         self.exc_info = None
         self.publish_updates = publish_updates
         self._publish_comps = {}
+
+        self._log_directory = os.getcwd()
+        self._log_handler = None
+        self._log_subscribers = 0
 
         self._partial_cmd = None  # for multi-line commands
 
@@ -502,6 +506,9 @@ class ConsoleServer(cmd.Cmd):
         self.cleanup()
         
         try:
+            # Start a new log file.
+            logging.getLogger().handlers[0].doRollover()
+
             self.files = FileManager('files', path=projdir,
                                      publish_updates=self.publish_updates)
             
@@ -637,26 +644,78 @@ class ConsoleServer(cmd.Cmd):
                         'console_errors', 'file_errors']:
             # these topics are published automatically
             return
-
-        parts = pathname.split('.')
-        if len(parts) > 1:
-            root = self.proj.get(parts[0])
-            if root:
-                rest = '.'.join(parts[1:])
-                root.register_published_vars(rest, publish)
-
-        cont, root = self.get_container(pathname)
-        if has_interface(cont, IComponent):
+        elif pathname == 'log_msgs':
             if publish:
-                if pathname in self._publish_comps:
-                    self._publish_comps[pathname] += 1
-                else:
-                    self._publish_comps[pathname] = 1
+                self._start_log_msgs(pathname)
             else:
-                if pathname in self._publish_comps:
-                    self._publish_comps[pathname] -= 1
-                    if self._publish_comps[pathname] < 1:
-                        del self._publish_comps[pathname]
+                self._stop_log_msgs(pathname)
+        else:
+            parts = pathname.split('.')
+            if len(parts) > 1:
+                root = self.proj.get(parts[0])
+                if root:
+                    rest = '.'.join(parts[1:])
+                    root.register_published_vars(rest, publish)
+    
+            cont, root = self.get_container(pathname)
+            if has_interface(cont, IComponent):
+                if publish:
+                    if pathname in self._publish_comps:
+                        self._publish_comps[pathname] += 1
+                    else:
+                        self._publish_comps[pathname] = 1
+                else:
+                    if pathname in self._publish_comps:
+                        self._publish_comps[pathname] -= 1
+                        if self._publish_comps[pathname] < 1:
+                            del self._publish_comps[pathname]
+
+    def _start_log_msgs(self, topic):
+        """ Start sending log messages. """
+        # Need to lock access while we capture state.
+        logging._acquireLock()
+        try:
+            # Flush output.
+            for handler in logging.getLogger().handlers:
+                handler.flush()
+
+            # Grab previously logged messages.
+            log_path = os.path.join(self._log_directory, 'openmdao_log.txt')
+            with open(log_path, 'r') as inp:
+                line = True  # Just to get things started.
+                while line:
+                    lines = []
+                    for i in range(100):  # Process in chunks.
+                        line = inp.readline()
+                        if line:
+                            lines.append(line)
+                        else:
+                            break
+                    if lines:
+                        publish('log_msgs',
+                                dict(active=False, text=''.join(lines)))
+            # End of historical messages.
+            publish('log_msgs', dict(active=False, text=''))
+
+            # Add handler to get any new messages.
+            if self._log_handler is None:
+                self._log_handler = _LogHandler()
+                logging.getLogger().addHandler(self._log_handler)
+        except Exception:
+            print "Can't initiate logging:"
+            traceback.print_exc()
+        finally:
+            logging._releaseLock()
+        self._log_subscribers += 1
+
+    def _stop_log_msgs(self):
+        """ Stop sending log messages. """
+        self._log_subscribers -= 1
+        if self._log_subscribers <= 0:
+            if self._log_handler is not None:
+                logging.getLogger().removeHandler(self._log_handler)
+                self._log_handler = None
+            self._log_subscribers = 0
 
     def file_has_instances(self, filename):
         """Returns True if the given file (assumed to be a file in the project)
@@ -672,3 +731,26 @@ class ConsoleServer(cmd.Cmd):
             if info and _match_insts(info.classes.keys()):
                 return True
         return False
+
+
+class _LogHandler(logging.StreamHandler):
+    """ Logging handler that publishes messages. """
+
+    def __init__(self):
+        # Python < 2.7 doesn't like super() here.
+        logging.StreamHandler.__init__(self, _LogStream())
+        # Formatting set to match format of file.
+        msg_fmt = '%(asctime)s %(levelname)s %(name)s: %(message)s'
+        date_fmt = '%b %d %H:%M:%S'
+        self.setFormatter(logging.Formatter(msg_fmt, date_fmt))
+
+
+class _LogStream(object):
+    """ Provides stream interface to publisher. """
+
+    def write(self, msg):
+        publish('log_msgs', dict(active=True, text=msg))
+
+    def flush(self):
+        pass
+

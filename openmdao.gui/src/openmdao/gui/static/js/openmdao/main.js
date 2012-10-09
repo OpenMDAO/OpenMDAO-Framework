@@ -90,9 +90,10 @@ jQuery(function() {
     // do layout
     jQuery('body').trigger('layoutresizeall');
     
-    
     //jQuery(window).bind('beforeunload', function(e) {
-    //    if (openmdao.model.getModified()){
+    //    // Don't check when testing -- it can cause a cascade of errors.
+    //    if (openmdao.model.getModified() &&
+    //        (typeof openmdao_test_mode === 'undefined')) {
     //        return "You have unsaved changes in your model.\nIf you continue, your changes will be lost.";
     //    }
     //});
