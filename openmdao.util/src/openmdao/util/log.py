@@ -39,8 +39,8 @@ __all__ = ['logger', 'getLogger', 'enable_console', 'disable_console',
 
 import atexit
 import cPickle
-import logging
 import logging.config
+import logging.handlers
 import os.path
 import select
 import socket
@@ -50,8 +50,6 @@ import sys
 import threading
 import datetime
 
-from multiprocessing.process import current_process
-
 LOG_DEBUG    = logging.DEBUG
 LOG_INFO     = logging.INFO
 LOG_WARNING  = logging.WARNING
@@ -60,26 +58,6 @@ LOG_CRITICAL = logging.CRITICAL
 
 LOG_DEBUG2 = logging.DEBUG - 2  # Protocol debug, etc.
 LOG_DEBUG3 = logging.DEBUG - 3  # Even lower-level stuff.
-
-_mode = 'a'  # Avoid mangling by subprocesses.
-_filename = 'openmdao_log.txt'
-
-# Ensure we can write to the log file.
-try:
-    _tmplog = open(_filename, _mode)
-except IOError:
-    _filename = 'openmdao_log_%d.txt' % os.getpid()
-else:
-    _tmplog.write("\n\n*********** BEGIN NEW LOG ************** (%s) PID=%s\n\n" % 
-                  (datetime.datetime.now(), os.getpid()))
-    _tmplog.close()
-    
-# Allow everything through, typical UNIX-ish timestamp, typical log format.
-logging.basicConfig(level=logging.WARNING,
-                    datefmt='%b %d %H:%M:%S',
-                    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
-                    filename=_filename,
-                    filemode=_mode)
 
 # Compress level names.
 logging.addLevelName(logging.NOTSET,   'N')
@@ -93,7 +71,40 @@ logging.addLevelName(LOG_DEBUG2, 'D2')
 logging.addLevelName(LOG_DEBUG3, 'D3')
 
 
-logger = logging.getLogger('')
+def _configure_root():
+    """ Configure root logger with a rotating file handler. """
+    mode = 'a'  # Avoid mangling by subprocesses.
+    filename = 'openmdao_log.txt'
+    # Ensure we can write to the log file.
+    try:
+        tmplog = open(filename, mode)
+    except IOError:
+        filename = 'openmdao_log_%d.txt' % os.getpid()
+    else:
+        tmplog.write('\n\n*********** BEGIN NEW LOG ************** (%s) PID=%s\n\n'
+                     % (datetime.datetime.now(), os.getpid()))
+        tmplog.close()
+    
+    msg_fmt = '%(asctime)s %(levelname)s %(name)s: %(message)s'
+    date_fmt = '%b %d %H:%M:%S'
+    formatter = logging.Formatter(msg_fmt, date_fmt)
+
+    handler = logging.handlers.RotatingFileHandler(filename)
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.WARNING)
+
+    logging.getLogger().addHandler(handler)
+
+
+# If the root logger hasn't been configured, do it now.
+logging._acquireLock()
+try:
+    logger = logging.getLogger()
+    if not logger.handlers:
+        _configure_root()
+finally:
+    logging._releaseLock()
+
 
 # If a logging config file exists, use it.
 if os.path.exists('logging.cfg'):
@@ -451,6 +462,10 @@ class _LogServer(SocketServer.ThreadingTCPServer):
         """ Add `hostname` as a legal client host. """
         client_addr = socket.gethostbyname(hostname)
         _LogServer._hosts.add(client_addr)
+        # Some machines register 127.0.1.1 and then use 127.0.0.1 for localhost.
+        if client_addr.startswith('127.') and \
+           '127.0.0.1' not in _LogServer._hosts:
+            _LogServer._hosts.add('127.0.0.1')
 
     def verify_request(self, request, client_address):
         """

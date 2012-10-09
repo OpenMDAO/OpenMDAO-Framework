@@ -39,7 +39,10 @@ openmdao.LibraryFrame = function(id,model) {
         // build the new html
         var html = '<div class="ui-widget" style="clear:both">'
                  +   '<label for="objtt-select" id="objtt-search">Search: </label>'
-                 +   '<input id="objtt-select">'
+                 +   '<table id="objtt-group"><tr>'
+                 +     '<td><input id="objtt-select"></td>'
+                 +     '<td><button id="objtt-clear">X</button></td>'
+                 +   '</tr></table>'
                  + '</div>';
         html += '<table id="objtypetable" style="width:100%"' +
                 ' cellpadding="0" cellspacing="0" border="0" >';
@@ -82,6 +85,7 @@ openmdao.LibraryFrame = function(id,model) {
                     "Variable"
                 ];
         var input_obj = self.elm.find('#objtt-select');
+
         input_obj.autocomplete({
            source: function(term, response_cb) {
                response_cb(selections);
@@ -93,17 +97,38 @@ openmdao.LibraryFrame = function(id,model) {
                ent.which = 13;
                input_obj.trigger(ent);
            },
+           open: function(event, ui) {
+               self.searchListOpen = true;
+           },
+           close: function(event, ui) {
+               self.searchListOpen = false;
+           },
            delay: 0,
            minLength: 0
         });
+
         input_obj.bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
-                dtable.fnFilter( e.target.value );
+                dtable.fnFilter(e.target.value);
                 dtable.width('100%');
-                if (selections.indexOf(e.target.value) === -1) {
-                   selections.push(e.target.value);
+                var found = jQuery('#objtypetable > tbody > tr > td');
+                if (found.length > 1 || 
+                    found.attr('class') !== 'dataTables_empty') {
+                    if (selections.indexOf(e.target.value) === -1) {
+                        selections.push(e.target.value);
+                    }
                 }
                 input_obj.autocomplete('close');
+            }
+        });
+
+        var clrButton = self.elm.find('#objtt-clear');
+        clrButton.click(function() {
+            inputObj = self.elm.find('#objtt-select');
+            inputObj.val('');
+            if (!self.searchListOpen) {
+                dtable.fnFilter('');
+                dtable.width('100%');
             }
         });
 

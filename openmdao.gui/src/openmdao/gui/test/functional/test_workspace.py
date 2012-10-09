@@ -237,10 +237,8 @@ def _test_properties(browser):
     projects_page, project_info_page, project_dict, workspace_page = startup(browser)
 
     # Check default 'top'.
-    workspace_page.show_properties()
     workspace_page.select_object('top')
     workspace_page.show_properties()
-    time.sleep(0.5)
     eq(workspace_page.props_header, 'Assembly: top')
     inputs = workspace_page.props_inputs
     eq(inputs.value, [['directory',     ''],
@@ -412,18 +410,7 @@ def execute(self)
     pass
 """, check=False)
 
-    # The error notifier can potentially arrive *before* the save notifier,
-    # resulting in the error notifier being underneath and causing a
-    # WebDriverException.  If that happens, try to handle the save and
-    # then retry the error notifier.
-    message = None
-    try:
-        message = NotifierPage.wait(editor_page, base_id='file-error')
-    except Exception as exc:
-        print 'Exception waiting for file-error:', str(exc) or repr(exc)
-        logging.exception('Waiting for file-error')
-    if message is None:
-        message = NotifierPage.wait(editor_page, base_id='file-error')
+    message = NotifierPage.wait(editor_page, base_id='file-error')
     eq(message, 'invalid syntax (bug.py, line 6)')
 
     browser.close()
@@ -436,7 +423,7 @@ def execute(self)
 from openmdao.main.api import Component
 class Bug2(Component):
 def __init__(self):
-    raise RuntimeError("__init__ failed")
+raise RuntimeError("__init__ failed")
 """)
     browser.close()
     browser.switch_to_window(workspace_window)
@@ -515,7 +502,7 @@ def _test_remove(browser):
     # Remove component.
     top.remove()
 
-    time.sleep(0.5)
+    time.sleep(1)
     eq(editor.is_visible, False)
     eq(connections.is_visible, False)
     eq(properties.is_visible, False)
@@ -581,6 +568,111 @@ def _test_noslots(browser):
     #project_info_page = projects_page.edit_project(project_dict['name'])
     #project_info_page.delete_project()
     #print "_test_dontsavechanges complete."
+
+
+def _test_logviewer(browser):
+    # Verify log viewer functionality.
+    # Note that by default the logging level is set to WARNING.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+    viewer = workspace_page.show_log()
+
+    # Incremental display.
+    workspace_page.do_command("import logging")
+    workspace_page.do_command("logging.error('1 Hello World')")
+    msgs = viewer.get_messages()
+    while "Shouldn't have handled a send event" in msgs[-1]:
+        msgs = msgs[:-1]
+    eq(msgs[-1][-13:], '1 Hello World')
+
+    # Exercise pausing the display. Since there's room on-screen,
+    # the lack of scrollbar update isn't noticable.
+    text = viewer.pause()
+    eq(text, 'Pause')
+    for i in range(2, 4):
+        workspace_page.do_command("logging.error('%d Hello World')" % i)
+    text = viewer.pause()  # Toggle-back.
+    eq(text, 'Resume')
+
+    # Clear display.
+    viewer.clear()
+    msgs = viewer.get_messages()
+    eq(msgs, [''])
+
+    # Exercise filtering.
+    logger = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                             'logger.py')
+    workspace_page.add_file(logger)
+    msgs = viewer.get_messages()
+    # Remove any spurious errors and drop timestamp.
+    initial = [msg[16:] for msg in msgs
+                        if "Shouldn't have handled a send event" not in msg]
+    eq(initial,
+       ['W root: warning 1',
+        'E root: error 1',
+        'C root: critical 1',
+        'W root: warning 2',
+        'E root: error 2',
+        'C root: critical 2',
+        'W root: warning 3',
+        'E root: error 3',
+        'C root: critical 3'])
+
+    # Turn off errors.
+    dialog = viewer.filter()
+    dialog('error_button').click()
+    dialog('ok_button').click()
+
+    msgs = viewer.get_messages()
+    filtered = [msg[16:] for msg in msgs]  # Drop timestamp.
+    eq(filtered,
+       ['W root: warning 1',
+        'C root: critical 1',
+        'W root: warning 2',
+        'C root: critical 2',
+        'W root: warning 3',
+        'C root: critical 3'])
+
+    # Clean up.
+    viewer.close()
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
+
+
+def _test_libsearch(browser):
+    # Verify library search functionality.
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    # Get default objects.
+    def_objects = workspace_page.get_object_types()
+    def_searches = workspace_page.get_library_searches()
+
+    # Get 'doe' search results.
+    workspace_page.set_library_filter('doe')
+    objects = workspace_page.get_object_types()
+    eq(objects,
+       ['CentralComposite',
+        'CSVFile',
+        'DOEdriver',
+        'FullFactorial',
+        'NeighborhoodDOEdriver',
+        'OptLatinHypercube',
+        'Uniform'])
+    doe_searches = workspace_page.get_library_searches()
+    eq(doe_searches, def_searches+['doe'])
+
+    # Clear search, now back to default objects.
+    workspace_page.clear_library_filter()
+    objects = workspace_page.get_object_types()
+    eq(objects, def_objects)
+
+    # Get 'xyzzy' search results.
+    workspace_page.set_library_filter('xyzzy')
+    objects = workspace_page.get_object_types()
+    eq(objects, ['No matching records found'])
+    searches = workspace_page.get_library_searches()
+    eq(searches, doe_searches)
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 
 if __name__ == '__main__':
