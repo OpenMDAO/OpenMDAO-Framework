@@ -33,6 +33,11 @@ def _test_console(browser):
     expected = ">>> print 'blah'\nblah"
     eq(workspace_page.history, expected)
 
+    # Check that browser title contains project name.
+    title = browser.title
+    expected = 'OpenMDAO: '+project_dict['name'].replace(' ', '_')
+    eq(title[:len(expected)], expected)
+
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
