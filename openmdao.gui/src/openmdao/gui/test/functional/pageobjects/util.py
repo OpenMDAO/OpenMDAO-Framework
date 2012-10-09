@@ -7,6 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
 
+from openmdao.util.log import logger
 
 # Set this True on fatal driver errors.
 _ABORT = False
@@ -61,9 +62,8 @@ class ConfirmationPage(BasePageObject):
 
 class NotifierPage(object):
     """
-    Overlay displayed by ``openmdao.Util.notify()``.
-    There can potentially be more than one of these displayed at the same
-    time in test mode (such as when saving a file with a syntax error).
+    Overlay displayed by ``openmdao.Util.notify()``. There can potentially be
+    more than one of these displayed at the same time.
     """
 
     @staticmethod

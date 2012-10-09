@@ -71,8 +71,8 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             try:
                 content = jsonpickle.decode(content)
                 message = jsonpickle.encode([topic, content])
-            except Exception, err:
-                exc_type, exc_value, exc_traceback = sys.exc_info
+            except Exception as err:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
                 print 'ZMQStreamHandler ERROR decoding/encoding message:', topic, err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return

@@ -99,6 +99,11 @@ class _ButtonElement(_BaseElement):
         """ The element's ``value`` attribute. """
         return self.element.get_attribute('value')
 
+    @property
+    def text(self):
+        """ The element's text. """
+        return self.element.text
+
     def click(self):
         """ 'Click' on the button. """
         element = self.element
