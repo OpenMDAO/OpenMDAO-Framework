@@ -8,6 +8,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         addButton = jQuery("<div "+buttonSpec +">Add Parameter</div>"),
         clrButton = jQuery("<div "+buttonSpec +">Clear Parameters</div>"),
         columns = [
+            {id:"del",     name:"",        field:"del",     width:25, formatter:buttonFormatter},
             {id:"target",  name:"Target",  field:"target",  width:140},
             {id:"low",     name:"Low",     field:"low",     width:70},
             {id:"high",    name:"High",    field:"high",    width:70},
@@ -23,6 +24,10 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             autoEdit: false
         };
 
+    function buttonFormatter(row,cell,value,columnDef,dataContext) {  
+        button = '<div class="ui-icon-trash"></div>';
+        return button;
+    }
     elm.append(parmsDiv);
 
     var table = jQuery('<table width="100%">'),
@@ -45,6 +50,20 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
             model.issueCommand(cmd);
         });
    }
+    parms.onClick.subscribe(function (e) {
+        var cell = parms.getCellFromEvent(e);
+        if (cell.cell==0) {
+            var delname = parms.getData()[cell.row].name
+            if (delname.split(",").length>1) {
+                cmd = pathname+'.remove_parameter('+delname+');';
+            }
+            else {
+                cmd = pathname+'.remove_parameter("'+delname+'");';
+            }
+            model.issueCommand(cmd);
+        }
+    });   
+    
 
     /** add a new parameter */
     function addParameter(target,low,high,scaler,adder,name) {
@@ -144,6 +163,7 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
 
     addButton.click(function() { promptForParameter(addParameter); });
     clrButton.click(function() { clearParameters(); });
+    
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
@@ -157,5 +177,6 @@ openmdao.ParametersPane = function(elm,model,pathname,name,editable) {
         }
         parms.updateRowCount();
         parms.render();
+        
     };
 };
