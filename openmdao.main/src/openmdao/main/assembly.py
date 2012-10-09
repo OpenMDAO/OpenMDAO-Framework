@@ -426,9 +426,9 @@ class Assembly (Component):
         it from its workflow(s) if it's a Component."""
         cont = getattr(self, name)
         self.disconnect(name)
-        self._depgraph.remove(name)
         self._exprmapper.remove(name)
         if has_interface(cont, IComponent):
+            self._depgraph.remove(name)
             for obj in self.__dict__.values():
                 if obj is not cont and is_instance(obj, Driver):
                     obj.workflow.remove(name)
