@@ -85,6 +85,7 @@ openmdao.LibraryFrame = function(id,model) {
                     "Variable"
                 ];
         var input_obj = self.elm.find('#objtt-select');
+
         input_obj.autocomplete({
            source: function(term, response_cb) {
                response_cb(selections);
@@ -105,12 +106,17 @@ openmdao.LibraryFrame = function(id,model) {
            delay: 0,
            minLength: 0
         });
+
         input_obj.bind('keypress.enterkey', function(e) {
             if (e.which === 13) {
-                dtable.fnFilter( e.target.value );
+                dtable.fnFilter(e.target.value);
                 dtable.width('100%');
-                if (selections.indexOf(e.target.value) === -1) {
-                   selections.push(e.target.value);
+                var found = jQuery('#objtypetable > tbody > tr > td');
+                if (found.length > 1 || 
+                    found.attr('class') !== 'dataTables_empty') {
+                    if (selections.indexOf(e.target.value) === -1) {
+                        selections.push(e.target.value);
+                    }
                 }
                 input_obj.autocomplete('close');
             }
