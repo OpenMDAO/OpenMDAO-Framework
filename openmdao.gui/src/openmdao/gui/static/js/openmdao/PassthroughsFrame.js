@@ -61,7 +61,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
                     }
                 }
             }
-        if (top_inputs.contains(pathname + "."+ input.name) || ctl > 0) {checked = ""; disabled = "disabled = 'disabled'";}
+        if (top_inputs.contains(pathname + "."+ input.name)) {checked = ""; disabled = "disabled = 'disabled'";}
         else {checked = ""; disabled = "";}
         return [checked, disabled]
     }
