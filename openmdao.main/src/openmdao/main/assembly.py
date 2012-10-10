@@ -965,4 +965,3 @@ def dump_iteration_tree(obj):
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()
-
