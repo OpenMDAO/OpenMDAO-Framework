@@ -2,6 +2,7 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
+    console.log(model.getConnections());
     var id = ('ConnectionsFrame-'+pathname).replace(/\./g,'-');
     openmdao.ConnectionsFrame.prototype.init.call(this, id,
         'Connections: '+openmdao.Util.getName(pathname));
@@ -211,6 +212,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     }
 
     function loadConnectionData(data) {
+        
         if (!data || !data.sources || !data.destinations) {
             // don't have what we need, probably something got deleted
             self.close();
