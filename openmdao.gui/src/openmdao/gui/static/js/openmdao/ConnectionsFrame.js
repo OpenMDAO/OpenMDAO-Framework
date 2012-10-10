@@ -211,6 +211,7 @@ openmdao.ConnectionsFrame = function(model,pathname,src_comp,dst_comp) {
     }
 
     function loadConnectionData(data) {
+        
         if (!data || !data.sources || !data.destinations) {
             // don't have what we need, probably something got deleted
             self.close();
