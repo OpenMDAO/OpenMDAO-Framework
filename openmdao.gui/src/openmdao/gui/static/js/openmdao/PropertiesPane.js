@@ -77,10 +77,10 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     //} else {
                     //    item._collapsed = false;
                     //}
-                    if (!this._collapsed[item.id]) {
-                        this._collapsed[item.id] = true;
+                    if (!_collapsed[item.id]) {
+                        _collapsed[item.id] = true;
                     } else {
-                        this._collapsed[item.id] = false;
+                        _collapsed[item.id] = false;
                     }
     
                     dataView.updateItem(item.id, item);
@@ -107,7 +107,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 //if (parent._collapsed) {
                 //    return false;
                 //}
-                if (this._collapsed[parent]) {
+                if (_collapsed[parent]) {
                     return false;
                 }
                 var idx = dataView.getIdxById(parent);
