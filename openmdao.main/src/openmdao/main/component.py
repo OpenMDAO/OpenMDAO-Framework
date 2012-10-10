@@ -35,6 +35,7 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot
 from openmdao.main.publisher import Publisher
+from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -1584,7 +1585,10 @@ class Component(Container):
 
             # Each variable type provides its own basic attributes
             io_attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-
+            
+            io_attr['id'] = name
+            io_attr['indent'] = 0
+            
             io_attr['valid'] = self.get_valid([name])[0]
             io_attr['connected'] = ''
 
@@ -1612,12 +1616,25 @@ class Component(Container):
                 inputs.append(io_attr)
             else:
                 outputs.append(io_attr)
-
+                
             # Process singleton and contained slots.
             if not io_only and slot_attr is not None:
                 # We can hide slots (e.g., the Workflow slot in drivers)
                 if 'hidden' not in meta or meta['hidden'] == False:
                     slots.append(slot_attr)
+                    
+            # For variables trees only: recursively add the inputs and outputs
+            # into this variable list
+            if slot_attr is not None:
+                vartable = self.get(name)
+                if isinstance(vartable, VariableTree):
+                    vt_attrs = vartable.get_attributes(io_only, indent=1,
+                                                       parent=name)
+                    
+                    if name in self.list_inputs():
+                        inputs += vt_attrs['Inputs']
+                    else:
+                        outputs += vt_attrs['Outputs']
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
@@ -1716,6 +1733,10 @@ class Component(Container):
             if constraint_pane:
                 attrs['Constraints'] = constraints
 
+        #for item in attrs['Inputs']:
+        #    print item
+        #for item in attrs['Outputs']:
+        #    print item
         return attrs
 
 

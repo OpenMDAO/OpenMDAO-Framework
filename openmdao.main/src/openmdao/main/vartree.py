@@ -154,13 +154,19 @@ class VariableTree(Container):
                                                         **metadata):
                             yield ('.'.join([name, chname]), child)
 
-    def get_attributes(self, io_only=True):
+    def get_attributes(self, io_only=True, indent=0, parent=None):
         """ get attributes for this variable tree. Variables may also include
         slots. Used by the GUI.
         
-        io_only: Bool
+        io_only: bool
             Set to true if we only want to populate the input and output
-            fields of the attributes dictionary."""
+            fields of the attributes dictionary.
+            
+        indent: int
+            Recursion level (for collapsing tables).
+            
+        parent: str
+            ID name of parent table line"""
             
         attrs = {}
         attrs['type'] = type(self).__name__
@@ -187,6 +193,12 @@ class VariableTree(Container):
             
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+            
+            # Support for expand/collapse
+            attr['indent'] = indent
+            attr['id'] = '%s_%s' % (parent, name)
+            if parent:
+                attr['parent'] = parent
                             
             attr['connected'] = ''
             if name in connected:

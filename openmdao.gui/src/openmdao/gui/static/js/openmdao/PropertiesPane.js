@@ -1,7 +1,6 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
@@ -16,7 +15,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             multiSelect: false,
             autoHeight: true,
             enableTextSelectionOnCells: true
-        };
+        },
+        _collapsed = {};
 
     self.pathname = pathname;
     if (editable) {
@@ -26,7 +26,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     if (meta) {
         columns = [
-            {id:"name",      name:"Name",        field:"name",      width:100 },
+            {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
             {id:"type",      name:"Type",        field:"type",      width:60 },
             {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
             {id:"units",     name:"Units",       field:"units",     width:60  },
@@ -37,8 +37,24 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         ];
     }
 
+    function VarTableFormatter(row,cell,value,columnDef,dataContext) {
+        var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
+        var idx = dataView.getIdxById(dataContext.id);
+        var nextline = dataView.getItemByIdx(idx+1)
+        if (nextline && nextline.indent > dataContext.indent) {
+            if (dataContext._collapsed) {
+                return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
+            } else {
+                return spacer + " <span class='toggle collapse'></span>&nbsp;" + value;
+            }
+        } else {
+            return spacer + "<span class='toggle'></span>" + value;
+        }
+    }
+    
     elm.append(propsDiv);
-    props = new Slick.Grid(propsDiv, [], columns, options);
+    var dataView = new Slick.Data.DataView({ inlineFilters: true });
+    props = new Slick.Grid(propsDiv, dataView, columns, options);
 
     props.onBeforeEditCell.subscribe(function(row,cell) {
         if (props.getDataItem(cell.row).connected.length > 0) {
@@ -50,13 +66,56 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
     });
 
+    props.onClick.subscribe(function (e) {
+        var cell = props.getCellFromEvent(e);
+        if (cell.cell==0) {
+            if (true) {
+                var item = dataView.getItem(cell.row);
+                if (item) {
+                    //if (!item._collapsed) {
+                    //    item._collapsed = true;
+                    //} else {
+                    //    item._collapsed = false;
+                    //}
+                    if (!this._collapsed[item.id]) {
+                        this._collapsed[item.id] = true;
+                    } else {
+                        this._collapsed[item.id] = false;
+                    }
+    
+                    dataView.updateItem(item.id, item);
+                }
+                e.stopImmediatePropagation();
+            }
+        }
+    });
+
     if (editable) {
         props.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. model.setProperty(path,name,value)
             model.setVariableValue(self.pathname + '.' + args.item.name, 
                                    args.item.value, args.item.type );
         });
-   }
+    }
+
+    this.filter = function myFilter(item) {
+        if (item.parent != null) {
+            var idx = dataView.getIdxById(item.parent);
+            var parent = dataView.getItemByIdx(idx)
+    
+            while (parent) {
+                //if (parent._collapsed) {
+                //    return false;
+                //}
+                if (this._collapsed[parent]) {
+                    return false;
+                }
+                var idx = dataView.getIdxById(parent);
+                var parent = dataView.getItemByIdx(idx)
+            }
+        }
+        return true;
+    }
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
@@ -66,8 +125,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         if (properties) {
             // Sort by name
             properties.sort(function(a, b) {
-                var nameA=a.name.toLowerCase(),
-                    nameB=b.name.toLowerCase();
+                var nameA=a.id.toLowerCase(),
+                    nameB=b.id.toLowerCase();
                 if (nameA < nameB) { //sort string ascending
                     return -1;
                 }
@@ -82,7 +141,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 if (value.hasOwnProperty("connected")) {
                     var nameStyle = '',
                         valueStyle = '';
-                    if (options.editable && (value.connected.length === 0)) {
+                    if (options.editable && (value.connected.length === 0) && (value.ttype != 'slot')) {
                         valueStyle += " cell-editable";
                     }
                     if (value.hasOwnProperty("implicit") && (value.implicit.length > 0)) {
@@ -109,7 +168,12 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
             });
 
-            props.setData(properties);
+            //props.setData(properties);
+              dataView.beginUpdate();
+              dataView.setItems(properties);
+              dataView.setFilter(this.filter);
+              dataView.endUpdate();
+
         }
         else {
             props.setData([]);
