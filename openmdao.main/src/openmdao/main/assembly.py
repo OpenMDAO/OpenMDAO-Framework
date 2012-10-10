@@ -588,6 +588,8 @@ class Assembly (Component):
         """
         to_remove = []
         if varpath2 is None:
+            if self.parent and '.' not in varpath: # boundary var. make sure it's disconnected in parent
+                self.parent.disconnect('.'.join([self.name, varpath]))
             graph = self._exprmapper._exprgraph
             to_remove = set()
             for expr in self._exprmapper.find_referring_exprs(varpath):
