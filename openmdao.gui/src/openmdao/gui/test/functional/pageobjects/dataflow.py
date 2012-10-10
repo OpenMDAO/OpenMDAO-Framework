@@ -40,6 +40,7 @@ class DataflowFigure(BasePageObject):
 
     # Port context menus.
     edit_connections   = ButtonElement((By.XPATH, "../div/a[text()='Edit Connections']"))
+    edit_passthroughs  = ButtonElement((By.XPATH, "../div/a[text()='Edit Passthroughs']"))
     edit_driver        = ButtonElement((By.XPATH, "../div/a[text()='Edit Driver']"))
 
     def __init__(self, browser, port, root):

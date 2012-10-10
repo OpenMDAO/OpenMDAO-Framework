@@ -10,9 +10,6 @@ class Paraboloid(Component):
     f_xy = Float(0.0, iotype='out', desc='F(x,y)')
 
     def execute(self):
-        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-            Minimum: x = 6.6667; y = -7.3333
-        """
 
         x = self.x
         y = self.y
@@ -29,22 +26,13 @@ class A1(Assembly):
         self.create_passthrough('p2.f_xy')
         
 
-class Top(Assembly):
+class Topp(Assembly):
     def configure(self):
         self.add('A1', A1())
         self.add('p1', Paraboloid())
 
         self.driver.workflow.add(['A1', 'p1'])
         
-        
+        self.create_passthrough('p1.y')
         self.connect('A1.f_xy','p1.x')
         
-if __name__ == "__main__":
-    from openmdao.main.api import set_as_top
-    top = Top()
-    print top.A1.list_connections()
-    print top.list_connections()
-    top.A1.remove('f_xy')
-    print top.A1.list_connections()
-    print top.list_connections()
-    
