@@ -90,7 +90,7 @@ class Sim(Assembly):
     def configure(self):
 
         self.add('mm',MetaModel())
-        self.mm.surrogate = {'default':KrigingSurrogate()}
+        self.mm.default_surrogate = KrigingSurrogate()
         self.mm.model = Dummy()
 
 
@@ -100,7 +100,7 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel = MetaModel()
         mmins = set(metamodel.list_inputs())
         mmouts = set(metamodel.list_outputs())
-        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.default_surrogate = KrigingSurrogate()
         metamodel.model = Simple()
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
@@ -119,7 +119,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.add('metamodel', MetaModel())
         asm.add('comp1', Simple())
         asm.add('comp2', Simple())
-        asm.metamodel.surrogate = {'default':KrigingSurrogate()}
+        asm.metamodel.default_surrogate = KrigingSurrogate()
         asm.metamodel.model = Simple()
         asm.metamodel.recorder = DumbRecorder()
         asm.driver.workflow.add(['metamodel','comp1','comp2'])
@@ -133,7 +133,7 @@ class MetaModelTestCase(unittest.TestCase):
     def test_comp_error(self): 
         a = Assembly()
         a.add('m',MetaModel()) 
-        a.m.surrogate = {'default':KrigingSurrogate()}
+        a.m.default_surrogate = KrigingSurrogate()
         a.m.model = DummyError()
         
         a.m.train_next = True
@@ -154,7 +154,7 @@ class MetaModelTestCase(unittest.TestCase):
                               ('comp1.c', 'metamodel.a'), ('comp1.d', 'metamodel.b')]))
         
         # do some training
-        data = [1,2,3,4]        
+        data = [1,2,3,4]
         
         for a,b in zip(data[:-1],data[1:]):
             asm.comp1.a = a
@@ -178,7 +178,7 @@ class MetaModelTestCase(unittest.TestCase):
     def _trained_asm(self, avals, bvals):
         asm = set_as_top(Assembly())
         asm.add('metamodel', MetaModel())
-        asm.metamodel.surrogate = {'default':KrigingSurrogate()}
+        asm.metamodel.default_surrogate = KrigingSurrogate()
         asm.metamodel.model = Simple()
         asm.metamodel.recorder = DumbRecorder()
         asm.driver.workflow.add(['metamodel'])
@@ -226,12 +226,12 @@ class MetaModelTestCase(unittest.TestCase):
     def test_warm_start(self): 
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.default_surrogate = KrigingSurrogate()
         metamodel.model = Simple()
         metamodel.recorder = DumbRecorder()
         simple = Simple()
         
-        cases = []        
+        cases = []
         
         metamodel.a = 1.
         metamodel.b = 2.
@@ -253,7 +253,7 @@ class MetaModelTestCase(unittest.TestCase):
         
         metamodel2 = MetaModel()
         metamodel2.name = 'meta2'
-        metamodel2.surrogate = {'default':KrigingSurrogate()}
+        metamodel2.default_surrogate = KrigingSurrogate()
         metamodel2.model = Simple()
         metamodel2.recorder = DumbRecorder()
         metamodel2.warm_start_data = case_iter
@@ -271,7 +271,7 @@ class MetaModelTestCase(unittest.TestCase):
     def test_default_execute(self):
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.default_surrogate = KrigingSurrogate()
         metamodel.model = Simple()
         metamodel.recorder = DumbRecorder()
         simple = Simple()
@@ -320,9 +320,9 @@ class MetaModelTestCase(unittest.TestCase):
     def test_multi_surrogate_models(self): 
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = {'d':KrigingSurrogate(),
-                               'c':LogisticRegression()}
         metamodel.model = Simple()
+        metamodel.sur_d = KrigingSurrogate()
+        metamodel.sur_c = LogisticRegression()
         metamodel.recorder = DumbRecorder()
         simple = Simple()
         
@@ -344,7 +344,7 @@ class MetaModelTestCase(unittest.TestCase):
         
     def test_includes(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.default_surrogate = KrigingSurrogate()
         metamodel.includes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.surrogate_input_names(), ['a'])
@@ -357,7 +357,7 @@ class MetaModelTestCase(unittest.TestCase):
 
     def test_excludes(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.default_surrogate = KrigingSurrogate()
         metamodel.excludes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.surrogate_input_names(), ['b'])
@@ -370,7 +370,7 @@ class MetaModelTestCase(unittest.TestCase):
         
     def test_include_exclude(self):
         metamodel = MyMetaModel()
-        metamodel.surrogate = {'default':KrigingSurrogate()}
+        metamodel.default_surrogate = KrigingSurrogate()
         metamodel.includes = ['a','d']
         try:
             metamodel.excludes = ['b','c']
