@@ -27,7 +27,7 @@ from optparse import OptionParser
 from openmdao.util.network import get_unused_ip_port
 
 from pageobjects.project import ProjectsListPage
-from pageobjects.util import abort
+from pageobjects.util import SafeDriver, abort
 
 if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
@@ -235,7 +235,7 @@ def generate(modname):
     for name in available_browsers:
         try:
             # Open browser and verify we can get page title.
-            browser = _browsers_to_test[name][1]()
+            browser = SafeDriver(_browsers_to_test[name][1]())
             browser.title
         except Exception as exc:
             msg = '%s setup failed: %s' % (name, exc)
@@ -397,7 +397,7 @@ def main(args=None):
                         if name.startswith('_test_')]
 
         setup_server(virtual_display=False)
-        browser = setup_chrome()
+        browser = SafeDriver(setup_chrome())
         try:
             for test in tests:
                 test(browser)
