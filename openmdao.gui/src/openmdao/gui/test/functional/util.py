@@ -244,21 +244,27 @@ def generate(modname):
             continue
 
         abort(False)
+        cleanup = True
+        runner = None
         for test in tests:
+            if runner is not None and runner.failed:
+                cleanup = False
+            runner = _Runner(test)
             logging.critical('')
             if abort():
-                msg = '%s tests aborting' % name
-                logging.critical(msg)
-                yield _Runner(test), SkipTest(msg)
+                logging.critical('%s: %s tests aborting', test.__name__, name)
+                yield runner, SkipTest(msg)
             else:
                 logging.critical('Run %s using %s', test.__name__, name)
-                yield _Runner(test), browser
+                yield runner, browser
+        if runner is not None and runner.failed:
+            cleanup = False
 
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
             browser.quit()
-            if name == 'Chrome' and os.path.exists('chromedriver.log'):
+            if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
                 os.remove('chromedriver.log')
 
 
@@ -274,6 +280,7 @@ class _Runner(object):
             self.description = test.__doc__.strip()
         else:
             self.description = '%s (%s)' % (test.__name__, test.__module__)
+        self.failed = False
 
     def __call__(self, browser):
         if isinstance(browser, Exception):
@@ -281,6 +288,8 @@ class _Runner(object):
         try:
             self.test(browser)
         except Exception as exc:
+            saved_exc = sys.exc_info()
+            self.failed = True
             package, dot, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
@@ -288,11 +297,19 @@ class _Runner(object):
             if not isinstance(exc, SkipTest):
                 filename = os.path.join(os.getcwd(), '%s.png' % testname)
                 print 'Attempting to take screenshot...'
-                browser.save_screenshot(filename)
-                msg = 'Screenshot in %s' % filename
-                print msg
-                logging.info(msg)
-            raise
+                try:
+                    browser.save_screenshot(filename)
+                except Exception as err:
+                    msg = 'Screenshot failed: %s' % err
+                    print msg
+                    logging.critical(msg)
+                else:
+                    msg = 'Screenshot in %s' % filename
+                    print msg
+                    logging.critical(msg)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            raise saved_exc[0], saved_exc[1], saved_exc[2]
 
 
 def startup(browser):

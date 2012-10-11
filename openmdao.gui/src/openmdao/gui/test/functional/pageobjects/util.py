@@ -92,69 +92,69 @@ class SafeBase(object):
         self._invoker = invoker
 
     def find_element(self, *args, **kwargs):
-        element = self._invoke('find_element', *args, **kwargs)
-        if element is not None:
-            element = SafeElement(element, self._invoker)
-        return element
+        return self._wrap(
+            self._invoke('find_element', *args, **kwargs))
 
     def find_elements(self, *args, **kwargs):
-        return self._invoke('find_elements', *args, **kwargs)
+        return self._wrap(
+            self._invoke('find_elements', *args, **kwargs))
 
     def find_element_by_class_name(self, *args, **kwargs):
-        element = self._invoke('find_element_by_class_name', *args, **kwargs)
-        if element is not None:
-            element = SafeElement(element, self._invoker)
-        return element
+        return self._wrap(
+            self._invoke('find_element_by_class_name', *args, **kwargs))
 
     def find_elements_by_class_name(self, *args, **kwargs):
-        return self._invoke('find_elements_by_class_name', *args, **kwargs)
+        return self._wrap(
+            self._invoke('find_elements_by_class_name', *args, **kwargs))
 
     def find_element_by_css_selector(self, *args, **kwargs):
-        element = self._invoke('find_element_by_css_selector', *args, **kwargs)
-        if element is not None:
-            element = SafeElement(element, self._invoker)
-        return element
+        return self._wrap(
+            self._invoke('find_element_by_css_selector', *args, **kwargs))
 
     def find_elements_by_css_selector(self, *args, **kwargs):
-        return self._invoke('find_elements_by_css_selector', *args, **kwargs)
+        return self._wrap(
+            self._invoke('find_elements_by_css_selector', *args, **kwargs))
 
     def find_element_by_id(self, *args, **kwargs):
-        element = self._invoke('find_element_by_id', *args, **kwargs)
-        if element is not None:
-            element = SafeElement(element, self._invoker)
-        return element
+        return self._wrap(
+            self._invoke('find_element_by_id', *args, **kwargs))
 
     def find_element_by_link_text(self, *args, **kwargs):
-        element = self._invoke('find_element_by_link_text', *args, **kwargs)
-        if element is not None:
-            element = SafeElement(element, self._invoker)
-        return element
+        return self._wrap(
+            self._invoke('find_element_by_link_text', *args, **kwargs))
 
     def find_elements_by_link_text(self, *args, **kwargs):
-        return self._invoke('find_elements_by_link_text', *args, **kwargs)
+        return self._wrap(self._invoke('find_elements_by_link_text', *args, **kwargs))
 
     def find_element_by_partial_link_text(self, *args, **kwargs):
-        element = self._invoke('find_element_by_partial_link_text', *args, **kwargs)
-        if element is not None:
-            element = SafeElement(element, self._invoker)
-        return element
+        return self._wrap(
+            self._invoke('find_element_by_partial_link_text', *args, **kwargs))
 
     def find_elements_by_partial_link_text(self, *args, **kwargs):
-        return self._invoke('find_elements_by_partial_link_text', *args, **kwargs)
+        return self._wrap(
+            self._invoke('find_elements_by_partial_link_text', *args, **kwargs))
 
     def find_element_by_xpath(self, *args, **kwargs):
-        element = self._invoke('find_element_by_xpath', *args, **kwargs)
-        if element is not None:
-            element = SafeElement(element, self._invoker)
-        return element
+        return self._wrap(
+            self._invoke('find_element_by_xpath', *args, **kwargs))
 
     def find_elements_by_xpath(self, *args, **kwargs):
-        return self._invoke('find_elements_by_xpath', *args, **kwargs)
+        return self._wrap(
+            self._invoke('find_elements_by_xpath', *args, **kwargs))
 
     def _invoke(self, what, *args, **kwargs):
         """ Send request to worker and wait (with timeout) for results. """
         method = getattr(self._delegate, what)
         return self._invoker.invoke(method, *args, **kwargs)
+
+    def _wrap(self, element):
+        """ Wrap `delegate` as :class:`SafeElement`. """
+        if element is not None:
+            if isinstance(element, list):
+                element = [SafeElement(item, self._invoker) for item in element]
+            else:
+                element = SafeElement(element, self._invoker)
+        return element
 
 
 class SafeElement(SafeBase):
@@ -174,14 +174,17 @@ class SafeElement(SafeBase):
     def click(self, *args, **kwargs):
         return self._invoke('click', *args, **kwargs)
 
+    def get_attribute(self, *args, **kwargs):
+        return self._invoke('get_attribute', *args, **kwargs)
+
     def is_displayed(self, *args, **kwargs):
         return self._invoke('is_displayed', *args, **kwargs)
 
     def is_enabled(self, *args, **kwargs):
         return self._invoke('is_enabled', *args, **kwargs)
 
-    def get_attribute(self, *args, **kwargs):
-        return self._invoke('get_attribute', *args, **kwargs)
+    def is_selected(self, *args, **kwargs):
+        return self._invoke('is_selected', *args, **kwargs)
 
     def send_keys(self, *args, **kwargs):
         return self._invoke('send_keys', *args, **kwargs)
