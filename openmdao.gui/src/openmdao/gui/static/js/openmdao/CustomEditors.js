@@ -12,7 +12,6 @@
 	    var loaded = false;
 	    var val_types = args.item.value_type;
 	    var key_types = args.item.key_type;
-	    console.log(args.item);
 	    var $add_button = $("<button>+</button>").button();
 	    var var_name = args.item['name'];
 	    if (typeof args.item.value == "string") {
@@ -176,6 +175,8 @@
 		var values = vals;
 	    }
 	    else {var values = args.item.values;}
+	    
+	    
             var scope = this;
 
             this.init = function() {
@@ -225,6 +226,7 @@
             var $select;
 	    var var_name = args.item['name'];
             var defaultValue;
+	    var val_types = args.item.value_type;
             var scope = this;
 
             this.init = function() {
@@ -255,7 +257,12 @@
             };
 
             this.applyValue = function(item,state) {
-                item[args.column.field] = state;
+		if (value_type == "Str") {
+		    item[args.column.field] = '"' + String(state) + '"';
+		    }
+		else {
+		    item[args.column.field] = state;
+		    }
             };
            
             this.isValueChanged = function() {
