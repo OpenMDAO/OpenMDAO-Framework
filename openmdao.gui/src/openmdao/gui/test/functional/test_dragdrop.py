@@ -64,7 +64,7 @@ def _test_workspace_dragdrop(browser):
 
     ensure_names_in_workspace(workspace_page, names,
         "Dragging 'assembly' to 'top' in one of the drop areas did not "
-        "produce a new element on page\n")
+        "produce a new element on page")
 
     # now test to see if all the new elements are children of 'top'
 
@@ -165,7 +165,7 @@ def _test_drop_on_component_editor(browser):
 
     ensure_names_in_workspace(workspace_page, names,
         "Dragging 'assembly' to 'top' (in component editor) in one of the "
-        "drop areas did not produce a new element on page\n")
+        "drop areas did not produce a new element on page")
 
     #now test to see if all the new elements are children of 'top'
 
@@ -860,7 +860,7 @@ def ensure_names_in_workspace(workspace_page, names, message=None):
 
     # now we will assert that the elements that we added appear on the page
     for name in names:
-        eq(name in allnames, True, message)
+        eq(name in allnames, True, '%s: %s' % (message, name))
 
 
 def drag_element_to(browser, element, drag_to, centerx):

@@ -27,7 +27,7 @@ from optparse import OptionParser
 from openmdao.util.network import get_unused_ip_port
 
 from pageobjects.project import ProjectsListPage
-from pageobjects.util import abort
+from pageobjects.util import SafeDriver, abort
 
 if '.' not in sys.path:  # Look like an interactive session.
     sys.path.append('.')
@@ -55,12 +55,13 @@ def setup_chrome():
         # Download, unpack, and install in OpenMDAO 'bin'.
         prefix = 'http://chromedriver.googlecode.com/files/'
 #        version = '19.0.1068.0'
-        version = '21.0.1180.4'
+#        version = '21.0.1180.4'
+        version = '23.0.1240.0'
         if sys.platform == 'darwin':
             flavor = 'mac'
         elif sys.platform == 'win32':
             flavor = 'win'
-            version = '22_0_1203_0b'
+#            version = '22_0_1203_0b'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
@@ -234,7 +235,7 @@ def generate(modname):
     for name in available_browsers:
         try:
             # Open browser and verify we can get page title.
-            browser = _browsers_to_test[name][1]()
+            browser = SafeDriver(_browsers_to_test[name][1]())
             browser.title
         except Exception as exc:
             msg = '%s setup failed: %s' % (name, exc)
@@ -243,21 +244,28 @@ def generate(modname):
             continue
 
         abort(False)
+        cleanup = True
+        runner = None
         for test in tests:
+            if runner is not None and runner.failed:
+                cleanup = False
+            runner = _Runner(test)
             logging.critical('')
             if abort():
-                msg = '%s tests aborting' % name
+                msg = '%s: %s tests aborting' % (test.__name__, name)
                 logging.critical(msg)
-                yield _Runner(test), SkipTest(msg)
+                yield runner, SkipTest(msg)
             else:
                 logging.critical('Run %s using %s', test.__name__, name)
-                yield _Runner(test), browser
+                yield runner, browser
+        if runner is not None and runner.failed:
+            cleanup = False
 
         if abort():
             logging.critical('Aborting tests, skipping browser close')
         else:
             browser.quit()
-            if name == 'Chrome' and os.path.exists('chromedriver.log'):
+            if cleanup and name == 'Chrome' and os.path.exists('chromedriver.log'):
                 os.remove('chromedriver.log')
 
 
@@ -273,6 +281,7 @@ class _Runner(object):
             self.description = test.__doc__.strip()
         else:
             self.description = '%s (%s)' % (test.__name__, test.__module__)
+        self.failed = False
 
     def __call__(self, browser):
         if isinstance(browser, Exception):
@@ -280,6 +289,8 @@ class _Runner(object):
         try:
             self.test(browser)
         except Exception as exc:
+            saved_exc = sys.exc_info()
+            self.failed = True
             package, dot, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
@@ -287,11 +298,19 @@ class _Runner(object):
             if not isinstance(exc, SkipTest):
                 filename = os.path.join(os.getcwd(), '%s.png' % testname)
                 print 'Attempting to take screenshot...'
-                browser.save_screenshot(filename)
-                msg = 'Screenshot in %s' % filename
-                print msg
-                logging.info(msg)
-            raise
+                try:
+                    browser.save_screenshot(filename)
+                except Exception as err:
+                    msg = 'Screenshot failed: %s' % err
+                    print msg
+                    logging.critical(msg)
+                else:
+                    msg = 'Screenshot in %s' % filename
+                    print msg
+                    logging.critical(msg)
+            sys.stdout.flush()
+            sys.stderr.flush()
+            raise saved_exc[0], saved_exc[1], saved_exc[2]
 
 
 def startup(browser):
@@ -396,7 +415,7 @@ def main(args=None):
                         if name.startswith('_test_')]
 
         setup_server(virtual_display=False)
-        browser = setup_chrome()
+        browser = SafeDriver(setup_chrome())
         try:
             for test in tests:
                 test(browser)

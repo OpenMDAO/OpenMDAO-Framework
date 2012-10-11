@@ -16,6 +16,7 @@ from unittest import TestCase
 if sys.platform != 'win32':  # No testing on Windows yet.
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
+    from pageobjects.basepageobject import TMO
     from pageobjects.util import NotifierPage
     from pageobjects.workspace import WorkspacePage
 
@@ -32,6 +33,11 @@ def _test_console(browser):
     workspace_page.do_command("print 'blah'")
     expected = ">>> print 'blah'\nblah"
     eq(workspace_page.history, expected)
+
+    # Check that browser title contains project name.
+    title = browser.title
+    expected = 'OpenMDAO: '+project_dict['name']+' - '
+    eq(title[:len(expected)], expected)
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -462,8 +468,12 @@ def _test_driver_config(browser):
     delbutton[0].click()
     parameters = editor.get_parameters()
     expected = []
-    for i, row in enumerate(parameters.value):
-        eq(row, expected[i])
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(parameters.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
 
     # Add a (nonsense) named objective.
     editor('objectives_tab').click()
@@ -481,8 +491,12 @@ def _test_driver_config(browser):
     delbutton[0].click()
     objectives = editor.get_objectives()
     expected = []
-    for i, row in enumerate(objectives.value):
-        eq(row, expected[i])
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(objectives.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
 
     # Add a (nonsense) named constraint.
     editor('constraints_tab').click()
@@ -500,8 +514,12 @@ def _test_driver_config(browser):
     delbutton[0].click()
     constraints = editor.get_constraints()
     expected = []
-    for i, row in enumerate(constraints.value):
-        eq(row, expected[i])
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(constraints.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
 
     # Clean up.
     editor.close()

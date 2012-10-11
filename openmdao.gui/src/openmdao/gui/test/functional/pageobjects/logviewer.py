@@ -25,24 +25,27 @@ class LogViewer(DialogPage):
 
     def clear(self):
         """ Clear display. """
-        chain = ActionChains(self.browser)
-        chain.context_click(self.root).perform()
-        self('clear_button').click()
-        time.sleep(0.5)  # Wait to pop-down.
+        self._context_click('clear_button')
 
     def filter(self):
         """ Return filtering dialog. """
-        chain = ActionChains(self.browser)
-        chain.context_click(self.root).perform()
-        self('filter_button').click()
+        self._context_click('filter_button')
         return FilterDialog.verify(self.browser, self.port)
 
     def pause(self):
         """ Pause/resume display. """
+        return self._context_click('pause_button')
+
+    def _context_click(self, name):
+        """ Display context menu. """
         chain = ActionChains(self.browser)
-        chain.context_click(self.root).perform()
-        text = self('pause_button').text
-        self('pause_button').click()
+        # Just using center of self.root had an isolated 'overlap' failure.
+        chain.move_to_element_with_offset(self('data').element, 2, 2)
+        chain.context_click(None)
+        chain.perform()
+        time.sleep(0.5)  # Wait for menu to display.
+        text = self(name).text
+        self(name).click()
         time.sleep(0.5)  # Wait to pop-down.
         return text
 

@@ -8,6 +8,7 @@ import jsonpickle
 from tornado import web
 
 from openmdao.gui.handlers import ReqHandler
+from openmdao.gui.projectdb import Projects
 from openmdao.main.publisher import publish
 from openmdao.util.log import logger
 
@@ -446,6 +447,8 @@ class ProjectHandler(ReqHandler):
         if path:
             self.delete_server()
             cserver = self.get_server()
+            name = Projects().get_by_path(path)['projectname']
+            cserver.set_current_project(name)
             path = os.path.join(self.get_project_dir(), path)
             self.redirect(self.application.reverse_url('workspace'))
         else:
@@ -555,7 +558,9 @@ class WorkspaceHandler(ReqHandler):
 
     @web.authenticated
     def get(self):
-        self.render('workspace/workspace.html')
+        cserver = self.get_server()
+        project = cserver.get_current_project()
+        self.render('workspace/workspace.html', project=project)
 
 
 class TestHandler(ReqHandler):
