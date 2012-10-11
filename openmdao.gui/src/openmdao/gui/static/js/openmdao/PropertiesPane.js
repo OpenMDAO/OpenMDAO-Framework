@@ -98,6 +98,8 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         });
     }
 
+    /* Function that returns false for collapsed rows, and true for the rest.
+    Used by Slickgrid */
     this.filter = function myFilter(item) {
         if (item.parent != null) {
             var idx = dataView.getIdxById(item.parent);
