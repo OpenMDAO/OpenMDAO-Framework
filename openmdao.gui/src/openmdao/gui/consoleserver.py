@@ -57,7 +57,7 @@ class ConsoleServer(cmd.Cmd):
         self._hist = []
 
         self.host = host
-        self.projfile = ''
+        self._projname = ''
         self.proj = None
         self.exc_info = None
         self.publish_updates = publish_updates
@@ -76,6 +76,15 @@ class ConsoleServer(cmd.Cmd):
         if not ProjFinder in sys.path_hooks:
             sys.path_hooks = [ProjFinder] + sys.path_hooks
 
+    def set_current_project(self, path):
+        """ Set current project name. """
+        # Called by ProjectHandler, since load_project() is too late to
+        # affect the rendering of the template.
+        self._projname = os.path.basename(path)
+
+    def get_current_project(self):
+        """ Get current project name. """
+        return self._projname
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
