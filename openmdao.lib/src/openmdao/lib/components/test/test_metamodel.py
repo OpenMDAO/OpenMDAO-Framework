@@ -171,6 +171,8 @@ class MetaModelTestCase(unittest.TestCase):
         assert_rel_error(self, asm.comp2.c, 6, 0.02)
         assert_rel_error(self, asm.comp2.d, -2, 0.02)
         
+        asm.metamodel.default_surrogate.nugget = 1
+        
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()
         self.assertEqual(asm.list_connections(), [])
@@ -296,26 +298,25 @@ class MetaModelTestCase(unittest.TestCase):
     def test_multi_surrogate_models_bad_surrogate_dict(self): 
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = {'d':KrigingSurrogate()}
+        metamodel.sur_d = KrigingSurrogate()
         try: 
             metamodel.model = Simple()
-        except ValueError,err: 
-            self.assertEqual('meta: No default surrogate model was specified. '
-            'Either specify a default, or specify a surrogate model for all '
-            'outputs',str(err))
+        except RuntimeError,err: 
+            self.assertEqual("meta: No default surrogate model is defined and the following outputs do not have a surrogate model: ['c']. "
+            "Either specify default_surrogate, or specify a surrogate model for all "
+            "outputs.",str(err))
         else: 
             self.fail('ValueError expected')
             
         metamodel = MetaModel()
         metamodel.name = 'meta'
-        metamodel.surrogate = {'d':KrigingSurrogate()}
+        metamodel.sur_d = KrigingSurrogate()
         metamodel.includes = ['a','b','d']
         try: 
             metamodel.model = Simple()
         except ValueError,err: 
-            if 'meta: Dict provided for "surrogates" does not include a value for "c". All outputs must be specified'==str(err):
+            if 'meta: No surrogate was provided for "c". All outputs must have a surrogate'==str(err):
                 self.fail('should not get a value error for variable c. It is not included in the metamodel')
-        
         
     def test_multi_surrogate_models(self): 
         metamodel = MetaModel()
@@ -409,8 +410,8 @@ class MetaModelTestCase(unittest.TestCase):
         s.mm.x = 10
         s.mm.reset_training_data = True
         self.assertEqual(len(s.mm._training_input_history), 0)
-        for name, tup in s.mm._surrogate_info.items():
-            self.assertEqual(s.mm._surrogate_info[name][1],[])
+        for name in s.mm._training_data:
+            self.assertEqual(s.mm._training_data[name],[])
 
         #all meta model inputs should remain at their current values
         self.assertEqual(s.mm.x, 10)

@@ -1,5 +1,7 @@
 """ Metamodel provides basic Meta Modeling capability."""
 
+from copy import deepcopy
+
 # pylint: disable-msg=E0611,F0401
 from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
@@ -53,15 +55,17 @@ class MetaModel(Component):
 
     def __init__(self, *args, **kwargs):
         super(MetaModel, self).__init__(*args, **kwargs)
-        self._training_data = {}
         self._surrogate_input_names = None
         self._surrogate_output_names = None
+        self._training_data = {}
         self._training_input_history = []
         self._const_inputs = {}  # dict of constant training inputs indices and their values
         self._train = False
         self._new_train_data = False
         self._failed_training_msgs = []
-
+        self._default_surrogate_copies = {} # need to maintain separate copy of default surrogate for each sur_* that doesn't
+                                            # have a surrogate defined
+        
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
         # the __init__ function.  If they need to create traits dynamically
@@ -233,8 +237,6 @@ class MetaModel(Component):
         if newmodel is not None and not has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
-        #if not self.default_surrogate:
-            #self.raise_exception("surrogate must be set before the model or any includes/excludes of variables", RuntimeError)
 
         new_model_traitnames = set()
         self._training_input_history = []
@@ -242,51 +244,32 @@ class MetaModel(Component):
         self._failed_training_msgs = []
 
         self._update_surrogate_list()
-        # remove traits promoted from the old model
-        #for name in self._current_model_traitnames:
-            #if self.parent:
-                #self.parent.disconnect('.'.join([self.name, name]))
-            #self.remove_trait(name)
-
+        
+        if self.default_surrogate is None:
+            no_sur = []
+            for name in self.surrogate_output_names():
+                if getattr(self, __surrogate_prefix__+name) is None:
+                    no_sur.append(name)
+            if len(no_sur) > 0 and len(no_sur) != len(self._surrogate_output_names):
+                self.raise_exception("No default surrogate model is defined and the following outputs do not have a surrogate model: %s. Either specify default_surrogate, or specify a surrogate model for all outputs." %
+                                     no_sur, RuntimeError)
+        
         if newmodel:
-            ## query for inputs
-            #traitdict = newmodel._alltraits(iotype='in')
-            #for name, trait in traitdict.items():
-                #if self._eligible(name):
-                    #self._surrogate_input_names.append(name)
-                #if name not in self._mm_class_traitnames:
-                    #self.add_trait(name, _clone_trait(trait))
-                    #new_model_traitnames.add(name)
-                    #setattr(self, name, getattr(newmodel, name))
-
-            ## now outputs
-            #traitdict = newmodel._alltraits(iotype='out')
-            #for name, trait in traitdict.items():
-                #if self._eligible(name):
-                    #if hasattr(self, __surrogate_prefix__+name):
-                        #logger.warning("name collision of surrogate with exising variable 'sur_%s'. Surrogate was not added" % name)
-                        #continue
-                    #self.add_trait(__surrogate_prefix__+name, Slot(ISurrogate))
-                    #self.on_trait_change(self._updated_surrogate, __surrogate_prefix__+name)
-
-                    #trait_type = surrogate.get_uncertain_value(1.0).__class__
-                    #self.add(name, Slot(trait_type, iotype='out', desc=trait.desc))
-
-                    #self._training_data[name] = [] 
-                    #new_model_traitnames.add(name)
-                    #setattr(self, name, surrogate.get_uncertain_value(getattr(newmodel, name)))
-
             newmodel.parent = self
             newmodel.name = 'model'
 
-        #self._current_model_traitnames = new_model_traitnames
-
     def _surrogate_updated(self, obj, name, old, new):
         """Called when a surrogate Slot (sur_*) is updated."""
-        varname = name[len(__surrogate_prefix__):]
-        val = getattr(self, name).get_uncertain_value(getattr(self.model, varname))
-        self.add(varname, Slot(val.__class__, iotype='out', desc=self.model.trait(varname).desc))
-        setattr(self, varname, val)
+        if new is None:
+            if self.default_surrogate:
+                self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+        else:
+            varname = name[len(__surrogate_prefix__):]
+            val = getattr(self, name).get_uncertain_value(getattr(self.model, varname))
+            self.add(varname, Slot(val.__class__, iotype='out', desc=self.model.trait(varname).desc))
+            setattr(self, varname, val)
+            if old is None and name in self._default_surrogate_copies:
+                del self._default_surrogate_copies[name]
     
     def update_inputs(self, compname, varnames):
         if compname != 'model':
@@ -307,8 +290,8 @@ class MetaModel(Component):
     def _get_surrogate(self, name):
         """Return the designated surrogate for the given output."""
         surrogate = getattr(self, __surrogate_prefix__+name, None)
-        if surrogate is None:
-            return self.default_surrogate
+        if surrogate is None and self.default_surrogate is not None:
+            surrogate = self._default_surrogate_copies[__surrogate_prefix__+name]
         return surrogate
     
     def update_outputs_from_model(self):
@@ -332,15 +315,18 @@ class MetaModel(Component):
     
     def _add_output(self, name):
         """Adds the specified output variable and its associated surrogate."""
-        if hasattr(self, __surrogate_prefix__+name):
+        sur_name = __surrogate_prefix__+name
+        
+        if hasattr(self, sur_name):
             logger.warning("name collision of surrogate with exising variable 'sur_%s'. Surrogate was not added" % name)
             return
         
-        self.add_trait(__surrogate_prefix__+name, Slot(ISurrogate, allow_none=True))
-        self.on_trait_change(self._surrogate_updated, __surrogate_prefix__+name)
+        self.add_trait(sur_name, Slot(ISurrogate, allow_none=True))
+        self.on_trait_change(self._surrogate_updated, sur_name)
 
         if self.default_surrogate is not None:
-            val = self.default_surrogate.get_uncertain_value(getattr(self.model, name))
+            self._default_surrogate_copies[sur_name] = deepcopy(self.default_surrogate)
+            val = self._default_surrogate_copies[sur_name].get_uncertain_value(getattr(self.model, name))
             self.add(name, Slot(val.__class__, iotype='out', desc=self.model.trait(name).desc))
             setattr(self, name, val)
         else:
@@ -424,8 +410,17 @@ class MetaModel(Component):
                                  RuntimeError)
         self._update_surrogate_list()
 
-    def _default_surrogate_changed(self, old, new):
-        pass
+    def _default_surrogate_changed(self, old_obj, new_obj):
+        if old_obj:
+            old_obj.on_trait_change(self._def_surrogate_trait_modified, remove=True)
+        if new_obj:
+            new_obj.on_trait_change(self._def_surrogate_trait_modified)
+        
+    def _def_surrogate_trait_modified(self, surrogate, name, old, new):
+        # default_surrogate was changed, so we need to replace all of the default copies
+        for name in self._default_surrogate_copies:
+            self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+        print name, 'changed!'
     
     def _eligible(self, name):
         """Return True if the named trait is not excluded from the public interface based
