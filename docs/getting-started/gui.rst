@@ -44,7 +44,7 @@ all your OpenMDAO projects that the GUI knows about. If this is your first time 
 using OpenMDAO for a while now, there won't be any projects in the list yet. You have to create new GUI projects for any
 existing models.
 
-.. figure:: project_page.png
+.. figure:: projects_page_v030.png
 
 When working with the GUI, anything you do will be contained in a project. You can think of a project as a collection of 
 information describing your model. That includes all of the Python files you use to define your components and the details of 
@@ -57,7 +57,7 @@ in for description and version number, but they are there if you want to keep tr
 Once you create the model, you just have to load it into the workspace. When it opens up, you'll be greeted by the following 
 screen: 
 
-.. figure:: workspace_start.png
+.. figure:: workspace_start_v030.png
 
 From this point, you're ready to start working with OpenMDAO using our GUI. We have a number of screen casts that walk you
 through how to use the GUI, and they follow along with the tutorials that you can go through in the rest of our docs. Just
