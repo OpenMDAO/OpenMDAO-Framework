@@ -214,20 +214,21 @@ class ConsoleServer(cmd.Cmd):
             self._error(err, sys.exc_info())
 
     @modifies_model
-    def run(self, *args, **kwargs):
-        ''' run the model (i.e. the top assembly)
+    def run(self, pathname, *args, **kwargs):
+        ''' run `pathname` or the model (i.e. the top assembly)
         '''
-
-        if 'top' in self.proj:
+        pathname = pathname or 'top'
+        if pathname in self.proj:
             print "Executing..."
             try:
-                top = self.proj.get('top')
-                top.run(*args, **kwargs)
+                comp = self.proj.get(pathname)
+                comp.run(*args, **kwargs)
                 print "Execution complete."
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error("Execution failed: No 'top' assembly was found.")
+            self._print_error("Execution failed: No %r component was found.",
+                              pathname)
 
     @modifies_model
     def execfile(self, filename):
