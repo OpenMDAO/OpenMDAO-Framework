@@ -7,11 +7,13 @@ from enthought.traits.trait_base import not_none
 from enthought.traits.has_traits import _clone_trait
 
 from openmdao.main.api import Component, Case
-from openmdao.lib.datatypes.api import Slot, List, Str, Event, Dict, Bool
+from openmdao.lib.datatypes.api import Slot, List, Str, Float, Int, Event, Dict, Bool
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
-     ICaseIterator
+     ICaseIterator, IUncertainVariable
 from openmdao.main.mp_support import has_interface
 from openmdao.util.log import logger
+from openmdao.main.datatypes.uncertaindist import UncertainDistVar
+from openmdao.util.typegroups import int_types, real_types
 
 _missing = object()
 __surrogate_prefix__ = 'sur_'
@@ -73,7 +75,7 @@ class MetaModel(Component):
         # during initialization they'll have to provide the value of
         # _mm_class_traitnames
         self._mm_class_traitnames = set(self.traits(iotype=not_none).keys())
-
+        
     def _train_next_fired(self):
         self._train = True
         self._new_train_data = True
@@ -279,7 +281,15 @@ class MetaModel(Component):
             self._surrogate_overrides.add(name)
             varname = name[len(__surrogate_prefix__):]
             val = getattr(self, name).get_uncertain_value(getattr(self.model, varname))
-            self.add(varname, Slot(val.__class__, iotype='out', desc=self.model.trait(varname).desc))
+            if has_interface(val, IUncertainVariable):
+                ttype = UncertainDistVar
+            elif isinstance(val, real_types):
+                ttype = Float
+            elif isinstance(val, int_types):
+                ttype = Int
+            self.add(varname, ttype(default_value=val, iotype='out', 
+                                    desc=self.model.trait(varname).desc,
+                                    units=self.model.trait(varname).units))
             setattr(self, varname, val)
             if old is None and name in self._default_surrogate_copies:
                 del self._default_surrogate_copies[name]

@@ -43,7 +43,7 @@ class Simple(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
-        
+                
 
 class Simple2(Component):
     
@@ -140,12 +140,23 @@ class MetaModelTestCase(unittest.TestCase):
     def test_setup1(self):
         meta_asm = self._get_assembly(default=False)
         asm = self._get_assembly(meta=False)
+        self.assertTrue('a' in meta_asm.metamodel.list_inputs())
+        self.assertTrue('b' in meta_asm.metamodel.list_inputs())
         self.assertEqual(asm.metamodel.a, meta_asm.metamodel.a)
         self.assertEqual(asm.metamodel.b, meta_asm.metamodel.b)
         meta_asm.run()
         asm.run()
         self.assertEqual(asm.metamodel.c, meta_asm.metamodel.c)
         self.assertEqual(asm.metamodel.d, meta_asm.metamodel.d)
+        meta_asm.metamodel.excludes = ['a']
+        self.assertTrue('a' not in meta_asm.metamodel.list_inputs())
+        self.assertTrue('b' in meta_asm.metamodel.list_inputs())
+        self.assertTrue(hasattr(meta_asm.metamodel, 'sur_c'))
+        self.assertTrue(hasattr(meta_asm.metamodel, 'sur_d'))
+        meta_asm.metamodel.excludes = ['d']
+        self.assertTrue(hasattr(meta_asm.metamodel, 'sur_c'))
+        self.assertTrue(not hasattr(meta_asm.metamodel, 'sur_d'))
+        
         
     def test_comp_error(self): 
         a = Assembly()
