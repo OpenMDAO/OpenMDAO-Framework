@@ -203,6 +203,25 @@ b = Float(0.0, iotype='out')
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['comp1', 'comp2', 'driver', 'top'])
 
+    # Check if running a component is recorded (it shouldn't be).
+    top = workspace_page.get_dataflow_figure('top')
+    top.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
+    history = workspace_page.history.split('\n')
+    eq(history[-2], 'Executing...')
+    eq(history[-1], 'Execution complete.')
+
+    workspace_page.toggle_files('foo.py')
+    workspace_page.expand_folder('_macros')
+    editor = workspace_page.edit_file('_macros/default')
+    contents = editor.get_code()
+    browser.close()
+    browser.switch_to_window(workspace_window)
+    for line in contents.split('\n'):
+        if 'run' in line:
+            raise AssertionError(line)
+
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
