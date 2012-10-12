@@ -14,6 +14,7 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
+    from selenium.common.exceptions import WebDriverException
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
     from pageobjects.basepageobject import TMO
@@ -220,6 +221,30 @@ b = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
     for line in contents.split('\n'):
         if 'run' in line:
+            raise AssertionError(line)
+
+    # Check if command errors are recorded (they shouldn't be).
+    workspace_page.do_command('print xyzzy', ack=False)
+    # We expect 2 notifiers: command complete and error.
+    # These will likely overlap in a manner that 'Ok' is found but
+    # later is hidden by the second notifier.
+    try:  # We expect 2 notifiers: command complete and error.
+        msg = NotifierPage.wait(workspace_page, base_id='command')
+    except WebDriverException as exc:
+        if 'Element is not clickable' in str(exc):
+            err = NotifierPage.wait(workspace_page)
+            msg = NotifierPage.wait(workspace_page, base_id='command')
+    else:
+        err = NotifierPage.wait(workspace_page)
+    if err != "NameError: name 'xyzzy' is not defined":
+        raise AssertionError('Unexpected message: %r' % err)
+
+    editor = workspace_page.edit_file('_macros/default')
+    contents = editor.get_code()
+    browser.close()
+    browser.switch_to_window(workspace_window)
+    for line in contents.split('\n'):
+        if 'xyzzy' in line:
             raise AssertionError(line)
 
     # Clean up.

@@ -55,9 +55,9 @@ openmdao.ConsoleFrame = function(id,model) {
                 },
                 // completion
                 function(jqXHR, textStatus) {
-                    if (typeof openmdao_test_mode != 'undefined') {
+                    if (typeof openmdao_test_mode !== 'undefined') {
                         openmdao.Util.notify("'"+cmd+"' complete: "
-                                             +textStatus);
+                                             +textStatus, 'Console', 'command');
                     }
                 }
             );
