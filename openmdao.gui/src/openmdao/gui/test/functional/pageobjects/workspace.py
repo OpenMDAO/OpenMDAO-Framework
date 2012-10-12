@@ -179,11 +179,12 @@ class WorkspacePage(BasePageObject):
         self('run_button').click()
         NotifierPage.wait(self, timeout)
 
-    def do_command(self, cmd, timeout=TMO):
+    def do_command(self, cmd, timeout=TMO, ack=True):
         """ Execute a command. """
         self.command = cmd
         self('submit').click()
-        NotifierPage.wait(self, timeout)
+        if ack:
+            NotifierPage.wait(self, timeout, base_id='command')
 
     def close_workspace(self, commit=False):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
