@@ -267,12 +267,16 @@ class WorkspacePage(BasePageObject):
         page.set_value(filename)
         NotifierPage.wait(self)  # Wait for creation to complete.
 
+    def find_file(self, filename, tmo=TMO):
+        """ Return elemnt corresponding to `filename`. """
+        xpath = "//a[(@path='/%s')]" % filename
+        return WebDriverWait(self.browser, tmo).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
+
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
         self('files_tab').click()
-        xpath = "//a[(@path='/%s')]" % filename
-        element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath(xpath))
+        element = self.find_file(filename)
         chain = ActionChains(self.browser)
         if dclick:  # This has had issues...
             for i in range(10):
@@ -280,8 +284,7 @@ class WorkspacePage(BasePageObject):
                     chain.double_click(element).perform()
                 except StaleElementReferenceException:
                     logging.warning('edit_file: StaleElementReferenceException')
-                    element = WebDriverWait(self.browser, 1).until(
-                        lambda browser: browser.find_element_by_xpath(xpath))
+                    element = self.find_file(filename, 1)
                     chain = ActionChains(self.browser)
                 else:
                     break
@@ -290,6 +293,26 @@ class WorkspacePage(BasePageObject):
             self('file_edit').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
+
+    def expand_folder(self, filename):
+        """ Expands `filename`. """
+        self('files_tab').click()
+        xpath = "//div[@id='ftree_pane']//a[(@path='/%s')]/../ins" % filename
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+        time.sleep(1)  # Wait for cute animation.
+
+    def toggle_files(self, filename):
+        """ Toggle files display, using context menu of `filename`. """
+        self('files_tab').click()
+        time.sleep(0.5)
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        chain.context_click(element).perform()
+        time.sleep(0.5)
+        self('file_toggle').click()
+        time.sleep(0.5)
 
     def commit_project(self, comment='no comment'):
         """ Commit current project. """

@@ -549,18 +549,23 @@ openmdao.Model=function(listeners_ready) {
 
     /** execute the model */
     this.runModel = function() {
+        self.runComponent('');
+    }
+
+    /** execute a component */
+    this.runComponent = function(pathname) {
         // make the call
         jQuery.ajax({
             type: 'POST',
             url:  'exec',
-            data: { },
+            data: { 'pathname': pathname },
             success: function(data, textStatus, jqXHR) {
                          if (typeof openmdao_test_mode !== 'undefined') {
                              openmdao.Util.notify('Run complete: '+textStatus);
                          }
                       },
             error: function(jqXHR, textStatus, errorThrown) {
-                       debug.error("Error running model (status="+jqXHR.status+"): "+jqXHR.statusText);
+                       debug.error("Error running component (status="+jqXHR.status+"): "+jqXHR.statusText);
                        debug.error(jqXHR,textStatus,errorThrown);
                    }
         });

@@ -252,7 +252,7 @@ def generate(modname):
             runner = _Runner(test)
             logging.critical('')
             if abort():
-                msg = '%s: %s tests aborting' % (test.__name__, name)
+                msg = '%s tests aborting' % name
                 logging.critical(msg)
                 yield runner, SkipTest(msg)
             else:
