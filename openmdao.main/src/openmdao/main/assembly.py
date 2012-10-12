@@ -426,9 +426,9 @@ class Assembly (Component):
         it from its workflow(s) if it's a Component."""
         cont = getattr(self, name)
         self.disconnect(name)
-        self._depgraph.remove(name)
         self._exprmapper.remove(name)
         if has_interface(cont, IComponent):
+            self._depgraph.remove(name)
             for obj in self.__dict__.values():
                 if obj is not cont and is_instance(obj, Driver):
                     obj.workflow.remove(name)
@@ -588,6 +588,8 @@ class Assembly (Component):
         """
         to_remove = []
         if varpath2 is None:
+            if self.parent and '.' not in varpath: # boundary var. make sure it's disconnected in parent
+                self.parent.disconnect('.'.join([self.name, varpath]))
             graph = self._exprmapper._exprgraph
             to_remove = set()
             for expr in self._exprmapper.find_referring_exprs(varpath):
@@ -965,4 +967,3 @@ def dump_iteration_tree(obj):
     f = cStringIO.StringIO()
     _dump_iteration_tree(obj, f, 0)
     return f.getvalue()
-

@@ -642,7 +642,7 @@ TestCase("ModelTest", {
       openmdao.model.runModel() ;
       assertEquals("exec", this.requests[0].url);
       assertEquals("POST", this.requests[0].method);
-      assertEquals(null, this.requests[0].requestBody);
+      assertEquals("pathname=", this.requests[0].requestBody);
       this.requests[0].respond(200, { "Content-Type": "text/plain" }, 'OK' ) ;
 
   },
