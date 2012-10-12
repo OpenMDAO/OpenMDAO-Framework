@@ -52,7 +52,7 @@ class EGO(Architecture):
         
         #add in the metamodel
         meta_model = self.parent.add(self.comp_name,MetaModel()) #metamodel now replaces old component with same name
-        meta_model.surrogate = {'default':KrigingSurrogate()}
+        meta_model.default_surrogate = KrigingSurrogate()
         meta_model.model = self.comp
         
         meta_model_recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))

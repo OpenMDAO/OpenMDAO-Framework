@@ -57,6 +57,7 @@ class MetaModel(Component):
         super(MetaModel, self).__init__(*args, **kwargs)
         self._surrogate_input_names = None
         self._surrogate_output_names = None
+        self._surrogate_overrides = set() # keeps track of which sur_<name> slots are full
         self._training_data = {}
         self._training_input_history = []
         self._const_inputs = {}  # dict of constant training inputs indices and their values
@@ -96,13 +97,16 @@ class MetaModel(Component):
             inputs = []
             for inp_name in self.surrogate_input_names():
                 var_name = '.'.join([self.name, inp_name])
-                inp_val = case[var_name]
-                if inp_val is not None:
-                    inputs.append(inp_val)
+                try:
+                    inp_val = case[var_name]
+                except KeyError:
+                    pass
+                    #self.raise_exception('The variable "%s" was not '
+                                         #'found as an input in one of the cases provided '
+                                         #'for warm_start_data.' % var_name, ValueError)
                 else:
-                    self.raise_exception('The variable "%s" was not '
-                                         'found as an input in one of the cases provided '
-                                         'for warm_start_data.' % var_name, ValueError)
+                    if inp_val is not None:
+                        inputs.append(inp_val)
             #print "inputs", inputs
             self._training_input_history.append(inputs)
 
@@ -157,6 +161,12 @@ class MetaModel(Component):
 
             self._train = False
         else:
+            if self.default_surrogate is None and not self._surrogate_overrides: # NO surrogates defined. just run model and get outputs
+                inputs = self.update_model_inputs()
+                self.model.run()
+                self.update_outputs_from_model()
+                return
+                
             #print '%s predicting' % self.get_pathname()
             if self._new_train_data:
                 if len(self._training_input_history) < 2:
@@ -263,7 +273,10 @@ class MetaModel(Component):
         if new is None:
             if self.default_surrogate:
                 self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+            if name in self._surrogate_overrides:
+                self._surrogate_overrides.remove(name)
         else:
+            self._surrogate_overrides.add(name)
             varname = name[len(__surrogate_prefix__):]
             val = getattr(self, name).get_uncertain_value(getattr(self.model, varname))
             self.add(varname, Slot(val.__class__, iotype='out', desc=self.model.trait(varname).desc))
@@ -353,8 +366,9 @@ class MetaModel(Component):
         """
         if self._surrogate_input_names is None:
             if self.model:
-                self._surrogate_input_names = [n for n in self.model._alltraits(iotype='in').keys() 
-                                               if self._eligible(n)]
+                self._surrogate_input_names = [n for n in self.model._alltraits(iotype='in').keys()
+                                               if self._eligible(n) and 
+                                                  n not in self._mm_class_traitnames]
             else:
                 return []
         return self._surrogate_input_names
@@ -417,10 +431,10 @@ class MetaModel(Component):
             new_obj.on_trait_change(self._def_surrogate_trait_modified)
         
     def _def_surrogate_trait_modified(self, surrogate, name, old, new):
-        # default_surrogate was changed, so we need to replace all of the default copies
+        # a trait inside of the default_surrogate was changed, so we need to
+        # replace all of the default copies
         for name in self._default_surrogate_copies:
             self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
-        print name, 'changed!'
     
     def _eligible(self, name):
         """Return True if the named trait is not excluded from the public interface based

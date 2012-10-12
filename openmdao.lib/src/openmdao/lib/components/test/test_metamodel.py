@@ -114,14 +114,21 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEquals(inputs-mmins, set(['w','x']))
         self.assertEquals(outputs-mmouts, set(['y','z']))
         
-    def _get_assembly(self):
+    def _get_assembly(self, default=True, meta=True):
         asm = set_as_top(Assembly())
-        asm.add('metamodel', MetaModel())
         asm.add('comp1', Simple())
         asm.add('comp2', Simple())
-        asm.metamodel.default_surrogate = KrigingSurrogate()
-        asm.metamodel.model = Simple()
-        asm.metamodel.recorder = DumbRecorder()
+        if meta:
+            asm.add('metamodel', MetaModel())
+            
+            if default:
+                asm.metamodel.default_surrogate = KrigingSurrogate()
+            
+            asm.metamodel.model = Simple()
+            asm.metamodel.recorder = DumbRecorder()
+        else:
+            asm.add('metamodel', Simple()) # put a real Simple comp in place of metamodel
+            
         asm.driver.workflow.add(['metamodel','comp1','comp2'])
         
         asm.connect('comp1.c','metamodel.a')
@@ -129,6 +136,16 @@ class MetaModelTestCase(unittest.TestCase):
         asm.connect('metamodel.c','comp2.a')
         asm.connect('metamodel.d','comp2.b')
         return asm
+        
+    def test_setup1(self):
+        meta_asm = self._get_assembly(default=False)
+        asm = self._get_assembly(meta=False)
+        self.assertEqual(asm.metamodel.a, meta_asm.metamodel.a)
+        self.assertEqual(asm.metamodel.b, meta_asm.metamodel.b)
+        meta_asm.run()
+        asm.run()
+        self.assertEqual(asm.metamodel.c, meta_asm.metamodel.c)
+        self.assertEqual(asm.metamodel.d, meta_asm.metamodel.d)
         
     def test_comp_error(self): 
         a = Assembly()
@@ -262,6 +279,7 @@ class MetaModelTestCase(unittest.TestCase):
         
         metamodel2.a = simple.a = 1
         metamodel2.b = simple.b = 2
+        metamodel.train_next = True
         metamodel2.run()
         simple.run()
         
@@ -342,11 +360,10 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertTrue(isinstance(metamodel.d,NormalDistribution))
         self.assertTrue(isinstance(metamodel.c,float))
         
-        
     def test_includes(self):
         metamodel = MyMetaModel()
         metamodel.default_surrogate = KrigingSurrogate()
-        metamodel.includes = ['a','d']
+        metamodel.includes = ['a', 'd']
         metamodel.model = Simple()
         self.assertEqual(metamodel.surrogate_input_names(), ['a'])
         self.assertEqual(metamodel.surrogate_output_names(), ['d'])
@@ -359,14 +376,14 @@ class MetaModelTestCase(unittest.TestCase):
     def test_excludes(self):
         metamodel = MyMetaModel()
         metamodel.default_surrogate = KrigingSurrogate()
-        metamodel.excludes = ['a','d']
+        metamodel.excludes = ['b', 'd']
         metamodel.model = Simple()
-        self.assertEqual(metamodel.surrogate_input_names(), ['b'])
+        self.assertEqual(metamodel.surrogate_input_names(), ['a'])
         self.assertEqual(metamodel.surrogate_output_names(), ['c'])
         
         # now try changing the excludes
-        metamodel.excludes = ['b', 'c']
-        self.assertEqual(metamodel.surrogate_input_names(), ['a'])
+        metamodel.excludes = ['a', 'c']
+        self.assertEqual(metamodel.surrogate_input_names(), ['b'])
         self.assertEqual(metamodel.surrogate_output_names(), ['d'])
         
     def test_include_exclude(self):

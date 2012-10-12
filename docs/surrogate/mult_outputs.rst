@@ -3,8 +3,9 @@
 Modeling Multiple Outputs
 ==================================
 
-This tutorial is a short demonstration of how to construct a MetaModel of a component with
-multiple outputs. This tutorial builds off of the :ref:`single-output tutorial <Using-a-MetaModel-Component>`, with 
+This tutorial is a short demonstration of how to construct a MetaModel of a
+component with multiple outputs. This tutorial builds off of the
+:ref:`single-output tutorial <Using-a-MetaModel-Component>`, with
 modifications for multiple outputs in a component.
 
 We created a new component called ``Trig()``. This component has one input and two 
@@ -51,9 +52,9 @@ is being evaluated for both outputs.
         
             #Components
             self.add("trig_meta_model",MetaModel())
-            self.trig_meta_model.surrogate = {"f_x_sin":LogisticRegression(),
-                                             "f_x_cos":KrigingSurrogate()}  
-            self.trig_meta_model.model = Trig()        
+            self.trig_meta_model.model = Trig()
+            self.trig_meta_model.sur_f_x_sin = LogisticRegression()
+            self.trig_meta_model.sur_f_x_cos = KrigingSurrogate()
             self.trig_meta_model.recorder = DBCaseRecorder()
 
             #Training the MetaModel
@@ -83,7 +84,7 @@ is being evaluated for both outputs.
 
         
 The iteration hierarchy is structurally the same as it would be with one output.  Even 
-though there're multiple surrogate models for multiple outputs, they are still contained 
+though there are multiple surrogate models for multiple outputs, they are still contained 
 within only one MetaModel component.  So once again there is the MetaModel component separately 
 added to each workflow and the ``trig_calc`` component being added to the validation 
 stage so that comparative values may be generated.
