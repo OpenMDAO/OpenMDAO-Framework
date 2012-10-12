@@ -42,7 +42,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         var idx = dataView.getIdxById(dataContext.id);
         var nextline = dataView.getItemByIdx(idx+1)
         if (nextline && nextline.indent > dataContext.indent) {
-            if (dataContext._collapsed) {
+            if (_collapsed[dataContext.id]) {
                 return spacer + " <span class='toggle expand'></span>&nbsp;" + value;
             } else {
                 return spacer + " <span class='toggle collapse'></span>&nbsp;" + value;
@@ -72,17 +72,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             if (true) {
                 var item = dataView.getItem(cell.row);
                 if (item) {
-                    //if (!item._collapsed) {
-                    //    item._collapsed = true;
-                    //} else {
-                    //    item._collapsed = false;
-                    //}
                     if (!_collapsed[item.id]) {
                         _collapsed[item.id] = true;
+                        _collapsed[item.parent] = true;
                     } else {
                         _collapsed[item.id] = false;
                     }
-    
+                    item._collapsed = _collapsed[item.id];
                     dataView.updateItem(item.id, item);
                 }
                 e.stopImmediatePropagation();
@@ -109,11 +105,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 //if (parent._collapsed) {
                 //    return false;
                 //}
-                if (_collapsed[parent]) {
+                if (_collapsed[parent.id]) {
                     return false;
                 }
-                var idx = dataView.getIdxById(parent);
-                var parent = dataView.getItemByIdx(idx)
+                idx = dataView.getIdxById(parent.parent);
+                parent = dataView.getItemByIdx(idx)
             }
         }
         return true;
@@ -166,6 +162,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                     }
                     if (css !== {}) {
                         editableCells[index] = css;
+                    }
+                }
+                if (value.hasOwnProperty("parent")) {
+                    if ( !_collapsed.hasOwnProperty(value.id) ) {
+                        _collapsed[value.id] = true; 
                     }
                 }
             });
