@@ -2,7 +2,6 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.FileTreeFrame = function(id,model,code_fn,geom_fn) {
-    var xyzzy = this;
     var menu = [
         {   "text": "File",
             "items": [

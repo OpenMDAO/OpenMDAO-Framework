@@ -509,8 +509,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // run
         menu.appendMenuItem(new draw2d.MenuItem("Run", null, function() {
-            var cmd = pathname + '.run();';
-            model.issueCommand(cmd);
+            model.runComponent(pathname);
         }));
 
 

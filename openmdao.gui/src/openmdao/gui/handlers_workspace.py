@@ -298,8 +298,9 @@ class ExecHandler(ReqHandler):
                 print e
                 result = result + str(sys.exc_info()) + '\n'
         else:
+            pathname = self.get_argument('pathname', default='')
             try:
-                cserver.run()
+                cserver.run(pathname)
             except Exception, e:
                 print e
                 result = result + str(sys.exc_info()) + '\n'
