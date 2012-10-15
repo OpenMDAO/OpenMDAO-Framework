@@ -7,38 +7,12 @@
 
 MetaModel is a class which supports generalized meta modeling 
 (a.k.a. surrogate modeling) capabilities. It has a slot called 
-`model` for the component that is being approximated. A second
-slot, called `default_surrogate` can be filled with a surrogate model
-generator instance. Copies of this default surrogate model generator will be used for
-any outputs that don't have a specific surrogate model generator associated
-with them. To associate a surrogate model generator with a specific output,
-you must first fill the `model` slot so that MetaModel can determine what your
-outputs are. When `model` is filled, MetaModel will create a slot named
-`sur_<output_name>` for each output of the model. To override the default
-surrogate model generator for a specific output, just drop the new surrogate
-model generator into the `sur_<output_name>` slot. All surrogate model
-generators must implement the ISurrogate interface. OpenMDAO provides some
-surrogate model gererators in the ``openmdao.lib.surrogatemodels`` directory.
-
-.. testcode:: MetaModel_slots
-        
-   from openmdao.main.api import Assembly
-   from openmdao.lib.components.api import MetaModel
-   from openmdao.lib.surrogatemodels.api import KrigingSurrogate,LogisticRegression
-
-   class Simulation(Assembly):
-       def configure(self):
-
-           self.add('meta_model',MetaModel())
-           #using KriginSurrogate for all outputs
-           self.meta_model.default_surrogate = KrigingSurrogate()
-
-
-Once the default_surrogate has been specified, the model slot, called 
-`model`, can be filled with a component. As soon as a component is put in the
+`model` for the component that is being approximated. As soon as a component is put in the
 slot, MetaModel will automatically mirror the inputs and outputs of that 
 component. In other words, MetaModel will have the same inputs and 
-outputs as whatever component is put into the model slot.
+outputs as whatever component is put into the model slot. If you fill 
+only the `model` slot, the a MetaModel instance will act exactly mimic
+the underlying component.
 
 .. testcode:: MetaModel_model
 
@@ -51,7 +25,37 @@ outputs as whatever component is put into the model slot.
         def configure(self):
 
             self.add('meta_model',MetaModel())
-            self.meta_model.default_surrogate = KrigingSurrogate()
+
+            #component has two inputs: x,y
+            self.meta_model.model = BraninComponent()
+            
+            #meta_model now has two inputs: x,y
+            self.meta_model.x = 9
+            self.meta_model.y = 9
+
+A second slot, called `default_surrogate` can be filled with a surrogate model
+generator instance. Copies of this default surrogate model generator will be used for
+any outputs that don't have a specific surrogate model generator associated
+with them. To associate a surrogate model generator with a specific output,
+you must first fill the `model` slot so that MetaModel can determine what your
+outputs are. When `model` is filled, MetaModel will create a slot named
+`sur_<output_name>` for each output of the model. To override the default
+surrogate model generator for a specific output, just drop the new surrogate
+model generator into the `sur_<output_name>` slot. All surrogate model
+generators must implement the ISurrogate interface. OpenMDAO provides some
+surrogate model generators in the ``openmdao.lib.surrogatemodels`` directory.
+
+.. testcode:: MetaModel_slots
+        
+   from openmdao.main.api import Assembly
+    from openmdao.lib.components.api import MetaModel
+    from openmdao.lib.surrogatemodels.api import KrigingSurrogate
+    from openmdao.lib.optproblems.branin import BraninComponent
+
+    class Simulation(Assembly):
+        def configure(self):
+
+            self.add('meta_model',MetaModel())
 
             #component has two inputs: x,y
             self.meta_model.model = BraninComponent()
@@ -59,14 +63,13 @@ outputs as whatever component is put into the model slot.
             #once the 'model' slot has been filled, a slot named 'sur_<name>' will
             #be created for each output variable. In this case we'll just put
             #another KrigingSurrogate in there, just to show how it's done. Since
-            #the default_surrogate is also a KriggingSurrogate, this will give us
+            #the default_surrogate is also a KrigingSurrogate, this will give us
             #the same results we would have had if we'd only used the default_surrogate.
             self.sur_f_xy = KrigingSurrogate() # use Kriging for the f_xy output
             
             #meta_model now has two inputs: x,y
             self.meta_model.x = 9
             self.meta_model.y = 9
-
 
 Depending on the component being approximated, you may not want to generate
 approximations for all the outputs. MetaModel provides two variables to give
@@ -140,9 +143,9 @@ each model output with the data. Then it will make a prediction of the model
 outputs for the given inputs. A MetaModel instance must always be run in training mode 
 before executing it in predict mode.
 
-To put an instance of MetaModel into the training mode, you must set the ``train_next`` event trait
-before executing the component. This event trait automatically resets itself after the execution, 
-so it must be set again before each training case. An event trait is just a trigger mechanism, and
+To put an instance of MetaModel into the training mode, you must set the ``train_next`` event
+before executing the component. This event automatically resets itself after the execution, 
+so it must be set again before each training case. An event is just a trigger mechanism, and
 it will trigger its behavior regardless of the value you set it to. 
 
 .. testcode:: MetaModel
@@ -169,8 +172,7 @@ it will trigger its behavior regardless of the value you set it to.
 
 
 In a typical iteration hierarchy, a Driver is responsible for setting the
-``train_next`` event when appropriate. This is accomplished via the
-IHasEvents Driver sub-interface. The ``train_next`` event is added to a
+``train_next`` event when appropriate. The ``train_next`` event is added to a
 Driver, which will then automatically set ``train_next`` prior to each
 iteration of the model. A simple code snippet is presented below, while a
 more detailed example can be found in the ``single_objective_ei`` example under the
