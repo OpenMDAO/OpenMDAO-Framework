@@ -141,7 +141,8 @@ class ProblemFormulationTest(unittest.TestCase):
         try:
             self.asm.architecture = DummyArchitecture()
         except RuntimeError as err:
-            self.assertEqual(str(err), ": This Assembly was already configured with another architecture.")
+            self.assertEqual(str(err), 
+               ": This Assembly was already configured with an architecture. To change architectures you must create a new ArchitectureAssembly.")
         else:
             self.fail("Exception expected")
         self.assertEqual(arch, self.asm.architecture)

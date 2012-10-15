@@ -192,7 +192,11 @@ class HgRepo(RepositoryBase):
         _run_command('hg add')
         if not comment:
             comment = 'no comment'
-        return _run_command('hg commit -m "%s"' % comment)
+        try:
+            return _run_command('hg commit -m "%s"' % comment)
+        except RuntimeError as err:
+            if 'no username supplied' in str(err):
+                return _run_command('hg commit -u unknown@unknown.com -m "%s"' % comment)
     
     @in_dir
     def revert(self, commit_id=None):
