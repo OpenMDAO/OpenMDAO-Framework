@@ -26,7 +26,7 @@ class Simulation(Assembly):
     
         #Components
         self.add("sin_meta_model",MetaModel())      
-        self.sin_meta_model.surrogate = {"default":KrigingSurrogate()}  
+        self.sin_meta_model.default_surrogate = KrigingSurrogate()
         self.sin_meta_model.model = Sin()        
         self.sin_meta_model.recorder = DBCaseRecorder()
         

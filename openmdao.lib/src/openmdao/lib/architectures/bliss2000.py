@@ -192,7 +192,7 @@ class BLISS2000(Architecture):
             driver.add_event("%s.reset_training_data"%mm_name)
 
             meta_models[comp] = meta_model
-            meta_model.surrogate = {'default':ResponseSurface()}
+            meta_model.default_surrogate = ResponseSurface()
             #if there are locals, you need to make a SubSystemOpt assembly
             comp_obj = self.parent.get(comp)
              
