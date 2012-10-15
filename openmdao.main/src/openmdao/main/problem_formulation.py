@@ -165,7 +165,8 @@ class ArchitectureAssembly(Assembly):
 
     def _architecture_changed(self, old, new): 
         if old is None or not old.configured:
-            self.architecture.parent = self
+            if new is not None:
+                self.architecture.parent = self
         else:
             self._trait_change_notify(False)
             try:
