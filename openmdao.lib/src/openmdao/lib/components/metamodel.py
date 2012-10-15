@@ -287,6 +287,9 @@ class MetaModel(Component):
                 ttype = Float
             elif isinstance(val, int_types):
                 ttype = Int
+            else:
+                self.raise_exception("value type of '%s' is not supported for a surrogate" %
+                                     val.__class__.__name__)
             self.add(varname, ttype(default_value=val, iotype='out', 
                                     desc=self.model.trait(varname).desc,
                                     units=self.model.trait(varname).units))

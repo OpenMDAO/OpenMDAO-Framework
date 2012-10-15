@@ -14,8 +14,10 @@ from nose.tools import with_setup
 from unittest import TestCase
 
 if sys.platform != 'win32':  # No testing on Windows yet.
+    from selenium.common.exceptions import WebDriverException
     from util import main, setup_server, teardown_server, generate, \
                      startup, closeout
+    from pageobjects.basepageobject import TMO
     from pageobjects.util import NotifierPage
     from pageobjects.workspace import WorkspacePage
 
@@ -32,6 +34,11 @@ def _test_console(browser):
     workspace_page.do_command("print 'blah'")
     expected = ">>> print 'blah'\nblah"
     eq(workspace_page.history, expected)
+
+    # Check that browser title contains project name.
+    title = browser.title
+    expected = 'OpenMDAO: '+project_dict['name']+' - '
+    eq(title[:len(expected)], expected)
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -196,6 +203,49 @@ b = Float(0.0, iotype='out')
     time.sleep(0.5)
     eq(sorted(workspace_page.get_dataflow_component_names()),
        ['comp1', 'comp2', 'driver', 'top'])
+
+    # Check if running a component is recorded (it shouldn't be).
+    top = workspace_page.get_dataflow_figure('top')
+    top.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
+    history = workspace_page.history.split('\n')
+    eq(history[-2], 'Executing...')
+    eq(history[-1], 'Execution complete.')
+
+    workspace_page.toggle_files('foo.py')
+    workspace_page.expand_folder('_macros')
+    editor = workspace_page.edit_file('_macros/default')
+    contents = editor.get_code()
+    browser.close()
+    browser.switch_to_window(workspace_window)
+    for line in contents.split('\n'):
+        if 'run' in line:
+            raise AssertionError(line)
+
+    # Check if command errors are recorded (they shouldn't be).
+    workspace_page.do_command('print xyzzy', ack=False)
+    # We expect 2 notifiers: command complete and error.
+    # These will likely overlap in a manner that 'Ok' is found but
+    # later is hidden by the second notifier.
+    try:  # We expect 2 notifiers: command complete and error.
+        msg = NotifierPage.wait(workspace_page, base_id='command')
+    except WebDriverException as exc:
+        if 'Element is not clickable' in str(exc):
+            err = NotifierPage.wait(workspace_page)
+            msg = NotifierPage.wait(workspace_page, base_id='command')
+    else:
+        err = NotifierPage.wait(workspace_page)
+    if err != "NameError: name 'xyzzy' is not defined":
+        raise AssertionError('Unexpected message: %r' % err)
+
+    editor = workspace_page.edit_file('_macros/default')
+    contents = editor.get_code()
+    browser.close()
+    browser.switch_to_window(workspace_window)
+    for line in contents.split('\n'):
+        if 'xyzzy' in line:
+            raise AssertionError(line)
 
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
@@ -453,9 +503,21 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     parameters = editor.get_parameters()
-    expected = [['driver.force_execute', '0', '1', '', '', '', 'nonsense']]
+    expected = [['', 'driver.force_execute', '0', '1', '', '', '', 'nonsense']]
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
+        
+    # Delete the parameter
+    delbutton = editor('parameters').find_elements_by_css_selector('.ui-icon-trash')
+    delbutton[0].click()
+    parameters = editor.get_parameters()
+    expected = []
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(parameters.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
 
     # Add a (nonsense) named objective.
     editor('objectives_tab').click()
@@ -464,9 +526,21 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     objectives = editor.get_objectives()
-    expected = [['driver.force_execute', 'nonsense']]
+    expected = [['', 'driver.force_execute', 'nonsense']]
     for i, row in enumerate(objectives.value):
         eq(row, expected[i])
+
+    # Delete the objective
+    delbutton = editor('objectives').find_elements_by_css_selector('.ui-icon-trash')
+    delbutton[0].click()
+    objectives = editor.get_objectives()
+    expected = []
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(objectives.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
 
     # Add a (nonsense) named constraint.
     editor('constraints_tab').click()
@@ -475,9 +549,21 @@ def _test_driver_config(browser):
     dialog.name = 'nonsense'
     dialog('ok').click()
     constraints = editor.get_constraints()
-    expected = [['driver.force_execute > 0', '1', '0', 'nonsense']]
+    expected = [['', 'driver.force_execute > 0', '1', '0', 'nonsense']]
     for i, row in enumerate(constraints.value):
         eq(row, expected[i])
+        
+    # Delete the constraint
+    delbutton = editor('constraints').find_elements_by_css_selector('.ui-icon-trash')
+    delbutton[0].click()
+    constraints = editor.get_constraints()
+    expected = []
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        for i, row in enumerate(constraints.value):
+            eq(row, expected[i])
+    finally:
+        browser.implicitly_wait(TMO)
 
     # Clean up.
     editor.close()

@@ -57,7 +57,7 @@ class ConsoleServer(cmd.Cmd):
         self._hist = []
 
         self.host = host
-        self.projfile = ''
+        self._projname = ''
         self.proj = None
         self.exc_info = None
         self.publish_updates = publish_updates
@@ -76,6 +76,15 @@ class ConsoleServer(cmd.Cmd):
         if not ProjFinder in sys.path_hooks:
             sys.path_hooks = [ProjFinder] + sys.path_hooks
 
+    def set_current_project(self, path):
+        """ Set current project name. """
+        # Called by ProjectHandler, since load_project() is too late to
+        # affect the rendering of the template.
+        self._projname = os.path.basename(path)
+
+    def get_current_project(self):
+        """ Get current project name. """
+        return self._projname
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
@@ -129,6 +138,7 @@ class ConsoleServer(cmd.Cmd):
             publish('console_errors', msg)
         except:
             logger.error('publishing of message failed')
+        
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -205,20 +215,21 @@ class ConsoleServer(cmd.Cmd):
             self._error(err, sys.exc_info())
 
     @modifies_model
-    def run(self, *args, **kwargs):
-        ''' run the model (i.e. the top assembly)
+    def run(self, pathname, *args, **kwargs):
+        ''' run `pathname` or the model (i.e. the top assembly)
         '''
-
-        if 'top' in self.proj:
+        pathname = pathname or 'top'
+        if pathname in self.proj:
             print "Executing..."
             try:
-                top = self.proj.get('top')
-                top.run(*args, **kwargs)
+                comp = self.proj.get(pathname)
+                comp.run(*args, **kwargs)
                 print "Execution complete."
             except Exception, err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error("Execution failed: No 'top' assembly was found.")
+            self._print_error("Execution failed: No %r component was found.",
+                              pathname)
 
     @modifies_model
     def execfile(self, filename):
@@ -550,8 +561,12 @@ class ConsoleServer(cmd.Cmd):
                 print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
             except Exception, err:
                 self._error(err, sys.exc_info())
+                return err # give the caller an indication that something went wrong so he can
+                           # give the proper error response to the http call if desired.
         else:
-            self._print_error('No Project to revert')
+            msg = 'No Project to revert'
+            self._print_error(msg)
+            return Exception(msg)
 
     @modifies_model
     def add_component(self, name, classname, parentname):

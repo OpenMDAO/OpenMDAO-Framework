@@ -133,14 +133,14 @@ def _test_connect(browser):
     eq(inputs[0].value, ['b_in', 'False'])
     inputs.rows[0].cells[1].click()
     browser.find_element_by_xpath('//*[@id="bool-editor-b_in"]/option[1]').click()
-    inputs.rows[0].cells[0].click()
+    #inputs.rows[0].cells[0].click()
     #inputs[0][1] = 'True'
     
     inputs = props.inputs
     eq(inputs[2].value, ['e_in', '1'])
     inputs.rows[2].cells[1].click()
     browser.find_element_by_xpath('//*[@id="editor-enum-e_in"]/option[3]').click()
-    inputs.rows[2].cells[0].click()
+    #inputs.rows[2].cells[0].click()
     #inputs[2][1] = '3'    
     
     props.close()
@@ -311,7 +311,8 @@ def _test_driverflows(browser):
     eq(editor.dialog_title, 'CONMINdriver: top.driver')
     outputs = editor.get_parameters()
     expected = [
-        ["('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
+        ['', 
+         "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')",
          '-10', '99', '', '', '', 
          "('preproc.x_in[0]', 'preproc.x_in[1]', 'preproc.x_in[2]', 'preproc.x_in[3]')"],
     ]
