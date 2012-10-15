@@ -5,11 +5,12 @@
 *MetaModel*
 ~~~~~~~~~~~
 
-MetaModel is a class which supports generalized meta modeling capabilities. It
-has a slot called `model` for the model that is being approximated. A second
+MetaModel is a class which supports generalized meta modeling 
+(a.k.a. surrogate modeling) capabilities. It has a slot called 
+`model` for the component that is being approximated. A second
 slot, called `default_surrogate` can be filled with a surrogate model
-generator. Copies of this default surrogate model generator will be used for
-any outputs that don't have a specific sorrogate model generator associated
+generator instance. Copies of this default surrogate model generator will be used for
+any outputs that don't have a specific surrogate model generator associated
 with them. To associate a surrogate model generator with a specific output,
 you must first fill the `model` slot so that MetaModel can determine what your
 outputs are. When `model` is filled, MetaModel will create a slot named
