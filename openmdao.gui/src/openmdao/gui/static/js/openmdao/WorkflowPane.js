@@ -9,36 +9,36 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
 
     // initialize private variables
     var self = this,
-        workflowID = "#"+pathname.replace(/\./g,'-')+"-workflow",
+        workflowID = pathname.replace(/\./g,'-')+'-workflow',
         workflowCSS = 'height:'+(screen.height-100)+'px;'+
                       'width:'+(screen.width-100)+'px;'+
-                      'position:relative;',
-        workflowDiv = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
-                      .appendTo(elm),
-        workflow = new draw2d.Workflow(workflowID),
+                      'position:relative;' +
+                      'border: 0px',
+        workflow = jQuery('<div id='+workflowID+' style="'+workflowCSS+'">')
+            .appendTo(elm),
         comp_figs = {},
         flow_figs = {},
         roots = [];  // Tracks order for consistent redraw.
 
     this.pathname = pathname;
 
-    workflow.setBackgroundImage( "/static/images/grid_10.png", true);
     elm.css({ 'overflow':'auto' });
-    workflow.setViewPort(elm.attr('id'));
+    workflow.css({ 'background-image': 'url("/static/images/grid_10.png")' });
 
     /** expand workflow (container) figures to contain all their children */
     function resizeFlowFigures() {
         var xmax = 0;
         jQuery.each(flow_figs, function (flowpath,flowfig) {
             flowfig.resize();
-            xmax = Math.max(xmax, flowfig.getAbsoluteX()+flowfig.getWidth());
+            xmax = Math.max(xmax, flowfig.getPosition().left+flowfig.getWidth());
         });
+        debug.info('WorkflowPane.reszieFlowFigures() xmax =',xmax);
         return xmax;
     }
 
-    /** update workflow from JSON workflow data
-     */
+    /** update workflow from JSON workflow data */
     function updateFigures(flow_name, json, offset) {
+       debug.info('WorkflowPane.updateFigures() offset =',offset);
         var path  = json.pathname,
             type  = json.type,
             valid = json.valid,
@@ -54,7 +54,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                 comp_fig = comp_figs[comp_key];
             }
             else {
-                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type,valid);
+                comp_fig = new openmdao.WorkflowComponentFigure(model,workflow,path,type,valid);
                 comp_figs[comp_key] = comp_fig;
             }
 
@@ -63,16 +63,21 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                 flow_fig.addComponentFigure(comp_fig);
             }
             else {
-                workflow.addFigure(comp_fig, offset+50, 50);
+//                workflow.addFigure(comp_fig, offset+50, 50);
+                workflow.append(comp_fig);
+                comp_fig.setPosition(offset+50,50);
             }
 
             // add workflow compartment figure for this flow
             // (overlap bottom right of driver figure)
             flowpath = flow_name+'.'+path;
-            newflow_fig = new openmdao.WorkflowFigure(model,flowpath,path,comp_fig);
-            x = comp_fig.getAbsoluteX()+comp_fig.getWidth()-20;
-            y = comp_fig.getAbsoluteY()+comp_fig.getHeight()-10;
-            workflow.addFigure(newflow_fig,x,y);
+            newflow_fig = new openmdao.WorkflowFigure(model,workflow,flowpath,path,comp_fig);
+            x = comp_fig.getPosition().left + comp_fig.getWidth()-20;
+            y = comp_fig.getPosition().top + comp_fig.getHeight()-10;
+//            workflow.addFigure(newflow_fig,x,y);
+            workflow.append(newflow_fig);
+            newflow_fig.setPosition(x,y);
+
             if (flow_fig) {
                 newflow_fig.horizontal = !flow_fig.horizontal;
                 flow_fig.addChild(newflow_fig);
@@ -94,7 +99,7 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                 comp_fig = comp_figs[comp_key];
             }
             else {
-                comp_fig = new openmdao.WorkflowComponentFigure(model,path,type,valid);
+                comp_fig = new openmdao.WorkflowComponentFigure(model,workflow,path,type,valid);
                 comp_figs[comp_key] = comp_fig;
             }
 
@@ -103,7 +108,10 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
                 flow_fig.addComponentFigure(comp_fig);
             }
             else {
-                workflow.addFigure(comp_fig, offset+50, 50);
+//                workflow.addFigure(comp_fig, offset+50, 50);
+                debug.info('WorkflowPane adding comp_fig:',comp_fig,'to',workflow);
+                workflow.append(comp_fig);
+                comp_fig.setPosition(offset+50,50);
             }
         }
     }
@@ -129,17 +137,21 @@ openmdao.WorkflowPane = function(elm,model,pathname,name) {
         if (!jQuery.isArray(json)) {
             json = [json];
         }
-        workflow.clear();
+        workflow.html('');
         comp_figs = {};
         flow_figs = {};
+
         var offset = 0,
             drawnFlows = [];
-            draw = function(flow, offset) {
-                       updateFigures('', flow, offset);
-                       xmax = resizeFlowFigures();
-                       drawnFlows.push(flow.pathname);
-                       return xmax;
-                   };
+
+        function draw(flow, offset) {
+           debug.info('WorkflowPane.draw() offset =',offset);
+           updateFigures('', flow, offset);
+           xmax = resizeFlowFigures();
+           drawnFlows.push(flow.pathname);
+           debug.info('WorkflowPane.draw() xmax =',xmax);
+           return xmax;
+        }
 
         // Redraw existing flows in same order.
         jQuery.each(roots, function(idx, name) {
