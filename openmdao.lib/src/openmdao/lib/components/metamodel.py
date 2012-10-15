@@ -270,6 +270,23 @@ class MetaModel(Component):
             newmodel.parent = self
             newmodel.name = 'model'
 
+    def _add_var_for_surrogate(self, surrogate, varname):
+        val = surrogate.get_uncertain_value(getattr(self.model, varname))
+        if has_interface(val, IUncertainVariable):
+            ttype = UncertainDistVar
+        elif isinstance(val, real_types):
+            ttype = Float
+        elif isinstance(val, int_types):
+            ttype = Int
+        else:
+            self.raise_exception("value type of '%s' is not a supported surrogate return value" %
+                                 val.__class__.__name__)
+        self.add(varname, ttype(default_value=val, iotype='out', 
+                                desc=self.model.trait(varname).desc,
+                                units=self.model.trait(varname).units))
+        setattr(self, varname, val)
+        
+        
     def _surrogate_updated(self, obj, name, old, new):
         """Called when a surrogate Slot (sur_*) is updated."""
         if new is None:
@@ -280,20 +297,7 @@ class MetaModel(Component):
         else:
             self._surrogate_overrides.add(name)
             varname = name[len(__surrogate_prefix__):]
-            val = getattr(self, name).get_uncertain_value(getattr(self.model, varname))
-            if has_interface(val, IUncertainVariable):
-                ttype = UncertainDistVar
-            elif isinstance(val, real_types):
-                ttype = Float
-            elif isinstance(val, int_types):
-                ttype = Int
-            else:
-                self.raise_exception("value type of '%s' is not supported for a surrogate" %
-                                     val.__class__.__name__)
-            self.add(varname, ttype(default_value=val, iotype='out', 
-                                    desc=self.model.trait(varname).desc,
-                                    units=self.model.trait(varname).units))
-            setattr(self, varname, val)
+            self._add_var_for_surrogate(getattr(self, name), varname)
             if old is None and name in self._default_surrogate_copies:
                 del self._default_surrogate_copies[name]
     
@@ -351,10 +355,9 @@ class MetaModel(Component):
         self.on_trait_change(self._surrogate_updated, sur_name)
 
         if self.default_surrogate is not None:
-            self._default_surrogate_copies[sur_name] = deepcopy(self.default_surrogate)
-            val = self._default_surrogate_copies[sur_name].get_uncertain_value(getattr(self.model, name))
-            self.add(name, Slot(val.__class__, iotype='out', desc=self.model.trait(name).desc))
-            setattr(self, name, val)
+            surrogate = deepcopy(self.default_surrogate)
+            self._default_surrogate_copies[sur_name] = surrogate
+            self._add_var_for_surrogate(surrogate, name)
         else:
             self.add_trait(name, _clone_trait(self.model.trait(name)))
 
