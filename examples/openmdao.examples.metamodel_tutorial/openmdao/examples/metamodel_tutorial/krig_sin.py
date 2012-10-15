@@ -5,7 +5,7 @@ from openmdao.lib.datatypes.api import Float
 from openmdao.lib.drivers.api import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial, Uniform
 from openmdao.lib.components.api import MetaModel
-from openmdao.lib.casehandlers.api import DBCaseRecorder
+from openmdao.lib.casehandlers.api import CSVCaseRecorder
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 
 
@@ -26,9 +26,8 @@ class Simulation(Assembly):
     
         #Components
         self.add("sin_meta_model",MetaModel())      
-        self.sin_meta_model.default_surrogate = KrigingSurrogate()
         self.sin_meta_model.model = Sin()        
-        self.sin_meta_model.recorder = DBCaseRecorder()
+        self.sin_meta_model.default_surrogate = KrigingSurrogate()
         
         #Training the MetaModel
         self.add("DOE_Trainer",DOEdriver())
@@ -37,7 +36,7 @@ class Simulation(Assembly):
         self.DOE_Trainer.add_parameter("sin_meta_model.x",low=0,high=20)
         self.DOE_Trainer.case_outputs = ["sin_meta_model.f_x"]
         self.DOE_Trainer.add_event("sin_meta_model.train_next")
-        self.DOE_Trainer.recorders = [DBCaseRecorder()]
+        self.DOE_Trainer.recorders = [CSVCaseRecorder()]
         
         #MetaModel Validation
         self.add("sin_calc",Sin())
@@ -46,7 +45,7 @@ class Simulation(Assembly):
         self.DOE_Validate.DOEgenerator.num_samples = 100
         self.DOE_Validate.add_parameter(("sin_meta_model.x","sin_calc.x"),low=0,high=20)
         self.DOE_Validate.case_outputs = ["sin_calc.f_x","sin_meta_model.f_x"]
-        self.DOE_Validate.recorders = [DBCaseRecorder()]
+        self.DOE_Validate.recorders = [CSVCaseRecorder()]
         
         #Iteration Hierarchy
         self.driver.workflow = SequentialWorkflow()
