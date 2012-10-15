@@ -149,7 +149,7 @@ openmdao.ComponentTreeFrame = function(id,model,select_fn,dblclick_fn,workflow_f
         menu.run = {
             "label"  : 'Run this Component',
             "action" :  function(node) {
-                            model.issueCommand(path+'.run()');
+                            model.runComponent(path);
                         }
         };
         menu.toggle = {

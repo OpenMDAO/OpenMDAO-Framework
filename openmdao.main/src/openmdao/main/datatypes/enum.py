@@ -101,6 +101,8 @@ class Enum(Variable):
             if field not in gui_excludes:
                 attr[field] = meta[field]
         
+        attr['value_types'] = [type(val).__name__ for val in meta['values']]
+            
         return attr, None
 
 
