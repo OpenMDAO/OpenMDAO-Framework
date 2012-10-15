@@ -102,6 +102,10 @@ class MetaModelTestCase(unittest.TestCase):
         mmouts = set(metamodel.list_outputs())
         metamodel.default_surrogate = KrigingSurrogate()
         metamodel.model = Simple()
+        attrs = metamodel.get_attributes(io_only=False)
+        for s in attrs['Slots']:
+            self.assertNotEqual(s['name'], 'c')
+            self.assertNotEqual(s['name'], 'd')
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
         self.assertEquals(inputs-mmins, set(['a','b']))
