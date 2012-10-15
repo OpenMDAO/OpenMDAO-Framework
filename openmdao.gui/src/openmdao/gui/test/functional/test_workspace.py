@@ -18,6 +18,8 @@ if sys.platform != 'win32':  # No testing on Windows yet.
                      startup, closeout
     from pageobjects.util import NotifierPage
     from pageobjects.workspace import WorkspacePage
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
 
     @with_setup(setup_server, teardown_server)
     def test_generator():
@@ -36,6 +38,53 @@ def _test_console(browser):
     # Clean up.
     closeout(projects_page, project_info_page, project_dict, workspace_page)
 
+
+def _test_console_history(browser):
+    # Check up and down arrow navigation through the command history
+    projects_page, project_info_page, project_dict, workspace_page = startup(browser)
+
+    command_elem = browser.find_element(By.ID, "command")
+
+    # Fill up the command history
+    workspace_page.do_command("import sys")
+    workspace_page.do_command("import os")
+    workspace_page.do_command("import time")
+    
+    # Try out the up and down arrows
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import time")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import os")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import sys")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import sys")
+
+    command_elem.send_keys( Keys.ARROW_DOWN )
+    eq(workspace_page.command, "import os")
+
+    command_elem.send_keys( Keys.ARROW_DOWN )
+    eq(workspace_page.command, "import time")
+
+    command_elem.send_keys( Keys.ARROW_DOWN )
+    eq(workspace_page.command, "import time")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import os")
+
+    workspace_page.do_command("import traceback")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import traceback")
+
+    command_elem.send_keys( Keys.ARROW_UP )
+    eq(workspace_page.command, "import time")
+
+    # Clean up.
+    closeout(projects_page, project_info_page, project_dict, workspace_page)
 
 def _test_palette_update(browser):
     # Import some files and add components from them.
