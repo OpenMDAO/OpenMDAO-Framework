@@ -1,4 +1,4 @@
-from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
+from openmdao.main.api import Assembly, Component, SequentialWorkflow
 from math import sin
 
 from openmdao.lib.datatypes.api import Float
@@ -26,8 +26,8 @@ class Simulation(Assembly):
     
         #Components
         self.add("sin_meta_model",MetaModel())      
-        self.sin_meta_model.default_surrogate = KrigingSurrogate()
         self.sin_meta_model.model = Sin()        
+        self.sin_meta_model.default_surrogate = KrigingSurrogate()
 
 
         #Training the MetaModel
@@ -58,7 +58,7 @@ class Simulation(Assembly):
 
 if __name__ == "__main__":
     
-    sim = set_as_top(Simulation())
+    sim = Simulation()
     sim.run()
         
     #This is how you can access any of the data
