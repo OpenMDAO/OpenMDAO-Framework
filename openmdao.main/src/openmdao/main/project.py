@@ -494,8 +494,6 @@ description =
                 exc_info = sys.exc_info()
 
         if err:
-            self._cmds_to_save.append('%s #ERR' % cmd)
-            self._save_command(save)
             raise
         else:
             if not self._cmds_to_save:
