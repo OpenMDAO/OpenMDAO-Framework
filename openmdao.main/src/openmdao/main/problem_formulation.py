@@ -165,16 +165,16 @@ class ArchitectureAssembly(Assembly):
 
     def _architecture_changed(self, old, new): 
         if old is None or not old.configured:
-            if new is not None:
-                self.architecture.parent = self
+            self.architecture.parent = self
         else:
             self._trait_change_notify(False)
             try:
                 self.architecture = old  # put the old value back
             finally:
                 self._trait_change_notify(True)
-            self.raise_exception("This Assembly was already configured with another "
-                                 "architecture.", RuntimeError)
+            self.raise_exception("This Assembly was already configured with an "
+                                 "architecture. To change architectures you must "
+                                 "create a new ArchitectureAssembly.", RuntimeError)
     
     def initialize(self): 
         """Sets all des_vars and coupling_vars to the start values, if specified.""" 

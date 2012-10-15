@@ -138,6 +138,7 @@ class ConsoleServer(cmd.Cmd):
             publish('console_errors', msg)
         except:
             logger.error('publishing of message failed')
+        
 
     def do_trace(self, arg):
         ''' print remembered trace from last exception
@@ -560,8 +561,12 @@ class ConsoleServer(cmd.Cmd):
                 print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
             except Exception, err:
                 self._error(err, sys.exc_info())
+                return err # give the caller an indication that something went wrong so he can
+                           # give the proper error response to the http call if desired.
         else:
-            self._print_error('No Project to revert')
+            msg = 'No Project to revert'
+            self._print_error(msg)
+            return Exception(msg)
 
     @modifies_model
     def add_component(self, name, classname, parentname):
