@@ -1,8 +1,6 @@
 import logging
-import threading
 import time
 
-from nose import SkipTest
 from nose.tools import eq_ as eq
 
 from selenium.webdriver import ActionChains
@@ -21,9 +19,10 @@ from elements import ButtonElement, GridElement, InputElement, TextElement
 from logviewer import LogViewer
 from workflow import find_workflow_figure, find_workflow_figures, \
                      find_workflow_component_figures
-from util import abort, ValuePrompt, NotifierPage, ConfirmationPage
+from util import ValuePrompt, NotifierPage, ConfirmationPage
 
 from openmdao.util.log import logger
+
 
 class WorkspacePage(BasePageObject):
 
@@ -130,8 +129,8 @@ class WorkspacePage(BasePageObject):
         expected = 'WebSockets open'
         try:
             msg = NotifierPage.wait(self)
-        except TimeoutError:  # Typically no exception text is provided.
-            raise TimeoutError('Timed-out waiting for web sockets')
+        except TimeoutException:  # Typically no exception text is provided.
+            raise TimeoutException('Timed-out waiting for web sockets')
         while msg != expected:
             # During 'automatic' reloads we can see 'WebSockets closed'
             logging.warning('Acknowledged %r while waiting for %r',
@@ -139,8 +138,8 @@ class WorkspacePage(BasePageObject):
             time.sleep(1)
             try:
                 msg = NotifierPage.wait(self)
-            except TimeoutError:
-                raise TimeoutError('Timed-out waiting for web sockets')
+            except TimeoutException:
+                raise TimeoutException('Timed-out waiting for web sockets')
 
     def find_library_button(self, name, delay=0):
         path = "//table[(@id='objtypetable')]//td[text()='%s']" % name
@@ -180,34 +179,26 @@ class WorkspacePage(BasePageObject):
         self('run_button').click()
         NotifierPage.wait(self, timeout)
 
-    def do_command(self, cmd, timeout=TMO):
+    def do_command(self, cmd, timeout=TMO, ack=True):
         """ Execute a command. """
         self.command = cmd
         self('submit').click()
-        NotifierPage.wait(self, timeout)
+        if ack:
+            NotifierPage.wait(self, timeout, base_id='command')
 
-    def close_workspace(self, timeout=TMO, commit=False):
+    def close_workspace(self, commit=False):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         if commit:
             self.commit_project()
         self.browser.execute_script('openmdao.Util.closeWebSockets();')
-        NotifierPage.wait(self, timeout)
+        NotifierPage.wait(self)
         self('project_menu').click()
-
-        # Sometimes chromedriver hangs here, so we click in separate thread.
-        # It's a known issue on the chromedriver site.
-        closer = threading.Thread(target=self._closer)
-        closer.daemon = True
-        closer.start()
-        closer.join(60)
-        if closer.is_alive():
-            abort(True)
-            raise SkipTest("Can't close workspace, driver hung :-(")
+        self('close_button').click()
 
         from project import ProjectsListPage
         return ProjectsListPage.verify(self.browser, self.port)
     
-    def attempt_to_close_workspace(self, expectDialog, confirm, timeout=TMO):
+    def attempt_to_close_workspace(self, expectDialog, confirm):
         """ Close the workspace page. Returns :class:`ProjectsListPage`. """
         self('project_menu').click()
         self('close_button').click()
@@ -217,7 +208,7 @@ class WorkspacePage(BasePageObject):
             dialog = ConfirmationPage(self)
             if confirm:  #close without saving
                 self.browser.execute_script('openmdao.Util.closeWebSockets();')
-                NotifierPage.wait(self, timeout)
+                NotifierPage.wait(self)
                 dialog.click_ok()
                 from project import ProjectsListPage
                 return ProjectsListPage.verify(self.browser, self.port)
@@ -226,10 +217,6 @@ class WorkspacePage(BasePageObject):
         else:      #no unsaved changes 
             from project import ProjectsListPage
             return ProjectsListPage.verify(self.browser, self.port)
-
-    def _closer(self):
-        """ Clicks the close button. """
-        self('close_button').click()
 
     def open_editor(self):
         """ Open code editor.  Returns :class:`EditorPage`. """
@@ -281,12 +268,16 @@ class WorkspacePage(BasePageObject):
         page.set_value(filename)
         NotifierPage.wait(self)  # Wait for creation to complete.
 
+    def find_file(self, filename, tmo=TMO):
+        """ Return elemnt corresponding to `filename`. """
+        xpath = "//a[(@path='/%s')]" % filename
+        return WebDriverWait(self.browser, tmo).until(
+            lambda browser: browser.find_element_by_xpath(xpath))
+
     def edit_file(self, filename, dclick=True):
         """ Edit `filename` via double-click or context menu. """
         self('files_tab').click()
-        xpath = "//a[(@path='/%s')]" % filename
-        element = WebDriverWait(self.browser, TMO).until(
-            lambda browser: browser.find_element_by_xpath(xpath))
+        element = self.find_file(filename)
         chain = ActionChains(self.browser)
         if dclick:  # This has had issues...
             for i in range(10):
@@ -294,8 +285,7 @@ class WorkspacePage(BasePageObject):
                     chain.double_click(element).perform()
                 except StaleElementReferenceException:
                     logging.warning('edit_file: StaleElementReferenceException')
-                    element = WebDriverWait(self.browser, 1).until(
-                        lambda browser: browser.find_element_by_xpath(xpath))
+                    element = self.find_file(filename, 1)
                     chain = ActionChains(self.browser)
                 else:
                     break
@@ -304,6 +294,26 @@ class WorkspacePage(BasePageObject):
             self('file_edit').click()
         self.browser.switch_to_window('Code Editor')
         return EditorPage.verify(self.browser, self.port)
+
+    def expand_folder(self, filename):
+        """ Expands `filename`. """
+        self('files_tab').click()
+        xpath = "//div[@id='ftree_pane']//a[(@path='/%s')]/../ins" % filename
+        element = WebDriverWait(self.browser, TMO).until(
+                      lambda browser: browser.find_element_by_xpath(xpath))
+        element.click()
+        time.sleep(1)  # Wait for cute animation.
+
+    def toggle_files(self, filename):
+        """ Toggle files display, using context menu of `filename`. """
+        self('files_tab').click()
+        time.sleep(0.5)
+        element = self.find_file(filename)
+        chain = ActionChains(self.browser)
+        chain.context_click(element).perform()
+        time.sleep(0.5)
+        self('file_toggle').click()
+        time.sleep(0.5)
 
     def commit_project(self, comment='no comment'):
         """ Commit current project. """

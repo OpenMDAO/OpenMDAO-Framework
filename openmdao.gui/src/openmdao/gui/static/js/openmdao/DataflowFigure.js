@@ -509,8 +509,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
 
         // run
         menu.appendMenuItem(new draw2d.MenuItem("Run", null, function() {
-            var cmd = pathname + '.run();';
-            model.issueCommand(cmd);
+            model.runComponent(pathname);
         }));
 
 
@@ -544,6 +543,16 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
             menu.appendMenuItem(new draw2d.MenuItem(txt, null, function() {
                 self.drawDriverFlows = !self.drawDriverFlows;
                 self.maximize();
+            }));
+
+            // menu spacer
+            menu.appendMenuItem(new draw2d.MenuItem("-", null, function() {
+            }));
+
+            // Edit passthroughs
+            menu.appendMenuItem(new draw2d.MenuItem("Edit Passthroughs", null, function() {
+                var f = new openmdao.PassthroughsFrame(model, pathname);
+
             }));
 
             // menu spacer
