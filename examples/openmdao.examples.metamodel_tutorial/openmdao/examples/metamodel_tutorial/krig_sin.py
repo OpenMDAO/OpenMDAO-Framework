@@ -28,8 +28,8 @@ class Simulation(Assembly):
         self.add("sin_meta_model",MetaModel())      
         self.sin_meta_model.default_surrogate = KrigingSurrogate()
         self.sin_meta_model.model = Sin()        
-        self.sin_meta_model.recorder = DBCaseRecorder()
-        
+
+
         #Training the MetaModel
         self.add("DOE_Trainer",DOEdriver())
         self.DOE_Trainer.DOEgenerator = FullFactorial()
