@@ -242,13 +242,14 @@ def _test_slots(browser):
 
     ##################################################
     # Second part of test: Drag and drop ExecComp from the Library onto the
-    # model (IComponent) slot of a MetaModel. This should be successful even
-    # though a dialog will popup with this notification message:
-    #   RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
+    # model (IComponent) slot of a MetaModel. 
+    ##This should be successful even
+    ## though a dialog will popup with this notification message:
+    ##   RuntimeError: m: surrogate must be set before the model or any includes/excludes of variables
     ##################################################
     slot_drop(browser, execcomp, comp, True, 'Component')
 
-    NotifyDialog(browser, top.port).close()
+    #NotifyDialog(browser, top.port).close()
 
     #refresh
     time.sleep(1.0)  # give it a second to update the figure
