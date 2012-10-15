@@ -173,7 +173,7 @@ class BLISS2000(Architecture):
         
         objective = self.parent.get_objectives().items()[0]
         comp_constraints = self.parent.get_constraints_by_comp()
-        coupling = self.parent.get_coupling_vars()
+        coupling = self.parent.list_coupling_vars()
         couple_deps = self.parent.get_coupling_deps_by_comp()
         couple_indeps = self.parent.get_coupling_indeps_by_comp()
         

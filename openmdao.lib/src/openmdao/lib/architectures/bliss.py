@@ -27,7 +27,7 @@ class BLISS(Architecture):
         objective = self.parent.get_objectives().items()[0]
         constraints = self.parent.list_constraints()
         comp_constraints = self.parent.get_constraints_by_comp()
-        coupling = self.parent.get_coupling_vars()
+        coupling = self.parent.list_coupling_vars()
         
         self.parent.add('driver',FixedPointIterator())
         self.parent.driver.max_iteration = 15
