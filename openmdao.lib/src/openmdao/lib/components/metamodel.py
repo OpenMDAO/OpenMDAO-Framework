@@ -85,7 +85,7 @@ class MetaModel(Component):
         self._const_inputs = {}
         self._failed_training_msgs = []
 
-        # remove output history from surrogate_info
+        # remove output history from training_data
         for name in self._training_data:
             self._training_data[name] = []
 
@@ -308,8 +308,8 @@ class MetaModel(Component):
         self.model.set_valid(varnames, True)
 
     def update_model_inputs(self):
-        """Copy the values of the MetaModel's inputs into the inputs of the model.
-        Returns the values of the inputs.
+        """Copy the values of the MetaModel's inputs into the inputs of the
+        model. Returns the values of the inputs.
         """
         input_values = []
         for name in self.surrogate_input_names():
@@ -358,8 +358,7 @@ class MetaModel(Component):
         else:
             self.add_trait(name, _clone_trait(self.model.trait(name)))
 
-        if name not in self._training_data:
-            self._training_data[name] = [] 
+        self._training_data[name] = [] 
     
     def _remove_input(self, name):
         """Removes the specified input variable."""
@@ -373,6 +372,8 @@ class MetaModel(Component):
             self.parent.disconnect('.'.join([self.name, name]))
         self.remove_trait(name)
         self.remove_trait(__surrogate_prefix__+name)
+        if name in self._training_data:
+            del self._training_data[name]
     
     def surrogate_input_names(self):
         """Return the list of names of public inputs that correspond
@@ -414,15 +415,25 @@ class MetaModel(Component):
         new_in = set(self.surrogate_input_names())
         new_out = set(self.surrogate_output_names())
         
-        for name in (old_in - new_in):
+        added_outs = new_out - old_out
+        added_ins = new_in - old_in
+        
+        removed_outs = old_out - new_out
+        removed_ins = old_in - new_in
+        
+        if added_outs or added_ins or removed_ins:
+            self.reset_training_data = True
+
+        for name in removed_ins:
             self._remove_input(name)
-        for name in (new_in - old_in):
+        for name in added_ins:
             self._add_input(name)
             
-        for name in (old_out - new_out):
+        for name in removed_outs:
             self._remove_output(name)
-        for name in (new_out - old_out):
+        for name in added_outs:
             self._add_output(name)
+            
         
     def _includes_changed(self, old, new):
         if self.excludes and new is not None:
@@ -448,7 +459,9 @@ class MetaModel(Component):
         for name in self.surrogate_output_names():
             surname = __surrogate_prefix__+name
             if surname not in self._surrogate_overrides:
-                self._add_output(name)
+                surrogate = deepcopy(self.default_surrogate)
+                self._default_surrogate_copies[surname] = surrogate
+                self._add_var_for_surrogate(surrogate, name)
                 
     def _def_surrogate_trait_modified(self, surrogate, name, old, new):
         # a trait inside of the default_surrogate was changed, so we need to
