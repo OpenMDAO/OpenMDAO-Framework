@@ -4,7 +4,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowComponentFigure=function(model, workflow, pathname, type, valid) {
+openmdao.WorkflowComponentFigure=function(elm, model, pathname, type, valid) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -19,14 +19,13 @@ openmdao.WorkflowComponentFigure=function(model, workflow, pathname, type, valid
             + '    <text id="name" x="50" y="25" text-anchor="middle">Name</text>'
             + '    <text id="klass" x="50" y="45" font-style="italic" text-anchor="middle">Klass</text>'
             + '</svg>',
-        elm = jQuery('<div class="WorkflowComponentFigure" style="width:100px;height:60px" />')
+        fig = jQuery('<div class="WorkflowComponentFigure" style="width:100px;height:60px" />')
             .append(svg),
         rectCSS = {'stroke-width':2, 'stroke':'#0b93d5', 'fill': 'white'},
-        textCSS = {'fill': 'black'},
         contextMenu = jQuery("<ul id="+id+"-menu class='context-menu'>")
-            .appendTo(elm);
+            .appendTo(fig);
 
-    workflow.append(elm);
+    elm.append(fig);
 
     // get name for this figure and set title appropriately
     if (name === 'driver') {
@@ -40,9 +39,9 @@ openmdao.WorkflowComponentFigure=function(model, workflow, pathname, type, valid
     }
 
     // set name, id, tooltip and width
-    elm.find('#name').text(name);
-    elm.find('#klass').text(type);
-    elm.attr('id',id);
+    fig.find('#name').text(name);
+    fig.find('#klass').text(type);
+    fig.attr('id',id);
 
     // create context menu
     contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
@@ -71,26 +70,26 @@ openmdao.WorkflowComponentFigure=function(model, workflow, pathname, type, valid
     }));
 
     /** provide access to fig's context menu (for use after fig is in the DOM */
-    elm.getContextMenu = function() {
+    fig.getContextMenu = function() {
         return contextMenu;
     };
 
     /** open object editor on double click */
-    elm.dblclick(function(e) {
+    fig.dblclick(function(e) {
         frame = new openmdao.ObjectFrame(model, pathname);
     });
 
     // set rectangle color based on state
     function setState(state) {
-        elm.find('rect').css(rectCSS);  // defaults
+        fig.find('rect').css(rectCSS);  // defaults
         if (state === "VALID") {
-            elm.find('rect').css({ 'stroke': '#00FF00' });  // green
+            fig.find('rect').css({ 'stroke': '#00FF00' });  // green
         }
         else if (state === "INVALID") {
-            elm.find('rect').css({ 'stroke': '#FF0000' });  // red
+            fig.find('rect').css({ 'stroke': '#FF0000' });  // red
         }
         else if (state === "RUNNING") {
-            elm.find('rect').css({ 'stroke': '#0000FF' });  // blue
+            fig.find('rect').css({ 'stroke': '#0000FF' });  // blue
         }
     }
 
@@ -112,32 +111,49 @@ openmdao.WorkflowComponentFigure=function(model, workflow, pathname, type, valid
 
     /** get element */
     this.getElement = function() {
-        return elm;
+        return fig;
     };
 
     /** get width */
     this.getWidth = function(x, y) {
-//        debug.info('WorkflowComponentFigure.getWidth()',name,elm,elm.width());
-        return elm.width();
+//        debug.info('WorkflowComponentFigure.getWidth()',name,fig,fig.width());
+        return fig.width();
     };
 
     /** get height */
     this.getHeight = function(x, y) {
-//        debug.info('WorkflowComponentFigure.getHeight()',name,elm,elm.height());
-        return elm.height();
+//        debug.info('WorkflowComponentFigure.getHeight()',name,fig,fig.height());
+        return fig.height();
     };
 
     /** set position relative to parent div */
     this.getPosition = function() {
-//        debug.info('WorkflowComponentFigure.getPosition()',name,elm,elm.position().left,elm.position().top);
-        return elm.position();
+//        debug.info('WorkflowComponentFigure.getPosition()',name,fig,fig.position().left,fig.position().top);
+        return fig.position();
     };
 
     /** set position relative to parent div */
     this.setPosition = function(x, y) {
-        debug.info('WorkflowComponentFigure.setPosition()',name,elm,x,y);
-        elm.css({ 'position': 'absolute', 'left': x+'px', 'top': y+'px' });
+        debug.info('WorkflowComponentFigure.setPosition()',name,fig,x,y);
+        fig.css({ 'position': 'absolute', 'left': x+'px', 'top': y+'px' });
     };
+
+    /** set type */
+    this.setType = function(new_type) {
+        type = new_type;
+        valid = new_valid;
+    }
+
+    /** set valid flag */
+    this.setValid = function(new_valid) {
+        valid = new_valid;
+        if (valid) {
+            setState('VALID');
+        }
+        else {
+            setState('INVALID');
+        }
+    }
 
 };
 
