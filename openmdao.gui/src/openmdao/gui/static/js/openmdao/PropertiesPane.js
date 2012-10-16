@@ -4,6 +4,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
+        dataview,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80 },
@@ -27,6 +28,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     if (meta) {
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:100,  formatter:VarTableFormatter },
+            {id:"id",      name:"id",        field:"id",      width:60 },
             {id:"type",      name:"Type",        field:"type",      width:60 },
             {id:"value",     name:"Value",       field:"value",     width:100 , editor:openmdao.ValueEditor },
             {id:"units",     name:"Units",       field:"units",     width:60  },
@@ -36,6 +38,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
             {id:"implicit", name:"Implicitly Connected To",   field:"implicit", width:100 },
         ];
     }
+
+    elm.append(propsDiv);
+    dataView = new Slick.Data.DataView({ inlineFilters: true });
+    dataView.beginUpdate();
+    dataView.setFilter(this.filter);
+    dataView.endUpdate();
+    props = new Slick.Grid(propsDiv, dataView, columns, options);
 
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
         var spacer = "<span style='display:inline-block;height:1px;width:" + (15 * dataContext["indent"]) + "px'></span>";
@@ -52,10 +61,6 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         }
     }
     
-    elm.append(propsDiv);
-    var dataView = new Slick.Data.DataView({ inlineFilters: true });
-    props = new Slick.Grid(propsDiv, dataView, columns, options);
-
     props.onBeforeEditCell.subscribe(function(row,cell) {
         if (props.getDataItem(cell.row).connected.length > 0) {
             return false;
@@ -71,19 +76,21 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
         if (cell.cell==0) {
             if (true) {
                 var item = dataView.getItem(cell.row);
+                console.log('Clicked Item')
+                console.log(item);
                 if (item) {
                     if (!_collapsed[item.id]) {
                         _collapsed[item.id] = true;
-                        _collapsed[item.parent] = true;
                     } else {
                         _collapsed[item.id] = false;
                     }
                     item._collapsed = _collapsed[item.id];
                     dataView.updateItem(item.id, item);
                 }
-                e.stopImmediatePropagation();
+                //e.stopImmediatePropagation();
             }
         }
+        props.render();
     });
 
     if (editable) {
@@ -97,15 +104,15 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     /* Function that returns false for collapsed rows, and true for the rest.
     Used by Slickgrid */
     this.filter = function myFilter(item) {
+        var idx, parent;
         if (item.parent != null) {
-            var idx = dataView.getIdxById(item.parent);
-            var parent = dataView.getItemByIdx(idx)
-    
+            idx = dataView.getIdxById(item.parent);
+            parent = dataView.getItemByIdx(idx)
             while (parent) {
-                //if (parent._collapsed) {
-                //    return false;
-                //}
                 if (_collapsed[parent.id]) {
+                    console.log('False')
+                    console.log(idx);
+                    console.log(parent);
                     return false;
                 }
                 idx = dataView.getIdxById(parent.parent);
@@ -133,7 +140,7 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
                 return 0; //default return value (no sorting)
             });
-
+            console.log(properties);
 
             jQuery.each(properties, function(index, value) {
                 if (value.hasOwnProperty("connected")) {
@@ -167,11 +174,12 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 if (value.hasOwnProperty("parent")) {
                     if ( !_collapsed.hasOwnProperty(value.id) ) {
                         _collapsed[value.id] = true; 
+                        _collapsed[value.parent] = true;
                     }
                 }
             });
 
-            //props.setData(properties);
+              //props.setData(properties);
               dataView.beginUpdate();
               dataView.setItems(properties);
               dataView.setFilter(this.filter);
