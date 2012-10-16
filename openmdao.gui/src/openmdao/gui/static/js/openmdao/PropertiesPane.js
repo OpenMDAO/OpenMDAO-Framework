@@ -4,7 +4,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     var self = this,
         props,
-        dataview,
+        dataView,
         propsDiv = jQuery("<div id='"+name+"_props' class='slickgrid' style='overflow:none;'>"),
         columns = [
             {id:"name",  name:"Name",  field:"name",  width:80 },
@@ -41,9 +41,9 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     elm.append(propsDiv);
     dataView = new Slick.Data.DataView({ inlineFilters: true });
-    dataView.beginUpdate();
-    dataView.setFilter(this.filter);
-    dataView.endUpdate();
+    /*dataView.beginUpdate();
+    #dataView.setFilter(this.filter);
+    dataView.endUpdate();*/
     props = new Slick.Grid(propsDiv, dataView, columns, options);
 
     function VarTableFormatter(row,cell,value,columnDef,dataContext) {
@@ -74,22 +74,19 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
     props.onClick.subscribe(function (e) {
         var cell = props.getCellFromEvent(e);
         if (cell.cell==0) {
-            if (true) {
-                var item = dataView.getItem(cell.row);
-                console.log('Clicked Item')
-                console.log(item);
-                if (item) {
-                    if (!_collapsed[item.id]) {
-                        _collapsed[item.id] = true;
-                    } else {
-                        _collapsed[item.id] = false;
-                    }
-                    item._collapsed = _collapsed[item.id];
-                    dataView.updateItem(item.id, item);
+            var item = dataView.getItem(cell.row);
+            if (item) {
+                if (!_collapsed[item.id]) {
+                    _collapsed[item.id] = true;
+                } else {
+                    _collapsed[item.id] = false;
                 }
-                //e.stopImmediatePropagation();
+                // dataView needs to know to update.
+                dataView.updateItem(item.id, item);
             }
+            e.stopImmediatePropagation();
         }
+        props.updateRowCount();
         props.render();
     });
 
@@ -103,16 +100,13 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
 
     /* Function that returns false for collapsed rows, and true for the rest.
     Used by Slickgrid */
-    this.filter = function myFilter(item) {
+    filter = function myFilter(item) {
         var idx, parent;
         if (item.parent != null) {
             idx = dataView.getIdxById(item.parent);
             parent = dataView.getItemByIdx(idx)
             while (parent) {
                 if (_collapsed[parent.id]) {
-                    console.log('False')
-                    console.log(idx);
-                    console.log(parent);
                     return false;
                 }
                 idx = dataView.getIdxById(parent.parent);
@@ -179,11 +173,11 @@ openmdao.PropertiesPane = function(elm,model,pathname,name,editable,meta) {
                 }
             });
 
-              //props.setData(properties);
-              dataView.beginUpdate();
-              dataView.setItems(properties);
-              dataView.setFilter(this.filter);
-              dataView.endUpdate();
+            //props.setData(properties);
+            dataView.beginUpdate();
+            dataView.setItems(properties);
+            dataView.setFilter(filter);
+            dataView.endUpdate();
 
         }
         else {
