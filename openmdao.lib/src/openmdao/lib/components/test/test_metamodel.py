@@ -44,6 +44,25 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
                 
+        
+class SimpleMatch(Component):
+    
+    a = Float(iotype='in')
+    b = Float(iotype='in')
+    c = Float(iotype='out')
+    d = Float(iotype='out')
+    
+    def __init__(self):
+        super(SimpleMatch, self).__init__()
+        self.a = 4.
+        self.b = 5.
+        self.c = 7.
+        self.d = 1.5
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+                
 
 class Simple2(Component):
     
@@ -110,9 +129,42 @@ class MetaModelTestCase(unittest.TestCase):
         outputs = set(metamodel.list_outputs())
         self.assertEquals(inputs-mmins, set(['a','b']))
         self.assertEquals(outputs-mmouts, set(['c','d']))
+        for i in range(3):
+            metamodel.train_next = True
+            metamodel.run()
+            
+        self.assertTrue(len(metamodel._training_data['c']) == 3)
+        self.assertTrue(len(metamodel._training_data['d']) == 3)
+        self.assertTrue(len(metamodel._training_input_history) == 3)
         
+        metamodel.includes = ['a','b','c','d']
+        
+        self.assertTrue(len(metamodel._training_data['c']) == 3)
+        self.assertTrue(len(metamodel._training_data['d']) == 3)
+        self.assertTrue(len(metamodel._training_input_history) == 3)
+        
+        # removing an output shouldn't clobber the rest of the training data
+        metamodel.includes = ['a','b','c']
+        
+        self.assertTrue(len(metamodel._training_data['c']) == 3)
+        self.assertTrue('d' not in metamodel._training_data)
+        self.assertTrue(len(metamodel._training_input_history) == 3)
+        
+        # now put a different model in with the same inputs/outputs
+        metamodel.model = SimpleMatch()
+        metamodel.includes = ['a','b','c','d']
+        inputs = set(metamodel.list_inputs())
+        outputs = set(metamodel.list_outputs())
+        self.assertEquals(inputs-mmins, set(['a','b']))
+        self.assertEquals(outputs-mmouts, set(['c', 'd']))
+
+        self.assertTrue(len(metamodel._training_data['c']) == 0)
+        self.assertTrue(len(metamodel._training_data['d']) == 0)
+        self.assertTrue(len(metamodel._training_input_history) == 0)
+
         # now put a different model in
         metamodel.model = Simple2()
+        metamodel.includes = ['w','x','y','z']
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
         self.assertEquals(inputs-mmins, set(['w','x']))

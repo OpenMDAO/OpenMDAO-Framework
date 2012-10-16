@@ -23,8 +23,6 @@ from openmdao.main.datatypes.api import Float
 @stub_if_missing_deps('numpy', 'scipy')
 class KrigingSurrogate(Container): 
     
-    nugget = Float(0)
-    
     implements(ISurrogate)
     
     def __init__(self,X=None,Y=None):

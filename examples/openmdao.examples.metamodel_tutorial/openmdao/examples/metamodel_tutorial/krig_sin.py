@@ -1,4 +1,6 @@
-from openmdao.main.api import Assembly, Component, SequentialWorkflow
+import sys
+
+from openmdao.main.api import Assembly, Component, SequentialWorkflow, set_as_top
 from math import sin
 
 from openmdao.lib.datatypes.api import Float
@@ -73,11 +75,12 @@ if __name__ == "__main__":
     actual = [case['sin_calc.f_x'] for case in validate_data]  
     predicted = [case['sin_meta_model.f_x'].mu for case in validate_data]
 
-    import pylab as p
+    if '--noplot' not in sys.argv:
+        import pylab as p
     
-    p.scatter(train_inputs,train_actual,c='g')
-    p.scatter(inputs,predicted,c='b')
-    p.show()
+        p.scatter(train_inputs,train_actual,c='g')
+        p.scatter(inputs,predicted,c='b')
+        p.show()
         
     for a,p in zip(actual,predicted): 
         print "%1.3f, %1.3f"%(a,p)

@@ -85,7 +85,7 @@ class MetaModel(Component):
         self._const_inputs = {}
         self._failed_training_msgs = []
 
-        # remove output history from surrogate_info
+        # remove output history from training_data
         for name in self._training_data:
             self._training_data[name] = []
 
@@ -251,16 +251,14 @@ class MetaModel(Component):
                                  TypeError)
 
         new_model_traitnames = set()
-        self._training_input_history = []
-        self._training_data = {}
-        self._failed_training_msgs = []
+        self.reset_training_data = True
 
         self._update_surrogate_list()
         
         if self.default_surrogate is None:
             no_sur = []
             for name in self.surrogate_output_names():
-                if getattr(self, __surrogate_prefix__+name) is None:
+                if getattr(self, __surrogate_prefix__+name, None) is None:
                     no_sur.append(name)
             if len(no_sur) > 0 and len(no_sur) != len(self._surrogate_output_names):
                 self.raise_exception("No default surrogate model is defined and the following outputs do not have a surrogate model: %s. Either specify default_surrogate, or specify a surrogate model for all outputs." %
@@ -271,6 +269,10 @@ class MetaModel(Component):
             newmodel.name = 'model'
 
     def _add_var_for_surrogate(self, surrogate, varname):
+        """Different surrogates have different types of output values, so create
+        the appropriate type of output Variable based on the return value
+        of get_uncertain_value on the surrogate.
+        """
         val = surrogate.get_uncertain_value(getattr(self.model, varname))
         if has_interface(val, IUncertainVariable):
             ttype = UncertainDistVar
@@ -285,7 +287,6 @@ class MetaModel(Component):
                                 desc=self.model.trait(varname).desc,
                                 units=self.model.trait(varname).units))
         setattr(self, varname, val)
-        
         
     def _surrogate_updated(self, obj, name, old, new):
         """Called when a surrogate Slot (sur_*) is updated."""
@@ -307,8 +308,8 @@ class MetaModel(Component):
         self.model.set_valid(varnames, True)
 
     def update_model_inputs(self):
-        """Copy the values of the MetaModel's inputs into the inputs of the model.
-        Returns the values of the inputs.
+        """Copy the values of the MetaModel's inputs into the inputs of the
+        model. Returns the values of the inputs.
         """
         input_values = []
         for name in self.surrogate_input_names():
@@ -321,7 +322,7 @@ class MetaModel(Component):
         """Return the designated surrogate for the given output."""
         surrogate = getattr(self, __surrogate_prefix__+name, None)
         if surrogate is None and self.default_surrogate is not None:
-            surrogate = self._default_surrogate_copies[__surrogate_prefix__+name]
+            surrogate = self._default_surrogate_copies.get(__surrogate_prefix__+name)
         return surrogate
     
     def update_outputs_from_model(self):
@@ -344,12 +345,8 @@ class MetaModel(Component):
         setattr(self, name, getattr(self.model, name))
     
     def _add_output(self, name):
-        """Adds the specified output variable and its associated surrogate."""
+        """Adds the specified output variable and its associated surrogate Slot."""
         sur_name = __surrogate_prefix__+name
-        
-        if hasattr(self, sur_name):
-            logger.warning("name collision of surrogate with exising variable 'sur_%s'. Surrogate was not added" % name)
-            return
         
         self.add_trait(sur_name, Slot(ISurrogate, allow_none=True))
         self.on_trait_change(self._surrogate_updated, sur_name)
@@ -375,6 +372,8 @@ class MetaModel(Component):
             self.parent.disconnect('.'.join([self.name, name]))
         self.remove_trait(name)
         self.remove_trait(__surrogate_prefix__+name)
+        if name in self._training_data:
+            del self._training_data[name]
     
     def surrogate_input_names(self):
         """Return the list of names of public inputs that correspond
@@ -416,15 +415,25 @@ class MetaModel(Component):
         new_in = set(self.surrogate_input_names())
         new_out = set(self.surrogate_output_names())
         
-        for name in (old_in - new_in):
+        added_outs = new_out - old_out
+        added_ins = new_in - old_in
+        
+        removed_outs = old_out - new_out
+        removed_ins = old_in - new_in
+        
+        if added_outs or added_ins or removed_ins:
+            self.reset_training_data = True
+
+        for name in removed_ins:
             self._remove_input(name)
-        for name in (new_in - old_in):
+        for name in added_ins:
             self._add_input(name)
             
-        for name in (old_out - new_out):
+        for name in removed_outs:
             self._remove_output(name)
-        for name in (new_out - old_out):
+        for name in added_outs:
             self._add_output(name)
+            
         
     def _includes_changed(self, old, new):
         if self.excludes and new is not None:
@@ -442,10 +451,18 @@ class MetaModel(Component):
 
     def _default_surrogate_changed(self, old_obj, new_obj):
         if old_obj:
-            old_obj.on_trait_change(self._def_surrogate_trait_modified, remove=True)
+            old_obj.on_trait_change(self._def_surrogate_trait_modified, 
+                                    remove=True)
         if new_obj:
             new_obj.on_trait_change(self._def_surrogate_trait_modified)
-        
+            
+        for name in self.surrogate_output_names():
+            surname = __surrogate_prefix__+name
+            if surname not in self._surrogate_overrides:
+                surrogate = deepcopy(self.default_surrogate)
+                self._default_surrogate_copies[surname] = surrogate
+                self._add_var_for_surrogate(surrogate, name)
+                
     def _def_surrogate_trait_modified(self, surrogate, name, old, new):
         # a trait inside of the default_surrogate was changed, so we need to
         # replace all of the default copies
