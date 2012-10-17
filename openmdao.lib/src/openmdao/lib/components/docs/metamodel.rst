@@ -47,7 +47,7 @@ surrogate model generators in the ``openmdao.lib.surrogatemodels`` directory.
 
 .. testcode:: MetaModel_slots
         
-   from openmdao.main.api import Assembly
+    from openmdao.main.api import Assembly
     from openmdao.lib.components.api import MetaModel
     from openmdao.lib.surrogatemodels.api import KrigingSurrogate
     from openmdao.lib.optproblems.branin import BraninComponent
