@@ -202,19 +202,20 @@ openmdao.Model=function(listeners_ready) {
     };
 
     /** revert back to the most recent commit of the project */
-    this.revert = function(callback, errorHandler) {
+    this.revert = function(errorHandler) {
         openmdao.Util.confirm("Remove all uncommitted changes?",
             function() {
                 jQuery.ajax({
                     type: 'POST',
                     url:  'project_revert',
-                    success: callback,
+                    success: function(data, textStatus, jqXHR) {
+                        self.reload()
+                    },
                     error: errorHandler,
                     complete: function(jqXHR, textStatus) {
                                   if (typeof openmdao_test_mode !== 'undefined') {
                                       openmdao.Util.notify('Revert complete: ' +textStatus);
                                   }
-                                  self.reload()
                               }
                 });
                 modified = false;

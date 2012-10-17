@@ -173,7 +173,7 @@ class BLISS2000(Architecture):
         
         objective = self.parent.get_objectives().items()[0]
         comp_constraints = self.parent.get_constraints_by_comp()
-        coupling = self.parent.get_coupling_vars()
+        coupling = self.parent.list_coupling_vars()
         couple_deps = self.parent.get_coupling_deps_by_comp()
         couple_indeps = self.parent.get_coupling_indeps_by_comp()
         
@@ -192,7 +192,7 @@ class BLISS2000(Architecture):
             driver.add_event("%s.reset_training_data"%mm_name)
 
             meta_models[comp] = meta_model
-            meta_model.surrogate = {'default':ResponseSurface()}
+            meta_model.default_surrogate = ResponseSurface()
             #if there are locals, you need to make a SubSystemOpt assembly
             comp_obj = self.parent.get(comp)
              

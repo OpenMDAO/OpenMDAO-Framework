@@ -339,10 +339,6 @@ openmdao.Util = {
         win.dialog('open');
     },
 
-    errCBNotify: function(jqXHR, textStatus, errorThrown) {
-        notify(textStatus, 'Error');
-    },
-    
     /**
      * show the properties of an object on the log (debug only)
      *
