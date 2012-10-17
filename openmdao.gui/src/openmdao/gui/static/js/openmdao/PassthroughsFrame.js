@@ -45,7 +45,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
 
         var assembly_idx = parts.indexOf(pathname.split(".").slice(-1)[0]);
         var comp_path = parts.slice(assembly_idx + 1).join(".");
-        var cmd = pathname +".create_passthrough('"+comp_path+"')";
+        var cmd = "_ = " + pathname +".create_passthrough('"+comp_path+"')";
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }
     
@@ -71,7 +71,7 @@ openmdao.PassthroughsFrame = function(model,pathname,src_comp,dst_comp) {
         var assembly = parts[0];
         var vname = parts[parts.length - 1];
 
-        var cmd = pathname +".remove('"+vname+"')";
+        var cmd = "_ = " + pathname +".remove('"+vname+"')";
         model.issueCommand(cmd, self.successHandler, self.errorHandler, self.doneHandler);
     }    
     
