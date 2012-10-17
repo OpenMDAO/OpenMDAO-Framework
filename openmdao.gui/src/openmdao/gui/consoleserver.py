@@ -562,7 +562,8 @@ class ConsoleServer(cmd.Cmd):
             except Exception, err:
                 self._error(err, sys.exc_info())
                 return err # give the caller an indication that something went wrong so he can
-                           # give the proper error response to the http call if desired.
+                           # give the proper error response to the http call if desired. Raising
+                           # an exception here doesn't work
         else:
             msg = 'No Project to revert'
             self._print_error(msg)
