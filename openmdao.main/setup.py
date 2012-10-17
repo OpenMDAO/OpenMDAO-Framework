@@ -85,6 +85,7 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
       openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
       openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
+      openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
       
       """,
     )
